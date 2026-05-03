@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Core\RimAI.Core.csproj" />
+    <ProjectReference Include="..\State\RimAI.State.csproj" />
+    <ProjectReference Include="..\Planner\RimAI.Planner.csproj" />
+    <ProjectReference Include="..\Coordination\RimAI.Coordination.csproj" />
+    <ProjectReference Include="..\LLM\RimAI.LLM.csproj" />
+  </ItemGroup>
+
+</Project>

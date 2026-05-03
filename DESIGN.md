@@ -1,0 +1,174 @@
+# RimAI — Design Document
+
+> **Living document.** When a design decision is made, update this file.
+> When Claude sees "remember", "always", "from now on", or "going forward" in a design discussion, update the relevant doc immediately.
+
+---
+
+## What is RimAI?
+
+An AI advisor system for RimWorld. The human plays the colony; RimAI watches the live game state and sends suggestions — like a cabinet of advisors writing memos. A self-improving LLM cabinet, led by the Mayor, surfaces strategic memos to a dashboard the player reads alongside the game. Over time, advice gets sharper, more advisor types come online, and individual advisors can graduate from *suggesting* to *acting* — but only when explicitly trusted by the player.
+
+This is not an RL agent and (for the MVP) not an autonomous player. Strategy and judgment come from LLMs. Output is suggestions, not RIMAPI writes. Each minister improves its own rules through the player's accept / dismiss / modify feedback on its memos.
+
+---
+
+## Design Goals
+
+1. **Advise well.** Suggestions should match what a thoughtful human player would recognise as good. The player keeps control; RimAI earns trust one accepted memo at a time.
+2. **Grounded in community knowledge.** Advice is informed by actual RimWorld guides, not just LLM training data.
+3. **Self-improving from real feedback.** Accept / Dismiss / Modify on each memo is the primary training signal; implicit state-watching is a fallback. The system gets better the more the player uses it.
+4. **Transparent.** Every memo carries its rationale, suggested actions, and the briefing it was based on. A single dashboard view should explain what the cabinet is recommending and why.
+5. **Cheap by default.** LLMs are called only when judgment is genuinely needed. Rules handle routine; the LLM handles exceptions.
+6. **Debuggable over clever.** Prefer deterministic, inspectable behaviour over emergent complexity.
+7. **Suggest by default; autonomy is opt-in.** Per-minister `Off / Suggest / Auto` dial. MVP ships with `Suggest` only; `Auto` graduations come later, one minister at a time, behind explicit player consent.
+
+---
+
+## Architecture Overview
+
+```
+┌──────────────────────────────────────────────┐
+│  Advisor Layer                               │
+│  Dashboard (React + TS, served by Host)      │
+│  AdviceBus (SSE feed of AdviceItems)         │
+├──────────────────────────────────────────────┤
+│  Strategic Layer                             │
+│  Mayor (LLM, daily memo from cabinet digest) │
+├──────────────────────────────────────────────┤
+│  Cabinet Layer                               │
+│  Chief of Staff + feeder ministers           │
+│  Each minister: Rules → maybe LLM            │
+│  Flag Channel (cross-minister signaling)     │
+├──────────────────────────────────────────────┤
+│  Ingestion Layer                             │
+│  RIMAPI HTTP / SSE client (reads only in MVP)│
+└──────────────────────────────────────────────┘
+```
+
+> **Deferred (Auto epic):** HTN planner, bulletin board, Labor solver, RIMAPI write coverage.
+> Designed but not built in MVP; re-engaged when the first minister graduates from `Suggest` to `Auto`.
+
+Two operational modes run in parallel:
+
+- **Play mode** — live game loop; ministers wake on briefing changes, evaluate rules, escalate to LLM when needed, emit `AdviceItem`s onto the AdviceBus.
+- **Refinement** — async; each minister reviews its own decision log (now enriched with player Accept / Dismiss / Modify signals), proposes rule changes, tests against fixtures, promotes on approval.
+
+→ See [`design/architecture.md`](design/architecture.md) for code structure and stack.
+
+---
+
+## The Cabinet
+
+Every minister has the same shape: a rules layer that handles routine cases, escalation conditions that trigger an LLM call, and an improve loop that tightens the rules over time. See [`design/ministers.md`](design/ministers.md).
+
+### MVP advisor (M1)
+
+| Minister | Domain |
+|---|---|
+| **Mayor** | Daily strategic memo synthesised from colony-wide briefing. The whole MVP. |
+
+### Feeder advisors (added M3+ as the cabinet grows)
+
+| Minister | Domain |
+|---|---|
+| **Minister of Agriculture** | Food, farming, hunting, cooking, freezer |
+| **Defense Minister** | Raids, combat, fortifications |
+| **Minister of Construction** | Buildings, power, layout (placement deferred) |
+| **Minister of Welfare** | Mood, recreation, schedules, relationships |
+| **Chief of Staff** | Flag triage, conflict arbitration into the Mayor's digest |
+
+### Deferred until Auto graduation
+
+| Minister | Domain | Why deferred |
+|---|---|---|
+| **Minister of Labor** | Assignment solver; bulletin board clearinghouse | No consumer in suggest-only mode — nothing allocates pawns. Re-engaged when the first feeder minister graduates to `Auto`. |
+
+### Candidate ministers (post-MVP)
+
+Add when the host minister's rules demonstrably can't keep up:
+
+| Candidate | Likely host (now) | Promotion trigger |
+|---|---|---|
+| Chief Medical Officer | Welfare | Medical reasoning pollutes Welfare prompts |
+| Research Director | Mayor posture | Research trade-offs need dedicated reasoning |
+| Minister of Trade | Welfare | Caravan strategy complex enough to justify |
+| Minister of Treasury | Labor/Mayor | Wealth-velocity management needs own context |
+| Base Layout Minister | Construction | Placement heuristics consistently produce bad results |
+
+---
+
+## Core Principles
+
+**Suggest by default; autonomy is per-minister and opt-in.** MVP ships with every advisor in `Suggest` mode. Graduating an advisor to `Auto` is a deliberate, per-minister event gated by track record + explicit player consent. → [`design/advice.md`](design/advice.md)
+
+**Ministers do not talk to each other directly.** All coordination is via flags. CoS arbitrates conflicts; the Mayor synthesises a daily digest. → [`design/communication.md`](design/communication.md)
+
+**Briefings are the quality lever.** Tight, focused, ~500 tokens per minister. The state store computes derived facts so the LLM doesn't have to. → [`design/state-store.md`](design/state-store.md)
+
+**Rules first, LLM second.** The rules layer handles the majority of decisions cheaply. The LLM earns its cost on genuine judgment calls. → [`design/ministers.md`](design/ministers.md)
+
+**Refinement is the minister.** Each minister improves its own rules. Not a separate agent — the same minister in a different mode. Player feedback (Accept / Dismiss / Modify) is the primary training signal. → [`design/evaluation.md`](design/evaluation.md)
+
+> **Deferred principle (Auto epic):** *Only Labor touches pawn allocation.* Re-engaged when the first minister graduates to `Auto` and needs to issue RIMAPI pawn writes. Until then, no minister touches pawn allocation. → [`design/ministers/labor.md`](design/ministers/labor.md), [`design/planning.md`](design/planning.md)
+
+---
+
+## External Dependencies
+
+**RIMAPI** — https://github.com/IlyaChichkov/RIMAPI. RimWorld mod embedding a REST + SSE server. 167 endpoints. GPL-3.0; we call over HTTP only (no linking).
+
+**Google GenAI SDK (`Google.GenAI`)** — LLM calls via Gemini Developer API (Google AI Studio) in MVP. Same client can later target Vertex AI. Streaming for UI; non-streaming for background minister thinking.
+
+**RIMAPI write coverage** — Not MVP-critical (suggest-only). Reads must cover every briefing input. Write coverage gets re-evaluated when the first minister graduates to `Auto`.
+
+---
+
+## Decision Log
+
+Decisions made and the reasoning behind them. Append; do not delete.
+
+| Decision | Rationale |
+|---|---|
+| External .NET 9 service, not in-game mod | Unity pins mods to .NET Fx 4.7.2; external service has full modern library access |
+| HTN + LLM, not RL | Episodes too long, action space huge, reward function fuzzy |
+| No MCP | HTN needs deterministic execution; MCP makes tool calls non-deterministic |
+| Per-colonist agents rejected | Colonists are resources; minister layer is sufficient |
+| No direct minister-to-minister comms | Observable flag + board model is debuggable; direct messaging becomes spaghetti |
+| No modules (all roles are real ministers) | Modules dilute briefing focus; briefing quality is the primary lever |
+| Rules-first, LLM-on-escalation | LLMs are expensive and slow; rules handle the common case cheaply |
+| Refinement is the minister, not a companion | Same entity, different mode; cleaner than a meta-agent per minister |
+| v1 human-gated rule promotion | Self-modification without audit accumulates drift; automate once fixture suite is strong |
+| Microsoft.SemanticKernel.Memory rejected | Mid-migration API churn; in-process cosine store is sufficient and debuggable |
+| Unified IMinisterRules interface | Standard shape enables shared test harness, code-gen templates, consistent rule-refinement behaviour |
+| Pivot to assisted-gameplay advisor (suggest-only MVP) | Original "autonomous player" framing required full RIMAPI write coverage, HTN execution spine, and a year-long success metric before any user value. Advisor framing ships value at M1 (a single useful memo) and turns player feedback into the primary training signal — strictly better than "did the colony survive year 1." |
+| Mayor-first MVP; per-domain ministers feed the digest | Strategic memos are the natural advisory voice. Building Mayor first lets a single minister demonstrate the whole loop (briefing → LLM → memo → feedback) before fanning out to a cabinet. |
+| HTN / bulletin board / Labor solver deferred until first Auto graduation | Their entire purpose is to allocate pawns. Under suggest-only there is no consumer. Design docs preserved verbatim, marked `Deferred — Auto epic`, so the future autonomy work doesn't redesign from scratch. |
+| Per-minister `Off / Suggest / Auto` autonomy dial named as a future construct | First-class concept in the design language even though only `Suggest` is implemented. Lets future docs reference the dial without re-introducing it; sets player expectations early. |
+| External advisor dashboard (React + TS) served by `RimAI.Host` over HTTP+SSE | Web UI iterates faster than desktop, runs cross-platform alongside the game, and reuses the SSE pattern already in play with RIMAPI. Adds a JS toolchain to the repo — accepted cost. Localhost-only auth posture. |
+| Both explicit and implicit feedback signals | Accept / Dismiss / Modify gives a clean signal when the player engages with the dashboard; implicit state-diff (snapshot game state at memo issuance, diff at expiry, score against `suggested_actions`) catches the rest. Mapping ambiguity is acknowledged — see [`design/advice.md`](design/advice.md) open questions. |
+| LLM provider switched to Gemini Developer API via `Google.GenAI` | First-party .NET SDK with a clean migration path to Vertex AI, plus first-party embedding models for the M4 RAG slice. |
+| `RimAI.Agents` split into `RimAI.LLM` + `RimAI.Ministers` | Makes dependency direction explicit (`Ministers` → `LLM`), keeps the LLM wrapper independently testable, and aligns project names with cabinet terminology. |
+
+---
+
+## Sub-documents
+
+| File | Contents |
+|---|---|
+| [`design/architecture.md`](design/architecture.md) | Stack, project structure, library choices, interfaces |
+| [`design/dashboard.md`](design/dashboard.md) | React+TS advisor dashboard: layout, HTTP+SSE contract, auth posture |
+| [`design/advice.md`](design/advice.md) | `AdviceItem` schema, Accept/Dismiss/Modify lifecycle, implicit-feedback inference |
+| [`design/ministers.md`](design/ministers.md) | Minister shape, rules system, LLM escalation, rule refinement |
+| [`design/state-store.md`](design/state-store.md) | Aggregates, briefings, cadences, versioning |
+| [`design/communication.md`](design/communication.md) | Flag schema, severity, inter-minister comms rules |
+| [`design/rag.md`](design/rag.md) | Knowledge base, ingestion, retrieval strategy |
+| [`design/evaluation.md`](design/evaluation.md) | Decision logging, improvement framework, fixture testing |
+| [`design/ministers/mayor.md`](design/ministers/mayor.md) | Mayor scope, daily memo schema (MVP centerpiece) |
+| [`design/ministers/chief-of-staff.md`](design/ministers/chief-of-staff.md) | CoS scope, arbitration logic |
+| [`design/ministers/agriculture.md`](design/ministers/agriculture.md) | Agriculture scope, briefing, rules |
+| [`design/ministers/defense.md`](design/ministers/defense.md) | Defense scope, briefing, rules |
+| [`design/ministers/construction.md`](design/ministers/construction.md) | Construction scope, briefing, rules |
+| [`design/ministers/welfare.md`](design/ministers/welfare.md) | Welfare scope, briefing, rules |
+| [`design/planning.md`](design/planning.md) | **Deferred — Auto epic.** HTN, primitive contract, failure model |
+| [`design/ministers/labor.md`](design/ministers/labor.md) | **Deferred — Auto epic.** Labor scope, assignment solver, bulletin board |

@@ -1,0 +1,34 @@
+# Build outputs
+bin/
+obj/
+*.user
+
+# Logs (runtime output, not committed)
+logs/
+
+# Rider / VS / VSCode
+.idea/
+.vs/
+*.suo
+.vscode/
+
+# NuGet
+*.nupkg
+*.snupkg
+
+# Environment / secrets — never commit
+.env
+.env.*
+appsettings.Local.json
+
+# Dashboard
+Dashboard/node_modules/
+Dashboard/dist/
+Host/wwwroot/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code local settings (personal, not team)
+.claude/settings.local.json
