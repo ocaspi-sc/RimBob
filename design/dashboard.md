@@ -71,6 +71,24 @@ Returns the most recent `IBriefing` for a minister so the briefing-inspector tab
 ### `GET /api/decisions?minister=&since=`
 Returns recent decision-log records (with feedback joined) for the decision-log tab.
 
+### `GET /api/agenda/latest`
+Returns the current `MayorAgenda` JSON. Used on page load and by the briefing-inspector.
+
+### `GET /api/agenda/history?since=<tick>`
+Returns `MayorAgenda` snapshots since `tick`, one per in-game day. Retained for 30 in-game days.
+
+### `POST /api/agenda/{version}/priority/{rank}/feedback`
+Accepts / dismisses / modifies an individual short-term priority item. Same `FeedbackEvent` body as `/api/advice/{id}/feedback`; recorded with `source: "agenda_priority"`.
+
+### New SSE event type on `GET /api/advice/stream`
+```
+event: agenda_update
+id: <version>
+data: { "version": 142, "updated_in_game_tick": "Y1Q3D12",
+        "update_notes": "...", "agenda": { ...MayorAgenda } }
+```
+On connect, the server replays the current Agenda as a single `agenda_update` event before the live feed begins.
+
 ### `GET /api/autonomy` / `PUT /api/autonomy`
 Reads/writes the per-minister autonomy dial. In MVP, every value is `Suggest` and `PUT` is a no-op that returns 200; the endpoint exists so the dashboard can render the panel and the contract is set for M7.
 
@@ -83,32 +101,45 @@ Reads/writes the per-minister autonomy dial. In MVP, every value is `Suggest` an
 ## Layout (MVP)
 
 ```
-┌────────────────────────────────────────────────────────────────┐
-│  RimAI                                  [colony name + tick]  │
-├────────────┬───────────────────────────────────────────────────┤
-│  Tabs      │  Memo Feed (default)                              │
-│  • Memos   │   ┌─────────────────────────────────────────────┐ │
-│  • Briefing│   │ End of Day 12 — Food window closing         │ │
-│  • Log     │   │ Mayor · Medium · 14:02                      │ │
-│  • Autonomy│   │ <body, markdown>                            │ │
-│            │   │ Suggested:                                   │ │
-│            │   │  • designate growing zone south of kitchen   │ │
-│            │   │  • raise Plants priority                     │ │
-│            │   │ [Accept] [Modify] [Dismiss]                  │ │
-│            │   └─────────────────────────────────────────────┘ │
-│            │   ┌── older memo ──────────────────────────────┐ │
-│            │   │ ...                                         │ │
-└────────────┴───────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│  RimAI                                    [colony name + tick]  │
+├────────────┬─────────────────────────────────────────────────────┤
+│  Tabs      │  Agenda (default)                                   │
+│  • Agenda  │  Posture: Consolidation · Defensive                 │
+│  • Alerts  │  "Winter approaching — repositioned food as P1."    │
+│  • Briefing│  ┌──────────────────────────────────────── NEW ──┐  │
+│  • Log     │  │ 1 · Food · Establish second growing zone       │  │
+│  • Autonomy│  │   before winter                                │  │
+│            │  │   · designate growing zone, ~8×8, south of    │  │
+│            │  │     kitchen                                    │  │
+│            │  │   · raise Plants priority on Hannah and Ben    │  │
+│            │  │   [Accept] [Modify] [Dismiss]                  │  │
+│            │  └────────────────────────────────────────────────┘  │
+│            │  ┌─────────────────────────────────────────────────┐ │
+│            │  │ 2 · Defense · Patch east-wall gap ...           │ │
+│            │  └─────────────────────────────────────────────────┘ │
+│            │  Long-term goals                                     │
+│            │  ● winter_prep    active    this quadrum             │
+│            │  ○ base_expansion deferred  year 2                   │
+└────────────┴─────────────────────────────────────────────────────┘
 ```
 
 ### Tabs (MVP)
-- **Memos** — feed, newest first. M1 ships this.
+- **Agenda** — Mayor's living plan; short-term priorities and long-term goals. **Default tab.** M1 ships this.
+- **Alerts** — feeder-minister `AdviceItem`s and Mayor tactical alerts (M5+). Empty in M1; placeholder tab acceptable.
 - **Briefing** — pick a minister, see the latest briefing JSON pretty-printed. M1 ships this.
 - **Log** — recent decision-log records with feedback events joined. M2 ships this.
 - **Autonomy** — per-minister dial. Read-only display in MVP; PUT is wired but every value stays `Suggest`. M2 ships the panel; the dial gets a real switch only at M7.
 
+### Agenda tab detail
+- Header: posture badges + `update_notes` one-liner.
+- Short-term priorities: numbered list of priority cards, each with domain, summary, suggested actions, and feedback buttons.
+- Delta badges: `NEW` for priorities added since the player's last view; `UPDATED` for changed items; `DONE` / `DEFERRED` for items that closed (shown for one day, then moved to history).
+- Long-term goals: compact list with status badges.
+- "Agenda history" link → inline changelog of past versions (if we ship it; see open questions).
+
 ### Tactical alerts (M5)
-When a `tactical_alert` advice arrives (severity ≥ High), the memo feed surfaces it with a distinct visual treatment (top of feed, sticky for some interval, severity-color border). It does not interrupt the daily-digest cadence; it sits alongside.
+When a `tactical_alert` advice arrives (severity ≥ High), it surfaces in the **Alerts** tab with a distinct visual treatment (top of list, sticky for some interval, severity-colour border). A badge on the Alerts tab nav item signals unread alerts.
 
 ---
 

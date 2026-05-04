@@ -31,14 +31,17 @@ This is not an RL agent and (for the MVP) not an autonomous player. Strategy and
 ┌──────────────────────────────────────────────┐
 │  Advisor Layer                               │
 │  Dashboard (React + TS, served by Host)      │
-│  AdviceBus (SSE feed of AdviceItems)         │
+│  AdviceBus (SSE: AdviceItems + agenda_update)│
 ├──────────────────────────────────────────────┤
 │  Strategic Layer                             │
-│  Mayor (LLM, daily memo from cabinet digest) │
+│  Mayor (LLM, updates Agenda once/day)        │
+│  Agenda (living plan: short+long term goals) │
+│  ↓ read-only broadcast                       │
 ├──────────────────────────────────────────────┤
 │  Cabinet Layer                               │
 │  Chief of Staff + feeder ministers           │
 │  Each minister: Rules → maybe LLM            │
+│  Ministers read Agenda for direction         │
 │  Flag Channel (cross-minister signaling)     │
 ├──────────────────────────────────────────────┤
 │  Ingestion Layer                             │
@@ -149,6 +152,7 @@ Decisions made and the reasoning behind them. Append; do not delete.
 | Both explicit and implicit feedback signals | Accept / Dismiss / Modify gives a clean signal when the player engages with the dashboard; implicit state-diff (snapshot game state at memo issuance, diff at expiry, score against `suggested_actions`) catches the rest. Mapping ambiguity is acknowledged — see [`design/advice.md`](design/advice.md) open questions. |
 | LLM provider switched to Gemini Developer API via `Google.GenAI` | First-party .NET SDK with a clean migration path to Vertex AI, plus first-party embedding models for the M4 RAG slice. |
 | `RimAI.Agents` split into `RimAI.LLM` + `RimAI.Ministers` | Makes dependency direction explicit (`Ministers` → `LLM`), keeps the LLM wrapper independently testable, and aligns project names with cabinet terminology. |
+| Mayor's output is the Agenda, not a daily_digest AdviceItem | A living planning document (short-term priorities + long-term goals, updated once/day) is a more natural advisory voice than a one-shot memo — it has persistent state, delta signals, and a clean Mayor→ministers direction channel. The Agenda *is* the MVP advice; AdviceItems survive as the feeder-minister format (M3+). → [`design/agenda.md`](design/agenda.md) |
 
 ---
 
@@ -164,7 +168,8 @@ Decisions made and the reasoning behind them. Append; do not delete.
 | [`design/communication.md`](design/communication.md) | Flag schema, severity, inter-minister comms rules |
 | [`design/rag.md`](design/rag.md) | Knowledge base, ingestion, retrieval strategy |
 | [`design/evaluation.md`](design/evaluation.md) | Decision logging, improvement framework, fixture testing |
-| [`design/ministers/mayor.md`](design/ministers/mayor.md) | Mayor scope, daily memo schema (MVP centerpiece) |
+| [`design/agenda.md`](design/agenda.md) | Mayor's Agenda: living plan schema, minister_direction interface, dashboard layout, API contract |
+| [`design/ministers/mayor.md`](design/ministers/mayor.md) | Mayor scope, Agenda update schema (MVP centerpiece) |
 | [`design/ministers/chief-of-staff.md`](design/ministers/chief-of-staff.md) | CoS scope, arbitration logic |
 | [`design/ministers/agriculture.md`](design/ministers/agriculture.md) | Agriculture scope, briefing, rules |
 | [`design/ministers/defense.md`](design/ministers/defense.md) | Defense scope, briefing, rules |

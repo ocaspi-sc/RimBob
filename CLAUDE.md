@@ -29,6 +29,7 @@ The trigger phrases below are reinforcements, not the only condition. If any of 
 | Advice schema, feedback lifecycle, autonomy dial | `design/advice.md` |
 | Dashboard UI, HTTP+SSE contract, auth posture | `design/dashboard.md` |
 | State store, briefings, aggregates | `design/state-store.md` |
+| Mayor's Agenda: living plan, minister_direction, dashboard, API | `design/agenda.md` |
 | Flags, inter-minister communication | `design/communication.md` |
 | RAG, knowledge base | `design/rag.md` |
 | Evaluation, improvement loop | `design/evaluation.md` |

@@ -12,10 +12,10 @@
 - [x] Write `RimApiClient` with typed GET for `/pawns` + handshake method
 - [x] `.github/workflows/ci.yml` — build + test on push
 - [ ] Confirm RIMAPI runs locally against RimWorld (`dotnet run --project Host`)
-- [ ] Add `Dashboard/` project (Vite + React + TS scaffold) per [`design/dashboard.md`](design/dashboard.md)
-- [ ] Add ASP.NET Core to Host; expose `GET /api/health` and stub `GET /api/advice/stream` SSE
-- [ ] Bind Host to `127.0.0.1` only (regression-test against `0.0.0.0`)
-- [ ] CI: extend pipeline to `npm ci && npm run build` for Dashboard
+- [x] Add `Dashboard/` project (Vite + React + TS scaffold) per [`design/dashboard.md`](design/dashboard.md)
+- [x] Add ASP.NET Core to Host; expose `GET /api/health` and stub `GET /api/advice/stream` SSE
+- [x] Bind Host to `127.0.0.1` only (regression-test against `0.0.0.0`)
+- [x] CI: extend pipeline to `npm ci && npm run build` for Dashboard
 
 ## Next (M1 — Mayor digest spine)
 

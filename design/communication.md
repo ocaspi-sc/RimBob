@@ -90,20 +90,26 @@ CoS does not directly produce advice items, issue labor requests, or write to RI
 
 ---
 
-## Mayor posture propagation
+## Mayor → ministers: the Agenda
 
-The Mayor's posture is not a message — it is a shared read-only value all ministers see in their briefing context. Ministers read the current posture in their rules evaluation and LLM prompts.
+The Mayor's direction to ministers is a **read-only broadcast via the Agenda**. Ministers never receive direct messages from the Mayor; they read the relevant section of the current `MayorAgenda` in their briefing context.
 
 ```csharp
-public class ColonyContext
+public class MinisterBriefingContext
 {
-    public MayorPosture    Posture          { get; }  // current posture
-    public ColonyObjective Objective        { get; }  // current long-horizon goal
-    public int[]           MinisterBiases   { get; }  // per-minister priority offsets
+    public MayorPosture  Posture          { get; }  // economic + military stance
+    public string?       AgendaDirection  { get; }  // minister_direction entry for this minister (null in M1)
+    public string[]      ShortTermDomains { get; }  // ranked domain list from agenda.short_term
 }
 ```
 
-This is not a message; it does not fire any wake event. Ministers apply posture adjustments to their goal priorities when they next evaluate.
+`AgendaDirection` is the `minister_direction[ministerName]` string from the current Agenda, injected as a prefix into the minister's LLM prompt. It tells the minister where the Mayor wants their attention focused this day.
+
+`ShortTermDomains` is a simple ranked list (e.g. `["food","defense","welfare"]`) derived from the Agenda's `short_term` priorities. Ministers use it in their rules layer to rank competing issues without needing to parse the full Agenda.
+
+This is not a message; it does not fire any wake event. Ministers apply posture adjustments to their goal priorities when they next evaluate. The Mayor is the only writer of the Agenda — ministers never mutate it.
+
+→ See [`design/agenda.md`](agenda.md) for the full Agenda schema.
 
 ---
 
