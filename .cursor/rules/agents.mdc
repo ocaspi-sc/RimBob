@@ -1,0 +1,74 @@
+---
+description: RimAI project rules for AI coding agents (Cursor, etc.)
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# RimAI — Agent Instructions
+
+An assisted-gameplay advisor for RimWorld. The human plays the colony; a cabinet of self-improving LLM ministers (led by the Mayor) sends suggestions to a React+TS dashboard. MVP is suggest-only; per-minister `Auto` graduations come later (M7+).
+
+---
+
+## Repo layout
+
+```
+Docs/                   design docs and planning
+  DESIGN.md             high-level principles and decision log
+  ROADMAP.md            milestones
+  TODO.md               actionable tasks
+  design/               per-topic design docs
+Src/                    all source code
+  RimAI.sln
+  ApiHost/              ASP.NET host (HTTP + SSE)
+  Cabinet/              minister logic (M3+)
+  Common/               pure domain types and interfaces (no external deps)
+  Dashboard/            React + TypeScript frontend
+  GameStateSync/        RIMAPI HTTP polling client
+  KnowledgeBase/        RAG guides + cosine vector store
+  LlmGateway/           Gemini boundary layer
+  StateStore/           briefing aggregates (M1+)
+  Tests/
+```
+
+---
+
+## Design doc routing
+
+| Topic | Doc |
+|---|---|
+| High-level principles, design goals | `Docs/DESIGN.md` |
+| Build order, milestones | `Docs/ROADMAP.md` |
+| Actionable tasks | `Docs/TODO.md` |
+| Minister shape, rules system | `Docs/design/ministers.md` |
+| Advice schema, feedback lifecycle | `Docs/design/advice.md` |
+| Dashboard UI, HTTP+SSE contract | `Docs/design/dashboard.md` |
+| State store, briefings, aggregates | `Docs/design/state-store.md` |
+| Flags, inter-minister communication | `Docs/design/communication.md` |
+| RAG, knowledge base | `Docs/design/rag.md` |
+| Evaluation, improvement loop | `Docs/design/evaluation.md` |
+| Code structure, stack, interfaces | `Docs/design/architecture.md` |
+| RIMAPI endpoints | `Docs/design/rimapi.md` |
+| Specific minister | `Docs/design/ministers/<name>.md` |
+
+---
+
+## Code conventions
+
+- `.NET 9`, C# latest features. Async everywhere that touches I/O.
+- No external dependencies in `Common/` (RimAI.Core) — pure domain types only.
+- Every new minister: own directory under `Src/Cabinet/<Name>/`.
+- `Rules.cs` is first in every minister directory; must compile and have tests before LLM is wired.
+- Fixture JSON files: `Src/Tests/<MinisterName>/Fixtures/`.
+- Use `// TODO:` liberally for known gaps and deferred writes.
+
+---
+
+## Key constraints
+
+- **Suggest by default.** MVP is suggest-only. See `Docs/design/advice.md`.
+- **Output is `AdviceItem`s, not actions.** No RIMAPI write calls in MVP.
+- **No direct minister-to-minister communication.** Flags only; CoS arbitrates.
+- **LLMs on escalation only.** Rules handle the common case.
+- **Dashboard is localhost-only.** Host binds `127.0.0.1`. Never `0.0.0.0`.
+- **Deferred (M7+):** HTN planner, bulletin board, Labor solver, pawn-allocation writes.
