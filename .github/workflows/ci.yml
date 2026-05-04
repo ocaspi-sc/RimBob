@@ -20,13 +20,13 @@ jobs:
           dotnet-version: '9.0.x'
 
       - name: Restore
-        run: dotnet restore RimAI.sln
+        run: dotnet restore Src/RimAI.sln
 
       - name: Build
-        run: dotnet build RimAI.sln --no-restore --configuration Release
+        run: dotnet build Src/RimAI.sln --no-restore --configuration Release
 
       - name: Test
-        run: dotnet test Tests/RimAI.Tests.csproj --no-build --configuration Release --logger "console;verbosity=normal"
+        run: dotnet test Src/Tests/RimAI.Tests.csproj --no-build --configuration Release --logger "console;verbosity=normal"
 
   dashboard-build:
     name: Dashboard Build
@@ -40,12 +40,12 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: Dashboard/package-lock.json
+          cache-dependency-path: Src/Dashboard/package-lock.json
 
       - name: Install
-        working-directory: Dashboard
+        working-directory: Src/Dashboard
         run: npm ci
 
       - name: Build
-        working-directory: Dashboard
+        working-directory: Src/Dashboard
         run: npm run build

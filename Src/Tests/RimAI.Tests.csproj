@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
@@ -20,9 +20,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Core\RimAI.Core.csproj" />
-    <ProjectReference Include="..\Ingestion\RimAI.Ingestion.csproj" />
-    <ProjectReference Include="..\LLM\RimAI.LLM.csproj" />
+    <ProjectReference Include="..\Common\RimAI.Core.csproj" />
+    <ProjectReference Include="..\GameStateSync\RimAI.Ingestion.csproj" />
+    <ProjectReference Include="..\LlmGateway\RimAI.LLM.csproj" />
   </ItemGroup>
 
 </Project>

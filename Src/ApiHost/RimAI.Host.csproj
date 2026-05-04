@@ -1,14 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
-    <ProjectReference Include="..\Core\RimAI.Core.csproj" />
-    <ProjectReference Include="..\Ingestion\RimAI.Ingestion.csproj" />
-    <ProjectReference Include="..\State\RimAI.State.csproj" />
-    <ProjectReference Include="..\Planner\RimAI.Planner.csproj" />
-    <ProjectReference Include="..\Coordination\RimAI.Coordination.csproj" />
-    <ProjectReference Include="..\LLM\RimAI.LLM.csproj" />
-    <ProjectReference Include="..\Ministers\RimAI.Ministers.csproj" />
-    <ProjectReference Include="..\Knowledge\RimAI.Knowledge.csproj" />
+    <ProjectReference Include="..\Common\RimAI.Core.csproj" />
+    <ProjectReference Include="..\GameStateSync\RimAI.Ingestion.csproj" />
+    <ProjectReference Include="..\StateStore\RimAI.State.csproj" />
+    <ProjectReference Include="..\LlmGateway\RimAI.LLM.csproj" />
+    <ProjectReference Include="..\KnowledgeBase\RimAI.Knowledge.csproj" />
   </ItemGroup>
 
   <ItemGroup>
