@@ -65,10 +65,19 @@ If corpus exceeds ~5,000 chunks or query latency becomes noticeable, swap `Knowl
 ## Guide corpus
 
 ```
-RimAI.Knowledge/guides/
-├── strategic-plan-y1-y2.md      // distilled from community guides
-└── (more guides added per minister session)
+Docs/guides/
+├── strategic-plan-y1-y2.md          // Y1-Y2 colony strategy, distilled
+└── beginner/
+    ├── beginner-survival-tips.md     // Steam guide (1.4, 2023) — colonist setup, research path
+    ├── survival-tactics.md           // rimworldhub.com — first 15 min, base layout, mood breaks
+    ├── wealth-management.md          // gamepadsquire.com — raid-point math, trade beacons, 60/140 rule
+    ├── killbox-design.md             // thegamer.com — 10 killbox design principles
+    ├── first-steps.md                // bisecthosting.com — scenario selection, 8-step build order
+    ├── tips-and-tricks.md            // blogs.plitch.com — 11 tips
+    └── failed-fetches.md             // wiki URLs blocked by 403 — copy manually
 ```
+
+`Ingest.cs` points to this path via config — `Src/KnowledgeBase/` stays pure C# infrastructure.
 
 Each minister session should identify which guides are most relevant and add them. Suggested additions:
 

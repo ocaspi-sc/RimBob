@@ -10,16 +10,25 @@ namespace RimAI.LLM;
 /// </summary>
 public sealed class LlmClient
 {
-    private readonly Func<CancellationToken, Task<string?>> _pingExecutor;
+    private readonly Func<CancellationToken, Task<string?>>? _pingExecutor;
     private readonly ILogger<LlmClient> _log;
 
     public const string DefaultModel = "gemini-2.5-flash";
 
+    public bool IsConfigured => _pingExecutor is not null;
+
     public LlmClient(ILogger<LlmClient> log)
     {
         _log = log;
-        var apiKey = Environment.GetEnvironmentVariable("GEMINI_API_KEY")
-            ?? throw new InvalidOperationException("GEMINI_API_KEY not set");
+        var apiKey = Environment.GetEnvironmentVariable("GEMINI_API_KEY");
+        if (string.IsNullOrEmpty(apiKey))
+        {
+            // Constructor must not throw — Host needs to boot for /api/health
+            // even when the key is absent (e.g. CI smoke tests).
+            _pingExecutor = null;
+            return;
+        }
+
         var client = new Client(apiKey: apiKey);
         _pingExecutor = async ct =>
         {
@@ -39,9 +48,16 @@ public sealed class LlmClient
 
     /// <summary>
     /// M0 smoke test: one-shot "pong" round-trip to prove the SDK + key work end-to-end.
+    /// Returns false (without throwing) if no API key was configured.
     /// </summary>
     public async Task<bool> PingAsync(CancellationToken ct)
     {
+        if (_pingExecutor is null)
+        {
+            _log.LogWarning("Gemini ping skipped — GEMINI_API_KEY not set");
+            return false;
+        }
+
         try
         {
             var reply = await _pingExecutor(ct);

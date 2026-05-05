@@ -28,6 +28,24 @@ jobs:
       - name: Test
         run: dotnet test Src/Tests/RimAI.Tests.csproj --no-build --configuration Release --logger "console;verbosity=normal"
 
+      - name: Host smoke test (/api/health)
+        run: |
+          dotnet run --project Src/ApiHost/RimAI.Host.csproj --configuration Release --no-build > host.log 2>&1 &
+          HOST_PID=$!
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:5000/api/health > /dev/null; then
+              echo "Health endpoint responded after ${i}s"
+              kill $HOST_PID 2>/dev/null || true
+              wait $HOST_PID 2>/dev/null || true
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Host did not respond within 30s — log follows:"
+          cat host.log
+          kill $HOST_PID 2>/dev/null || true
+          exit 1
+
   dashboard-build:
     name: Dashboard Build
     runs-on: ubuntu-latest

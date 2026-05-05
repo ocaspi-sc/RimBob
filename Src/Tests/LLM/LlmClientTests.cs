@@ -47,7 +47,7 @@ public sealed class LlmClientTests
     }
 
     [Fact]
-    public void Constructor_Throws_WhenGeminiKeyMissing()
+    public async Task Constructor_DoesNotThrow_AndPingReturnsFalse_WhenGeminiKeyMissing()
     {
         const string keyName = "GEMINI_API_KEY";
         var previous = Environment.GetEnvironmentVariable(keyName);
@@ -55,10 +55,10 @@ public sealed class LlmClientTests
         {
             Environment.SetEnvironmentVariable(keyName, null);
 
-            var act = () => new LlmClient(NullLogger<LlmClient>.Instance);
+            var sut = new LlmClient(NullLogger<LlmClient>.Instance);
 
-            act.Should().Throw<InvalidOperationException>()
-                .WithMessage("GEMINI_API_KEY not set");
+            sut.IsConfigured.Should().BeFalse();
+            (await sut.PingAsync(CancellationToken.None)).Should().BeFalse();
         }
         finally
         {

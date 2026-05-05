@@ -209,29 +209,32 @@ Knowledge/
 ├── Embeddings.cs          // calls Gemini embeddings API (or other)
 ├── EmbeddingCache.cs      // on-disk JSON cache keyed by chunk hash
 ├── Ingest.cs              // one-time guide ingestion
-└── guides/
-    ├── strategic-plan-y1-y2.md
-    └── (more guides added over time)
+└── (no guides here — guide corpus lives in Docs/guides/)
 ```
 
 ### Host
 .NET 9 service that wires everything and serves the dashboard.
 
 ```
-Host/
+ApiHost/                          // project: RimAI.Host
 ├── Program.cs
+├── RimAiOptions.cs               // typed config bound from "RimAi" section
+├── appsettings.json              // Serilog config + RimAi (ListenUrl, RimApiBaseUrl, PingLlmOnStartup)
+├── appsettings.Development.json
 ├── Api/
 │   ├── HealthController.cs       // GET /api/health
 │   ├── AdviceStreamController.cs // GET /api/advice/stream  (SSE)
 │   ├── FeedbackController.cs     // POST /api/advice/{id}/feedback
 │   └── AutonomyController.cs     // GET/PUT /api/autonomy   (per-minister Off|Suggest|Auto)
-├── Static/                       // Dashboard build output (Vite output) served from here
+├── wwwroot/                      // Dashboard build output (Vite outDir)
 └── Orchestrator/
     ├── Orchestrator.cs           // main loop; wakes ministers on briefing change
     └── Budgeter.cs               // tracks LLM spend per minister; enforces cap
 ```
 
 Host binds to `localhost` only — see [`dashboard.md`](dashboard.md) auth posture.
+
+**Configuration.** Non-secret config lives in `appsettings.json` under the `RimAi` section (typed via `RimAiOptions`). Secrets — currently only `GEMINI_API_KEY` — stay in environment variables; never bind them through `IConfiguration`. `LlmClient` tolerates a missing key (constructor does not throw, `IsConfigured` is false, `PingAsync` returns false) so the Host can boot for `/api/health` smoke checks without credentials.
 
 ### Dashboard
 React + TypeScript advisor UI. Built with Vite. Output served as static assets by Host (or via Vite dev proxy in development).

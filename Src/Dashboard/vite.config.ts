@@ -11,7 +11,7 @@ export default defineConfig({
   },
   build: {
     // Production: output goes into Host/wwwroot/ and is served as static assets
-    outDir: '../Host/wwwroot',
+    outDir: '../ApiHost/wwwroot',
     emptyOutDir: true,
   },
 })

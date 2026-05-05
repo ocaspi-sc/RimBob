@@ -11,11 +11,15 @@
 - [x] Wire `Google.GenAI` (official SDK) + API key env var (`GEMINI_API_KEY`) + startup ping smoke check
 - [x] Write `RimApiClient` with typed GET for `/pawns` + handshake method
 - [x] `.github/workflows/ci.yml` — build + test on push
-- [ ] Confirm RIMAPI runs locally against RimWorld (`dotnet run --project Host`)
+- [ ] Confirm RIMAPI runs locally against RimWorld (`dotnet run --project ApiHost`)
 - [x] Add `Dashboard/` project (Vite + React + TS scaffold) per [`design/dashboard.md`](design/dashboard.md)
 - [x] Add ASP.NET Core to Host; expose `GET /api/health` and stub `GET /api/advice/stream` SSE
 - [x] Bind Host to `127.0.0.1` only (regression-test against `0.0.0.0`)
 - [x] CI: extend pipeline to `npm ci && npm run build` for Dashboard
+- [x] Serilog reads from `appsettings.json` (console + rolling file)
+- [x] Typed config via `RimAiOptions` (`ListenUrl`, `RimApiBaseUrl`, `PingLlmOnStartup`); `GEMINI_API_KEY` stays env-only
+- [x] CI smoke test: boot Host, curl `/api/health`, assert 200
+- [x] Vite `outDir` points at `ApiHost/wwwroot`; dev proxy verified against `/api/*`
 
 ## Next (M1 — Mayor digest spine)
 
@@ -64,7 +68,7 @@ See [`DESIGN.md`](DESIGN.md) decision log and Open Questions sections in sub-doc
 ## Done
 
 - [x] Initial DESIGN.md written
-- [x] Strategic plan Y1-Y2 guide written (`RimAI.Knowledge/guides/strategic-plan-y1-y2.md`)
+- [x] Strategic plan Y1-Y2 guide written (`Docs/guides/strategic-plan-y1-y2.md`)
 - [x] Mayor system prompt drafted (`RimAI.LLM/prompts/mayor.system.md`)
 - [x] Split `RimAI.Agents` into `RimAI.LLM` + `RimAI.Ministers`
 - [x] HTN design discussed and documented (now deferred — Auto epic)
