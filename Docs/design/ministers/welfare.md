@@ -27,6 +27,8 @@ public enum WelfareGoal
     // CMO module
     TriageMedical,            // wounded or sick colonist needs treatment
     ManageSurgeryQueue,       // scheduled surgeries
+    // Prisoner module
+    RecruitPrisoner,          // open/accelerate recruitment of a high-value prisoner
     // Trade module
     InitiateCaravan,          // send caravan to faction
     ManageGoodwill            // gift or appease a faction
@@ -45,8 +47,10 @@ Key fields:
 - `RelationshipMap`: pairs with tension, recent social events
 - `ScheduleEfficiency`: work hours, joy hours, sleep hours by colonist
 - `RecentBreaks`: last 3 mental breaks — who, trigger, outcome
-- **CMO sub-block:** `Wounded`, `Sick`, `SurgeryQueue`, `MedStock`, `HospitalBeds`
+- **CMO sub-block:** `Wounded`, `Sick` (with `ImmunityProgress` % and `SeverityProgress` % per pawn — the immunity race), `SurgeryQueue`, `MedStock`, `HospitalBeds`
+- **Prisoner sub-block:** `PrisonerCount`, `PrisonerDetails` (name, key skills, traits, health, current mood, resistance remaining) — recruitment pipeline
 - **Trade sub-block:** `FactionGoodwill`, `TraderApproaching`, `CaravanOpportunities`, `TradeSurplus`
+- **Schedule sub-block:** `Priority1Unset` (colonists missing Firefighting/Patient/Bed Rest at priority 1)
 
 ---
 
@@ -64,6 +68,9 @@ Key fields:
 | `surgery_queue` | SurgeryQueue non-empty AND doctor available | ManageSurgeryQueue |
 | `trader_approaching` | TraderApproachingInDays < 2 | InitiateCaravan (Medium) — surface for trade decisions |
 | `goodwill_low` | Any allied faction goodwill < 25 | ManageGoodwill (Low) |
+| `immunity_losing_race` | Any sick pawn: SeverityProgress > ImmunityProgress | TriageMedical (Critical) — pawn will die without intervention |
+| `prisoner_recruit_candidate` | PrisonerCount > 0 AND any prisoner has skill ≥ 6 in a gap role AND resistance low | RecruitPrisoner (Medium) |
+| `priority_1_unset` | Any colonist missing Firefighting or Patient at priority 1 | ManageSchedules (Medium) — colony-level safety baseline |
 
 **Escalates when:**
 - Specific break-risk colonist intervention (what action would most help this specific pawn?)
@@ -132,3 +139,5 @@ Labor requests posted:
 - [ ] Recreation building priority: which joy buildings first? (Horseshoe → chess → TV — define order in rules)
 - [ ] Medical supply chain: who ensures medicine stockpile? Welfare flags need; who actually orders/crafts it?
 - [ ] Relationship intervention: can the agent force social interactions? (Check RIMAPI endpoint coverage)
+- [ ] Night Owl / trait-schedule mismatches: Night Owl colonists on day schedules lose mood and productive hours. Add `TraitScheduleConflicts` field to Schedule sub-block and a rule. Out of Y1-Y2 survival scope but a meaningful Y2 optimization.
+- [ ] Prisoner recruitment — **resolved for briefing and rules above**. Open: what is "gap role"? Needs a SkillGaps field (cross-reference from Labor briefing when it exists, or derive from colonist roster here).

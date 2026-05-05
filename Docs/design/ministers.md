@@ -128,19 +128,7 @@ See [`advice.md`](advice.md) for the full `AdviceItem` schema and feedback lifec
 
 The rules layer is a C# class per minister. Pure, no I/O, deterministic.
 
-**It should handle the common case.** Rough escalation rate targets:
-
-| Minister | Target escalation rate | Rationale |
-|---|---|---|
-| Labor | < 5% | Assignment is a solved optimization problem |
-| Agriculture | ~20% | Seasonal decisions, crop choices need judgment |
-| Construction | ~30% | Build program needs judgment; order is mechanical |
-| Welfare | ~40% | Mood interventions often formulaic; crises need judgment |
-| Defense | ~60% | Raid response is highly context-dependent |
-| Chief of Staff | ~70% | Arbitration is judgment by definition |
-| Mayor | ~85% | The role is judgment |
-
-These are initial targets. The improve loop drives them down over time.
+**It should handle the common case.** Escalation rate varies by minister — Labor and Agriculture are mostly mechanical, Mayor and CoS are mostly judgment. Targets get calibrated per minister once it's shipped; the improve loop drives them down over time.
 
 **Authoring rules:** write the most important rule first (the one that handles the highest-frequency case), then the second most important, etc. The Evaluate method tries rules in priority order and returns on first match. An unmatched briefing escalates.
 
@@ -167,34 +155,13 @@ Rules should NOT escalate for:
 
 ### What refinement has access to
 
-```
-Tools available in refinement (not in play mode):
-- ReadFile(path)         — read Rules.cs and related source
-- WriteFile(path, code)  — propose a Rules.cs change
-- RunFixtures(suite)     — run the fixture test suite, return pass/fail + diffs
-- ReadDecisionLog(n)     — last n decisions with outcomes
-- ReadEscalationLog(n)   — last n escalations with LLM outputs
-```
+Refinement reads the decision and escalation logs and can edit `Rules.cs`, prompts, and fixtures. For code-shaped work it can shell out to **Claude Code** by writing a prompt to `.plans/<minister>-<task>.md` — see [`evaluation.md`](evaluation.md) for the full tooling story. Fixtures are the regression net.
 
 ### Typical refinement session flow
 
-1. Read last N escalations where outcome was eventually observed.
-2. Group by `escalation_reason`. Find clusters of ≥5 with consistent LLM output.
-3. For each cluster: draft a rule that would have matched + produced the same output.
-4. Write proposed Rules.cs change.
-5. Run fixtures. If pass rate drops, revise. If pass rate is stable or improves, surface for approval.
-6. Human reviews diff + fixture results → approve or reject with note.
-7. On approval, Rules.cs is updated. The approved rule is logged as a promotion event.
+Read recent escalations with observed outcomes, cluster by reason, draft a rule that would have matched, run fixtures, surface diff + fixture results for human approval. Promotions are logged.
 
-### Approval gates (v1)
-
-All rule promotions require human approval in v1. The system surfaces:
-- The escalation pattern (N examples)
-- The proposed rule (diff)
-- Fixture results (before/after)
-- The human approves or rejects with a note
-
-Auto-approve (post-MVP): available when the fixture suite covers ≥50 scenarios for the minister and the proposed rule improves pass rate. Requires explicit opt-in per minister.
+Auto-approve is post-MVP and per-minister opt-in; specifics deferred until the fixture suite is mature.
 
 ---
 
@@ -229,6 +196,29 @@ Tests/
 Player Accept / Modify events on shipped advice are also raw material for new fixtures — see `fixture-gen` in [`evaluation.md`](evaluation.md).
 
 Fixtures run on every CI push. A rule change that breaks a fixture is a regression.
+
+---
+
+## Zone ownership
+
+Zones (stockpile, growing, dumping, home, allowed) are owned by the minister whose domain they serve. No dedicated Minister of Zoning — zones are means to other ministers' ends, not a domain of their own.
+
+| Zone type | Owning minister | Notes |
+|---|---|---|
+| Food stockpile | Agriculture | Co-located with freezer; minister knows food quantities and spoilage risk |
+| Material / component stockpile | Construction | Co-located with workshops; minister knows material flow and build queue |
+| Ammo / weapon stockpile | Defense | Near killbox or armoury |
+| Medicine stockpile | Welfare | Near hospital; minister tracks medical supply chain |
+| Growing zone | Agriculture | Placement, size, crop assignment |
+| Dumping zone | Construction | Rock chunks, corpses, waste — base hygiene |
+| Home zone | Mayor / CoS | Colony-wide; no minister claims it |
+| Allowed zone | Mayor / CoS | Colony-wide; no minister claims it |
+
+**In Suggest mode:** conflicting zone advice from two ministers surfaces as two cards on the dashboard. The player resolves it. No system-level arbitration needed.
+
+**At M7 (Auto graduation):** when zone suggestions can be auto-applied via RIMAPI, the CoS gets a zone-conflict resolution rule. Last-write-wins is not acceptable; CoS arbitrates by domain priority for contested tiles: Defense > Agriculture > Construction > Welfare.
+
+**Layout efficiency** (pawn travel distance, zone placement relative to workstations) is owned by **Construction** as an extension of its `RoomProgram` brief — not a new minister. See `design/ministers/construction.md`.
 
 ---
 

@@ -9,7 +9,9 @@
 
 ## Domain
 
-Buildings, power infrastructure, build order. What to build and in what priority. Does NOT currently decide where to build — placement uses heuristics until Base Layout Minister exists.
+Buildings, power infrastructure, build order, material stockpile zones, and base layout efficiency. What to build, in what priority, and whether zone/room placement is costing pawn travel time.
+
+**No Base Layout Minister will be created** — layout efficiency (pawn travel distance, zone placement relative to workstations) lives here as an extension of `RoomProgram`. See `design/ministers.md` § Zone ownership for the full zone-ownership table.
 
 Research priority queue lives here (as a module) until Research Director graduates.
 
@@ -37,7 +39,7 @@ public enum ConstructionGoal
 Key fields:
 - `BuildingQueue`: outstanding blueprints, % complete, blocked reasons
 - `MaterialInventory`: steel, stone blocks, wood, components, plasteel, gold by count
-- `PowerGrid`: generation (W), consumption (W), battery storage, deficit zones by sector
+- `PowerGrid`: generation (W), consumption (W), battery storage, deficit zones by sector, `BatteryCount` (total batteries on grid — ZZZT risk rises above ~4–6 on a single circuit)
 - `RoomProgram`: rooms that should exist (derived from colonist count + Mayor objective)
 - `StructuralRisks`: wood structures near fire hazards, unroofed areas, missing doors
 - `ResearchQueue`: current research + prioritised queue (from Mayor posture)
@@ -54,7 +56,9 @@ Key fields:
 | `low_battery_backup` | Battery capacity < 2x nightly consumption | ExpandPower (Medium) |
 | `queue_exists` | BuildingQueue has items AND materials available | ExecuteBuildQueue |
 | `missing_beds` | Beds < Colonists | BuildRoomProgram (beds, High) |
-| `wood_structure_risk` | Any wood wall adjacent to open flame source | UpgradeMaterials (Medium) |
+| `wood_critical_structures` | Kitchen, freezer, or hospital has wood walls | UpgradeMaterials (High) — fire here is colony-ending |
+| `wood_structure_risk` | Any other wood wall adjacent to open flame source | UpgradeMaterials (Medium) |
+| `zzzt_battery_risk` | BatteryCount > 6 on single circuit | ExpandPower (Medium) — split into separate circuits or remove excess batteries |
 | `stonecutting_priority` | MaterialInventory.StoneBlocks < 200 AND stonecutter exists | ExecuteBuildQueue (stonecutting bills) |
 
 **Escalates when:**
@@ -136,8 +140,9 @@ BuildRoomProgram
 
 ## Open questions / TODO
 
-- [ ] Placement / layout: when does Base Layout Minister get designed? What are the promotion triggers?
+- [ ] Placement / layout: **Base Layout Minister will not be created** — layout efficiency lives here as an extension of RoomProgram. Define pawn-travel heuristics in a dedicated session.
 - [ ] How does Construction handle Defense's fortification requests? (Defense designates; Construction builds. Interface TBD.)
 - [ ] Research Director graduation criteria: when does research trade-off reasoning justify its own minister?
 - [ ] How does Construction know what rooms are "missing"? (RoomProgram derivation — define in state-store session)
 - [ ] Component bottleneck: Construction needs to manage component fabrication. Is that Construction or Labor?
+- [ ] Deep drill → infestation risk: Construction recommends mining; Defense handles infestations. The link between active deep drills and elevated infestation probability needs to surface somewhere (likely Defense's SeasonalThreats). Out of Y1-Y2 scope but flag when deep drill is built.

@@ -38,6 +38,9 @@ Key derived facts:
 - `DaysOfFoodRemaining`: stockpile nutrition / average daily consumption rate
 - `PlannedHarvestWindow`: crops with growth > 90% and their estimated yield
 - `ColdSnapForecast`: from weather data + season; if within 15 days, fast-track harvest
+- `MealsStocked`: count of cooked meals by type (simple / fine / nutrient paste)
+- `MealsStockedPerColonist`: derived — MealsStocked / colonist count; target ≥ 5
+- `CookSkillLevel`: highest available cook's skill (gates fine meal advice)
 
 ---
 
@@ -55,6 +58,9 @@ Known rules (first pass — refine in dedicated session):
 | `hunt_if_low_no_crops` | DaysOfFood < 20 AND no plantable zones | HuntForFood |
 | `freezer_at_capacity` | FreezerCapacity.Used > 90% | ManageFreezer |
 | `spoilage_risk` | FreezerTemperature > 0°C | ManageFreezer (Critical) |
+| `meals_understocked` | MealsStockedPerColonist < 5 AND DaysOfFood > 7 | ManageCookBills — suggest setting cook bill to "do until X" (5 × colonists) |
+| `meal_quality_upgrade` | MealsStockedPerColonist >= 10 AND CookSkillLevel >= 6 AND DaysOfFood > 30 | ManageCookBills — switch bill to fine meals for mood boost |
+| `meal_quality_downgrade` | DaysOfFood < 20 OR active_raid | ManageCookBills — revert to simple meals, stop wasting ingredients |
 
 **Escalates when:**
 - Crop choice involves trade-offs (rice vs potatoes vs devilstrand — guide knowledge needed)
@@ -70,6 +76,7 @@ Known rules (first pass — refine in dedicated session):
 - Growing zone designation (create, resize, crop selection)
 - Hunting restriction zone
 - Butcher bill
+- Cook bill (type, do-until count)
 - Stockpile zone configuration (food category)
 
 Labor requests posted (not owned RIMAPI writes):
@@ -117,4 +124,5 @@ Retrieval required for: crop choice decisions, seasonal timing, first devilstran
 - [ ] Hunting value/risk scoring for target selection
 - [ ] How does Agriculture handle caravans taking food?
 - [ ] Psychoid/smokeleaf — Agriculture grows it; Trade sells it. Who decides to grow it?
-- [ ] Nutrient paste vs fine meals — does Agriculture or Welfare own cook quality decisions?
+- [ ] Nutrient paste vs fine meals — **resolved**: Agriculture owns cook bills. Simple meals are the default; fine meals when DaysOfFood > 30 AND cook skill >= 6; nutrient paste only as a famine measure (–3 mood debuff). See rules above.
+- [ ] Animal management (breeding, culling, hauler training) — Agriculture domain but not modelled in Y1-Y2 scope; add when animal economy becomes relevant (typically Y2+)
