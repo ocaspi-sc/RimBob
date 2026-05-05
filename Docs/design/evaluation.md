@@ -96,22 +96,13 @@ Before surfacing any candidate rule or prompt change for approval, compute the *
 
 **Trigger:** a rule fires repeatedly and `observed_outcome` is `degraded`.
 
-**Process:**
-1. Minister reads decision log, groups by `rule_fired` × outcome.
-2. For rules with degraded outcome rate > 20% over 10+ firings: surface as a regression candidate.
-3. Minister proposes either: modify the rule's precondition, delete the rule, or replace with escalation.
-4. Approval gate → `Rules.cs` change.
+Minister groups decisions by `rule_fired` × outcome and surfaces rules with a high degraded rate as candidates to modify, delete, or convert to escalation. Approval gate → `Rules.cs` change.
 
 ### Loop 3: Prompt / RAG iteration
 
 **Trigger:** LLM escalation produced a decision that was later `degraded`.
 
-**Process:**
-1. Identify the prompt (hash lookup) and the briefing context.
-2. Replay with a modified prompt or different RAG retrieval.
-3. Compare outputs.
-4. If better: update the system prompt or retrieval profile.
-5. Approval gate → prompt file change.
+Replay the offending prompt with variations (system prompt edit, different RAG retrieval); if outputs improve, surface for approval. Approval gate → prompt file change.
 
 ---
 
@@ -177,19 +168,25 @@ Human approves or rejects with a note. Rejection note is written to the refineme
 
 ### Post-MVP (auto-approve)
 
-Auto-approve is available per-minister when:
-- Fixture suite covers ≥50 scenarios for that minister.
-- Proposed change improves or maintains fixture pass rate.
-- Change is in the rules layer only (not prompt or RAG changes — those stay human-gated longer).
-- No fixture that was previously passing is now failing.
-
-Requires explicit opt-in per minister. Not the default.
+Auto-approve is a future, per-minister opt-in once the fixture suite is mature enough to catch regressions. Specifics (thresholds, scope) are decided when the first minister is a candidate; not designed up front.
 
 ---
 
-## Claude skills to build
+## Tooling: Claude Code escalation
 
-These skills would make refinement sessions practical:
+Refinement (and any minister-side dev automation) can hand work off to **Claude Code** by writing a prompt to a file and invoking it as a subprocess. This is a deliberate second tier above the in-process LLM call:
+
+- The in-process LLM (Gemini) handles fast, schema-bound judgment during play.
+- Claude Code handles harder code-shaped work — drafting `Rules.cs` diffs, generating fixtures, reviewing escalation clusters — with a stronger model and full tool access (file read/write, test runs).
+
+The handoff is intentionally simple: write the prompt to `.plans/<minister>-<task>.md`, run Claude Code against the repo, read back the diff or generated artefact. No bespoke agent SDK integration in MVP.
+
+**Where this matters most:**
+- **Bootstrapping initial automations.** First-pass `Rules.cs`, fixture seeds, and prompt templates for a new minister are easier to draft via Claude Code than to hand-write or in-process-LLM.
+- **Refinement loops.** Promoting an escalation cluster into a rule is a code-edit task — exactly Claude Code's strength.
+- **Dev workflows in general.** Any minister-authored tooling (skills below) can be a Claude Code prompt rather than a bespoke C# pipeline.
+
+Skills worth building (each is just a prompt file plus a thin invocation):
 
 | Skill | Purpose |
 |---|---|

@@ -89,15 +89,7 @@ Every minister has the same shape: a rules layer that handles routine cases, esc
 
 ### Candidate ministers (post-MVP)
 
-Add when the host minister's rules demonstrably can't keep up:
-
-| Candidate | Likely host (now) | Promotion trigger |
-|---|---|---|
-| Chief Medical Officer | Welfare | Medical reasoning pollutes Welfare prompts |
-| Research Director | Mayor posture | Research trade-offs need dedicated reasoning |
-| Minister of Trade | Welfare | Caravan strategy complex enough to justify |
-| Minister of Treasury | Labor/Mayor | Wealth-velocity management needs own context |
-| Base Layout Minister | Construction | Placement heuristics consistently produce bad results |
+Spun out from a host minister when its rules and prompts can't keep up — e.g. medical reasoning leaving Welfare, base layout leaving Construction, trade strategy leaving Welfare. Promoted case-by-case; no pre-allocated roster.
 
 ---
 
@@ -153,6 +145,7 @@ Decisions made and the reasoning behind them. Append; do not delete.
 | LLM provider switched to Gemini Developer API via `Google.GenAI` | First-party .NET SDK with a clean migration path to Vertex AI, plus first-party embedding models for the M4 RAG slice. |
 | `RimAI.Agents` split into `RimAI.LLM` + `RimAI.Ministers` | Makes dependency direction explicit (`Ministers` → `LLM`), keeps the LLM wrapper independently testable, and aligns project names with cabinet terminology. |
 | Mayor's output is the Agenda, not a daily_digest AdviceItem | A living planning document (short-term priorities + long-term goals, updated once/day) is a more natural advisory voice than a one-shot memo — it has persistent state, delta signals, and a clean Mayor→ministers direction channel. The Agenda *is* the MVP advice; AdviceItems survive as the feeder-minister format (M3+). → [`design/agenda.md`](design/agenda.md) |
+| Refinement / dev agents may shell out to Claude Code via prompt files | Two-tier model: in-process Gemini for fast schema-bound play decisions; Claude Code (subprocess, prompt file in `.plans/`) for code-shaped work — drafting `Rules.cs` diffs, generating fixtures, bootstrapping a new minister's initial automations. Stronger model + full repo tool access where it matters; no bespoke agent-SDK integration. → [`design/evaluation.md`](design/evaluation.md) |
 
 ---
 
