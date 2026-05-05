@@ -14,7 +14,7 @@ public sealed class RimApiClientTests
     [Fact]
     public async Task GetMapPawns_WhenApiReturnsPawns_ReturnsMappedList()
     {
-        var pawn = new MapPawnDto("p1", "Bob", 1.0f, 0.8f, 0.9f, null);
+        var pawn = new MapPawnDto(1, "Bob", "Male", 30, 1.0f, 0.8f, 0.9f, null);
         using var http = MakeClient(new PathRouter()
             .Add("map/pawns", Envelope(new List<MapPawnDto> { pawn })));
 
@@ -40,11 +40,13 @@ public sealed class RimApiClientTests
     [Fact]
     public async Task Handshake_WhenColonyLoaded_ReturnsOkWithFirstPawnName()
     {
-        var state = new GameStateDto(1000, 5000f, 3, "Cassandra", false, 0);
-        var pawn  = new MapPawnDto("p1", "Alice", 1.0f, 0.9f, 1.0f, null);
+        var state = new GameStateDto(1000, 5000f, 3, "Cassandra", false, "Playing", 1);
+        var map   = new MapInfoDto(0, 0, true, false, "10", 1, "(250,1,250)");
+        var pawn  = new MapPawnDto(1, "Alice", "Female", 25, 1.0f, 0.9f, 1.0f, null);
 
         using var http = MakeClient(new PathRouter()
             .Add("game/state", Envelope(state))
+            .Add("maps",       Envelope(new List<MapInfoDto> { map }))
             .Add("map/pawns",  Envelope(new List<MapPawnDto> { pawn })));
 
         var (ok, message) = await new RimApiClient(http).HandshakeAsync();
@@ -56,7 +58,7 @@ public sealed class RimApiClientTests
     [Fact]
     public async Task Handshake_WhenNoColonists_ReturnsFailWithHint()
     {
-        var state = new GameStateDto(1000, 0f, 0, "Cassandra", false, 0);
+        var state = new GameStateDto(1000, 0f, 0, "Cassandra", false, "Playing", 0);
 
         using var http = MakeClient(new PathRouter()
             .Add("game/state", Envelope(state)));

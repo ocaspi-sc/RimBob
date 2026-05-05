@@ -51,7 +51,12 @@ public sealed class RimApiClient(HttpClient http)
             if (state.ColonistCount == 0)
                 return (false, "RIMAPI reachable but no colonists found — is a colony loaded?");
 
-            var pawns = await GetMapPawnsAsync(state.MapId, ct);
+            var maps = await GetMapsAsync(ct);
+            var home = maps.FirstOrDefault(m => m.IsPlayerHome) ?? maps.FirstOrDefault();
+            if (home is null)
+                return (false, "RIMAPI reachable but no maps loaded.");
+
+            var pawns = await GetMapPawnsAsync(home.Id, ct);
             var firstName = pawns.FirstOrDefault()?.Name ?? "unknown";
             return (true, firstName);
         }
@@ -71,9 +76,13 @@ public sealed class RimApiClient(HttpClient http)
     public Task<GameStateDto> GetGameStateAsync(CancellationToken ct = default) =>
         GetEnvelopedAsync<GameStateDto>("api/v1/game/state", ct);
 
-    /// <summary>GET api/v1/datetime — in-game year, quadrum, day, hour, season.</summary>
+    /// <summary>GET api/v1/datetime — single string ("Nth of Quadrum, Year, Hh"). Parse client-side.</summary>
     public Task<DateTimeDto> GetDateTimeAsync(CancellationToken ct = default) =>
         GetEnvelopedAsync<DateTimeDto>("api/v1/datetime", ct);
+
+    /// <summary>GET api/v1/maps — list of loaded maps with id, faction, player-home flag.</summary>
+    public async Task<IReadOnlyList<MapInfoDto>> GetMapsAsync(CancellationToken ct = default) =>
+        await GetEnvelopedAsync<List<MapInfoDto>>("api/v1/maps", ct);
 
     // ── Pawns ─────────────────────────────────────────────────────────────────
 
@@ -83,7 +92,7 @@ public sealed class RimApiClient(HttpClient http)
     /// </summary>
     public async Task<IReadOnlyList<MapPawnDto>> GetMapPawnsAsync(
         int mapId, CancellationToken ct = default) =>
-        await GetEnvelopedAsync<List<MapPawnDto>>($"api/v1/map/pawns?mapId={mapId}", ct);
+        await GetEnvelopedAsync<List<MapPawnDto>>($"api/v1/map/pawns?map_id={mapId}", ct);
 
     /// <summary>
     /// GET api/v2/colonists/detailed?map_id — full bio + needs + skills + health.

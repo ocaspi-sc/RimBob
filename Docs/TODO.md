@@ -11,7 +11,7 @@
 - [x] Wire `Google.GenAI` (official SDK) + API key env var (`GEMINI_API_KEY`) + startup ping smoke check
 - [x] Write `RimApiClient` with typed GET for `/pawns` + handshake method
 - [x] `.github/workflows/ci.yml` — build + test on push
-- [ ] Confirm RIMAPI runs locally against RimWorld (`dotnet run --project ApiHost`)
+- [x] Confirm RIMAPI runs locally against RimWorld (`dotnet run --project ApiHost`)
 - [x] Add `Dashboard/` project (Vite + React + TS scaffold) per [`design/dashboard.md`](design/dashboard.md)
 - [x] Add ASP.NET Core to Host; expose `GET /api/health` and stub `GET /api/advice/stream` SSE
 - [x] Bind Host to `127.0.0.1` only (regression-test against `0.0.0.0`)

@@ -2,11 +2,13 @@ using System.Text.Json.Serialization;
 
 namespace RimAI.Ingestion.Dtos;
 
-// ── GET /map/pawns?mapId ──────────────────────────────────────────────────────
-// Basic pawn list — name, health, mood, hunger, position.
+// ── GET /api/v1/map/pawns?map_id ──────────────────────────────────────────────
+// Basic pawn list — verified against live RIMAPI.
 public record MapPawnDto(
-    [property: JsonPropertyName("id")]       string Id,
+    [property: JsonPropertyName("id")]       int Id,
     [property: JsonPropertyName("name")]     string Name,
+    [property: JsonPropertyName("gender")]   string? Gender,
+    [property: JsonPropertyName("age")]      int Age,
     [property: JsonPropertyName("health")]   float Health,     // 0–1
     [property: JsonPropertyName("mood")]     float Mood,       // 0–1
     [property: JsonPropertyName("hunger")]   float Hunger,     // 0–1 (1 = full)

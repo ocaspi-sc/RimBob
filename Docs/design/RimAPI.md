@@ -4,6 +4,8 @@ Cached digest of the upstream [RIMAPI](https://github.com/IlyaChichkov/RIMAPI) d
 
 If you need an endpoint not listed here, fetch the live docs and append to this file.
 
+> **Verified vs. cached.** The catalogue below was distilled from upstream docs and is **not** all field-checked against the running mod. So far the M0 handshake has verified `/api/v1/game/state`, `/api/v1/maps`, and `/api/v1/map/pawns?map_id=` only. Several DTO field names that previously diverged from the live API have been corrected against the running RIMAPI (e.g. `tick` → `game_tick`, `wealth` → `colony_wealth`, `paused` → `is_paused`, `mapId` → `map_id`); other endpoint DTOs remain speculative until a minister actually wires them.
+
 ---
 
 ## Globals
@@ -68,7 +70,7 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 | GET | `/map/things?map_id` | every thing |
 | GET | `/map/things-at` (body position) | things at cell |
 | GET | `/map/things/radius?map_id&x&z&radius` | things in radius |
-| GET | `/map/pawns?mapId` | pawns w/ name, health, mood, hunger, position |
+| GET | `/map/pawns?map_id` | pawns w/ name, health, mood, hunger, position |
 | GET | `/map/terrain?map_id` | RLE terrain grid |
 | GET | `/map/fog-grid?map_id` | RLE visibility |
 | GET | `/map/ore?map_id` | ore deposits |
