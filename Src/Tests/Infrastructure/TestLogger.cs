@@ -33,6 +33,8 @@ public sealed class TestLogger<T> : ILogger<T>
 internal static class TestLogFile
 {
     private static readonly Lazy<StreamWriter> Writer = new(Open);
+    // TODO: coarse lock serializes all test-thread writes; replace with a lock-free
+    // concurrent queue + dedicated writer thread if test-suite parallelism grows.
     private static readonly object Lock = new();
 
     private static StreamWriter Open()
