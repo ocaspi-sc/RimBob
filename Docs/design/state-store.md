@@ -84,6 +84,8 @@ Ingestion cadence is independent from minister LLM cadence. Pollers keep aggrega
 
 **No push/SSE needed.** RIMAPI's SSE endpoints stream camera video, not game events. Polling at RimWorld's timescale is sufficient — a raid letter sits in the stack for minutes. The event-diff tier detects new entries by comparing a snapshot hash or count against the previous poll.
 
+> **M1 status:** the cadence tiers above are **not yet implemented**. M1 ships an explicit `IngestionDispatcher.RefreshAllAsync()` that pulls every needed endpoint in one parallel batch. The daily-tick poller (separate TODO) calls it once per in-game day. Tier-based pollers come online when a second consumer (M3 Agriculture) needs faster cadence than once-a-day.
+
 ### Event-diff: what to watch
 Informed by RimGPT's Harmony patch catalog — these are the signals that drive minister decisions:
 

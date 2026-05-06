@@ -26,7 +26,9 @@
 - [ ] `AdviceItem`, `SuggestedAction`, `FeedbackEvent`, `AutonomyMode` types in `Core/Advice/`
 - [ ] `AdviceBus` in `Coordination/`; bridge to Host SSE
 - [ ] Daily-tick poller wakes Mayor
-- [ ] `MayorBriefing` aggregating across food / mood / threat / wealth (minimum viable for one useful memo)
+- [x] `MayorBriefing` aggregating across food / mood / threat / wealth (minimum viable for one useful memo) — schema + ColonyState aggregates + IngestionDispatcher + BriefingCache + derivation in place
+- [ ] Stockpile inventory endpoint — extend `RimApiClient` so `ResourceSnapshot` and `EstimatedDaysOfFood` get real values (currently empty/null pending endpoint)
+- [ ] Research endpoint in `RimApiClient` so `ResearchSnapshot` populates
 - [ ] Mayor system prompt rewritten for memo output (was posture); see `RimAI.LLM/prompts/mayor.system.md`
 - [ ] Dashboard `MemoFeed` + `MemoCard` components rendering live SSE feed
 - [ ] First Mayor fixture (1 scenario) verifying memo shape

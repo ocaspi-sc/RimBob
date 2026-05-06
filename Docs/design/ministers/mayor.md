@@ -85,6 +85,8 @@ The Mayor receives once per in-game day:
 
 Note: in M1, the only feeder is the colony-wide briefing; CoS digest, trend windows, and feedback aggregation come online M2/M3/M5.
 
+The M1 colony-wide briefing schema is implemented as `RimAI.Core.Briefings.MayorBriefing` (see [`Src/Common/Briefings/MayorBriefing.cs`](../../../Src/Common/Briefings/MayorBriefing.cs)). It targets ≤ 800 tokens serialized and is derived from `ColonyState` via `MayorBriefingDerivation`.
+
 ---
 
 ## Key constraints

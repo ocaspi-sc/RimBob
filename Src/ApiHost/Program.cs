@@ -3,6 +3,7 @@ using Serilog;
 using RimAI.Host;
 using RimAI.Ingestion;
 using RimAI.LLM;
+using RimAI.State;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -33,6 +34,10 @@ builder.Services.AddHttpClient<RimApiClient>((sp, c) =>
     c.Timeout = TimeSpan.FromSeconds(10);
 });
 builder.Services.AddSingleton<LlmClient>();
+
+builder.Services.AddSingleton<ColonyState>();
+builder.Services.AddSingleton<BriefingCache>();
+builder.Services.AddScoped<IngestionDispatcher>();
 
 var app = builder.Build();
 
