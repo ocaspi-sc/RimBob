@@ -1,10 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
-using Microsoft.Extensions.Logging.Abstractions;
 using RimAI.Ingestion;
 using RimAI.Ingestion.Dtos;
 using RimAI.State;
+using RimAI.Tests.Infrastructure;
 
 namespace RimAI.Tests.State;
 
@@ -17,7 +17,7 @@ public sealed class IngestionDispatcherTests
         using var http = MakeClient(router);
         var rim = new RimApiClient(http);
         var s = new ColonyState();
-        var dispatcher = new IngestionDispatcher(rim, s, NullLogger<IngestionDispatcher>.Instance);
+        var dispatcher = new IngestionDispatcher(rim, s, new TestLogger<IngestionDispatcher>());
 
         await dispatcher.RefreshAllAsync();
 
@@ -38,7 +38,7 @@ public sealed class IngestionDispatcherTests
         using var http = MakeClient(StandardRouter());
         var s = new ColonyState();
         var dispatcher = new IngestionDispatcher(
-            new RimApiClient(http), s, NullLogger<IngestionDispatcher>.Instance);
+            new RimApiClient(http), s, new TestLogger<IngestionDispatcher>());
 
         await dispatcher.RefreshAllAsync();
 
@@ -58,7 +58,7 @@ public sealed class IngestionDispatcherTests
             .Add("api/v1/maps", Envelope(new List<MapInfoDto>()));
         using var http = MakeClient(router);
         var dispatcher = new IngestionDispatcher(
-            new RimApiClient(http), new ColonyState(), NullLogger<IngestionDispatcher>.Instance);
+            new RimApiClient(http), new ColonyState(), new TestLogger<IngestionDispatcher>());
 
         var act = () => dispatcher.RefreshAllAsync();
 

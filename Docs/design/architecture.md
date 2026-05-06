@@ -338,24 +338,41 @@ public record AdviceItem(
 
 Structured JSON logging is not optional — it is the audit surface for minister decisions and the input to refinement.
 
-Every decision emits a log event:
+Two event types are logged to `logs/decisions-YYYYMMDD.jsonl` (JSONL, one object per line):
+
+**Briefing recompute** — emitted by `BriefingCache` on every cache miss. Contains the full serialized briefing so the exact inputs to any LLM call are reconstructable.
+
 ```json
 {
-  "minister": "Agriculture",
-  "tick": "Y1Q3D7H14",
-  "trigger": "briefing_change",
+  "ts":       "2026-05-06T14:23:01.412Z",
+  "level":    "Debug",
+  "category": "BriefingCache",
+  "message":  "MayorBriefing recompute version=1 aggregateVersions=[2,1,3,1,1,1,1,1,1] briefing={...full MayorBriefing JSON...}"
+}
+```
+
+**Minister decision** — emitted when a minister's rules layer or LLM call produces output.
+
+```json
+{
+  "minister":        "Agriculture",
+  "tick":            "Y1Q3D7H14",
+  "trigger":         "briefing_change",
   "briefing_version": 142,
-  "path": "rules",
-  "rule_fired": "harvest_when_mature",
-  "decision": { "advice": [...], "flags": [...] },
+  "path":            "rules",
+  "rule_fired":      "harvest_when_mature",
+  "decision":        { "advice": [], "flags": [] },
   "outcome_window_ticks": 2880
 }
 ```
 
 Valid `trigger` values: `briefing_change` | `flag_fired` | `heartbeat` | `scheduled_wakeup`.
-For `scheduled_wakeup`, the event also includes `"wakeup_payload": "<string>"` — the opaque note the minister left for itself.
+For `scheduled_wakeup`, the event also includes `"wakeup_payload": "<string>"`.
 
-Log sink: Serilog → structured file per session. Refinement reads these files.
+**Sinks:**
+- `logs/rimai-YYYYMMDD.log` — human-readable rolling log (Info+).
+- `logs/decisions-YYYYMMDD.jsonl` — structured JSON, all events from `RimAI.State` and `RimAI.Ministers` namespaces (Debug+). This is the file refinement reads.
+- Tests write to `logs/test-YYYYMMDD-HHmmss.jsonl` (one file per `dotnet test` invocation, shared across all test classes).
 
 ---
 

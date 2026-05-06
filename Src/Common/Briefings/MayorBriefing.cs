@@ -6,6 +6,7 @@ namespace RimAI.Core.Briefings;
 /// aggregation come online M2/M3+. See Docs/design/ministers/mayor.md.
 /// </summary>
 public sealed record MayorBriefing(
+    long             BriefingVersion, // monotonic counter from BriefingCache; used in decision log
     DateStamp        Date,
     long             GameTick,
     SeasonContext    Season,

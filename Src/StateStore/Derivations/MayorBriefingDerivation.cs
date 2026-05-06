@@ -40,7 +40,7 @@ public static class MayorBriefingDerivation
     private static readonly string[] Quadrums = ["Aprimay", "Jugust", "Septober", "Decembary"];
     private const int DaysPerQuadrum = 15;
 
-    public static MayorBriefing Compute(ColonyState s)
+    public static MayorBriefing Compute(ColonyState s, long briefingVersion = 0)
     {
         var date     = RimDateParser.Parse(s.Economy.Value.DateTimeRaw);
         var season   = DeriveSeason(date);
@@ -62,6 +62,7 @@ public static class MayorBriefingDerivation
         // TODO: research endpoint not yet exposed in RimApiClient.
 
         return new MayorBriefing(
+            BriefingVersion: briefingVersion,
             Date: date, GameTick: s.Economy.Value.Tick, Season: season,
             Colonists: colonists, Skills: skills, Traits: traits,
             Medical: medical, Prisoners: 0, // TODO: prisoners not yet ingested.

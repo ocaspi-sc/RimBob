@@ -1,6 +1,7 @@
 using FluentAssertions;
 using RimAI.Core.Aggregates;
 using RimAI.State;
+using RimAI.Tests.Infrastructure;
 
 namespace RimAI.Tests.State;
 
@@ -10,7 +11,7 @@ public sealed class BriefingCacheTests
     public void GetMayorBriefing_FirstCall_ReturnsFreshBriefing()
     {
         var s = new ColonyState();
-        var cache = new BriefingCache(s);
+        var cache = new BriefingCache(s, new TestLogger<BriefingCache>());
 
         var b = cache.GetMayorBriefing();
 
@@ -21,7 +22,7 @@ public sealed class BriefingCacheTests
     public void GetMayorBriefing_NoVersionChange_ReturnsSameInstance()
     {
         var s = new ColonyState();
-        var cache = new BriefingCache(s);
+        var cache = new BriefingCache(s, new TestLogger<BriefingCache>());
 
         var first = cache.GetMayorBriefing();
         var second = cache.GetMayorBriefing();
@@ -33,7 +34,7 @@ public sealed class BriefingCacheTests
     public void GetMayorBriefing_AfterAggregateUpdate_ReturnsNewInstance()
     {
         var s = new ColonyState();
-        var cache = new BriefingCache(s);
+        var cache = new BriefingCache(s, new TestLogger<BriefingCache>());
 
         var first = cache.GetMayorBriefing();
 
@@ -42,13 +43,14 @@ public sealed class BriefingCacheTests
 
         second.Should().NotBeSameAs(first);
         second.Power.NetW.Should().Be(500f);
+        second.BriefingVersion.Should().Be(2);
     }
 
     [Fact]
     public void GetMayorBriefing_AfterEveryAggregateUpdates_RecomputesEachTime()
     {
         var s = new ColonyState();
-        var cache = new BriefingCache(s);
+        var cache = new BriefingCache(s, new TestLogger<BriefingCache>());
 
         // Touch each aggregate; each touch must invalidate the cache.
         var prev = cache.GetMayorBriefing();
