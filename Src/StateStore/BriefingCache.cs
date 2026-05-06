@@ -24,15 +24,29 @@ public sealed class BriefingCache(ColonyState state, ILogger<BriefingCache> log)
             return _mayor;
 
         var version = ++_mayorVersion;
+        var changed = ChangedAggregates(_mayorInputs, current);
         _mayor = MayorBriefingDerivation.Compute(state, version);
         _mayorInputs = current;
 
         log.LogDebug(
-            "MayorBriefing recompute version={Version} aggregateVersions=[{Versions}] briefing={BriefingJson}",
+            "MayorBriefing recompute version={Version} updatedAggregates=[{Updated}] briefing={BriefingJson}",
             version,
-            string.Join(',', current),
+            string.Join(',', changed),
             JsonSerializer.Serialize(_mayor, JsonOpts));
 
         return _mayor;
+    }
+
+    private static IEnumerable<string> ChangedAggregates(long[] previous, long[] current)
+    {
+        var names = ColonyState.MayorBriefingAggregateNames;
+        // On the very first compute previous is empty — report all as "initial".
+        if (previous.Length == 0) return ["initial"];
+
+        var changed = new List<string>();
+        for (var i = 0; i < current.Length && i < names.Length; i++)
+            if (i >= previous.Length || current[i] != previous[i])
+                changed.Add(names[i]);
+        return changed;
     }
 }

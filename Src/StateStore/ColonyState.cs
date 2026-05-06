@@ -21,6 +21,13 @@ public sealed class ColonyState
     public Versioned<FarmSnapshot>     Farm       { get; } = new(AggregateDefaults.Farm);
 
     /// <summary>
+    /// Canonical name → version pairs for every aggregate the MayorBriefing reads.
+    /// Order must stay in sync with GetVersionsForMayorBriefing().
+    /// </summary>
+    public static readonly string[] MayorBriefingAggregateNames =
+        ["Map", "Economy", "Colonists", "Stockpiles", "Buildings", "Power", "Threats", "Weather", "Farm"];
+
+    /// <summary>
     /// Versions of every aggregate the MayorBriefing reads, in canonical order.
     /// Used by BriefingCache to detect input changes.
     /// </summary>

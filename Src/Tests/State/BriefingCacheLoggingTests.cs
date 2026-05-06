@@ -31,13 +31,14 @@ public sealed class BriefingCacheLoggingTests
 
         var (_, msg1) = log.Events[0];
         msg1.Should().Contain("version=1");
-        msg1.Should().Contain("aggregateVersions=");
+        msg1.Should().Contain("updatedAggregates=[initial]");   // first compute has no prior snapshot
         msg1.Should().Contain("briefing=");
-        msg1.Should().Contain("\"BriefingVersion\":1");  // briefing JSON includes the version stamp
+        msg1.Should().Contain("\"BriefingVersion\":1");
 
         var (_, msg2) = log.Events[1];
         msg2.Should().Contain("version=2");
+        msg2.Should().Contain("updatedAggregates=[Power]");     // only Power was bumped
         msg2.Should().Contain("\"BriefingVersion\":2");
-        msg2.Should().Contain("\"NetW\":2000");           // 3000 - 1000
+        msg2.Should().Contain("\"NetW\":2000");                 // 3000 - 1000
     }
 }

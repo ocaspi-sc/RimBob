@@ -33,6 +33,7 @@ public sealed class TestLogger<T> : ILogger<T>
 internal static class TestLogFile
 {
     private static readonly Lazy<StreamWriter> Writer = new(Open);
+    private static readonly object Lock = new();
 
     private static StreamWriter Open()
     {
@@ -40,7 +41,7 @@ internal static class TestLogFile
         Directory.CreateDirectory(dir);
         var path = Path.Combine(dir, $"test-{DateTime.Now:yyyyMMdd-HHmmss}.jsonl");
         var w = new StreamWriter(path, append: false, System.Text.Encoding.UTF8) { AutoFlush = true };
-        AppDomain.CurrentDomain.ProcessExit += (_, _) => { try { w.Flush(); w.Close(); } catch { /* best-effort */ } };
+        AppDomain.CurrentDomain.ProcessExit += (_, _) => { try { lock (Lock) { w.Flush(); w.Close(); } } catch { /* best-effort */ } };
         Console.WriteLine($"[TestLog] → {path}");
         return w;
     }
@@ -54,7 +55,10 @@ internal static class TestLogFile
             category,
             message
         });
-        Writer.Value.WriteLine(line);
+        lock (Lock)
+        {
+            Writer.Value.WriteLine(line);
+        }
         Console.WriteLine($"[{level.ToString()[..3].ToUpper()}] [{category}] {message}");
     }
 }
