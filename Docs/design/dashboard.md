@@ -84,10 +84,9 @@ Accepts / dismisses / modifies an individual short-term priority item. Same `Fee
 ```
 event: agenda_update
 id: <version>
-data: { "version": 142, "updated_in_game_tick": "Y1Q3D12",
-        "update_notes": "...", "agenda": { ...MayorAgenda } }
+data: { ...full MayorAgenda }
 ```
-On connect, the server replays the current Agenda as a single `agenda_update` event before the live feed begins.
+On connect, the server replays the current Agenda (if one exists) as a single `agenda_update` event before the live feed begins. Idle connections receive `event: ping\ndata: {}\n\n` every 15s.
 
 ### `GET /api/autonomy` / `PUT /api/autonomy`
 Reads/writes the per-minister autonomy dial. In MVP, every value is `Suggest` and `PUT` is a no-op that returns 200; the endpoint exists so the dashboard can render the panel and the contract is set for M7.

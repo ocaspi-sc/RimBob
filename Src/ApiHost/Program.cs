@@ -1,8 +1,12 @@
 using Microsoft.Extensions.Options;
 using Serilog;
+using RimAI.Coordination;
+using RimAI.Core.Ministers;
 using RimAI.Host;
+using RimAI.Host.Endpoints;
 using RimAI.Ingestion;
 using RimAI.LLM;
+using RimAI.Ministers.Mayor;
 using RimAI.State;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -40,6 +44,13 @@ builder.Services.AddSingleton<ColonyState>();
 builder.Services.AddSingleton<BriefingCache>();
 builder.Services.AddScoped<IngestionDispatcher>();
 
+builder.Services.AddSingleton<AdviceBus>();
+builder.Services.AddSingleton<AgendaStore>();
+builder.Services.AddSingleton<MayorRules>();
+builder.Services.AddSingleton<Mayor>();
+builder.Services.AddSingleton<IMinister>(sp => sp.GetRequiredService<Mayor>());
+builder.Services.AddHostedService<DayTickOrchestrator>();
+
 var app = builder.Build();
 
 // ── Middleware ─────────────────────────────────────────────────────────────
@@ -49,16 +60,9 @@ app.UseStaticFiles();
 // ── API endpoints ──────────────────────────────────────────────────────────
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok", service = "RimAI" }));
 
-// SSE feed — empty in M0; ministers push AdviceItems here from M1 onward
-app.MapGet("/api/advice/stream", async (HttpContext ctx, CancellationToken ct) =>
-{
-    ctx.Response.ContentType = "text/event-stream";
-    ctx.Response.Headers["Cache-Control"] = "no-cache";
-    ctx.Response.Headers["X-Accel-Buffering"] = "no";
-    await ctx.Response.Body.FlushAsync(ct);
-    try { await Task.Delay(Timeout.Infinite, ct); }
-    catch (OperationCanceledException) { }
-});
+app.MapAgendaStream();
+app.MapAgendaEndpoints();
+app.MapAutonomyEndpoints();
 
 // ── Startup checks ─────────────────────────────────────────────────────────
 app.Lifetime.ApplicationStarted.Register(() =>

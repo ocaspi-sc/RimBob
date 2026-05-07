@@ -6,6 +6,8 @@
     <ProjectReference Include="..\StateStore\RimAI.State.csproj" />
     <ProjectReference Include="..\LlmGateway\RimAI.LLM.csproj" />
     <ProjectReference Include="..\KnowledgeBase\RimAI.Knowledge.csproj" />
+    <ProjectReference Include="..\Coordination\RimAI.Coordination.csproj" />
+    <ProjectReference Include="..\Ministers\RimAI.Ministers.csproj" />
   </ItemGroup>
 
   <ItemGroup>

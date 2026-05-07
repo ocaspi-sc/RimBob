@@ -199,11 +199,14 @@ This is a read-only broadcast — no callback, no acknowledgment.
 ```
 event: agenda_update
 id: <version>
-data: { "version": 142, "updated_in_game_tick": "Y1Q3D12",
-        "update_notes": "...", "agenda": { ...MayorAgenda } }
+data: { ...full MayorAgenda }
 ```
 
-On connect, the server replays the current Agenda as a single `agenda_update` event before the live feed begins.
+The `data` is the full `MayorAgenda` JSON — `version`, `updated_in_game_tick`, `update_notes`, `posture`, `state_of_the_union`, `short_term`, `long_term`, `minister_direction`. SSE `id` mirrors `version` so EventSource resume works.
+
+On connect, the server replays the current Agenda as a single `agenda_update` event before the live feed begins. If no Agenda exists yet (Host just started, no day has rolled), the connection stays open and the dashboard sees its first `agenda_update` when the Mayor's first turn fires.
+
+The server also sends `event: ping\ndata: {}\n\n` every 15 seconds when idle to keep the connection alive through proxies.
 
 ### `GET /api/agenda/latest`
 Returns the current `MayorAgenda` JSON.
