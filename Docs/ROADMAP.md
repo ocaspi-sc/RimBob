@@ -36,20 +36,22 @@
 
 ---
 
-## M1 — Mayor digest spine
+## M1 — Mayor's Agenda spine
 
-**Done when:** at the close of an in-game day, the Mayor receives a colony-wide briefing, calls the LLM, and the resulting `AdviceItem` (one daily memo) appears in the dashboard's memo feed with body, rationale, and `suggested_actions` rendered.
+**Done when:** at the close of an in-game day, the Mayor receives a colony-wide briefing, calls the LLM, and the resulting `MayorAgenda` (versioned living plan) is broadcast as an `agenda_update` SSE event and rendered on the dashboard's Agenda tab — posture badges, state-of-the-union paragraph, update_notes line, ranked short-term cards, long-term list. Feedback buttons render disabled (M2 wires them).
 
-**Demo:** start a fresh colony, fast-forward one in-game day; a memo appears titled "End of Day 1 — Brief" with strategic observations and 2–4 suggested next steps. No second memo until the next in-game day.
+**Demo:** start a fresh colony, fast-forward one in-game day; the Agenda tab updates with `posture`, a state-of-the-union paragraph, an `update_notes` line, and 2–5 short-term bullets each tagged `NEW`. Second day → second `MayorAgenda` version with carried-forward IDs and delta badges. No update mid-day.
 
 **Scope:**
-- `ColonistRegistry` + `StockpileLedger` aggregates (minimum viable for a useful memo).
-- Daily-tick poller wakes the Mayor.
-- `MayorBriefing` aggregating across domains (food, mood, threat, wealth, schedule).
-- `AdviceItem` type + `AdviceBus` in-process emitter.
-- Mayor system prompt updated for memo output (not posture).
-- Host SSE pushes new `AdviceItem`s to subscribers.
-- Dashboard renders the memo feed (single column, newest first).
+- `ColonistRegistry` + `StockpileLedger` + related aggregates feeding `MayorBriefing` (food, mood, threat, wealth, weather, research).
+- `DayTickOrchestrator` wakes the Mayor on in-game day rollover.
+- `MayorBriefing` aggregating across domains.
+- `MayorAgenda` / `MayorAgendaInput` / `AgendaItem` / `MayorPosture` / `AutonomyMode` / `FeedbackEvent` types in `Core/Advice/`.
+- `AdviceBus` in-process emitter; `AgendaStore` with 30-day history ring.
+- Mayor system prompt rewritten for Agenda output (state_of_the_union, update_notes, short_term ≤5, long_term, posture).
+- `LlmClient.CallMayorAsync` with `responseMimeType=application/json`.
+- Host SSE pushes `agenda_update` events; `/api/agenda/{latest,history}` and `/api/autonomy` REST endpoints.
+- Dashboard renders the Agenda tab (default tab; placeholder Alerts/Briefing/Log/Autonomy).
 
 ---
 

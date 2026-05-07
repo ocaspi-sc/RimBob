@@ -1,7 +1,7 @@
 # RimAI — Advisor Dashboard
 
 > **Living document.** See `CLAUDE.md` for update rules.
-> Slice: M0 (skeleton) → M1 (memo feed) → M2 (feedback) → M5 (tactical alerts) → M6 (autonomy panel readonly).
+> Slice: M0 (skeleton) → M1 (Agenda tab) → M2 (feedback + decision log + briefing tab) → M5 (tactical alerts) → M6 (autonomy panel readonly).
 
 ---
 

@@ -251,8 +251,8 @@ Dashboard/
 │   │   ├── adviceStream.ts      // EventSource subscriber
 │   │   └── feedback.ts
 │   ├── components/
-│   │   ├── MemoFeed.tsx
-│   │   ├── MemoCard.tsx         // Accept | Dismiss | Modify controls
+│   │   ├── AgendaTab.tsx
+│   │   ├── AgendaItemCard.tsx   // Accept | Dismiss | Modify controls (M2 wires)
 │   │   ├── BriefingInspector.tsx
 │   │   ├── DecisionLog.tsx
 │   │   └── AutonomyPanel.tsx    // per-minister Off | Suggest | Auto dial
