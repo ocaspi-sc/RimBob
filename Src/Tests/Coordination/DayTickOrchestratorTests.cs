@@ -1,0 +1,112 @@
+using FluentAssertions;
+using Microsoft.Extensions.Logging.Abstractions;
+using RimAI.Coordination;
+using RimAI.Core.Aggregates;
+using RimAI.Core.Ministers;
+using RimAI.State;
+
+namespace RimAI.Tests.Coordination;
+
+public sealed class DayTickOrchestratorTests
+{
+    private const long TicksPerDay = 60_000;
+
+    [Fact]
+    public async Task FirstObservation_DoesNotTriggerMayor()
+    {
+        ColonyState colony = new();
+        colony.Economy.Update(new EconomyLedger(TicksPerDay * 3, 0, "", "", false, ""));
+        FakeMinister mayor = new();
+
+        DayTickOrchestrator sut = new(colony, mayor, NullLogger<DayTickOrchestrator>.Instance);
+        await RunOneCycleAsync(sut);
+
+        mayor.WakeCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task DayChange_TriggersExactlyOnce()
+    {
+        ColonyState colony = new();
+        FakeMinister mayor = new();
+        DayTickOrchestrator sut = new(colony, mayor, NullLogger<DayTickOrchestrator>.Instance);
+
+        colony.Economy.Update(new EconomyLedger(TicksPerDay * 3, 0, "", "", false, ""));
+        await RunOneCycleAsync(sut);  // first observation, no fire
+
+        colony.Economy.Update(new EconomyLedger(TicksPerDay * 4, 0, "", "", false, ""));
+        await RunOneCycleAsync(sut);  // day rollover, fires
+
+        mayor.WakeCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task SameDayPolls_DoNotRetrigger()
+    {
+        ColonyState colony = new();
+        FakeMinister mayor = new();
+        DayTickOrchestrator sut = new(colony, mayor, NullLogger<DayTickOrchestrator>.Instance);
+
+        colony.Economy.Update(new EconomyLedger(TicksPerDay * 3, 0, "", "", false, ""));
+        await RunOneCycleAsync(sut);
+        colony.Economy.Update(new EconomyLedger(TicksPerDay * 4, 0, "", "", false, ""));
+        await RunOneCycleAsync(sut);
+
+        // Mid-day tick advance, no day rollover
+        colony.Economy.Update(new EconomyLedger(TicksPerDay * 4 + 30_000, 0, "", "", false, ""));
+        await RunOneCycleAsync(sut);
+        colony.Economy.Update(new EconomyLedger(TicksPerDay * 4 + 59_999, 0, "", "", false, ""));
+        await RunOneCycleAsync(sut);
+
+        mayor.WakeCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task MayorThrows_ServiceContinues()
+    {
+        ColonyState colony = new();
+        FakeMinister mayor = new() { ThrowOnWake = true };
+        DayTickOrchestrator sut = new(colony, mayor, NullLogger<DayTickOrchestrator>.Instance);
+
+        colony.Economy.Update(new EconomyLedger(TicksPerDay * 3, 0, "", "", false, ""));
+        await RunOneCycleAsync(sut);
+
+        // Day rollover -> mayor throws -> service catches and continues.
+        colony.Economy.Update(new EconomyLedger(TicksPerDay * 4, 0, "", "", false, ""));
+        Func<Task> act = () => RunOneCycleAsync(sut);
+        await act.Should().NotThrowAsync();
+
+        mayor.WakeCount.Should().Be(1);
+    }
+
+    /// <summary>
+    /// Runs the BackgroundService just long enough to perform one observation cycle.
+    /// The orchestrator polls every 2s; we cancel after 200ms which is enough for the
+    /// initial body to execute exactly once (Task.Delay throws on cancel, exiting the loop).
+    /// </summary>
+    private static async Task RunOneCycleAsync(DayTickOrchestrator sut)
+    {
+        using CancellationTokenSource cts = new();
+        Task run = sut.StartAsync(cts.Token);
+        await Task.Delay(200);
+        await sut.StopAsync(CancellationToken.None);
+        cts.Cancel();
+        try { await run; } catch (OperationCanceledException) { }
+    }
+
+    private sealed class FakeMinister : IMinister
+    {
+        public string Name => "FakeMayor";
+        public int    WakeCount   { get; private set; }
+        public bool   ThrowOnWake { get; init; }
+
+        public Task RunPlayCycle(CancellationToken ct)
+        {
+            WakeCount++;
+            if (ThrowOnWake) throw new InvalidOperationException("boom");
+            return Task.CompletedTask;
+        }
+
+        public Task RunRefinement(CancellationToken ct) => Task.CompletedTask;
+    }
+}

@@ -75,9 +75,12 @@ public sealed class Mayor(
                 return input;
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex) when (attempt == 1)
+            catch (Exception ex)
             {
-                log.LogWarning(ex, "Mayor LLM call failed (attempt 1); retrying once");
+                if (attempt == 1)
+                    log.LogWarning(ex, "Mayor LLM call failed (attempt 1); retrying once");
+                else
+                    log.LogError(ex, "Mayor LLM call failed (attempt 2); giving up this turn");
             }
         }
         return null;

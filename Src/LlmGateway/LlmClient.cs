@@ -20,8 +20,13 @@ public sealed class LlmClient
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
     };
 
+    public delegate Task<MayorAgendaInput> MayorCallExecutor(
+        MayorBriefing briefing, MayorAgenda? previous,
+        IReadOnlyList<string> lensPrefills, CancellationToken ct);
+
     private readonly Client?                                       _client;
     private readonly Func<CancellationToken, Task<string?>>?       _pingExecutor;
+    private readonly MayorCallExecutor?                            _mayorExecutor;
     private readonly PromptBuilder                                 _prompts;
     private readonly ILogger<LlmClient>                            _log;
 
@@ -60,6 +65,15 @@ public sealed class LlmClient
         _prompts      = null!;
         _client       = null;
         _pingExecutor = pingExecutor;
+    }
+
+    // Test-only ctor: injects a Mayor agenda executor so play-cycle tests don't hit Gemini.
+    internal LlmClient(ILogger<LlmClient> log, MayorCallExecutor mayorExecutor)
+    {
+        _log           = log;
+        _prompts       = null!;
+        _client        = null;
+        _mayorExecutor = mayorExecutor;
     }
 
     /// <summary>
@@ -117,6 +131,9 @@ public sealed class LlmClient
         IReadOnlyList<string> lensPrefills,
         CancellationToken     ct)
     {
+        if (_mayorExecutor is not null)
+            return await _mayorExecutor(briefing, previousAgenda, lensPrefills, ct);
+
         if (_client is null)
             throw new InvalidOperationException("GEMINI_API_KEY not set — cannot call Mayor LLM.");
 
