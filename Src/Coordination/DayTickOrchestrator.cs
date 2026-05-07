@@ -29,8 +29,8 @@ public sealed class DayTickOrchestrator(
         {
             try
             {
-                var tick = colony.Economy.Value.Tick;
-                var day  = tick / TicksPerDay;
+                long tick = colony.Economy.Value.Tick;
+                long day  = tick / TicksPerDay;
 
                 if (_lastDay >= 0 && day != _lastDay)
                 {

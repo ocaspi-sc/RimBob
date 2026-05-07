@@ -33,8 +33,8 @@ public sealed class AgendaStore
     {
         lock (_lock)
         {
-            var version = (_current?.Version ?? 0) + 1;
-            var next = new MayorAgenda(
+            int version = (_current?.Version ?? 0) + 1;
+            MayorAgenda next = new(
                 Version:           version,
                 UpdatedInGameTick: updatedInGameTick,
                 Posture:           proposed.Posture,
@@ -56,14 +56,3 @@ public sealed class AgendaStore
     }
 }
 
-/// <summary>
-/// Mayor's proposed agenda content. Version + tick are assigned by the store.
-/// </summary>
-public sealed record MayorAgendaInput(
-    MayorPosture                        Posture,
-    string                              StateOfTheUnion,
-    string                              UpdateNotes,
-    IReadOnlyList<AgendaItem>           ShortTerm,
-    IReadOnlyList<AgendaItem>           LongTerm,
-    IReadOnlyDictionary<string, string> MinisterDirection
-);

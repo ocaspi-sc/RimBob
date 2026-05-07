@@ -1,5 +1,8 @@
 using Microsoft.Extensions.Logging;
+using RimAI.Coordination;
+using RimAI.Core.Briefings;
 using RimAI.Core.Ministers;
+using RimAI.LLM;
 using RimAI.State;
 
 namespace RimAI.Ministers.Mayor;
@@ -11,33 +14,81 @@ namespace RimAI.Ministers.Mayor;
 public sealed class Mayor(
     BriefingCache       briefings,
     MayorRules          rules,
+    AgendaStore         agendaStore,
+    LlmClient           llm,
+    AdviceBus           bus,
     ILogger<Mayor>      log
 ) : IMinister
 {
+    private const int ShortTermCap = 5;
+
     public string Name => "Mayor";
 
-    public Task RunPlayCycle(CancellationToken ct)
+    public async Task RunPlayCycle(CancellationToken ct)
     {
-        var briefing = briefings.GetMayorBriefing();
-        var lens     = rules.Evaluate(briefing, ColonyContext.Default);
+        MayorBriefing briefing             = briefings.GetMayorBriefing();
+        MayorLensSet lens                  = rules.Evaluate(briefing, ColonyContext.Default);
+        Core.Advice.MayorAgenda? previous  = agendaStore.Current;
 
         log.LogInformation(
-            "Mayor wake briefing_version={BriefingVersion} lenses=[{Lenses}] prefills={PrefillCount}",
-            briefing.BriefingVersion,
-            FormatLenses(lens),
-            lens.PromptPrefills.Count);
+            "Mayor wake briefing_version={BriefingVersion} previous_agenda_version={PrevVersion} lenses=[{Lenses}]",
+            briefing.BriefingVersion, previous?.Version ?? 0, FormatLenses(lens));
 
-        // TODO (W3+W4): read previous MayorAgenda from AgendaStore, build prompt via PromptBuilder,
-        // call LlmClient.CallMayorAsync, validate ShortTerm <= 5 (retry once), AgendaStore.Update,
-        // AdviceBus.Publish(new AgendaUpdated(...)).
-        return Task.CompletedTask;
+        Core.Advice.MayorAgendaInput? input = await CallLlmWithRetryAsync(briefing, previous, lens.PromptPrefills, ct);
+        if (input is null)
+        {
+            log.LogError("Mayor LLM call failed twice; agenda not updated this turn.");
+            return;
+        }
+
+        Core.Advice.MayorAgenda stamped = agendaStore.Update(input, FormatTick(briefing));
+        bus.Publish(new AgendaUpdated(stamped));
+
+        log.LogInformation(
+            "Mayor agenda v{Version} stored and published (tick={Tick} short_term={ShortCount})",
+            stamped.Version, stamped.UpdatedInGameTick, stamped.ShortTerm.Count);
     }
 
     public Task RunRefinement(CancellationToken ct) => Task.CompletedTask;  // M6
 
+    private async Task<Core.Advice.MayorAgendaInput?> CallLlmWithRetryAsync(
+        MayorBriefing briefing, Core.Advice.MayorAgenda? previous,
+        IReadOnlyList<string> prefills, CancellationToken ct)
+    {
+        for (int attempt = 1; attempt <= 2; attempt++)
+        {
+            try
+            {
+                Core.Advice.MayorAgendaInput input = await llm.CallMayorAsync(briefing, previous, prefills, ct);
+                if (input.ShortTerm.Count > ShortTermCap)
+                {
+                    log.LogWarning(
+                        "Mayor agenda has {Count} short_term items (cap is {Cap}); attempt {Attempt}",
+                        input.ShortTerm.Count, ShortTermCap, attempt);
+                    if (attempt == 2)
+                    {
+                        // Truncate rather than drop the whole agenda after the second try.
+                        return input with { ShortTerm = input.ShortTerm.Take(ShortTermCap).ToList() };
+                    }
+                    continue;
+                }
+                return input;
+            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex) when (attempt == 1)
+            {
+                log.LogWarning(ex, "Mayor LLM call failed (attempt 1); retrying once");
+            }
+        }
+        return null;
+    }
+
+    private static string FormatTick(MayorBriefing b) =>
+        $"Y{b.Date.Year ?? 0}{b.Date.Quadrum ?? "?"}D{b.Date.Day ?? 0}";
+
     private static string FormatLenses(MayorLensSet l)
     {
-        var fired = new List<string>(4);
+        List<string> fired = new(4);
         if (l.WinterPrep)        fired.Add("winter_prep");
         if (l.FoodCrisis)        fired.Add("food_crisis");
         if (l.YearTwoTransition) fired.Add("year_two_transition");

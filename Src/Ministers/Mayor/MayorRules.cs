@@ -12,20 +12,20 @@ public sealed class MayorRules
 {
     public MayorLensSet Evaluate(MayorBriefing briefing, ColonyContext _)
     {
-        var prefills = new List<string>();
+        List<string> prefills = new();
 
-        var winterPrep = briefing.Season.DaysToWinter is { } d && d < 20;
+        bool winterPrep = briefing.Season.DaysToWinter is { } d && d < 20;
         if (winterPrep)
             prefills.Add($"Winter prep lens: only {briefing.Season.DaysToWinter} days to winter — ensure a winter bullet sits in short_term.");
 
-        var foodCrisis = briefing.Food.EstimatedDaysOfFood is { } days && days < 7;
+        bool foodCrisis = briefing.Food.EstimatedDaysOfFood is { } days && days < 7;
         if (foodCrisis)
             prefills.Add($"Food crisis lens: only {briefing.Food.EstimatedDaysOfFood:F0} days of food remaining — force food bullet to position 1.");
 
         // M1: no flag channel; QuietDay is always true.
         const bool quietDay = true;
 
-        var yearTwoTransition = briefing.Date.Year == 2 && briefing.Date.Quadrum == "Q1";
+        bool yearTwoTransition = briefing.Date.Year == 2 && briefing.Date.Quadrum == "Q1";
         if (yearTwoTransition)
             prefills.Add("Year-two transition lens: add an endgame-objective bullet to long_term (ship_launch | royal_favor | archonexus | maintenance).");
 

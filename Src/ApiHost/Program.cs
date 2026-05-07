@@ -33,6 +33,7 @@ builder.Services.AddHttpClient<RimApiClient>((sp, c) =>
     c.BaseAddress = new Uri(opts.RimApiBaseUrl);
     c.Timeout = TimeSpan.FromSeconds(10);
 });
+builder.Services.AddSingleton<PromptBuilder>();
 builder.Services.AddSingleton<LlmClient>();
 
 builder.Services.AddSingleton<ColonyState>();
