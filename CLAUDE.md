@@ -64,6 +64,7 @@ If a decision affects multiple docs, update the most specific one and add a cros
 - Every new minister gets its own directory under `Src/Cabinet/<Name>/`.
 - `Rules.cs` is the first file in every minister directory. It must compile and have tests before the LLM is wired.
 - Fixture JSON files live in `Src/Tests/<MinisterName>/Fixtures/`.
+- avoid using var for types
 
 ---
 
