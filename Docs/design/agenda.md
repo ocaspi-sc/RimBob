@@ -30,6 +30,8 @@ Each bullet is a free-text string. The Mayor writes what it wants; there is no s
     "summary":  "Hold wealth, shore up food before winter. No expansion this quadrum."
   },
 
+  "state_of_the_union": "Six colonists, all healthy; mood is steady at 72%. Food covers 18 days against a winter that arrives in 20 — tight but not red. Wealth has plateaued near 85k; raid points are tracking, not racing. Power is comfortable, the freezer is running, the east wall has a known gap that hasn't been tested. Research is mid-microelectronics. Overall: stable colony with one obvious time-pressure (food vs. winter) and one quiet liability (the wall).",
+
   "update_notes": "Winter arrives in ~20 days. Moved food to top. Defense is calm — east wall still needs patching but is not urgent.",
 
   "short_term": [
@@ -55,7 +57,9 @@ Each bullet is a free-text string. The Mayor writes what it wants; there is no s
 
 **`version`** — monotonically incrementing integer. The dashboard diffs consecutive versions to show delta badges.
 
-**`update_notes`** — one or two sentences the Mayor writes explaining what changed since the previous version. This is the player's daily narrative briefing. Kept short (~50–100 words).
+**`state_of_the_union`** — narrative paragraph the Mayor writes describing where the colony stands *right now*: people, food, defense, wealth, mood, research — whatever matters this turn. This is the "where are we" passage; `update_notes` is the "what changed" delta. Target ~100–200 words. Kept fresh each turn even on quiet days.
+
+**`update_notes`** — one or two sentences the Mayor writes explaining what changed since the previous version. The player's daily delta briefing. Kept short (~50–100 words).
 
 **`posture`** — structured strategic stance. Ministers read this in their briefing context; it frames the Agenda display header in the dashboard.
 
@@ -132,6 +136,15 @@ The Agenda tab is the **primary** dashboard tab in MVP (replaces "Memos").
 ┌──────────────────────────────────────────────────────────────────┐
 │  Agenda                        Y1 Q3 D12 · Updated 2 mins ago   │
 │  Consolidation · Defensive                                        │
+├──────────────────────────────────────────────────────────────────┤
+│  State of the Union                                               │
+│  Six colonists, all healthy; mood steady at 72%. Food covers 18 │
+│  days against a winter in 20 — tight but not red. Wealth ~85k,  │
+│  raid points tracking. Power comfortable, freezer running, east │
+│  wall has a known gap. Research mid-microelectronics. Stable    │
+│  with one time-pressure and one quiet liability.                │
+├──────────────────────────────────────────────────────────────────┤
+│  What changed                                                     │
 │  "Winter arrives in ~20 days. Moved food to top."               │
 ├──────────────────────────────────────────────────────────────────┤
 │  Short-term                                                       │

@@ -106,8 +106,14 @@ Reads/writes the per-minister autonomy dial. In MVP, every value is `Suggest` an
 ├────────────┬─────────────────────────────────────────────────────┤
 │  Tabs      │  Agenda (default)                                   │
 │  • Agenda  │  Posture: Consolidation · Defensive                 │
-│  • Alerts  │  "Winter approaching — repositioned food as P1."    │
-│  • Briefing│  ┌──────────────────────────────────────── NEW ──┐  │
+│  • Alerts  │  State of the Union                                  │
+│  • Briefing│  Six colonists healthy; mood 72%. Food 18d vs        │
+│  • Log     │  winter in 20 — tight. Wealth 85k tracking. East    │
+│  • Autonomy│  wall gap untested. Stable, one time-pressure.       │
+│            │  ─                                                   │
+│            │  What changed                                        │
+│            │  "Winter approaching — repositioned food as P1."    │
+│            │  ┌──────────────────────────────────────── NEW ──┐  │
 │  • Log     │  │ 1 · Food · Establish second growing zone       │  │
 │  • Autonomy│  │   before winter                                │  │
 │            │  │   · designate growing zone, ~8×8, south of    │  │
@@ -132,7 +138,7 @@ Reads/writes the per-minister autonomy dial. In MVP, every value is `Suggest` an
 - **Autonomy** — per-minister dial. Read-only display in MVP; PUT is wired but every value stays `Suggest`. M2 ships the panel; the dial gets a real switch only at M7.
 
 ### Agenda tab detail
-- Header: posture badges + `update_notes` one-liner.
+- Header: posture badges, then `state_of_the_union` paragraph (the "where we are" briefing), then `update_notes` one-liner (the "what changed" delta).
 - Short-term priorities: numbered list of priority cards, each with domain, summary, suggested actions, and feedback buttons.
 - Delta badges: `NEW` for priorities added since the player's last view; `UPDATED` for changed items; `DONE` / `DEFERRED` for items that closed (shown for one day, then moved to history).
 - Long-term goals: compact list with status badges.

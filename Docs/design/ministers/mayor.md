@@ -51,6 +51,7 @@ The Mayor's LLM call at turn-end produces a **complete new `MayorAgenda`** — n
       "military": "defensive",
       "summary":  "Hold wealth, shore up food before winter."
     },
+    "state_of_the_union": "Six colonists, all healthy; mood steady at 72%. Food covers 18 days against a winter in 20. Wealth ~85k and tracking, not racing. Power comfortable, freezer running, east wall has a known gap. Research mid-microelectronics. Stable with one time-pressure (food vs winter) and one quiet liability (the wall).",
     "update_notes": "Winter arrives in ~20 days. Moved food to top. East wall gap still needs patching.",
     "short_term": [
       { "id": "st_1", "text": "Establish a second growing zone before winter — food covers 18 days, winter in ~20.", "status": "active" },
@@ -113,6 +114,7 @@ See [`RimAI.LLM/prompts/mayor.system.md`](../../LLM/prompts/mayor.system.md). Up
 - Player Accept rate > 50% on short-term Agenda bullets by M6.
 - Player explicit Dismiss with note < 20% (silent ignore is acceptable).
 - Modify-then-accept patterns drive at least one rule promotion per quadrum (post-M6).
+- `state_of_the_union` reads like a real status briefing — concrete numbers, no filler. ~100–200 words.
 - `update_notes` stays scannable in 10–15s — 50–100 words.
 
 ---
