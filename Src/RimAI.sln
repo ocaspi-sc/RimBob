@@ -1,4 +1,4 @@
-
+﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
@@ -16,6 +16,10 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RimAI.Host", "ApiHost\RimAI.Host.csproj", "{06DAA201-5AC3-484B-B17D-EA71F4A6BE3F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RimAI.Tests", "Tests\RimAI.Tests.csproj", "{C5B61189-A4FE-48EA-9596-013733851372}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Ministers", "Ministers", "{79280237-CB6C-3C04-C73F-74558FD3CF6D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RimAI.Ministers", "Ministers\RimAI.Ministers.csproj", "{AFD9C8EE-5DD0-4B4B-97C3-63A262DB4992}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -111,8 +115,23 @@ Global
 		{C5B61189-A4FE-48EA-9596-013733851372}.Release|x64.Build.0 = Release|Any CPU
 		{C5B61189-A4FE-48EA-9596-013733851372}.Release|x86.ActiveCfg = Release|Any CPU
 		{C5B61189-A4FE-48EA-9596-013733851372}.Release|x86.Build.0 = Release|Any CPU
+		{AFD9C8EE-5DD0-4B4B-97C3-63A262DB4992}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AFD9C8EE-5DD0-4B4B-97C3-63A262DB4992}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AFD9C8EE-5DD0-4B4B-97C3-63A262DB4992}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{AFD9C8EE-5DD0-4B4B-97C3-63A262DB4992}.Debug|x64.Build.0 = Debug|Any CPU
+		{AFD9C8EE-5DD0-4B4B-97C3-63A262DB4992}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{AFD9C8EE-5DD0-4B4B-97C3-63A262DB4992}.Debug|x86.Build.0 = Debug|Any CPU
+		{AFD9C8EE-5DD0-4B4B-97C3-63A262DB4992}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AFD9C8EE-5DD0-4B4B-97C3-63A262DB4992}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AFD9C8EE-5DD0-4B4B-97C3-63A262DB4992}.Release|x64.ActiveCfg = Release|Any CPU
+		{AFD9C8EE-5DD0-4B4B-97C3-63A262DB4992}.Release|x64.Build.0 = Release|Any CPU
+		{AFD9C8EE-5DD0-4B4B-97C3-63A262DB4992}.Release|x86.ActiveCfg = Release|Any CPU
+		{AFD9C8EE-5DD0-4B4B-97C3-63A262DB4992}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{AFD9C8EE-5DD0-4B4B-97C3-63A262DB4992} = {79280237-CB6C-3C04-C73F-74558FD3CF6D}
 	EndGlobalSection
 EndGlobal
