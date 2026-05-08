@@ -30,6 +30,8 @@ public sealed class IngestionDispatcherTests
         s.Threats.Version.Should().Be(1);
         s.Weather.Version.Should().Be(1);
         s.Farm.Version.Should().Be(1);
+        s.Resources.Version.Should().Be(1);
+        s.Research.Version.Should().Be(1);
     }
 
     [Fact]
@@ -76,11 +78,16 @@ public sealed class IngestionDispatcherTests
             Storyteller: "Cassandra", Paused: false, ProgramState: "Playing", MapCount: 1);
         var date = new DateTimeDto("5th of Aprimay, 5500, 14h");
         var pawn = new ColonistDetailedDto(
-            Id: "c1", Name: "Alice", Age: 28, Gender: "Female",
-            Health: 1.0f, Mood: 0.7f, Hunger: 1.0f,
-            Skills: [new SkillDto("Plants", 12, "Major")],
-            Traits: ["Industrious"],
-            CurrentJob: "Sowing", Position: null);
+            Pawn: new ColonistBasicDto(
+                Id: 1, Name: "Alice", Gender: "Female", Age: 28,
+                Health: 1.0f, Mood: 0.7f, Hunger: 1.0f, Position: null),
+            Detailes: new ColonistDetailsDto(
+                WorkInfo: new PawnWorkInfoDto(
+                    Skills: [new SkillDto("Plants", 12, 2)],   // 2 = Major passion
+                    CurrentJob: "Sowing",
+                    Traits: [new TraitDto("Industrious", "industrious")]),
+                MedicalInfo: new PawnMedicalInfoDto(
+                    IsDead: false, IsDowned: false, Hediffs: [])));
         var farm = new FarmSummaryDto(50, 0.6f, 5, [new CropBreakdownDto("Rice", 30, 0.7f)]);
         var zones = new List<ZoneDto>
         {
@@ -101,6 +108,18 @@ public sealed class IngestionDispatcherTests
             new("RaidEnemy", 0.5f, "Raider attack")
         };
 
+        var resources = new ResourcesSummaryDto(
+            TotalItems: 200, TotalMarketValue: 4500f,
+            CriticalResources: new CriticalResourcesDto(
+                FoodSummary: new FoodSummaryDto(
+                    FoodTotal: 80, TotalNutrition: 45.0f, MealsCount: 20, RawFoodCount: 40),
+                MedicineTotal: 15, WeaponCount: 4, WeaponValue: 800f));
+        var research = new ResearchProgressDto(
+            Name: "Microelectronics", Label: "Microelectronics",
+            Progress: 1500f, ResearchPoints: 3000f,
+            IsFinished: false, CanStartNow: true,
+            ProgressPercent: 50f);
+
         return new PathRouter()
             .Add("api/v1/maps",                    Envelope(new List<MapInfoDto> { map }))
             .Add("api/v1/game/state",              Envelope(state))
@@ -112,7 +131,9 @@ public sealed class IngestionDispatcherTests
             .Add("api/v1/map/power/info",          Envelope(power))
             .Add("api/v1/map/weather",             Envelope(weather))
             .Add("api/v1/lords",                   Envelope(lords))
-            .Add("api/v1/incidents",               Envelope(incidents));
+            .Add("api/v1/incidents",               Envelope(incidents))
+            .Add("api/v1/resources/summary",       Envelope(resources))
+            .Add("api/v1/research/progress",       Envelope(research));
     }
 
     private static HttpClient MakeClient(PathRouter router) =>

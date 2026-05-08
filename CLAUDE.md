@@ -52,6 +52,7 @@ If a decision affects multiple docs, update the most specific one and add a cros
 - **Agent plans location:** store agent-created plans in `/.plans`.
 - **Design sessions:** focus is exploration and documentation. Don't write code unless asked.
 - **Build sessions:** focus is implementation. Don't redesign unless a blocker is found.
+- **`q:` prefix = question only.** When a user message starts with `q:` (case-insensitive), the message is a question — answer it without editing files, running tools that mutate state, or starting work. The `q:` lifts the default doc-update directive for that turn (the question itself is not a design decision). If answering naturally surfaces a design decision, ask before acting on it.
 
 ---
 

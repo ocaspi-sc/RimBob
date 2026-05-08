@@ -50,16 +50,15 @@ public static class MayorBriefingDerivation
         var skills    = DeriveSkillCoverage(pawns);
         var traits    = DeriveTraits(pawns);
         var medical   = DeriveMedical(pawns);
-        var food      = DeriveFood(s.Farm.Value, s.Stockpiles.Value, pawns.Count);
-        var resources = DeriveResources(s.Stockpiles.Value);
+        var food      = DeriveFood(s.Farm.Value, s.Resources.Value, pawns.Count);
+        var resources = DeriveResources(s.Resources.Value);
         var power     = DerivePower(s.Power.Value);
         var buildings = DeriveBuildings(s.Buildings.Value);
         var mood      = DeriveMood(pawns);
         var threat    = DeriveThreat(s.Threats.Value);
         var wealth    = DeriveWealth(s.Economy.Value, pawns.Count);
         var weather   = new WeatherSnapshot(s.Weather.Value.Def, s.Weather.Value.TemperatureC, s.Weather.Value.RainRate);
-        var research  = new ResearchSnapshot(null, null);
-        // TODO: research endpoint not yet exposed in RimApiClient.
+        var research  = new ResearchSnapshot(s.Research.Value.CurrentProject, s.Research.Value.Progress);
 
         return new MayorBriefing(
             BriefingVersion: briefingVersion,
@@ -174,16 +173,17 @@ public static class MayorBriefingDerivation
         // TODO: SurgeryPending requires a surgery-bill endpoint not yet exposed.
     }
 
-    private static FoodSnapshot DeriveFood(FarmSnapshot farm, StockpileLedger stock, int colonistCount)
-    {
-        var foodUnits = stock.ItemsByDef
-            .Where(kv => IsFoodDef(kv.Key))
-            .Sum(kv => kv.Value);
+    // Standard RimWorld nutrition: an adult colonist eats ~1.6 nutrition / day.
+    // Used as the divisor for days-of-food when /resources/summary reports nutrition.
+    private const float NutritionPerColonistPerDay = 1.6f;
 
-        // Crude: 1.6 food units / colonist / day (approx ~0.6kg meal).
-        // Null when we have no inventory data, so the Mayor doesn't reason from a fake zero.
-        float? daysOfFood = stock.ItemsByDef.Count > 0 && colonistCount > 0
-            ? foodUnits / (1.6f * colonistCount)
+    private static FoodSnapshot DeriveFood(FarmSnapshot farm, ResourceSummary resources, int colonistCount)
+    {
+        // EstimatedDaysOfFood is null when we have no nutrition signal yet
+        // (mid-startup, or RIMAPI hasn't seen any meals). The Mayor's prompt
+        // treats null as "food data unknown — request stockpile audit", not zero.
+        float? daysOfFood = resources.TotalNutrition > 0f && colonistCount > 0
+            ? resources.TotalNutrition / (NutritionPerColonistPerDay * colonistCount)
             : null;
 
         return new FoodSnapshot(
@@ -193,52 +193,24 @@ public static class MayorBriefingDerivation
             CropBreakdown:  farm.CropBreakdown
                                 .Select(c => new CropBreakdown(c.Def, c.Count, c.AverageGrowth))
                                 .ToList(),
-            EstimatedFoodUnitsInStockpile: foodUnits,
+            EstimatedFoodUnitsInStockpile: resources.FoodTotal,
             EstimatedDaysOfFood:           daysOfFood
         );
     }
 
-    private static bool IsFoodDef(string def) =>
-        def.Contains("Meal", StringComparison.OrdinalIgnoreCase) ||
-        def.Contains("Pemmican", StringComparison.OrdinalIgnoreCase) ||
-        def.Contains("Rice", StringComparison.OrdinalIgnoreCase) ||
-        def.Contains("Potato", StringComparison.OrdinalIgnoreCase) ||
-        def.Contains("Corn", StringComparison.OrdinalIgnoreCase) ||
-        def.Contains("Berries", StringComparison.OrdinalIgnoreCase) ||
-        def.Contains("Meat", StringComparison.OrdinalIgnoreCase) ||
-        def.Contains("Milk", StringComparison.OrdinalIgnoreCase) ||
-        def.Contains("Egg", StringComparison.OrdinalIgnoreCase);
-
-    private static ResourceSnapshot DeriveResources(StockpileLedger stock)
+    private static ResourceSnapshot DeriveResources(ResourceSummary r)
     {
-        // Empty until an inventory endpoint surfaces. See IngestionDispatcher.MapStockpiles.
-        if (stock.ItemsByDef.Count == 0)
-            return new ResourceSnapshot(
-                new Dictionary<string, int>(),
-                new Dictionary<string, int>(),
-                new Dictionary<string, int>());
-
-        static bool IsMaterial(string d) =>
-            d.Equals("Steel", StringComparison.OrdinalIgnoreCase) ||
-            d.Equals("WoodLog", StringComparison.OrdinalIgnoreCase) ||
-            d.Equals("Plasteel", StringComparison.OrdinalIgnoreCase) ||
-            d.Equals("ComponentIndustrial", StringComparison.OrdinalIgnoreCase) ||
-            d.Equals("ComponentSpacer", StringComparison.OrdinalIgnoreCase) ||
-            d.Equals("Cloth", StringComparison.OrdinalIgnoreCase) ||
-            d.Equals("Uranium", StringComparison.OrdinalIgnoreCase) ||
-            d.StartsWith("Block", StringComparison.OrdinalIgnoreCase);
-
-        static bool IsMedicine(string d) =>
-            d.StartsWith("Medicine", StringComparison.OrdinalIgnoreCase);
-
-        static bool IsWeapon(string d) =>
-            d.StartsWith("Gun_", StringComparison.OrdinalIgnoreCase) ||
-            d.StartsWith("Bow_", StringComparison.OrdinalIgnoreCase) ||
-            d.StartsWith("MeleeWeapon_", StringComparison.OrdinalIgnoreCase);
-
-        var materials = stock.ItemsByDef.Where(kv => IsMaterial(kv.Key)).ToDictionary(kv => kv.Key, kv => kv.Value);
-        var medicine  = stock.ItemsByDef.Where(kv => IsMedicine(kv.Key)).ToDictionary(kv => kv.Key, kv => kv.Value);
-        var weapons   = stock.ItemsByDef.Where(kv => IsWeapon(kv.Key)).ToDictionary(kv => kv.Key, kv => kv.Value);
+        // /resources/summary gives us aggregated counts but not per-def detail.
+        // Materials stays empty until /resources/stored returns non-empty data
+        // (currently `{}` on a fresh map); medicine + weapons surface as a single
+        // bucket each so the Mayor can at least see "do we have any?".
+        Dictionary<string, int> materials = new();
+        Dictionary<string, int> medicine  = r.MedicineTotal > 0
+            ? new Dictionary<string, int> { ["Medicine"] = r.MedicineTotal }
+            : new();
+        Dictionary<string, int> weapons   = r.WeaponCount > 0
+            ? new Dictionary<string, int> { ["Weapons"]  = r.WeaponCount }
+            : new();
 
         return new ResourceSnapshot(materials, medicine, weapons);
     }

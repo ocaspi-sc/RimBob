@@ -91,3 +91,40 @@ public record RoomDto(
     [property: JsonPropertyName("beds")]        int Beds,
     [property: JsonPropertyName("impressiveness")] float? Impressiveness
 );
+
+// ── GET /api/v1/resources/summary?map_id ──────────────────────────────────────
+// Colony-wide stockpile rollup. Verified against live RIMAPI 1.9.0.
+// `total_nutrition` is sometimes 0 even when food_total > 0 — treat as a hint
+// rather than authoritative; days-of-food is null when nutrition is zero.
+public record ResourcesSummaryDto(
+    [property: JsonPropertyName("total_items")]        int                  TotalItems,
+    [property: JsonPropertyName("total_market_value")] float                TotalMarketValue,
+    [property: JsonPropertyName("critical_resources")] CriticalResourcesDto? CriticalResources
+);
+
+public record CriticalResourcesDto(
+    [property: JsonPropertyName("food_summary")]    FoodSummaryDto? FoodSummary,
+    [property: JsonPropertyName("medicine_total")]  int             MedicineTotal,
+    [property: JsonPropertyName("weapon_count")]    int             WeaponCount,
+    [property: JsonPropertyName("weapon_value")]    float           WeaponValue
+);
+
+public record FoodSummaryDto(
+    [property: JsonPropertyName("food_total")]       int   FoodTotal,
+    [property: JsonPropertyName("total_nutrition")]  float TotalNutrition,
+    [property: JsonPropertyName("meals_count")]      int   MealsCount,
+    [property: JsonPropertyName("raw_food_count")]   int   RawFoodCount
+);
+
+// ── GET /api/v1/research/progress ─────────────────────────────────────────────
+// Current research project + progress. Returns name="none", label="None",
+// progress_percent=0 when nothing is selected.
+public record ResearchProgressDto(
+    [property: JsonPropertyName("name")]             string  Name,
+    [property: JsonPropertyName("label")]            string? Label,
+    [property: JsonPropertyName("progress")]         float   Progress,            // ticks of work done
+    [property: JsonPropertyName("research_points")]  float   ResearchPoints,
+    [property: JsonPropertyName("is_finished")]      bool    IsFinished,
+    [property: JsonPropertyName("can_start_now")]    bool    CanStartNow,
+    [property: JsonPropertyName("progress_percent")] float   ProgressPercent      // 0–100
+);

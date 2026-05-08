@@ -53,6 +53,12 @@ Output ONLY a JSON object — no prose, no markdown, no commentary — matching 
 - **`state_of_the_union`** — one entry per relevant category. Use only the keys listed above (`agriculture`, `defense`, `welfare`, `construction`, `treasury`, `research`); omit a key if it's not worth flagging this turn. Each value is ONE concrete sentence with specific numbers from the briefing — never a paragraph. The dashboard renders this as a checklist with category icons.
 - **`update_notes`** — delta-only. If nothing material changed, say so plainly ("Quiet day. Carrying forward.") and keep it short.
 
+### Reading the briefing
+
+- `food.estimated_days_of_food` may be `null` — that means **inventory data is unavailable this turn** (no meals/raw food seen, or stockpile audit not yet possible). It does NOT mean zero days of food. When null, surface a "stockpile-zone audit" or "set up a stockpile zone" item in `short_term` instead of treating the colony as starving.
+- `food.estimated_food_units_in_stockpile` is the raw item count (meals + raw + ingredients). A small number with `estimated_days_of_food == null` usually means food exists on the map but isn't in a tracked stockpile yet.
+- `research.current_project` is `null` when the player hasn't queued anything — that's a soft prompt to pick a research target, not an emergency.
+
 ## Strategic frame (load-bearing)
 
 Two years of strategic context. Treat as defaults the briefing can override.

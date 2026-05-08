@@ -7,9 +7,8 @@ namespace RimAI.State;
 
 /// <summary>
 /// Pulls a full snapshot from RIMAPI and writes it into ColonyState aggregates.
-/// M1: explicit RefreshAllAsync; the polling cadences in state-store.md (Slow /
-/// Medium / Fast / Event-diff) are not built yet — the daily-tick poller will
-/// drive this for now.
+/// M1.5: explicit RefreshAllAsync; the slow / fast / event-diff polling cadences
+/// in state-store.md are deferred — DayTickOrchestrator drives this every poll.
 /// </summary>
 public sealed class IngestionDispatcher(
     RimApiClient rimApi,
@@ -18,27 +17,30 @@ public sealed class IngestionDispatcher(
 {
     public async Task RefreshAllAsync(CancellationToken ct = default)
     {
-        var maps = await rimApi.GetMapsAsync(ct);
-        var home = maps.FirstOrDefault(m => m.IsPlayerHome) ?? maps.FirstOrDefault()
+        IReadOnlyList<MapInfoDto> maps = await rimApi.GetMapsAsync(ct);
+        MapInfoDto home = maps.FirstOrDefault(m => m.IsPlayerHome) ?? maps.FirstOrDefault()
             ?? throw new InvalidOperationException("RIMAPI returned no maps.");
 
         state.Map.Update(new MapInfoSnapshot(home.Id, home.Size));
 
-        var stateTask     = rimApi.GetGameStateAsync(ct);
-        var dateTask      = rimApi.GetDateTimeAsync(ct);
-        var pawnsTask     = rimApi.GetColonistsDetailedAsync(home.Id, ct);
-        var farmTask      = rimApi.GetFarmSummaryAsync(home.Id, ct);
-        var zonesTask     = rimApi.GetZonesAsync(home.Id, ct);
-        var buildingsTask = rimApi.GetBuildingsAsync(home.Id, ct);
-        var powerTask     = rimApi.GetPowerInfoAsync(home.Id, ct);
-        var weatherTask   = rimApi.GetWeatherAsync(home.Id, ct);
-        var lordsTask     = rimApi.GetLordsAsync(home.Id, ct);
-        var incidentsTask = rimApi.GetIncidentsAsync(home.Id, ct);
+        Task<GameStateDto>                      stateTask     = rimApi.GetGameStateAsync(ct);
+        Task<DateTimeDto>                       dateTask      = rimApi.GetDateTimeAsync(ct);
+        Task<IReadOnlyList<ColonistDetailedDto>> pawnsTask    = rimApi.GetColonistsDetailedAsync(home.Id, ct);
+        Task<FarmSummaryDto>                    farmTask      = rimApi.GetFarmSummaryAsync(home.Id, ct);
+        Task<IReadOnlyList<ZoneDto>>            zonesTask     = rimApi.GetZonesAsync(home.Id, ct);
+        Task<IReadOnlyList<BuildingDto>>        buildingsTask = rimApi.GetBuildingsAsync(home.Id, ct);
+        Task<PowerInfoDto>                      powerTask     = rimApi.GetPowerInfoAsync(home.Id, ct);
+        Task<WeatherDto>                        weatherTask   = rimApi.GetWeatherAsync(home.Id, ct);
+        Task<IReadOnlyList<LordDto>>            lordsTask     = rimApi.GetLordsAsync(home.Id, ct);
+        Task<IReadOnlyList<IncidentDto>>        incidentsTask = rimApi.GetIncidentsAsync(home.Id, ct);
+        Task<ResourcesSummaryDto>               resourcesTask = rimApi.GetResourcesSummaryAsync(home.Id, ct);
+        Task<ResearchProgressDto>               researchTask  = rimApi.GetResearchProgressAsync(ct);
 
         await Task.WhenAll(stateTask, dateTask, pawnsTask, farmTask, zonesTask,
-                           buildingsTask, powerTask, weatherTask, lordsTask, incidentsTask);
+                           buildingsTask, powerTask, weatherTask, lordsTask, incidentsTask,
+                           resourcesTask, researchTask);
 
-        var gs = stateTask.Result;
+        GameStateDto gs = stateTask.Result;
         state.Economy.Update(new EconomyLedger(
             gs.Tick, gs.Wealth, gs.Storyteller, gs.ProgramState, gs.Paused, dateTask.Result.DateTime));
 
@@ -50,34 +52,53 @@ public sealed class IngestionDispatcher(
 
         state.Buildings.Update(new BuildingRegistry(MapBuildings(buildingsTask.Result)));
 
-        var p = powerTask.Result;
+        PowerInfoDto p = powerTask.Result;
         state.Power.Update(new PowerNetwork(p.Production, p.Consumption, p.Stored, p.Capacity));
 
-        var w = weatherTask.Result;
+        WeatherDto w = weatherTask.Result;
         state.Weather.Update(new WeatherSnapshot(w.Def, w.Temperature, w.RainRate));
 
         state.Threats.Update(new ThreatBoard(
             MapLords(lordsTask.Result),
             MapIncidents(incidentsTask.Result)));
+
+        state.Resources.Update(MapResources(resourcesTask.Result));
+        state.Research.Update(MapResearch(researchTask.Result));
     }
 
     // ── Mappers ───────────────────────────────────────────────────────────────
 
     private static IReadOnlyList<ColonistRecord> MapPawns(IReadOnlyList<ColonistDetailedDto> pawns) =>
-        pawns.Select(p => new ColonistRecord(
-            Id:         p.Id,
-            Name:       p.Name,
-            Age:        p.Age,
-            Gender:     p.Gender,
-            Health:     p.Health,
-            Mood:       p.Mood,
-            Hunger:     p.Hunger,
-            CurrentJob: p.CurrentJob,
-            Skills:     (p.Skills ?? [])
-                            .Select(s => new ColonistSkill(s.Def, s.Level, s.Passion))
-                            .ToList(),
-            Traits:     p.Traits ?? []
-        )).ToList();
+        pawns
+            .Where(p => p.Pawn is not null)
+            .Select(p =>
+            {
+                ColonistBasicDto basic    = p.Pawn!;
+                PawnWorkInfoDto? work     = p.Detailes?.WorkInfo;
+                IReadOnlyList<SkillDto> sk = work?.Skills ?? [];
+                IReadOnlyList<TraitDto> tr = work?.Traits ?? [];
+
+                return new ColonistRecord(
+                    Id:         basic.Id.ToString(),
+                    Name:       basic.Name ?? $"pawn_{basic.Id}",
+                    Age:        basic.Age,
+                    Gender:     basic.Gender ?? "",
+                    Health:     basic.Health,
+                    Mood:       basic.Mood,
+                    Hunger:     basic.Hunger,
+                    CurrentJob: work?.CurrentJob,
+                    Skills:     sk.Select(s => new ColonistSkill(s.Name, s.Level, PassionName(s.Passion))).ToList(),
+                    Traits:     tr.Select(t => t.Name).ToList()
+                );
+            })
+            .ToList();
+
+    private static string PassionName(int p) => p switch
+    {
+        1 => "Minor",
+        2 => "Major",
+        _ => "None"
+    };
 
     private static FarmSnapshot MapFarm(FarmSummaryDto f) =>
         new(
@@ -89,19 +110,15 @@ public sealed class IngestionDispatcher(
                                 .ToList()
         );
 
-    private StockpileLedger MapStockpiles(IReadOnlyList<ZoneDto> zones)
+    private static StockpileLedger MapStockpiles(IReadOnlyList<ZoneDto> zones)
     {
-        var stockpileZones = zones
+        // /map/zones gives us zone metadata but no item lists. Per-def counts now
+        // come from /api/v1/resources/summary (see ResourceSummary aggregate);
+        // ItemsByDef here stays empty by design.
+        List<StockpileZone> stockpileZones = zones
             .Where(z => string.Equals(z.Type, "StockpileZone", StringComparison.OrdinalIgnoreCase))
             .Select(z => new StockpileZone(z.Id, z.Type, z.Label, z.Cells?.Count ?? 0))
             .ToList();
-
-        // TODO: ZoneDto does not currently surface item counts (see MapDto.cs:41-49).
-        // Once a stockpile-inventory endpoint is added to RimApiClient, populate
-        // ItemsByDef here. For now the dictionary is empty and we log once per refresh.
-        if (stockpileZones.Count > 0)
-            log.LogWarning("Stockpile contents unavailable: ZoneDto carries no item list. " +
-                           "ResourceSnapshot will be empty until an inventory endpoint is added.");
 
         return new StockpileLedger(stockpileZones, new Dictionary<string, int>());
     }
@@ -124,4 +141,33 @@ public sealed class IngestionDispatcher(
             .Take(5)
             .Select(i => new IncidentRecord(i.Def, i.DaysSince, i.Label))
             .ToList();
+
+    private static ResourceSummary MapResources(ResourcesSummaryDto r)
+    {
+        FoodSummaryDto? food = r.CriticalResources?.FoodSummary;
+        return new ResourceSummary(
+            TotalItems:       r.TotalItems,
+            TotalMarketValue: r.TotalMarketValue,
+            FoodTotal:        food?.FoodTotal      ?? 0,
+            TotalNutrition:   food?.TotalNutrition ?? 0f,
+            MealsCount:       food?.MealsCount     ?? 0,
+            RawFoodCount:     food?.RawFoodCount   ?? 0,
+            MedicineTotal:    r.CriticalResources?.MedicineTotal ?? 0,
+            WeaponCount:      r.CriticalResources?.WeaponCount   ?? 0,
+            WeaponValue:      r.CriticalResources?.WeaponValue   ?? 0f
+        );
+    }
+
+    private static ResearchInfo MapResearch(ResearchProgressDto r)
+    {
+        // RIMAPI sentinel for "no project selected": name == "none", label == "None".
+        bool hasProject = !string.IsNullOrEmpty(r.Name) &&
+                          !r.Name.Equals("none", StringComparison.OrdinalIgnoreCase);
+
+        return new ResearchInfo(
+            CurrentProject: hasProject ? (r.Label ?? r.Name) : null,
+            Progress:       hasProject ? r.ProgressPercent / 100f : null,
+            IsFinished:     r.IsFinished
+        );
+    }
 }

@@ -156,6 +156,30 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 |---|---|---|
 | GET | `/api/v2/colonists/detailed?map_id` | full bio + needs + skills + health per colonist |
 
+> **Verified shape (M1.5).** `/api/v2/colonists/detailed` returns a list of objects with two fields: `pawn` (id, name, gender, age, health, mood, hunger, position) and `detailes` (yes, that spelling — `work_info.{skills, current_job, traits}`, `medical_info.{is_dead, is_downed, hediffs[]}`, `social_info`, `policies_info`). `skill.passion` is an int (0=None, 1=Minor, 2=Major), `skill.name` (not `def`) holds the skill key. Trait entries are objects (`{name, label}`), not bare strings.
+
+### Resources (Thing controller)
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/v1/resources/summary?map_id` | colony-wide rollup: total items, market value, food/medicine/weapons rollups |
+| GET | `/api/v1/resources/stored?map_id` | per-def stored counts (returns `{}` until stockpiles are populated) |
+| GET | `/api/v1/resources/storages/summary?map_id` | stockpile cell utilization (`total_stockpiles`, `used_cells`, `utilization_percent`) |
+
+> **Verified shape (M1.5).** `/resources/summary.critical_resources` carries `food_summary.{food_total, total_nutrition, meals_count, raw_food_count}`, `medicine_total`, `weapon_count`, `weapon_value`. `total_nutrition` can be 0 even when `food_total > 0` (raw food not yet categorised); the dispatcher leaves `EstimatedDaysOfFood` null in that case rather than reporting fake zero days.
+
+### Research
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/v1/research/progress` | current project: `name`, `label`, `progress`, `progress_percent`, `is_finished`, `can_start_now` |
+| GET | `/api/v1/research/finished` | list of completed projects |
+| GET | `/api/v1/research/tree` | full tech tree |
+| GET | `/api/v1/research/project?name` | one project's metadata + prerequisites |
+| GET | `/api/v1/research/summary` | by-tech-level rollups (finished / total / percent) |
+| POST | `/api/v1/research/target` | set current project by defName |
+| POST | `/api/v1/research/stop` | stop current project |
+
+> **Verified shape (M1.5).** `/research/progress` returns sentinel `{name:"none", label:"None", progress_percent:0}` when nothing is selected; the dispatcher maps that to `ResearchInfo.CurrentProject = null`.
+
 ### DevTools
 | Method | Path | Purpose |
 |---|---|---|

@@ -191,6 +191,28 @@ public sealed class RimApiClient(HttpClient http)
         int mapId, CancellationToken ct = default) =>
         GetEnvelopedListAsync<IncidentDto>($"api/v1/incidents?map_id={mapId}", ct);
 
+    // ── Resources / inventory ─────────────────────────────────────────────────
+
+    /// <summary>
+    /// GET api/v1/resources/summary?map_id — colony-wide stockpile rollup
+    /// (food/medicine/weapon counts + total nutrition + market value).
+    /// Replaces reliance on per-zone item lists, which RIMAPI's /map/zones
+    /// does not expose.
+    /// </summary>
+    public Task<ResourcesSummaryDto> GetResourcesSummaryAsync(
+        int mapId, CancellationToken ct = default) =>
+        GetEnvelopedAsync<ResourcesSummaryDto>($"api/v1/resources/summary?map_id={mapId}", ct);
+
+    // ── Research ──────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// GET api/v1/research/progress — current research project + progress.
+    /// Returns name="none", label="None", progress_percent=0 when nothing is
+    /// selected; IngestionDispatcher maps that to ResearchInfo.CurrentProject = null.
+    /// </summary>
+    public Task<ResearchProgressDto> GetResearchProgressAsync(CancellationToken ct = default) =>
+        GetEnvelopedAsync<ResearchProgressDto>("api/v1/research/progress", ct);
+
     // ── Write endpoints (Labor-owned) ─────────────────────────────────────────
     // TODO: Pawn Edit Controller and Pawn Job Controller field shapes are not cached
     //       in rimapi.md. Fetch live docs when M3 (Labor/assignment solver) begins

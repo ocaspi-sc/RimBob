@@ -97,29 +97,52 @@ public sealed class MayorBriefingDerivationTests
     }
 
     [Fact]
-    public void Compute_StockpileWithItems_GroupsByCategory()
+    public void Compute_ResourceSummary_PopulatesFoodAndCategoryRollups()
     {
-        var s = StateWith([]);
-        s.Stockpiles.Update(new StockpileLedger(
-            Zones: [],
-            ItemsByDef: new Dictionary<string, int>
-            {
-                ["Steel"]              = 1500,
-                ["WoodLog"]            = 300,
-                ["MedicineHerbal"]     = 25,
-                ["MedicineIndustrial"] = 12,
-                ["Gun_Revolver"]       = 3,
-                ["MeleeWeapon_Knife"]  = 2,
-                ["Pemmican"]           = 200,
-            }));
+        var s = StateWith([Pawn("A", mood: 0.7f), Pawn("B", mood: 0.7f)]);
+        s.Resources.Update(new ResourceSummary(
+            TotalItems: 250, TotalMarketValue: 5000f,
+            FoodTotal: 200, TotalNutrition: 32f,    // 32 / (1.6 * 2 colonists) = 10 days
+            MealsCount: 20, RawFoodCount: 80,
+            MedicineTotal: 37,
+            WeaponCount: 5, WeaponValue: 1200f));
 
         var b = MayorBriefingDerivation.Compute(s);
 
-        b.Resources.Materials.Should().ContainKey("Steel").WhoseValue.Should().Be(1500);
-        b.Resources.Materials.Should().ContainKey("WoodLog");
-        b.Resources.Medicine.Should().HaveCount(2);
-        b.Resources.Weapons.Should().HaveCount(2);
         b.Food.EstimatedFoodUnitsInStockpile.Should().Be(200);
+        b.Food.EstimatedDaysOfFood.Should().Be(10f);
+        b.Resources.Materials.Should().BeEmpty();
+        b.Resources.Medicine.Should().ContainKey("Medicine").WhoseValue.Should().Be(37);
+        b.Resources.Weapons.Should().ContainKey("Weapons").WhoseValue.Should().Be(5);
+    }
+
+    [Fact]
+    public void Compute_ResourceSummaryNoNutrition_LeavesDaysOfFoodNull()
+    {
+        var s = StateWith([Pawn("A", mood: 0.7f)]);
+        s.Resources.Update(new ResourceSummary(
+            TotalItems: 50, TotalMarketValue: 100f,
+            FoodTotal: 57, TotalNutrition: 0f,    // RIMAPI sometimes reports zero
+            MealsCount: 0, RawFoodCount: 0,
+            MedicineTotal: 0, WeaponCount: 0, WeaponValue: 0f));
+
+        var b = MayorBriefingDerivation.Compute(s);
+
+        b.Food.EstimatedFoodUnitsInStockpile.Should().Be(57);
+        b.Food.EstimatedDaysOfFood.Should().BeNull();
+    }
+
+    [Fact]
+    public void Compute_ResearchInfo_FlowsThroughToBriefing()
+    {
+        var s = StateWith([]);
+        s.Research.Update(new ResearchInfo(
+            CurrentProject: "Microelectronics", Progress: 0.42f, IsFinished: false));
+
+        var b = MayorBriefingDerivation.Compute(s);
+
+        b.Research.CurrentProject.Should().Be("Microelectronics");
+        b.Research.Progress.Should().Be(0.42f);
     }
 
     [Fact]

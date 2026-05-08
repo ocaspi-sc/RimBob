@@ -19,13 +19,15 @@ public sealed class ColonyState
     public Versioned<ThreatBoard>      Threats    { get; } = new(AggregateDefaults.Threats);
     public Versioned<WeatherSnapshot>  Weather    { get; } = new(AggregateDefaults.Weather);
     public Versioned<FarmSnapshot>     Farm       { get; } = new(AggregateDefaults.Farm);
+    public Versioned<ResourceSummary>  Resources  { get; } = new(AggregateDefaults.Resources);
+    public Versioned<ResearchInfo>     Research   { get; } = new(AggregateDefaults.Research);
 
     /// <summary>
     /// Canonical name → version pairs for every aggregate the MayorBriefing reads.
     /// Order must stay in sync with GetVersionsForMayorBriefing().
     /// </summary>
     public static readonly string[] MayorBriefingAggregateNames =
-        ["Map", "Economy", "Colonists", "Stockpiles", "Buildings", "Power", "Threats", "Weather", "Farm"];
+        ["Map", "Economy", "Colonists", "Stockpiles", "Buildings", "Power", "Threats", "Weather", "Farm", "Resources", "Research"];
 
     /// <summary>
     /// Versions of every aggregate the MayorBriefing reads, in canonical order.
@@ -34,6 +36,7 @@ public sealed class ColonyState
     public long[] GetVersionsForMayorBriefing() =>
     [
         Map.Version, Economy.Version, Colonists.Version, Stockpiles.Version,
-        Buildings.Version, Power.Version, Threats.Version, Weather.Version, Farm.Version
+        Buildings.Version, Power.Version, Threats.Version, Weather.Version, Farm.Version,
+        Resources.Version, Research.Version
     ];
 }

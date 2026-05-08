@@ -16,26 +16,61 @@ public record MapPawnDto(
 );
 
 // ── GET /api/v2/colonists/detailed?map_id ─────────────────────────────────────
-// Full bio + needs + skills + health per colonist (v2 controller).
-// TODO: field list is not fully cached — verify against live RIMAPI and expand.
+// Full bio + needs + skills + medical per colonist (v2 controller).
+// Wire shape verified against live RIMAPI 1.9.0 — basic identity sits under
+// `pawn`, everything else under `detailes` (yes, the upstream spelling).
 public record ColonistDetailedDto(
-    [property: JsonPropertyName("id")]          string Id,
-    [property: JsonPropertyName("name")]        string Name,
-    [property: JsonPropertyName("age")]         int Age,
-    [property: JsonPropertyName("gender")]      string Gender,
-    [property: JsonPropertyName("health")]      float Health,
-    [property: JsonPropertyName("mood")]        float Mood,
-    [property: JsonPropertyName("hunger")]      float Hunger,
+    [property: JsonPropertyName("pawn")]     ColonistBasicDto?   Pawn,
+    [property: JsonPropertyName("detailes")] ColonistDetailsDto? Detailes
+);
+
+public record ColonistBasicDto(
+    [property: JsonPropertyName("id")]       int Id,
+    [property: JsonPropertyName("name")]     string? Name,
+    [property: JsonPropertyName("gender")]   string? Gender,
+    [property: JsonPropertyName("age")]      int Age,
+    [property: JsonPropertyName("health")]   float Health,
+    [property: JsonPropertyName("mood")]     float Mood,
+    [property: JsonPropertyName("hunger")]   float Hunger,
+    [property: JsonPropertyName("position")] PositionDto? Position
+);
+
+public record ColonistDetailsDto(
+    [property: JsonPropertyName("work_info")]    PawnWorkInfoDto?    WorkInfo,
+    [property: JsonPropertyName("medical_info")] PawnMedicalInfoDto? MedicalInfo
+);
+
+public record PawnWorkInfoDto(
     [property: JsonPropertyName("skills")]      IReadOnlyList<SkillDto>? Skills,
-    [property: JsonPropertyName("traits")]      IReadOnlyList<string>? Traits,
-    [property: JsonPropertyName("current_job")] string? CurrentJob,
-    [property: JsonPropertyName("position")]    PositionDto? Position
+    [property: JsonPropertyName("current_job")] string?                  CurrentJob,
+    [property: JsonPropertyName("traits")]      IReadOnlyList<TraitDto>? Traits
+);
+
+public record PawnMedicalInfoDto(
+    [property: JsonPropertyName("is_dead")]   bool IsDead,
+    [property: JsonPropertyName("is_downed")] bool IsDowned,
+    [property: JsonPropertyName("hediffs")]   IReadOnlyList<HediffDto>? Hediffs
 );
 
 public record SkillDto(
-    [property: JsonPropertyName("def")]     string Def,       // "Cooking", "Plants", etc.
-    [property: JsonPropertyName("level")]   int Level,        // 0–20
-    [property: JsonPropertyName("passion")] string Passion    // None | Minor | Major
+    [property: JsonPropertyName("name")]    string Name,    // "Cooking", "Plants", etc.
+    [property: JsonPropertyName("level")]   int    Level,   // 0–20
+    [property: JsonPropertyName("passion")] int    Passion  // 0=None, 1=Minor, 2=Major
+);
+
+public record TraitDto(
+    [property: JsonPropertyName("name")]  string  Name,
+    [property: JsonPropertyName("label")] string? Label
+);
+
+public record HediffDto(
+    [property: JsonPropertyName("def_name")]                       string  DefName,
+    [property: JsonPropertyName("label")]                          string? Label,
+    [property: JsonPropertyName("severity")]                       float   Severity,
+    [property: JsonPropertyName("bleeding")]                       bool    Bleeding,
+    [property: JsonPropertyName("is_lethal")]                      bool    IsLethal,
+    [property: JsonPropertyName("is_currently_life_threatening")]  bool    IsCurrentlyLifeThreatening,
+    [property: JsonPropertyName("tendable_now")]                   bool    TendableNow
 );
 
 // ── Shared ────────────────────────────────────────────────────────────────────

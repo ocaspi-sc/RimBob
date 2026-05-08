@@ -78,6 +78,33 @@ public sealed record FarmSnapshot(
 
 public sealed record CropTypeCount(string Def, int Count, float AverageGrowth);
 
+/// <summary>
+/// Colony-wide stockpile rollup from /api/v1/resources/summary.
+/// FoodTotal / TotalNutrition come straight from RIMAPI; days-of-food is
+/// derived in MayorBriefingDerivation (null when nutrition is zero).
+/// </summary>
+public sealed record ResourceSummary(
+    int   TotalItems,
+    float TotalMarketValue,
+    int   FoodTotal,
+    float TotalNutrition,
+    int   MealsCount,
+    int   RawFoodCount,
+    int   MedicineTotal,
+    int   WeaponCount,
+    float WeaponValue
+);
+
+/// <summary>
+/// Current research selection from /api/v1/research/progress.
+/// CurrentProject is null when nothing is selected (RIMAPI returns "none"/0).
+/// </summary>
+public sealed record ResearchInfo(
+    string? CurrentProject,   // label, e.g. "Microelectronics"; null when nothing is selected
+    float?  Progress,         // 0–1, derived from ProgressPercent / 100
+    bool    IsFinished
+);
+
 // Empty defaults — used at ColonyState construction so Versioned<T>.Value is never null.
 public static class AggregateDefaults
 {
@@ -90,4 +117,6 @@ public static class AggregateDefaults
     public static readonly ThreatBoard       Threats     = new([], []);
     public static readonly WeatherSnapshot   Weather     = new("", 0f, 0f);
     public static readonly FarmSnapshot      Farm        = new(0, 0f, 0, []);
+    public static readonly ResourceSummary   Resources   = new(0, 0f, 0, 0f, 0, 0, 0, 0, 0f);
+    public static readonly ResearchInfo      Research    = new(null, null, false);
 }
