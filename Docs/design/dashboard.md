@@ -99,6 +99,14 @@ Reads/writes the per-minister autonomy dial. In MVP, every value is `Suggest` an
 
 ## Layout (MVP)
 
+Dashboard presentation is a **dark command-center console**. The default desktop view should fit inside one browser viewport: a top status bar, left boxed tab rail, central scrollable agenda console, and right boxed telemetry console. The page itself should avoid whole-window scrolling on normal desktop sizes; overflow belongs inside the agenda and telemetry boxes so the dashboard remains usable next to RimWorld.
+
+Visual conventions:
+- Dark theme only for MVP; no light/dark toggle until there is an explicit design reason.
+- Use repeated boxed modules with squared, technical styling: compact borders, status lamps, corner accents, dense telemetry rows, and restrained cyan / amber / green / red accents.
+- Keep information dense and scan-friendly. Avoid marketing-page spacing, large empty hero areas, and soft card-heavy layouts.
+- Text must wrap inside its module instead of widening the dashboard. Narrow screens can stack modules, but desktop should keep the command-center composition.
+
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │  RimAI                                    [colony name + tick]  │
@@ -177,4 +185,4 @@ These are weak signals but cheap to collect; documented in [`advice.md`](advice.
 - [ ] Notification on new memo: in-page only, or OS-level (browser notification API)?
 - [ ] Memo expiry UX: hide expired memos, gray them out, or move to a "history" pane?
 - [ ] Mobile/small-screen layout — needed?
-- [ ] Theme: light/dark toggle vs. follow-system.
+- [x] Theme: dark command-center console for MVP; no light/dark toggle yet.

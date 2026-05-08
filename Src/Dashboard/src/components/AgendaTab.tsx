@@ -10,8 +10,9 @@ interface Props {
 export function AgendaTab({ agenda, previous }: Props) {
   if (!agenda) {
     return (
-      <div style={{ color: '#6b7280', padding: '2rem 0', textAlign: 'center' }}>
-        Waiting for the first briefing… (Mayor is calling Gemini.)
+      <div className="empty-console">
+        <span className="empty-code">MAYOR UPLINK</span>
+        Waiting for the first briefing... Mayor is calling Gemini.
       </div>
     );
   }
@@ -25,22 +26,22 @@ export function AgendaTab({ agenda, previous }: Props) {
   const closedShort = agenda.short_term.filter(i => i.status !== 'active');
 
   return (
-    <div>
+    <div className="agenda-console">
       <AgendaHeader agenda={agenda} />
 
-      <Section title="State of the Union" accent="#3730a3">
+      <Section title="State of the Union" tone="violet">
         <StateOfTheUnion entries={agenda.state_of_the_union} />
       </Section>
 
-      <Section title="What changed" accent="#92400e">
-        <p style={{ margin: 0, fontStyle: 'italic', color: '#374151', lineHeight: 1.55 }}>
+      <Section title="What changed" tone="amber">
+        <p className="update-notes">
           {agenda.update_notes}
         </p>
       </Section>
 
       <Section
         title="Short-term priorities"
-        accent="#15803d"
+        tone="green"
         count={activeShort.length}
         countLabel="active"
       >
@@ -54,11 +55,11 @@ export function AgendaTab({ agenda, previous }: Props) {
           />
         ))}
         {closedShort.length > 0 && (
-          <details style={{ marginTop: '0.6rem' }}>
-            <summary style={{ cursor: 'pointer', color: '#6b7280', fontSize: '0.85rem' }}>
+          <details className="closed-priorities">
+            <summary>
               {closedShort.length} closed this turn
             </summary>
-            <div style={{ marginTop: '0.4rem' }}>
+            <div>
               {closedShort.map(item => (
                 <AgendaItemCard
                   key={item.id}
@@ -73,17 +74,12 @@ export function AgendaTab({ agenda, previous }: Props) {
 
       <Section
         title="Long-term goals"
-        accent="#0e7490"
+        tone="cyan"
         count={agenda.long_term.length}
       >
         {agenda.long_term.length === 0 && <Empty>No long-term goals.</Empty>}
         {agenda.long_term.length > 0 && (
-          <div style={{
-            border: '1px solid #e5e7eb',
-            borderRadius: 8,
-            background: '#fff',
-            overflow: 'hidden',
-          }}>
+          <div className="boxed-list">
             {agenda.long_term.map((item, i) => (
               <LongTermRow key={item.id} item={item} divider={i > 0} />
             ))}
@@ -92,23 +88,17 @@ export function AgendaTab({ agenda, previous }: Props) {
       </Section>
 
       {ministerEntries.length > 0 && (
-        <Section title="Minister direction" accent="#7c3aed" count={ministerEntries.length}>
-          <div style={{ display: 'grid', gap: '0.5rem' }}>
+        <Section title="Minister direction" tone="magenta" count={ministerEntries.length}>
+          <div className="minister-grid">
             {ministerEntries.map(([minister, direction]) => (
               <div
                 key={minister}
-                style={{
-                  border: '1px solid #e5e7eb',
-                  borderRadius: 8,
-                  padding: '0.6rem 0.85rem',
-                  background: '#fff',
-                }}
+                className="minister-card"
               >
-                <div style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase',
-                              letterSpacing: '0.05em', color: '#7c3aed', marginBottom: '0.2rem' }}>
+                <div>
                   {minister}
                 </div>
-                <div style={{ color: '#374151', fontSize: '0.9rem' }}>{direction}</div>
+                <p>{direction}</p>
               </div>
             ))}
           </div>
@@ -120,27 +110,17 @@ export function AgendaTab({ agenda, previous }: Props) {
 
 function AgendaHeader({ agenda }: { agenda: MayorAgenda }) {
   return (
-    <header
-      style={{
-        marginBottom: '1.5rem',
-        padding: '1rem 1.1rem',
-        background: 'linear-gradient(135deg, #f5f3ff 0%, #eef2ff 100%)',
-        border: '1px solid #e0e7ff',
-        borderRadius: 10,
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between',
-                    alignItems: 'baseline', marginBottom: '0.6rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-        <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
+    <header className="agenda-header">
+      <div className="agenda-header-top">
+        <div className="posture-row">
           <PostureBadge label={agenda.posture.economic} kind="economic" />
-          <span style={{ color: '#9ca3af' }}>·</span>
           <PostureBadge label={agenda.posture.military} kind="military" />
         </div>
-        <div style={{ fontSize: '0.8rem', color: '#6b7280', fontVariantNumeric: 'tabular-nums' }}>
-          v{agenda.version} · {agenda.updated_in_game_tick}
+        <div className="agenda-version">
+          v{agenda.version} / tick {agenda.updated_in_game_tick}
         </div>
       </div>
-      <div style={{ color: '#1f2937', lineHeight: 1.5, fontSize: '0.95rem' }}>
+      <div className="posture-summary">
         {agenda.posture.summary}
       </div>
     </header>
@@ -148,39 +128,21 @@ function AgendaHeader({ agenda }: { agenda: MayorAgenda }) {
 }
 
 function PostureBadge({ label, kind }: { label: string; kind: 'economic' | 'military' }) {
-  const palette = kind === 'economic'
-    ? { bg: '#dcfce7', fg: '#166534', icon: '$' }
-    : { bg: '#fee2e2', fg: '#991b1b', icon: '⚔' };
   return (
-    <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '0.3rem',
-        fontSize: '0.78rem',
-        fontWeight: 600,
-        textTransform: 'capitalize',
-        padding: '0.25rem 0.6rem',
-        borderRadius: 999,
-        background: palette.bg,
-        color: palette.fg,
-      }}
-    >
-      <span style={{ opacity: 0.7 }}>{palette.icon}</span>
+    <span className={`posture-badge ${kind}`}>
+      <span aria-hidden>{kind === 'economic' ? 'ECO' : 'MIL'}</span>
       {label}
     </span>
   );
 }
 
-// ── State of the Union ──────────────────────────────────────────────────────
-
-const ministerMeta: Record<string, { emoji: string; label: string; order: number }> = {
-  agriculture:  { emoji: '🌾', label: 'Agriculture',  order: 1 },
-  defense:      { emoji: '🛡️', label: 'Defense',      order: 2 },
-  welfare:      { emoji: '❤️', label: 'Welfare',      order: 3 },
-  construction: { emoji: '🔨', label: 'Construction', order: 4 },
-  treasury:     { emoji: '💰', label: 'Treasury',     order: 5 },
-  research:     { emoji: '🔬', label: 'Research',     order: 6 },
+const ministerMeta: Record<string, { code: string; label: string; order: number }> = {
+  agriculture: { code: 'AGR', label: 'Agriculture', order: 1 },
+  defense: { code: 'DEF', label: 'Defense', order: 2 },
+  welfare: { code: 'WEL', label: 'Welfare', order: 3 },
+  construction: { code: 'CON', label: 'Construction', order: 4 },
+  treasury: { code: 'TRE', label: 'Treasury', order: 5 },
+  research: { code: 'RSH', label: 'Research', order: 6 },
 };
 
 function StateOfTheUnion({ entries }: { entries: Record<string, string> }) {
@@ -197,29 +159,16 @@ function StateOfTheUnion({ entries }: { entries: Record<string, string> }) {
   });
 
   return (
-    <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+    <ul className="union-list">
       {sorted.map(key => {
-        const meta = ministerMeta[key] ?? { emoji: '•', label: capitalise(key), order: 99 };
+        const meta = ministerMeta[key] ?? { code: 'SYS', label: capitalise(key), order: 99 };
         return (
-          <li key={key} style={{
-            display: 'grid',
-            gridTemplateColumns: '1.5rem 6rem 1fr',
-            gap: '0.6rem',
-            padding: '0.4rem 0',
-            borderBottom: '1px solid #f3f4f6',
-            alignItems: 'baseline',
-          }}>
-            <span style={{ fontSize: '1.05rem', textAlign: 'center' }} aria-hidden>{meta.emoji}</span>
-            <span style={{
-              fontSize: '0.78rem',
-              fontWeight: 600,
-              color: '#3730a3',
-              textTransform: 'uppercase',
-              letterSpacing: '0.04em',
-            }}>
+          <li key={key}>
+            <span aria-hidden>{meta.code}</span>
+            <strong>
               {meta.label}
-            </span>
-            <span style={{ color: '#1f2937', lineHeight: 1.5 }}>{entries[key]}</span>
+            </strong>
+            <p>{entries[key]}</p>
           </li>
         );
       })}
@@ -241,31 +190,19 @@ function computeDelta(current: AgendaItem, prev: AgendaItem | undefined): DeltaB
 
 interface SectionProps {
   title: string;
-  accent: string;
+  tone: 'violet' | 'amber' | 'green' | 'cyan' | 'magenta';
   children: ReactNode;
   count?: number;
   countLabel?: string;
 }
 
-function Section({ title, accent, children, count, countLabel }: SectionProps) {
+function Section({ title, tone, children, count, countLabel }: SectionProps) {
   return (
-    <section style={{ marginBottom: '1.5rem' }}>
-      <h3 style={{
-        display: 'flex',
-        alignItems: 'baseline',
-        gap: '0.5rem',
-        margin: '0 0 0.65rem',
-        paddingLeft: '0.6rem',
-        borderLeft: `3px solid ${accent}`,
-        fontSize: '0.78rem',
-        textTransform: 'uppercase',
-        letterSpacing: '0.07em',
-        color: '#374151',
-        fontWeight: 600,
-      }}>
+    <section className={`dashboard-section tone-${tone}`}>
+      <h3>
         <span>{title}</span>
         {count !== undefined && (
-          <span style={{ color: '#9ca3af', fontWeight: 500, letterSpacing: 0, textTransform: 'none' }}>
+          <span>
             {count}{countLabel ? ` ${countLabel}` : ''}
           </span>
         )}
@@ -276,43 +213,19 @@ function Section({ title, accent, children, count, countLabel }: SectionProps) {
 }
 
 function Empty({ children }: { children: ReactNode }) {
-  return <div style={{ color: '#9ca3af', fontStyle: 'italic', padding: '0.5rem 0' }}>{children}</div>;
+  return <div className="module-empty">{children}</div>;
 }
 
 function LongTermRow({ item, divider }: { item: AgendaItem; divider: boolean }) {
-  const icon = item.status === 'completed' ? '✓' : item.status === 'deferred' ? '○' : '●';
-  const iconColor =
-    item.status === 'completed' ? '#15803d' :
-    item.status === 'deferred'  ? '#9ca3af' : '#0e7490';
-
   return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.7rem',
-      padding: '0.7rem 0.9rem',
-      borderTop: divider ? '1px solid #f3f4f6' : 'none',
-      color: '#374151',
-    }}>
-      <span style={{ width: '1rem', textAlign: 'center', color: iconColor, fontSize: '0.85rem' }}>
-        {icon}
-      </span>
-      <span style={{
-        flex: 1,
-        textDecoration: item.status === 'completed' ? 'line-through' : undefined,
-        color: item.status === 'deferred' ? '#9ca3af' : '#1f2937',
-      }}>
+    <div className={`long-term-row ${divider ? 'divided' : ''} ${item.status}`}>
+      <span aria-hidden />
+      <p>
         {item.text}
-      </span>
-      <span style={{
-        fontSize: '0.7rem',
-        textTransform: 'uppercase',
-        letterSpacing: '0.05em',
-        color: iconColor,
-        fontWeight: 600,
-      }}>
+      </p>
+      <strong>
         {item.status}
-      </span>
+      </strong>
     </div>
   );
 }

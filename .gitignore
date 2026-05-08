@@ -11,6 +11,7 @@ logs/
 .vs/
 *.suo
 .vscode/
+*.code-workspace
 
 # NuGet
 *.nupkg
@@ -33,3 +34,14 @@ Thumbs.db
 
 # Claude Code local settings (personal, not team)
 .claude/settings.local.json
+.claude/worktrees/
+
+# Codex/agent local scratch
+.plans/
+
+# PowerShell module analysis cache can appear when tools run with HOME in repo
+Microsoft/
+
+# Local scratch files
+Untitled
+Docs/Untitled

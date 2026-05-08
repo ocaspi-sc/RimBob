@@ -10,20 +10,20 @@ import type { ColonySnapshot } from './types/colony';
 type TabKey = 'agenda' | 'alerts' | 'briefing' | 'log' | 'autonomy';
 
 const tabs: Array<{ key: TabKey; label: string; ready: boolean; note?: string }> = [
-  { key: 'agenda',    label: 'Agenda',    ready: true },
-  { key: 'alerts',    label: 'Alerts',    ready: false, note: 'Coming in M5' },
-  { key: 'briefing',  label: 'Briefing',  ready: false, note: 'Coming in M1+' },
-  { key: 'log',       label: 'Log',       ready: false, note: 'Coming in M2' },
-  { key: 'autonomy',  label: 'Autonomy',  ready: false, note: 'Coming in M2' },
+  { key: 'agenda',   label: 'Agenda',   ready: true },
+  { key: 'alerts',   label: 'Alerts',   ready: false, note: 'Coming in M5' },
+  { key: 'briefing', label: 'Briefing', ready: false, note: 'Coming in M1+' },
+  { key: 'log',      label: 'Log',      ready: false, note: 'Coming in M2' },
+  { key: 'autonomy', label: 'Autonomy', ready: false, note: 'Coming in M2' },
 ];
 
 const SnapshotPollMs = 5_000;
 
 export default function App() {
-  const [agenda,   setAgenda]   = useState<MayorAgenda | null>(null);
+  const [agenda, setAgenda] = useState<MayorAgenda | null>(null);
   const [previous, setPrevious] = useState<MayorAgenda | null>(null);
   const [snapshot, setSnapshot] = useState<ColonySnapshot | null>(null);
-  const [active,   setActive]   = useState<TabKey>('agenda');
+  const [active, setActive] = useState<TabKey>('agenda');
 
   useEffect(() => {
     let cancelled = false;
@@ -70,47 +70,49 @@ export default function App() {
     };
   }, []);
 
+  const connectionState = agenda ? 'live' : 'standby';
+
   return (
-    <main style={{ fontFamily: 'system-ui, sans-serif', maxWidth: 1180, margin: '0 auto', padding: '2rem 1.5rem' }}>
-      <header style={{ marginBottom: '1.5rem', borderBottom: '1px solid #e5e7eb', paddingBottom: '1rem' }}>
-        <h1 style={{ margin: 0, fontSize: '1.5rem' }}>RimAI</h1>
-        <p style={{ margin: '0.25rem 0 0', color: '#6b7280', fontSize: '0.9rem' }}>
-          Colony advisor dashboard
-        </p>
+    <main className="app-shell">
+      <header className="topbar panel-box">
+        <div>
+          <div className="kicker">RimWorld Advisory Cabinet</div>
+          <h1>RimAI Command</h1>
+        </div>
+        <div className="topbar-status">
+          <span className={`status-light ${connectionState}`} aria-hidden />
+          <span>{connectionState === 'live' ? 'Agenda feed live' : 'Awaiting first agenda'}</span>
+          <span className="divider" />
+          <span>Poll {SnapshotPollMs / 1000}s</span>
+        </div>
       </header>
 
-      <nav style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-        {tabs.map(t => (
-          <button
-            key={t.key}
-            disabled={!t.ready}
-            onClick={() => t.ready && setActive(t.key)}
-            title={t.note}
-            style={{
-              padding: '0.4rem 0.9rem',
-              border: 'none',
-              borderBottom: active === t.key ? '2px solid #3730a3' : '2px solid transparent',
-              background: 'transparent',
-              fontSize: '0.9rem',
-              fontWeight: active === t.key ? 600 : 400,
-              color: t.ready ? (active === t.key ? '#1f2937' : '#6b7280') : '#d1d5db',
-              cursor: t.ready ? 'pointer' : 'not-allowed',
-            }}
-          >
-            {t.label}
-          </button>
-        ))}
-      </nav>
+      <div className="command-grid">
+        <nav className="tab-rail panel-box" aria-label="Dashboard sections">
+          {tabs.map(t => (
+            <button
+              key={t.key}
+              className={`tab-button ${active === t.key ? 'active' : ''}`}
+              disabled={!t.ready}
+              onClick={() => t.ready && setActive(t.key)}
+              title={t.note}
+            >
+              <span>{t.label}</span>
+              {!t.ready && <small>{t.note}</small>}
+            </button>
+          ))}
+        </nav>
 
-      <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start' }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <section className="main-console panel-box">
           {active === 'agenda' && <AgendaTab agenda={agenda} previous={previous} />}
           {active !== 'agenda' && (
-            <div style={{ color: '#9ca3af', textAlign: 'center', padding: '3rem 0' }}>
+            <div className="empty-console">
+              <span className="empty-code">MODULE LOCKED</span>
               {tabs.find(t => t.key === active)?.note ?? 'Coming soon'}
             </div>
           )}
-        </div>
+        </section>
+
         <Sidebar snapshot={snapshot} />
       </div>
     </main>
