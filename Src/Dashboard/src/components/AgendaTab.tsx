@@ -29,7 +29,7 @@ export function AgendaTab({ agenda, previous }: Props) {
       <AgendaHeader agenda={agenda} />
 
       <Section title="State of the Union" accent="#3730a3">
-        <p style={{ margin: 0, lineHeight: 1.6, color: '#1f2937' }}>{agenda.state_of_the_union}</p>
+        <StateOfTheUnion entries={agenda.state_of_the_union} />
       </Section>
 
       <Section title="What changed" accent="#92400e">
@@ -170,6 +170,65 @@ function PostureBadge({ label, kind }: { label: string; kind: 'economic' | 'mili
       {label}
     </span>
   );
+}
+
+// ── State of the Union ──────────────────────────────────────────────────────
+
+const ministerMeta: Record<string, { emoji: string; label: string; order: number }> = {
+  agriculture:  { emoji: '🌾', label: 'Agriculture',  order: 1 },
+  defense:      { emoji: '🛡️', label: 'Defense',      order: 2 },
+  welfare:      { emoji: '❤️', label: 'Welfare',      order: 3 },
+  construction: { emoji: '🔨', label: 'Construction', order: 4 },
+  treasury:     { emoji: '💰', label: 'Treasury',     order: 5 },
+  research:     { emoji: '🔬', label: 'Research',     order: 6 },
+};
+
+function StateOfTheUnion({ entries }: { entries: Record<string, string> }) {
+  const keys = Object.keys(entries);
+  if (keys.length === 0) {
+    return <Empty>No state-of-the-union entries this turn.</Empty>;
+  }
+
+  // Order known categories first, then anything unexpected at the end.
+  const sorted = keys.slice().sort((a, b) => {
+    const oa = ministerMeta[a]?.order ?? 99;
+    const ob = ministerMeta[b]?.order ?? 99;
+    return oa - ob;
+  });
+
+  return (
+    <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+      {sorted.map(key => {
+        const meta = ministerMeta[key] ?? { emoji: '•', label: capitalise(key), order: 99 };
+        return (
+          <li key={key} style={{
+            display: 'grid',
+            gridTemplateColumns: '1.5rem 6rem 1fr',
+            gap: '0.6rem',
+            padding: '0.4rem 0',
+            borderBottom: '1px solid #f3f4f6',
+            alignItems: 'baseline',
+          }}>
+            <span style={{ fontSize: '1.05rem', textAlign: 'center' }} aria-hidden>{meta.emoji}</span>
+            <span style={{
+              fontSize: '0.78rem',
+              fontWeight: 600,
+              color: '#3730a3',
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+            }}>
+              {meta.label}
+            </span>
+            <span style={{ color: '#1f2937', lineHeight: 1.5 }}>{entries[key]}</span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function capitalise(s: string): string {
+  return s.length === 0 ? s : s[0].toUpperCase() + s.slice(1);
 }
 
 function computeDelta(current: AgendaItem, prev: AgendaItem | undefined): DeltaBadge {

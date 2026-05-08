@@ -17,7 +17,8 @@ public sealed class AdviceBusTests
         MayorAgenda agenda = new(
             Version: 1, UpdatedInGameTick: "Y1Q1D1",
             Posture: new MayorPosture("growth", "defensive", "go"),
-            StateOfTheUnion: "All quiet.", UpdateNotes: "Day 1.",
+            StateOfTheUnion: new Dictionary<string, string> { ["welfare"] = "All quiet." },
+            UpdateNotes: "Day 1.",
             ShortTerm: [], LongTerm: [],
             MinisterDirection: new Dictionary<string, string>());
 

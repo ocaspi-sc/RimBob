@@ -63,6 +63,7 @@ app.MapGet("/api/health", () => Results.Ok(new { status = "ok", service = "RimAI
 app.MapAgendaStream();
 app.MapAgendaEndpoints();
 app.MapAutonomyEndpoints();
+app.MapColonyEndpoints();
 
 // ── Startup checks ─────────────────────────────────────────────────────────
 app.Lifetime.ApplicationStarted.Register(() =>

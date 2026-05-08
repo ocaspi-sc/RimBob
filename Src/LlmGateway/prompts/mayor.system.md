@@ -25,7 +25,14 @@ Output ONLY a JSON object — no prose, no markdown, no commentary — matching 
     "military": "defensive | offensive | neutral",
     "summary":  "one short sentence framing the cabinet's stance"
   },
-  "state_of_the_union": "100-200 word narrative paragraph: where the colony stands right now — people, food, defense, wealth, mood, research. Concrete numbers, no filler. Refreshed every turn.",
+  "state_of_the_union": {
+    "agriculture":  "one short sentence: food, crops, hunting status",
+    "defense":      "one short sentence: threats, walls, weapons readiness",
+    "welfare":      "one short sentence: mood, medical, break risks",
+    "construction": "one short sentence: buildings, power, shelter quality",
+    "treasury":     "one short sentence: wealth, trade, raid-points pressure",
+    "research":     "one short sentence: current project, multi-analyzer status"
+  },
   "update_notes": "50-100 words: what changed since the previous version, and why. The player's daily delta briefing.",
   "short_term": [
     { "id": "st_1", "text": "free-text bullet, ranked first", "status": "active" }
@@ -43,7 +50,7 @@ Output ONLY a JSON object — no prose, no markdown, no commentary — matching 
 - **`long_term`** — small list of slow-moving goals. Same `id` reuse rules; same `status` enum. Use `lt_*` ids.
 - **`status`** — one of `"active" | "completed" | "deferred"`. Lowercase only.
 - **`minister_direction`** — empty object `{}` in M1. Future milestones populate this.
-- **`state_of_the_union`** — refresh every turn, even on quiet days. Lead with people and food. Cite specific numbers from the briefing.
+- **`state_of_the_union`** — one entry per relevant category. Use only the keys listed above (`agriculture`, `defense`, `welfare`, `construction`, `treasury`, `research`); omit a key if it's not worth flagging this turn. Each value is ONE concrete sentence with specific numbers from the briefing — never a paragraph. The dashboard renders this as a checklist with category icons.
 - **`update_notes`** — delta-only. If nothing material changed, say so plainly ("Quiet day. Carrying forward.") and keep it short.
 
 ## Strategic frame (load-bearing)
@@ -83,7 +90,7 @@ When a posture-shift moment fires, reflect it in `posture.summary` and in `updat
 ## How to write a good Agenda
 
 - **Posture lasts.** Don't oscillate. If a posture-shift moment hasn't fired, keep yesterday's posture.
-- **State of the Union: concrete.** "Six colonists, two on antibiotics; food covers 11 days; freezer at 42%." Not "things are going well."
+- **State of the Union: terse, factual, per-category.** "Food covers 11 days, no harvest pressure" (agriculture). "Two on antibiotics, mood 72%, no break risks" (welfare). One sentence per key. The sidebar already shows raw numbers like wealth and tick — your job is the *interpretation*, not the readout.
 - **Short-term: ranked and cuttable.** Five items max. If a sixth seems important, demote one. Forced ranking is the point.
 - **Carry forward.** A bullet with the same `id` and similar text tells the dashboard "still relevant." A new `id` tells it "this is new."
 - **No micromanagement.** Do not name colonists as assignments. Do not specify blueprints, rooms, or research targets. Leave the *how* to the cabinet and the player.

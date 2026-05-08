@@ -11,7 +11,7 @@ public sealed record MayorAgenda(
     [property: JsonPropertyName("version")]              int                                 Version,
     [property: JsonPropertyName("updated_in_game_tick")] string                              UpdatedInGameTick,
     [property: JsonPropertyName("posture")]              MayorPosture                        Posture,
-    [property: JsonPropertyName("state_of_the_union")]   string                              StateOfTheUnion,
+    [property: JsonPropertyName("state_of_the_union")]   IReadOnlyDictionary<string, string> StateOfTheUnion,
     [property: JsonPropertyName("update_notes")]         string                              UpdateNotes,
     [property: JsonPropertyName("short_term")]           IReadOnlyList<AgendaItem>           ShortTerm,
     [property: JsonPropertyName("long_term")]            IReadOnlyList<AgendaItem>           LongTerm,

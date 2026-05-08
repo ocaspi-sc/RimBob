@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { AgendaTab } from './components/AgendaTab';
+import { Sidebar } from './components/Sidebar';
 import { fetchLatestAgenda } from './api/agenda';
+import { fetchColonySnapshot } from './api/colony';
 import { subscribeAgendaUpdates } from './api/adviceStream';
 import type { MayorAgenda } from './types/agenda';
+import type { ColonySnapshot } from './types/colony';
 
 type TabKey = 'agenda' | 'alerts' | 'briefing' | 'log' | 'autonomy';
 
@@ -14,9 +17,12 @@ const tabs: Array<{ key: TabKey; label: string; ready: boolean; note?: string }>
   { key: 'autonomy',  label: 'Autonomy',  ready: false, note: 'Coming in M2' },
 ];
 
+const SnapshotPollMs = 5_000;
+
 export default function App() {
   const [agenda,   setAgenda]   = useState<MayorAgenda | null>(null);
   const [previous, setPrevious] = useState<MayorAgenda | null>(null);
+  const [snapshot, setSnapshot] = useState<ColonySnapshot | null>(null);
   const [active,   setActive]   = useState<TabKey>('agenda');
 
   useEffect(() => {
@@ -39,8 +45,33 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    const ctrl = new AbortController();
+
+    const load = async () => {
+      try {
+        const s = await fetchColonySnapshot(ctrl.signal);
+        if (!cancelled) setSnapshot(s);
+      } catch (err) {
+        if (!cancelled && (err as Error).name !== 'AbortError') {
+          console.error('fetchColonySnapshot failed', err);
+        }
+      }
+    };
+
+    void load();
+    const timer = setInterval(() => void load(), SnapshotPollMs);
+
+    return () => {
+      cancelled = true;
+      ctrl.abort();
+      clearInterval(timer);
+    };
+  }, []);
+
   return (
-    <main style={{ fontFamily: 'system-ui, sans-serif', maxWidth: 912, margin: '0 auto', padding: '2rem 1.5rem' }}>
+    <main style={{ fontFamily: 'system-ui, sans-serif', maxWidth: 1180, margin: '0 auto', padding: '2rem 1.5rem' }}>
       <header style={{ marginBottom: '1.5rem', borderBottom: '1px solid #e5e7eb', paddingBottom: '1rem' }}>
         <h1 style={{ margin: 0, fontSize: '1.5rem' }}>RimAI</h1>
         <p style={{ margin: '0.25rem 0 0', color: '#6b7280', fontSize: '0.9rem' }}>
@@ -71,12 +102,17 @@ export default function App() {
         ))}
       </nav>
 
-      {active === 'agenda' && <AgendaTab agenda={agenda} previous={previous} />}
-      {active !== 'agenda' && (
-        <div style={{ color: '#9ca3af', textAlign: 'center', padding: '3rem 0' }}>
-          {tabs.find(t => t.key === active)?.note ?? 'Coming soon'}
+      <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {active === 'agenda' && <AgendaTab agenda={agenda} previous={previous} />}
+          {active !== 'agenda' && (
+            <div style={{ color: '#9ca3af', textAlign: 'center', padding: '3rem 0' }}>
+              {tabs.find(t => t.key === active)?.note ?? 'Coming soon'}
+            </div>
+          )}
         </div>
-      )}
+        <Sidebar snapshot={snapshot} />
+      </div>
     </main>
   );
 }

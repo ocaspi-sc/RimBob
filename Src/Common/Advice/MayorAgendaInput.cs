@@ -8,7 +8,7 @@ namespace RimAI.Core.Advice;
 /// </summary>
 public sealed record MayorAgendaInput(
     [property: JsonPropertyName("posture")]            MayorPosture                        Posture,
-    [property: JsonPropertyName("state_of_the_union")] string                              StateOfTheUnion,
+    [property: JsonPropertyName("state_of_the_union")] IReadOnlyDictionary<string, string> StateOfTheUnion,
     [property: JsonPropertyName("update_notes")]       string                              UpdateNotes,
     [property: JsonPropertyName("short_term")]         IReadOnlyList<AgendaItem>           ShortTerm,
     [property: JsonPropertyName("long_term")]          IReadOnlyList<AgendaItem>           LongTerm,

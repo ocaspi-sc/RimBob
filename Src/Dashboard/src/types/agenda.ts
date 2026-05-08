@@ -19,7 +19,8 @@ export interface MayorAgenda {
   version: number;
   updated_in_game_tick: string;
   posture: MayorPosture;
-  state_of_the_union: string;
+  /** Map of category name → one-line interpretation. Keys: agriculture, defense, welfare, construction, treasury, research. */
+  state_of_the_union: Record<string, string>;
   update_notes: string;
   short_term: AgendaItem[];
   long_term: AgendaItem[];

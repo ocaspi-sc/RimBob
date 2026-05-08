@@ -72,7 +72,12 @@ internal static class InputBuilder
 {
     public static MayorAgendaInput Default { get; } = new(
         Posture:           new MayorPosture("consolidation", "defensive", "Hold steady."),
-        StateOfTheUnion:   "Stable colony, six adults, food adequate, no active threats.",
+        StateOfTheUnion:   new Dictionary<string, string>
+        {
+            ["agriculture"] = "Food covers 18 days, no harvest pressure.",
+            ["defense"]     = "No active threats, walls intact.",
+            ["welfare"]     = "Mood 72%, no break risks.",
+        },
         UpdateNotes:       "Quiet day. Carrying forward.",
         ShortTerm:         [],
         LongTerm:          [],
