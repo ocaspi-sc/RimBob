@@ -1,4 +1,4 @@
-# RimAI — Human Backlog
+# RimAI — Human Todo
 
 > Loose capture of future ideas, spikes, and "what if" tasks from the human.
 > Anything serious that gets promoted belongs in `Docs/TODO.md` or `Docs/ROADMAP.md`.
