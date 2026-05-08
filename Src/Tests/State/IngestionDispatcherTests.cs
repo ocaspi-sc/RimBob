@@ -48,9 +48,44 @@ public sealed class IngestionDispatcherTests
         s.Economy.Value.DateTimeRaw.Should().Be("5th of Aprimay, 5500, 14h");
         s.Colonists.Value.Colonists.Should().HaveCount(1);
         s.Colonists.Value.Colonists[0].Name.Should().Be("Alice");
+        s.Colonists.Value.Colonists[0].IsDowned.Should().BeFalse();
+        s.Colonists.Value.Colonists[0].IsDead.Should().BeFalse();
         s.Power.Value.ProductionW.Should().Be(2000f);
         s.Threats.Value.Lords.Should().ContainSingle()
             .Which.JobType.Should().Be("Raid");
+    }
+
+    [Fact]
+    public async Task RefreshAllAsync_PawnMedicalInfo_FlowsThroughToColonistRecord()
+    {
+        // Use the standard router but swap in a colonists payload with a downed pawn
+        // and a pawn with null medical_info, to cover both branches of the mapper.
+        var pawnDowned = new ColonistDetailedDto(
+            Pawn: new ColonistBasicDto(2, "Bob", "Male", 35, 0.9f, 0.6f, 1.0f, null),
+            Detailes: new ColonistDetailsDto(
+                WorkInfo: null,
+                MedicalInfo: new PawnMedicalInfoDto(IsDead: false, IsDowned: true, Hediffs: [])));
+        var pawnNoMedical = new ColonistDetailedDto(
+            Pawn: new ColonistBasicDto(3, "Carol", "Female", 22, 1.0f, 0.7f, 1.0f, null),
+            Detailes: new ColonistDetailsDto(WorkInfo: null, MedicalInfo: null));
+        var router = StandardRouterWithoutColonists()
+            .Add("api/v2/colonists/detailed",
+                 Envelope(new List<ColonistDetailedDto> { pawnDowned, pawnNoMedical }));
+
+        using var http = MakeClient(router);
+        var s = new ColonyState();
+        var dispatcher = new IngestionDispatcher(
+            new RimApiClient(http), s, new TestLogger<IngestionDispatcher>());
+
+        await dispatcher.RefreshAllAsync();
+
+        var bob   = s.Colonists.Value.Colonists.Single(c => c.Name == "Bob");
+        var carol = s.Colonists.Value.Colonists.Single(c => c.Name == "Carol");
+
+        bob.IsDowned.Should().BeTrue();
+        bob.IsDead.Should().BeFalse();
+        carol.IsDowned.Should().BeFalse();   // null medical_info defaults to false
+        carol.IsDead.Should().BeFalse();
     }
 
     [Fact]
@@ -72,22 +107,29 @@ public sealed class IngestionDispatcherTests
 
     private static PathRouter StandardRouter()
     {
-        var map = new MapInfoDto(0, 0, true, false, "10", 1, "(250,1,250)");
-        var state = new GameStateDto(
-            Tick: 12345, Wealth: 7500f, ColonistCount: 1,
-            Storyteller: "Cassandra", Paused: false, ProgramState: "Playing", MapCount: 1);
-        var date = new DateTimeDto("5th of Aprimay, 5500, 14h");
         var pawn = new ColonistDetailedDto(
             Pawn: new ColonistBasicDto(
                 Id: 1, Name: "Alice", Gender: "Female", Age: 28,
                 Health: 1.0f, Mood: 0.7f, Hunger: 1.0f, Position: null),
             Detailes: new ColonistDetailsDto(
                 WorkInfo: new PawnWorkInfoDto(
-                    Skills: [new SkillDto("Plants", 12, 2)],   // 2 = Major passion
+                    Skills: [new SkillDto("Plants", 12, 2)],
                     CurrentJob: "Sowing",
                     Traits: [new TraitDto("Industrious", "industrious")]),
                 MedicalInfo: new PawnMedicalInfoDto(
                     IsDead: false, IsDowned: false, Hediffs: [])));
+
+        return StandardRouterWithoutColonists()
+            .Add("api/v2/colonists/detailed", Envelope(new List<ColonistDetailedDto> { pawn }));
+    }
+
+    private static PathRouter StandardRouterWithoutColonists()
+    {
+        var map = new MapInfoDto(0, 0, true, false, "10", 1, "(250,1,250)");
+        var state = new GameStateDto(
+            Tick: 12345, Wealth: 7500f, ColonistCount: 1,
+            Storyteller: "Cassandra", Paused: false, ProgramState: "Playing", MapCount: 1);
+        var date = new DateTimeDto("5th of Aprimay, 5500, 14h");
         var farm = new FarmSummaryDto(50, 0.6f, 5, [new CropBreakdownDto("Rice", 30, 0.7f)]);
         var zones = new List<ZoneDto>
         {
@@ -124,7 +166,6 @@ public sealed class IngestionDispatcherTests
             .Add("api/v1/maps",                    Envelope(new List<MapInfoDto> { map }))
             .Add("api/v1/game/state",              Envelope(state))
             .Add("api/v1/datetime",                Envelope(date))
-            .Add("api/v2/colonists/detailed",      Envelope(new List<ColonistDetailedDto> { pawn }))
             .Add("api/v1/map/farm/summary",        Envelope(farm))
             .Add("api/v1/map/zones",               Envelope(zones))
             .Add("api/v1/map/buildings",           Envelope(buildings))

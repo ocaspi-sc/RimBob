@@ -75,6 +75,7 @@ public sealed class IngestionDispatcher(
             {
                 ColonistBasicDto basic    = p.Pawn!;
                 PawnWorkInfoDto? work     = p.Detailes?.WorkInfo;
+                PawnMedicalInfoDto? med   = p.Detailes?.MedicalInfo;
                 IReadOnlyList<SkillDto> sk = work?.Skills ?? [];
                 IReadOnlyList<TraitDto> tr = work?.Traits ?? [];
 
@@ -86,6 +87,8 @@ public sealed class IngestionDispatcher(
                     Health:     basic.Health,
                     Mood:       basic.Mood,
                     Hunger:     basic.Hunger,
+                    IsDowned:   med?.IsDowned ?? false,
+                    IsDead:     med?.IsDead   ?? false,
                     CurrentJob: work?.CurrentJob,
                     Skills:     sk.Select(s => new ColonistSkill(s.Name, s.Level, PassionName(s.Passion))).ToList(),
                     Traits:     tr.Select(t => t.Name).ToList()

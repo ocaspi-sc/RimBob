@@ -34,19 +34,13 @@ public sealed class LlmClient
 
     public bool IsConfigured => _client is not null || _pingExecutor is not null;
 
-    public LlmClient(PromptBuilder prompts, ILogger<LlmClient> log)
+    public LlmClient(string? apiKey, PromptBuilder prompts, ILogger<LlmClient> log)
     {
         _prompts = prompts;
         _log     = log;
-        string? apiKey = System.Environment.GetEnvironmentVariable("GEMINI_API_KEY");
-        if (string.IsNullOrEmpty(apiKey))
-        {
-            // Constructor must not throw — Host needs to boot for /api/health
-            // even when the key is absent (e.g. CI smoke tests).
-            _client = null;
-            return;
-        }
-        _client = new Client(apiKey: apiKey);
+        // Constructor must not throw — Host needs to boot for /api/health
+        // even when the key is absent (e.g. CI smoke tests).
+        _client = string.IsNullOrWhiteSpace(apiKey) ? null : new Client(apiKey: apiKey);
     }
 
     // Test-only ctor: simulates the "no GEMINI_API_KEY set" case.

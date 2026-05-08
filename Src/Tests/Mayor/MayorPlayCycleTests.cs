@@ -99,7 +99,7 @@ public sealed class MayorPlayCycleTests
             Bus.AgendaUpdated += e => PublishedAgendas.Add(e.Agenda);
 
             LlmClient llm = new(NullLogger<LlmClient>.Instance, executor);
-            Mayor = new(Cache, new MayorRules(), Store, llm, Bus, new MayorStatus(), NullLogger<MayorMinister>.Instance);
+            Mayor = new(Cache, new MayorRules(), Store, llm, new PromptBuilder(), Bus, new MayorStatus(), NullLogger<MayorMinister>.Instance);
         }
     }
 }

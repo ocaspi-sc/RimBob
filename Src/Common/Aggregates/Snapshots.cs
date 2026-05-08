@@ -24,6 +24,8 @@ public sealed record ColonistRecord(
     float  Health,
     float  Mood,
     float  Hunger,
+    bool   IsDowned,
+    bool   IsDead,
     string? CurrentJob,
     IReadOnlyList<ColonistSkill> Skills,
     IReadOnlyList<string>        Traits

@@ -11,6 +11,9 @@ using RimAI.State;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// appsettings.Local.json is gitignored; safe place for the Gemini key in dev.
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: false);
+
 // ── Logging: Serilog reads from appsettings.json ───────────────────────────
 builder.Host.UseSerilog((ctx, services, cfg) =>
     cfg.ReadFrom.Configuration(ctx.Configuration)
@@ -38,7 +41,15 @@ builder.Services.AddHttpClient<RimApiClient>((sp, c) =>
     c.Timeout = TimeSpan.FromSeconds(10);
 });
 builder.Services.AddSingleton<PromptBuilder>();
-builder.Services.AddSingleton<LlmClient>();
+builder.Services.AddSingleton<LlmClient>(sp =>
+{
+    var opts = sp.GetRequiredService<IOptions<RimAiOptions>>().Value;
+    // Env var wins so an explicit GEMINI_API_KEY override still works.
+    string? apiKey = Environment.GetEnvironmentVariable("GEMINI_API_KEY");
+    if (string.IsNullOrWhiteSpace(apiKey)) apiKey = opts.GeminiApiKey;
+    return new LlmClient(apiKey, sp.GetRequiredService<PromptBuilder>(),
+                                 sp.GetRequiredService<ILogger<LlmClient>>());
+});
 
 builder.Services.AddSingleton<ColonyState>();
 builder.Services.AddSingleton<BriefingCache>();
@@ -96,12 +107,12 @@ app.Lifetime.ApplicationStarted.Register(() =>
             var llm = scope.ServiceProvider.GetRequiredService<LlmClient>();
             if (!llm.IsConfigured)
             {
-                Log.Warning("GEMINI_API_KEY not set — LLM calls will fail at runtime");
-                Console.WriteLine("✗ GEMINI_API_KEY env var not set");
+                Log.Warning("Gemini API key not set — LLM calls will fail at runtime");
+                Console.WriteLine("✗ Gemini API key not set (env GEMINI_API_KEY or RimAi.GeminiApiKey in appsettings.Local.json)");
             }
             else if (opts.PingLlmOnStartup)
             {
-                Console.WriteLine("✓ GEMINI_API_KEY present");
+                Console.WriteLine("✓ Gemini API key present");
                 using var pingCts =
                     CancellationTokenSource.CreateLinkedTokenSource(app.Lifetime.ApplicationStopping);
                 pingCts.CancelAfter(TimeSpan.FromSeconds(5));

@@ -52,6 +52,7 @@ public sealed record PawnLine(
     float  Mood,
     float  Health,
     float  Hunger,
+    bool   IsDowned,   // authoritative incapacitation flag from RIMAPI; do not infer from Health
     string? CurrentJob,
     string? TopSkill   // "Plants 14*" — level + passion glyph
 );

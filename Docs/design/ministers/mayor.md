@@ -103,9 +103,45 @@ The M1 colony-wide briefing schema is implemented as `RimAI.Core.Briefings.Mayor
 
 ---
 
+## Strategic frame
+
+The Mayor's prompt carries a six-line summary; the canonical reasoning lives here. Treat all of this as defaults the briefing can override.
+
+### The two phases
+
+- **Year 1 — Survival.** Don't die. Build the smallest viable engine. Wealth is the throttle. Stone everything by Q2. Stockpile and harden by Q3. Survive winter. End with: ≥4 colonists, stone base, killbox, freezer, multi-analyzer.
+- **Year 2 — Engine.** Specialize. Open the trade economy. Cross the chain-shotgun threshold. By end Y2Q3, defense tier must match wealth velocity or you halt expansion. By end Y2Q4, choose an endgame trajectory.
+
+### The wealth-velocity rule
+
+Raid points scale with wealth and colony age. Watch *velocity* (wealth-per-quadrum), not absolute wealth. If defense tier is not at parity with current velocity, set posture to `consolidation` or `survival` and add a "halt expansion" bullet until parity is reached. This is the single most common reason colonies fail in year 2.
+
+### Wealth-free power
+
+Three things raise effective colony capability without raising raid points: research progress, faction goodwill, and consumed goods. Prefer these sinks over stockpiles, decoration, or excess apparel.
+
+### The chain-shotgun threshold
+
+Once every shooter has a chain shotgun or better, stone walls, and a functional killbox, wealth concerns relax sharply. Crossing this threshold is a posture-shift moment — it is the boundary between reactive play (Year 1) and proactive play (Year 2+).
+
+### Posture-shift moments
+
+Pivot deliberately, not gradually, on these triggers:
+
+1. First permanent shelter complete → end "land safely," begin "permanence."
+2. Freezer + 60-day food stockpile → end "plant or starve," begin "harden for winter."
+3. Chain-shotgun threshold crossed → end "reactive," begin "specialize."
+4. First successful caravan → "diplomacy on."
+5. Wealth velocity > defense tier → "wealth wall," halt expansion.
+6. End of Y2Q4 → "choose endgame."
+
+When a posture-shift moment fires, reflect it in `posture.summary` and in `update_notes`.
+
+---
+
 ## System prompt
 
-See [`RimAI.LLM/prompts/mayor.system.md`](../../LLM/prompts/mayor.system.md). Update when this doc changes the memo schema or constraints.
+See [`Src/LlmGateway/prompts/mayor.system.md`](../../../Src/LlmGateway/prompts/mayor.system.md). It carries the schema, briefing-reading rules, and a short summary of the strategic frame above. Update when this doc changes the memo schema or constraints.
 
 ---
 

@@ -168,6 +168,55 @@ public sealed class MayorBriefingDerivationTests
     }
 
     [Fact]
+    public void Compute_NoDownedOrDead_MedicalDownedIsZero_RegardlessOfHealth()
+    {
+        var s = StateWith(
+        [
+            Pawn("Alice", health: 0.10f, isDowned: false),  // wounded but not downed
+            Pawn("Bob",   health: 0.50f, isDowned: false),
+            Pawn("Carol", health: 1.00f, isDowned: false),
+        ]);
+
+        var b = MayorBriefingDerivation.Compute(s);
+
+        b.Medical.Downed.Should().Be(0);
+        b.Colonists.Pawns.Should().OnlyContain(p => p.IsDowned == false);
+    }
+
+    [Fact]
+    public void Compute_DownedPawnWithHighHealth_StillCountsAsDowned()
+    {
+        var s = StateWith(
+        [
+            Pawn("Alice", health: 0.90f, isDowned: true),   // proves we use the flag, not the float
+            Pawn("Bob",   health: 0.95f, isDowned: false),
+        ]);
+
+        var b = MayorBriefingDerivation.Compute(s);
+
+        b.Medical.Downed.Should().Be(1);
+        b.Colonists.Pawns.Should().Contain(p => p.Name == "Alice" && p.IsDowned);
+    }
+
+    [Fact]
+    public void Compute_DeadPawn_ExcludedFromBriefing()
+    {
+        var s = StateWith(
+        [
+            Pawn("Alice", isDead: true),
+            Pawn("Bob"),
+            Pawn("Carol"),
+        ]);
+
+        var b = MayorBriefingDerivation.Compute(s);
+
+        b.Colonists.Count.Should().Be(2);
+        b.Colonists.Pawns.Should().NotContain(p => p.Name == "Alice");
+        b.Medical.Downed.Should().Be(0);
+        b.Medical.Sick.Should().Be(0);
+    }
+
+    [Fact]
     public void Compute_TopSkill_PrefersHighestLevelWithPassionGlyph()
     {
         var s = StateWith(
@@ -268,11 +317,14 @@ public sealed class MayorBriefingDerivationTests
         string name,
         float mood = 0.5f,
         float health = 1.0f,
+        bool  isDowned = false,
+        bool  isDead = false,
         IReadOnlyList<ColonistSkill>? skills = null,
         IReadOnlyList<string>? traits = null) =>
         new(
             Id: name, Name: name, Age: 30, Gender: "Male",
             Health: health, Mood: mood, Hunger: 1.0f,
+            IsDowned: isDowned, IsDead: isDead,
             CurrentJob: null,
             Skills: skills ?? [],
             Traits: traits ?? []

@@ -67,7 +67,7 @@ Each bullet is a free-text string. The Mayor writes what it wants; there is no s
 
 **`generated_at`** — ISO 8601 UTC timestamp stamped by `AgendaStore.Update` (server-side, not the LLM). Lets the dashboard show "Updated 2 min ago" without depending on the in-game tick clock.
 
-**`state_of_the_union`** — `Record<string, string>` keyed by category. Allowed keys: `agriculture`, `defense`, `welfare`, `construction`, `treasury`, `research`. The Mayor emits one terse sentence per relevant category and may omit a key entirely when nothing's worth flagging. The dashboard renders this as an emoji-prefixed checklist (one row per key); emojis are *not* in the LLM output — the dashboard maps category → icon for consistent display. Raw colony numbers (wealth, food days, tick) live in the sidebar; this field is the *interpretation*, not the readout.
+**`state_of_the_union`** — `Record<string, string>` keyed by category. Allowed keys: `agriculture`, `defense`, `welfare`, `construction`, `treasury`, `research`. The Mayor emits one terse sentence per relevant category and may omit a key entirely when nothing's worth flagging. Each value leads with its category emoji (🌾 🛡️ ❤️ 🔨 💰 🔬), emitted by the Mayor — the dashboard renders the value verbatim and no longer maps category → icon. Raw colony numbers (wealth, food days, tick) live in the sidebar; this field is the *interpretation*, not the readout.
 
 **`update_notes`** — one or two sentences the Mayor writes explaining what changed since the previous version. The player's daily delta briefing. Kept short (~50–100 words).
 

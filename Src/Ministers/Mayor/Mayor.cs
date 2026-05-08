@@ -16,12 +16,14 @@ public sealed class Mayor(
     MayorRules          rules,
     AgendaStore         agendaStore,
     LlmClient           llm,
+    PromptBuilder       prompts,
     AdviceBus           bus,
     MayorStatus         status,
     ILogger<Mayor>      log
 ) : IMinister
 {
     private const int ShortTermCap = 5;
+    private static readonly string PromptDumpPath = Path.Combine("logs", "mayor-prompt-latest.md");
 
     public string Name => "Mayor";
 
@@ -38,6 +40,8 @@ public sealed class Mayor(
             log.LogInformation(
                 "Mayor wake briefing_version={BriefingVersion} previous_agenda_version={PrevVersion} lenses=[{Lenses}]",
                 briefing.BriefingVersion, previous?.Version ?? 0, FormatLenses(lens));
+
+            DumpPrompt(briefing, previous, lens.PromptPrefills);
 
             Core.Advice.MayorAgendaInput? input = await CallLlmWithRetryAsync(briefing, previous, lens.PromptPrefills, ct);
             if (input is null)
@@ -96,6 +100,25 @@ public sealed class Mayor(
             }
         }
         return null;
+    }
+
+    private void DumpPrompt(MayorBriefing briefing, Core.Advice.MayorAgenda? previous, IReadOnlyList<string> prefills)
+    {
+        try
+        {
+            string system = prompts.MayorSystemPrompt;
+            string user   = prompts.BuildMayorUserMessage(briefing, previous, prefills);
+            string body   =
+                $"<!-- Mayor prompt snapshot — briefing v{briefing.BriefingVersion}, " +
+                $"previous agenda v{previous?.Version ?? 0}, written {DateTime.UtcNow:O} -->\n\n" +
+                $"# system\n\n{system}\n\n# user\n\n{user}\n";
+            Directory.CreateDirectory(Path.GetDirectoryName(PromptDumpPath)!);
+            File.WriteAllText(PromptDumpPath, body);
+        }
+        catch (Exception ex)
+        {
+            log.LogWarning(ex, "Failed to dump Mayor prompt to {Path}", PromptDumpPath);
+        }
     }
 
     private static string FormatTick(MayorBriefing b) =>

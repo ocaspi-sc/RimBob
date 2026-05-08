@@ -44,7 +44,9 @@ public static class MayorBriefingDerivation
     {
         var date     = RimDateParser.Parse(s.Economy.Value.DateTimeRaw);
         var season   = DeriveSeason(date);
-        var pawns    = s.Colonists.Value.Colonists;
+        // Dead colonists stay in the registry until the next ingestion drops them,
+        // but the briefing should reflect the living colony only.
+        var pawns    = s.Colonists.Value.Colonists.Where(p => !p.IsDead).ToList();
 
         var colonists = DeriveColonistsSummary(pawns);
         var skills    = DeriveSkillCoverage(pawns);
@@ -104,6 +106,7 @@ public static class MayorBriefingDerivation
             Mood:       p.Mood,
             Health:     p.Health,
             Hunger:     p.Hunger,
+            IsDowned:   p.IsDowned,
             CurrentJob: p.CurrentJob,
             TopSkill:   FormatTopSkill(p.Skills)
         )).ToList();
@@ -165,10 +168,8 @@ public static class MayorBriefingDerivation
 
     private static MedicalState DeriveMedical(IReadOnlyList<ColonistRecord> pawns)
     {
-        // M1 heuristic: very low health = downed; mild deficit = sick. Refine when
-        // RimApiClient exposes a health-hediff endpoint.
-        var downed = pawns.Count(p => p.Health < 0.30f);
-        var sick   = pawns.Count(p => p.Health is >= 0.30f and < 0.85f);
+        var downed = pawns.Count(p => p.IsDowned);
+        var sick   = pawns.Count(p => !p.IsDowned && p.Health < 0.85f);
         return new MedicalState(downed, sick, 0);
         // TODO: SurgeryPending requires a surgery-bill endpoint not yet exposed.
     }

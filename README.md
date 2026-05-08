@@ -38,7 +38,7 @@ Src/Tests/             Unit and integration-style tests
 - .NET 9 SDK
 - Node.js LTS
 - RimWorld with RIMAPI available at `http://localhost:8765/`
-- `GEMINI_API_KEY` environment variable for LLM-backed Mayor calls
+- A Gemini API key for LLM-backed Mayor calls (env var or `appsettings.Local.json` — see Setup)
 
 The host binds to localhost only. Do not expose it on `0.0.0.0`.
 
@@ -51,11 +51,19 @@ cd Src/Dashboard
 npm install
 ```
 
-Set the Gemini API key for the current PowerShell session:
+Set the Gemini API key. Either export it as an env var (preferred for CI):
 
 ```powershell
 $env:GEMINI_API_KEY = "your-key-here"
 ```
+
+…or for local dev, drop it in `Src/ApiHost/appsettings.Local.json` (gitignored):
+
+```json
+{ "RimAi": { "GeminiApiKey": "your-key-here" } }
+```
+
+The env var wins when both are set. Don't put the key in `appsettings.json` or `appsettings.Development.json` — both are tracked.
 
 Build the dashboard into the host static assets:
 
