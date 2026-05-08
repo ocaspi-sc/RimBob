@@ -11,7 +11,7 @@
 - [ ] Stockpile inventory endpoint — extend `RimApiClient` so `ResourceSnapshot` and `EstimatedDaysOfFood` get real values (currently empty/null pending endpoint). Without it, the food_crisis lens can't fire.
 - [ ] Research endpoint in `RimApiClient` so `ResearchSnapshot` populates.
 - [ ] Decide what `EstimatedDaysOfFood == null` should look like in the prompt — explicit "food levels unknown" vs. omit field.
-- [ ] Vite `npm ci && npm run build` confirmed locally (CI will catch it but worth a manual smoke if Node is around).
+- [x] Vite `npm install && npm run build` confirmed locally with Node 24.15 LTS — 34 modules, 148 KB bundle, no TS errors.
 
 ## Next (M2 — feedback loop)
 
