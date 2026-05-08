@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using RimAI.Coordination;
 using RimAI.Core.Briefings;
@@ -23,7 +24,12 @@ public sealed class Mayor(
 ) : IMinister
 {
     private const int ShortTermCap = 5;
-    private static readonly string PromptDumpPath = Path.Combine("logs", "mayor-prompt-latest.md");
+    private static readonly string PromptDumpPath     = Path.Combine("logs", "mayor-prompt-latest.md");
+    private static readonly string ManualResponsePath = Path.Combine("logs", "mayor-response.json");
+    private static readonly JsonSerializerOptions ManualResponseJson = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+    };
 
     public string Name => "Mayor";
 
@@ -43,12 +49,17 @@ public sealed class Mayor(
 
             DumpPrompt(briefing, previous, lens.PromptPrefills);
 
-            Core.Advice.MayorAgendaInput? input = await CallLlmWithRetryAsync(briefing, previous, lens.PromptPrefills, ct);
+            Core.Advice.MayorAgendaInput? input = TryLoadManualResponse();
             if (input is null)
             {
-                cycleError = "LLM call failed twice";
-                log.LogError("Mayor LLM call failed twice; agenda not updated this turn.");
-                return;
+                input = await CallLlmWithRetryAsync(briefing, previous, lens.PromptPrefills, ct);
+                if (input is null)
+                {
+                    cycleError = "LLM call failed twice";
+                    log.LogError("Mayor LLM call failed twice; agenda not updated this turn.");
+                    return;
+                }
+                status.MarkLlmSuccess();
             }
 
             Core.Advice.MayorAgenda stamped = agendaStore.Update(input, FormatTick(briefing));
@@ -100,6 +111,54 @@ public sealed class Mayor(
             }
         }
         return null;
+    }
+
+    /// <summary>
+    /// Manual fallback: if logs/mayor-response.json was saved more recently than the
+    /// last successful Gemini call, parse it and return as the cycle's input. The user
+    /// drops a response from another LLM there when Gemini is rate-limited.
+    /// </summary>
+    private Core.Advice.MayorAgendaInput? TryLoadManualResponse()
+    {
+        FileInfo fi = new(ManualResponsePath);
+        if (!fi.Exists) return null;
+
+        DateTime cutoff = status.LastLlmSuccessAt?.UtcDateTime ?? DateTime.MinValue;
+        if (fi.LastWriteTimeUtc <= cutoff)
+        {
+            log.LogDebug(
+                "Mayor manual response file at {Path} is older than last LLM success ({Cutoff:O}); ignoring",
+                ManualResponsePath, cutoff);
+            return null;
+        }
+
+        try
+        {
+            string body = File.ReadAllText(ManualResponsePath);
+            Core.Advice.MayorAgendaInput? parsed =
+                JsonSerializer.Deserialize<Core.Advice.MayorAgendaInput>(body, ManualResponseJson);
+            if (parsed is null)
+            {
+                log.LogWarning("Mayor manual response at {Path} parsed to null; ignoring", ManualResponsePath);
+                return null;
+            }
+
+            Core.Advice.MayorAgendaInput capped = parsed.ShortTerm.Count > ShortTermCap
+                ? parsed with { ShortTerm = parsed.ShortTerm.Take(ShortTermCap).ToList() }
+                : parsed;
+
+            log.LogInformation(
+                "Mayor using manual response from {Path} (mtime={Mtime:O}, last LLM success={Cutoff:O})",
+                ManualResponsePath, fi.LastWriteTimeUtc, cutoff);
+            return capped;
+        }
+        catch (Exception ex)
+        {
+            log.LogWarning(ex,
+                "Mayor manual response at {Path} failed to parse — falling through to Gemini",
+                ManualResponsePath);
+            return null;
+        }
     }
 
     private void DumpPrompt(MayorBriefing briefing, Core.Advice.MayorAgenda? previous, IReadOnlyList<string> prefills)

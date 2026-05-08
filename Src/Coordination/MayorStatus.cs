@@ -10,11 +10,13 @@ public sealed class MayorStatus
     private bool _running;
     private DateTimeOffset? _startedAt;
     private DateTimeOffset? _completedAt;
+    private DateTimeOffset? _lastLlmSuccessAt;
     private string? _lastError;
 
     public bool IsRunning            { get { lock (_lock) return _running; } }
     public DateTimeOffset? StartedAt { get { lock (_lock) return _startedAt; } }
     public DateTimeOffset? CompletedAt { get { lock (_lock) return _completedAt; } }
+    public DateTimeOffset? LastLlmSuccessAt { get { lock (_lock) return _lastLlmSuccessAt; } }
     public string? LastError         { get { lock (_lock) return _lastError; } }
 
     public void Begin()
@@ -35,5 +37,10 @@ public sealed class MayorStatus
             _completedAt  = DateTimeOffset.UtcNow;
             _lastError    = error;
         }
+    }
+
+    public void MarkLlmSuccess()
+    {
+        lock (_lock) _lastLlmSuccessAt = DateTimeOffset.UtcNow;
     }
 }

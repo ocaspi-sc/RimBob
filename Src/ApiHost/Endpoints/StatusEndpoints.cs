@@ -30,6 +30,7 @@ public static class StatusEndpoints
                 mayor_running     = mayor.IsRunning,
                 mayor_started_at  = mayor.StartedAt,
                 mayor_completed_at = mayor.CompletedAt,
+                mayor_last_llm_success_at = mayor.LastLlmSuccessAt,
                 mayor_last_error  = mayor.LastError,
             });
         });
