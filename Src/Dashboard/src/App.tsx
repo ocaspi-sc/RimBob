@@ -40,7 +40,7 @@ export default function App() {
   }, []);
 
   return (
-    <main style={{ fontFamily: 'system-ui, sans-serif', maxWidth: 760, margin: '0 auto', padding: '2rem 1.5rem' }}>
+    <main style={{ fontFamily: 'system-ui, sans-serif', maxWidth: 912, margin: '0 auto', padding: '2rem 1.5rem' }}>
       <header style={{ marginBottom: '1.5rem', borderBottom: '1px solid #e5e7eb', paddingBottom: '1rem' }}>
         <h1 style={{ margin: 0, fontSize: '1.5rem' }}>RimAI</h1>
         <p style={{ margin: '0.25rem 0 0', color: '#6b7280', fontSize: '0.9rem' }}>

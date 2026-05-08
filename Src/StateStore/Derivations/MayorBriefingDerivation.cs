@@ -293,10 +293,11 @@ public static class MayorBriefingDerivation
         // Hostile lord heuristic: any lord whose JobType names a hostile activity.
         // TODO: confirm against live RIMAPI — Lord faction-hostility may be a better signal.
         bool IsHostile(HostileLord l) =>
-            l.JobType.Contains("Raid", StringComparison.OrdinalIgnoreCase) ||
-            l.JobType.Contains("Siege", StringComparison.OrdinalIgnoreCase) ||
-            l.JobType.Contains("Assault", StringComparison.OrdinalIgnoreCase) ||
-            l.JobType.Contains("Sapper", StringComparison.OrdinalIgnoreCase);
+            l.JobType is not null && (
+                l.JobType.Contains("Raid",    StringComparison.OrdinalIgnoreCase) ||
+                l.JobType.Contains("Siege",   StringComparison.OrdinalIgnoreCase) ||
+                l.JobType.Contains("Assault", StringComparison.OrdinalIgnoreCase) ||
+                l.JobType.Contains("Sapper",  StringComparison.OrdinalIgnoreCase));
 
         var hostiles = board.Lords.Where(IsHostile).ToList();
 

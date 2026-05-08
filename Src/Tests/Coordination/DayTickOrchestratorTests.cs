@@ -12,7 +12,7 @@ public sealed class DayTickOrchestratorTests
     private const long TicksPerDay = 60_000;
 
     [Fact]
-    public async Task FirstObservation_DoesNotTriggerMayor()
+    public async Task FirstObservation_TriggersMayor()
     {
         ColonyState colony = new();
         colony.Economy.Update(new EconomyLedger(TicksPerDay * 3, 0, "", "", false, ""));
@@ -21,23 +21,23 @@ public sealed class DayTickOrchestratorTests
         DayTickOrchestrator sut = new(colony, mayor, NullLogger<DayTickOrchestrator>.Instance);
         await RunOneCycleAsync(sut);
 
-        mayor.WakeCount.Should().Be(0);
+        mayor.WakeCount.Should().Be(1);
     }
 
     [Fact]
-    public async Task DayChange_TriggersExactlyOnce()
+    public async Task DayChange_TriggersOnRollover()
     {
         ColonyState colony = new();
         FakeMinister mayor = new();
         DayTickOrchestrator sut = new(colony, mayor, NullLogger<DayTickOrchestrator>.Instance);
 
         colony.Economy.Update(new EconomyLedger(TicksPerDay * 3, 0, "", "", false, ""));
-        await RunOneCycleAsync(sut);  // first observation, no fire
+        await RunOneCycleAsync(sut);  // first observation → fires
+        mayor.WakeCount.Should().Be(1);
 
         colony.Economy.Update(new EconomyLedger(TicksPerDay * 4, 0, "", "", false, ""));
-        await RunOneCycleAsync(sut);  // day rollover, fires
-
-        mayor.WakeCount.Should().Be(1);
+        await RunOneCycleAsync(sut);  // day rollover → fires again
+        mayor.WakeCount.Should().Be(2);
     }
 
     [Fact]
@@ -48,14 +48,12 @@ public sealed class DayTickOrchestratorTests
         DayTickOrchestrator sut = new(colony, mayor, NullLogger<DayTickOrchestrator>.Instance);
 
         colony.Economy.Update(new EconomyLedger(TicksPerDay * 3, 0, "", "", false, ""));
-        await RunOneCycleAsync(sut);
-        colony.Economy.Update(new EconomyLedger(TicksPerDay * 4, 0, "", "", false, ""));
-        await RunOneCycleAsync(sut);
+        await RunOneCycleAsync(sut);  // first observation → fires (count = 1)
 
-        // Mid-day tick advance, no day rollover
-        colony.Economy.Update(new EconomyLedger(TicksPerDay * 4 + 30_000, 0, "", "", false, ""));
+        // Mid-day tick advances — same day, should not re-trigger.
+        colony.Economy.Update(new EconomyLedger(TicksPerDay * 3 + 30_000, 0, "", "", false, ""));
         await RunOneCycleAsync(sut);
-        colony.Economy.Update(new EconomyLedger(TicksPerDay * 4 + 59_999, 0, "", "", false, ""));
+        colony.Economy.Update(new EconomyLedger(TicksPerDay * 3 + 59_999, 0, "", "", false, ""));
         await RunOneCycleAsync(sut);
 
         mayor.WakeCount.Should().Be(1);
@@ -69,10 +67,8 @@ public sealed class DayTickOrchestratorTests
         DayTickOrchestrator sut = new(colony, mayor, NullLogger<DayTickOrchestrator>.Instance);
 
         colony.Economy.Update(new EconomyLedger(TicksPerDay * 3, 0, "", "", false, ""));
-        await RunOneCycleAsync(sut);
 
-        // Day rollover -> mayor throws -> service catches and continues.
-        colony.Economy.Update(new EconomyLedger(TicksPerDay * 4, 0, "", "", false, ""));
+        // First observation fires the mayor; mayor throws; service must swallow and continue.
         Func<Task> act = () => RunOneCycleAsync(sut);
         await act.Should().NotThrowAsync();
 

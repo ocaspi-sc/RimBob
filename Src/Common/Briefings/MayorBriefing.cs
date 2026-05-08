@@ -114,7 +114,7 @@ public sealed record ThreatSnapshot(
     IReadOnlyList<string>     RecentIncidents
 );
 
-public sealed record RaidDigest(string JobType, string? FactionId, float? ThreatPoints, int PawnCount);
+public sealed record RaidDigest(string? JobType, string? FactionId, float? ThreatPoints, int PawnCount);
 
 public sealed record WealthSnapshot(float Colony, int ColonistCount, float WealthPerColonist);
 

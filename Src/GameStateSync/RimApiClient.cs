@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 using RimAI.Ingestion.Dtos;
 
 namespace RimAI.Ingestion;
@@ -24,17 +25,41 @@ public sealed class RimApiClient(HttpClient http)
 
     private async Task<T> GetEnvelopedAsync<T>(string path, CancellationToken ct)
     {
-        var envelope = await http.GetFromJsonAsync<RimApiEnvelope<T>>(path, ct)
+        RimApiEnvelope<T>? envelope = await http.GetFromJsonAsync<RimApiEnvelope<T>>(path, ct)
             ?? throw new InvalidOperationException($"RIMAPI returned null for {path}");
 
         if (!envelope.Success)
         {
-            var errors = string.Join(", ", envelope.Errors ?? []);
+            string errors = string.Join(", ", envelope.Errors ?? []);
             throw new RimApiException($"RIMAPI error at {path}: {errors}");
         }
 
         return envelope.Data
             ?? throw new InvalidOperationException($"RIMAPI envelope.data was null for {path}");
+    }
+
+    /// <summary>
+    /// Like GetEnvelopedAsync but for collection endpoints. Returns an empty list when
+    /// RIMAPI sends {} or null for data (observed when a map has no zones/buildings/etc).
+    /// </summary>
+    private async Task<IReadOnlyList<T>> GetEnvelopedListAsync<T>(string path, CancellationToken ct)
+    {
+        try
+        {
+            RimApiEnvelope<List<T>>? envelope =
+                await http.GetFromJsonAsync<RimApiEnvelope<List<T>>>(path, ct);
+
+            if (envelope?.Success == true)
+                return envelope.Data ?? [];
+
+            string errors = string.Join(", ", envelope?.Errors ?? []);
+            throw new RimApiException($"RIMAPI error at {path}: {errors}");
+        }
+        catch (JsonException)
+        {
+            // RIMAPI returns {} instead of [] for empty collections on some endpoints.
+            return [];
+        }
     }
 
     // ── Handshake ─────────────────────────────────────────────────────────────
@@ -81,8 +106,8 @@ public sealed class RimApiClient(HttpClient http)
         GetEnvelopedAsync<DateTimeDto>("api/v1/datetime", ct);
 
     /// <summary>GET api/v1/maps — list of loaded maps with id, faction, player-home flag.</summary>
-    public async Task<IReadOnlyList<MapInfoDto>> GetMapsAsync(CancellationToken ct = default) =>
-        await GetEnvelopedAsync<List<MapInfoDto>>("api/v1/maps", ct);
+    public Task<IReadOnlyList<MapInfoDto>> GetMapsAsync(CancellationToken ct = default) =>
+        GetEnvelopedListAsync<MapInfoDto>("api/v1/maps", ct);
 
     // ── Pawns ─────────────────────────────────────────────────────────────────
 
@@ -90,18 +115,18 @@ public sealed class RimApiClient(HttpClient http)
     /// GET api/v1/map/pawns?mapId — basic pawn list (name, health, mood, hunger, position).
     /// Use GetColonistsDetailedAsync for skills and traits.
     /// </summary>
-    public async Task<IReadOnlyList<MapPawnDto>> GetMapPawnsAsync(
+    public Task<IReadOnlyList<MapPawnDto>> GetMapPawnsAsync(
         int mapId, CancellationToken ct = default) =>
-        await GetEnvelopedAsync<List<MapPawnDto>>($"api/v1/map/pawns?map_id={mapId}", ct);
+        GetEnvelopedListAsync<MapPawnDto>($"api/v1/map/pawns?map_id={mapId}", ct);
 
     /// <summary>
     /// GET api/v2/colonists/detailed?map_id — full bio + needs + skills + health.
     /// Primary source for ColonistRegistry and LaborBriefing skill data.
     /// TODO: confirm response is a list; the v2 controller shape is not fully cached in rimapi.md.
     /// </summary>
-    public async Task<IReadOnlyList<ColonistDetailedDto>> GetColonistsDetailedAsync(
+    public Task<IReadOnlyList<ColonistDetailedDto>> GetColonistsDetailedAsync(
         int mapId, CancellationToken ct = default) =>
-        await GetEnvelopedAsync<List<ColonistDetailedDto>>(
+        GetEnvelopedListAsync<ColonistDetailedDto>(
             $"api/v2/colonists/detailed?map_id={mapId}", ct);
 
     // ── Agriculture ───────────────────────────────────────────────────────────
@@ -111,14 +136,14 @@ public sealed class RimApiClient(HttpClient http)
         GetEnvelopedAsync<FarmSummaryDto>($"api/v1/map/farm/summary?map_id={mapId}", ct);
 
     /// <summary>GET api/v1/map/plants?map_id — all plants with growth %, position, zone.</summary>
-    public async Task<IReadOnlyList<PlantDto>> GetPlantsAsync(
+    public Task<IReadOnlyList<PlantDto>> GetPlantsAsync(
         int mapId, CancellationToken ct = default) =>
-        await GetEnvelopedAsync<List<PlantDto>>($"api/v1/map/plants?map_id={mapId}", ct);
+        GetEnvelopedListAsync<PlantDto>($"api/v1/map/plants?map_id={mapId}", ct);
 
     /// <summary>GET api/v1/map/animals?map_id — wild and tame animals (for hunting assessment).</summary>
-    public async Task<IReadOnlyList<AnimalDto>> GetAnimalsAsync(
+    public Task<IReadOnlyList<AnimalDto>> GetAnimalsAsync(
         int mapId, CancellationToken ct = default) =>
-        await GetEnvelopedAsync<List<AnimalDto>>($"api/v1/map/animals?map_id={mapId}", ct);
+        GetEnvelopedListAsync<AnimalDto>($"api/v1/map/animals?map_id={mapId}", ct);
 
     /// <summary>GET api/v1/map/weather?map_id — current weather def, temperature, rain rate.</summary>
     public Task<WeatherDto> GetWeatherAsync(int mapId, CancellationToken ct = default) =>
@@ -127,14 +152,14 @@ public sealed class RimApiClient(HttpClient http)
     // ── Map / Colony state ────────────────────────────────────────────────────
 
     /// <summary>GET api/v1/map/zones?map_id — grow zones and stockpile zones with cell lists.</summary>
-    public async Task<IReadOnlyList<ZoneDto>> GetZonesAsync(
+    public Task<IReadOnlyList<ZoneDto>> GetZonesAsync(
         int mapId, CancellationToken ct = default) =>
-        await GetEnvelopedAsync<List<ZoneDto>>($"api/v1/map/zones?map_id={mapId}", ct);
+        GetEnvelopedListAsync<ZoneDto>($"api/v1/map/zones?map_id={mapId}", ct);
 
     /// <summary>GET api/v1/map/buildings?map_id — all buildings (hp, power state, working).</summary>
-    public async Task<IReadOnlyList<BuildingDto>> GetBuildingsAsync(
+    public Task<IReadOnlyList<BuildingDto>> GetBuildingsAsync(
         int mapId, CancellationToken ct = default) =>
-        await GetEnvelopedAsync<List<BuildingDto>>($"api/v1/map/buildings?map_id={mapId}", ct);
+        GetEnvelopedListAsync<BuildingDto>($"api/v1/map/buildings?map_id={mapId}", ct);
 
     /// <summary>GET api/v1/map/power/info?map_id — colony-wide power production / consumption / storage.</summary>
     public Task<PowerInfoDto> GetPowerInfoAsync(int mapId, CancellationToken ct = default) =>
@@ -147,9 +172,9 @@ public sealed class RimApiClient(HttpClient http)
             $"api/v1/map/creatures/summary?map_id={mapId}", ct);
 
     /// <summary>GET api/v1/map/rooms?map_id — rooms with role, temperature, bed count, impressiveness.</summary>
-    public async Task<IReadOnlyList<RoomDto>> GetRoomsAsync(
+    public Task<IReadOnlyList<RoomDto>> GetRoomsAsync(
         int mapId, CancellationToken ct = default) =>
-        await GetEnvelopedAsync<List<RoomDto>>($"api/v1/map/rooms?map_id={mapId}", ct);
+        GetEnvelopedListAsync<RoomDto>($"api/v1/map/rooms?map_id={mapId}", ct);
 
     // ── Threats / Events ──────────────────────────────────────────────────────
 
@@ -157,14 +182,14 @@ public sealed class RimApiClient(HttpClient http)
     /// GET api/v1/lords?map_id — active AI lords (raids, sieges, caravans).
     /// Presence of a hostile lord is the primary raid-detection signal for Defense.
     /// </summary>
-    public async Task<IReadOnlyList<LordDto>> GetLordsAsync(
+    public Task<IReadOnlyList<LordDto>> GetLordsAsync(
         int mapId, CancellationToken ct = default) =>
-        await GetEnvelopedAsync<List<LordDto>>($"api/v1/lords?map_id={mapId}", ct);
+        GetEnvelopedListAsync<LordDto>($"api/v1/lords?map_id={mapId}", ct);
 
     /// <summary>GET api/v1/incidents?map_id — recent incidents with days_since.</summary>
-    public async Task<IReadOnlyList<IncidentDto>> GetIncidentsAsync(
+    public Task<IReadOnlyList<IncidentDto>> GetIncidentsAsync(
         int mapId, CancellationToken ct = default) =>
-        await GetEnvelopedAsync<List<IncidentDto>>($"api/v1/incidents?map_id={mapId}", ct);
+        GetEnvelopedListAsync<IncidentDto>($"api/v1/incidents?map_id={mapId}", ct);
 
     // ── Write endpoints (Labor-owned) ─────────────────────────────────────────
     // TODO: Pawn Edit Controller and Pawn Job Controller field shapes are not cached

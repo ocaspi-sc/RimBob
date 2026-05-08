@@ -58,8 +58,8 @@ public sealed record ThreatBoard(
 );
 
 public sealed record HostileLord(
-    string Id,
-    string JobType,
+    string  Id,
+    string? JobType,
     string? FactionId,
     float?  ThreatPoints,
     int     PawnCount

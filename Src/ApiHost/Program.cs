@@ -42,7 +42,7 @@ builder.Services.AddSingleton<LlmClient>();
 
 builder.Services.AddSingleton<ColonyState>();
 builder.Services.AddSingleton<BriefingCache>();
-builder.Services.AddScoped<IngestionDispatcher>();
+builder.Services.AddSingleton<IngestionDispatcher>();
 
 builder.Services.AddSingleton<AdviceBus>();
 builder.Services.AddSingleton<AgendaStore>();

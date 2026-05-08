@@ -22,38 +22,70 @@ export function AgendaItemCard({ item, delta, rank }: Props) {
       style={{
         border: '1px solid #e5e7eb',
         borderRadius: 8,
-        padding: '0.85rem 1rem',
+        padding: '0.85rem 1rem 0.7rem',
         marginBottom: '0.6rem',
         background: '#fff',
         opacity: isClosed ? 0.65 : 1,
+        display: 'grid',
+        gridTemplateColumns: rank !== undefined ? '2rem 1fr auto' : '1fr auto',
+        columnGap: '0.75rem',
+        rowGap: '0.6rem',
+        alignItems: 'start',
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
-        <div style={{ flex: 1 }}>
-          {rank !== undefined && (
-            <span style={{ color: '#9ca3af', fontWeight: 500, marginRight: '0.4rem' }}>{rank}.</span>
-          )}
-          <span style={{ textDecoration: isClosed ? 'line-through' : undefined }}>{item.text}</span>
+      {rank !== undefined && (
+        <div
+          style={{
+            width: '1.9rem',
+            height: '1.9rem',
+            borderRadius: '50%',
+            background: '#eef2ff',
+            color: '#3730a3',
+            fontWeight: 600,
+            fontSize: '0.85rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          {rank}
         </div>
-        {delta && (
-          <span
-            style={{
-              fontSize: '0.7rem',
-              fontWeight: 600,
-              letterSpacing: '0.05em',
-              padding: '0.15rem 0.45rem',
-              borderRadius: 4,
-              textTransform: 'uppercase',
-              background: badgeColours[delta].bg,
-              color: badgeColours[delta].fg,
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {delta}
-          </span>
-        )}
+      )}
+
+      <div style={{
+        lineHeight: 1.5,
+        color: '#1f2937',
+        textDecoration: isClosed ? 'line-through' : undefined,
+      }}>
+        {item.text}
       </div>
-      <div style={{ marginTop: '0.6rem', display: 'flex', gap: '0.4rem' }}>
+
+      {delta && (
+        <span
+          style={{
+            fontSize: '0.7rem',
+            fontWeight: 600,
+            letterSpacing: '0.05em',
+            padding: '0.18rem 0.5rem',
+            borderRadius: 4,
+            textTransform: 'uppercase',
+            background: badgeColours[delta].bg,
+            color: badgeColours[delta].fg,
+            whiteSpace: 'nowrap',
+            justifySelf: 'end',
+          }}
+        >
+          {delta}
+        </span>
+      )}
+
+      <div style={{
+        gridColumn: rank !== undefined ? '2 / -1' : '1 / -1',
+        display: 'flex',
+        gap: '0.4rem',
+        paddingTop: '0.15rem',
+      }}>
         <FeedbackButton label="Accept" />
         <FeedbackButton label="Modify" />
         <FeedbackButton label="Dismiss" />
@@ -68,7 +100,7 @@ function FeedbackButton({ label }: { label: string }) {
       disabled
       title="Wired in M2"
       style={{
-        fontSize: '0.8rem',
+        fontSize: '0.78rem',
         padding: '0.25rem 0.7rem',
         border: '1px solid #d1d5db',
         background: '#f9fafb',
