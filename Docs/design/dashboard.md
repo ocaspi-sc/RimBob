@@ -105,7 +105,9 @@ Visual conventions:
 - Dark theme only for MVP; no light/dark toggle until there is an explicit design reason.
 - Use repeated boxed modules with squared, technical styling: compact borders, status lamps, corner accents, dense telemetry rows, and restrained cyan / amber / green / red accents.
 - Keep information dense and scan-friendly. Avoid marketing-page spacing, large empty hero areas, and soft card-heavy layouts.
+- Keep vertical padding tight enough for split-screen play. Prefer compact rows and module spacing over airy panels.
 - Text must wrap inside its module instead of widening the dashboard. Narrow screens can stack modules, but desktop should keep the command-center composition.
+- Do not show scrollbars unless the content actually overflows. Decorative panel accents must stay inside their boxes so they do not create phantom scrollbars.
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐

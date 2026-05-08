@@ -42,10 +42,10 @@ body {
 .app-shell {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  gap: 12px;
+  gap: 10px;
   width: 100%;
   height: 100vh;
-  padding: 12px;
+  padding: 10px;
   overflow: hidden;
 }
 
@@ -71,16 +71,16 @@ body {
 }
 
 .panel-box::before {
-  top: -1px;
-  left: -1px;
+  top: 0;
+  left: 0;
   border-top: 2px solid #56cffb;
   border-left: 2px solid #56cffb;
   border-top-left-radius: 8px;
 }
 
 .panel-box::after {
-  right: -1px;
-  bottom: -1px;
+  right: 0;
+  bottom: 0;
   border-right: 2px solid #f59e0b;
   border-bottom: 2px solid #f59e0b;
   border-bottom-right-radius: 8px;
@@ -90,8 +90,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 74px;
-  padding: 14px 18px;
+  min-height: 66px;
+  padding: 11px 16px;
   overflow: hidden;
 }
 
@@ -143,15 +143,15 @@ body {
 .command-grid {
   display: grid;
   grid-template-columns: 164px minmax(0, 1fr) minmax(256px, 20vw);
-  gap: 12px;
+  gap: 10px;
   min-height: 0;
 }
 
 .tab-rail {
   display: grid;
   align-content: start;
-  gap: 8px;
-  padding: 12px;
+  gap: 7px;
+  padding: 10px;
   overflow-x: hidden;
   overflow-y: auto;
 }
@@ -160,8 +160,8 @@ body {
   display: grid;
   gap: 3px;
   width: 100%;
-  min-height: 48px;
-  padding: 9px 10px;
+  min-height: 44px;
+  padding: 8px 10px;
   color: #8ea0b5;
   text-align: left;
   background: rgba(10, 14, 21, 0.72);
@@ -201,18 +201,18 @@ body {
 .main-console {
   min-width: 0;
   min-height: 0;
-  padding: 12px;
+  padding: 10px;
   overflow-x: hidden;
   overflow-y: auto;
 }
 
 .agenda-console {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .agenda-header {
-  padding: 13px 14px;
+  padding: 10px 12px;
   background:
     linear-gradient(135deg, rgba(86, 207, 251, 0.13), rgba(20, 27, 38, 0.92)),
     #101720;
@@ -242,7 +242,7 @@ body {
 }
 
 .posture-summary {
-  margin-top: 9px;
+  margin-top: 7px;
   color: #e8f2fb;
   font-size: 0.94rem;
   line-height: 1.45;
@@ -280,7 +280,7 @@ body {
 }
 
 .dashboard-section {
-  padding: 10px;
+  padding: 8px;
   background: rgba(8, 12, 18, 0.76);
   border: 1px solid rgba(103, 122, 143, 0.35);
   border-radius: 7px;
@@ -290,7 +290,7 @@ body {
   display: flex;
   align-items: baseline;
   gap: 8px;
-  margin: 0 0 9px;
+  margin: 0 0 7px;
   padding-left: 9px;
   color: #e7edf5;
   border-left: 3px solid var(--tone);
@@ -323,7 +323,7 @@ body {
 
 .union-list {
   display: grid;
-  gap: 7px;
+  gap: 6px;
   padding: 0;
   margin: 0;
   list-style: none;
@@ -335,7 +335,7 @@ body {
   gap: 9px;
   align-items: start;
   min-width: 0;
-  padding: 8px;
+  padding: 6px 8px;
   background: rgba(17, 24, 34, 0.8);
   border: 1px solid rgba(103, 122, 143, 0.26);
   border-radius: 6px;
@@ -381,8 +381,8 @@ body {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px 10px;
   align-items: start;
-  margin-bottom: 8px;
-  padding: 10px;
+  margin-bottom: 7px;
+  padding: 8px 10px;
   background:
     linear-gradient(90deg, rgba(86, 207, 251, 0.09), transparent 45%),
     rgba(18, 25, 35, 0.93);
@@ -466,8 +466,8 @@ body {
 }
 
 .feedback-button {
-  min-height: 28px;
-  padding: 4px 10px;
+  min-height: 26px;
+  padding: 3px 10px;
   color: #66788b;
   font-size: 0.76rem;
   background: rgba(8, 12, 18, 0.8);
@@ -477,7 +477,7 @@ body {
 }
 
 .closed-priorities {
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 .closed-priorities summary {
@@ -487,7 +487,7 @@ body {
 }
 
 .closed-priorities > div {
-  margin-top: 7px;
+  margin-top: 6px;
 }
 
 .boxed-list {
@@ -502,7 +502,7 @@ body {
   grid-template-columns: 14px minmax(0, 1fr) auto;
   gap: 10px;
   align-items: center;
-  padding: 9px 10px;
+  padding: 7px 10px;
   color: #d6dee8;
 }
 
@@ -548,7 +548,7 @@ body {
 }
 
 .minister-card {
-  padding: 9px 10px;
+  padding: 7px 10px;
   background: rgba(17, 24, 34, 0.8);
   border: 1px solid rgba(244, 114, 182, 0.28);
   border-radius: 7px;
@@ -572,7 +572,7 @@ body {
 .side-console {
   min-width: 0;
   min-height: 0;
-  padding: 12px;
+  padding: 10px;
   overflow-x: hidden;
   overflow-y: auto;
 }
@@ -582,8 +582,8 @@ body {
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 9px;
-  padding-bottom: 8px;
+  margin-bottom: 7px;
+  padding-bottom: 6px;
   border-bottom: 1px solid rgba(103, 122, 143, 0.32);
 }
 
@@ -596,15 +596,15 @@ body {
 }
 
 .telemetry-group {
-  margin-bottom: 8px;
-  padding: 8px;
+  margin-bottom: 7px;
+  padding: 6px 8px;
   background: rgba(8, 12, 18, 0.54);
   border: 1px solid rgba(103, 122, 143, 0.26);
   border-radius: 6px;
 }
 
 .telemetry-group h3 {
-  margin: 0 0 6px;
+  margin: 0 0 5px;
   color: #56cffb;
   font-size: 0.66rem;
   font-weight: 850;
@@ -622,7 +622,7 @@ body {
   justify-content: space-between;
   gap: 8px;
   min-width: 0;
-  padding: 3px 0;
+  padding: 2px 0;
   color: #8ea0b5;
   font-size: 0.79rem;
   border-top: 1px solid rgba(103, 122, 143, 0.14);
@@ -653,7 +653,7 @@ body {
 }
 
 .telemetry-footer {
-  margin-top: 8px;
+  margin-top: 6px;
   text-align: right;
 }
 
