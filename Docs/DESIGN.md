@@ -17,7 +17,7 @@ This is not an RL agent and (for the MVP) not an autonomous player. Strategy and
 
 1. **Advise well.** Suggestions should match what a thoughtful human player would recognise as good. The player keeps control; RimAI earns trust one accepted memo at a time.
 2. **Grounded in community knowledge.** Advice is informed by actual RimWorld guides, not just LLM training data.
-3. **Self-improving from real feedback.** Accept / Dismiss / Modify on each memo is the primary training signal; implicit state-watching is a fallback. The system gets better the more the player uses it.
+3. **Self-improving from real feedback.** Accept / Dismiss / Pushback on each memo is the primary training signal; implicit state-watching is a fallback. The system gets better the more the player uses it.
 4. **Transparent.** Every memo carries its rationale, suggested actions, and the briefing it was based on. A single dashboard view should explain what the cabinet is recommending and why.
 5. **Cheap by default.** LLMs are called only when judgment is genuinely needed. Rules handle routine; the LLM handles exceptions.
 6. **Debuggable over clever.** Prefer deterministic, inspectable behaviour over emergent complexity.
@@ -55,7 +55,7 @@ This is not an RL agent and (for the MVP) not an autonomous player. Strategy and
 Two operational modes run in parallel:
 
 - **Play mode** — live game loop; ministers wake on briefing changes, evaluate rules, escalate to LLM when needed, emit `AdviceItem`s onto the AdviceBus.
-- **Refinement** — async; each minister reviews its own decision log (now enriched with player Accept / Dismiss / Modify signals), proposes rule changes, tests against fixtures, promotes on approval.
+- **Refinement** — async; each minister reviews its own decision log (now enriched with player Accept / Dismiss / Pushback signals), proposes rule changes, tests against fixtures, promotes on approval.
 
 → See [`design/architecture.md`](design/architecture.md) for code structure and stack.
 
@@ -103,7 +103,7 @@ Spun out from a host minister when its rules and prompts can't keep up — e.g. 
 
 **Rules first, LLM second.** The rules layer handles the majority of decisions cheaply. The LLM earns its cost on genuine judgment calls. → [`design/ministers.md`](design/ministers.md)
 
-**Refinement is the minister.** Each minister improves its own rules. Not a separate agent — the same minister in a different mode. Player feedback (Accept / Dismiss / Modify) is the primary training signal. → [`design/evaluation.md`](design/evaluation.md)
+**Refinement is the minister.** Each minister improves its own rules. Not a separate agent — the same minister in a different mode. Player feedback (Accept / Dismiss / Pushback) is the primary training signal. → [`design/evaluation.md`](design/evaluation.md)
 
 > **Deferred principle (Auto epic):** *Only Labor touches pawn allocation.* Re-engaged when the first minister graduates to `Auto` and needs to issue RIMAPI pawn writes. Until then, no minister touches pawn allocation. → [`design/ministers/labor.md`](design/ministers/labor.md), [`design/planning.md`](design/planning.md)
 
@@ -141,7 +141,7 @@ Decisions made and the reasoning behind them. Append; do not delete.
 | HTN / bulletin board / Labor solver deferred until first Auto graduation | Their entire purpose is to allocate pawns. Under suggest-only there is no consumer. Design docs preserved verbatim, marked `Deferred — Auto epic`, so the future autonomy work doesn't redesign from scratch. |
 | Per-minister `Off / Suggest / Auto` autonomy dial named as a future construct | First-class concept in the design language even though only `Suggest` is implemented. Lets future docs reference the dial without re-introducing it; sets player expectations early. |
 | External advisor dashboard (React + TS) served by `RimAI.Host` over HTTP+SSE | Web UI iterates faster than desktop, runs cross-platform alongside the game, and reuses the SSE pattern already in play with RIMAPI. Adds a JS toolchain to the repo — accepted cost. Localhost-only auth posture. |
-| Both explicit and implicit feedback signals | Accept / Dismiss / Modify gives a clean signal when the player engages with the dashboard; implicit state-diff (snapshot game state at memo issuance, diff at expiry, score against `suggested_actions`) catches the rest. Mapping ambiguity is acknowledged — see [`design/advice.md`](design/advice.md) open questions. |
+| Explicit feedback only; ministers own their own pushback lists | Accept / Dismiss / **Pushback** is the entire training signal in MVP. Pushback replaces the earlier "Modify" action — instead of editing suggested-action text, the player tells the minister *why he's wrong* in natural language. Each minister persists its own scoped pushback list under `Src/Cabinet/<Minister>/Pushbacks/`; pushbacks are injected into that minister's next prompt and clustered at refinement time. **Implicit state-diff inference is dropped from MVP** — the explicit channel is load-bearing and the kind-to-field mapping was speculative. → [`design/advice.md`](design/advice.md) |
 | LLM provider switched to Gemini Developer API via `Google.GenAI` | First-party .NET SDK with a clean migration path to Vertex AI, plus first-party embedding models for the M4 RAG slice. |
 | `RimAI.Agents` split into `RimAI.LLM` + `RimAI.Ministers` | Makes dependency direction explicit (`Ministers` → `LLM`), keeps the LLM wrapper independently testable, and aligns project names with cabinet terminology. |
 | Mayor's output is the Agenda, not a daily_digest AdviceItem | A living planning document (short-term priorities + long-term goals, updated once/day) is a more natural advisory voice than a one-shot memo — it has persistent state, delta signals, and a clean Mayor→ministers direction channel. The Agenda *is* the MVP advice; AdviceItems survive as the feeder-minister format (M3+). → [`design/agenda.md`](design/agenda.md) |
@@ -159,7 +159,7 @@ Decisions made and the reasoning behind them. Append; do not delete.
 |---|---|
 | [`design/architecture.md`](design/architecture.md) | Stack, project structure, library choices, interfaces |
 | [`design/dashboard.md`](design/dashboard.md) | React+TS advisor dashboard: layout, HTTP+SSE contract, auth posture |
-| [`design/advice.md`](design/advice.md) | `AdviceItem` schema, Accept/Dismiss/Modify lifecycle, implicit-feedback inference |
+| [`design/advice.md`](design/advice.md) | `AdviceItem` schema, Accept/Dismiss/Pushback lifecycle, minister-owned pushback lists |
 | [`design/ministers.md`](design/ministers.md) | Minister shape, rules system, LLM escalation, rule refinement |
 | [`design/state-store.md`](design/state-store.md) | Aggregates, briefings, cadences, versioning |
 | [`design/communication.md`](design/communication.md) | Flag schema, severity, inter-minister comms rules |

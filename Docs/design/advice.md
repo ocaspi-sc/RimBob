@@ -1,7 +1,9 @@
 # RimAI — Advice: Schema, Lifecycle, Feedback
 
 > **Living document.** See `CLAUDE.md` for update rules.
-> Slice: M1 (schema + emission) → M2 (feedback lifecycle) → M3+ (implicit-feedback inference).
+> Slice: M1 (schema + emission) → M5 (Accept / Dismiss / Pushback lifecycle, minister-owned pushback lists) → M6 (refinement consumes pushbacks).
+>
+> **Roadmap re-eval (2026-05-08):** Feedback was M2; it's now M5 — landing just before M6 consumes it. RAG (was M4) is now M2 because the Mayor's output needs to be worth reacting to before we build UI on top of it. **Modify** is renamed **Pushback**: the player tells the minister *why he's wrong* in natural language, instead of editing `suggested_actions` text. **Implicit-feedback inference is dropped from the MVP** — the explicit Pushback channel is load-bearing; implicit signals were always a fallback and the cost wasn't justified.
 
 ---
 
@@ -10,9 +12,9 @@
 Under the assisted-gameplay pivot ([`../DESIGN.md`](../DESIGN.md)), every minister's output is an `AdviceItem`, and the player's reaction is the primary training signal. This doc defines:
 
 1. The `AdviceItem` schema.
-2. The Accept / Dismiss / Modify lifecycle.
-3. The implicit-feedback strategy (state-watching when the player doesn't click anything).
-4. How both feedback channels feed back into [`evaluation.md`](evaluation.md) refinement.
+2. The Accept / Dismiss / Pushback lifecycle.
+3. The minister-owned pushback list — each minister persists its own corrections, scoped to itself.
+4. How pushbacks feed back into [`evaluation.md`](evaluation.md) refinement.
 5. The autonomy dial — present in the type system from MVP, only `Suggest` honored until M7.
 
 ---
@@ -88,20 +90,20 @@ The autonomy mode the issuing minister was in when the advice was emitted. Alway
 ```
         ┌────────────────────────────────────────────────────┐
         │                                                    │
-emit ──►Active──► Accepted   ─────────► Archived (kept in log)
+emit ──►Active──► Accepted   ─────────► Archived
         │   │                                                
         │   ├──►  Dismissed  ─────────► Archived
         │   │                                                
-        │   ├──►  Modified   ─────────► Archived (with diff)
-        │   │                                                
+        │   ├──►  Pushback   ─────────► Archived + appended to issuing
+        │   │                          minister's pushback list
         │   ├──►  Superseded ─────────► Archived (link to successor)
         │   │                                                
         │   └──►  Expired    ─────────► Archived (no explicit feedback)
         │                                                    
-        └─► flagged for refinement when the right cluster forms
+        └─► clustered by the issuing minister at refinement time (M6)
 ```
 
-State transitions are emitted as `FeedbackEvent`s and written to the decision log. Archived advice stays queryable indefinitely.
+State transitions are emitted as `FeedbackEvent`s. Pushbacks additionally append to the **issuing minister's own pushback list** (see below). Archived advice stays queryable indefinitely.
 
 ---
 
@@ -110,75 +112,71 @@ State transitions are emitted as `FeedbackEvent`s and written to the decision lo
 ```jsonc
 {
   "advice_id":       "advice_...",
-  "action":          "Accept | Dismiss | Modify | Expired | Superseded",
-  "note":            "optional player-written note",
-  "modified_actions": [ /* SuggestedAction[]; only when action == Modify */ ],
+  "minister":        "Mayor",                  // issuing minister; pushbacks route to its list
+  "action":          "Accept | Dismiss | Pushback | Expired | Superseded",
+  "note":            "optional short note (Accept/Dismiss)",
+  "pushback_text":   "natural-language explanation of why the minister was wrong",
   "issued_at":       "2026-05-03T14:08:23Z",
-  "issued_in_game_tick": "Y1Q3D12H07",
-  "implicit_signals": {                  // populated even on Accept/Dismiss; see below
-    "memo_opened": true,
-    "memo_visible_seconds": 47,
-    "briefing_inspected": false
-  }
+  "issued_in_game_tick": "Y1Q3D12H07"
 }
 ```
 
----
-
-## Explicit feedback (Accept / Dismiss / Modify)
-
-Surfaced in the dashboard as three buttons on every memo card.
-
-- **Accept** — "I read this and I'll act on it." Optional note.
-- **Dismiss** — "I read this and I'm not acting on it." Note recommended; dismissal-with-note is the highest-value training signal because it tells the system *why* the advice was wrong.
-- **Modify** — "Mostly right, but with these changes." Player edits `suggested_actions` text in a modal; edited actions are recorded in `modified_actions`.
-
-The modified actions are **not executed** in MVP. They become input to refinement: when the same advice type is consistently modified the same way, refinement proposes a rule change that produces the modified shape directly.
+`pushback_text` is only present when `action == "Pushback"`. `note` and `pushback_text` are mutually exclusive — use whichever the action requires.
 
 ---
 
-## Implicit feedback (state-diff fallback)
+## Explicit feedback (Accept / Dismiss / Pushback)
 
-When the player ignores the buttons (the common case for many advice items), we infer engagement from game state.
+Surfaced in the dashboard as three buttons on every memo / agenda item.
 
-### Strategy
+- **Accept** — "I read this and I'll act on it." Optional short note.
+- **Dismiss** — "I read this and I'm not acting on it." Optional short note.
+- **Pushback** — "You're wrong, and here's why." Free-text natural-language explanation entered in a modal. The textarea prompt is literally *"Tell the minister why he's wrong."* This replaces the older "Modify" action — instead of asking the player to edit suggested-action text, we ask them to teach the minister.
 
-For each emitted advice item:
+Pushback is the highest-value signal in the system. It's the player's correction in their own words; refinement reads pushbacks to find recurring themes and propose rule changes.
 
-1. **Snapshot relevant briefing fields at issuance.** "Relevant" = the fields its `suggested_actions` would plausibly affect, mapped per `kind`:
-   - `designate_zone` → zone counts and tiles by type
-   - `build` → building counts by def
-   - `set_priority` → per-pawn work priority for the work types named
-   - `draft` → drafted-pawn ids
-   - etc.
-2. **At advice expiry, snapshot the same fields.**
-3. **Score overlap.** If post-state moved in the direction the advice suggested, infer "followed (likely)." If it moved opposite, "rejected (likely)." If it didn't move, "ignored."
-4. **Record as a low-confidence `FeedbackEvent`** with `action: "Expired"` and an `implicit_signals.inferred` block.
+---
 
-### Limitations (acknowledged, not solved)
+## Minister-owned pushback list
 
-- Confounding: the player may take an action for unrelated reasons.
-- Resolution: many `kind`s are too coarse to map cleanly (a generic "build sandbags" advice can't easily be matched to which sandbag the player placed).
-- Timing: the player may act *days* after a memo, beyond its expiry.
+Each minister **owns and persists its own pushback list**. Pushbacks are scoped — the Mayor doesn't see Agriculture's pushbacks; Agriculture doesn't see Defense's. Each minister learns from its own corrections.
 
-These are real but tolerable for a *fallback* signal. The explicit signal is the load-bearing one.
+### Storage
 
-### MVP stub (M2)
+- Location: `Src/Cabinet/<Minister>/Pushbacks/` (durable, kept across sessions).
+- Format: append-only JSON-lines file, one entry per pushback, with the originating `advice_id`, full advice payload reference (so the minister can see what it said), the player's `pushback_text`, and the in-game tick.
+- Retention: indefinite. Pushbacks are training data — pruning is a deliberate decision (post-M6).
 
-Just snapshot + diff a small whitelist of fields (food zones, total wealth, drafted-pawn count). Score is binary: "moved in advice direction" / "didn't." Full per-`kind` mapping comes M3+ as feeder ministers come online.
+### Two roles
+
+1. **Inline correction (M5)** — the last N pushbacks (capped by age + relevance) are injected into the issuing minister's next prompt as a "recent player corrections" section. The minister reads them as part of its context and adjusts subsequent advice. No code change required to benefit; the LLM does the lifting.
+2. **Refinement input (M6)** — the full pushback list is the corpus that the refinement loop clusters over to propose `Rules.cs` changes. See [`evaluation.md`](evaluation.md).
+
+### Why scoped to one minister
+
+- Encapsulation: each minister is responsible for its own learning. Mixing pushbacks across ministers would require routing logic that hasn't earned its keep.
+- Prompt budget: only the issuing minister needs its own corrections in-context.
+- Refinement clarity: clustering is simpler when the corpus is homogeneous.
+
+If a pushback is ever relevant to multiple ministers, the player can pushback again on the relevant memo when each minister surfaces it. We do not de-duplicate across ministers.
+
+---
+
+## Implicit feedback — dropped from MVP
+
+> *Removed in the 2026-05-08 re-eval.* The earlier plan included a state-diff implicit-feedback collector (snapshot relevant briefing fields at issuance, diff at expiry, score overlap with `suggested_actions`). It's been cut: the explicit Pushback channel is load-bearing, implicit signals were always a fallback, and the kind-to-field mapping was speculative. If a need re-emerges post-M6 we'll add it then with real data on what's missing.
 
 ---
 
 ## How feedback feeds refinement
 
-[`evaluation.md`](evaluation.md) Loop 1 (rule promotion) gains a new clustering dimension: **same `advice_type` + same explicit feedback action.**
+[`evaluation.md`](evaluation.md) Loop 1 (rule promotion) clusters over a single minister's **pushback list**:
 
-Examples:
-- 8 `expand_zone` advice items all Accepted with no modification → strong promotion candidate; the rule that would have produced them can be promoted.
-- 6 `hunt` advice items all Dismissed with notes mentioning "winter, nothing to hunt" → the rule that should *suppress* `hunt` advice in winter is the candidate.
-- 5 `food_security` advice items all Modified to add a "build a freezer" action → the rule (or prompt) should learn to include freezer suggestions when food + summer + no freezer.
+- 6 pushbacks on `hunt` advice in winter all saying variations of "nothing to hunt this season" → candidate rule: suppress `hunt` advice when `Season == Winter && WildAnimalCount < threshold`.
+- 5 pushbacks on `food_security` advice all mentioning "we already have a freezer" → candidate prompt change: include `HasFreezer` in the briefing and tell the minister not to suggest one when present.
+- Accept-without-note streaks reinforce that the rule that produced them is working — used to *confirm* a rule rather than promote a new one.
 
-Implicit "ignored" signals are weighted lower than explicit Dismiss; "followed (likely)" is weighted lower than explicit Accept. Confidence thresholds for promotion are set in [`evaluation.md`](evaluation.md) approval gates.
+Confidence thresholds for promotion are set in [`evaluation.md`](evaluation.md) approval gates.
 
 ---
 
@@ -201,8 +199,8 @@ In MVP the only valid value is `Suggest`. The dashboard's autonomy panel shows t
 
 ## Open questions
 
-- [ ] How should we surface low-confidence implicit feedback in the dashboard so the player can correct it? (E.g. "We thought you acted on yesterday's food memo — was that right?" prompts.)
-- [ ] Should `Modify` create a *new* advice item (versioned successor) or just attach the modification to the original?
+- [ ] Pushback selection for the prompt: how do we cap "last N corrections" — by age, by relevance to the current briefing fields, by token budget, or a mix? Calibrate once we have real pushbacks.
+- [ ] Pushback expiry / pruning: do pushbacks ever lose relevance (e.g. a winter-specific correction once it's spring), or do they always go in? Assume always-in until M6 shows otherwise.
 - [ ] How do we handle conflicting advice from two ministers in the same memo cycle? (CoS arbitrates pre-Mayor, but for tactical alerts CoS hasn't run yet.)
 - [ ] Per-minister advice-type catalogues — define exact enums per minister in their respective docs.
 - [ ] When a memo references a colonist who dies before expiry, should the memo auto-archive? (Probably yes; encode as `expires_on_game_state`.)

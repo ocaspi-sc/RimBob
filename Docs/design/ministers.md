@@ -37,19 +37,18 @@ The Orchestrator passes the trigger into `RunPlayCycle` so ministers can inspect
 **Refinement** (async, between sessions or on-demand):
 ```
 RunRefinement()
-  → Read own decision log
-  → Identify escalation patterns, rule misfires
-  → Read player FeedbackEvents (Accept | Dismiss | Modify) joined to advice ids
-  → Identify advice consistently Dismissed or consistently Modified the same way
+  → Read own pushback list (Src/Cabinet/<Minister>/Pushbacks/)
+  → Read own escalation history (rule misfires, LLM call patterns)
+  → Cluster pushbacks by theme (recurring corrections in the player's words)
   → Propose Rules.cs / prompt changes (code-gen with tools)
   → Run proposals against fixture suite
   → Gate on approval (human in v1; auto above confidence threshold post-MVP)
   → Promote approved changes to Rules.cs  ← "rule promotion"
 ```
 
-Player feedback is the **primary** training signal under suggest-only. Implicit state-diff (did the colony state evolve in a way consistent with the advice?) is a fallback when feedback is absent. See [`advice.md`](advice.md).
+Each minister **owns its own pushback list** — the player's natural-language explanations of why that minister was wrong. Pushbacks are scoped: the Mayor doesn't see Agriculture's pushbacks. They flow into the issuing minister's next prompt as "recent player corrections" (M5) and serve as the refinement corpus (M6). Implicit state-diff is *not* part of MVP — see [`advice.md`](advice.md).
 
-Refinement IS the minister. Not a separate agent — the same minister in a different mode, with different tools available (code read/write, fixture runner) and different context (decision log instead of briefing).
+Refinement IS the minister. Not a separate agent — the same minister in a different mode, with different tools available (code read/write, fixture runner) and different context (its pushback list instead of a briefing).
 
 ---
 
@@ -193,7 +192,7 @@ Tests/
 }
 ```
 
-Player Accept / Modify events on shipped advice are also raw material for new fixtures — see `fixture-gen` in [`evaluation.md`](evaluation.md).
+Player Accept events and Pushback entries on shipped advice are also raw material for new fixtures — see `fixture-gen` in [`evaluation.md`](evaluation.md).
 
 Fixtures run on every CI push. A rule change that breaks a fixture is a regression.
 

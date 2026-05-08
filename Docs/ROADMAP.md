@@ -11,11 +11,11 @@
 | M0 | Repo lit — scaffold compiles, RIMAPI handshake, dashboard skeleton serves a hello-world page | Done |
 | M1 | Mayor's Agenda spine — colony-wide briefing → Mayor LLM → versioned `MayorAgenda` rendered in the dashboard | Done |
 | M1.5 | Live operability — startup briefing, periodic ingestion, sidebar telemetry, on-demand Refresh, run-state + prompt-introspection endpoints | Done |
-| M2 | Feedback loop — Accept / Dismiss / Modify wired; decisions logged; implicit state-diff stub | Not started |
+| M2 | Grounded reasoning (RAG) — Mayor cites guide passages; measurable agenda-quality improvement before adding feeders | Not started |
 | M3 | First feeder advisor (Agriculture) — sub-briefing into the Mayor; first cross-minister flag | Not started |
-| M4 | Grounded reasoning — RAG retrieval cited in memos; measurable advice improvement | Not started |
-| M5 | Cabinet of advisors — Defense, Construction, Welfare feeding the Mayor; severity-gated tactical alerts surface independently of the daily digest | Not started |
-| M6 | Refinement loop closes — accept/dismiss data drives the first promoted rule per minister | Not started |
+| M4 | Cabinet of advisors — Defense, Construction, Welfare feeding the Mayor; severity-gated tactical alerts surface independently of the daily digest | Not started |
+| M5 | Feedback loop — Accept / Dismiss / Pushback wired; each minister owns and persists its own pushback list | Not started |
+| M6 | Refinement loop closes — pushbacks drive the first promoted rule per minister | Not started |
 | M7 (post-MVP) | First Auto graduation — one minister's narrowest advice type (e.g. stockpile-zone suggestions) gains an `Auto` mode behind the dial. Re-engages deferred HTN / Labor pieces | Not started |
 
 > **Out of MVP scope:** the original "Year 1 survived, no human input" milestone is deprecated under the assisted-gameplay pivot. Equivalent autonomous play is now a long-tail goal reached by graduating multiple ministers to `Auto` over many cycles, not a single milestone.
@@ -76,26 +76,28 @@
 
 ---
 
-## M2 — Feedback loop
+## M2 — Grounded reasoning (RAG)
 
-**Done when:** each memo in the dashboard has working Accept / Dismiss / Modify controls; the action writes a `FeedbackEvent` to the decision log; an implicit-feedback stub records pre/post game-state snapshots tied to the memo's `suggested_actions`.
+**Done when:** in-process RAG store loads ≥2 guides; retrievals appear in prompt traces; the Mayor cites a specific guide passage in at least one agenda field (state-of-the-union or item rationale); side-by-side comparison shows a measurably better-justified agenda with RAG vs without.
 
-**Demo:** dismiss yesterday's memo with a note "we already did this"; the decision log shows the dismissal; query the log by minister and see the Mayor's accept/dismiss/modify ratio.
+**Demo:** boot Host, fast-forward one in-game day with RAG enabled vs disabled; the RAG agenda cites a guide passage (e.g. "fall checklist: ensure 60-day food buffer") in `state_of_the_union.agriculture` or in a short-term card's rationale.
+
+**Why this is M2 instead of feedback:** before we wire feedback UI on top of the Mayor's output, the Mayor needs to be worth reacting to. RAG is the cheapest quality lever and is independent of the feedback infra. It also gives the eventual feedback corpus more signal per memo.
 
 **Scope:**
-- `FeedbackEvent` schema (memo id, action, optional player note, timestamp, in-game tick).
-- Dashboard buttons + modify modal (free-text edits to `suggested_actions`).
-- Decision log writer (Serilog → structured file).
-- Implicit-feedback collector: snapshot relevant briefing fields at memo issuance, diff at memo expiry, score overlap with `suggested_actions`. Stub-quality is fine here — see [`design/advice.md`](design/advice.md) open questions.
-- Dashboard "decision log" tab shows the last N feedback events with the originating memo.
+- `KnowledgeBase` in-process cosine store.
+- Guide ingestion (`strategic-plan-y1-y2.md` + one wiki guide).
+- Evergreen content distilled into the Mayor's system prompt (cached).
+- RAG retrieval for long-tail lookups, surfaced in agenda `citations[]`.
+- Side-by-side fixture: same briefing, with/without RAG, agenda diff captured.
 
 ---
 
 ## M3 — First feeder advisor (Agriculture)
 
-**Done when:** the Mayor's daily digest visibly incorporates Agriculture's sub-briefing; Agriculture can emit a flag (e.g. "food crisis imminent") that the Mayor's memo reflects in body or severity.
+**Done when:** the Mayor's daily agenda visibly incorporates Agriculture's sub-briefing; Agriculture can emit a flag (e.g. "food crisis imminent") that the Mayor reflects in body or severity.
 
-**Demo:** induce a food shortage; next daily memo leads with food security and cites Agriculture's flag in its rationale.
+**Demo:** induce a food shortage; next daily agenda leads with food security and cites Agriculture's flag in its rationale.
 
 **Scope:**
 - `IMinisterRules<AgricultureBriefing>` interface + Agriculture rules layer.
@@ -106,25 +108,11 @@
 
 ---
 
-## M4 — Grounded reasoning
-
-**Done when:** in-process RAG store loads ≥2 guides; retrievals appear in prompt traces; one fixture shows a measurably better-justified memo with RAG vs without (cited guide passage in the rationale).
-
-**Demo:** side-by-side memo rationales with and without retrieval; RAG version cites a specific guide passage.
-
-**Scope:**
-- `KnowledgeBase` in-process cosine store.
-- Guide ingestion (`strategic-plan-y1-y2.md` + one wiki guide).
-- Evergreen content distilled into Mayor / Agriculture system prompts (cached).
-- RAG retrieval for long-tail lookups, surfaced in memo `citations[]`.
-
----
-
-## M5 — Cabinet of advisors
+## M4 — Cabinet of advisors
 
 **Done when:** Defense, Construction, Welfare each feed sub-briefings + flags into the Mayor; severity-gated **tactical alerts** can surface as their own dashboard items (separate from the daily digest) when a Critical or High flag fires.
 
-**Demo:** raid scenario — Defense emits Critical flag → tactical alert appears in dashboard immediately; next daily Mayor memo summarises the incident and proposes follow-up.
+**Demo:** raid scenario — Defense emits Critical flag → tactical alert appears in dashboard immediately; next daily Mayor agenda summarises the incident and proposes follow-up.
 
 **Scope:**
 - Defense, Construction, Welfare ministers + their rules layers.
@@ -134,14 +122,34 @@
 
 ---
 
+## M5 — Feedback loop
+
+**Done when:** each memo / agenda item in the dashboard has working **Accept / Dismiss / Pushback** controls; each minister maintains its own persisted **pushback list** containing the player's natural-language explanations of why that minister was wrong; pushbacks for a given minister flow into that minister's next prompt as "recent player corrections."
+
+**Demo:** dismiss yesterday's `food_security` advice with a Pushback note ("we already built the freezer"); next day, the Mayor's prompt to Agriculture includes that note in the corrections section, and the next agenda doesn't repeat the same suggestion.
+
+**Why this is M5 (not M2):** feedback is only valuable once there are multiple ministers producing enough advice to find patterns in (M3, M4 first), and it's only consumed by M6. Landing it just before M6 keeps it fresh and avoids building UI on top of an output we hadn't yet lived with.
+
+**Scope:**
+- **Pushback** is the renamed Modify action. Semantics: the player explains in natural language why the minister is wrong, rather than editing `suggested_actions` text.
+- `FeedbackEvent` schema (memo id, action, player note, timestamp, in-game tick).
+- Each minister owns and persists its own pushback list under `Src/Cabinet/<Minister>/Pushbacks/`. Pushbacks are scoped — the Mayor doesn't see Agriculture's pushbacks and vice versa.
+- Dashboard buttons + Pushback modal (free-text textarea, prompt: *"Tell the minister why he's wrong."*).
+- Per-minister pushback view in the dashboard (replaces the old "decision log" tab idea — there's no global log, only per-minister lists).
+- Pushbacks injected into the issuing minister's next prompt as a "recent player corrections" section, capped to the last N entries by age and severity.
+- **Implicit-feedback / state-diff inference is dropped from the MVP.** The explicit Pushback channel is load-bearing; implicit signals were always a fallback and the cost wasn't justified.
+
+---
+
 ## M6 — Refinement loop closes
 
-**Done when:** for one minister, the refinement loop reads the decision log (now with feedback events), identifies a cluster of consistently-Accepted-or-Modified escalations, generates a candidate `Rules.cs` change, runs it against fixtures, and surfaces the diff for human approval. One rule is promoted end-to-end.
+**Done when:** for one minister, the refinement loop reads its **own pushback list**, identifies a cluster of consistent corrections (e.g. 6 pushbacks all saying "no hunting in winter"), generates a candidate `Rules.cs` change, runs it against fixtures, and surfaces the diff for human approval. One rule is promoted end-to-end.
 
-**Demo:** run the `minister-review` skill against Agriculture's log; see a proposed rule + fixture pass-rate diff; approve; observe rule appear in `Rules.cs`.
+**Demo:** run the `minister-review` skill against Agriculture's pushback list; see a proposed rule + fixture pass-rate diff; approve; observe rule appear in `Rules.cs`.
 
 **Scope:**
 - Refinement-mode tooling for at least one minister.
+- Pushback-clustering pass (LLM-assisted theme extraction over the minister's own pushback list).
 - Fixture suite at ≥10 scenarios for that minister.
 - Approval-gated promotion path.
 
