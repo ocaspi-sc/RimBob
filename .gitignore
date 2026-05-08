@@ -22,9 +22,10 @@ logs/
 appsettings.Local.json
 
 # Dashboard
-Dashboard/node_modules/
-Dashboard/dist/
-Host/wwwroot/
+Src/Dashboard/node_modules/
+Src/Dashboard/dist/
+# Host/wwwroot/ holds Vite's production build output (built by `npm run build`).
+Src/ApiHost/wwwroot/
 
 # OS
 .DS_Store
