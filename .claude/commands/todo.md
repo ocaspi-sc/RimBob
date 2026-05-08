@@ -1,16 +1,16 @@
 ---
-description: Capture an idea or task into todo.md with tags. Optionally saves a plan to Docs/plans/ and links it.
+description: Capture an idea or task into Human.md with tags. Optionally saves a plan to Docs/plans/ and links it.
 allowed-tools: Read, Edit, Write
 ---
 
 ## Context
 
 - Today's date: !`date /t`
-- Current todo.md: !`type todo.md`
+- Current Human.md: !`type Human.md`
 
 ## Your task
 
-Append one new entry to `todo.md` in this project, just after the `<!-- entries go here -->` comment.
+Append one new entry to `Human.md` in this project, just after the `<!-- entries go here -->` comment.
 
 **Input:** Use `$ARGUMENTS` if the user provided a description after `/todo`. Otherwise derive the task from the most recent idea or decision in the conversation.
 
