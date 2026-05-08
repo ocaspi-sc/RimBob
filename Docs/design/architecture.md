@@ -136,9 +136,12 @@ The shared coordination layer between ministers. Owns the flag channel (cross-mi
 
 ```
 Coordination/
-├── FlagChannel.cs      // flag emission, routing, severity tiers, expiry
-├── AdviceBus.cs        // in-process emitter; Host bridges it to the SSE feed
-└── BulletinBoard.cs    // Deferred — Auto epic. LaborRequest lifecycle.
+├── AdviceBus.cs              // in-process emitter; Host bridges it to the SSE feed
+├── AgendaStore.cs            // versioned MayorAgenda store + 30-day history ring
+├── DayTickOrchestrator.cs    // BackgroundService; refreshes ColonyState each poll, fires Mayor on startup + day rollover
+├── MayorStatus.cs            // tracks IsRunning / StartedAt / CompletedAt / LastError; surfaced via /api/status
+├── FlagChannel.cs            // flag emission, routing, severity tiers, expiry
+└── BulletinBoard.cs          // Deferred — Auto epic. LaborRequest lifecycle.
 ```
 
 The advice bus is the single inspectable surface for colony advice. A dashboard view should show every memo traceable to `minister → briefing → rule_or_llm_path → AdviceItem`.
@@ -216,20 +219,22 @@ Knowledge/
 .NET 9 service that wires everything and serves the dashboard.
 
 ```
-ApiHost/                          // project: RimAI.Host
-├── Program.cs
-├── RimAiOptions.cs               // typed config bound from "RimAi" section
-├── appsettings.json              // Serilog config + RimAi (ListenUrl, RimApiBaseUrl, PingLlmOnStartup)
+ApiHost/                              // project: RimAI.Host
+├── Program.cs                        // DI wiring + startup checks
+├── RimAiOptions.cs                   // typed config bound from "RimAi" section
+├── appsettings.json                  // Serilog config + RimAi (ListenUrl, RimApiBaseUrl, PingLlmOnStartup)
 ├── appsettings.Development.json
-├── Api/
-│   ├── HealthController.cs       // GET /api/health
-│   ├── AdviceStreamController.cs // GET /api/advice/stream  (SSE)
-│   ├── FeedbackController.cs     // POST /api/advice/{id}/feedback
-│   └── AutonomyController.cs     // GET/PUT /api/autonomy   (per-minister Off|Suggest|Auto)
-├── wwwroot/                      // Dashboard build output (Vite outDir)
-└── Orchestrator/
-    ├── Orchestrator.cs           // main loop; wakes ministers on briefing change
-    └── Budgeter.cs               // tracks LLM spend per minister; enforces cap
+├── Endpoints/
+│   ├── AgendaStreamEndpoint.cs       // GET  /api/advice/stream      (SSE)
+│   ├── AgendaEndpoints.cs            // GET  /api/agenda/{latest|history}
+│   │                                 // POST /api/agenda/refresh     (demand-trigger)
+│   ├── ColonyEndpoints.cs            // GET  /api/colony/snapshot    (latest MayorBriefing)
+│   ├── StatusEndpoints.cs            // GET  /api/status             (server + Mayor run state)
+│   │                                 // GET  /api/mayor/prompt       (next system + user message)
+│   └── AutonomyEndpoints.cs          // GET/PUT /api/autonomy        (per-minister Off|Suggest|Auto)
+├── wwwroot/                          // Dashboard build output (Vite outDir)
+└── Orchestrator/                     // (planned) main-loop budgeter; not built yet — DayTickOrchestrator
+                                      // in Coordination/ drives Mayor wake-ups in M1.5
 ```
 
 Host binds to `localhost` only — see [`dashboard.md`](dashboard.md) auth posture.

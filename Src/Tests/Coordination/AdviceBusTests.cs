@@ -16,6 +16,7 @@ public sealed class AdviceBusTests
 
         MayorAgenda agenda = new(
             Version: 1, UpdatedInGameTick: "Y1Q1D1",
+            GeneratedAt: DateTimeOffset.UnixEpoch,
             Posture: new MayorPosture("growth", "defensive", "go"),
             StateOfTheUnion: new Dictionary<string, string> { ["welfare"] = "All quiet." },
             UpdateNotes: "Day 1.",
@@ -40,6 +41,7 @@ internal static class InputBuilderExtensions
 {
     public static MayorAgenda ToAgenda(this MayorAgendaInput input, int version, string tick) => new(
         Version: version, UpdatedInGameTick: tick,
+        GeneratedAt: DateTimeOffset.UnixEpoch,
         Posture: input.Posture, StateOfTheUnion: input.StateOfTheUnion,
         UpdateNotes: input.UpdateNotes, ShortTerm: input.ShortTerm, LongTerm: input.LongTerm,
         MinisterDirection: input.MinisterDirection);

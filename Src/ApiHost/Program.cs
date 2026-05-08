@@ -47,6 +47,7 @@ builder.Services.AddSingleton<IngestionDispatcher>();
 builder.Services.AddSingleton<AdviceBus>();
 builder.Services.AddSingleton<AgendaStore>();
 builder.Services.AddSingleton<MayorRules>();
+builder.Services.AddSingleton<MayorStatus>();
 builder.Services.AddSingleton<Mayor>();
 builder.Services.AddSingleton<IMinister>(sp => sp.GetRequiredService<Mayor>());
 builder.Services.AddHostedService<DayTickOrchestrator>();
@@ -64,6 +65,7 @@ app.MapAgendaStream();
 app.MapAgendaEndpoints();
 app.MapAutonomyEndpoints();
 app.MapColonyEndpoints();
+app.MapStatusEndpoints();
 
 // ── Startup checks ─────────────────────────────────────────────────────────
 app.Lifetime.ApplicationStarted.Register(() =>

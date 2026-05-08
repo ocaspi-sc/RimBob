@@ -5,13 +5,12 @@
 
 ---
 
-## Now (M1 wrap — verify against a live colony)
+## Now (RIMAPI gaps surfaced by M1.5 smoke)
 
-- [ ] End-to-end smoke: boot Host with `GEMINI_API_KEY` and a fresh RimWorld colony, fast-forward one in-game day, observe `agenda_update` event in browser DevTools, confirm dashboard renders posture + state-of-the-union + bullets.
-- [ ] Stockpile inventory endpoint — extend `RimApiClient` so `ResourceSnapshot` and `EstimatedDaysOfFood` get real values (currently empty/null pending endpoint). Without it, the food_crisis lens can't fire.
-- [ ] Research endpoint in `RimApiClient` so `ResearchSnapshot` populates.
+- [ ] Stockpile inventory endpoint — extend `RimApiClient` so `ResourceSnapshot` and `EstimatedDaysOfFood` get real values (currently empty/null pending endpoint). Without it, the food_crisis lens can't fire and the sidebar shows "—" for food days.
+- [ ] Research endpoint in `RimApiClient` so `ResearchSnapshot.CurrentProject` / `Progress` populate (sidebar shows "—").
+- [ ] Live PawnDto mapping returns `name=null age=0 mood=0` — confirm the v2 colonists/detailed payload shape against RIMAPI source and fix the mapper. Without this, sidebar People rows are right but PawnLine is unusable to the prompt.
 - [ ] Decide what `EstimatedDaysOfFood == null` should look like in the prompt — explicit "food levels unknown" vs. omit field.
-- [x] Vite `npm install && npm run build` confirmed locally with Node 24.15 LTS — 34 modules, 148 KB bundle, no TS errors.
 
 ## Next (M2 — feedback loop)
 
@@ -19,7 +18,7 @@
 - [ ] Wire dashboard Accept / Modify / Dismiss buttons (Modify modal opens an editable text field, posts `modified_text`).
 - [ ] Implicit-feedback collector stub: snapshot relevant briefing fields at memo issuance, diff at memo expiry.
 - [ ] `Decision Log` tab renders the last N `FeedbackEvent`s with the originating Agenda bullet.
-- [ ] `Briefing` tab renders the latest `MayorBriefing` JSON pretty-printed.
+- [ ] `Briefing` tab renders the latest `MayorBriefing` JSON pretty-printed (data already at `/api/colony/snapshot`; just needs UI).
 
 ## Design TODOs (deferred)
 
@@ -76,3 +75,4 @@ See [`DESIGN.md`](DESIGN.md) decision log and Open Questions sections in sub-doc
 - [x] **M1 W6 — Dashboard.** Agenda tab renders the live SSE feed: posture badges, state-of-the-union, what-changed, ranked short-term cards with delta badges (`NEW`/`UPDATED`/`DONE`/`DEFERRED`), long-term list. Feedback buttons disabled.
 - [x] **M1 W7 — Tests.** 22 tests across MayorRules, Mayor play cycle, AgendaStore, AdviceBus, DayTickOrchestrator. 62/62 total passing.
 - [x] **M1 W8 — Doc reconciliation.** ROADMAP M1 + this file rewritten to reflect Agenda pivot; agenda.md / dashboard.md SSE envelope simplified to `data: {full MayorAgenda}`.
+- [x] **M1.5 — Live operability.** Wake Mayor on Host startup, periodic `IngestionDispatcher` calls in `DayTickOrchestrator`, `state_of_the_union` per-category dict, `MayorAgenda.GeneratedAt`, `MayorStatus`, `/api/colony/snapshot`, `/api/status`, `/api/mayor/prompt`, `POST /api/agenda/refresh`, dark command-center dashboard with sidebar telemetry + Refresh button.

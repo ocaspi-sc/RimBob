@@ -23,6 +23,7 @@ Each bullet is a free-text string. The Mayor writes what it wants; there is no s
 {
   "version":              142,          // increments every update
   "updated_in_game_tick": "Y1Q3D12",
+  "generated_at":         "2026-05-08T17:20:36.412Z",  // ISO 8601 UTC, server-stamped
 
   "posture": {
     "economic": "consolidation",        // growth | consolidation | survival
@@ -30,7 +31,14 @@ Each bullet is a free-text string. The Mayor writes what it wants; there is no s
     "summary":  "Hold wealth, shore up food before winter. No expansion this quadrum."
   },
 
-  "state_of_the_union": "Six colonists, all healthy; mood is steady at 72%. Food covers 18 days against a winter that arrives in 20 — tight but not red. Wealth has plateaued near 85k; raid points are tracking, not racing. Power is comfortable, the freezer is running, the east wall has a known gap that hasn't been tested. Research is mid-microelectronics. Overall: stable colony with one obvious time-pressure (food vs. winter) and one quiet liability (the wall).",
+  "state_of_the_union": {
+    "agriculture":  "Food covers 18 days against winter in 20 — tight, not red.",
+    "defense":      "East wall has a known gap, untested. No active threats.",
+    "welfare":      "Six colonists healthy; mood steady at 72%; no break risks.",
+    "construction": "Freezer running, power comfortable, no damaged buildings.",
+    "treasury":     "Wealth plateaued near 85k; raid points tracking, not racing.",
+    "research":     "Mid-microelectronics; multi-analyzer not yet built."
+  },
 
   "update_notes": "Winter arrives in ~20 days. Moved food to top. Defense is calm — east wall still needs patching but is not urgent.",
 
@@ -57,7 +65,9 @@ Each bullet is a free-text string. The Mayor writes what it wants; there is no s
 
 **`version`** — monotonically incrementing integer. The dashboard diffs consecutive versions to show delta badges.
 
-**`state_of_the_union`** — narrative paragraph the Mayor writes describing where the colony stands *right now*: people, food, defense, wealth, mood, research — whatever matters this turn. This is the "where are we" passage; `update_notes` is the "what changed" delta. Target ~100–200 words. Kept fresh each turn even on quiet days.
+**`generated_at`** — ISO 8601 UTC timestamp stamped by `AgendaStore.Update` (server-side, not the LLM). Lets the dashboard show "Updated 2 min ago" without depending on the in-game tick clock.
+
+**`state_of_the_union`** — `Record<string, string>` keyed by category. Allowed keys: `agriculture`, `defense`, `welfare`, `construction`, `treasury`, `research`. The Mayor emits one terse sentence per relevant category and may omit a key entirely when nothing's worth flagging. The dashboard renders this as an emoji-prefixed checklist (one row per key); emojis are *not* in the LLM output — the dashboard maps category → icon for consistent display. Raw colony numbers (wealth, food days, tick) live in the sidebar; this field is the *interpretation*, not the readout.
 
 **`update_notes`** — one or two sentences the Mayor writes explaining what changed since the previous version. The player's daily delta briefing. Kept short (~50–100 words).
 
@@ -133,39 +143,32 @@ Refinement clusters these the same way it clusters `AdviceItem` feedback: dismis
 The Agenda tab is the **primary** dashboard tab in MVP (replaces "Memos").
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│  Agenda                        Y1 Q3 D12 · Updated 2 mins ago   │
-│  Consolidation · Defensive                                        │
-├──────────────────────────────────────────────────────────────────┤
-│  State of the Union                                               │
-│  Six colonists, all healthy; mood steady at 72%. Food covers 18 │
-│  days against a winter in 20 — tight but not red. Wealth ~85k,  │
-│  raid points tracking. Power comfortable, freezer running, east │
-│  wall has a known gap. Research mid-microelectronics. Stable    │
-│  with one time-pressure and one quiet liability.                │
-├──────────────────────────────────────────────────────────────────┤
-│  What changed                                                     │
-│  "Winter arrives in ~20 days. Moved food to top."               │
-├──────────────────────────────────────────────────────────────────┤
-│  Short-term                                                       │
-│  ┌──────────────────────────────────────────────────── NEW ────┐ │
-│  │ · Establish a second growing zone before winter — food       │ │
-│  │   covers 18 days, winter arrives in ~20.                     │ │
-│  │   [Accept] [Modify] [Dismiss]                                │ │
-│  └──────────────────────────────────────────────────────────────┘ │
-│  ┌─────────────────────────────────────────────────────────────┐ │
-│  │ · Patch the east-wall gap before the next raid window.       │ │
-│  │   [Accept] [Modify] [Dismiss]                                │ │
-│  └─────────────────────────────────────────────────────────────┘ │
-│  ┌─────────────────────────────────────────────────────────────┐ │
-│  │ · Review colonist schedules for the cold snap.              │ │
-│  │   [Accept] [Modify] [Dismiss]                                │ │
-│  └─────────────────────────────────────────────────────────────┘ │
-├──────────────────────────────────────────────────────────────────┤
-│  Long-term                                                        │
-│  ● Complete winter prep (food, heat, schedules) before day 30.   │
-│  ○ Base expansion deferred to year 2.                             │
-└──────────────────────────────────────────────────────────────────┘
+┌─ Main console ───────────────────────────────────┬─ Sidebar ──────┐
+│  Agenda                      v142 · Y1Q3D12      │  Colony        │
+│  $ Consolidation · ⚔ Defensive · Updated 2m ago  │  ─ Date        │
+│  "Hold wealth, shore up food before winter."     │   When  12 Jul │
+├──────────────────────────────────────────────────┤   Winter in 20d│
+│  State of the Union                              │  ─ People      │
+│   🌾 Agriculture  Food covers 18d vs winter in 20│   Total      6 │
+│   🛡️ Defense      East wall gap, no active raid │   Adults     6 │
+│   ❤️ Welfare      Mood 72%, no break risks       │  ─ Mood        │
+│   🔨 Construction Freezer running, power +120 W  │   Average  72% │
+│   💰 Treasury     Wealth ~85k, points tracking   │  ─ Food        │
+│   🔬 Research     Mid-microelectronics           │   Days   18.0d │
+├──────────────────────────────────────────────────┤  ─ Wealth      │
+│  What changed                                    │   Colony  85,2k│
+│  "Winter arrives in ~20 days. Moved food to top."│  ─ Power       │
+├──────────────────────────────────────────────────┤   Net   +120 W │
+│  Short-term · 3 active                           │  ─ Threat      │
+│  ① Establish second growing zone …       NEW    │   Raid     no  │
+│      [Accept] [Modify] [Dismiss]                 │  ─ Weather     │
+│  ② Patch east-wall gap …                        │   Temp   -2.1°C│
+│  ③ Review schedules for the cold snap.          │  ─ Research    │
+├──────────────────────────────────────────────────┤   Microelec 60%│
+│  Long-term · 2                                   │                │
+│   ●  Complete winter prep before day 30.         │ briefing v142  │
+│   ○  Base expansion deferred to Y2.              │ tick 612,400   │
+└──────────────────────────────────────────────────┴────────────────┘
 ```
 
 Delta badges on short-term bullets: `NEW` for new IDs; `UPDATED` for carried-forward IDs with changed text; `DONE` / `DEFERRED` for IDs that exited (shown one day then moved to history).
@@ -214,8 +217,11 @@ Returns the current `MayorAgenda` JSON.
 ### `GET /api/agenda/history?since=<tick>`
 Returns `MayorAgenda` snapshots since `tick`, one per in-game day. Retained for 30 in-game days; older history archived to decision log.
 
+### `POST /api/agenda/refresh`
+Demand-triggers a state ingestion + Mayor cycle. Same body shape as a `DayTickOrchestrator` rollover but fired from the dashboard "Refresh" button. Returns `{ "refreshed": true }` on success; the new agenda is broadcast over SSE as usual. No body required.
+
 ### `POST /api/agenda/{version}/item/{id}/feedback`
-Body: same `FeedbackEvent` shape as `/api/advice/{id}/feedback`, with `source: "agenda_item"`, `agenda_version`, `item_id`, and (for Modify) `modified_text` instead of `modified_actions`.
+Body: same `FeedbackEvent` shape as `/api/advice/{id}/feedback`, with `source: "agenda_item"`, `agenda_version`, `item_id`, and (for Modify) `modified_text` instead of `modified_actions`. **M2.**
 
 ---
 

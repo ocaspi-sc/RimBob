@@ -1,20 +1,18 @@
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { MayorAgenda, AgendaItem } from '../types/agenda';
+import type { RimAIStatus } from '../types/status';
+import { fetchMayorPrompt } from '../api/status';
 import { AgendaItemCard, type DeltaBadge } from './AgendaItemCard';
 
 interface Props {
   agenda: MayorAgenda | null;
   previous: MayorAgenda | null;
+  status: RimAIStatus | null;
 }
 
-export function AgendaTab({ agenda, previous }: Props) {
+export function AgendaTab({ agenda, previous, status }: Props) {
   if (!agenda) {
-    return (
-      <div className="empty-console">
-        <span className="empty-code">MAYOR UPLINK</span>
-        Waiting for the first briefing... Mayor is calling Gemini.
-      </div>
-    );
+    return <MayorUplinkState status={status} />;
   }
 
   const previousShort = new Map<string, AgendaItem>(
@@ -108,6 +106,109 @@ export function AgendaTab({ agenda, previous }: Props) {
   );
 }
 
+// ── Waiting state ─────────────────────────────────────────────────────────────
+
+function formatElapsed(seconds: number): string {
+  const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+  const s = (seconds % 60).toString().padStart(2, '0');
+  return `${m}:${s}`;
+}
+
+function MayorUplinkState({ status }: { status: RimAIStatus | null }) {
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    if (!status?.mayor_running || !status.mayor_started_at) return;
+    const start = new Date(status.mayor_started_at).getTime();
+    const tick = () => setElapsed(Math.floor((Date.now() - start) / 1000));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [status?.mayor_running, status?.mayor_started_at]);
+
+  if (!status) {
+    return (
+      <div className="mayor-uplink">
+        <span className="empty-code">MAYOR UPLINK</span>
+        <p>Connecting to server…</p>
+      </div>
+    );
+  }
+
+  if (!status.llm_configured) {
+    return (
+      <div className="mayor-uplink error">
+        <span className="empty-code">MAYOR OFFLINE</span>
+        <p>
+          Gemini not configured —{' '}
+          set <code>GEMINI_API_KEY</code> and restart the server.
+        </p>
+        <PromptViewer />
+      </div>
+    );
+  }
+
+  return (
+    <div className="mayor-uplink">
+      <span className="empty-code">MAYOR UPLINK</span>
+      {status.mayor_running ? (
+        <p>
+          Calling Gemini…{' '}
+          <span className="uplink-timer">{formatElapsed(elapsed)}</span>
+        </p>
+      ) : (
+        <p>Waiting for Mayor cycle…</p>
+      )}
+      {status.mayor_last_error && (
+        <p className="uplink-error">Last error: {status.mayor_last_error}</p>
+      )}
+      <PromptViewer />
+    </div>
+  );
+}
+
+function PromptViewer() {
+  const [prompt, setPrompt] = useState<{ system: string; user: string } | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleToggle = (e: React.SyntheticEvent<HTMLDetailsElement>) => {
+    if (!(e.target as HTMLDetailsElement).open || prompt || loading) return;
+    setLoading(true);
+    fetchMayorPrompt()
+      .then(setPrompt)
+      .catch(err => console.error('fetchMayorPrompt', err))
+      .finally(() => setLoading(false));
+  };
+
+  return (
+    <details className="prompt-viewer" onToggle={handleToggle}>
+      <summary>What was sent to Gemini</summary>
+      {loading && <p className="prompt-loading">Loading…</p>}
+      {prompt && (
+        <>
+          <h4>Briefing (user message)</h4>
+          <pre className="prompt-pre">{prettyJson(prompt.user)}</pre>
+          <h4>System prompt</h4>
+          <pre className="prompt-pre">{prompt.system}</pre>
+        </>
+      )}
+    </details>
+  );
+}
+
+function prettyJson(raw: string): string {
+  try { return JSON.stringify(JSON.parse(raw), null, 2); }
+  catch { return raw; }
+}
+
+// ── Header ────────────────────────────────────────────────────────────────────
+
+function formatTimestamp(iso: string): string {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
 function AgendaHeader({ agenda }: { agenda: MayorAgenda }) {
   return (
     <header className="agenda-header">
@@ -116,8 +217,11 @@ function AgendaHeader({ agenda }: { agenda: MayorAgenda }) {
           <PostureBadge label={agenda.posture.economic} kind="economic" />
           <PostureBadge label={agenda.posture.military} kind="military" />
         </div>
-        <div className="agenda-version">
-          v{agenda.version} / tick {agenda.updated_in_game_tick}
+        <div className="agenda-meta">
+          <span className="agenda-version">v{agenda.version} · {agenda.updated_in_game_tick}</span>
+          <span className="agenda-timestamp" title={agenda.generated_at}>
+            Generated {formatTimestamp(agenda.generated_at)}
+          </span>
         </div>
       </div>
       <div className="posture-summary">
@@ -151,7 +255,6 @@ function StateOfTheUnion({ entries }: { entries: Record<string, string> }) {
     return <Empty>No state-of-the-union entries this turn.</Empty>;
   }
 
-  // Order known categories first, then anything unexpected at the end.
   const sorted = keys.slice().sort((a, b) => {
     const oa = ministerMeta[a]?.order ?? 99;
     const ob = ministerMeta[b]?.order ?? 99;

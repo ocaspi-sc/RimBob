@@ -17,6 +17,7 @@ public sealed class Mayor(
     AgendaStore         agendaStore,
     LlmClient           llm,
     AdviceBus           bus,
+    MayorStatus         status,
     ILogger<Mayor>      log
 ) : IMinister
 {
@@ -26,27 +27,38 @@ public sealed class Mayor(
 
     public async Task RunPlayCycle(CancellationToken ct)
     {
-        MayorBriefing briefing             = briefings.GetMayorBriefing();
-        MayorLensSet lens                  = rules.Evaluate(briefing, ColonyContext.Default);
-        Core.Advice.MayorAgenda? previous  = agendaStore.Current;
-
-        log.LogInformation(
-            "Mayor wake briefing_version={BriefingVersion} previous_agenda_version={PrevVersion} lenses=[{Lenses}]",
-            briefing.BriefingVersion, previous?.Version ?? 0, FormatLenses(lens));
-
-        Core.Advice.MayorAgendaInput? input = await CallLlmWithRetryAsync(briefing, previous, lens.PromptPrefills, ct);
-        if (input is null)
+        status.Begin();
+        string? cycleError = null;
+        try
         {
-            log.LogError("Mayor LLM call failed twice; agenda not updated this turn.");
-            return;
+            MayorBriefing briefing             = briefings.GetMayorBriefing();
+            MayorLensSet lens                  = rules.Evaluate(briefing, ColonyContext.Default);
+            Core.Advice.MayorAgenda? previous  = agendaStore.Current;
+
+            log.LogInformation(
+                "Mayor wake briefing_version={BriefingVersion} previous_agenda_version={PrevVersion} lenses=[{Lenses}]",
+                briefing.BriefingVersion, previous?.Version ?? 0, FormatLenses(lens));
+
+            Core.Advice.MayorAgendaInput? input = await CallLlmWithRetryAsync(briefing, previous, lens.PromptPrefills, ct);
+            if (input is null)
+            {
+                cycleError = "LLM call failed twice";
+                log.LogError("Mayor LLM call failed twice; agenda not updated this turn.");
+                return;
+            }
+
+            Core.Advice.MayorAgenda stamped = agendaStore.Update(input, FormatTick(briefing));
+            bus.Publish(new AgendaUpdated(stamped));
+
+            log.LogInformation(
+                "Mayor agenda v{Version} stored and published (tick={Tick} short_term={ShortCount})",
+                stamped.Version, stamped.UpdatedInGameTick, stamped.ShortTerm.Count);
         }
-
-        Core.Advice.MayorAgenda stamped = agendaStore.Update(input, FormatTick(briefing));
-        bus.Publish(new AgendaUpdated(stamped));
-
-        log.LogInformation(
-            "Mayor agenda v{Version} stored and published (tick={Tick} short_term={ShortCount})",
-            stamped.Version, stamped.UpdatedInGameTick, stamped.ShortTerm.Count);
+        finally
+        {
+            if (!ct.IsCancellationRequested)
+                status.End(cycleError);
+        }
     }
 
     public Task RunRefinement(CancellationToken ct) => Task.CompletedTask;  // M6

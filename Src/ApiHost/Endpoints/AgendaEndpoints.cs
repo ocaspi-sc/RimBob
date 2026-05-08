@@ -1,10 +1,12 @@
 using RimAI.Coordination;
 using RimAI.Core.Advice;
+using RimAI.Core.Ministers;
+using RimAI.State;
 
 namespace RimAI.Host.Endpoints;
 
 /// <summary>
-/// GET /api/agenda/latest and /api/agenda/history.
+/// GET /api/agenda/latest, /api/agenda/history, POST /api/agenda/refresh.
 /// </summary>
 public static class AgendaEndpoints
 {
@@ -24,6 +26,17 @@ public static class AgendaEndpoints
                 if (string.CompareOrdinal(a.UpdatedInGameTick, since) > 0)
                     filtered.Add(a);
             return Results.Ok(filtered);
+        });
+
+        // Demand-triggered briefing refresh + new agenda generation.
+        app.MapPost("/api/agenda/refresh", async (
+            IngestionDispatcher ingestion,
+            IMinister mayor,
+            CancellationToken ct) =>
+        {
+            await ingestion.RefreshAllAsync(ct);
+            await mayor.RunPlayCycle(ct);
+            return Results.Ok(new { refreshed = true });
         });
 
         return app;

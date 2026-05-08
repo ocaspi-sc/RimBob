@@ -18,6 +18,7 @@ export interface MayorPosture {
 export interface MayorAgenda {
   version: number;
   updated_in_game_tick: string;
+  generated_at: string;  // ISO 8601 UTC
   posture: MayorPosture;
   /** Map of category name → one-line interpretation. Keys: agriculture, defense, welfare, construction, treasury, research. */
   state_of_the_union: Record<string, string>;

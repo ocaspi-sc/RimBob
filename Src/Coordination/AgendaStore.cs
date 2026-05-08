@@ -37,6 +37,7 @@ public sealed class AgendaStore
             MayorAgenda next = new(
                 Version:           version,
                 UpdatedInGameTick: updatedInGameTick,
+                GeneratedAt:       DateTimeOffset.UtcNow,
                 Posture:           proposed.Posture,
                 StateOfTheUnion:   proposed.StateOfTheUnion,
                 UpdateNotes:       proposed.UpdateNotes,

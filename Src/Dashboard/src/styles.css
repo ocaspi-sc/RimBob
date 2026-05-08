@@ -134,10 +134,69 @@ body {
   box-shadow: 0 0 12px rgba(52, 211, 153, 0.75);
 }
 
+/* ── Status chips ──────────────────────────────────────────────────────────── */
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  white-space: nowrap;
+}
+
+.chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.chip-sub {
+  font-weight: 400;
+  opacity: 0.75;
+  margin-left: 2px;
+}
+
+.status-chip.ok     { color: #34d399; }
+.status-chip.warn   { color: #f59e0b; }
+.status-chip.error  { color: #f87171; }
+.status-chip.active { color: #60a5fa; }
+
 .divider {
   width: 1px;
   height: 18px;
   background: rgba(159, 176, 194, 0.3);
+}
+
+.refresh-btn {
+  padding: 4px 12px;
+  border-radius: 5px;
+  border: 1px solid rgba(159, 176, 194, 0.35);
+  background: rgba(255, 255, 255, 0.06);
+  color: #c9d8e8;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.refresh-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.refresh-btn:disabled,
+.refresh-btn.refreshing {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .command-grid {
@@ -233,12 +292,25 @@ body {
   justify-content: flex-start;
 }
 
+.agenda-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
 .agenda-version,
 .telemetry-footer {
   color: #8293a6;
   font-size: 0.72rem;
   font-variant-numeric: tabular-nums;
   text-transform: uppercase;
+}
+
+.agenda-timestamp {
+  color: #6a7f94;
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .posture-summary {
@@ -670,6 +742,88 @@ body {
   gap: 8px;
   min-height: 260px;
   text-align: center;
+}
+
+/* ── Mayor uplink waiting state ────────────────────────────────────────────── */
+
+.mayor-uplink {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 28px 24px;
+  color: #8ea0b5;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.mayor-uplink p {
+  margin: 0;
+}
+
+.mayor-uplink.error .empty-code {
+  color: #f87171;
+}
+
+.uplink-timer {
+  font-variant-numeric: tabular-nums;
+  font-size: 1.1em;
+  color: #60a5fa;
+  font-weight: 600;
+}
+
+.uplink-error {
+  color: #f87171;
+  font-size: 0.8rem;
+}
+
+.prompt-viewer {
+  margin-top: 8px;
+  border: 1px solid rgba(159, 176, 194, 0.2);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.prompt-viewer summary {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6a7f94;
+  user-select: none;
+}
+
+.prompt-viewer summary:hover {
+  color: #9fb0c2;
+}
+
+.prompt-viewer h4 {
+  margin: 12px 12px 4px;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6a7f94;
+}
+
+.prompt-pre {
+  margin: 0 12px 12px;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 5px;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: #c0d0e0;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.prompt-loading {
+  padding: 8px 12px;
+  font-size: 0.78rem;
+  color: #6a7f94;
 }
 
 @media (max-width: 1180px) {

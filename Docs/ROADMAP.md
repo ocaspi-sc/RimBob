@@ -9,7 +9,8 @@
 | Milestone | Description | Status |
 |---|---|---|
 | M0 | Repo lit — scaffold compiles, RIMAPI handshake, dashboard skeleton serves a hello-world page | Done |
-| M1 | Mayor digest spine — colony-wide briefing → Mayor LLM → one daily memo rendered in the dashboard | Not started |
+| M1 | Mayor's Agenda spine — colony-wide briefing → Mayor LLM → versioned `MayorAgenda` rendered in the dashboard | Done |
+| M1.5 | Live operability — startup briefing, periodic ingestion, sidebar telemetry, on-demand Refresh, run-state + prompt-introspection endpoints | Done |
 | M2 | Feedback loop — Accept / Dismiss / Modify wired; decisions logged; implicit state-diff stub | Not started |
 | M3 | First feeder advisor (Agriculture) — sub-briefing into the Mayor; first cross-minister flag | Not started |
 | M4 | Grounded reasoning — RAG retrieval cited in memos; measurable advice improvement | Not started |
@@ -52,6 +53,26 @@
 - `LlmClient.CallMayorAsync` with `responseMimeType=application/json`.
 - Host SSE pushes `agenda_update` events; `/api/agenda/{latest,history}` and `/api/autonomy` REST endpoints.
 - Dashboard renders the Agenda tab (default tab; placeholder Alerts/Briefing/Log/Autonomy).
+
+---
+
+## M1.5 — Live operability
+
+**Done when:** Host start-up triggers a Mayor briefing within seconds of RIMAPI handshake (no day-rollover wait); `ColonyState` stays current via periodic ingestion; the dashboard renders the agenda alongside a sidebar of dry colony numbers; the player can demand a fresh agenda from the topbar; Mayor run state and the next prompt are introspectable over HTTP.
+
+**Demo:** boot Host with RimWorld already running; the dashboard shows posture, sidebar telemetry, and a v1 agenda within ~15 seconds. Click **Refresh** in the topbar — status pill flips to "Refreshing", a new agenda v2 lands seconds later with `UPDATED`/`NEW` deltas. `curl /api/status` shows `mayor_running` and the last completion timestamp.
+
+**Scope:**
+- `DayTickOrchestrator` calls `IngestionDispatcher.RefreshAllAsync` on every poll (so `ColonyState` actually updates), and fires Mayor on the *first* successful poll instead of skipping it.
+- `IngestionDispatcher` promoted to Singleton so the BackgroundService can take it directly.
+- `state_of_the_union` schema change: free-text paragraph → `Record<string, string>` keyed by category (`agriculture`, `defense`, `welfare`, `construction`, `treasury`, `research`).
+- `MayorAgenda.GeneratedAt` (UTC) — server-stamped by `AgendaStore.Update` so the dashboard can show "Updated Xs ago" without depending on the in-game clock.
+- `MayorStatus` singleton tracks `IsRunning` / `StartedAt` / `CompletedAt` / `LastError`; `Mayor.RunPlayCycle` brackets each call with `Begin/End`.
+- `POST /api/agenda/refresh` — demand-trigger ingestion + Mayor cycle.
+- `GET /api/colony/snapshot` — full `MayorBriefing` for the dashboard sidebar.
+- `GET /api/status` — server / RIMAPI / LLM health + Mayor run state.
+- `GET /api/mayor/prompt` — system + user message that would be sent to Gemini next turn (introspection).
+- Dashboard restyled to a dark command-center console: topbar (status pill + Refresh + poll cadence), tab rail (with `MODULE LOCKED · Coming in M{n}` placeholders), main-console panel (Agenda tab), sidebar panel (Colony telemetry).
 
 ---
 

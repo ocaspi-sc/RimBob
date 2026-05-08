@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AgendaTab } from './components/AgendaTab';
 import { Sidebar } from './components/Sidebar';
-import { fetchLatestAgenda } from './api/agenda';
+import { fetchLatestAgenda, triggerRefresh } from './api/agenda';
 import { fetchColonySnapshot } from './api/colony';
+import { fetchStatus } from './api/status';
 import { subscribeAgendaUpdates } from './api/adviceStream';
 import type { MayorAgenda } from './types/agenda';
 import type { ColonySnapshot } from './types/colony';
+import type { RimAIStatus } from './types/status';
 
 type TabKey = 'agenda' | 'alerts' | 'briefing' | 'log' | 'autonomy';
 
@@ -18,12 +20,28 @@ const tabs: Array<{ key: TabKey; label: string; ready: boolean; note?: string }>
 ];
 
 const SnapshotPollMs = 5_000;
+const StatusPollMs   = 3_000;
+
+type ChipState = 'ok' | 'warn' | 'error' | 'active';
+
+function StatusChip({ label, state, sub }: { label: string; state: ChipState; sub?: string }) {
+  return (
+    <span className={`status-chip ${state}`}>
+      <span className="chip-dot" aria-hidden />
+      {label}
+      {sub && <span className="chip-sub">{sub}</span>}
+    </span>
+  );
+}
 
 export default function App() {
-  const [agenda, setAgenda] = useState<MayorAgenda | null>(null);
+  const [agenda, setAgenda]     = useState<MayorAgenda | null>(null);
   const [previous, setPrevious] = useState<MayorAgenda | null>(null);
   const [snapshot, setSnapshot] = useState<ColonySnapshot | null>(null);
-  const [active, setActive] = useState<TabKey>('agenda');
+  const [active, setActive]     = useState<TabKey>('agenda');
+  const [status, setStatus]     = useState<RimAIStatus | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const refreshAbort = useRef<AbortController | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -70,7 +88,57 @@ export default function App() {
     };
   }, []);
 
-  const connectionState = agenda ? 'live' : 'standby';
+  useEffect(() => {
+    let cancelled = false;
+    const ctrl = new AbortController();
+
+    const load = async () => {
+      try {
+        const s = await fetchStatus(ctrl.signal);
+        if (!cancelled) setStatus(s);
+      } catch (err) {
+        if (!cancelled && (err as Error).name !== 'AbortError') {
+          console.error('fetchStatus failed', err);
+        }
+      }
+    };
+
+    void load();
+    const timer = setInterval(() => void load(), StatusPollMs);
+
+    return () => {
+      cancelled = true;
+      ctrl.abort();
+      clearInterval(timer);
+    };
+  }, []);
+
+  const handleRefresh = async () => {
+    if (refreshing) return;
+    refreshAbort.current?.abort();
+    const ctrl = new AbortController();
+    refreshAbort.current = ctrl;
+    setRefreshing(true);
+    try {
+      await triggerRefresh(ctrl.signal);
+    } catch (err) {
+      if ((err as Error).name !== 'AbortError') {
+        console.error('triggerRefresh failed', err);
+      }
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const mayorChipState: ChipState = !status
+    ? 'warn'
+    : status.mayor_running
+    ? 'active'
+    : status.mayor_last_error
+    ? 'error'
+    : 'ok';
+
+  const mayorChipSub = status?.mayor_running ? 'Running' : status?.mayor_last_error ? 'Error' : 'Idle';
 
   return (
     <main className="app-shell">
@@ -80,10 +148,25 @@ export default function App() {
           <h1>RimAI Command</h1>
         </div>
         <div className="topbar-status">
-          <span className={`status-light ${connectionState}`} aria-hidden />
-          <span>{connectionState === 'live' ? 'Agenda feed live' : 'Awaiting first agenda'}</span>
+          <StatusChip label="SERVER" state="ok" />
+          <StatusChip
+            label="RIMAPI"
+            state={status ? (status.rimapi_reachable ? 'ok' : 'warn') : 'warn'}
+          />
+          <StatusChip
+            label="GEMINI"
+            state={status ? (status.llm_configured ? 'ok' : 'error') : 'warn'}
+          />
+          <StatusChip label="MAYOR" state={mayorChipState} sub={mayorChipSub} />
           <span className="divider" />
-          <span>Poll {SnapshotPollMs / 1000}s</span>
+          <button
+            className={`refresh-btn ${refreshing ? 'refreshing' : ''}`}
+            onClick={() => void handleRefresh()}
+            disabled={refreshing}
+            title="Re-run briefing and generate a new agenda"
+          >
+            {refreshing ? 'Refreshing…' : 'Refresh'}
+          </button>
         </div>
       </header>
 
@@ -104,7 +187,7 @@ export default function App() {
         </nav>
 
         <section className="main-console panel-box">
-          {active === 'agenda' && <AgendaTab agenda={agenda} previous={previous} />}
+          {active === 'agenda' && <AgendaTab agenda={agenda} previous={previous} status={status} />}
           {active !== 'agenda' && (
             <div className="empty-console">
               <span className="empty-code">MODULE LOCKED</span>
