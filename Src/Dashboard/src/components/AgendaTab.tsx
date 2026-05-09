@@ -11,6 +11,8 @@ interface Props {
 }
 
 export function AgendaTab({ agenda, previous, status }: Props) {
+  const [showPrompt, setShowPrompt] = useState(false);
+
   if (!agenda) {
     return <MayorUplinkState status={status} />;
   }
@@ -23,9 +25,20 @@ export function AgendaTab({ agenda, previous, status }: Props) {
   const activeShort = agenda.short_term.filter(i => i.status === 'active');
   const closedShort = agenda.short_term.filter(i => i.status !== 'active');
 
+  if (showPrompt) {
+    return (
+      <div className="prompt-page">
+        <AgendaHeader agenda={agenda} showPrompt={showPrompt} onTogglePrompt={() => setShowPrompt(p => !p)} />
+        <PromptFull />
+      </div>
+    );
+  }
+
   return (
     <div className="agenda-console">
-      <AgendaHeader agenda={agenda} />
+      <AgendaHeader agenda={agenda} showPrompt={showPrompt} onTogglePrompt={() => setShowPrompt(p => !p)} />
+
+      <>
 
       <Section title="State of the Union" tone="violet">
         <StateOfTheUnion entries={agenda.state_of_the_union} />
@@ -102,6 +115,8 @@ export function AgendaTab({ agenda, previous, status }: Props) {
           </div>
         </Section>
       )}
+
+      </>
     </div>
   );
 }
@@ -167,6 +182,37 @@ function MayorUplinkState({ status }: { status: RimAIStatus | null }) {
   );
 }
 
+function PromptFull() {
+  const [prompt, setPrompt] = useState<{ system: string; user: string } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    fetchMayorPrompt()
+      .then(setPrompt)
+      .catch(err => setError(String(err)))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="prompt-full-status">Loading prompt…</div>;
+  if (error)   return <div className="prompt-full-status error">{error}</div>;
+  if (!prompt) return null;
+
+  return (
+    <div className="prompt-full">
+      <div className="prompt-section">
+        <h4>Briefing (user message)</h4>
+        <pre className="prompt-pre">{prettyJson(prompt.user)}</pre>
+      </div>
+      <div className="prompt-section">
+        <h4>System prompt</h4>
+        <pre className="prompt-pre">{prompt.system}</pre>
+      </div>
+    </div>
+  );
+}
+
 function PromptViewer() {
   const [prompt, setPrompt] = useState<{ system: string; user: string } | null>(null);
   const [loading, setLoading] = useState(false);
@@ -209,23 +255,34 @@ function formatTimestamp(iso: string): string {
   return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
-function AgendaHeader({ agenda }: { agenda: MayorAgenda }) {
+function AgendaHeader({ agenda, showPrompt, onTogglePrompt }: {
+  agenda: MayorAgenda;
+  showPrompt: boolean;
+  onTogglePrompt: () => void;
+}) {
   return (
     <header className="agenda-header">
-      <div className="agenda-header-top">
+      <div className="agenda-header-left">
         <div className="posture-row">
           <PostureBadge label={agenda.posture.economic} kind="economic" />
           <PostureBadge label={agenda.posture.military} kind="military" />
         </div>
-        <div className="agenda-meta">
-          <span className="agenda-version">v{agenda.version} · {agenda.updated_in_game_tick}</span>
-          <span className="agenda-timestamp" title={agenda.generated_at}>
-            Generated {formatTimestamp(agenda.generated_at)}
-          </span>
+        <div className="posture-summary">
+          {agenda.posture.summary}
         </div>
       </div>
-      <div className="posture-summary">
-        {agenda.posture.summary}
+      <div className="agenda-meta">
+        <span className="agenda-version">v{agenda.version} · {agenda.updated_in_game_tick}</span>
+        <span className="agenda-timestamp" title={agenda.generated_at}>
+          Generated {formatTimestamp(agenda.generated_at)}
+        </span>
+        <button
+          className={`prompt-toggle-btn ${showPrompt ? 'active' : ''}`}
+          onClick={onTogglePrompt}
+          title="Toggle Gemini prompt view"
+        >
+          {showPrompt ? 'Agenda' : 'Prompt'}
+        </button>
       </div>
     </header>
   );

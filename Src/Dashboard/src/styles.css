@@ -202,6 +202,7 @@ body {
 .command-grid {
   display: grid;
   grid-template-columns: 164px minmax(0, 1fr) minmax(256px, 20vw);
+  grid-template-rows: minmax(0, 1fr);
   gap: 10px;
   min-height: 0;
 }
@@ -271,6 +272,9 @@ body {
 }
 
 .agenda-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
   padding: 10px 12px;
   background:
     linear-gradient(135deg, rgba(86, 207, 251, 0.13), rgba(20, 27, 38, 0.92)),
@@ -279,16 +283,19 @@ body {
   border-radius: 7px;
 }
 
-.agenda-header-top,
+.agenda-header-left {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
 .posture-row {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
-  justify-content: space-between;
-}
-
-.posture-row {
   justify-content: flex-start;
 }
 
@@ -296,7 +303,8 @@ body {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 2px;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
 .agenda-version,
@@ -313,8 +321,77 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+.prompt-toggle-btn {
+  padding: 2px 9px;
+  border-radius: 4px;
+  border: 1px solid rgba(159, 176, 194, 0.3);
+  background: rgba(255, 255, 255, 0.05);
+  color: #8293a6;
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.prompt-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #c9d8e8;
+}
+
+.prompt-toggle-btn.active {
+  background: rgba(96, 165, 250, 0.15);
+  border-color: rgba(96, 165, 250, 0.4);
+  color: #60a5fa;
+}
+
+/* prompt-page fills the main-console exactly — no content-growth */
+.prompt-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.prompt-full {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 8px 0 0;
+  overflow: hidden;
+}
+
+.prompt-section {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.prompt-section h4 {
+  flex-shrink: 0;
+  margin: 0 0 5px;
+  padding: 0 4px;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6a7f94;
+}
+
+.prompt-full-status {
+  padding: 24px;
+  color: #6a7f94;
+  font-size: 0.84rem;
+}
+
+.prompt-full-status.error {
+  color: #f87171;
+}
+
 .posture-summary {
-  margin-top: 7px;
   color: #e8f2fb;
   font-size: 0.94rem;
   line-height: 1.45;
@@ -497,7 +574,6 @@ body {
 }
 
 .delta-badge {
-  justify-self: end;
   white-space: nowrap;
 }
 
@@ -525,26 +601,36 @@ body {
   border: 1px solid rgba(148, 163, 184, 0.32);
 }
 
-.feedback-row {
+.agenda-card-actions {
   display: flex;
-  flex-wrap: wrap;
-  grid-column: 1 / -1;
+  flex-direction: column;
+  align-items: flex-end;
   gap: 6px;
-  padding-top: 2px;
+  justify-self: end;
 }
 
-.agenda-card.ranked .feedback-row {
-  grid-column: 2 / -1;
-}
-
-.feedback-button {
-  min-height: 26px;
-  padding: 3px 10px;
-  color: #66788b;
-  font-size: 0.76rem;
-  background: rgba(8, 12, 18, 0.8);
-  border: 1px solid rgba(103, 122, 143, 0.36);
+.pushback-button {
+  padding: 4px 14px;
+  color: #ffe1a3;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.4);
   border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.pushback-button:hover:not(:disabled) {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fff5d9;
+  border-color: rgba(245, 158, 11, 0.65);
+}
+
+.pushback-button:disabled {
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
@@ -806,18 +892,18 @@ body {
 }
 
 .prompt-pre {
-  margin: 0 12px 12px;
+  flex: 1;
+  min-height: 0;
+  margin: 0 0 8px;
   padding: 10px 12px;
   background: rgba(0, 0, 0, 0.3);
   border-radius: 5px;
   font-size: 0.72rem;
   line-height: 1.5;
   color: #c0d0e0;
-  overflow-x: auto;
+  overflow: auto;
   white-space: pre-wrap;
   word-break: break-word;
-  max-height: 320px;
-  overflow-y: auto;
 }
 
 .prompt-loading {
@@ -876,11 +962,12 @@ body {
   }
 
   .rank-token,
-  .delta-badge {
+  .agenda-card-actions {
     justify-self: start;
   }
 
-  .agenda-card.ranked .feedback-row {
-    grid-column: 1 / -1;
+  .agenda-card-actions {
+    flex-direction: row;
+    align-items: center;
   }
 }

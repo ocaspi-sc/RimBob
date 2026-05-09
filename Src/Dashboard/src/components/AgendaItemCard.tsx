@@ -22,29 +22,22 @@ export function AgendaItemCard({ item, delta, rank }: Props) {
         {item.text}
       </div>
 
-      {delta && (
-        <span className={`delta-badge ${delta}`}>
-          {delta}
-        </span>
-      )}
-
-      <div className="feedback-row">
-        <FeedbackButton label="Accept" />
-        <FeedbackButton label="Modify" />
-        <FeedbackButton label="Dismiss" />
+      <div className="agenda-card-actions">
+        {delta && (
+          <span className={`delta-badge ${delta}`}>
+            {delta}
+          </span>
+        )}
+        {!isClosed && (
+          <button
+            className="pushback-button"
+            disabled
+            title="Wired in M2"
+          >
+            Pushback
+          </button>
+        )}
       </div>
     </div>
-  );
-}
-
-function FeedbackButton({ label }: { label: string }) {
-  return (
-    <button
-      disabled
-      title="Wired in M2"
-      className="feedback-button"
-    >
-      {label}
-    </button>
   );
 }
