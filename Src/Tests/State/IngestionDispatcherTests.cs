@@ -137,7 +137,7 @@ public sealed class IngestionDispatcherTests
         };
         var buildings = new List<BuildingDto>
         {
-            new("b1", "Bed", null, 1.0f, true, true)
+            new(1, "Bed", "wooden bed", "Building_Bed", null)
         };
         var power = new PowerInfoDto(2000f, 1500f, 100f, 500f);
         var weather = new WeatherDto("Clear", 18f, 0f);

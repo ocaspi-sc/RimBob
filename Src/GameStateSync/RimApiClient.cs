@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using RimAI.Ingestion.Dtos;
 
 namespace RimAI.Ingestion;
@@ -19,7 +20,7 @@ namespace RimAI.Ingestion;
 /// v1 paths:  api/v1/...
 /// v2 paths:  api/v2/...   (pawn detailed controller)
 /// </summary>
-public sealed class RimApiClient(HttpClient http)
+public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = null)
 {
     // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -55,9 +56,15 @@ public sealed class RimApiClient(HttpClient http)
             string errors = string.Join(", ", envelope?.Errors ?? []);
             throw new RimApiException($"RIMAPI error at {path}: {errors}");
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
             // RIMAPI returns {} instead of [] for empty collections on some endpoints.
+            // But the same catch can mask DTO-vs-wire mismatches (e.g. wrong field type),
+            // so log a warning. If a real endpoint suddenly starts returning [] here,
+            // check the log for the schema drift.
+            log?.LogWarning(
+                "RIMAPI list at {Path} could not be deserialized as List<{Type}> — returning empty. {Message}",
+                path, typeof(T).Name, ex.Message);
             return [];
         }
     }

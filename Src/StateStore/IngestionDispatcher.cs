@@ -127,7 +127,8 @@ public sealed class IngestionDispatcher(
     }
 
     private static IReadOnlyList<BuildingRecord> MapBuildings(IReadOnlyList<BuildingDto> bs) =>
-        bs.Select(b => new BuildingRecord(b.Id, b.Def, b.Hp, b.PowerOn, b.IsWorking)).ToList();
+        // RIMAPI doesn't expose hp / power_on / is_working — default to "fine, unknown".
+        bs.Select(b => new BuildingRecord(b.Id.ToString(), b.Def, Hp: 1.0f, PowerOn: null, IsWorking: null)).ToList();
 
     private static IReadOnlyList<HostileLord> MapLords(IReadOnlyList<LordDto> lords) =>
         lords.Select(l => new HostileLord(
