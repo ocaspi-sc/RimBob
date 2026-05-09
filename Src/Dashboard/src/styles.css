@@ -346,29 +346,28 @@ body {
   color: #60a5fa;
 }
 
-/* prompt-page fills the main-console exactly — no content-growth */
+/* Prompt boxes expand in normal flow; main-console owns page scrolling. */
 .prompt-page {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow: hidden;
+  display: grid;
+  gap: 8px;
+  min-height: 100%;
+  overflow: visible;
 }
 
 .prompt-full {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
+  display: grid;
   gap: 10px;
   padding: 8px 0 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .prompt-section {
-  flex: 1;
   min-height: 0;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+}
+
+.prompt-section-compact {
+  align-content: start;
 }
 
 .prompt-section h4 {
@@ -379,6 +378,80 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: #6a7f94;
+}
+
+.briefing-parts {
+  min-height: 0;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  overflow: visible;
+}
+
+.briefing-box {
+  min-width: 0;
+  background: rgba(8, 12, 18, 0.72);
+  border: 1px solid rgba(103, 122, 143, 0.35);
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.briefing-box[open] {
+  border-color: rgba(86, 207, 251, 0.38);
+}
+
+.briefing-box summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  padding: 8px 10px;
+  color: #c9d8e8;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  user-select: none;
+}
+
+.briefing-box summary:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.briefing-box summary span,
+.briefing-box summary small {
+  min-width: 0;
+}
+
+.briefing-box summary span {
+  overflow-wrap: anywhere;
+}
+
+.briefing-box summary small {
+  color: #6a7f94;
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.briefing-box .prompt-pre {
+  max-height: 320px;
+  margin: 0;
+  border-top: 1px solid rgba(103, 122, 143, 0.22);
+  border-radius: 0;
+  background: rgba(0, 0, 0, 0.24);
+}
+
+.prompt-text-box {
+  min-height: 0;
+}
+
+.prompt-text-box .prompt-pre {
+  max-height: min(42vh, 420px);
 }
 
 .prompt-full-status {
@@ -892,7 +965,6 @@ body {
 }
 
 .prompt-pre {
-  flex: 1;
   min-height: 0;
   margin: 0 0 8px;
   padding: 10px 12px;

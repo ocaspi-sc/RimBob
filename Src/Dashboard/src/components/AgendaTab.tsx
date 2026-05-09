@@ -203,11 +203,10 @@ function PromptFull() {
     <div className="prompt-full">
       <div className="prompt-section">
         <h4>Briefing (user message)</h4>
-        <pre className="prompt-pre">{prettyJson(prompt.user)}</pre>
+        <BriefingPrompt raw={prompt.user} />
       </div>
-      <div className="prompt-section">
-        <h4>System prompt</h4>
-        <pre className="prompt-pre">{prompt.system}</pre>
+      <div className="prompt-section prompt-section-compact">
+        <PromptTextBox title="System prompt" text={prompt.system} />
       </div>
     </div>
   );
@@ -233,18 +232,131 @@ function PromptViewer() {
       {prompt && (
         <>
           <h4>Briefing (user message)</h4>
-          <pre className="prompt-pre">{prettyJson(prompt.user)}</pre>
-          <h4>System prompt</h4>
-          <pre className="prompt-pre">{prompt.system}</pre>
+          <BriefingPrompt raw={prompt.user} />
+          <PromptTextBox title="System prompt" text={prompt.system} />
         </>
       )}
     </details>
   );
 }
 
-function prettyJson(raw: string): string {
-  try { return JSON.stringify(JSON.parse(raw), null, 2); }
-  catch { return raw; }
+type JsonValue =
+  | null
+  | string
+  | number
+  | boolean
+  | JsonValue[]
+  | { [key: string]: JsonValue };
+
+type JsonRecord = { [key: string]: JsonValue };
+
+interface BriefingGroup {
+  title: string;
+  keys: string[];
+}
+
+const briefingGroups: BriefingGroup[] = [
+  { title: 'Overview', keys: ['briefingVersion', 'date', 'gameTick', 'season'] },
+  { title: 'People', keys: ['colonists', 'skills', 'traits', 'medical', 'prisoners'] },
+  { title: 'Food & resources', keys: ['food', 'resources'] },
+  { title: 'Infrastructure', keys: ['power', 'buildings'] },
+  { title: 'Welfare & threat', keys: ['mood', 'threat', 'wealth'] },
+  { title: 'Environment', keys: ['weather'] },
+  { title: 'Research', keys: ['research'] },
+];
+
+function BriefingPrompt({ raw }: { raw: string }) {
+  const parsed = parseJson(raw);
+  if (!isRecord(parsed)) {
+    return <pre className="prompt-pre">{raw}</pre>;
+  }
+
+  const briefingFromPayload = parsed.briefing;
+  const hasBriefingPayload = isRecord(briefingFromPayload);
+  const briefing = hasBriefingPayload ? briefingFromPayload : parsed;
+  const usedKeys = new Set(briefingGroups.flatMap(group => group.keys.map(normaliseKey)));
+  const extraKeys = Object.keys(briefing).filter(key => !usedKeys.has(normaliseKey(key)));
+  const groups = extraKeys.length === 0
+    ? briefingGroups
+    : [...briefingGroups, { title: 'Other briefing fields', keys: extraKeys }];
+  const context = hasBriefingPayload ? withoutKey(parsed, 'briefing') : {};
+
+  return (
+    <div className="briefing-parts">
+      {groups.map(group => {
+        const section = pickKeys(briefing, group.keys);
+        if (Object.keys(section).length === 0) return null;
+        return (
+          <details key={group.title} className="briefing-box">
+            <summary>
+              <span>{group.title}</span>
+              <small>{summariseValue(section)}</small>
+            </summary>
+            <pre className="prompt-pre">{JSON.stringify(section, null, 2)}</pre>
+          </details>
+        );
+      })}
+      {Object.keys(context).length > 0 && (
+        <details className="briefing-box">
+          <summary>
+            <span>Prompt context</span>
+            <small>{summariseValue(context)}</small>
+          </summary>
+          <pre className="prompt-pre">{JSON.stringify(context, null, 2)}</pre>
+        </details>
+      )}
+    </div>
+  );
+}
+
+function PromptTextBox({ title, text }: { title: string; text: string }) {
+  return (
+    <details className="briefing-box prompt-text-box">
+      <summary>
+        <span>{title}</span>
+        <small>{text.length.toLocaleString()} chars</small>
+      </summary>
+      <pre className="prompt-pre">{text}</pre>
+    </details>
+  );
+}
+
+function parseJson(raw: string): JsonValue | undefined {
+  try { return JSON.parse(raw) as JsonValue; }
+  catch { return undefined; }
+}
+
+function isRecord(value: JsonValue | undefined): value is JsonRecord {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function pickKeys(source: JsonRecord, keys: string[]): JsonRecord {
+  const wanted = new Set(keys.map(normaliseKey));
+  return Object.entries(source).reduce<JsonRecord>((acc, [key, value]) => {
+    if (wanted.has(normaliseKey(key))) acc[key] = value;
+    return acc;
+  }, {});
+}
+
+function normaliseKey(key: string): string {
+  return key.toLowerCase();
+}
+
+function withoutKey(source: JsonRecord, keyToOmit: string): JsonRecord {
+  return Object.entries(source).reduce<JsonRecord>((acc, [key, value]) => {
+    if (key !== keyToOmit) acc[key] = value;
+    return acc;
+  }, {});
+}
+
+function summariseValue(value: JsonValue): string {
+  if (Array.isArray(value)) return `${value.length} item${value.length === 1 ? '' : 's'}`;
+  if (isRecord(value)) {
+    const count = Object.keys(value).length;
+    return `${count} field${count === 1 ? '' : 's'}`;
+  }
+  if (value === null) return 'null';
+  return String(value);
 }
 
 // ── Header ────────────────────────────────────────────────────────────────────
