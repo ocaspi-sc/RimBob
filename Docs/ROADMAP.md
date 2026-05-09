@@ -11,7 +11,7 @@
 | M0 | Repo lit — scaffold compiles, RIMAPI handshake, dashboard skeleton serves a hello-world page | Done |
 | M1 | Mayor's Agenda spine — colony-wide briefing → Mayor LLM → versioned `MayorAgenda` rendered in the dashboard | Done |
 | M1.5 | Live operability — startup briefing, periodic ingestion, sidebar telemetry, on-demand Refresh, run-state + prompt-introspection endpoints | Done |
-| M2 | Grounded reasoning (RAG) — Mayor cites guide passages; measurable agenda-quality improvement before adding feeders | Not started |
+| M2 | Grounded reasoning (RAG) — Mayor cites guide passages; measurable agenda-quality improvement before adding feeders | Done |
 | M3 | First feeder advisor (Agriculture) — sub-briefing into the Mayor; first cross-minister flag | Not started |
 | M4 | Cabinet of advisors — Defense, Construction, Welfare feeding the Mayor; severity-gated tactical alerts surface independently of the daily digest | Not started |
 | M5 | Feedback loop — Accept / Dismiss / Pushback wired; each minister owns and persists its own pushback list | Not started |
@@ -86,10 +86,12 @@
 
 **Scope:**
 - `KnowledgeBase` in-process cosine store.
-- Guide ingestion (`strategic-plan-y1-y2.md` + one wiki guide).
-- Evergreen content distilled into the Mayor's system prompt (cached).
-- RAG retrieval for long-tail lookups, surfaced in agenda `citations[]`.
+- Guide ingestion from `Docs/guides/**/*.md` with SHA-256 embedding cache under `var/embeddings`.
+- Gemini embedding via `gemini-embedding-001`.
+- RAG retrieval for long-tail lookups, surfaced in agenda `citations[]` and per-item `cite_ids[]`.
 - Side-by-side fixture: same briefing, with/without RAG, agenda diff captured.
+
+**Follow-up:** Tier 1 evergreen prompt distillation remains a prompt-quality task after M2; the shipped slice grounds the Mayor through Tier 2 retrieval.
 
 ---
 

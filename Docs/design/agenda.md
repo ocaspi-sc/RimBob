@@ -43,7 +43,7 @@ Each bullet is a free-text string. The Mayor writes what it wants; there is no s
   "update_notes": "Winter arrives in ~20 days. Moved food to top. Defense is calm — east wall still needs patching but is not urgent.",
 
   "short_term": [
-    { "id": "st_1", "text": "Establish a second growing zone before winter — food covers 18 days, winter arrives in ~20.", "status": "active" },
+    { "id": "st_1", "text": "Establish a second growing zone before winter — food covers 18 days, winter arrives in ~20.", "status": "active", "cite_ids": ["g1"] },
     { "id": "st_2", "text": "Patch the east-wall gap before the next raid window.", "status": "active" },
     { "id": "st_3", "text": "Review colonist schedules for the cold snap — anyone on long outdoor shifts is a break risk.", "status": "active" }
   ],
@@ -57,7 +57,16 @@ Each bullet is a free-text string. The Mayor writes what it wants; there is no s
     "Agriculture": "Focus on winter-prep angles: growing adequacy, stockpile, freezer capacity. Hold expansion.",
     "Defense":     "Light posture. Note the east-wall gap; patrol scheduling.",
     "Welfare":     "Watch mood through the cold snap. Flag anyone near a mental break."
-  }
+  },
+
+  "citations": [
+    {
+      "cite_id":     "g1",
+      "source_path": "guides/strategic-plan-y1-y2.md",
+      "heading":     "Year 1 Q3: harden for winter",
+      "snippet":     "Aim for a 60-day food buffer before the first hard freeze; do not start new growing zones in late autumn."
+    }
+  ]
 }
 ```
 
@@ -80,6 +89,8 @@ Each bullet is a free-text string. The Mayor writes what it wants; there is no s
 **`long_term[].status`** — same enum as `short_term`.
 
 **`minister_direction`** — only present for active ministers (M3+). Absent in M1. Plain-English direction injected into each minister's LLM prompt as a prefix. Not parsed by code.
+
+**`citations`** — server-stamped list of guide passages retrieved for this turn (M2 RAG). Each entry: `{ cite_id, source_path, heading, snippet }`. The dashboard renders these as footnotes/hover cards alongside short_term and long_term items. Empty when RAG is disabled (`RimAi:Rag:Enabled = false`) or no key is configured. The Mayor may reference a citation from a specific bullet via `short_term[i].cite_ids` / `long_term[i].cite_ids` (optional, omitted when no bullet directly leans on a passage). See [`design/rag.md`](rag.md).
 
 ---
 

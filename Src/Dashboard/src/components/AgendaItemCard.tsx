@@ -20,6 +20,7 @@ export function AgendaItemCard({ item, delta, rank }: Props) {
 
       <div className="agenda-card-text">
         {item.text}
+        {/* TODO: render item.cite_ids as guide footnotes once citation UI lands. */}
       </div>
 
       <div className="agenda-card-actions">

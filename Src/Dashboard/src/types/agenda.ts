@@ -7,6 +7,14 @@ export interface AgendaItem {
   id: string;
   text: string;
   status: AgendaItemStatus;
+  cite_ids?: string[];
+}
+
+export interface Citation {
+  cite_id: string;
+  source_path: string;
+  heading: string;
+  snippet: string;
 }
 
 export interface MayorPosture {
@@ -26,4 +34,5 @@ export interface MayorAgenda {
   short_term: AgendaItem[];
   long_term: AgendaItem[];
   minister_direction: Record<string, string>;
+  citations: Citation[];
 }

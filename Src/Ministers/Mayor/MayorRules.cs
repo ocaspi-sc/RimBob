@@ -5,41 +5,41 @@ namespace RimAI.Ministers.Mayor;
 
 /// <summary>
 /// Mayor's thin rules layer. Unlike feeder ministers (decide-or-escalate), the Mayor
-/// almost always escalates to the LLM — the rules' job is to add prompt-shaping
-/// hints ("lenses") for the next call. ~95% escalation rate per design.
+/// almost always escalates to the LLM; the rules' job is to add agenda directives
+/// that constrain the next call. ~95% escalation rate per design.
 /// </summary>
 public sealed class MayorRules
 {
-    public MayorLensSet Evaluate(MayorBriefing briefing, ColonyContext _)
+    public MayorDirectiveSet Evaluate(MayorBriefing briefing, ColonyContext _)
     {
-        List<string> prefills = new();
+        List<string> directives = new();
 
-        bool winterPrep = briefing.Season.DaysToWinter is { } d && d < 20;
-        if (winterPrep)
-            prefills.Add($"Winter prep lens: only {briefing.Season.DaysToWinter} days to winter — ensure a winter bullet sits in short_term.");
+        bool winterPrepRequired = briefing.Season.DaysToWinter is { } d && d < 20;
+        if (winterPrepRequired)
+            directives.Add($"Winter prep directive: only {briefing.Season.DaysToWinter} days to winter — ensure a winter bullet sits in short_term.");
 
-        bool foodCrisis = briefing.Food.EstimatedDaysOfFood is { } days && days < 7;
-        if (foodCrisis)
-            prefills.Add($"Food crisis lens: only {briefing.Food.EstimatedDaysOfFood:F0} days of food remaining — force food bullet to position 1.");
+        bool foodSecurityCritical = briefing.Food.EstimatedDaysOfFood is { } days && days < 7;
+        if (foodSecurityCritical)
+            directives.Add($"Food security directive: only {briefing.Food.EstimatedDaysOfFood:F0} days of food remaining — force food bullet to position 1.");
 
         // M1: no flag channel; QuietDay is always true.
         const bool quietDay = true;
 
         bool yearTwoTransition = briefing.Date.Year == 2 && briefing.Date.Quadrum == "Q1";
         if (yearTwoTransition)
-            prefills.Add("Year-two transition lens: add an endgame-objective bullet to long_term (ship_launch | royal_favor | archonexus | maintenance).");
+            directives.Add("Year-two transition directive: add an endgame-objective bullet to long_term (ship_launch | royal_favor | archonexus | maintenance).");
 
-        if (quietDay && !winterPrep && !foodCrisis && !yearTwoTransition)
-            prefills.Add("Quiet day: no Medium-or-higher flags fired in the last 24h. Keep update_notes brief and 'all clear' in tone.");
+        if (quietDay && !winterPrepRequired && !foodSecurityCritical && !yearTwoTransition)
+            directives.Add("Quiet day directive: no Medium-or-higher flags fired in the last 24h. Keep update_notes brief and 'all clear' in tone.");
 
-        return new MayorLensSet(winterPrep, foodCrisis, quietDay, yearTwoTransition, prefills);
+        return new MayorDirectiveSet(winterPrepRequired, foodSecurityCritical, quietDay, yearTwoTransition, directives);
     }
 }
 
-public sealed record MayorLensSet(
-    bool WinterPrep,
-    bool FoodCrisis,
+public sealed record MayorDirectiveSet(
+    bool WinterPrepRequired,
+    bool FoodSecurityCritical,
     bool QuietDay,
     bool YearTwoTransition,
-    IReadOnlyList<string> PromptPrefills
+    IReadOnlyList<string> Directives
 );

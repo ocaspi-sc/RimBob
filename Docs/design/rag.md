@@ -33,6 +33,44 @@ Specific, situational, or detailed content retrieved at call time. Used when the
 
 ## Implementation
 
+### Mayor data flow
+
+```mermaid
+flowchart TD
+    RimAPI["RIMAPI read endpoints"] --> Dispatcher["IngestionDispatcher"]
+    Dispatcher --> State["ColonyState aggregates"]
+    State --> Derivation["MayorBriefingDerivation"]
+    Derivation --> Briefing["MayorBriefing<br/>derived colony facts"]
+
+    Briefing --> Rules["MayorRules"]
+    Rules --> Directives["agenda_directives<br/>rule-generated constraints"]
+
+    Briefing --> Query["MayorRetriever.BuildQuery"]
+    Directives --> Query
+    Query --> QueryEmbedding["Gemini query embedding"]
+
+    Guides["Docs/guides/**/*.md"] --> Ingest["Ingest.SplitByHeadings"]
+    Ingest --> ChunkEmbedding["Gemini chunk embeddings"]
+    ChunkEmbedding --> Cache["var/embeddings cache"]
+    Cache --> KB["KnowledgeBase<br/>in-process cosine store"]
+
+    QueryEmbedding --> KB
+    KB --> Citations["Citation[]<br/>g1, g2, ... snippets"]
+
+    Briefing --> Prompt["PromptBuilder"]
+    Directives --> Prompt
+    Citations --> Prompt
+    Prompt --> LLM["Mayor LLM call"]
+    LLM --> AgendaInput["MayorAgendaInput<br/>may include item cite_ids"]
+    Citations --> Stamp["Server stamps full citations"]
+    AgendaInput --> Stamp
+    Stamp --> Agenda["MayorAgenda"]
+    Agenda --> Store["AgendaStore + AdviceBus"]
+    Store --> Dashboard["Dashboard / SSE"]
+```
+
+`MayorBriefingDerivation` answers "what is true about the colony?" and writes structured facts. `MayorRules` answers "what must the Mayor pay attention to?" and writes agenda directives. `MayorRetriever` uses both the facts and directives to retrieve guide passages before the Mayor LLM call.
+
 ### In-process cosine store
 
 No vector DB framework. Small corpus; simple store is sufficient and debuggable.
@@ -129,9 +167,22 @@ The escalation reason flags that RAG retrieval for "devilstrand harvest timing" 
 
 ---
 
+## M2 implementation (resolved decisions)
+
+- **Embedding model:** Gemini `gemini-embedding-001` via `Google.GenAI` 1.6.1. Configured under `RimAi:Rag:EmbeddingModel`. (`text-embedding-004` was the original choice but is not exposed on the v1beta endpoint that the SDK currently targets.) 3072-dim by default; free tier handles the current ~50-chunk corpus.
+- **Chunking:** semantic by H1/H2/H3 markdown headings. Sections exceeding `Ingest.MaxChunkChars` (≈ 800 tokens) are split on paragraph boundaries; deeper headings (H4+) stay inside the parent chunk. Implementation: `Src/KnowledgeBase/Ingest.cs::SplitByHeadings`.
+- **Cache:** SHA-256-keyed JSON files under `var/embeddings/` (configurable via `RimAi:Rag:CacheRoot`). Append-only for M2 — corpus is small; GC is post-MVP.
+- **Retrieval:** `MayorRetriever` builds a query string from the briefing (date, season, food, threat, wealth, weather, research, plus agenda directives) and pulls `topK` chunks. Disabled (or missing-key) cleanly short-circuits to an empty list — the Mayor still runs.
+- **Tier 1 status:** evergreen prompt distillation is not part of the shipped M2 implementation. The Mayor currently consumes guide knowledge through Tier 2 `retrieved_guides[]`; distillation is a follow-up if prompt traces show under-use of retrieved passages.
+
+### Citation rendering
+
+Each retrieved chunk becomes a `Citation { cite_id, source_path, heading, snippet }` (snippet truncated to ~320 chars). The Mayor's prompt receives them as a `retrieved_guides[]` array; the LLM may attach `cite_id`s to specific `short_term[]` / `long_term[]` items via the optional `cite_ids` field. The Mayor's `MayorAgenda.citations[]` is server-stamped from the retriever's output regardless of what the LLM emits, so the dashboard always has the snippet text to render.
+
+When `RimAi:Rag:Enabled` is `false`, retrieval is skipped, `retrieved_guides` is omitted from the prompt, and `MayorAgenda.citations` is empty.
+
 ## Open questions
 
-- [ ] Embedding model: Gemini embeddings (`text-embedding-004` / `gemini-embedding-001`) or a local model (e.g., `sentence-transformers` via Python sidecar)? Local is cheaper at ingestion; Gemini is simpler to wire.
-- [ ] Chunking strategy: fixed-size (512 tokens) vs. semantic (by heading/paragraph)? Semantic is better quality; fixed is simpler.
 - [ ] Guide freshness: RimWorld updates change mechanics. How do we flag stale guide content?
-- [ ] Per-minister guide curation: who decides which guides are relevant? Add to each minister's session scope.
+- [ ] Per-minister guide curation: who decides which guides are relevant? Add to each minister's session scope (re-engaged at M3 when Agriculture lands).
+- [ ] Tier 1 (evergreen content baked into system prompts): not yet implemented — Mayor still relies on Tier 2 retrieval for guide knowledge. Revisit once we measure the Mayor under-using Tier 2 hits.

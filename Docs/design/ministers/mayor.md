@@ -23,14 +23,20 @@ In `Suggest` mode (the only MVP mode) the player reads the Agenda and decides wh
 
 ---
 
+## RAG (M2)
+
+Each Mayor turn runs `MayorRetriever.RetrieveAsync` before the LLM call. A query string is built from the briefing (date, season, food, threat, wealth, weather, research, plus agenda directives) and embedded once via Gemini `gemini-embedding-001`; top-K chunks come back from `KnowledgeBase` and feed the prompt as `retrieved_guides[]`. The Mayor cites the ones it actually used by attaching `cite_id`s to the relevant short_term / long_term items; the full retrieved list is also stamped onto `MayorAgenda.citations[]` server-side for the dashboard. Disabled when `RimAi:Rag:Enabled = false` or no Gemini key is configured. → [`design/rag.md`](../rag.md).
+
+---
+
 ## Rules layer (thin)
 
 Mayor rules are primarily **prompt-shaping triggers** — conditions that pre-fill posture context for the LLM call (the LLM still writes the Agenda update).
 
 Known rules:
-- `winter_prep_lens`: if `DaysToWinter < 20` → bias toward winter prep framing; ensure a winter bullet is in `short_term`
-- `food_crisis_lens`: if `DaysOfFoodRemaining < 7` → force food bullet to position 1 in `short_term`
-- `year_two_transition_lens`: if `Year == 2 AND Q == 1` → prompt the Mayor to add an endgame-objective bullet to `long_term`
+- `winter_prep_required`: if `DaysToWinter < 20` → ensure a winter bullet is in `short_term`
+- `food_security_critical`: if `DaysOfFoodRemaining < 7` → force food bullet to position 1 in `short_term`
+- `year_two_transition`: if `Year == 2 AND Q == 1` → prompt the Mayor to add an endgame-objective bullet to `long_term`
 - `quiet_day_short_notes`: if no Medium-or-higher flags fired in the last 24h → request brief `update_notes` ("all clear" tone)
 
 Everything else escalates to the LLM with the full daily digest and lets it write.

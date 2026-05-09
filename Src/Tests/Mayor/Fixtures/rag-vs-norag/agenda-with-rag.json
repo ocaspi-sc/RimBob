@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "updated_in_game_tick": "Y1 Septober D8",
+  "generated_at": "2026-05-09T00:00:00+00:00",
+  "posture": {
+    "economic": "survival",
+    "military": "defensive",
+    "summary": "Winter is close; stop wealth growth and build a food buffer."
+  },
+  "state_of_the_union": {
+    "agriculture": "The retrieved winter-prep guide recommends a 60-day food buffer; current stores cover only 5.4 days.",
+    "defense": "No active raid, but wealth should stay controlled until the food buffer is rebuilt.",
+    "welfare": "Keep work focused and avoid new comfort projects until meals are secure."
+  },
+  "update_notes": "RAG retrieval grounded the food priority in the winter-prep guide.",
+  "short_term": [
+    {
+      "id": "st_food_1",
+      "text": "Build toward the cited 60-day winter food buffer before starting any new wealth-positive construction.",
+      "status": "active",
+      "cite_ids": ["g1"]
+    }
+  ],
+  "long_term": [
+    {
+      "id": "lt_stability_1",
+      "text": "Use guide-backed winter preparation as the gate before shifting back to growth.",
+      "status": "active",
+      "cite_ids": ["g1"]
+    }
+  ],
+  "minister_direction": {},
+  "citations": [
+    {
+      "cite_id": "g1",
+      "source_path": "strategic-plan-y1-y2.md",
+      "heading": "Winter prep",
+      "snippet": "Build a 60-day food buffer before winter."
+    }
+  ]
+}

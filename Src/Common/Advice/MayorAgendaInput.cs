@@ -12,5 +12,6 @@ public sealed record MayorAgendaInput(
     [property: JsonPropertyName("update_notes")]       string                              UpdateNotes,
     [property: JsonPropertyName("short_term")]         IReadOnlyList<AgendaItem>           ShortTerm,
     [property: JsonPropertyName("long_term")]          IReadOnlyList<AgendaItem>           LongTerm,
-    [property: JsonPropertyName("minister_direction")] IReadOnlyDictionary<string, string> MinisterDirection
+    [property: JsonPropertyName("minister_direction")] IReadOnlyDictionary<string, string> MinisterDirection,
+    [property: JsonPropertyName("citations")]          IReadOnlyList<Citation>?            Citations = null
 );

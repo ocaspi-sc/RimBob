@@ -8,7 +8,8 @@ namespace RimAI.LLM;
 
 /// <summary>
 /// Assembles prompts for LLM calls. System prompts are read from disk once and cached;
-/// user messages are built fresh from briefing + prior agenda + lens hints.
+/// user messages are built fresh from briefing + prior agenda + agenda directives + retrieved
+/// guide passages (M2 RAG).
 /// </summary>
 public sealed class PromptBuilder
 {
@@ -23,11 +24,15 @@ public sealed class PromptBuilder
     public string MayorSystemPrompt => _mayorSystemPrompt.Value;
 
     public string BuildMayorUserMessage(
-        MayorBriefing         briefing,
-        MayorAgenda?          previousAgenda,
-        IReadOnlyList<string> lensPrefills)
+        MayorBriefing           briefing,
+        MayorAgenda?            previousAgenda,
+        IReadOnlyList<string>   agendaDirectives,
+        IReadOnlyList<Citation> retrievedGuides)
     {
-        MayorPromptPayload payload = new(briefing, previousAgenda, lensPrefills);
+        IReadOnlyList<RetrievedGuide>? guides = retrievedGuides.Count == 0
+            ? null
+            : [.. retrievedGuides.Select(c => new RetrievedGuide(c.CiteId, c.Heading, c.SourcePath, c.Snippet))];
+        MayorPromptPayload payload = new(briefing, previousAgenda, agendaDirectives, guides);
         return JsonSerializer.Serialize(payload, UserMessageJson);
     }
 
@@ -43,7 +48,15 @@ public sealed class PromptBuilder
 }
 
 internal sealed record MayorPromptPayload(
-    [property: JsonPropertyName("briefing")]        MayorBriefing         Briefing,
-    [property: JsonPropertyName("previous_agenda")] MayorAgenda?          PreviousAgenda,
-    [property: JsonPropertyName("lens_prefills")]   IReadOnlyList<string> LensPrefills
+    [property: JsonPropertyName("briefing")]         MayorBriefing                  Briefing,
+    [property: JsonPropertyName("previous_agenda")]  MayorAgenda?                   PreviousAgenda,
+    [property: JsonPropertyName("agenda_directives")] IReadOnlyList<string>         AgendaDirectives,
+    [property: JsonPropertyName("retrieved_guides")] IReadOnlyList<RetrievedGuide>? RetrievedGuides
+);
+
+internal sealed record RetrievedGuide(
+    [property: JsonPropertyName("cite_id")] string CiteId,
+    [property: JsonPropertyName("heading")] string Heading,
+    [property: JsonPropertyName("source")]  string Source,
+    [property: JsonPropertyName("snippet")] string Snippet
 );

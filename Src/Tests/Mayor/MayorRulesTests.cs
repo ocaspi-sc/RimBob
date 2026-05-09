@@ -8,42 +8,42 @@ namespace RimAI.Tests.Mayor;
 public sealed class MayorRulesTests
 {
     [Fact]
-    public void WinterPrepLens_FiresWhenDaysToWinterUnder20()
+    public void WinterPrepDirective_FiresWhenDaysToWinterUnder20()
     {
         MayorBriefing briefing = BriefingBuilder.Default with { Season = new SeasonContext("Septober", 8, 18) };
 
-        MayorLensSet lens = new MayorRules().Evaluate(briefing, ColonyContext.Default);
+        MayorDirectiveSet directives = new MayorRules().Evaluate(briefing, ColonyContext.Default);
 
-        lens.WinterPrep.Should().BeTrue();
-        lens.PromptPrefills.Should().Contain(p => p.Contains("Winter prep"));
+        directives.WinterPrepRequired.Should().BeTrue();
+        directives.Directives.Should().Contain(p => p.Contains("Winter prep"));
     }
 
     [Fact]
-    public void WinterPrepLens_DoesNotFireWhenWinterFar()
+    public void WinterPrepDirective_DoesNotFireWhenWinterFar()
     {
         MayorBriefing briefing = BriefingBuilder.Default with { Season = new SeasonContext("Aprimay", 12, 45) };
 
-        MayorLensSet lens = new MayorRules().Evaluate(briefing, ColonyContext.Default);
+        MayorDirectiveSet directives = new MayorRules().Evaluate(briefing, ColonyContext.Default);
 
-        lens.WinterPrep.Should().BeFalse();
+        directives.WinterPrepRequired.Should().BeFalse();
     }
 
     [Fact]
-    public void FoodCrisisLens_FiresWhenDaysOfFoodUnder7()
+    public void FoodSecurityDirective_FiresWhenDaysOfFoodUnder7()
     {
         MayorBriefing briefing = BriefingBuilder.Default with
         {
             Food = BriefingBuilder.Default.Food with { EstimatedDaysOfFood = 4.2f }
         };
 
-        MayorLensSet lens = new MayorRules().Evaluate(briefing, ColonyContext.Default);
+        MayorDirectiveSet directives = new MayorRules().Evaluate(briefing, ColonyContext.Default);
 
-        lens.FoodCrisis.Should().BeTrue();
-        lens.PromptPrefills.Should().Contain(p => p.Contains("Food crisis"));
+        directives.FoodSecurityCritical.Should().BeTrue();
+        directives.Directives.Should().Contain(p => p.Contains("Food security"));
     }
 
     [Fact]
-    public void FoodCrisisLens_DoesNotFireWhenDaysOfFoodIsNull()
+    public void FoodSecurityDirective_DoesNotFireWhenDaysOfFoodIsNull()
     {
         // Current state — stockpile endpoint not wired yet, EstimatedDaysOfFood derives null.
         MayorBriefing briefing = BriefingBuilder.Default with
@@ -51,9 +51,9 @@ public sealed class MayorRulesTests
             Food = BriefingBuilder.Default.Food with { EstimatedDaysOfFood = null }
         };
 
-        MayorLensSet lens = new MayorRules().Evaluate(briefing, ColonyContext.Default);
+        MayorDirectiveSet directives = new MayorRules().Evaluate(briefing, ColonyContext.Default);
 
-        lens.FoodCrisis.Should().BeFalse();
+        directives.FoodSecurityCritical.Should().BeFalse();
     }
 
     [Fact]
@@ -64,25 +64,25 @@ public sealed class MayorRulesTests
             Date = new DateStamp("2nd of Aprimay, 5501", 2, "Q1", 2, 6)
         };
 
-        MayorLensSet lens = new MayorRules().Evaluate(briefing, ColonyContext.Default);
+        MayorDirectiveSet directives = new MayorRules().Evaluate(briefing, ColonyContext.Default);
 
-        lens.YearTwoTransition.Should().BeTrue();
+        directives.YearTwoTransition.Should().BeTrue();
     }
 
     [Fact]
-    public void QuietDay_PrefillEmittedWhenNoOtherLensFires()
+    public void QuietDayDirective_EmittedWhenNoOtherDirectiveFires()
     {
-        MayorLensSet lens = new MayorRules().Evaluate(BriefingBuilder.Default, ColonyContext.Default);
+        MayorDirectiveSet directives = new MayorRules().Evaluate(BriefingBuilder.Default, ColonyContext.Default);
 
-        lens.QuietDay.Should().BeTrue();
-        lens.WinterPrep.Should().BeFalse();
-        lens.FoodCrisis.Should().BeFalse();
-        lens.YearTwoTransition.Should().BeFalse();
-        lens.PromptPrefills.Should().Contain(p => p.Contains("Quiet day"));
+        directives.QuietDay.Should().BeTrue();
+        directives.WinterPrepRequired.Should().BeFalse();
+        directives.FoodSecurityCritical.Should().BeFalse();
+        directives.YearTwoTransition.Should().BeFalse();
+        directives.Directives.Should().Contain(p => p.Contains("Quiet day"));
     }
 
     [Fact]
-    public void PromptPrefills_AccumulatesAcrossLenses()
+    public void Directives_AccumulateAcrossRules()
     {
         MayorBriefing briefing = BriefingBuilder.Default with
         {
@@ -90,11 +90,11 @@ public sealed class MayorRulesTests
             Food   = BriefingBuilder.Default.Food with { EstimatedDaysOfFood = 5f }
         };
 
-        MayorLensSet lens = new MayorRules().Evaluate(briefing, ColonyContext.Default);
+        MayorDirectiveSet directives = new MayorRules().Evaluate(briefing, ColonyContext.Default);
 
-        lens.WinterPrep.Should().BeTrue();
-        lens.FoodCrisis.Should().BeTrue();
-        lens.PromptPrefills.Count.Should().Be(2);
+        directives.WinterPrepRequired.Should().BeTrue();
+        directives.FoodSecurityCritical.Should().BeTrue();
+        directives.Directives.Count.Should().Be(2);
     }
 }
 

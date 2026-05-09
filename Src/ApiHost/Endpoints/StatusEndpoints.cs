@@ -1,4 +1,7 @@
 using RimAI.Coordination;
+using RimAI.Core.Advice;
+using RimAI.Core.Briefings;
+using RimAI.Knowledge;
 using RimAI.LLM;
 using RimAI.State;
 
@@ -19,7 +22,7 @@ public static class StatusEndpoints
             LlmClient       llm,
             MayorStatus     mayor) =>
         {
-            var briefing = briefings.GetMayorBriefing();
+            MayorBriefing briefing = briefings.GetMayorBriefing();
             return Results.Ok(new
             {
                 server            = "ok",
@@ -35,13 +38,16 @@ public static class StatusEndpoints
             });
         });
 
-        app.MapGet("/api/mayor/prompt", (
+        app.MapGet("/api/mayor/prompt", async (
             BriefingCache   briefings,
             AgendaStore     agendaStore,
-            PromptBuilder   prompts) =>
+            PromptBuilder   prompts,
+            MayorRetriever  retriever,
+            CancellationToken ct) =>
         {
-            var briefing    = briefings.GetMayorBriefing();
-            string user     = prompts.BuildMayorUserMessage(briefing, agendaStore.Current, []);
+            MayorBriefing briefing = briefings.GetMayorBriefing();
+            IReadOnlyList<Citation> retrieved = await retriever.RetrieveAsync(briefing, [], ct);
+            string user = prompts.BuildMayorUserMessage(briefing, agendaStore.Current, [], retrieved);
             string system;
             try   { system = prompts.MayorSystemPrompt; }
             catch (FileNotFoundException ex) { system = $"(prompt file not found: {ex.FileName})"; }

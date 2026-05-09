@@ -5,6 +5,7 @@ obj/
 
 # Logs (runtime output, not committed)
 logs/
+var/
 
 # Rider / VS / VSCode
 .idea/

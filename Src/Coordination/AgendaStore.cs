@@ -43,7 +43,8 @@ public sealed class AgendaStore
                 UpdateNotes:       proposed.UpdateNotes,
                 ShortTerm:         proposed.ShortTerm,
                 LongTerm:          proposed.LongTerm,
-                MinisterDirection: proposed.MinisterDirection
+                MinisterDirection: proposed.MinisterDirection,
+                Citations:         proposed.Citations ?? []
             );
 
             if (_current is not null)

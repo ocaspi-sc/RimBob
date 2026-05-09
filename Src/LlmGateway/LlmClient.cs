@@ -6,6 +6,8 @@ using Microsoft.Extensions.Logging;
 using RimAI.Core.Advice;
 using RimAI.Core.Briefings;
 
+using Citation = RimAI.Core.Advice.Citation;
+
 namespace RimAI.LLM;
 
 /// <summary>
@@ -21,8 +23,11 @@ public sealed class LlmClient
     };
 
     public delegate Task<MayorAgendaInput> MayorCallExecutor(
-        MayorBriefing briefing, MayorAgenda? previous,
-        IReadOnlyList<string> lensPrefills, CancellationToken ct);
+        MayorBriefing           briefing,
+        MayorAgenda?            previous,
+        IReadOnlyList<string>   agendaDirectives,
+        IReadOnlyList<Citation> retrievedGuides,
+        CancellationToken       ct);
 
     private readonly Client?                                       _client;
     private readonly Func<CancellationToken, Task<string?>>?       _pingExecutor;
@@ -120,18 +125,19 @@ public sealed class LlmClient
     /// Throws if the API key is missing or the response can't be parsed.
     /// </summary>
     public async Task<MayorAgendaInput> CallMayorAsync(
-        MayorBriefing         briefing,
-        MayorAgenda?          previousAgenda,
-        IReadOnlyList<string> lensPrefills,
-        CancellationToken     ct)
+        MayorBriefing           briefing,
+        MayorAgenda?            previousAgenda,
+        IReadOnlyList<string>   agendaDirectives,
+        IReadOnlyList<Citation> retrievedGuides,
+        CancellationToken       ct)
     {
         if (_mayorExecutor is not null)
-            return await _mayorExecutor(briefing, previousAgenda, lensPrefills, ct);
+            return await _mayorExecutor(briefing, previousAgenda, agendaDirectives, retrievedGuides, ct);
 
         if (_client is null)
             throw new InvalidOperationException("GEMINI_API_KEY not set — cannot call Mayor LLM.");
 
-        string userMessage = _prompts.BuildMayorUserMessage(briefing, previousAgenda, lensPrefills);
+        string userMessage = _prompts.BuildMayorUserMessage(briefing, previousAgenda, agendaDirectives, retrievedGuides);
         GenerateContentConfig config = new()
         {
             SystemInstruction = new Content { Parts = [new Part { Text = _prompts.MayorSystemPrompt }] },

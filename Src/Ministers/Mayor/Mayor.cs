@@ -1,8 +1,10 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using RimAI.Coordination;
+using RimAI.Core.Advice;
 using RimAI.Core.Briefings;
 using RimAI.Core.Ministers;
+using RimAI.Knowledge;
 using RimAI.LLM;
 using RimAI.State;
 
@@ -20,6 +22,7 @@ public sealed class Mayor(
     PromptBuilder       prompts,
     AdviceBus           bus,
     MayorStatus         status,
+    MayorRetriever      retriever,
     ILogger<Mayor>      log
 ) : IMinister
 {
@@ -39,20 +42,22 @@ public sealed class Mayor(
         string? cycleError = null;
         try
         {
-            MayorBriefing briefing             = briefings.GetMayorBriefing();
-            MayorLensSet lens                  = rules.Evaluate(briefing, ColonyContext.Default);
-            Core.Advice.MayorAgenda? previous  = agendaStore.Current;
+            MayorBriefing briefing                 = briefings.GetMayorBriefing();
+            MayorDirectiveSet directiveSet          = rules.Evaluate(briefing, ColonyContext.Default);
+            Core.Advice.MayorAgenda? previous      = agendaStore.Current;
 
             log.LogInformation(
-                "Mayor wake briefing_version={BriefingVersion} previous_agenda_version={PrevVersion} lenses=[{Lenses}]",
-                briefing.BriefingVersion, previous?.Version ?? 0, FormatLenses(lens));
+                "Mayor wake briefing_version={BriefingVersion} previous_agenda_version={PrevVersion} directives=[{Directives}]",
+                briefing.BriefingVersion, previous?.Version ?? 0, FormatDirectives(directiveSet));
 
-            DumpPrompt(briefing, previous, lens.PromptPrefills);
+            IReadOnlyList<Citation> retrieved = await retriever.RetrieveAsync(briefing, directiveSet.Directives, ct);
+
+            DumpPrompt(briefing, previous, directiveSet.Directives, retrieved);
 
             Core.Advice.MayorAgendaInput? input = TryLoadManualResponse();
             if (input is null)
             {
-                input = await CallLlmWithRetryAsync(briefing, previous, lens.PromptPrefills, ct);
+                input = await CallLlmWithRetryAsync(briefing, previous, directiveSet.Directives, retrieved, ct);
                 if (input is null)
                 {
                     cycleError = "LLM call failed twice";
@@ -61,6 +66,9 @@ public sealed class Mayor(
                 }
                 status.MarkLlmSuccess();
             }
+
+            // Re-attach the citations the retriever produced — the LLM only references them by id.
+            input = input with { Citations = retrieved };
 
             Core.Advice.MayorAgenda stamped = agendaStore.Update(input, FormatTick(briefing));
             bus.Publish(new AgendaUpdated(stamped));
@@ -80,13 +88,13 @@ public sealed class Mayor(
 
     private async Task<Core.Advice.MayorAgendaInput?> CallLlmWithRetryAsync(
         MayorBriefing briefing, Core.Advice.MayorAgenda? previous,
-        IReadOnlyList<string> prefills, CancellationToken ct)
+        IReadOnlyList<string> directives, IReadOnlyList<Citation> retrieved, CancellationToken ct)
     {
         for (int attempt = 1; attempt <= 2; attempt++)
         {
             try
             {
-                Core.Advice.MayorAgendaInput input = await llm.CallMayorAsync(briefing, previous, prefills, ct);
+                Core.Advice.MayorAgendaInput input = await llm.CallMayorAsync(briefing, previous, directives, retrieved, ct);
                 if (input.ShortTerm.Count > ShortTermCap)
                 {
                     log.LogWarning(
@@ -161,15 +169,17 @@ public sealed class Mayor(
         }
     }
 
-    private void DumpPrompt(MayorBriefing briefing, Core.Advice.MayorAgenda? previous, IReadOnlyList<string> prefills)
+    private void DumpPrompt(MayorBriefing briefing, Core.Advice.MayorAgenda? previous,
+                            IReadOnlyList<string> directives, IReadOnlyList<Citation> retrieved)
     {
         try
         {
             string system = prompts.MayorSystemPrompt;
-            string user   = prompts.BuildMayorUserMessage(briefing, previous, prefills);
+            string user   = prompts.BuildMayorUserMessage(briefing, previous, directives, retrieved);
             string body   =
                 $"<!-- Mayor prompt snapshot — briefing v{briefing.BriefingVersion}, " +
-                $"previous agenda v{previous?.Version ?? 0}, written {DateTime.UtcNow:O} -->\n\n" +
+                $"previous agenda v{previous?.Version ?? 0}, retrieved {retrieved.Count} guides, " +
+                $"written {DateTime.UtcNow:O} -->\n\n" +
                 $"# system\n\n{system}\n\n# user\n\n{user}\n";
             Directory.CreateDirectory(Path.GetDirectoryName(PromptDumpPath)!);
             File.WriteAllText(PromptDumpPath, body);
@@ -183,13 +193,13 @@ public sealed class Mayor(
     private static string FormatTick(MayorBriefing b) =>
         $"Y{b.Date.Year ?? 0}{b.Date.Quadrum ?? "?"}D{b.Date.Day ?? 0}";
 
-    private static string FormatLenses(MayorLensSet l)
+    private static string FormatDirectives(MayorDirectiveSet d)
     {
         List<string> fired = new(4);
-        if (l.WinterPrep)        fired.Add("winter_prep");
-        if (l.FoodCrisis)        fired.Add("food_crisis");
-        if (l.YearTwoTransition) fired.Add("year_two_transition");
-        if (l.QuietDay && fired.Count == 0) fired.Add("quiet_day");
+        if (d.WinterPrepRequired)   fired.Add("winter_prep_required");
+        if (d.FoodSecurityCritical) fired.Add("food_security_critical");
+        if (d.YearTwoTransition)    fired.Add("year_two_transition");
+        if (d.QuietDay && fired.Count == 0) fired.Add("quiet_day");
         return string.Join(',', fired);
     }
 }

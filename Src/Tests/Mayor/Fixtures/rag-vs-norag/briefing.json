@@ -1,0 +1,52 @@
+{
+  "briefing_version": 1,
+  "date": {
+    "raw": "8th of Septober, 5500, 14h",
+    "year": 1,
+    "quadrum": "Septober",
+    "day": 8,
+    "hour": 14
+  },
+  "game_tick": 2820000,
+  "season": {
+    "current_season": "Septober",
+    "days_elapsed_in_quadrum": 8,
+    "days_to_winter": 7
+  },
+  "colonists": {
+    "count": 3,
+    "idle": 0,
+    "incapacitated": 0,
+    "pawns": [],
+    "oldest_colonist_age": 33
+  },
+  "food": {
+    "estimated_food_units_in_stockpile": 18,
+    "estimated_days_of_food": 5.4,
+    "meals_count": 12,
+    "raw_food_defs": ["RawPotatoes", "Corn"],
+    "animals_slaughterable": 0,
+    "crop_nutrition_growing": 30.0
+  },
+  "threat": {
+    "active_raid": false,
+    "hostile_lord_count": 0,
+    "total_threat_points": 0,
+    "recent_incidents": [],
+    "active_map_threats": []
+  },
+  "wealth": {
+    "colony": 18500,
+    "items": 6400,
+    "buildings": 7900
+  },
+  "weather": {
+    "def": "Clear",
+    "temperature_c": 6.0,
+    "rain_rate": 0.0
+  },
+  "research": {
+    "current_project": "Battery",
+    "progress_percent": 45
+  }
+}

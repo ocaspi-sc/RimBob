@@ -5,6 +5,7 @@ using RimAI.Core.Ministers;
 using RimAI.Host;
 using RimAI.Host.Endpoints;
 using RimAI.Ingestion;
+using RimAI.Knowledge;
 using RimAI.LLM;
 using RimAI.Ministers.Mayor;
 using RimAI.State;
@@ -59,6 +60,52 @@ builder.Services.AddSingleton<AdviceBus>();
 builder.Services.AddSingleton<AgendaStore>();
 builder.Services.AddSingleton<MayorRules>();
 builder.Services.AddSingleton<MayorStatus>();
+
+// ── RAG (M2) ───────────────────────────────────────────────────────────────
+// Embedder isn't in DI — null-when-unconfigured doesn't compose well with the
+// generic AddSingleton<TService> constraints. Each consumer builds its own via
+// the same RimAiOptions resolution path.
+builder.Services.AddSingleton<KnowledgeBase>();
+builder.Services.AddSingleton<EmbeddingCache>(sp =>
+{
+    RimAiOptions opts = sp.GetRequiredService<IOptions<RimAiOptions>>().Value;
+    string cacheDir = Path.IsPathRooted(opts.Rag.CacheRoot)
+        ? opts.Rag.CacheRoot
+        : Path.Combine(builder.Environment.ContentRootPath, opts.Rag.CacheRoot);
+    return new EmbeddingCache(cacheDir);
+});
+builder.Services.AddSingleton<MayorRetriever>(sp =>
+{
+    RimAiOptions opts = sp.GetRequiredService<IOptions<RimAiOptions>>().Value;
+    IEmbedder? embedder = ResolveEmbedder(opts, sp);
+    return new MayorRetriever(
+        kb:       sp.GetRequiredService<KnowledgeBase>(),
+        embedder: embedder,
+        enabled:  opts.Rag.Enabled,
+        topK:     opts.Rag.TopK,
+        log:      sp.GetRequiredService<ILogger<MayorRetriever>>());
+});
+builder.Services.AddSingleton<Ingest>(sp =>
+{
+    RimAiOptions opts = sp.GetRequiredService<IOptions<RimAiOptions>>().Value;
+    IEmbedder? embedder = ResolveEmbedder(opts, sp)
+        ?? throw new InvalidOperationException("Ingest requires an embedder; check RimAi:Rag:Enabled and Gemini key.");
+    return new Ingest(
+        embedder: embedder,
+        cache:    sp.GetRequiredService<EmbeddingCache>(),
+        log:      sp.GetRequiredService<ILogger<Ingest>>());
+});
+
+static IEmbedder? ResolveEmbedder(RimAiOptions opts, IServiceProvider sp)
+{
+    if (!opts.Rag.Enabled) return null;
+    string? apiKey = Environment.GetEnvironmentVariable("GEMINI_API_KEY");
+    if (string.IsNullOrWhiteSpace(apiKey)) apiKey = opts.GeminiApiKey;
+    if (string.IsNullOrWhiteSpace(apiKey)) return null;
+    return new GeminiEmbedder(apiKey, opts.Rag.EmbeddingModel,
+        sp.GetRequiredService<ILogger<GeminiEmbedder>>());
+}
+
 builder.Services.AddSingleton<Mayor>();
 builder.Services.AddSingleton<IMinister>(sp => sp.GetRequiredService<Mayor>());
 builder.Services.AddHostedService<DayTickOrchestrator>();
@@ -118,6 +165,42 @@ app.Lifetime.ApplicationStarted.Register(() =>
                 pingCts.CancelAfter(TimeSpan.FromSeconds(5));
                 var pingOk = await llm.PingAsync(pingCts.Token);
                 Console.WriteLine(pingOk ? "✓ Gemini ping OK" : "✗ Gemini ping failed (see logs)");
+            }
+
+            // ── RAG ingestion (M2) ───────────────────────────────────────
+            if (opts.Rag.Enabled)
+            {
+                IEmbedder? embedder = ResolveEmbedder(opts, scope.ServiceProvider);
+                if (embedder is null)
+                {
+                    Log.Warning("RAG enabled but no Gemini key configured — KnowledgeBase will stay empty.");
+                    Console.WriteLine("✗ RAG enabled but Gemini key missing — KnowledgeBase empty");
+                }
+                else
+                {
+                    string guidesRoot = Path.IsPathRooted(opts.Rag.GuidesRoot)
+                        ? opts.Rag.GuidesRoot
+                        : Path.Combine(app.Environment.ContentRootPath, opts.Rag.GuidesRoot);
+                    Ingest        ingest = scope.ServiceProvider.GetRequiredService<Ingest>();
+                    KnowledgeBase kb     = scope.ServiceProvider.GetRequiredService<KnowledgeBase>();
+                    using CancellationTokenSource ingestCts =
+                        CancellationTokenSource.CreateLinkedTokenSource(app.Lifetime.ApplicationStopping);
+                    ingestCts.CancelAfter(TimeSpan.FromMinutes(2));
+                    try
+                    {
+                        await ingest.RunAsync(guidesRoot, kb, ingestCts.Token);
+                        Console.WriteLine($"✓ KnowledgeBase ready: {kb.Count} chunks from {opts.Rag.GuidesRoot}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warning(ex, "Guide ingestion failed; Mayor will run without RAG this session.");
+                        Console.WriteLine($"✗ KnowledgeBase ingest failed — {ex.Message}");
+                    }
+                }
+            }
+            else
+            {
+                Console.WriteLine("· RAG disabled in config (RimAi:Rag:Enabled = false)");
             }
 
             Console.WriteLine($"\nDashboard: {opts.ListenUrl}\n");
