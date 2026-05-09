@@ -268,6 +268,8 @@ Dashboard/
 
 See [`dashboard.md`](dashboard.md) for the contract.
 
+**React component convention.** Collapsible dashboard UI should use the standard disclosure pattern: a real `<button>` header with `aria-expanded` / `aria-controls`, plus a conditionally rendered panel in normal document flow. Use this instead of ad hoc fixed-height panes or native `<details>` when opening a section must push subsequent content down predictably.
+
 ---
 
 ## Key interfaces (draft — update after first slice)

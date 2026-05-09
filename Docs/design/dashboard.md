@@ -187,8 +187,9 @@ Locked tabs render a unified empty-console panel (`MODULE LOCKED · Coming in M{
 - The Agenda header's **Prompt** toggle opens a full-height prompt inspector for the next Mayor call.
 - The Mayor user message is parsed as JSON when possible. Its `briefing` object is split into collapsible boxed groups using case-insensitive field matching: Overview, People, Food & resources, Infrastructure, Welfare & threat, Environment, Research, and Other briefing fields when new fields arrive.
 - All prompt inspector boxes start collapsed.
+- Prompt inspector boxes use the standard React disclosure pattern: a `<button>` header with `aria-expanded` / `aria-controls`, and a conditionally rendered panel in normal document flow.
 - Prompt inspector boxes stay in normal document flow: opening a box expands its row and pushes every subsequent box downward. The main console owns page-level scrolling; individual large box bodies still cap their height and scroll internally.
-- Non-briefing user-message context (`previous_agenda`, `lens_prefills`, `retrieved_guides`) stays available in a separate collapsed **Prompt context** box. If parsing fails, render the raw user message unchanged.
+- Non-briefing user-message context (`previous_agenda`, `agenda_directives`, `retrieved_guides`) stays available in a separate collapsed **Prompt context** box. If parsing fails, render the raw user message unchanged.
 - The system prompt renders as its own collapsible boxed section below the briefing inspector.
 
 ### Agenda tab detail

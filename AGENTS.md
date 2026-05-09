@@ -65,6 +65,7 @@ If a decision affects multiple docs, update the most specific one and add a cros
 - `Rules.cs` is the first file in every minister directory. It must compile and have tests before the LLM is wired.
 - Fixture JSON files live in `Src/Tests/<MinisterName>/Fixtures/`.
 - avoid using var for types
+- React collapsible UI should use the standard disclosure pattern: a real `<button>` header with `aria-expanded` / `aria-controls`, plus a conditionally rendered panel in normal document flow. Do not use ad hoc fixed-height panes or native `<details>` when layout needs to push following content down predictably.
 
 ---
 

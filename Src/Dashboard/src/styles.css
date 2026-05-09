@@ -396,40 +396,50 @@ body {
   overflow: hidden;
 }
 
-.briefing-box[open] {
+.briefing-box.open {
   border-color: rgba(86, 207, 251, 0.38);
 }
 
-.briefing-box summary {
+.briefing-box-heading {
+  margin: 0;
+}
+
+.briefing-box-trigger {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  width: 100%;
   min-width: 0;
   padding: 8px 10px;
   color: #c9d8e8;
+  background: transparent;
+  border: 0;
   font-size: 0.76rem;
   font-weight: 800;
   letter-spacing: 0.08em;
+  text-align: left;
   text-transform: uppercase;
   cursor: pointer;
   user-select: none;
 }
 
-.briefing-box summary:hover {
+.briefing-box-trigger:hover,
+.briefing-box-trigger:focus-visible {
   background: rgba(255, 255, 255, 0.04);
+  outline: none;
 }
 
-.briefing-box summary span,
-.briefing-box summary small {
+.briefing-box-trigger span,
+.briefing-box-trigger small {
   min-width: 0;
 }
 
-.briefing-box summary span {
+.briefing-box-trigger span {
   overflow-wrap: anywhere;
 }
 
-.briefing-box summary small {
+.briefing-box-trigger small {
   color: #6a7f94;
   font-size: 0.68rem;
   font-weight: 650;
@@ -438,10 +448,13 @@ body {
   white-space: nowrap;
 }
 
+.briefing-box-panel {
+  border-top: 1px solid rgba(103, 122, 143, 0.22);
+}
+
 .briefing-box .prompt-pre {
   max-height: 320px;
   margin: 0;
-  border-top: 1px solid rgba(103, 122, 143, 0.22);
   border-radius: 0;
   background: rgba(0, 0, 0, 0.24);
 }

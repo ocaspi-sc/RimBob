@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 import type { MayorAgenda, AgendaItem } from '../types/agenda';
 import type { RimAIStatus } from '../types/status';
 import { fetchMayorPrompt } from '../api/status';
@@ -287,23 +287,19 @@ function BriefingPrompt({ raw }: { raw: string }) {
         const section = pickKeys(briefing, group.keys);
         if (Object.keys(section).length === 0) return null;
         return (
-          <details key={group.title} className="briefing-box">
-            <summary>
-              <span>{group.title}</span>
-              <small>{summariseValue(section)}</small>
-            </summary>
+          <CollapsibleBox
+            key={group.title}
+            title={group.title}
+            meta={summariseValue(section)}
+          >
             <pre className="prompt-pre">{JSON.stringify(section, null, 2)}</pre>
-          </details>
+          </CollapsibleBox>
         );
       })}
       {Object.keys(context).length > 0 && (
-        <details className="briefing-box">
-          <summary>
-            <span>Prompt context</span>
-            <small>{summariseValue(context)}</small>
-          </summary>
+        <CollapsibleBox title="Prompt context" meta={summariseValue(context)}>
           <pre className="prompt-pre">{JSON.stringify(context, null, 2)}</pre>
-        </details>
+        </CollapsibleBox>
       )}
     </div>
   );
@@ -311,13 +307,57 @@ function BriefingPrompt({ raw }: { raw: string }) {
 
 function PromptTextBox({ title, text }: { title: string; text: string }) {
   return (
-    <details className="briefing-box prompt-text-box">
-      <summary>
-        <span>{title}</span>
-        <small>{text.length.toLocaleString()} chars</small>
-      </summary>
+    <CollapsibleBox
+      className="prompt-text-box"
+      title={title}
+      meta={`${text.length.toLocaleString()} chars`}
+    >
       <pre className="prompt-pre">{text}</pre>
-    </details>
+    </CollapsibleBox>
+  );
+}
+
+function CollapsibleBox({
+  children,
+  className,
+  meta,
+  title,
+}: {
+  children: ReactNode;
+  className?: string;
+  meta: string;
+  title: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const buttonId = useId();
+  const panelId = useId();
+
+  return (
+    <section className={`briefing-box${isOpen ? ' open' : ''}${className ? ` ${className}` : ''}`}>
+      <h5 className="briefing-box-heading">
+        <button
+          id={buttonId}
+          type="button"
+          className="briefing-box-trigger"
+          aria-expanded={isOpen}
+          aria-controls={panelId}
+          onClick={() => setIsOpen(open => !open)}
+        >
+          <span>{title}</span>
+          <small>{meta}</small>
+        </button>
+      </h5>
+      {isOpen && (
+        <div
+          id={panelId}
+          className="briefing-box-panel"
+          role="region"
+          aria-labelledby={buttonId}
+        >
+          {children}
+        </div>
+      )}
+    </section>
   );
 }
 
