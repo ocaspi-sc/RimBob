@@ -1,14 +1,14 @@
-import type { AgendaItem } from '../types/agenda';
+import type { AgendaPriority } from '../types/agenda';
 
 export type DeltaBadge = 'new' | 'updated' | 'done' | 'deferred' | null;
 
 interface Props {
-  item: AgendaItem;
+  item: AgendaPriority;
   delta: DeltaBadge;
   rank?: number;
 }
 
-export function AgendaItemCard({ item, delta, rank }: Props) {
+export function AgendaPriorityCard({ item, delta, rank }: Props) {
   const isClosed = item.status !== 'active';
   return (
     <div className={`agenda-card ${isClosed ? 'closed' : ''} ${rank !== undefined ? 'ranked' : ''}`}>

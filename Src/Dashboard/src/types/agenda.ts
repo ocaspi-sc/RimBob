@@ -1,16 +1,16 @@
 // TypeScript mirrors of the wire-shape MayorAgenda. Snake_case keys match
 // the JSON produced by RimAI.Core.Advice.* records.
 
-export type AgendaItemStatus = 'active' | 'completed' | 'deferred';
+export type AgendaPriorityStatus = 'active' | 'completed' | 'deferred';
 
-export interface AgendaItem {
+export interface AgendaPriority {
   id: string;
   text: string;
-  status: AgendaItemStatus;
+  status: AgendaPriorityStatus;
   cite_ids?: string[];
 }
 
-export interface Citation {
+export interface GuideCitation {
   cite_id: string;
   source_path: string;
   heading: string;
@@ -31,8 +31,8 @@ export interface MayorAgenda {
   /** Map of category name → one-line interpretation. Keys: agriculture, defense, welfare, construction, treasury, research. */
   state_of_the_union: Record<string, string>;
   update_notes: string;
-  short_term: AgendaItem[];
-  long_term: AgendaItem[];
-  minister_direction: Record<string, string>;
-  citations: Citation[];
+  short_term: AgendaPriority[];
+  long_term: AgendaPriority[];
+  cabinet_direction: Record<string, string>;
+  guide_citations: GuideCitation[];
 }

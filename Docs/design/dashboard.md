@@ -118,7 +118,7 @@ On connect, the server replays the current Agenda (if one exists) as a single `a
 Reads/writes the per-minister autonomy dial. In MVP, every value is `Suggest` and `PUT` is a no-op that returns 200; the endpoint exists so the dashboard can render the panel and the contract is set for M7.
 
 ```json
-{ "Mayor": "Suggest", "Agriculture": "Suggest", "Defense": "Suggest" }
+{ "Mayor": "Suggest", "Food": "Suggest", "Defense": "Suggest" }
 ```
 
 ---
@@ -145,7 +145,7 @@ Visual conventions:
 │   Briefing    │  "Hold wealth, shore up food …"      │   12 Jul Y1    │
 │   Log (M2)    │  ─                                   │   Winter 20d   │
 │   Autonomy    │  State of the Union                  │  ─ People  6   │
-│               │   🌾 Agriculture  Food 18d vs 20…    │  ─ Mood   72%  │
+│               │   Food          Food 18d vs 20…       │  ─ Mood   72%  │
 │               │   🛡️ Defense      East wall gap, …  │  ─ Food   18d  │
 │               │   ❤️ Welfare      Mood 72%, no risk  │  ─ Wealth 85k  │
 │               │   🔨 Construction Freezer running    │  ─ Power +120W │
@@ -176,6 +176,7 @@ The four main regions are independent boxed panels (`panel-box`): topbar, tab ra
 
 ### Tabs (MVP)
 - **Agenda** — Mayor's living plan; short-term priorities and long-term goals. **Default tab.** M1 ships this.
+- **Prompt** — ready developer inspector immediately after Agenda. It renders `/api/mayor/prompt` independently of whether an agenda exists, so the prompt/debug view does not fall back to the Mayor uplink waiting state.
 - **Alerts** — feeder-minister `AdviceItem`s and Mayor tactical alerts (M5+). Renders the "MODULE LOCKED" placeholder in M1.
 - **Briefing** — pick a minister, see the latest briefing JSON pretty-printed. M1 ships this; backed by `/api/colony/snapshot` and `/api/mayor/prompt` for inspection.
 - **Log** — recent decision-log records with feedback events joined. M2 ships this.
@@ -184,17 +185,20 @@ The four main regions are independent boxed panels (`panel-box`): topbar, tab ra
 Locked tabs render a unified empty-console panel (`MODULE LOCKED · Coming in M{n}`), not a disabled button — keeps the visual mass consistent so the rail doesn't shift width as M2/M5/M7 land.
 
 ### Prompt view
-- The Agenda header's **Prompt** toggle opens a full-height prompt inspector for the next Mayor call.
-- The Mayor user message is parsed as JSON when possible. Its `briefing` object is split into collapsible boxed groups using case-insensitive field matching: Overview, People, Food & resources, Infrastructure, Welfare & threat, Environment, Research, and Other briefing fields when new fields arrive.
+- The left rail's **Prompt** tab opens the full-height prompt inspector for the next Mayor call. The Agenda header may also expose a local **Prompt** toggle, but the dedicated tab is the primary entry point and works before the first agenda has been produced.
+- `/api/mayor/prompt` remains an exact-string introspection endpoint (`{ system, user }`). Readability is a frontend concern: the dashboard parses the Mayor user message JSON at render time, with a raw decorated text fallback when parsing fails.
+- Parsed prompt JSON renders as a readable labeled tree rather than a raw `JSON.stringify` block. Primitive fields become compact key/value rows; arrays render as nested items; empty objects/lists/nulls get explicit placeholders.
+- Important prompt keywords map to emoji decorations in the UI (food, defense, welfare, health, people, power, construction, wealth, research, weather, risk, status). These icons are visual decorations only; they are not inserted into the backend prompt payload.
+- The parsed `briefing` object is split into collapsible boxed groups using case-insensitive field matching: Overview, People, Food & resources, Infrastructure, Welfare & threat, Environment, Research, and Other briefing fields when new fields arrive.
 - All prompt inspector boxes start collapsed.
 - Prompt inspector boxes use the standard React disclosure pattern: a `<button>` header with `aria-expanded` / `aria-controls`, and a conditionally rendered panel in normal document flow.
 - Prompt inspector boxes stay in normal document flow: opening a box expands its row and pushes every subsequent box downward. The main console owns page-level scrolling; individual large box bodies still cap their height and scroll internally.
-- Non-briefing user-message context (`previous_agenda`, `agenda_directives`, `retrieved_guides`) stays available in a separate collapsed **Prompt context** box. If parsing fails, render the raw user message unchanged.
+- Non-briefing user-message context (`previous_agenda`, `agenda_directives`, `guide_context`) stays available in a separate collapsed **Prompt context** box. If parsing fails, render the raw user message unchanged.
 - The system prompt renders as its own collapsible boxed section below the briefing inspector.
 
 ### Agenda tab detail
 - Header card: posture badges (economic `$ growth/consolidation/survival` + military `⚔ defensive/offensive/neutral`), version + tick on the right, posture summary below.
-- **State of the Union** — emoji-prefixed checklist, one row per category present in `state_of_the_union`. Order: agriculture · defense · welfare · construction · treasury · research; unknown keys appear last with a bullet icon. Emoji is not in the wire data — the dashboard maps category → icon (`🌾🛡️❤️🔨💰🔬`).
+- **State of the Union** — checklist, one row per category present in `state_of_the_union`. Order: food · defense · welfare · construction · treasury · research; unknown keys appear last.
 - **What changed** — `update_notes` rendered italic.
 - **Short-term priorities** — section header shows "(N active)". Numbered rank circles on each card. Closed items (completed/deferred) collapse into a `<details>` "N closed this turn" disclosure beneath the active list.
 - **Long-term goals** — compact bordered list with status icons (`●` active, `○` deferred, `✓` completed) and a status pill on the right.
@@ -204,6 +208,8 @@ Locked tabs render a unified empty-console panel (`MODULE LOCKED · Coming in M{
 ### Sidebar (Colony telemetry)
 - Polls `/api/colony/snapshot` every 5s (configurable via `SnapshotPollMs` constant).
 - Groups: Date, People, Mood, Food, Wealth, Power, Threat, Weather, Research.
+- Group and row labels can carry decorative emoji icons in the UI. They are marked `aria-hidden` and do not change the telemetry payload or accessible label text.
+- Telemetry rows should stay dense: use compact spacing and two-column row grids when the sidebar width allows, falling back to normal wrapping on narrow layouts.
 - Warning rows render in red (`telemetry-row.warn`) for: low food (< 7d), downed/sick colonists, break-risk count, negative net power, active raid.
 - Footer line shows `briefing v{n} · tick {gameTick}` so the player can correlate sidebar values with the current agenda version.
 

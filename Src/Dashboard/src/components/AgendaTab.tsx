@@ -1,8 +1,17 @@
 import { useEffect, useId, useState, type ReactNode } from 'react';
-import type { MayorAgenda, AgendaItem } from '../types/agenda';
+import type { MayorAgenda, AgendaPriority } from '../types/agenda';
 import type { RimAIStatus } from '../types/status';
 import { fetchMayorPrompt } from '../api/status';
-import { AgendaItemCard, type DeltaBadge } from './AgendaItemCard';
+import { AgendaPriorityCard, type DeltaBadge } from './AgendaPriorityCard';
+import {
+  DecoratedPlainText,
+  ReadableJsonView,
+  isJsonRecord,
+  keywordIconForText,
+  summariseJsonValue,
+  type JsonRecord,
+  type JsonValue,
+} from './PromptReadableView';
 
 interface Props {
   agenda: MayorAgenda | null;
@@ -17,11 +26,11 @@ export function AgendaTab({ agenda, previous, status }: Props) {
     return <MayorUplinkState status={status} />;
   }
 
-  const previousShort = new Map<string, AgendaItem>(
+  const previousShort = new Map<string, AgendaPriority>(
     (previous?.short_term ?? []).map(i => [i.id, i] as const),
   );
 
-  const ministerEntries = Object.entries(agenda.minister_direction ?? {});
+  const ministerEntries = Object.entries(agenda.cabinet_direction ?? {});
   const activeShort = agenda.short_term.filter(i => i.status === 'active');
   const closedShort = agenda.short_term.filter(i => i.status !== 'active');
 
@@ -58,7 +67,7 @@ export function AgendaTab({ agenda, previous, status }: Props) {
       >
         {agenda.short_term.length === 0 && <Empty>No short-term priorities.</Empty>}
         {activeShort.map((item, idx) => (
-          <AgendaItemCard
+          <AgendaPriorityCard
             key={item.id}
             item={item}
             rank={idx + 1}
@@ -72,7 +81,7 @@ export function AgendaTab({ agenda, previous, status }: Props) {
             </summary>
             <div>
               {closedShort.map(item => (
-                <AgendaItemCard
+                <AgendaPriorityCard
                   key={item.id}
                   item={item}
                   delta={computeDelta(item, previousShort.get(item.id))}
@@ -182,7 +191,7 @@ function MayorUplinkState({ status }: { status: RimAIStatus | null }) {
   );
 }
 
-function PromptFull() {
+export function PromptFull() {
   const [prompt, setPrompt] = useState<{ system: string; user: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -240,16 +249,6 @@ function PromptViewer() {
   );
 }
 
-type JsonValue =
-  | null
-  | string
-  | number
-  | boolean
-  | JsonValue[]
-  | { [key: string]: JsonValue };
-
-type JsonRecord = { [key: string]: JsonValue };
-
 interface BriefingGroup {
   title: string;
   keys: string[];
@@ -267,12 +266,12 @@ const briefingGroups: BriefingGroup[] = [
 
 function BriefingPrompt({ raw }: { raw: string }) {
   const parsed = parseJson(raw);
-  if (!isRecord(parsed)) {
-    return <pre className="prompt-pre">{raw}</pre>;
+  if (!isJsonRecord(parsed)) {
+    return <DecoratedPlainText text={raw} />;
   }
 
   const briefingFromPayload = parsed.briefing;
-  const hasBriefingPayload = isRecord(briefingFromPayload);
+  const hasBriefingPayload = isJsonRecord(briefingFromPayload);
   const briefing = hasBriefingPayload ? briefingFromPayload : parsed;
   const usedKeys = new Set(briefingGroups.flatMap(group => group.keys.map(normaliseKey)));
   const extraKeys = Object.keys(briefing).filter(key => !usedKeys.has(normaliseKey(key)));
@@ -289,16 +288,21 @@ function BriefingPrompt({ raw }: { raw: string }) {
         return (
           <CollapsibleBox
             key={group.title}
+            icon={keywordIconForText(group.title)}
             title={group.title}
-            meta={summariseValue(section)}
+            meta={summariseJsonValue(section)}
           >
-            <pre className="prompt-pre">{JSON.stringify(section, null, 2)}</pre>
+            <ReadableJsonView value={section} />
           </CollapsibleBox>
         );
       })}
       {Object.keys(context).length > 0 && (
-        <CollapsibleBox title="Prompt context" meta={summariseValue(context)}>
-          <pre className="prompt-pre">{JSON.stringify(context, null, 2)}</pre>
+        <CollapsibleBox
+          icon={keywordIconForText('context guides directives agenda')}
+          title="Prompt context"
+          meta={summariseJsonValue(context)}
+        >
+          <ReadableJsonView value={context} />
         </CollapsibleBox>
       )}
     </div>
@@ -309,10 +313,11 @@ function PromptTextBox({ title, text }: { title: string; text: string }) {
   return (
     <CollapsibleBox
       className="prompt-text-box"
+      icon={keywordIconForText(title)}
       title={title}
       meta={`${text.length.toLocaleString()} chars`}
     >
-      <pre className="prompt-pre">{text}</pre>
+      <DecoratedPlainText text={text} />
     </CollapsibleBox>
   );
 }
@@ -320,11 +325,13 @@ function PromptTextBox({ title, text }: { title: string; text: string }) {
 function CollapsibleBox({
   children,
   className,
+  icon,
   meta,
   title,
 }: {
   children: ReactNode;
   className?: string;
+  icon?: string | null;
   meta: string;
   title: string;
 }) {
@@ -343,8 +350,11 @@ function CollapsibleBox({
           aria-controls={panelId}
           onClick={() => setIsOpen(open => !open)}
         >
-          <span>{title}</span>
-          <small>{meta}</small>
+          <span className="briefing-box-title">
+            {icon && <span className="briefing-box-icon" aria-hidden>{icon}</span>}
+            {title}
+          </span>
+          <small className="briefing-box-meta">{meta}</small>
         </button>
       </h5>
       {isOpen && (
@@ -366,10 +376,6 @@ function parseJson(raw: string): JsonValue | undefined {
   catch { return undefined; }
 }
 
-function isRecord(value: JsonValue | undefined): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function pickKeys(source: JsonRecord, keys: string[]): JsonRecord {
   const wanted = new Set(keys.map(normaliseKey));
   return Object.entries(source).reduce<JsonRecord>((acc, [key, value]) => {
@@ -387,16 +393,6 @@ function withoutKey(source: JsonRecord, keyToOmit: string): JsonRecord {
     if (key !== keyToOmit) acc[key] = value;
     return acc;
   }, {});
-}
-
-function summariseValue(value: JsonValue): string {
-  if (Array.isArray(value)) return `${value.length} item${value.length === 1 ? '' : 's'}`;
-  if (isRecord(value)) {
-    const count = Object.keys(value).length;
-    return `${count} field${count === 1 ? '' : 's'}`;
-  }
-  if (value === null) return 'null';
-  return String(value);
 }
 
 // ── Header ────────────────────────────────────────────────────────────────────
@@ -492,7 +488,7 @@ function capitalise(s: string): string {
   return s.length === 0 ? s : s[0].toUpperCase() + s.slice(1);
 }
 
-function computeDelta(current: AgendaItem, prev: AgendaItem | undefined): DeltaBadge {
+function computeDelta(current: AgendaPriority, prev: AgendaPriority | undefined): DeltaBadge {
   if (!prev) return 'new';
   if (current.status === 'completed' && prev.status !== 'completed') return 'done';
   if (current.status === 'deferred' && prev.status !== 'deferred') return 'deferred';
@@ -528,7 +524,7 @@ function Empty({ children }: { children: ReactNode }) {
   return <div className="module-empty">{children}</div>;
 }
 
-function LongTermRow({ item, divider }: { item: AgendaItem; divider: boolean }) {
+function LongTermRow({ item, divider }: { item: AgendaPriority; divider: boolean }) {
   return (
     <div className={`long-term-row ${divider ? 'divided' : ''} ${item.status}`}>
       <span aria-hidden />

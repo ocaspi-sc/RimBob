@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { AgendaTab } from './components/AgendaTab';
+import { AgendaTab, PromptFull } from './components/AgendaTab';
 import { Sidebar } from './components/Sidebar';
 import { fetchLatestAgenda, triggerRefresh } from './api/agenda';
 import { fetchColonySnapshot } from './api/colony';
@@ -9,10 +9,11 @@ import type { MayorAgenda } from './types/agenda';
 import type { ColonySnapshot } from './types/colony';
 import type { RimAIStatus } from './types/status';
 
-type TabKey = 'agenda' | 'alerts' | 'briefing' | 'log' | 'autonomy';
+type TabKey = 'agenda' | 'prompt' | 'alerts' | 'briefing' | 'log' | 'autonomy';
 
 const tabs: Array<{ key: TabKey; label: string; ready: boolean; note?: string }> = [
   { key: 'agenda',   label: 'Agenda',   ready: true },
+  { key: 'prompt',   label: 'Prompt',   ready: true },
   { key: 'alerts',   label: 'Alerts',   ready: false, note: 'Coming in M5' },
   { key: 'briefing', label: 'Briefing', ready: false, note: 'Coming in M1+' },
   { key: 'log',      label: 'Log',      ready: false, note: 'Coming in M2' },
@@ -188,7 +189,12 @@ export default function App() {
 
         <section className="main-console panel-box">
           {active === 'agenda' && <AgendaTab agenda={agenda} previous={previous} status={status} />}
-          {active !== 'agenda' && (
+          {active === 'prompt' && (
+            <div className="prompt-page">
+              <PromptFull />
+            </div>
+          )}
+          {active !== 'agenda' && active !== 'prompt' && (
             <div className="empty-console">
               <span className="empty-code">MODULE LOCKED</span>
               {tabs.find(t => t.key === active)?.note ?? 'Coming soon'}
