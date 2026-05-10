@@ -79,7 +79,7 @@ Labor's refinement will evolve the solver toward optimal assignment — recognis
 | `skill_gap_flag` | SkillGap exists for > 1 in-game day | Emit Medium flag to CoS: colony lacks skill X |
 
 **Escalates when (< 5%):**
-- Conflicting Critical requests that can't both be satisfied (Defense vs Agriculture both Critical)
+- Conflicting Critical requests that can't both be satisfied (Defense vs Food both Critical)
 - Unusual pawn state (mind-controlled, berserk, wedding) — defer or flag
 
 ---

@@ -46,7 +46,7 @@ RunRefinement()
   → Promote approved changes to Rules.cs  ← "rule promotion"
 ```
 
-Each minister **owns its own pushback list** — the player's natural-language explanations of why that minister was wrong. Pushbacks are scoped: the Mayor doesn't see Agriculture's pushbacks. They flow into the issuing minister's next prompt as "recent player corrections" (M5) and serve as the refinement corpus (M6). Implicit state-diff is *not* part of MVP — see [`advice.md`](advice.md).
+Each minister **owns its own pushback list** — the player's natural-language explanations of why that minister was wrong. Pushbacks are scoped: the Mayor doesn't see Food's pushbacks. They flow into the issuing minister's next prompt as "recent player corrections" (M5) and serve as the refinement corpus (M6). Implicit state-diff is *not* part of MVP — see [`advice.md`](advice.md).
 
 Refinement IS the minister. Not a separate agent — the same minister in a different mode, with different tools available (code read/write, fixture runner) and different context (its pushback list instead of a briefing).
 
@@ -129,11 +129,50 @@ See [`advice.md`](advice.md) for the full `AdviceItem` schema and feedback lifec
 
 The rules layer is a C# class per minister. Pure, no I/O, deterministic.
 
-**It should handle the common case.** Escalation rate varies by minister — Labor and Agriculture are mostly mechanical, Mayor and CoS are mostly judgment. Targets get calibrated per minister once it's shipped; the improve loop drives them down over time.
+**It should handle the common case.** Escalation rate varies by minister — Labor and Food are mostly mechanical, Mayor and CoS are mostly judgment. Targets get calibrated per minister once it's shipped; the improve loop drives them down over time.
 
 **Authoring rules:** write the most important rule first (the one that handles the highest-frequency case), then the second most important, etc. The Evaluate method tries rules in priority order and returns on first match. An unmatched briefing escalates.
 
 **Keeping rules honest:** every rule has a name (string constant). Decision log records which rule fired. Bad outcomes with the same rule name → that rule is a candidate for revision.
+
+---
+
+## Cabinet domain ownership
+
+Each minister owns either a production chain or a well-defined subsystem:
+
+| Minister | Boundary |
+|---|---|
+| Food | Nutrition chain: wild harvest, crop production, hunting-for-food, butchering, cooking, meals, food stockpiles, freezer integrity |
+| Defense | Threat response: raids, drafted combat, fortifications as defensive intent, weapons/ammo readiness |
+| Construction | Built infrastructure: rooms, power, production buildings, material stockpiles, layout efficiency, non-defense blueprints |
+| Welfare | Pawn wellbeing: mood, recreation, schedules, relationships, hospital/medical sub-block until CMO graduates |
+| Mayor | Colony-wide strategy and posture; owns no routine operational action |
+| Chief of Staff | Flag triage and conflict arbitration; owns no direct production chain |
+| Labor | Deferred Auto-epic assignment solver; owns pawn allocation only after Auto re-engages |
+
+### Resource requests
+
+Ministers may request resources needed to satisfy their domain: tiles, labor capacity, items, buildings, bills, stockpile space, or attention from another subsystem. In MVP those requests are advisory only: they appear in `AdviceItem.suggested_actions[]` and/or `AgentFlag.Requests`. A request does not grant ownership of the target resource and does not execute anything.
+
+At Auto graduation, requests become inputs to the deferred planning/Labor path. Until then, "Food requests 2 cooks" means "tell the player cooking labor is needed," not "Food changes pawn priorities."
+
+### First-pass action ownership map
+
+Clear-cut actions get a primary owner now:
+
+| Action family | Primary minister | Notes |
+|---|---|---|
+| Sow/harvest crops, choose food crops, harvest wild berries/agave | Food | Drug/textile crops remain a hard case until Trade/Treasury exists |
+| Hunt for food, butcher, cook meals, set cook/butcher bills | Food | Combat risk from dangerous animals can raise a Defense flag |
+| Food stockpiles, freezer capacity, freezer temperature | Food | Construction may be requested to build coolers/walls; Food owns the need |
+| Build rooms, walls, doors, workstations, power, storage for materials | Construction | Defensive structures are Defense intent with Construction as build executor in Suggest text |
+| Draft/undraft, defensive positioning, weapon readiness, traps/turrets/killbox intent | Defense | Pawn allocation remains player/Labor in Suggest mode |
+| Recreation, schedules, medical care, mood interventions, social risk | Welfare | CMO may split out later if medical complexity earns it |
+| Research target | Mayor for strategic direction, candidate Research minister later | Clear operational owner deferred |
+| Trade/caravan/economy actions | Candidate Trade/Treasury minister later | For now ministers emit flags or Mayor agenda items |
+
+Hard cases are intentionally left unresolved until first-pass ministers ship and advice logs show where complexity accumulates.
 
 ---
 
@@ -172,7 +211,7 @@ Each minister has a fixture suite: a set of canned briefings with known-good exp
 
 ```
 Tests/
-└── Agriculture/
+└── Food/
     └── Fixtures/
         ├── food-shortage-day-40.json        # briefing + expected goals
         ├── fall-harvest-window.json
@@ -206,18 +245,18 @@ Zones (stockpile, growing, dumping, home, allowed) are owned by the minister who
 
 | Zone type | Owning minister | Notes |
 |---|---|---|
-| Food stockpile | Agriculture | Co-located with freezer; minister knows food quantities and spoilage risk |
+| Food stockpile | Food | Co-located with freezer; minister knows food quantities and spoilage risk |
 | Material / component stockpile | Construction | Co-located with workshops; minister knows material flow and build queue |
 | Ammo / weapon stockpile | Defense | Near killbox or armoury |
 | Medicine stockpile | Welfare | Near hospital; minister tracks medical supply chain |
-| Growing zone | Agriculture | Placement, size, crop assignment |
+| Growing zone | Food | Placement, size, crop assignment |
 | Dumping zone | Construction | Rock chunks, corpses, waste — base hygiene |
 | Home zone | Mayor / CoS | Colony-wide; no minister claims it |
 | Allowed zone | Mayor / CoS | Colony-wide; no minister claims it |
 
 **In Suggest mode:** conflicting zone advice from two ministers surfaces as two cards on the dashboard. The player resolves it. No system-level arbitration needed.
 
-**At M7 (Auto graduation):** when zone suggestions can be auto-applied via RIMAPI, the CoS gets a zone-conflict resolution rule. Last-write-wins is not acceptable; CoS arbitrates by domain priority for contested tiles: Defense > Agriculture > Construction > Welfare.
+**At M7 (Auto graduation):** when zone suggestions can be auto-applied via RIMAPI, the CoS gets a zone-conflict resolution rule. Last-write-wins is not acceptable; CoS arbitrates by domain priority for contested tiles: Defense > Food > Construction > Welfare.
 
 **Layout efficiency** (pawn travel distance, zone placement relative to workstations) is owned by **Construction** as an extension of its `RoomProgram` brief — not a new minister. See `design/ministers/construction.md`.
 

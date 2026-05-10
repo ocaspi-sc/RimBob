@@ -15,7 +15,7 @@ Ground minister reasoning in actual RimWorld community knowledge rather than rel
 **Tier 1 — System prompt (evergreen content)**
 Distilled, stable strategic knowledge baked into each minister's system prompt. Cached at the LLM API layer (prompt caching). Does not hit the vector store.
 
-- Agriculture: crop choice rules, seasonal priorities, food math
+- Food: crop choice rules, seasonal priorities, food math
 - Defense: raid tier benchmarks, killbox principles, weapon recommendations
 - Construction: build order heuristics, material choices, power math
 - Welfare: mood modifier sources, recreation building efficiency
@@ -42,10 +42,10 @@ flowchart TD
     State --> Derivation["MayorBriefingDerivation"]
     Derivation --> Briefing["MayorBriefing<br/>derived colony facts"]
 
-    Briefing --> Rules["MayorRules"]
+    Briefing --> Rules["MayorAgendaRules"]
     Rules --> Directives["agenda_directives<br/>rule-generated constraints"]
 
-    Briefing --> Query["MayorRetriever.BuildQuery"]
+    Briefing --> Query["MayorRagRetriever.BuildQuery"]
     Directives --> Query
     Query --> QueryEmbedding["Gemini query embedding"]
 
@@ -55,21 +55,21 @@ flowchart TD
     Cache --> KB["KnowledgeBase<br/>in-process cosine store"]
 
     QueryEmbedding --> KB
-    KB --> Citations["Citation[]<br/>g1, g2, ... snippets"]
+    KB --> GuideCitations["GuideCitation[]<br/>g1, g2, ... snippets"]
 
     Briefing --> Prompt["PromptBuilder"]
     Directives --> Prompt
-    Citations --> Prompt
+    GuideCitations --> Prompt
     Prompt --> LLM["Mayor LLM call"]
     LLM --> AgendaInput["MayorAgendaInput<br/>may include item cite_ids"]
-    Citations --> Stamp["Server stamps full citations"]
+    GuideCitations --> Stamp["Server stamps full guide_citations"]
     AgendaInput --> Stamp
     Stamp --> Agenda["MayorAgenda"]
     Agenda --> Store["AgendaStore + AdviceBus"]
     Store --> Dashboard["Dashboard / SSE"]
 ```
 
-`MayorBriefingDerivation` answers "what is true about the colony?" and writes structured facts. `MayorRules` answers "what must the Mayor pay attention to?" and writes agenda directives. `MayorRetriever` uses both the facts and directives to retrieve guide passages before the Mayor LLM call.
+`MayorBriefingDerivation` answers "what is true about the colony?" and writes structured facts. `MayorAgendaRules` answers "what must the Mayor pay attention to?" and writes agenda directives. `MayorRagRetriever` uses both the facts and directives to retrieve guide passages before the Mayor LLM call.
 
 ### In-process cosine store
 
@@ -121,7 +121,7 @@ Each minister session should identify which guides are most relevant and add the
 
 | Minister | Guides to add |
 |---|---|
-| Agriculture | RimWorld wiki crop tables, food math guide |
+| Food | RimWorld wiki crop tables, food math guide |
 | Defense | Killbox guide, raid composition wiki, mechanoid guide |
 | Construction | Power math, room stats (beauty, cleanliness), biome-specific tips |
 | Welfare | Mood modifier reference, recreation building guide |
@@ -152,7 +152,7 @@ Retrieval only runs on the LLM escalation path. Rules evaluations don't use RAG.
 A rule can flag that it needs guide knowledge before it can fire:
 
 ```csharp
-// In Agriculture Rules.cs
+// In Food Rules.cs
 if (briefing.Season == Season.Fall && briefing.DaysToWinter < 15)
 {
     // This decision benefits from guide knowledge — escalate with context
@@ -172,17 +172,17 @@ The escalation reason flags that RAG retrieval for "devilstrand harvest timing" 
 - **Embedding model:** Gemini `gemini-embedding-001` via `Google.GenAI` 1.6.1. Configured under `RimAi:Rag:EmbeddingModel`. (`text-embedding-004` was the original choice but is not exposed on the v1beta endpoint that the SDK currently targets.) 3072-dim by default; free tier handles the current ~50-chunk corpus.
 - **Chunking:** semantic by H1/H2/H3 markdown headings. Sections exceeding `Ingest.MaxChunkChars` (≈ 800 tokens) are split on paragraph boundaries; deeper headings (H4+) stay inside the parent chunk. Implementation: `Src/KnowledgeBase/Ingest.cs::SplitByHeadings`.
 - **Cache:** SHA-256-keyed JSON files under `var/embeddings/` (configurable via `RimAi:Rag:CacheRoot`). Append-only for M2 — corpus is small; GC is post-MVP.
-- **Retrieval:** `MayorRetriever` builds a query string from the briefing (date, season, food, threat, wealth, weather, research, plus agenda directives) and pulls `topK` chunks. Disabled (or missing-key) cleanly short-circuits to an empty list — the Mayor still runs.
-- **Tier 1 status:** evergreen prompt distillation is not part of the shipped M2 implementation. The Mayor currently consumes guide knowledge through Tier 2 `retrieved_guides[]`; distillation is a follow-up if prompt traces show under-use of retrieved passages.
+- **Retrieval:** `MayorRagRetriever` builds a query string from the briefing (date, season, food, threat, wealth, weather, research, plus agenda directives) and pulls `topK` chunks. Disabled (or missing-key) cleanly short-circuits to an empty list — the Mayor still runs.
+- **Tier 1 status:** evergreen prompt distillation is not part of the shipped M2 implementation. The Mayor currently consumes guide knowledge through Tier 2 `guide_context[]`; distillation is a follow-up if prompt traces show under-use of retrieved passages.
 
-### Citation rendering
+### GuideCitation rendering
 
-Each retrieved chunk becomes a `Citation { cite_id, source_path, heading, snippet }` (snippet truncated to ~320 chars). The Mayor's prompt receives them as a `retrieved_guides[]` array; the LLM may attach `cite_id`s to specific `short_term[]` / `long_term[]` items via the optional `cite_ids` field. The Mayor's `MayorAgenda.citations[]` is server-stamped from the retriever's output regardless of what the LLM emits, so the dashboard always has the snippet text to render.
+Each retrieved chunk becomes a `GuideCitation { cite_id, source_path, heading, snippet }` (snippet truncated to ~320 chars). The Mayor's prompt receives them as a `guide_context[]` array; the LLM may attach `cite_id`s to specific `short_term[]` / `long_term[]` items via the optional `cite_ids` field. The Mayor's `MayorAgenda.guide_citations[]` is server-stamped from the retriever's output regardless of what the LLM emits, so the dashboard always has the snippet text to render.
 
-When `RimAi:Rag:Enabled` is `false`, retrieval is skipped, `retrieved_guides` is omitted from the prompt, and `MayorAgenda.citations` is empty.
+When `RimAi:Rag:Enabled` is `false`, retrieval is skipped, `guide_context` is omitted from the prompt, and `MayorAgenda.guide_citations` is empty.
 
 ## Open questions
 
 - [ ] Guide freshness: RimWorld updates change mechanics. How do we flag stale guide content?
-- [ ] Per-minister guide curation: who decides which guides are relevant? Add to each minister's session scope (re-engaged at M3 when Agriculture lands).
+- [ ] Per-minister guide curation: who decides which guides are relevant? Add to each minister's session scope (re-engaged at M3 when Food lands).
 - [ ] Tier 1 (evergreen content baked into system prompts): not yet implemented — Mayor still relies on Tier 2 retrieval for guide knowledge. Revisit once we measure the Mayor under-using Tier 2 hits.

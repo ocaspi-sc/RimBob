@@ -61,7 +61,7 @@ Views (briefings) cache themselves keyed by the versions of the aggregates they 
 if (foodBriefingCache.InputVersions == currentVersions)
     return foodBriefingCache.Value;
 
-var briefing = ComputeAgricultureBriefing(colonists, stockpiles, map, ...);
+var briefing = ComputeFoodBriefing(colonists, stockpiles, map, ...);
 foodBriefingCache = new Cache(briefing, currentVersions);
 return briefing;
 ```
@@ -84,7 +84,7 @@ Ingestion cadence is independent from minister LLM cadence. Pollers keep aggrega
 
 **No push/SSE needed.** RIMAPI's SSE endpoints stream camera video, not game events. Polling at RimWorld's timescale is sufficient — a raid letter sits in the stack for minutes. The event-diff tier detects new entries by comparing a snapshot hash or count against the previous poll.
 
-> **M1 status:** the cadence tiers above are **not yet implemented**. M1 ships an explicit `IngestionDispatcher.RefreshAllAsync()` that pulls every needed endpoint in one parallel batch. The daily-tick poller (separate TODO) calls it once per in-game day. Tier-based pollers come online when a second consumer (M3 Agriculture) needs faster cadence than once-a-day.
+> **M1 status:** the cadence tiers above are **not yet implemented**. M1 ships an explicit `IngestionDispatcher.RefreshAllAsync()` that pulls every needed endpoint in one parallel batch. The daily-tick poller (separate TODO) calls it once per in-game day. Tier-based pollers come online when a second consumer (M3 Food) needs faster cadence than once-a-day.
 
 ### Event-diff: what to watch
 Informed by RimGPT's Harmony patch catalog — these are the signals that drive minister decisions:
@@ -108,9 +108,9 @@ Informed by RimGPT's Harmony patch catalog — these are the signals that drive 
 
 Each minister gets exactly one briefing object — its complete view for reasoning. Tight, focused, ~500 tokens when serialised for the LLM. This is the primary quality lever.
 
-**Agriculture:**
+### Food
 ```
-AgricultureBriefing
+FoodBriefing
 ├── DaysOfFoodRemaining         (derived: stockpile / daily consumption rate)
 ├── FoodStockpile               (counts by food type)
 ├── ActiveGrowingZones          (zone, crop, growth %, expected yield, days to harvest)
@@ -118,7 +118,8 @@ AgricultureBriefing
 ├── SeasonContext               (current season, days to next, growing period remaining)
 ├── ColdSnapForecast            (from weather + season model)
 ├── HuntingTargets              (nearby huntable animals, value/risk ratio)
-├── KitchenState                (cooks available, food poisoning risk level)
+├── KitchenState                (cooks available, food poisoning risk level, cook bills)
+├── ButcheryState               (butcher table, corpse/meat backlog, butcher bills)
 ├── FreezerCapacity             (used / total, current temperature, at-risk items)
 ├── ActiveThreats               (bool — don't plant during a raid)
 └── RecentEvents                (last 24h: harvests, spoilage, food-related incidents)
@@ -179,7 +180,7 @@ LaborBriefing
 A `TrendBuffer<T>` ring buffer per tracked scalar metric. Sampled every in-game hour, retained for 7 in-game days. Used by ministers reasoning about trajectories.
 
 ```csharp
-TrendBuffer<float> foodTrend;     // Agriculture watches velocity
+TrendBuffer<float> foodTrend;     // Food watches velocity
 TrendBuffer<float> moodTrend;     // Welfare watches slope
 TrendBuffer<float> wealthTrend;   // future Treasury watches velocity
 TrendBuffer<int>   threatTrend;   // Defense watches raid-point growth

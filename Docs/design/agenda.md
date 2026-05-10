@@ -1,7 +1,7 @@
 # RimAI — The Mayor's Agenda
 
 > **Living document.** See `CLAUDE.md` for update rules.
-> Slice: M1 (Agenda replaces daily_digest as Mayor's advice output) → M3 (minister_direction consumed by feeder ministers) → M5 (tactical alerts join Alerts tab).
+> Slice: M1 (Agenda replaces daily_digest as Mayor's advice output) → M3 (cabinet_direction consumed by feeder ministers) → M5 (tactical alerts join Alerts tab).
 
 ---
 
@@ -32,7 +32,7 @@ Each bullet is a free-text string. The Mayor writes what it wants; there is no s
   },
 
   "state_of_the_union": {
-    "agriculture":  "Food covers 18 days against winter in 20 — tight, not red.",
+    "food":  "Food covers 18 days against winter in 20 — tight, not red.",
     "defense":      "East wall has a known gap, untested. No active threats.",
     "welfare":      "Six colonists healthy; mood steady at 72%; no break risks.",
     "construction": "Freezer running, power comfortable, no damaged buildings.",
@@ -53,13 +53,13 @@ Each bullet is a free-text string. The Mayor writes what it wants; there is no s
     { "id": "lt_2", "text": "Base expansion deferred to year 2, after wealth velocity recovers.", "status": "deferred" }
   ],
 
-  "minister_direction": {
-    "Agriculture": "Focus on winter-prep angles: growing adequacy, stockpile, freezer capacity. Hold expansion.",
+  "cabinet_direction": {
+    "Food": "Focus on winter-prep angles: growing adequacy, stockpile, freezer capacity. Hold expansion.",
     "Defense":     "Light posture. Note the east-wall gap; patrol scheduling.",
     "Welfare":     "Watch mood through the cold snap. Flag anyone near a mental break."
   },
 
-  "citations": [
+  "guide_citations": [
     {
       "cite_id":     "g1",
       "source_path": "guides/strategic-plan-y1-y2.md",
@@ -76,7 +76,7 @@ Each bullet is a free-text string. The Mayor writes what it wants; there is no s
 
 **`generated_at`** — ISO 8601 UTC timestamp stamped by `AgendaStore.Update` (server-side, not the LLM). Lets the dashboard show "Updated 2 min ago" without depending on the in-game tick clock.
 
-**`state_of_the_union`** — `Record<string, string>` keyed by category. Allowed keys: `agriculture`, `defense`, `welfare`, `construction`, `treasury`, `research`. The Mayor emits one terse sentence per relevant category and may omit a key entirely when nothing's worth flagging. Each value leads with its category emoji (🌾 🛡️ ❤️ 🔨 💰 🔬), emitted by the Mayor — the dashboard renders the value verbatim and no longer maps category → icon. Raw colony numbers (wealth, food days, tick) live in the sidebar; this field is the *interpretation*, not the readout.
+**`state_of_the_union`** — `Record<string, string>` keyed by category. Allowed keys: `food`, `defense`, `welfare`, `construction`, `treasury`, `research`. The Mayor emits one terse sentence per relevant category and may omit a key entirely when nothing's worth flagging. Raw colony numbers (wealth, food days, tick) live in the sidebar; this field is the *interpretation*, not the readout.
 
 **`update_notes`** — one or two sentences the Mayor writes explaining what changed since the previous version. The player's daily delta briefing. Kept short (~50–100 words).
 
@@ -88,9 +88,9 @@ Each bullet is a free-text string. The Mayor writes what it wants; there is no s
 
 **`long_term[].status`** — same enum as `short_term`.
 
-**`minister_direction`** — only present for active ministers (M3+). Absent in M1. Plain-English direction injected into each minister's LLM prompt as a prefix. Not parsed by code.
+**`cabinet_direction`** — only present for active ministers (M3+). Absent in M1. Plain-English direction injected into each minister's LLM prompt as a prefix. Not parsed by code.
 
-**`citations`** — server-stamped list of guide passages retrieved for this turn (M2 RAG). Each entry: `{ cite_id, source_path, heading, snippet }`. The dashboard renders these as footnotes/hover cards alongside short_term and long_term items. Empty when RAG is disabled (`RimAi:Rag:Enabled = false`) or no key is configured. The Mayor may reference a citation from a specific bullet via `short_term[i].cite_ids` / `long_term[i].cite_ids` (optional, omitted when no bullet directly leans on a passage). See [`design/rag.md`](rag.md).
+**`guide_citations`** — server-stamped list of guide passages retrieved for this turn (M2 RAG). Each entry: `{ cite_id, source_path, heading, snippet }`. The dashboard renders these as footnotes/hover cards alongside short_term and long_term items. Empty when RAG is disabled (`RimAi:Rag:Enabled = false`) or no key is configured. The Mayor may reference a citation from a specific bullet via `short_term[i].cite_ids` / `long_term[i].cite_ids` (optional, omitted when no bullet directly leans on a passage). See [`design/rag.md`](rag.md).
 
 ---
 
@@ -160,7 +160,7 @@ The Agenda tab is the **primary** dashboard tab in MVP (replaces "Memos").
 │  "Hold wealth, shore up food before winter."     │   When  12 Jul │
 ├──────────────────────────────────────────────────┤   Winter in 20d│
 │  State of the Union                              │  ─ People      │
-│   🌾 Agriculture  Food covers 18d vs winter in 20│   Total      6 │
+│   Food            Food covers 18d vs winter in 20│   Total      6 │
 │   🛡️ Defense      East wall gap, no active raid │   Adults     6 │
 │   ❤️ Welfare      Mood 72%, no break risks       │  ─ Mood        │
 │   🔨 Construction Freezer running, power +120 W  │   Average  72% │
@@ -196,7 +196,7 @@ When a feeder minister's rules layer or LLM prompt runs, it receives from the br
 public class MinisterBriefingContext
 {
     public MayorPosture Posture         { get; }  // economic + military stance
-    public string?      AgendaDirection { get; }  // minister_direction[ministerName], null in M1
+    public string?      AgendaDirection { get; }  // cabinet_direction[ministerName], null in M1
 }
 ```
 
@@ -216,7 +216,7 @@ id: <version>
 data: { ...full MayorAgenda }
 ```
 
-The `data` is the full `MayorAgenda` JSON — `version`, `updated_in_game_tick`, `update_notes`, `posture`, `state_of_the_union`, `short_term`, `long_term`, `minister_direction`. SSE `id` mirrors `version` so EventSource resume works.
+The `data` is the full `MayorAgenda` JSON — `version`, `updated_in_game_tick`, `update_notes`, `posture`, `state_of_the_union`, `short_term`, `long_term`, `cabinet_direction`. SSE `id` mirrors `version` so EventSource resume works.
 
 On connect, the server replays the current Agenda as a single `agenda_update` event before the live feed begins. If no Agenda exists yet (Host just started, no day has rolled), the connection stays open and the dashboard sees its first `agenda_update` when the Mayor's first turn fires.
 
@@ -241,4 +241,4 @@ Body: same `FeedbackEvent` shape as `/api/advice/{id}/feedback`, with `source: "
 - [ ] Should short-term bullets be capped (e.g. 5)? A hard cap forces the Mayor to rank and cut rather than surfacing everything.
 - [ ] Should the player be able to manually mark a short-term bullet complete mid-day, or does only the Mayor mark completion on the next turn?
 - [ ] Long-term items: feedback buttons in a future milestone, or permanently informational?
-- [ ] `minister_direction` is free-text — sufficient for prompt-inject in M3, but if the rules layer needs to parse direction cheaply, may need lightweight structure later.
+- [ ] `cabinet_direction` is free-text — sufficient for prompt-inject in M3, but if the rules layer needs to parse direction cheaply, may need lightweight structure later.

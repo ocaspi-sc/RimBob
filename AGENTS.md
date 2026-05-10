@@ -29,12 +29,13 @@ The trigger phrases below are reinforcements, not the only condition. If any of 
 | Advice schema, feedback lifecycle, autonomy dial | `Docs/design/advice.md` |
 | Dashboard UI, HTTP+SSE contract, auth posture | `Docs/design/dashboard.md` |
 | State store, briefings, aggregates | `Docs/design/state-store.md` |
-| Mayor's Agenda: living plan, minister_direction, dashboard, API | `Docs/design/agenda.md` |
+| Mayor's Agenda: living plan, cabinet_direction, dashboard, API | `Docs/design/agenda.md` |
 | Flags, inter-minister communication | `Docs/design/communication.md` |
 | RAG, knowledge base | `Docs/design/rag.md` |
 | Evaluation, improvement loop | `Docs/design/evaluation.md` |
 | Code structure, stack, interfaces | `Docs/design/architecture.md` |
 | RIMAPI endpoints, conventions, controller catalogue | [`Docs/design/rimapi.md`](Docs/design/RimAPI.md) |
+| Food minister, food chain, harvesting/cooking/storage | `Docs/design/ministers/food.md` |
 | Specific minister | `Docs/design/ministers/<name>.md` |
 | HTN, planning *(deferred — Auto epic)* | `Docs/design/planning.md` |
 | Labor / assignment solver *(deferred — Auto epic)* | `Docs/design/ministers/labor.md` |

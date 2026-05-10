@@ -39,7 +39,7 @@ Flag triage and conflict arbitration. The CoS sits between the cabinet and the M
     {
       "flag_id": "...",
       "action": "forward_to_mayor | resolve | downgrade | defer",
-      "priority_ruling": "agriculture_wins | defense_wins | split",
+      "priority_ruling": "food_wins | defense_wins | split",
       "rationale": "..."
     }
   ],
@@ -59,5 +59,5 @@ Flag triage and conflict arbitration. The CoS sits between the cabinet and the M
 
 - [ ] Define exact resolution action enum
 - [ ] Should CoS have its own briefing, or just read the flag channel?
-- [ ] How does CoS handle three-way contention (Construction, Defense, and Agriculture all want the same colonist at High)?
+- [ ] How does CoS handle three-way contention (Construction, Defense, and Food all want the same colonist at High)?
 - [ ] Flag aging: should Low flags auto-escalate to Medium after N in-game hours of being ignored?

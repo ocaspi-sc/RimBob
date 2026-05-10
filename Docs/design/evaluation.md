@@ -18,7 +18,7 @@ Every decision — whether from the rules layer or LLM escalation — writes one
 
 ```json
 {
-  "minister": "Agriculture",
+  "minister": "Food",
   "tick": "Y1Q3D7H14",
   "tick_sequence": 4820,
   "trigger": "briefing_change | flag | heartbeat",
@@ -66,7 +66,7 @@ A background process runs every in-game day. For each decision where `outcome_wi
 2. Compute direction: improved / stable / degraded.
 3. Write `observed_outcome` into the log.
 
-Attribution is approximate — a colony is a complex system and many things happen simultaneously. But gross direction over a reasonable window (e.g., did food go up or down after Agriculture decided to expand zones?) is signal enough for refinement.
+Attribution is approximate — a colony is a complex system and many things happen simultaneously. But gross direction over a reasonable window (e.g., did food go up or down after Food decided to expand zones?) is signal enough for refinement.
 
 ---
 

@@ -33,7 +33,7 @@ Planning = recursive expansion: take the top-level compound (from the LLM's top-
 Each minister registers its domain at startup. The planner engine is shared; the domains are per-minister.
 
 ```csharp
-planner.RegisterDomain(new AgricultureDomain());
+planner.RegisterDomain(new FoodDomain());
 planner.RegisterDomain(new DefenseDomain());
 // etc.
 ```
@@ -57,7 +57,7 @@ Forward simulation belongs at the Mayor/CoS level for multi-day strategic trades
 
 **Fresh plan each run.** No patching across runs. Compounds are small; a stale plan is more dangerous than a recomputed one.
 
-### Example domain (Agriculture)
+### Example domain (Food)
 
 ```
 Compound: EnsureFoodSecurity
@@ -115,6 +115,6 @@ Stuck-primitive detection is a first-class concern, not an afterthought. It is t
 
 ## Open questions
 
-- [ ] How are compound tasks versioned? (If Agriculture adds a new method mid-playthrough, does the in-progress plan replan?)
+- [ ] How are compound tasks versioned? (If Food adds a new method mid-playthrough, does the in-progress plan replan?)
 - [ ] Priority inheritance: if a High request spawns a Critical sub-request, does the sub-request inherit Critical?
 - [ ] Stuck timeout values — need calibration against real RIMAPI response times

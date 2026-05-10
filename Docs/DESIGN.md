@@ -75,7 +75,7 @@ Every minister has the same shape: a rules layer that handles routine cases, esc
 
 | Minister | Domain |
 |---|---|
-| **Minister of Agriculture** | Food, farming, hunting, cooking, freezer |
+| **Minister of Food** | Full food chain: harvesting, farming, hunting, cooking, storage, freezer |
 | **Defense Minister** | Raids, combat, fortifications |
 | **Minister of Construction** | Buildings, power, layout (placement deferred) |
 | **Minister of Welfare** | Mood, recreation, schedules, relationships |
@@ -90,6 +90,14 @@ Every minister has the same shape: a rules layer that handles routine cases, esc
 ### Candidate ministers (post-MVP)
 
 Spun out from a host minister when its rules and prompts can't keep up — e.g. medical reasoning leaving Welfare, base layout leaving Construction, trade strategy leaving Welfare. Promoted case-by-case; no pre-allocated roster.
+
+---
+
+### Cabinet boundary rule
+
+Each minister owns either a production chain or a well-defined subsystem. Food owns the full nutrition chain from acquisition to cooked meals and freezer/storage integrity. Defense owns the threat-response subsystem. Construction owns built infrastructure, power, rooms, and material flow. Welfare owns pawn wellbeing, medical sub-blocks, schedules, and social/recreation systems.
+
+Every in-game action should eventually map to one primary owning minister. The first pass maps only clear-cut actions; contested cases are documented as open questions until their ownership is justified by actual advice/rule complexity.
 
 ---
 
@@ -147,11 +155,12 @@ Decisions made and the reasoning behind them. Append; do not delete.
 | Mayor's output is the Agenda, not a daily_digest AdviceItem | A living planning document (short-term priorities + long-term goals, updated once/day) is a more natural advisory voice than a one-shot memo — it has persistent state, delta signals, and a clean Mayor→ministers direction channel. The Agenda *is* the MVP advice; AdviceItems survive as the feeder-minister format (M3+). → [`design/agenda.md`](design/agenda.md) |
 | Refinement / dev agents may shell out to Claude Code via prompt files | Two-tier model: in-process Gemini for fast schema-bound play decisions; Claude Code (subprocess, prompt file in `.plans/`) for code-shaped work — drafting `Rules.cs` diffs, generating fixtures, bootstrapping a new minister's initial automations. Stronger model + full repo tool access where it matters; no bespoke agent-SDK integration. → [`design/evaluation.md`](design/evaluation.md) |
 | Mayor wakes on Host startup, not only on day rollover | Original M1 deferred firing the Mayor until the first in-game day rolled over so we'd never publish a "fake" agenda from cold state. In practice that left the dashboard blank for 24 in-game minutes per session — the player can't tell whether the system is alive. `DayTickOrchestrator` now fires Mayor on the first successful poll (after a full `IngestionDispatcher.RefreshAllAsync`), so the dashboard is useful within ~15s of Host start. The same orchestrator drives subsequent rollovers. |
-| `state_of_the_union` is a per-category dict, not a paragraph | A 100–200 word paragraph mixed strategy with raw numbers and was hard to skim during play. Splitting into one terse sentence per category (`agriculture`, `defense`, `welfare`, `construction`, `treasury`, `research`) lets the dashboard render an emoji checklist that reads in one glance, and pairs cleanly with the new sidebar (which carries the raw numbers). The Mayor's job is the interpretation; the sidebar is the readout. → [`design/agenda.md`](design/agenda.md) |
+| `state_of_the_union` is a per-category dict, not a paragraph | A 100–200 word paragraph mixed strategy with raw numbers and was hard to skim during play. Splitting into one terse sentence per category (`food`, `defense`, `welfare`, `construction`, `treasury`, `research`) lets the dashboard render a checklist that reads in one glance, and pairs cleanly with the new sidebar (which carries the raw numbers). The Mayor's job is the interpretation; the sidebar is the readout. → [`design/agenda.md`](design/agenda.md) |
 | Dashboard sidebar reads `MayorBriefing` directly via `/api/colony/snapshot` | Rather than threading the briefing through the agenda payload (which would couple the polled telemetry to the once-per-day agenda update), the sidebar polls the same `BriefingCache` the Mayor reads. One source of truth, two consumers, independent cadences. The agenda body can stay interpretive instead of repeating numbers. → [`design/dashboard.md`](design/dashboard.md) |
 | Demand-trigger: `POST /api/agenda/refresh` | Once the Mayor wakes on every day rollover and on Host start, the only remaining gap is the player wanting a fresh agenda *now* — after they've made a major change. A topbar "Refresh" button on the dashboard hits this endpoint, which runs the same ingestion + Mayor cycle. No body, no auth surface beyond localhost. |
 | Mayor briefing carries explicit `is_downed` / `is_dead` per colonist | The briefing was carrying a `Health < 0.30f` heuristic-derived `Medical.Downed` count and discarding the authoritative `is_downed` / `is_dead` flags RIMAPI v2 returns. `ColonistRecord` now stores both flags; `PawnLine` exposes `IsDowned`; `DeriveMedical` uses the flags directly; dead pawns are filtered out of the briefing entirely. → [`design/ministers/mayor.md`](design/ministers/mayor.md) |
 | Mayor system prompt collapses the strategic-frame doctrine | The prompt was 116 lines, dominated by ~33 lines of RimWorld doctrine (two-phase, wealth-velocity, chain-shotgun, posture-shift). Doctrine now lives in `design/ministers/mayor.md`; the prompt carries a six-line summary plus a doc cross-reference. Net effect: shorter prompt, lower hallucination surface, single source of truth for the strategy. The prompt also now mandates LLM-emitted category emojis on `state_of_the_union` values (the dashboard renders them verbatim). → [`design/ministers/mayor.md`](design/ministers/mayor.md), [`design/agenda.md`](design/agenda.md) |
+| Agriculture renamed Food; cabinet domains are production chains or crisp subsystems | "Agriculture" was too narrow for the actual owner of food security. The Food minister owns harvesting, farming, hunting, cooking, food stockpiles, freezer integrity, and food-chain resource requests. More broadly, each minister should own a production chain or clearly bounded subsystem; every game action should eventually have one primary owner. Clear-cut action ownership is mapped first, with hard cases left explicit. See [`design/ministers.md`](design/ministers.md) and [`design/ministers/food.md`](design/ministers/food.md). |
 
 ---
 
@@ -167,10 +176,10 @@ Decisions made and the reasoning behind them. Append; do not delete.
 | [`design/communication.md`](design/communication.md) | Flag schema, severity, inter-minister comms rules |
 | [`design/rag.md`](design/rag.md) | Knowledge base, ingestion, retrieval strategy |
 | [`design/evaluation.md`](design/evaluation.md) | Decision logging, improvement framework, fixture testing |
-| [`design/agenda.md`](design/agenda.md) | Mayor's Agenda: living plan schema, minister_direction interface, dashboard layout, API contract |
+| [`design/agenda.md`](design/agenda.md) | Mayor's Agenda: living plan schema, cabinet_direction interface, dashboard layout, API contract |
 | [`design/ministers/mayor.md`](design/ministers/mayor.md) | Mayor scope, Agenda update schema (MVP centerpiece) |
 | [`design/ministers/chief-of-staff.md`](design/ministers/chief-of-staff.md) | CoS scope, arbitration logic |
-| [`design/ministers/agriculture.md`](design/ministers/agriculture.md) | Agriculture scope, briefing, rules |
+| [`design/ministers/food.md`](design/ministers/food.md) | Food scope, briefing, rules |
 | [`design/ministers/defense.md`](design/ministers/defense.md) | Defense scope, briefing, rules |
 | [`design/ministers/construction.md`](design/ministers/construction.md) | Construction scope, briefing, rules |
 | [`design/ministers/welfare.md`](design/ministers/welfare.md) | Welfare scope, briefing, rules |

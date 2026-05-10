@@ -58,7 +58,7 @@ Core/
 │   └── EconomyLedger.cs
 ├── Briefings/
 │   ├── IBriefing.cs
-│   ├── AgricultureBriefing.cs
+│   ├── FoodBriefing.cs
 │   ├── DefenseBriefing.cs
 │   ├── ConstructionBriefing.cs
 │   ├── WelfareBriefing.cs
@@ -151,10 +151,10 @@ The cabinet ministers and their rules layers.
 
 ```
 Ministers/
-├── Agriculture/
-│   ├── MinisterOfAgriculture.cs
-│   ├── Rules.cs              // IMinisterRules<AgricultureBriefing>
-│   ├── AgricultureDomain.cs  // HTN domain registration
+├── Food/
+│   ├── MinisterOfFood.cs
+│   ├── Rules.cs              // IMinisterRules<FoodBriefing>
+│   ├── FoodDomain.cs         // HTN domain registration
 │   └── scope.md              // written after first slice ships
 ├── Defense/
 │   ├── DefenseMinister.cs
@@ -178,7 +178,7 @@ Ministers/
 │   └── scope.md
 ├── Mayor/
 │   ├── Mayor.cs
-│   ├── Rules.cs
+│   ├── MayorAgendaRules.cs
 │   └── scope.md
 └── ChiefOfStaff/
     ├── ChiefOfStaff.cs
@@ -196,7 +196,7 @@ LLM/
 ├── AdviceSchema.cs           // JSON schema for AdviceItem LLM output
 └── prompts/
     ├── mayor.system.md
-    ├── agriculture.system.md
+    ├── food.system.md
     ├── defense.system.md
     ├── construction.system.md
     ├── welfare.system.md
@@ -257,7 +257,7 @@ Dashboard/
 │   │   └── feedback.ts
 │   ├── components/
 │   │   ├── AgendaTab.tsx
-│   │   ├── AgendaItemCard.tsx   // Accept | Dismiss | Modify controls (M2 wires)
+│   │   ├── AgendaPriorityCard.tsx   // Accept | Dismiss | Modify controls (M2 wires)
 │   │   ├── BriefingInspector.tsx
 │   │   ├── DecisionLog.tsx
 │   │   └── AutonomyPanel.tsx    // per-minister Off | Suggest | Auto dial
@@ -316,7 +316,7 @@ public record AdviceItem(
     string             Body,
     string             Rationale,
     SuggestedAction[]  SuggestedActions,
-    string[]           Citations,
+    string[]           GuideCitationIds,
     DateTime           IssuedAt,
     DateTime           ExpiresAt
 );
@@ -362,7 +362,7 @@ Two event types are logged to `logs/decisions-YYYYMMDD.jsonl` (JSONL, one object
 
 ```json
 {
-  "minister":        "Agriculture",
+  "minister":        "Food",
   "tick":            "Y1Q3D7H14",
   "trigger":         "briefing_change",
   "briefing_version": 142,

@@ -133,7 +133,7 @@ Labor requests posted:
 
 ## Open questions / TODO
 
-- [ ] CMO graduation criteria: when does medical reasoning justify its own minister? (Likely: when CMO sub-block rules + escalations exceed Agriculture-level complexity)
+- [ ] CMO graduation criteria: when does medical reasoning justify its own minister? (Likely: when CMO sub-block rules + escalations exceed Food-level complexity)
 - [ ] Trade graduation criteria: when does caravan strategy justify its own minister?
 - [ ] How does Welfare handle ideology-specific mood modifiers? (Deferred until Ideology DLC scope)
 - [ ] Recreation building priority: which joy buildings first? (Horseshoe → chess → TV — define order in rules)

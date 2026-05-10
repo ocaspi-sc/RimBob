@@ -12,7 +12,7 @@
 | M1 | Mayor's Agenda spine — colony-wide briefing → Mayor LLM → versioned `MayorAgenda` rendered in the dashboard | Done |
 | M1.5 | Live operability — startup briefing, periodic ingestion, sidebar telemetry, on-demand Refresh, run-state + prompt-introspection endpoints | Done |
 | M2 | Grounded reasoning (RAG) — Mayor cites guide passages; measurable agenda-quality improvement before adding feeders | Done |
-| M3 | First feeder advisor (Agriculture) — sub-briefing into the Mayor; first cross-minister flag | Not started |
+| M3 | First feeder advisor (Food) — sub-briefing into the Mayor; first cross-minister flag | Not started |
 | M4 | Cabinet of advisors — Defense, Construction, Welfare feeding the Mayor; severity-gated tactical alerts surface independently of the daily digest | Not started |
 | M5 | Feedback loop — Accept / Dismiss / Pushback wired; each minister owns and persists its own pushback list | Not started |
 | M6 | Refinement loop closes — pushbacks drive the first promoted rule per minister | Not started |
@@ -47,7 +47,7 @@
 - `ColonistRegistry` + `StockpileLedger` + related aggregates feeding `MayorBriefing` (food, mood, threat, wealth, weather, research).
 - `DayTickOrchestrator` wakes the Mayor on in-game day rollover.
 - `MayorBriefing` aggregating across domains.
-- `MayorAgenda` / `MayorAgendaInput` / `AgendaItem` / `MayorPosture` / `AutonomyMode` / `FeedbackEvent` types in `Core/Advice/`.
+- `MayorAgenda` / `MayorAgendaInput` / `AgendaPriority` / `MayorPosture` / `AutonomyMode` / `FeedbackEvent` types in `Core/Advice/`.
 - `AdviceBus` in-process emitter; `AgendaStore` with 30-day history ring.
 - Mayor system prompt rewritten for Agenda output (state_of_the_union, update_notes, short_term ≤5, long_term, posture).
 - `LlmClient.CallMayorAsync` with `responseMimeType=application/json`.
@@ -65,7 +65,7 @@
 **Scope:**
 - `DayTickOrchestrator` calls `IngestionDispatcher.RefreshAllAsync` on every poll (so `ColonyState` actually updates), and fires Mayor on the *first* successful poll instead of skipping it.
 - `IngestionDispatcher` promoted to Singleton so the BackgroundService can take it directly.
-- `state_of_the_union` schema change: free-text paragraph → `Record<string, string>` keyed by category (`agriculture`, `defense`, `welfare`, `construction`, `treasury`, `research`).
+- `state_of_the_union` schema change: free-text paragraph → `Record<string, string>` keyed by category (`food`, `defense`, `welfare`, `construction`, `treasury`, `research`).
 - `MayorAgenda.GeneratedAt` (UTC) — server-stamped by `AgendaStore.Update` so the dashboard can show "Updated Xs ago" without depending on the in-game clock.
 - `MayorStatus` singleton tracks `IsRunning` / `StartedAt` / `CompletedAt` / `LastError`; `Mayor.RunPlayCycle` brackets each call with `Begin/End`.
 - `POST /api/agenda/refresh` — demand-trigger ingestion + Mayor cycle.
@@ -80,7 +80,7 @@
 
 **Done when:** in-process RAG store loads ≥2 guides; retrievals appear in prompt traces; the Mayor cites a specific guide passage in at least one agenda field (state-of-the-union or item rationale); side-by-side comparison shows a measurably better-justified agenda with RAG vs without.
 
-**Demo:** boot Host, fast-forward one in-game day with RAG enabled vs disabled; the RAG agenda cites a guide passage (e.g. "fall checklist: ensure 60-day food buffer") in `state_of_the_union.agriculture` or in a short-term card's rationale.
+**Demo:** boot Host, fast-forward one in-game day with RAG enabled vs disabled; the RAG agenda cites a guide passage (e.g. "fall checklist: ensure 60-day food buffer") in `state_of_the_union.food` or in a short-term card's rationale.
 
 **Why this is M2 instead of feedback:** before we wire feedback UI on top of the Mayor's output, the Mayor needs to be worth reacting to. RAG is the cheapest quality lever and is independent of the feedback infra. It also gives the eventual feedback corpus more signal per memo.
 
@@ -88,25 +88,25 @@
 - `KnowledgeBase` in-process cosine store.
 - Guide ingestion from `Docs/guides/**/*.md` with SHA-256 embedding cache under `var/embeddings`.
 - Gemini embedding via `gemini-embedding-001`.
-- RAG retrieval for long-tail lookups, surfaced in agenda `citations[]` and per-item `cite_ids[]`.
+- RAG retrieval for long-tail lookups, surfaced in agenda `guide_citations[]` and per-item `cite_ids[]`.
 - Side-by-side fixture: same briefing, with/without RAG, agenda diff captured.
 
 **Follow-up:** Tier 1 evergreen prompt distillation remains a prompt-quality task after M2; the shipped slice grounds the Mayor through Tier 2 retrieval.
 
 ---
 
-## M3 — First feeder advisor (Agriculture)
+## M3 — First feeder advisor (Food)
 
-**Done when:** the Mayor's daily agenda visibly incorporates Agriculture's sub-briefing; Agriculture can emit a flag (e.g. "food crisis imminent") that the Mayor reflects in body or severity.
+**Done when:** the Mayor's daily agenda visibly incorporates Food's sub-briefing; Food can emit a flag (e.g. "food crisis imminent") that the Mayor reflects in body or severity.
 
-**Demo:** induce a food shortage; next daily agenda leads with food security and cites Agriculture's flag in its rationale.
+**Demo:** induce a food shortage; next daily agenda leads with food security and cites Food's flag in its rationale.
 
 **Scope:**
-- `IMinisterRules<AgricultureBriefing>` interface + Agriculture rules layer.
-- Agriculture briefing derivations (`DaysOfFoodRemaining`, etc).
+- `IMinisterRules<FoodBriefing>` interface + Food rules layer.
+- Food briefing derivations (`DaysOfFoodRemaining`, etc).
 - Flag channel (in-process, severity-tiered) — Mayor consumes; no other consumer.
 - Mayor prompt includes flag digest section.
-- 5 Agriculture scenario fixtures (memo-shape expectations, not goals).
+- 5 Food scenario fixtures (memo-shape expectations, not goals).
 
 ---
 
@@ -128,14 +128,14 @@
 
 **Done when:** each memo / agenda item in the dashboard has working **Accept / Dismiss / Pushback** controls; each minister maintains its own persisted **pushback list** containing the player's natural-language explanations of why that minister was wrong; pushbacks for a given minister flow into that minister's next prompt as "recent player corrections."
 
-**Demo:** dismiss yesterday's `food_security` advice with a Pushback note ("we already built the freezer"); next day, the Mayor's prompt to Agriculture includes that note in the corrections section, and the next agenda doesn't repeat the same suggestion.
+**Demo:** dismiss yesterday's `food_security` advice with a Pushback note ("we already built the freezer"); next day, the Mayor's prompt to Food includes that note in the corrections section, and the next agenda doesn't repeat the same suggestion.
 
 **Why this is M5 (not M2):** feedback is only valuable once there are multiple ministers producing enough advice to find patterns in (M3, M4 first), and it's only consumed by M6. Landing it just before M6 keeps it fresh and avoids building UI on top of an output we hadn't yet lived with.
 
 **Scope:**
 - **Pushback** is the renamed Modify action. Semantics: the player explains in natural language why the minister is wrong, rather than editing `suggested_actions` text.
 - `FeedbackEvent` schema (memo id, action, player note, timestamp, in-game tick).
-- Each minister owns and persists its own pushback list under `Src/Cabinet/<Minister>/Pushbacks/`. Pushbacks are scoped — the Mayor doesn't see Agriculture's pushbacks and vice versa.
+- Each minister owns and persists its own pushback list under `Src/Cabinet/<Minister>/Pushbacks/`. Pushbacks are scoped — the Mayor doesn't see Food's pushbacks and vice versa.
 - Dashboard buttons + Pushback modal (free-text textarea, prompt: *"Tell the minister why he's wrong."*).
 - Per-minister pushback view in the dashboard (replaces the old "decision log" tab idea — there's no global log, only per-minister lists).
 - Pushbacks injected into the issuing minister's next prompt as a "recent player corrections" section, capped to the last N entries by age and severity.
@@ -147,7 +147,7 @@
 
 **Done when:** for one minister, the refinement loop reads its **own pushback list**, identifies a cluster of consistent corrections (e.g. 6 pushbacks all saying "no hunting in winter"), generates a candidate `Rules.cs` change, runs it against fixtures, and surfaces the diff for human approval. One rule is promoted end-to-end.
 
-**Demo:** run the `minister-review` skill against Agriculture's pushback list; see a proposed rule + fixture pass-rate diff; approve; observe rule appear in `Rules.cs`.
+**Demo:** run the `minister-review` skill against Food's pushback list; see a proposed rule + fixture pass-rate diff; approve; observe rule appear in `Rules.cs`.
 
 **Scope:**
 - Refinement-mode tooling for at least one minister.
@@ -159,11 +159,11 @@
 
 ## M7 — First Auto graduation (post-MVP)
 
-**Done when:** the player can flip one narrow advice type (e.g. Agriculture's stockpile-zone suggestions) from `Suggest` to `Auto`. When in `Auto`, the relevant `AdviceItem` is automatically applied via RIMAPI writes instead of being shown for approval. Player can revert to `Suggest` at any time.
+**Done when:** the player can flip one narrow advice type (e.g. Food's stockpile-zone suggestions) from `Suggest` to `Auto`. When in `Auto`, the relevant `AdviceItem` is automatically applied via RIMAPI writes instead of being shown for approval. Player can revert to `Suggest` at any time.
 
 **This re-engages the deferred design** — see [`design/planning.md`](design/planning.md) (HTN) and [`design/ministers/labor.md`](design/ministers/labor.md). Scope decided then, not now.
 
-**Demo:** zone change suggested by Agriculture is created in-game without the player clicking Accept.
+**Demo:** zone change suggested by Food is created in-game without the player clicking Accept.
 
 ---
 

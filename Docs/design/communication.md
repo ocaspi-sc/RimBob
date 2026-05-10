@@ -25,7 +25,7 @@ Flags are how ministers signal needs upward and sideways. The CoS consumes them;
 ```csharp
 public class AgentFlag
 {
-    public string         SourceAgent;       // "MinisterOfAgriculture"
+    public string         SourceAgent;       // "MinisterOfFood"
     public FlagSeverity   Severity;          // Critical, High, Medium, Low
     public string         Summary;           // "Food supply below 5 days"
     public ResourceRequest[] Requests;       // what is needed to resolve it
@@ -65,7 +65,7 @@ Emitted → Active → Resolved (by CoS action or natural expiry)
 
 Ministers cannot read each other's briefings. But a minister's briefing can include a **context block** with summarized cross-domain facts that affect its decisions.
 
-Example: `AgricultureBriefing.ActiveThreats: bool` — Agriculture doesn't need to understand the raid; it just needs to know "don't plant right now."
+Example: `FoodBriefing.ActiveThreats: bool` — Food doesn't need to understand the raid; it just needs to know "don't plant right now."
 
 These cross-domain facts are computed by the state store as derived views, not by ministers. They flow through briefing derivations, not through minister-to-minister calls.
 
@@ -98,12 +98,12 @@ The Mayor's direction to ministers is a **read-only broadcast via the Agenda**. 
 public class MinisterBriefingContext
 {
     public MayorPosture  Posture          { get; }  // economic + military stance
-    public string?       AgendaDirection  { get; }  // minister_direction entry for this minister (null in M1)
+    public string?       AgendaDirection  { get; }  // cabinet_direction entry for this minister (null in M1)
     public string[]      ShortTermDomains { get; }  // ranked domain list from agenda.short_term
 }
 ```
 
-`AgendaDirection` is the `minister_direction[ministerName]` string from the current Agenda, injected as a prefix into the minister's LLM prompt. It tells the minister where the Mayor wants their attention focused this day.
+`AgendaDirection` is the `cabinet_direction[ministerName]` string from the current Agenda, injected as a prefix into the minister's LLM prompt. It tells the minister where the Mayor wants their attention focused this day.
 
 `ShortTermDomains` is a simple ranked list (e.g. `["food","defense","welfare"]`) derived from the Agenda's `short_term` priorities. Ministers use it in their rules layer to rank competing issues without needing to parse the full Agenda.
 
@@ -127,5 +127,5 @@ These would create hidden coupling, debugging nightmares, and circular dependenc
 ## Open questions
 
 - [ ] Should the CoS flag channel be FIFO or priority-sorted? Priority-sorted risks starvation of Low flags; FIFO is unfair to Critical. Likely: priority queue with aging (Low flags eventually get promoted if waiting too long).
-- [ ] Flag deduplication: if Agriculture emits "food shortage" every tick, should the board suppress duplicates? Propose: same minister, same summary → update existing flag, don't add new one.
+- [ ] Flag deduplication: if Food emits "food shortage" every tick, should the board suppress duplicates? Propose: same minister, same summary → update existing flag, don't add new one.
 - [ ] How long are flags retained in history for improve-mode audit?

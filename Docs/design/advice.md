@@ -34,7 +34,7 @@ Under the assisted-gameplay pivot ([`../DESIGN.md`](../DESIGN.md)), every minist
     { "kind": "designate_zone", "what": "growing zone, ~8x8, fertile soil south of kitchen" },
     { "kind": "build",          "what": "two more sandbag sections covering the east approach" }
   ],
-  "citations":       ["strategic-plan-y1-y2.md#fall-checklist"],
+  "guide_citations":       ["strategic-plan-y1-y2.md#fall-checklist"],
   "briefing_ref":    { "minister": "Mayor", "version": 142, "hash": "sha256:..." },
   "issued_at":       "2026-05-03T14:02:11Z",
   "issued_in_game_tick": "Y1Q3D12H06",
@@ -49,7 +49,7 @@ Under the assisted-gameplay pivot ([`../DESIGN.md`](../DESIGN.md)), every minist
 Mirrors `FlagSeverity` in [`communication.md`](communication.md). Drives dashboard visual treatment and (post-M5) whether the advice surfaces as a tactical-alert outside the daily cadence.
 
 ### `advice_type`
-Closed enum **per minister.** This is the unit the future autonomy dial graduates one at a time. E.g. Agriculture's `food_security`, `harvest_now`, `expand_zone`, `hunt`, `trade_food_surplus`. Adding a new `advice_type` is a deliberate design step (matches "adding a new HTN compound" in the deferred world).
+Closed enum **per minister.** This is the unit the future autonomy dial graduates one at a time. E.g. Food's `food_security`, `harvest_now`, `expand_zone`, `hunt`, `trade_food_surplus`. Adding a new `advice_type` is a deliberate design step (matches "adding a new HTN compound" in the deferred world).
 
 ### `suggested_actions[].kind`
 Closed enum **across all ministers**. Each `kind` is a category that an `Auto`-graduated minister will eventually wire to an HTN primitive. MVP catalogue:
@@ -139,7 +139,7 @@ Pushback is the highest-value signal in the system. It's the player's correction
 
 ## Minister-owned pushback list
 
-Each minister **owns and persists its own pushback list**. Pushbacks are scoped — the Mayor doesn't see Agriculture's pushbacks; Agriculture doesn't see Defense's. Each minister learns from its own corrections.
+Each minister **owns and persists its own pushback list**. Pushbacks are scoped — the Mayor doesn't see Food's pushbacks; Food doesn't see Defense's. Each minister learns from its own corrections.
 
 ### Storage
 
