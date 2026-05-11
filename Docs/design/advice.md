@@ -26,10 +26,14 @@ Under the assisted-gameplay pivot ([`../DESIGN.md`](../DESIGN.md)), every minist
   "id":              "advice_2026-05-03T14:02:11Z_mayor_001",
   "minister":        "Mayor",
   "advice_type":     "daily_digest",          // closed enum, per minister
-  "severity":        "Medium",                // Low | Medium | High | Critical
+  "severity":        "medium",                // low | medium | high | critical
   "title":           "End of Day 12 — Food window closing, defense slack",
   "body":            "Markdown body. 2-6 short paragraphs.",
   "rationale":       "Why these were the most important items today.",
+  "resource_requests": [
+    { "kind": "labor", "what": "2 cooking-capable colonists", "why": "meal stock below 2 days", "quantity": 2, "priority": "high", "requested_from": "Labor" },
+    { "kind": "building", "what": "1 cooler", "why": "freezer warming above safe temperature" }
+  ],
   "suggested_actions": [
     { "kind": "designate_zone", "what": "growing zone, ~8x8, fertile soil south of kitchen" },
     { "kind": "build",          "what": "two more sandbag sections covering the east approach" }
@@ -41,7 +45,7 @@ Under the assisted-gameplay pivot ([`../DESIGN.md`](../DESIGN.md)), every minist
   "expires_at":      "2026-05-04T14:02:11Z",
   "expires_on_game_state": null,              // optional predicate; see "Expiry" below
   "supersedes":      null,                    // id of previous advice this replaces, if any
-  "autonomy_at_issue": "Suggest"              // value of the dial when this was emitted
+  "autonomy_at_issue": "suggest"              // value of the dial when this was emitted
 }
 ```
 
@@ -51,8 +55,24 @@ Mirrors `FlagSeverity` in [`communication.md`](communication.md). Drives dashboa
 ### `advice_type`
 Closed enum **per minister.** This is the unit the future autonomy dial graduates one at a time. E.g. Food's `food_security`, `harvest_now`, `expand_zone`, `hunt`, `trade_food_surplus`. Adding a new `advice_type` is a deliberate design step (matches "adding a new HTN compound" in the deferred world).
 
+### `resource_requests[].kind`
+Closed enum across all ministers. A resource request states what the minister needs in order to resolve the problem it is describing; it is not itself an executed action. MVP draft catalogue:
+
+| Kind | Meaning |
+|---|---|
+| `labor` | More pawn time/capacity in a work area or skill band. |
+| `tile` | Reserved map area, zone footprint, or placement space. |
+| `item` | Consumable or held item (medicine, components, shells, textiles, etc.). |
+| `building` | A built asset or workstation (cooler, hospital bed, fabrication bench, turret, etc.). |
+| `bill` | A production/configuration bill or stock target. |
+| `stockpile_space` | Filtered storage capacity in a relevant zone. |
+| `attention` | Priority from another subsystem or from the player. |
+| `trade_capacity` | Buying/selling/caravan bandwidth. |
+
+Each request carries `kind`, `what`, and short `why` text. It may also carry `quantity`, `priority`, and `requested_from` when the emitter can state them cleanly. These fields are still advisory in MVP: they describe need, not allocation.
+
 ### `suggested_actions[].kind`
-Closed enum **across all ministers**. Each `kind` is a category that an `Auto`-graduated minister will eventually wire to an HTN primitive. MVP catalogue:
+Closed enum **across all ministers**. Each `kind` is a category that an `Auto`-graduated minister will eventually wire to an HTN primitive. These are the outward "do X" recommendations, distinct from `resource_requests[]` which describe prerequisites or needs. MVP catalogue:
 
 | Kind | Meaning (MVP: text-only) |
 |---|---|

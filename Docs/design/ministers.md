@@ -92,10 +92,14 @@ When the LLM is called (escalation path), it returns one or more `AdviceItem`s:
   "advice": [
     {
       "advice_type": "food_security",   // closed enum, per minister
-      "severity":    "High",            // Low | Medium | High | Critical
+      "severity":    "high",            // low | medium | high | critical
       "title":       "Food situation tightening — start a second growing zone",
       "body":        "Days-of-food has dropped to 22 from 31 yesterday...",
       "rationale":   "rice matures in 8d, cold snap in 14d",
+      "resource_requests": [
+        { "kind": "labor", "what": "more plant/cooking capacity this day", "why": "Food cannot close the gap without work time" },
+        { "kind": "tile", "what": "~8x8 fertile growing footprint", "why": "current sowed area cannot cover winter buffer" }
+      ],
       "suggested_actions": [
         { "kind": "designate_zone", "what": "growing zone, ~8x8, fertile soil south of kitchen" },
         { "kind": "set_priority",   "what": "raise Plants priority for Hannah and Ben" }
@@ -114,6 +118,7 @@ When the LLM is called (escalation path), it returns one or more `AdviceItem`s:
 
 Rules for the LLM:
 - `advice_type` is a **closed enum per minister**. The LLM picks from the list; no free-form advice types. (This is the unit the future autonomy dial graduates one at a time.)
+- `resource_requests` are first-class advisory needs: "Food needs labor/tiles/items/etc." They do not allocate pawns, reserve tiles, or grant ownership of another minister's domain in MVP.
 - `suggested_actions` are advisory text — they are *not* executed in MVP, only rendered. Their `kind` is a closed enum so future Auto graduation can wire each kind to an HTN primitive.
 - The `notes` field is the upgrade seam. When a note pattern repeats and the LLM consistently writes the same advice off it, refinement promotes it into a rule.
 - Minister LLMs never name colonists, specify blueprints, or choose methods. Those would matter under Auto; under Suggest, the player decides.
@@ -157,7 +162,7 @@ Each minister owns either a production chain or a well-defined subsystem:
 
 ### Resource requests
 
-Ministers may request resources needed to satisfy their domain: tiles, labor capacity, items, buildings, bills, stockpile space, or attention from another subsystem. In MVP those requests are advisory only: they appear in `AdviceItem.suggested_actions[]` and/or `AgentFlag.Requests`. A request does not grant ownership of the target resource and does not execute anything.
+Ministers may request resources needed to satisfy their domain: tiles, labor capacity, items, buildings, bills, stockpile space, or attention from another subsystem. In MVP those requests are advisory only: they appear in `AdviceItem.resource_requests[]` and/or `AgentFlag.Requests`. A request does not grant ownership of the target resource and does not execute anything.
 
 At Auto graduation, requests become inputs to the deferred planning/Labor path. Until then, "Food requests 2 cooks" means "tell the player cooking labor is needed," not "Food changes pawn priorities."
 

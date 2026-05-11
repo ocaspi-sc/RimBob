@@ -1,0 +1,27 @@
+using System.Text.Json.Serialization;
+
+namespace RimAI.Core.Advice;
+
+/// <summary>
+/// A player-facing recommendation. In MVP this is rendered only; Auto wiring is
+/// deferred until a minister graduates a specific advice type.
+/// </summary>
+public sealed record SuggestedAction(
+    [property: JsonPropertyName("kind")]
+    SuggestedActionKind Kind,
+    [property: JsonPropertyName("what")]
+    string What);
+
+[JsonConverter(typeof(SnakeCaseLowerEnumConverter<SuggestedActionKind>))]
+public enum SuggestedActionKind
+{
+    DesignateZone,
+    Build,
+    SetPriority,
+    SetSchedule,
+    Draft,
+    Forbid,
+    Research,
+    Trade,
+    Note
+}

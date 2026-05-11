@@ -25,15 +25,18 @@ Flags are how ministers signal needs upward and sideways. The CoS consumes them;
 ```csharp
 public class AgentFlag
 {
-    public string         SourceAgent;       // "MinisterOfFood"
+    public string         Id;                // for cancellation / deduplication
+    public string         SourceMinister;    // "Food"
     public FlagSeverity   Severity;          // Critical, High, Medium, Low
+    public string         Domain;            // "food", "defense", "medical", ...
     public string         Summary;           // "Food supply below 5 days"
-    public ResourceRequest[] Requests;       // what is needed to resolve it
-    public string         ReasoningTrace;    // rule name or LLM rationale
-    public DateTime       ExpiresAt;         // auto-expiry
-    public string         FlagId;            // for cancellation / deduplication
+    public ResourceRequest[]? Requests;      // optional resources needed to resolve it
+    public string?        Detail;            // rule name, trace, or LLM rationale
+    public DateTime?      ExpiresAt;         // auto-expiry
 }
 ```
+
+`Requests` uses the same `ResourceRequest` schema as `AdviceItem.resource_requests[]` in [`advice.md`](advice.md). In MVP the field is advisory only; it lets CoS and Mayor see what a minister needs without granting allocation authority.
 
 ### Severity tiers
 

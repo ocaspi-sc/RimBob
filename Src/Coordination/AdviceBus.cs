@@ -16,6 +16,3 @@ public sealed class AdviceBus
 }
 
 public sealed record AgendaUpdated(MayorAgenda Agenda);
-
-// M3+: feeder ministers will publish these. Placeholder so downstream code can compile.
-public sealed record AdviceItem(string Id, string Minister, string Title);

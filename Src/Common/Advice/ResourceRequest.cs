@@ -1,0 +1,34 @@
+using System.Text.Json.Serialization;
+
+namespace RimAI.Core.Advice;
+
+/// <summary>
+/// A resource a minister needs in order to resolve its advice. Requests are
+/// advisory in MVP; they do not allocate pawns, reserve tiles, or write to RIMAPI.
+/// </summary>
+public sealed record ResourceRequest(
+    [property: JsonPropertyName("kind")]
+    ResourceRequestKind Kind,
+    [property: JsonPropertyName("what")]
+    string What,
+    [property: JsonPropertyName("why")]
+    string Why,
+    [property: JsonPropertyName("quantity")]
+    int? Quantity = null,
+    [property: JsonPropertyName("priority")]
+    AdviceSeverity? Priority = null,
+    [property: JsonPropertyName("requested_from")]
+    string? RequestedFrom = null);
+
+[JsonConverter(typeof(SnakeCaseLowerEnumConverter<ResourceRequestKind>))]
+public enum ResourceRequestKind
+{
+    Labor,
+    Tile,
+    Item,
+    Building,
+    Bill,
+    StockpileSpace,
+    Attention,
+    TradeCapacity
+}

@@ -16,6 +16,7 @@
 - [ ] Choose the first Food briefing fields and fixture scenarios.
 - [ ] Define Food's initial flag contract into the Mayor.
 - [ ] Decide whether guide citations get a small dashboard footnote treatment in M3 or wait for the broader feedback UI.
+- [ ] Render `AdviceItem.resource_requests[]` separately from `suggested_actions[]` on feeder-minister memo cards.
 - [ ] `Briefing` tab renders the latest `MayorBriefing` JSON pretty-printed (data already at `/api/colony/snapshot`; just needs UI).
 
 ## Later (M5 — Feedback loop)
@@ -34,7 +35,6 @@
 - [ ] Per-minister `advice_type` enums — define in each minister's session.
 - [ ] Per-minister scope docs (`RimAI.Ministers/<name>/scope.md`) — write after first slice ships.
 - [ ] Construction: placement / layout strategy (Base Layout Minister candidate).
-- [ ] Specify `AgentFlag` field types precisely.
 - [ ] Define CoS arbitration rules in detail (M3+).
 - [ ] Implicit-feedback: per-`kind` field-mapping table (M3+; stub OK in M2).
 - [ ] Candidate minister promotion criteria (CMO, Research, Trade, Treasury).
@@ -87,3 +87,4 @@ See [`DESIGN.md`](DESIGN.md) decision log and Open Questions sections in sub-doc
 - [x] **M1.5 — Live operability.** Wake Mayor on Host startup, periodic `IngestionDispatcher` calls in `DayTickOrchestrator`, `state_of_the_union` per-category dict, `MayorAgenda.GeneratedAt`, `MayorStatus`, `/api/colony/snapshot`, `/api/status`, `/api/mayor/prompt`, `POST /api/agenda/refresh`, dark command-center dashboard with sidebar telemetry + Refresh button.
 - [x] **RIMAPI gap closure.** `ColonistDetailedDto` rewritten for actual nested v2 shape (`pawn` + `detailes.work_info` + `detailes.medical_info`) — names, ages, mood, skills, traits, current_job now populate. New `/resources/summary` and `/research/progress` endpoints in `RimApiClient` feed `ResourceSummary` + `ResearchInfo` aggregates. Mayor system prompt teaches the model what `food.estimated_days_of_food == null` means (request stockpile audit, do not assume starvation). `Docs/design/RimAPI.md` annotated with verified shapes for the three controllers.
 - [x] **M2 — Grounded reasoning / RAG.** `RimAI.Knowledge` now has an in-process cosine store, markdown guide ingestion from `Docs/guides`, Gemini embedding + disk cache under `var/embeddings`, Mayor retrieval via `guide_context[]`, server-stamped `MayorAgenda.guide_citations[]`, `AgendaPriority.cite_ids`, and RAG-vs-no-RAG fixture snapshots under `Src/Tests/Mayor/Fixtures/rag-vs-norag/`. Tier 1 evergreen prompt distillation and polished dashboard footnote rendering are follow-ups.
+- [x] **Advice resource requests.** `AdviceItem.resource_requests[]` and `AgentFlag.Requests` now share a `ResourceRequest` schema so ministers can request labor, tiles, items, buildings, bills, stockpile space, attention, or trade capacity without executing allocation in MVP.

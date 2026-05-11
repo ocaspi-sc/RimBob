@@ -1,3 +1,6 @@
+using System.Text.Json.Serialization;
+using RimAI.Core.Advice;
+
 namespace RimAI.Core.Ministers;
 
 /// <summary>
@@ -5,14 +8,24 @@ namespace RimAI.Core.Ministers;
 /// Staff routes them. Ministers never talk to each other directly.
 /// </summary>
 public record AgentFlag(
+    [property: JsonPropertyName("id")]
     string Id,
+    [property: JsonPropertyName("source_minister")]
     string SourceMinister,
+    [property: JsonPropertyName("severity")]
     FlagSeverity Severity,
+    [property: JsonPropertyName("domain")]
     string Domain,
+    [property: JsonPropertyName("summary")]
     string Summary,
+    [property: JsonPropertyName("requests")]
+    IReadOnlyList<ResourceRequest>? Requests = null,
+    [property: JsonPropertyName("detail")]
     string? Detail = null,
+    [property: JsonPropertyName("expires_at")]
     DateTimeOffset? ExpiresAt = null);
 
+[JsonConverter(typeof(SnakeCaseLowerEnumConverter<FlagSeverity>))]
 public enum FlagSeverity
 {
     Low = 0,

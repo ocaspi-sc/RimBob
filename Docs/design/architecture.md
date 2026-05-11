@@ -65,11 +65,11 @@ Core/
 │   └── LaborBriefing.cs
 ├── Flags/
 │   ├── AgentFlag.cs
-│   ├── FlagSeverity.cs
-│   └── ResourceRequest.cs
+│   └── FlagSeverity.cs
 ├── Advice/
 │   ├── AdviceItem.cs       // see design/advice.md for schema
 │   ├── AdviceSeverity.cs
+│   ├── ResourceRequest.cs
 │   ├── SuggestedAction.cs
 │   ├── FeedbackEvent.cs    // Accept | Dismiss | Modify
 │   └── AutonomyMode.cs     // Off | Suggest | Auto (per-minister)
@@ -311,14 +311,20 @@ Minister output in MVP:
 public record AdviceItem(
     string             Id,
     string             Minister,
+    string             AdviceType,
     AdviceSeverity     Severity,
     string             Title,
     string             Body,
     string             Rationale,
+    ResourceRequest[]  ResourceRequests,
     SuggestedAction[]  SuggestedActions,
-    string[]           GuideCitationIds,
-    DateTime           IssuedAt,
-    DateTime           ExpiresAt
+    string[]           GuideCitations,
+    DateTimeOffset     IssuedAt,
+    DateTimeOffset     ExpiresAt,
+    string?            IssuedInGameTick,
+    BriefingRef?       BriefingRef,
+    string?            Supersedes,
+    AutonomyMode       AutonomyAtIssue
 );
 ```
 
