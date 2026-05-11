@@ -5,11 +5,21 @@
 
 ---
 
-## Now (next slice)
+## Now (live-state gaps)
 
 - [ ] **PawnMedicalInfo wiring.** `PawnMedicalInfoDto.IsDowned` and `Hediffs` flow through the DTO but `MayorBriefingDerivation.DeriveMedical` still uses a `Health < 0.30` heuristic. Plumb `is_downed` + life-threatening hediffs into `ColonistRecord` so Mayor can distinguish "anesthetised" from "dying".
 - [ ] **`/resources/stored` integration.** Currently `Materials` dictionary is empty (only Medicine/Weapons rollups). When a stockpile zone has items and `/resources/stored` returns non-empty, populate per-def material counts so the Mayor can talk about steel, components, etc.
 - [ ] **`total_nutrition == 0` upstream investigation.** RIMAPI returns 0 nutrition even when `food_total > 0` and meals exist on map. Check whether this is a bug we can patch around (e.g. compute from `meals_count * 0.9 + raw_food_count * 0.05`) or a deeper RIMAPI gap.
+
+## Current implementation order
+
+1. [ ] **Stabilize Mayor inputs.** Finish the live-state data gaps above before adding feeder ministers.
+2. [ ] **Ship Food M3 end to end.** Briefing fields, initial rules, first flag contract, Mayor digest ingestion, dashboard rendering for `resource_requests`, then fixtures.
+3. [ ] **Add minimal CoS handling.** Implement the Mayor-side helper for dedupe, lead framing, and tactical-alert vs digest routing before multiple feeders exist.
+4. [ ] **Add Construction.** Food's first live dependencies are cooler / power / room / storage recommendations, not Defense coupling.
+5. [ ] **Add Defense.**
+6. [ ] **Resolve Welfare / Medical sequencing.** Decide whether they land together or whether Medical becomes its own follow-on slice (`M4.5` / second wave), then implement Welfare.
+7. [ ] **Wire Pushback feedback.** Land M5 only after multiple ministers are emitting advice.
 
 ## Next (M3 — Food feeder)
 
@@ -23,20 +33,30 @@
 
 - [ ] `POST /api/agenda/{version}/item/{id}/feedback` writes a `FeedbackEvent` to the decision log.
 - [ ] Wire dashboard Accept / Dismiss / Pushback buttons (Pushback modal opens an editable text field, posts `pushback_text`).
-- [ ] Implicit-feedback collector stub: snapshot relevant briefing fields at memo issuance, diff at memo expiry.
 - [ ] `Decision Log` tab renders the last N `FeedbackEvent`s with the originating Agenda bullet.
 - [ ] Per-minister persistent pushback list (each minister owns + carries forward player corrections).
 
 ## Design TODOs (deferred)
 
+### Doc alignment
+
 - [ ] Extend the action ownership sketch into a full RIMAPI action/endpoint catalogue, preserving owner/requester/executor labels.
+- [ ] Reconcile the Medical/Welfare boundary across docs (`DESIGN.md` still describes Welfare as owning medical sub-blocks, while `design/ministers.md` splits Medical into its own subsystem).
+- [ ] Update `design/dashboard.md` to remove stale Modify / `modified_actions` / implicit-feedback language and align it with Pushback-only feedback.
+- [ ] Expand the roadmap beyond the first cabinet wave: explicitly schedule Industry, Medical, Research, and Economy instead of leaving them only in post-MVP notes.
+
+### Cabinet rollout planning
+
 - [ ] Add scope docs for Industry, Medical, Research, and Economy once their first slices are scheduled.
 - [ ] Food minister M3 prep: replace remaining code-facing Agriculture names with Food when implementation starts (`FoodBriefing`, `MinisterOfFood`, fixtures under `Src/Tests/Food/Fixtures/`).
 - [ ] Per-minister `advice_type` enums — define in each minister's session.
 - [ ] Per-minister scope docs (`RimAI.Ministers/<name>/scope.md`) — write after first slice ships.
 - [ ] Construction: placement / layout strategy (Base Layout Minister candidate).
-- [ ] Define CoS arbitration rules in detail (M3+).
-- [ ] Implicit-feedback: per-`kind` field-mapping table (M3+; stub OK in M2).
+- [ ] Define the minimum viable CoS arbitration rule set for M4: dedupe same-issue flags, choose lead framing when multiple ministers point at the same problem, and decide when a flag becomes a tactical alert versus Mayor-digest input.
+- [ ] Decide whether Medical should stay coupled to Welfare in the rollout plan or become its own slice after Welfare.
+
+### Longer-tail design
+
 - [ ] Candidate minister promotion criteria (CMO, Research, Trade, Treasury).
 - [ ] Memo cadence calibration: severity-gated tactical alerts vs. strict daily.
 - [ ] Dashboard: notification UX (in-page only vs. browser notifications).
