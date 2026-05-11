@@ -79,6 +79,10 @@ Every minister has the same shape: a rules layer that handles routine cases, esc
 | **Defense Minister** | Raids, combat, fortifications |
 | **Minister of Construction** | Buildings, power, layout (placement deferred) |
 | **Minister of Welfare** | Mood, recreation, schedules, relationships |
+| **Minister of Industry** | Non-food production: stonecutting, tailoring, smithing, machining, fabrication, drugs |
+| **Medical Minister** | Wounds, disease, surgery, medicine stock, hospital readiness |
+| **Research Minister** | Research queue, tech path, unlock dependencies |
+| **Economy Minister** | Trade, caravans, wealth pressure, surplus liquidation |
 | **Chief of Staff** | Flag triage, conflict arbitration into the Mayor's digest |
 
 ### Deferred until Auto graduation
@@ -161,6 +165,7 @@ Decisions made and the reasoning behind them. Append; do not delete.
 | Mayor briefing carries explicit `is_downed` / `is_dead` per colonist | The briefing was carrying a `Health < 0.30f` heuristic-derived `Medical.Downed` count and discarding the authoritative `is_downed` / `is_dead` flags RIMAPI v2 returns. `ColonistRecord` now stores both flags; `PawnLine` exposes `IsDowned`; `DeriveMedical` uses the flags directly; dead pawns are filtered out of the briefing entirely. → [`design/ministers/mayor.md`](design/ministers/mayor.md) |
 | Mayor system prompt collapses the strategic-frame doctrine | The prompt was 116 lines, dominated by ~33 lines of RimWorld doctrine (two-phase, wealth-velocity, chain-shotgun, posture-shift). Doctrine now lives in `design/ministers/mayor.md`; the prompt carries a six-line summary plus a doc cross-reference. Net effect: shorter prompt, lower hallucination surface, single source of truth for the strategy. The prompt also now mandates LLM-emitted category emojis on `state_of_the_union` values (the dashboard renders them verbatim). → [`design/ministers/mayor.md`](design/ministers/mayor.md), [`design/agenda.md`](design/agenda.md) |
 | Agriculture renamed Food; cabinet domains are production chains or crisp subsystems | "Agriculture" was too narrow for the actual owner of food security. The Food minister owns harvesting, farming, hunting, cooking, food stockpiles, freezer integrity, and food-chain resource requests. More broadly, each minister should own a production chain or clearly bounded subsystem; every game action should eventually have one primary owner. Clear-cut action ownership is mapped first, with hard cases left explicit. See [`design/ministers.md`](design/ministers.md) and [`design/ministers/food.md`](design/ministers/food.md). |
+| Hybrid cabinet accepted: production chains plus crisp subsystems | The cabinet shape is Food, Construction, Industry, Economy as production/economic chains; Defense, Welfare, Medical, Research as bounded subsystems; Mayor for strategy; CoS for arbitration; Labor deferred for Auto pawn assignment. Action mapping uses owner/requester/executor language so one minister is accountable while dependencies stay visible. See [`design/ministers.md`](design/ministers.md). |
 
 ---
 

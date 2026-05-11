@@ -28,7 +28,8 @@
 
 ## Design TODOs (deferred)
 
-- [ ] Draft first-pass game action ownership catalogue: map clear-cut RimWorld actions to primary ministers, then list hard cases separately.
+- [ ] Extend the action ownership sketch into a full RIMAPI action/endpoint catalogue, preserving owner/requester/executor labels.
+- [ ] Add scope docs for Industry, Medical, Research, and Economy once their first slices are scheduled.
 - [ ] Food minister M3 prep: replace remaining code-facing Agriculture names with Food when implementation starts (`FoodBriefing`, `MinisterOfFood`, fixtures under `Src/Tests/Food/Fixtures/`).
 - [ ] Per-minister `advice_type` enums — define in each minister's session.
 - [ ] Per-minister scope docs (`RimAI.Ministers/<name>/scope.md`) — write after first slice ships.

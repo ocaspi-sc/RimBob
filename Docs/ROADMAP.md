@@ -13,7 +13,7 @@
 | M1.5 | Live operability — startup briefing, periodic ingestion, sidebar telemetry, on-demand Refresh, run-state + prompt-introspection endpoints | Done |
 | M2 | Grounded reasoning (RAG) — Mayor cites guide passages; measurable agenda-quality improvement before adding feeders | Done |
 | M3 | First feeder advisor (Food) — sub-briefing into the Mayor; first cross-minister flag | Not started |
-| M4 | Cabinet of advisors — Defense, Construction, Welfare feeding the Mayor; severity-gated tactical alerts surface independently of the daily digest | Not started |
+| M4 | First cabinet wave — Defense, Construction, Welfare feeding the Mayor; severity-gated tactical alerts surface independently of the daily digest | Not started |
 | M5 | Feedback loop — Accept / Dismiss / Pushback wired; each minister owns and persists its own pushback list | Not started |
 | M6 | Refinement loop closes — pushbacks drive the first promoted rule per minister | Not started |
 | M7 (post-MVP) | First Auto graduation — one minister's narrowest advice type (e.g. stockpile-zone suggestions) gains an `Auto` mode behind the dial. Re-engages deferred HTN / Labor pieces | Not started |
@@ -110,7 +110,7 @@
 
 ---
 
-## M4 — Cabinet of advisors
+## M4 — First cabinet wave
 
 **Done when:** Defense, Construction, Welfare each feed sub-briefings + flags into the Mayor; severity-gated **tactical alerts** can surface as their own dashboard items (separate from the daily digest) when a Critical or High flag fires.
 
@@ -167,14 +167,15 @@
 
 ---
 
-## Post-MVP candidates
+## Post-MVP / later cabinet expansion
 
 - Additional Auto graduations per advice type.
-- Chief Medical Officer minister.
-- Research Director minister.
-- Minister of Trade.
-- Minister of Treasury (in-game wealth management).
+- Industry minister.
+- Medical minister.
+- Research minister.
+- Economy minister (trade, caravans, wealth pressure).
 - Base Layout Minister (spatial placement).
+- Animal management minister if Food/Economy/Defense sharing becomes noisy.
 - Multi-map support.
 - Cross-session memory / colony history.
 - Auto-approve gate for rule promotion (once fixture suites are strong).

@@ -145,8 +145,12 @@ Each minister owns either a production chain or a well-defined subsystem:
 |---|---|
 | Food | Nutrition chain: wild harvest, crop production, hunting-for-food, butchering, cooking, meals, food stockpiles, freezer integrity |
 | Defense | Threat response: raids, drafted combat, fortifications as defensive intent, weapons/ammo readiness |
-| Construction | Built infrastructure: rooms, power, production buildings, material stockpiles, layout efficiency, non-defense blueprints |
-| Welfare | Pawn wellbeing: mood, recreation, schedules, relationships, hospital/medical sub-block until CMO graduates |
+| Construction | Built infrastructure: rooms, power, temperature systems, base layout, non-defense blueprints |
+| Industry | Non-food production chain: stonecutting, tailoring, smithing, machining, fabrication, drug production, production stockpiles |
+| Welfare | Pawn wellbeing: mood, recreation, schedules, relationships, comfort, beauty, ideology mood pressure |
+| Medical | Health subsystem: wounds, disease, surgery, triage, medicine stock, hospital readiness |
+| Research | Technology path: research queue, unlock dependencies, capability planning |
+| Economy | Wealth and trade chain: trade goods, caravans, buying scarce resources, selling surplus, wealth pressure |
 | Mayor | Colony-wide strategy and posture; owns no routine operational action |
 | Chief of Staff | Flag triage and conflict arbitration; owns no direct production chain |
 | Labor | Deferred Auto-epic assignment solver; owns pawn allocation only after Auto re-engages |
@@ -157,22 +161,83 @@ Ministers may request resources needed to satisfy their domain: tiles, labor cap
 
 At Auto graduation, requests become inputs to the deferred planning/Labor path. Until then, "Food requests 2 cooks" means "tell the player cooking labor is needed," not "Food changes pawn priorities."
 
-### First-pass action ownership map
+### Action ownership map
 
-Clear-cut actions get a primary owner now:
+Every game action eventually gets one primary **owner**. Other ministers may be **requesters** when the action serves their chain. In MVP this is advisory only; requester/owner language does not execute writes or allocate pawns.
 
-| Action family | Primary minister | Notes |
-|---|---|---|
-| Sow/harvest crops, choose food crops, harvest wild berries/agave | Food | Drug/textile crops remain a hard case until Trade/Treasury exists |
-| Hunt for food, butcher, cook meals, set cook/butcher bills | Food | Combat risk from dangerous animals can raise a Defense flag |
-| Food stockpiles, freezer capacity, freezer temperature | Food | Construction may be requested to build coolers/walls; Food owns the need |
-| Build rooms, walls, doors, workstations, power, storage for materials | Construction | Defensive structures are Defense intent with Construction as build executor in Suggest text |
-| Draft/undraft, defensive positioning, weapon readiness, traps/turrets/killbox intent | Defense | Pawn allocation remains player/Labor in Suggest mode |
-| Recreation, schedules, medical care, mood interventions, social risk | Welfare | CMO may split out later if medical complexity earns it |
-| Research target | Mayor for strategic direction, candidate Research minister later | Clear operational owner deferred |
-| Trade/caravan/economy actions | Candidate Trade/Treasury minister later | For now ministers emit flags or Mayor agenda items |
+#### Food and survival
 
-Hard cases are intentionally left unresolved until first-pass ministers ship and advice logs show where complexity accumulates.
+| Action family | Owner | Common requesters | Notes |
+|---|---|---|---|
+| Sow food crops, choose food crop, expand food growing zone | Food | Mayor, Economy | Food owns nutrition timing and crop choice; Economy may request cash crops, but food security wins when scarce |
+| Harvest crops, wild berries/agave, ambrosia-for-food | Food | Welfare, Economy | Ambrosia drug policy can involve Welfare/Economy; nutrition pressure belongs to Food |
+| Hunt for food | Food | Defense, Economy | Food owns need/target recommendation; Defense may veto or flag dangerous hunts |
+| Butcher animals/corpses for meat | Food | Economy | Human/insect corpse policy may involve Welfare, but meat pipeline belongs to Food |
+| Cook meals, choose meal type, set cook/butcher bill targets | Food | Welfare, Medical | Welfare can request fine meals; Medical can request safe food for sick pawns |
+| Manage freezer, food stockpile, spoilage response | Food | Construction | Food owns the need; Construction owns requested coolers, walls, doors, power work |
+
+#### Base and infrastructure
+
+| Action family | Owner | Common requesters | Notes |
+|---|---|---|---|
+| Build rooms, walls, doors, floors, roofs, furniture | Construction | All ministers | Construction owns build feasibility, placement, materials, and layout cost |
+| Build power generation, batteries, conduits, switches | Construction | Food, Industry, Defense, Medical | Requester owns why power matters; Construction owns power design |
+| Build temperature systems: coolers, heaters, vents | Construction | Food, Welfare, Medical, Industry | Freezer need is Food; hospital safety is Medical; asset build is Construction |
+| Build production benches | Construction | Industry, Food, Medical, Research | Industry/Food/Medical own the production need; Construction owns placing/building the bench |
+| Manage material/component stockpiles | Construction | Industry, Defense | Construction owns base material availability; Industry owns production input buffers |
+| Dumping zones, stone chunk flow, base cleanup infrastructure | Construction | Industry, Welfare | Cleaning labor is not owned here; infrastructure and zone purpose are |
+
+#### Industry and goods
+
+| Action family | Owner | Common requesters | Notes |
+|---|---|---|---|
+| Stonecutting, smelting, machining, fabrication | Industry | Construction, Defense, Economy | Construction requests blocks/components; Defense requests weapons/armor; Economy requests sale goods |
+| Tailoring, apparel quality, textile processing | Industry | Welfare, Defense, Economy | Welfare requests temperature/mood apparel; Defense requests armor; Economy requests trade goods |
+| Smithing, weapons, armor, shield belts | Industry | Defense, Economy | Defense owns combat requirement; Industry owns making the item |
+| Drug production, chemfuel, refinery outputs | Industry | Medical, Welfare, Economy, Defense | Policy is hard-case shared context; production ownership stays Industry |
+| Art, statues, quality furniture production | Industry | Welfare, Economy, Construction | Welfare requests beauty; Economy requests sale value |
+
+#### Defense and emergencies
+
+| Action family | Owner | Common requesters | Notes |
+|---|---|---|---|
+| Draft/undraft, combat positioning, retreat/hold advice | Defense | Mayor, Medical | Pawn allocation remains player/Labor in Suggest mode |
+| Weapon readiness, loadout recommendations, armor readiness | Defense | Industry | Defense owns what is needed; Industry owns crafting it |
+| Killbox, traps, turrets, defensive wall intent | Defense | Construction, Industry | Defense owns defensive doctrine; Construction owns build feasibility |
+| Firefighting, breach response, infestation response | Defense | Construction, Medical | Treat as emergency response; Construction handles repairs after threat stabilizes |
+| Prisoner combat risk and escape response | Defense | Welfare, Economy | Ongoing prisoner care/trade is not Defense unless threat is active |
+
+#### Welfare and health
+
+| Action family | Owner | Common requesters | Notes |
+|---|---|---|---|
+| Recreation, comfort, beauty, sleep quality, room impressiveness | Welfare | Construction, Industry | Welfare owns the pawn-need reason; Construction/Industry own requested assets |
+| Schedules, joy/work/sleep balance, mental-break prevention | Welfare | Medical, Defense | In Suggest mode these are advice only; Labor owns Auto assignment later |
+| Relationships, social fights, ideology mood pressure | Welfare | Mayor | Ideology is Welfare unless it becomes large enough for its own subsystem |
+| Triage, tending, disease monitoring, surgery, hospital readiness | Medical | Welfare, Construction, Industry | Split from Welfare because cadence/severity differ |
+| Medicine stock, hospital beds, sterile room, vitals risk | Medical | Construction, Industry, Economy | Medical owns readiness; requesters provide assets or purchases |
+
+#### Strategy, research, and economy
+
+| Action family | Owner | Common requesters | Notes |
+|---|---|---|---|
+| Research queue and tech path | Research | Mayor, Defense, Food, Industry, Medical | Mayor sets strategic posture; Research owns queue mechanics and dependency path |
+| Trade offers, buying scarce resources, selling surplus | Economy | Food, Medical, Defense, Industry | Requester owns need; Economy owns trade decision and wealth impact |
+| Caravan formation/provisioning purpose | Economy | Food, Defense, Medical | Food owns nutrition sufficiency; Defense owns escort risk; Economy owns trip purpose |
+| Wealth pressure, stockpile liquidation, trade-good strategy | Economy | Mayor, Industry | Mayor sets posture; Economy owns operational wealth management |
+| Colony-wide goals and priority ordering | Mayor | All ministers | Mayor owns strategy, not operational action |
+| Conflicting flags and same-tick priority conflicts | Chief of Staff | All ministers | CoS arbitrates framing/priority, not execution |
+
+#### Hard cases to keep explicit
+
+| Hard case | Provisional handling |
+|---|---|
+| Psychoid/smokeleaf/beer | Industry owns production; Welfare owns drug policy; Economy owns sale strategy |
+| Devilstrand | Food comments on growing opportunity cost; Industry owns textile use; Economy owns sale value |
+| Animals | Food owns slaughter pressure; Economy owns sale/trade; Defense owns combat animals; a future Animals minister is possible |
+| Prisoners | Welfare owns living conditions; Medical owns health; Economy owns ransom/slavery/trade questions; Defense owns escape/riot risk |
+| Ideology/rituals | Welfare owns mood pressure for now; split later only if rules/prompts become noisy |
+| Multi-map/caravans | Economy owns purpose; Defense owns threat; Food/Medical own provisioning sufficiency; full multi-map support deferred |
 
 ---
 
