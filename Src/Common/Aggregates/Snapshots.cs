@@ -80,6 +80,25 @@ public sealed record FarmSnapshot(
 
 public sealed record CropTypeCount(string Def, int Count, float AverageGrowth);
 
+public sealed record PlantRegistry(IReadOnlyList<PlantRecord> Plants);
+
+public sealed record PlantRecord(
+    string Id,
+    string Def,
+    float Growth,
+    bool IsCrop,
+    string? ZoneId
+);
+
+public sealed record AnimalRegistry(IReadOnlyList<AnimalRecord> Animals);
+
+public sealed record AnimalRecord(
+    string Id,
+    string Def,
+    bool Tame,
+    float Health
+);
+
 /// <summary>
 /// Colony-wide stockpile rollup from /api/v1/resources/summary.
 /// FoodTotal / TotalNutrition come straight from RIMAPI; days-of-food is
@@ -119,6 +138,8 @@ public static class AggregateDefaults
     public static readonly ThreatBoard       Threats     = new([], []);
     public static readonly WeatherSnapshot   Weather     = new("", 0f, 0f);
     public static readonly FarmSnapshot      Farm        = new(0, 0f, 0, []);
+    public static readonly PlantRegistry     Plants      = new([]);
+    public static readonly AnimalRegistry    Animals     = new([]);
     public static readonly ResourceSummary   Resources   = new(0, 0f, 0, 0f, 0, 0, 0, 0, 0f);
     public static readonly ResearchInfo      Research    = new(null, null, false);
 }

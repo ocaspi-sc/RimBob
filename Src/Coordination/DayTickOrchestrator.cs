@@ -6,13 +6,8 @@ using RimAI.State;
 namespace RimAI.Coordination;
 
 /// <summary>
-/// Polls ColonyState's in-game day and wakes the Mayor once per day change.
+/// Polls ColonyState's in-game day and wakes the cabinet once per day change.
 /// In-game day = EconomyLedger.Tick / 60000 (RimWorld has 60k ticks per day).
-///
-/// On first successful poll: refreshes state fully and fires Mayor immediately
-/// so the dashboard has an agenda on load without waiting for a day to roll over.
-/// On each subsequent poll: refreshes state (keeps ColonyState current), fires
-/// Mayor only when the day number changes.
 /// </summary>
 public sealed class DayTickOrchestrator : BackgroundService
 {
@@ -20,34 +15,37 @@ public sealed class DayTickOrchestrator : BackgroundService
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(2);
 
     private readonly ColonyState _colony;
-    private readonly IMinister _mayor;
+    private readonly Func<CancellationToken, Task> _runCycle;
+    private readonly string _cycleName;
     private readonly ILogger<DayTickOrchestrator> _log;
     private readonly Func<CancellationToken, Task> _refresh;
 
     private long _lastDay = -1;
 
-    /// <summary>Production constructor — wired by DI.</summary>
     public DayTickOrchestrator(
-        ColonyState                       colony,
-        IngestionDispatcher               ingestion,
-        IMinister                         mayor,
-        ILogger<DayTickOrchestrator>      log)
-        : this(colony, mayor, log, ingestion.RefreshAllAsync) { }
+        ColonyState colony,
+        CabinetCycle cabinet,
+        ILogger<DayTickOrchestrator> log)
+        : this(colony, "Cabinet", log, cabinet.RunAsync, _ => Task.CompletedTask) { }
 
-    /// <summary>
-    /// Test constructor. Pass a custom <paramref name="refresh"/> delegate to control
-    /// when/how ColonyState is updated; pass <c>null</c> to make refresh a no-op so
-    /// tests can set <see cref="ColonyState"/> aggregates directly.
-    /// </summary>
     internal DayTickOrchestrator(
-        ColonyState                       colony,
-        IMinister                         mayor,
-        ILogger<DayTickOrchestrator>      log,
-        Func<CancellationToken, Task>?    refresh = null)
+        ColonyState colony,
+        IMinister mayor,
+        ILogger<DayTickOrchestrator> log,
+        Func<CancellationToken, Task>? refresh = null)
+        : this(colony, mayor.Name, log, mayor.RunPlayCycle, refresh) { }
+
+    private DayTickOrchestrator(
+        ColonyState colony,
+        string cycleName,
+        ILogger<DayTickOrchestrator> log,
+        Func<CancellationToken, Task> runCycle,
+        Func<CancellationToken, Task>? refresh)
     {
-        _colony  = colony;
-        _mayor   = mayor;
-        _log     = log;
+        _colony = colony;
+        _cycleName = cycleName;
+        _log = log;
+        _runCycle = runCycle;
         _refresh = refresh ?? (_ => Task.CompletedTask);
     }
 
@@ -62,24 +60,23 @@ public sealed class DayTickOrchestrator : BackgroundService
                 await _refresh(ct);
 
                 long tick = _colony.Economy.Value.Tick;
-                long day  = tick / TicksPerDay;
+                long day = tick / TicksPerDay;
 
                 if (_lastDay == -1)
                 {
-                    // First successful poll: publish initial briefing so dashboard loads with content.
                     _lastDay = day;
                     _log.LogInformation(
-                        "Startup ingestion complete (tick={Tick}, day={Day}); firing initial briefing",
-                        tick, day);
-                    await _mayor.RunPlayCycle(ct);
+                        "Startup ingestion complete (tick={Tick}, day={Day}); firing initial {Cycle} cycle",
+                        tick, day, _cycleName);
+                    await _runCycle(ct);
                 }
                 else if (day != _lastDay)
                 {
                     _log.LogInformation(
-                        "Day rollover: {Previous} → {Current} (tick={Tick}); waking {Minister}",
-                        _lastDay, day, tick, _mayor.Name);
+                        "Day rollover: {Previous} -> {Current} (tick={Tick}); waking {Cycle}",
+                        _lastDay, day, tick, _cycleName);
                     _lastDay = day;
-                    await _mayor.RunPlayCycle(ct);
+                    await _runCycle(ct);
                 }
             }
             catch (OperationCanceledException)

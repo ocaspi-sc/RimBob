@@ -23,6 +23,7 @@ public sealed class Mayor(
     AdviceBus           bus,
     MayorStatus         status,
     MayorRagRetriever      retriever,
+    FlagChannel         flags,
     ILogger<Mayor>      log
 ) : IMinister
 {
@@ -43,7 +44,8 @@ public sealed class Mayor(
         try
         {
             MayorBriefing briefing                 = briefings.GetMayorBriefing();
-            MayorDirectiveSet directiveSet          = rules.Evaluate(briefing, ColonyContext.Default);
+            IReadOnlyList<AgentFlag> activeFlags    = flags.Active(FlagSeverity.Medium);
+            MayorDirectiveSet directiveSet          = rules.Evaluate(briefing, ColonyContext.Default, activeFlags);
             Core.Advice.MayorAgenda? previous      = agendaStore.Current;
 
             log.LogInformation(
@@ -52,12 +54,12 @@ public sealed class Mayor(
 
             IReadOnlyList<GuideCitation> retrieved = await retriever.RetrieveAsync(briefing, directiveSet.Directives, ct);
 
-            DumpPrompt(briefing, previous, directiveSet.Directives, retrieved);
+            DumpPrompt(briefing, previous, directiveSet.Directives, retrieved, activeFlags);
 
             Core.Advice.MayorAgendaInput? input = TryLoadManualResponse();
             if (input is null)
             {
-                input = await CallLlmWithRetryAsync(briefing, previous, directiveSet.Directives, retrieved, ct);
+                input = await CallLlmWithRetryAsync(briefing, previous, directiveSet.Directives, retrieved, activeFlags, ct);
                 if (input is null)
                 {
                     cycleError = "LLM call failed twice";
@@ -88,13 +90,14 @@ public sealed class Mayor(
 
     private async Task<Core.Advice.MayorAgendaInput?> CallLlmWithRetryAsync(
         MayorBriefing briefing, Core.Advice.MayorAgenda? previous,
-        IReadOnlyList<string> directives, IReadOnlyList<GuideCitation> retrieved, CancellationToken ct)
+        IReadOnlyList<string> directives, IReadOnlyList<GuideCitation> retrieved,
+        IReadOnlyList<AgentFlag> activeFlags, CancellationToken ct)
     {
         for (int attempt = 1; attempt <= 2; attempt++)
         {
             try
             {
-                Core.Advice.MayorAgendaInput input = await llm.CallMayorAsync(briefing, previous, directives, retrieved, ct);
+                Core.Advice.MayorAgendaInput input = await llm.CallMayorAsync(briefing, previous, directives, retrieved, activeFlags, ct);
                 if (input.ShortTerm.Count > ShortTermCap)
                 {
                     log.LogWarning(
@@ -170,12 +173,13 @@ public sealed class Mayor(
     }
 
     private void DumpPrompt(MayorBriefing briefing, Core.Advice.MayorAgenda? previous,
-                            IReadOnlyList<string> directives, IReadOnlyList<GuideCitation> retrieved)
+                            IReadOnlyList<string> directives, IReadOnlyList<GuideCitation> retrieved,
+                            IReadOnlyList<AgentFlag> activeFlags)
     {
         try
         {
             string system = prompts.MayorSystemPrompt;
-            string user   = prompts.BuildMayorUserMessage(briefing, previous, directives, retrieved);
+            string user   = prompts.BuildMayorUserMessage(briefing, previous, directives, retrieved, activeFlags);
             string body   =
                 $"<!-- Mayor prompt snapshot — briefing v{briefing.BriefingVersion}, " +
                 $"previous agenda v{previous?.Version ?? 0}, retrieved {retrieved.Count} guides, " +

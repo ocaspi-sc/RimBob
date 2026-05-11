@@ -1,6 +1,7 @@
 using RimAI.Coordination;
 using RimAI.Core.Advice;
 using RimAI.Core.Briefings;
+using RimAI.Core.Ministers;
 using RimAI.Knowledge;
 using RimAI.LLM;
 using RimAI.State;
@@ -43,11 +44,13 @@ public static class StatusEndpoints
             AgendaStore     agendaStore,
             PromptBuilder   prompts,
             MayorRagRetriever  retriever,
+            FlagChannel flags,
             CancellationToken ct) =>
         {
             MayorBriefing briefing = briefings.GetMayorBriefing();
             IReadOnlyList<GuideCitation> retrieved = await retriever.RetrieveAsync(briefing, [], ct);
-            string user = prompts.BuildMayorUserMessage(briefing, agendaStore.Current, [], retrieved);
+            IReadOnlyList<AgentFlag> activeFlags = flags.Active(FlagSeverity.Medium);
+            string user = prompts.BuildMayorUserMessage(briefing, agendaStore.Current, [], retrieved, activeFlags);
             string system;
             try   { system = prompts.MayorSystemPrompt; }
             catch (FileNotFoundException ex) { system = $"(prompt file not found: {ex.FileName})"; }

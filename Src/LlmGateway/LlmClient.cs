@@ -5,6 +5,7 @@ using Google.GenAI.Types;
 using Microsoft.Extensions.Logging;
 using RimAI.Core.Advice;
 using RimAI.Core.Briefings;
+using RimAI.Core.Ministers;
 
 using GuideCitation = RimAI.Core.Advice.GuideCitation;
 
@@ -27,11 +28,19 @@ public sealed class LlmClient
         MayorAgenda?            previous,
         IReadOnlyList<string>   agendaDirectives,
         IReadOnlyList<GuideCitation> guideContext,
+        IReadOnlyList<AgentFlag> activeFlags,
         CancellationToken       ct);
+
+    public delegate Task<FoodLlmResponse> FoodCallExecutor(
+        FoodBriefing briefing,
+        MinisterBriefingContext context,
+        IReadOnlyList<GuideCitation> guideContext,
+        CancellationToken ct);
 
     private readonly Client?                                       _client;
     private readonly Func<CancellationToken, Task<string?>>?       _pingExecutor;
     private readonly MayorCallExecutor?                            _mayorExecutor;
+    private readonly FoodCallExecutor?                             _foodExecutor;
     private readonly PromptBuilder                                 _prompts;
     private readonly ILogger<LlmClient>                            _log;
 
@@ -46,6 +55,9 @@ public sealed class LlmClient
         // Constructor must not throw — Host needs to boot for /api/health
         // even when the key is absent (e.g. CI smoke tests).
         _client = string.IsNullOrWhiteSpace(apiKey) ? null : new Client(apiKey: apiKey);
+        _pingExecutor = null;
+        _mayorExecutor = null;
+        _foodExecutor = null;
     }
 
     // Test-only ctor: simulates the "no GEMINI_API_KEY set" case.
@@ -55,6 +67,7 @@ public sealed class LlmClient
         _prompts      = null!;
         _client       = null;
         _pingExecutor = null;
+        _foodExecutor = null;
     }
 
     // Test-only ctor: injects a ping executor so PingAsync can be exercised without Gemini.
@@ -64,6 +77,8 @@ public sealed class LlmClient
         _prompts      = null!;
         _client       = null;
         _pingExecutor = pingExecutor;
+        _mayorExecutor = null;
+        _foodExecutor = null;
     }
 
     // Test-only ctor: injects a Mayor agenda executor so play-cycle tests don't hit Gemini.
@@ -72,7 +87,19 @@ public sealed class LlmClient
         _log           = log;
         _prompts       = null!;
         _client        = null;
+        _pingExecutor  = null;
         _mayorExecutor = mayorExecutor;
+        _foodExecutor  = null;
+    }
+
+    internal LlmClient(ILogger<LlmClient> log, FoodCallExecutor foodExecutor)
+    {
+        _log          = log;
+        _prompts      = null!;
+        _client       = null;
+        _pingExecutor = null;
+        _mayorExecutor = null;
+        _foodExecutor = foodExecutor;
     }
 
     /// <summary>
@@ -129,15 +156,16 @@ public sealed class LlmClient
         MayorAgenda?            previousAgenda,
         IReadOnlyList<string>   agendaDirectives,
         IReadOnlyList<GuideCitation> guideContext,
+        IReadOnlyList<AgentFlag>? activeFlags,
         CancellationToken       ct)
     {
         if (_mayorExecutor is not null)
-            return await _mayorExecutor(briefing, previousAgenda, agendaDirectives, guideContext, ct);
+            return await _mayorExecutor(briefing, previousAgenda, agendaDirectives, guideContext, activeFlags ?? [], ct);
 
         if (_client is null)
             throw new InvalidOperationException("GEMINI_API_KEY not set — cannot call Mayor LLM.");
 
-        string userMessage = _prompts.BuildMayorUserMessage(briefing, previousAgenda, agendaDirectives, guideContext);
+        string userMessage = _prompts.BuildMayorUserMessage(briefing, previousAgenda, agendaDirectives, guideContext, activeFlags);
         GenerateContentConfig config = new()
         {
             SystemInstruction = new Content { Parts = [new Part { Text = _prompts.MayorSystemPrompt }] },
@@ -175,6 +203,59 @@ public sealed class LlmClient
         _log.LogInformation(
             "Mayor LLM call complete: latency={LatencyMs}ms short_term={ShortCount} long_term={LongCount} update_notes=\"{Preview}\"",
             sw.ElapsedMilliseconds, parsed.ShortTerm.Count, parsed.LongTerm.Count, preview);
+
+        return parsed;
+    }
+
+    public async Task<FoodLlmResponse> CallFoodAsync(
+        FoodBriefing briefing,
+        MinisterBriefingContext context,
+        IReadOnlyList<GuideCitation> guideContext,
+        CancellationToken ct)
+    {
+        if (_foodExecutor is not null)
+            return await _foodExecutor(briefing, context, guideContext, ct);
+
+        if (_client is null)
+            throw new InvalidOperationException("GEMINI_API_KEY not set - cannot call Food LLM.");
+
+        string userMessage = _prompts.BuildFoodUserMessage(briefing, context, guideContext);
+        GenerateContentConfig config = new()
+        {
+            SystemInstruction = new Content { Parts = [new Part { Text = _prompts.FoodSystemPrompt }] },
+            ResponseMimeType  = "application/json",
+            Temperature       = 0.3f
+        };
+
+        Stopwatch sw = Stopwatch.StartNew();
+        Google.GenAI.Types.GenerateContentResponse response = await _client.Models.GenerateContentAsync(
+            model:             DefaultModel,
+            contents:          userMessage,
+            config:            config,
+            cancellationToken: ct);
+        sw.Stop();
+
+        string? text = response.Candidates?.FirstOrDefault()?.Content?.Parts?.FirstOrDefault()?.Text;
+        if (string.IsNullOrWhiteSpace(text))
+            throw new InvalidOperationException("Gemini returned empty response for Food call.");
+
+        FoodLlmResponse? parsed;
+        try
+        {
+            parsed = JsonSerializer.Deserialize<FoodLlmResponse>(text, ResponseJson);
+        }
+        catch (JsonException ex)
+        {
+            _log.LogError(ex, "Failed to parse Food response as JSON. Raw text:\n{Text}", text);
+            throw;
+        }
+
+        if (parsed is null)
+            throw new InvalidOperationException("Gemini Food response deserialized to null.");
+
+        _log.LogInformation(
+            "Food LLM call complete: latency={LatencyMs}ms advice={AdviceCount} flags={FlagCount}",
+            sw.ElapsedMilliseconds, parsed.Advice.Count, parsed.Flags.Count);
 
         return parsed;
     }

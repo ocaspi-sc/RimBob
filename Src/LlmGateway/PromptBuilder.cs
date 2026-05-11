@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using RimAI.Core.Advice;
 using RimAI.Core.Briefings;
+using RimAI.Core.Ministers;
 
 namespace RimAI.LLM;
 
@@ -20,19 +21,38 @@ public sealed class PromptBuilder
     };
 
     private static readonly Lazy<string> _mayorSystemPrompt = new(() => LoadPrompt("mayor.system.md"));
+    private static readonly Lazy<string> _foodSystemPrompt = new(() => LoadPrompt("food.system.md"));
 
     public string MayorSystemPrompt => _mayorSystemPrompt.Value;
+    public string FoodSystemPrompt => _foodSystemPrompt.Value;
 
     public string BuildMayorUserMessage(
         MayorBriefing           briefing,
         MayorAgenda?            previousAgenda,
         IReadOnlyList<string>   agendaDirectives,
+        IReadOnlyList<GuideCitation> guideContext,
+        IReadOnlyList<AgentFlag>? activeFlags = null)
+    {
+        IReadOnlyList<GuideContextEntry>? guides = guideContext.Count == 0
+            ? null
+            : [.. guideContext.Select(c => new GuideContextEntry(c.CiteId, c.Heading, c.SourcePath, c.Snippet))];
+        MayorPromptPayload payload = new(briefing, previousAgenda, agendaDirectives, guides, activeFlags);
+        return JsonSerializer.Serialize(payload, UserMessageJson);
+    }
+
+    public string BuildFoodUserMessage(
+        FoodBriefing briefing,
+        MinisterBriefingContext context,
         IReadOnlyList<GuideCitation> guideContext)
     {
         IReadOnlyList<GuideContextEntry>? guides = guideContext.Count == 0
             ? null
             : [.. guideContext.Select(c => new GuideContextEntry(c.CiteId, c.Heading, c.SourcePath, c.Snippet))];
-        MayorPromptPayload payload = new(briefing, previousAgenda, agendaDirectives, guides);
+        FoodPromptPayload payload = new(
+            briefing,
+            context,
+            Enum.GetNames<FoodAdviceType>(),
+            guides);
         return JsonSerializer.Serialize(payload, UserMessageJson);
     }
 
@@ -51,6 +71,14 @@ internal sealed record MayorPromptPayload(
     [property: JsonPropertyName("briefing")]         MayorBriefing                  Briefing,
     [property: JsonPropertyName("previous_agenda")]  MayorAgenda?                   PreviousAgenda,
     [property: JsonPropertyName("agenda_directives")] IReadOnlyList<string>         AgendaDirectives,
+    [property: JsonPropertyName("guide_context")] IReadOnlyList<GuideContextEntry>? GuideContext,
+    [property: JsonPropertyName("active_flags")] IReadOnlyList<AgentFlag>? ActiveFlags
+);
+
+internal sealed record FoodPromptPayload(
+    [property: JsonPropertyName("briefing")] FoodBriefing Briefing,
+    [property: JsonPropertyName("minister_context")] MinisterBriefingContext Context,
+    [property: JsonPropertyName("allowed_advice_types")] IReadOnlyList<string> AllowedAdviceTypes,
     [property: JsonPropertyName("guide_context")] IReadOnlyList<GuideContextEntry>? GuideContext
 );
 

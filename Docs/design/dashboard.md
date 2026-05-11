@@ -1,7 +1,7 @@
 # RimAI — Advisor Dashboard
 
 > **Living document.** See `CLAUDE.md` for update rules.
-> Slice: M0 (skeleton) → M1 (Agenda tab) → M2 (feedback + decision log + briefing tab) → M5 (tactical alerts) → M6 (autonomy panel readonly).
+> Slice: M0 (skeleton) → M1 (Agenda tab) → M2 (RAG/prompt inspection) → M3 (Food feeder alerts + briefing inspector) → M5 (feedback) → M7 (autonomy).
 
 ---
 
@@ -39,7 +39,7 @@ All endpoints live under `/api/`. Host is the only producer; dashboard is the on
 Liveness probe. Returns `{ status: "ok", version: "..." }`.
 
 ### `GET /api/advice/stream`  *(SSE)*
-The advice feed. Server-Sent Events stream of `AdviceItem` JSON payloads.
+The advice feed. Server-Sent Events stream of agenda and `AdviceItem` JSON payloads.
 
 ```
 event: advice
@@ -54,7 +54,7 @@ event: ping
 data: {}                        // every 15s; keeps connection alive
 ```
 
-On connect, the server replays the last 24h of unexpired advice items so a fresh page load shows current state. Older advice is fetched on demand from `/api/advice?from=...`.
+On connect, the server replays the current agenda and active unexpired advice items so a fresh page load shows current state. Older advice history is deferred until the decision-log work.
 
 ### `POST /api/advice/{id}/feedback`
 Body:
@@ -66,7 +66,7 @@ Body:
 Writes a `FeedbackEvent` to the decision log. Echoes back over SSE for other open tabs.
 
 ### `GET /api/briefings/{minister}/latest`
-Returns the most recent `IBriefing` for a minister so the briefing-inspector tab can render the source data behind any memo.
+Returns the most recent `IBriefing` for a minister so the briefing-inspector tab can render the source data behind any memo. M3 implements `mayor` and `food`.
 
 ### `GET /api/decisions?minister=&since=`
 Returns recent decision-log records (with feedback joined) for the decision-log tab.
@@ -177,8 +177,8 @@ The four main regions are independent boxed panels (`panel-box`): topbar, tab ra
 ### Tabs (MVP)
 - **Agenda** — Mayor's living plan; short-term priorities and long-term goals. **Default tab.** M1 ships this.
 - **Prompt** — ready developer inspector immediately after Agenda. It renders `/api/mayor/prompt` independently of whether an agenda exists, so the prompt/debug view does not fall back to the Mayor uplink waiting state.
-- **Alerts** — feeder-minister `AdviceItem`s and Mayor tactical alerts (M5+). Renders the "MODULE LOCKED" placeholder in M1.
-- **Briefing** — pick a minister, see the latest briefing JSON pretty-printed. M1 ships this; backed by `/api/colony/snapshot` and `/api/mayor/prompt` for inspection.
+- **Alerts** — active feeder-minister `AdviceItem`s. M3 renders Food cards with severity, rationale, suggested actions, and a separate `Resource requests` block. Tactical-alert badges are still M5+.
+- **Briefing** — pick Mayor or Food and see the latest briefing JSON pretty-printed. M3 backs this with `/api/briefings/{minister}/latest`.
 - **Log** — recent decision-log records with feedback events joined. M2 ships this.
 - **Autonomy** — per-minister dial. Read-only display in MVP; PUT is wired but every value stays `Suggest`. M2 ships the panel; the dial gets a real switch only at M7.
 
@@ -213,8 +213,8 @@ Locked tabs render a unified empty-console panel (`MODULE LOCKED · Coming in M{
 - Warning rows render in red (`telemetry-row.warn`) for: low food (< 7d), downed/sick colonists, break-risk count, negative net power, active raid.
 - Footer line shows `briefing v{n} · tick {gameTick}` so the player can correlate sidebar values with the current agenda version.
 
-### Tactical alerts (M5)
-When a `tactical_alert` advice arrives (severity ≥ High), it surfaces in the **Alerts** tab with a distinct visual treatment (top of list, sticky for some interval, severity-colour border). A badge on the Alerts tab nav item signals unread alerts.
+### Feeder alerts (M3) and tactical alerts (M5)
+M3 Alerts is the active feeder memo surface. It renders Food `AdviceItem`s from SSE `event: advice`, replayed on page load by `AdviceBus.ActiveAdvice()`. High/Critical visual treatment exists, but unread badges, tactical-alert stickiness, and Mayor-authored `tactical_alert` advice remain M5+.
 
 ---
 

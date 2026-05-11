@@ -125,6 +125,8 @@ FoodBriefing
 └── RecentEvents                (last 24h: harvests, spoilage, food-related incidents)
 ```
 
+M3 implemented `FoodBriefing` is intentionally narrower than the target above: it derives nutrition source, fallback nutrition from meal/raw counts, days-of-food, crop breakdown, ready harvest count, wild harvest candidates, wild animal count, stockpile cells, Plants/Cooking coverage, cooler/power signals, season, active threat, and recent food incident names. It does not yet compute exact food-zone yield, distance/risk scores, bill state, room temperature, spoilage timers, or caravan provisioning.
+
 **Defense:**
 ```
 DefenseBriefing

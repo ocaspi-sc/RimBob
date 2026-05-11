@@ -8,7 +8,7 @@
     "summary": "Winter is close; stop wealth growth and build a food buffer."
   },
   "state_of_the_union": {
-    "agriculture": "The retrieved winter-prep guide recommends a 60-day food buffer; current stores cover only 5.4 days.",
+    "food": "The retrieved winter-prep guide recommends a 60-day food buffer; current stores cover only 5.4 days.",
     "defense": "No active raid, but wealth should stay controlled until the food buffer is rebuilt.",
     "welfare": "Keep work focused and avoid new comfort projects until meals are secure."
   },

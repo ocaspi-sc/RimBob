@@ -136,7 +136,7 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
         GetEnvelopedListAsync<ColonistDetailedDto>(
             $"api/v2/colonists/detailed?map_id={mapId}", ct);
 
-    // ── Agriculture ───────────────────────────────────────────────────────────
+    // ── Food-chain reads ──────────────────────────────────────────────────────
 
     /// <summary>GET api/v1/map/farm/summary?map_id — crop totals + avg growth per crop type.</summary>
     public Task<FarmSummaryDto> GetFarmSummaryAsync(int mapId, CancellationToken ct = default) =>
@@ -226,10 +226,10 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
     //       and implement: SetWorkPriority, SetSchedule, ForceJob, SetZoneRestriction.
     //       Only MinisterOfLabor calls these writes.
 
-    // ── Grow zone write (Agriculture-owned) ──────────────────────────────────
+    // ── Grow zone write (Food-owned, deferred Auto path) ─────────────────────
     /// <summary>
     /// POST api/v1/map/zone/growing — create a grow zone over a rect with a crop def.
-    /// Owned by Agriculture minister. Only call via the HTN planner primitive.
+    /// Owned by Food minister. Only call via the HTN planner primitive.
     /// TODO: confirm request body shape { "map_id", "plant_def", "rect": {x1,y1,x2,y2} }.
     /// </summary>
     public async Task CreateGrowZoneAsync(
@@ -244,7 +244,7 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
 
     /// <summary>
     /// POST api/v1/order/designate/area — designate Hunt / Harvest / Mine / Deconstruct
-    /// over a rect. Used by Agriculture (harvest, hunt) and Construction (mine, decon).
+    /// over a rect. Used by Food (harvest, hunt) and Construction (mine, decon).
     /// TODO: confirm request body shape { "map_id", "designation", "rect" }.
     /// </summary>
     public async Task DesignateAreaAsync(

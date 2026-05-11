@@ -2,6 +2,7 @@
 
 > **Living document.** See `AGENTS.md` for update rules.
 > Slice: M3 - first feeder advisor for the Mayor's daily memo. Replaces the old Agriculture minister.
+> Implementation status: first runtime slice is `FoodBriefing` + rules-first `MinisterOfFood` with Gemini escalation, `AdviceItem` output, and flags into the Mayor.
 
 ---
 
@@ -17,6 +18,13 @@ Food security across the full nutrition chain:
 Food is broader than Agriculture. Farming is only one method inside the food chain; the minister is accountable for whether the colony can keep eating.
 
 Food does not own pawn allocation. It may request labor capacity, e.g. cooks, growers, hunters, haulers, but in Suggest mode that request is advice to the player. The deferred Labor minister owns actual pawn assignment once Auto exists.
+
+M3 runtime path:
+
+1. `CabinetCycle` refreshes ingestion, runs Food, then runs the Mayor.
+2. Food reads `FoodBriefing` from `BriefingCache`, evaluates `Rules.cs`, and emits `AdviceItem`s plus optional `AgentFlag`s.
+3. If rules return `Escalate`, Food calls Gemini with `food.system.md`, `FoodBriefing`, `MinisterBriefingContext`, and food-focused `guide_context`.
+4. The Mayor reads active Medium+ flags and reflects relevant Food pressure in `state_of_the_union.food`, `update_notes`, and short-term priorities.
 
 ---
 
@@ -49,21 +57,15 @@ Adding an advice type is a design decision because it becomes a future autonomy-
 
 See [`design/state-store.md`](../state-store.md#food) for the full field list.
 
-Key derived facts:
+M3 implemented facts:
 
-- `DaysOfFoodRemaining`: stockpile nutrition / average daily consumption rate.
-- `FoodStockpile`: counts by category: meals, raw plant food, meat, animal products, preserved foods.
-- `MealStock`: cooked meal counts by type and meals-per-colonist.
-- `ActiveGrowingZones`: zone, crop, growth %, expected yield, days to harvest.
-- `WildHarvestTargets`: harvestable plants by distance, season risk, expected nutrition.
-- `HuntingTargets`: nearby huntable animals, value/risk ratio.
-- `KitchenState`: cooks available, highest cooking skill, food poisoning risk, active cook bills.
-- `ButcheryState`: butcher table availability, corpses/meat backlog, active butcher bills.
-- `FreezerState`: used/total capacity, current temperature, cooler state, at-risk items.
-- `SeasonContext`: current season, growing period remaining, days to winter.
-- `FoodChainLaborPressure`: whether growing/cooking/hauling/hunting work is the bottleneck.
-- `ActiveThreats`: bool - do not recommend routine planting/hunting during a raid.
-- `RecentFoodEvents`: last 24h: harvests, spoilage, food poisoning, blight, freezer outage.
+- `EstimatedDaysOfFood`: reported nutrition when available, otherwise conservative meal/raw-food fallback.
+- `NutritionSource`: `reported`, `fallback_meal_raw_counts`, or `unknown`.
+- `FoodUnits`, `MealsCount`, `RawFoodCount`, `ReadyToHarvest`, crop breakdown.
+- `WildHarvestCandidates` and `WildAnimalCount` as first-pass opportunity counts.
+- Plants/Cooking skill coverage, stockpile cells, cooler count, net power, active threat, recent food incidents.
+
+Deferred from the richer target briefing: exact zone-level yield, distance/risk scoring, kitchen/butchery bills, room temperature, item spoilage, and caravan provisioning.
 
 ---
 
@@ -74,7 +76,8 @@ Known first-pass rules:
 | Rule | Condition | Output |
 |---|---|---|
 | `maintain_security_threshold` | DaysOfFood >= 30 AND no urgent spoilage/harvest issue | No advice |
-| `emergency_food_flag` | DaysOfFood < 7 | FoodSecurity Critical, flag CoS |
+| `nutrition_signal_gap` | Food units exist but nutrition is unknown/fallback-derived | ManageFoodStockpile, stockpile audit |
+| `emergency_food_flag` | DaysOfFood < 7 | FoodSecurity High, flag Mayor |
 | `low_food_flag` | DaysOfFood < 15 | FoodSecurity High |
 | `harvest_mature_crops` | MatureCropTiles > 0 OR wild harvest at rot/freeze risk | HarvestNow |
 | `plant_before_winter` | DaysToWinter < 20 AND growing capacity available | ExpandGrowingCapacity, prefer rice unless guide/context says otherwise |
@@ -94,6 +97,8 @@ Escalates when:
 - Unusual food event appears: blight, toxic fallout, heat wave/freezer loss, animal revenge risk.
 - Drug/textile crops compete with food crops.
 - Caravan/trade food policy matters.
+
+M3 severity calibration: Food emits `High` for urgent shortage by default. `Critical` is reserved for true immediate starvation evidence, not just a low buffer.
 
 ---
 

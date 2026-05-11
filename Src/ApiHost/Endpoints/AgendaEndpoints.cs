@@ -34,12 +34,10 @@ public static class AgendaEndpoints
 
         // Demand-triggered briefing refresh + new agenda generation.
         app.MapPost("/api/agenda/refresh", async (
-            IngestionDispatcher ingestion,
-            IMinister mayor,
+            CabinetCycle cabinet,
             CancellationToken ct) =>
         {
-            await ingestion.RefreshAllAsync(ct);
-            await mayor.RunPlayCycle(ct);
+            await cabinet.RunAsync(ct);
             return Results.Ok(new { refreshed = true });
         });
 

@@ -7,6 +7,7 @@ using RimAI.Host.Endpoints;
 using RimAI.Ingestion;
 using RimAI.Knowledge;
 using RimAI.LLM;
+using RimAI.Ministers.Food;
 using RimAI.Ministers.Mayor;
 using RimAI.State;
 
@@ -58,6 +59,7 @@ builder.Services.AddSingleton<IngestionDispatcher>();
 
 builder.Services.AddSingleton<AdviceBus>();
 builder.Services.AddSingleton<AgendaStore>();
+builder.Services.AddSingleton<FlagChannel>();
 builder.Services.AddSingleton<MayorAgendaRules>();
 builder.Services.AddSingleton<MayorStatus>();
 
@@ -85,6 +87,17 @@ builder.Services.AddSingleton<MayorRagRetriever>(sp =>
         topK:     opts.Rag.TopK,
         log:      sp.GetRequiredService<ILogger<MayorRagRetriever>>());
 });
+builder.Services.AddSingleton<FoodRagRetriever>(sp =>
+{
+    RimAiOptions opts = sp.GetRequiredService<IOptions<RimAiOptions>>().Value;
+    IEmbedder? embedder = ResolveEmbedder(opts, sp);
+    return new FoodRagRetriever(
+        kb:       sp.GetRequiredService<KnowledgeBase>(),
+        embedder: embedder,
+        enabled:  opts.Rag.Enabled,
+        topK:     opts.Rag.TopK,
+        log:      sp.GetRequiredService<ILogger<FoodRagRetriever>>());
+});
 builder.Services.AddSingleton<Ingest>(sp =>
 {
     RimAiOptions opts = sp.GetRequiredService<IOptions<RimAiOptions>>().Value;
@@ -107,7 +120,11 @@ static IEmbedder? ResolveEmbedder(RimAiOptions opts, IServiceProvider sp)
 }
 
 builder.Services.AddSingleton<Mayor>();
+builder.Services.AddSingleton<Rules>();
+builder.Services.AddSingleton<MinisterOfFood>();
 builder.Services.AddSingleton<IMinister>(sp => sp.GetRequiredService<Mayor>());
+builder.Services.AddSingleton<IMinister>(sp => sp.GetRequiredService<MinisterOfFood>());
+builder.Services.AddSingleton<CabinetCycle>();
 builder.Services.AddHostedService<DayTickOrchestrator>();
 
 var app = builder.Build();

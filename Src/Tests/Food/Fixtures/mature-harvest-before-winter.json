@@ -1,0 +1,7 @@
+{
+  "description": "Mature food crops are ready before winter",
+  "expected_advice": ["harvest_now"],
+  "expected_top_advice_type": "harvest_now",
+  "expected_severity_min": "Medium",
+  "should_escalate": false
+}

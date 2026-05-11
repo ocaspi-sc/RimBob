@@ -36,6 +36,29 @@ public sealed class AdviceBusTests
         Action act = () => bus.Publish(new AgendaUpdated(InputBuilder.Default.ToAgenda(7, "tick")));
         act.Should().NotThrow();
     }
+
+    [Fact]
+    public void PublishAdvice_RetainsActiveAdviceForReplay()
+    {
+        AdviceBus bus = new();
+        AdviceItem item = new(
+            Id: "a1",
+            Minister: "Food",
+            AdviceType: "food_security",
+            Severity: AdviceSeverity.High,
+            Title: "Food low",
+            Body: "Body",
+            Rationale: "Rationale",
+            ResourceRequests: [],
+            SuggestedActions: [],
+            GuideCitationIds: [],
+            IssuedAt: DateTimeOffset.UtcNow,
+            ExpiresAt: DateTimeOffset.UtcNow.AddHours(1));
+
+        bus.Publish(item);
+
+        bus.ActiveAdvice().Should().ContainSingle().Which.Id.Should().Be("a1");
+    }
 }
 
 internal static class InputBuilderExtensions

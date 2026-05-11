@@ -8,7 +8,7 @@
     "summary": "Winter is close and the colony needs to stabilize food before expanding."
   },
   "state_of_the_union": {
-    "agriculture": "Food is under a week with winter approaching.",
+    "food": "Food is under a week with winter approaching.",
     "defense": "No active raid, but low stores make recovery fragile.",
     "welfare": "Mood is serviceable while food work is prioritized."
   },

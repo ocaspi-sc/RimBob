@@ -1,0 +1,6 @@
+{
+  "description": "Stable 35-day food buffer with no immediate food-chain issue",
+  "expected_advice": [],
+  "expected_trace": "maintain_security_threshold",
+  "should_escalate": false
+}

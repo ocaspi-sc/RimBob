@@ -13,21 +13,21 @@
 
 ## Current implementation order
 
-1. [ ] **Stabilize Mayor inputs.** Finish the live-state data gaps above before adding feeder ministers.
-2. [ ] **Ship Food M3 end to end.** Briefing fields, initial rules, first flag contract, Mayor digest ingestion, dashboard rendering for `resource_requests`, then fixtures.
+1. [ ] **Stabilize Mayor inputs.** Finish the remaining live-state data gaps above; M3 now includes fallback food nutrition so Food is not blocked by `total_nutrition == 0`.
+2. [x] **Ship Food M3 end to end.** Briefing fields, initial rules, first flag contract, Mayor digest ingestion, dashboard rendering for `resource_requests`, then fixtures.
 3. [ ] **Add minimal CoS handling.** Implement the Mayor-side helper for dedupe, lead framing, and tactical-alert vs digest routing before multiple feeders exist.
 4. [ ] **Add Construction.** Food's first live dependencies are cooler / power / room / storage recommendations, not Defense coupling.
 5. [ ] **Add Defense.**
 6. [ ] **Resolve Welfare / Medical sequencing.** Decide whether they land together or whether Medical becomes its own follow-on slice (`M4.5` / second wave), then implement Welfare.
 7. [ ] **Wire Pushback feedback.** Land M5 only after multiple ministers are emitting advice.
 
-## Next (M3 — Food feeder)
+## Next (post-M3 follow-ups)
 
-- [ ] Choose the first Food briefing fields and fixture scenarios.
-- [ ] Define Food's initial flag contract into the Mayor.
-- [ ] Decide whether guide citations get a small dashboard footnote treatment in M3 or wait for the broader feedback UI.
-- [ ] Render `AdviceItem.resource_requests[]` separately from `suggested_actions[]` on feeder-minister memo cards.
-- [ ] `Briefing` tab renders the latest `MayorBriefing` JSON pretty-printed (data already at `/api/colony/snapshot`; just needs UI).
+- [ ] Add polished guide-citation footnotes on feeder memo cards.
+- [ ] Add Food decision log persistence so M6 refinement has shipped advice traces.
+- [ ] Improve Food hunting target risk/value scoring from live animal data.
+- [ ] Expand Food briefing with bill state, freezer room temperature, and spoilage timers when RIMAPI exposes them.
+- [x] `Briefing` tab renders latest Mayor/Food briefing JSON.
 
 ## Later (M5 — Feedback loop)
 
@@ -48,7 +48,7 @@
 ### Cabinet rollout planning
 
 - [ ] Add scope docs for Industry, Medical, Research, and Economy once their first slices are scheduled.
-- [ ] Food minister M3 prep: replace remaining code-facing Agriculture names with Food when implementation starts (`FoodBriefing`, `MinisterOfFood`, fixtures under `Src/Tests/Food/Fixtures/`).
+- [x] Food minister M3 prep: replace remaining code-facing Agriculture names with Food where the M3 runtime touched it (`FoodBriefing`, `MinisterOfFood`, fixtures under `Src/Tests/Food/Fixtures/`).
 - [ ] Per-minister `advice_type` enums — define in each minister's session.
 - [ ] Per-minister scope docs (`RimAI.Ministers/<name>/scope.md`) — write after first slice ships.
 - [ ] Construction: placement / layout strategy (Base Layout Minister candidate).

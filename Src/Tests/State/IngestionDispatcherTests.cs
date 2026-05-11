@@ -30,6 +30,8 @@ public sealed class IngestionDispatcherTests
         s.Threats.Version.Should().Be(1);
         s.Weather.Version.Should().Be(1);
         s.Farm.Version.Should().Be(1);
+        s.Plants.Version.Should().Be(1);
+        s.Animals.Version.Should().Be(1);
         s.Resources.Version.Should().Be(1);
         s.Research.Version.Should().Be(1);
     }
@@ -131,6 +133,14 @@ public sealed class IngestionDispatcherTests
             Storyteller: "Cassandra", Paused: false, ProgramState: "Playing", MapCount: 1);
         var date = new DateTimeDto("5th of Aprimay, 5500, 14h");
         var farm = new FarmSummaryDto(50, 0.6f, 5, [new CropBreakdownDto("Rice", 30, 0.7f)]);
+        var plants = new List<PlantDto>
+        {
+            new("plant1", "BerryBush", 1.0f, null, false, null)
+        };
+        var animals = new List<AnimalDto>
+        {
+            new("animal1", "Hare", null, false, 1.0f, null)
+        };
         var zones = new List<ZoneDto>
         {
             new("z1", "StockpileZone", "main", [], null)
@@ -167,6 +177,8 @@ public sealed class IngestionDispatcherTests
             .Add("api/v1/game/state",              Envelope(state))
             .Add("api/v1/datetime",                Envelope(date))
             .Add("api/v1/map/farm/summary",        Envelope(farm))
+            .Add("api/v1/map/plants",              Envelope(plants))
+            .Add("api/v1/map/animals",             Envelope(animals))
             .Add("api/v1/map/zones",               Envelope(zones))
             .Add("api/v1/map/buildings",           Envelope(buildings))
             .Add("api/v1/map/power/info",          Envelope(power))

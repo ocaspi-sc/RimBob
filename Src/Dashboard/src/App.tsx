@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { AgendaTab, PromptFull } from './components/AgendaTab';
 import { Sidebar } from './components/Sidebar';
+import { AlertsTab } from './components/AlertsTab';
+import { BriefingTab } from './components/BriefingTab';
 import { fetchLatestAgenda, triggerRefresh } from './api/agenda';
 import { fetchColonySnapshot } from './api/colony';
 import { fetchStatus } from './api/status';
 import { subscribeAgendaUpdates } from './api/adviceStream';
 import type { MayorAgenda } from './types/agenda';
+import type { AdviceItem } from './types/advice';
 import type { ColonySnapshot } from './types/colony';
 import type { RimAIStatus } from './types/status';
 
@@ -14,8 +17,8 @@ type TabKey = 'agenda' | 'prompt' | 'alerts' | 'briefing' | 'log' | 'autonomy';
 const tabs: Array<{ key: TabKey; label: string; ready: boolean; note?: string }> = [
   { key: 'agenda',   label: 'Agenda',   ready: true },
   { key: 'prompt',   label: 'Prompt',   ready: true },
-  { key: 'alerts',   label: 'Alerts',   ready: false, note: 'Coming in M5' },
-  { key: 'briefing', label: 'Briefing', ready: false, note: 'Coming in M1+' },
+  { key: 'alerts',   label: 'Alerts',   ready: true },
+  { key: 'briefing', label: 'Briefing', ready: true },
   { key: 'log',      label: 'Log',      ready: false, note: 'Coming in M2' },
   { key: 'autonomy', label: 'Autonomy', ready: false, note: 'Coming in M2' },
 ];
@@ -38,6 +41,7 @@ function StatusChip({ label, state, sub }: { label: string; state: ChipState; su
 export default function App() {
   const [agenda, setAgenda]     = useState<MayorAgenda | null>(null);
   const [previous, setPrevious] = useState<MayorAgenda | null>(null);
+  const [advice, setAdvice]     = useState<AdviceItem[]>([]);
   const [snapshot, setSnapshot] = useState<ColonySnapshot | null>(null);
   const [active, setActive]     = useState<TabKey>('agenda');
   const [status, setStatus]     = useState<RimAIStatus | null>(null);
@@ -50,13 +54,21 @@ export default function App() {
       .then(latest => { if (!cancelled && latest) setAgenda(latest); })
       .catch(err => console.error('initial fetchLatestAgenda failed', err));
 
-    const unsubscribe = subscribeAgendaUpdates(next => {
-      setAgenda(curr => {
-        if (curr && curr.version === next.version) return curr;
-        setPrevious(curr);
-        return next;
-      });
-    });
+    const unsubscribe = subscribeAgendaUpdates(
+      next => {
+        setAgenda(curr => {
+          if (curr && curr.version === next.version) return curr;
+          setPrevious(curr);
+          return next;
+        });
+      },
+      item => {
+        setAdvice(curr => {
+          const filtered = curr.filter(existing => existing.id !== item.id);
+          return [item, ...filtered].sort((a, b) => severityRank(b.severity) - severityRank(a.severity));
+        });
+      },
+    );
 
     return () => {
       cancelled = true;
@@ -189,12 +201,14 @@ export default function App() {
 
         <section className="main-console panel-box">
           {active === 'agenda' && <AgendaTab agenda={agenda} previous={previous} status={status} />}
+          {active === 'alerts' && <AlertsTab advice={advice} />}
+          {active === 'briefing' && <BriefingTab />}
           {active === 'prompt' && (
             <div className="prompt-page">
               <PromptFull />
             </div>
           )}
-          {active !== 'agenda' && active !== 'prompt' && (
+          {active !== 'agenda' && active !== 'prompt' && active !== 'alerts' && active !== 'briefing' && (
             <div className="empty-console">
               <span className="empty-code">MODULE LOCKED</span>
               {tabs.find(t => t.key === active)?.note ?? 'Coming soon'}
@@ -206,4 +220,11 @@ export default function App() {
       </div>
     </main>
   );
+}
+
+function severityRank(severity: AdviceItem['severity']): number {
+  if (severity === 'critical') return 3;
+  if (severity === 'high') return 2;
+  if (severity === 'medium') return 1;
+  return 0;
 }

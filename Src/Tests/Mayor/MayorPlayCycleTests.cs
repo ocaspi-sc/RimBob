@@ -17,7 +17,7 @@ public sealed class MayorPlayCycleTests
     [Fact]
     public async Task FirstCycle_StoresAgendaV1AndPublishesEvent()
     {
-        Harness h = new((_, _, _, _, _) => CannedAgenda("first"));
+        Harness h = new((_, _, _, _, _, _) => CannedAgenda("first"));
 
         await h.Mayor.RunPlayCycle(CancellationToken.None);
 
@@ -31,7 +31,7 @@ public sealed class MayorPlayCycleTests
     public async Task SecondCycle_IncrementsVersionAndPushesPreviousIntoHistory()
     {
         int call = 0;
-        Harness h = new((_, _, _, _, _) => CannedAgenda($"v{++call}"));
+        Harness h = new((_, _, _, _, _, _) => CannedAgenda($"v{++call}"));
 
         await h.Mayor.RunPlayCycle(CancellationToken.None);
         await h.Mayor.RunPlayCycle(CancellationToken.None);
@@ -46,7 +46,7 @@ public sealed class MayorPlayCycleTests
     public async Task ShortTermOverCap_OnFirstCallTriggersRetry_SecondCallTruncates()
     {
         int call = 0;
-        Harness h = new((_, _, _, _, _) =>
+        Harness h = new((_, _, _, _, _, _) =>
         {
             call++;
             // Both attempts return 6 items; Mayor truncates after the second attempt.
@@ -67,7 +67,7 @@ public sealed class MayorPlayCycleTests
     [Fact]
     public async Task LlmAlwaysThrows_AgendaUntouched_NoPublish()
     {
-        Harness h = new((_, _, _, _, _) => throw new InvalidOperationException("boom"));
+        Harness h = new((_, _, _, _, _, _) => throw new InvalidOperationException("boom"));
 
         await h.Mayor.RunPlayCycle(CancellationToken.None);
 
@@ -104,7 +104,7 @@ public sealed class MayorPlayCycleTests
             MayorRagRetriever retriever = new(kb, embedder: null, enabled: false, topK: 0,
                                            NullLogger<MayorRagRetriever>.Instance);
             Mayor = new(Cache, new MayorAgendaRules(), Store, llm, new PromptBuilder(), Bus, new MayorStatus(),
-                        retriever, NullLogger<MayorMinister>.Instance);
+                        retriever, new FlagChannel(), NullLogger<MayorMinister>.Instance);
         }
     }
 }

@@ -27,6 +27,8 @@ public sealed class IngestionDispatcher(
         Task<DateTimeDto>                       dateTask      = rimApi.GetDateTimeAsync(ct);
         Task<IReadOnlyList<ColonistDetailedDto>> pawnsTask    = rimApi.GetColonistsDetailedAsync(home.Id, ct);
         Task<FarmSummaryDto>                    farmTask      = rimApi.GetFarmSummaryAsync(home.Id, ct);
+        Task<IReadOnlyList<PlantDto>>           plantsTask    = rimApi.GetPlantsAsync(home.Id, ct);
+        Task<IReadOnlyList<AnimalDto>>          animalsTask   = rimApi.GetAnimalsAsync(home.Id, ct);
         Task<IReadOnlyList<ZoneDto>>            zonesTask     = rimApi.GetZonesAsync(home.Id, ct);
         Task<IReadOnlyList<BuildingDto>>        buildingsTask = rimApi.GetBuildingsAsync(home.Id, ct);
         Task<PowerInfoDto>                      powerTask     = rimApi.GetPowerInfoAsync(home.Id, ct);
@@ -36,7 +38,7 @@ public sealed class IngestionDispatcher(
         Task<ResourcesSummaryDto>               resourcesTask = rimApi.GetResourcesSummaryAsync(home.Id, ct);
         Task<ResearchProgressDto>               researchTask  = rimApi.GetResearchProgressAsync(ct);
 
-        await Task.WhenAll(stateTask, dateTask, pawnsTask, farmTask, zonesTask,
+        await Task.WhenAll(stateTask, dateTask, pawnsTask, farmTask, plantsTask, animalsTask, zonesTask,
                            buildingsTask, powerTask, weatherTask, lordsTask, incidentsTask,
                            resourcesTask, researchTask);
 
@@ -47,6 +49,8 @@ public sealed class IngestionDispatcher(
         state.Colonists.Update(new ColonistRegistry(MapPawns(pawnsTask.Result)));
 
         state.Farm.Update(MapFarm(farmTask.Result));
+        state.Plants.Update(MapPlants(plantsTask.Result));
+        state.Animals.Update(MapAnimals(animalsTask.Result));
 
         state.Stockpiles.Update(MapStockpiles(zonesTask.Result));
 
@@ -112,6 +116,12 @@ public sealed class IngestionDispatcher(
                                 .Select(c => new CropTypeCount(c.Def, c.Count, c.AvgGrowth))
                                 .ToList()
         );
+
+    private static PlantRegistry MapPlants(IReadOnlyList<PlantDto> plants) =>
+        new(plants.Select(p => new PlantRecord(p.Id, p.Def, p.Growth, p.IsCrop, p.ZoneId)).ToList());
+
+    private static AnimalRegistry MapAnimals(IReadOnlyList<AnimalDto> animals) =>
+        new(animals.Select(a => new AnimalRecord(a.Id, a.Def, a.Tame, a.Health)).ToList());
 
     private static StockpileLedger MapStockpiles(IReadOnlyList<ZoneDto> zones)
     {

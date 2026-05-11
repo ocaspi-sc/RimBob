@@ -119,7 +119,7 @@ public sealed class MayorRagTests
             Store  = new();
             Bus    = new();
 
-            LlmClient.MayorCallExecutor executor = (_, _, _, retrieved, _) =>
+            LlmClient.MayorCallExecutor executor = (_, _, _, retrieved, _, _) =>
             {
                 LastGuideContext = retrieved;
                 return Task.FromResult(InputBuilder.Default with { UpdateNotes = "rag-test" });
@@ -127,7 +127,7 @@ public sealed class MayorRagTests
             LlmClient llm = new(NullLogger<LlmClient>.Instance, executor);
 
             Mayor = new(Cache, new MayorAgendaRules(), Store, llm, new PromptBuilder(), Bus,
-                        new MayorStatus(), retriever, NullLogger<MayorMinister>.Instance);
+                        new MayorStatus(), retriever, new FlagChannel(), NullLogger<MayorMinister>.Instance);
         }
     }
 }

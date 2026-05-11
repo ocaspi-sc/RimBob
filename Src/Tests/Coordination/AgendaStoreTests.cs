@@ -74,7 +74,7 @@ internal static class InputBuilder
         Posture:           new MayorPosture("consolidation", "defensive", "Hold steady."),
         StateOfTheUnion:   new Dictionary<string, string>
         {
-            ["agriculture"] = "Food covers 18 days, no harvest pressure.",
+            ["food"] = "Food covers 18 days, no harvest pressure.",
             ["defense"]     = "No active threats, walls intact.",
             ["welfare"]     = "Mood 72%, no break risks.",
         },

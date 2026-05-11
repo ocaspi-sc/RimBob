@@ -10,7 +10,10 @@ namespace RimAI.Ministers.Mayor;
 /// </summary>
 public sealed class MayorAgendaRules
 {
-    public MayorDirectiveSet Evaluate(MayorBriefing briefing, ColonyContext _)
+    public MayorDirectiveSet Evaluate(
+        MayorBriefing briefing,
+        ColonyContext _,
+        IReadOnlyList<AgentFlag>? activeFlags = null)
     {
         List<string> directives = new();
 
@@ -22,8 +25,13 @@ public sealed class MayorAgendaRules
         if (foodSecurityCritical)
             directives.Add($"Food security directive: only {briefing.Food.EstimatedDaysOfFood:F0} days of food remaining — force food bullet to position 1.");
 
-        // M1: no flag channel; QuietDay is always true.
-        const bool quietDay = true;
+        IReadOnlyList<AgentFlag> mediumOrHigher = activeFlags ?? [];
+        foreach (AgentFlag flag in mediumOrHigher)
+        {
+            directives.Add($"Feeder flag from {flag.SourceMinister} ({flag.Severity}, {flag.Domain}): {flag.Summary}. Reflect this in the matching state_of_the_union category and agenda rationale when relevant.");
+        }
+
+        bool quietDay = mediumOrHigher.Count == 0;
 
         bool yearTwoTransition = briefing.Date.Year == 2 && briefing.Date.Quadrum == "Q1";
         if (yearTwoTransition)

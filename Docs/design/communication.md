@@ -20,6 +20,8 @@ No bilateral messaging. No shared mutable state between ministers. If two minist
 
 Flags are how ministers signal needs upward and sideways. The CoS consumes them; the Mayor reads a daily digest of Medium flags; Critical flags preempt everything.
 
+M3 runtime status: before a separate CoS loop exists, `FlagChannel` is an in-process active-flag store. Food publishes flags into it; the Mayor reads active Medium+ flags during the same `CabinetCycle` and folds them into the next agenda prompt. This is a Mayor-side bridge, not direct minister-to-minister communication.
+
 ### Flag schema
 
 ```csharp
@@ -43,7 +45,7 @@ public class AgentFlag
 | Tier | Handled by | Examples | Behaviour |
 |---|---|---|---|
 | **Critical** | Immediate preemption | Active raid, fire, infestation | Defense can interrupt all other ministers' work |
-| **High** | Chief of Staff, same tick | Colonist downed, food shortage, disease | CoS resolves or escalates to Mayor |
+| **High** | Chief of Staff / Mayor-side bridge in M3 | Colonist downed, food shortage, disease | CoS resolves or escalates to Mayor |
 | **Medium** | Mayor daily digest | Research complete, wall breach, mood declining | Batched, not acted on immediately |
 | **Low** | Labor queue, when free | Beautification, surplus trade opportunity | Deferred until capacity available |
 

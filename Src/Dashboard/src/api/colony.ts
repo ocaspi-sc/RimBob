@@ -6,3 +6,9 @@ export async function fetchColonySnapshot(signal?: AbortSignal): Promise<ColonyS
   if (!res.ok) throw new Error(`/api/colony/snapshot returned ${res.status}`);
   return await res.json() as ColonySnapshot;
 }
+
+export async function fetchLatestBriefing(minister: 'mayor' | 'food', signal?: AbortSignal): Promise<unknown> {
+  const res = await fetch(`/api/briefings/${minister}/latest`, { signal });
+  if (!res.ok) throw new Error(`/api/briefings/${minister}/latest returned ${res.status}`);
+  return await res.json() as unknown;
+}

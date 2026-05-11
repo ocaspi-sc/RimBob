@@ -17,14 +17,18 @@ public sealed class BriefingCache(ColonyState state, ILogger<BriefingCache> log)
     private long[] _mayorInputs = [];
     private long _mayorVersion;
 
+    private FoodBriefing? _food;
+    private long[] _foodInputs = [];
+    private long _foodVersion;
+
     public MayorBriefing GetMayorBriefing()
     {
-        var current = state.GetVersionsForMayorBriefing();
+        long[] current = state.GetVersionsForMayorBriefing();
         if (_mayor is not null && current.AsSpan().SequenceEqual(_mayorInputs))
             return _mayor;
 
-        var version = ++_mayorVersion;
-        var changed = ChangedAggregates(_mayorInputs, current);
+        long version = ++_mayorVersion;
+        IEnumerable<string> changed = ChangedAggregates(_mayorInputs, current, ColonyState.MayorBriefingAggregateNames);
         _mayor = MayorBriefingDerivation.Compute(state, version);
         _mayorInputs = current;
 
@@ -37,14 +41,32 @@ public sealed class BriefingCache(ColonyState state, ILogger<BriefingCache> log)
         return _mayor;
     }
 
-    private static IEnumerable<string> ChangedAggregates(long[] previous, long[] current)
+    public FoodBriefing GetFoodBriefing()
     {
-        var names = ColonyState.MayorBriefingAggregateNames;
-        // On the very first compute previous is empty — report all as "initial".
+        long[] current = state.GetVersionsForFoodBriefing();
+        if (_food is not null && current.AsSpan().SequenceEqual(_foodInputs))
+            return _food;
+
+        long version = ++_foodVersion;
+        IEnumerable<string> changed = ChangedAggregates(_foodInputs, current, ColonyState.FoodBriefingAggregateNames);
+        _food = FoodBriefingDerivation.Compute(state, version);
+        _foodInputs = current;
+
+        log.LogDebug(
+            "FoodBriefing recompute version={Version} updatedAggregates=[{Updated}] briefing={BriefingJson}",
+            version,
+            string.Join(',', changed),
+            JsonSerializer.Serialize(_food, JsonOpts));
+
+        return _food;
+    }
+
+    private static IEnumerable<string> ChangedAggregates(long[] previous, long[] current, string[] names)
+    {
         if (previous.Length == 0) return ["initial"];
 
-        var changed = new List<string>();
-        for (var i = 0; i < current.Length && i < names.Length; i++)
+        List<string> changed = new();
+        for (int i = 0; i < current.Length && i < names.Length; i++)
             if (i >= previous.Length || current[i] != previous[i])
                 changed.Add(names[i]);
         return changed;

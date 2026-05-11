@@ -12,7 +12,7 @@
 | M1 | Mayor's Agenda spine — colony-wide briefing → Mayor LLM → versioned `MayorAgenda` rendered in the dashboard | Done |
 | M1.5 | Live operability — startup briefing, periodic ingestion, sidebar telemetry, on-demand Refresh, run-state + prompt-introspection endpoints | Done |
 | M2 | Grounded reasoning (RAG) — Mayor cites guide passages; measurable agenda-quality improvement before adding feeders | Done |
-| M3 | First feeder advisor (Food) — sub-briefing into the Mayor; first cross-minister flag | Not started |
+| M3 | First feeder advisor (Food) — sub-briefing into the Mayor; first cross-minister flag | Implemented |
 | M4 | First cabinet wave — Construction, Defense, Welfare feeding the Mayor; severity-gated tactical alerts surface independently of the daily digest | Not started |
 | M5 | Feedback loop — Accept / Dismiss / Pushback wired; each minister owns and persists its own pushback list | Not started |
 | M6 | Refinement loop closes — pushbacks drive the first promoted rule per minister | Not started |
@@ -98,6 +98,8 @@
 ## M3 — First feeder advisor (Food)
 
 **Done when:** the Mayor's daily agenda visibly incorporates Food's sub-briefing; Food can emit a flag (e.g. "food crisis imminent") that the Mayor reflects in body or severity.
+
+**Implementation:** M3 ships `FoodBriefing`, rules-first `MinisterOfFood`, Food Gemini escalation, Food RAG retrieval, active `FlagChannel`, `CabinetCycle` (Food before Mayor), SSE `advice` replay, Alerts rendering for Food `AdviceItem`s, and Mayor/Food briefing inspection.
 
 **Demo:** induce a food shortage; next daily agenda leads with food security and cites Food's flag in its rationale.
 

@@ -446,7 +446,8 @@ function PostureBadge({ label, kind }: { label: string; kind: 'economic' | 'mili
 }
 
 const ministerMeta: Record<string, { code: string; label: string; order: number }> = {
-  agriculture: { code: 'AGR', label: 'Agriculture', order: 1 },
+  food: { code: 'FOD', label: 'Food', order: 1 },
+  agriculture: { code: 'FOD', label: 'Food', order: 1 },
   defense: { code: 'DEF', label: 'Defense', order: 2 },
   welfare: { code: 'WEL', label: 'Welfare', order: 3 },
   construction: { code: 'CON', label: 'Construction', order: 4 },

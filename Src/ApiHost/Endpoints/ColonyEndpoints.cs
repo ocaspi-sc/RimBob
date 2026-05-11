@@ -14,6 +14,12 @@ public static class ColonyEndpoints
         app.MapGet("/api/colony/snapshot", (BriefingCache cache) =>
             Results.Ok(cache.GetMayorBriefing()));
 
+        app.MapGet("/api/briefings/mayor/latest", (BriefingCache cache) =>
+            Results.Ok(cache.GetMayorBriefing()));
+
+        app.MapGet("/api/briefings/food/latest", (BriefingCache cache) =>
+            Results.Ok(cache.GetFoodBriefing()));
+
         return app;
     }
 }

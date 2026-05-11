@@ -14,7 +14,7 @@ public abstract record RulesResult;
 
 /// <summary>Rules produced a decision. No LLM call needed.</summary>
 public record Decision(
-    IReadOnlyList<MinisterGoal> Goals,
+    IReadOnlyList<RimAI.Core.Advice.AdviceItem> Advice,
     IReadOnlyList<AgentFlag> Flags,
     string Trace) : RulesResult;
 
