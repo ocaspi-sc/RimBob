@@ -16,13 +16,13 @@ namespace RimAI.Ministers.Mayor;
 /// </summary>
 public sealed class Mayor(
     BriefingCache       briefings,
-    MayorRules          rules,
+    MayorAgendaRules          rules,
     AgendaStore         agendaStore,
     LlmClient           llm,
     PromptBuilder       prompts,
     AdviceBus           bus,
     MayorStatus         status,
-    MayorRetriever      retriever,
+    MayorRagRetriever      retriever,
     ILogger<Mayor>      log
 ) : IMinister
 {
@@ -50,7 +50,7 @@ public sealed class Mayor(
                 "Mayor wake briefing_version={BriefingVersion} previous_agenda_version={PrevVersion} directives=[{Directives}]",
                 briefing.BriefingVersion, previous?.Version ?? 0, FormatDirectives(directiveSet));
 
-            IReadOnlyList<Citation> retrieved = await retriever.RetrieveAsync(briefing, directiveSet.Directives, ct);
+            IReadOnlyList<GuideCitation> retrieved = await retriever.RetrieveAsync(briefing, directiveSet.Directives, ct);
 
             DumpPrompt(briefing, previous, directiveSet.Directives, retrieved);
 
@@ -67,8 +67,8 @@ public sealed class Mayor(
                 status.MarkLlmSuccess();
             }
 
-            // Re-attach the citations the retriever produced — the LLM only references them by id.
-            input = input with { Citations = retrieved };
+            // Re-attach the guide_citations the retriever produced — the LLM only references them by id.
+            input = input with { GuideCitations = retrieved };
 
             Core.Advice.MayorAgenda stamped = agendaStore.Update(input, FormatTick(briefing));
             bus.Publish(new AgendaUpdated(stamped));
@@ -88,7 +88,7 @@ public sealed class Mayor(
 
     private async Task<Core.Advice.MayorAgendaInput?> CallLlmWithRetryAsync(
         MayorBriefing briefing, Core.Advice.MayorAgenda? previous,
-        IReadOnlyList<string> directives, IReadOnlyList<Citation> retrieved, CancellationToken ct)
+        IReadOnlyList<string> directives, IReadOnlyList<GuideCitation> retrieved, CancellationToken ct)
     {
         for (int attempt = 1; attempt <= 2; attempt++)
         {
@@ -170,7 +170,7 @@ public sealed class Mayor(
     }
 
     private void DumpPrompt(MayorBriefing briefing, Core.Advice.MayorAgenda? previous,
-                            IReadOnlyList<string> directives, IReadOnlyList<Citation> retrieved)
+                            IReadOnlyList<string> directives, IReadOnlyList<GuideCitation> retrieved)
     {
         try
         {

@@ -21,8 +21,8 @@ public sealed class AdviceBusTests
             StateOfTheUnion: new Dictionary<string, string> { ["welfare"] = "All quiet." },
             UpdateNotes: "Day 1.",
             ShortTerm: [], LongTerm: [],
-            MinisterDirection: new Dictionary<string, string>(),
-            Citations: []);
+            CabinetDirection: new Dictionary<string, string>(),
+            GuideCitations: []);
 
         bus.Publish(new AgendaUpdated(agenda));
 
@@ -45,6 +45,6 @@ internal static class InputBuilderExtensions
         GeneratedAt: DateTimeOffset.UnixEpoch,
         Posture: input.Posture, StateOfTheUnion: input.StateOfTheUnion,
         UpdateNotes: input.UpdateNotes, ShortTerm: input.ShortTerm, LongTerm: input.LongTerm,
-        MinisterDirection: input.MinisterDirection,
-        Citations: input.Citations ?? []);
+        CabinetDirection: input.CabinetDirection,
+        GuideCitations: input.GuideCitations ?? []);
 }

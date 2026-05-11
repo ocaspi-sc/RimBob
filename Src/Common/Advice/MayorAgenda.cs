@@ -14,8 +14,8 @@ public sealed record MayorAgenda(
     [property: JsonPropertyName("posture")]              MayorPosture                        Posture,
     [property: JsonPropertyName("state_of_the_union")]   IReadOnlyDictionary<string, string> StateOfTheUnion,
     [property: JsonPropertyName("update_notes")]         string                              UpdateNotes,
-    [property: JsonPropertyName("short_term")]           IReadOnlyList<AgendaItem>           ShortTerm,
-    [property: JsonPropertyName("long_term")]            IReadOnlyList<AgendaItem>           LongTerm,
-    [property: JsonPropertyName("minister_direction")]   IReadOnlyDictionary<string, string> MinisterDirection,
-    [property: JsonPropertyName("citations")]            IReadOnlyList<Citation>             Citations
+    [property: JsonPropertyName("short_term")]           IReadOnlyList<AgendaPriority>           ShortTerm,
+    [property: JsonPropertyName("long_term")]            IReadOnlyList<AgendaPriority>           LongTerm,
+    [property: JsonPropertyName("cabinet_direction")]    IReadOnlyDictionary<string, string>     CabinetDirection,
+    [property: JsonPropertyName("guide_citations")]      IReadOnlyList<GuideCitation>            GuideCitations
 );

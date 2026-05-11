@@ -8,7 +8,7 @@ namespace RimAI.Ministers.Mayor;
 /// almost always escalates to the LLM; the rules' job is to add agenda directives
 /// that constrain the next call. ~95% escalation rate per design.
 /// </summary>
-public sealed class MayorRules
+public sealed class MayorAgendaRules
 {
     public MayorDirectiveSet Evaluate(MayorBriefing briefing, ColonyContext _)
     {

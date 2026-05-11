@@ -27,11 +27,11 @@ public sealed class PromptBuilder
         MayorBriefing           briefing,
         MayorAgenda?            previousAgenda,
         IReadOnlyList<string>   agendaDirectives,
-        IReadOnlyList<Citation> retrievedGuides)
+        IReadOnlyList<GuideCitation> guideContext)
     {
-        IReadOnlyList<RetrievedGuide>? guides = retrievedGuides.Count == 0
+        IReadOnlyList<GuideContextEntry>? guides = guideContext.Count == 0
             ? null
-            : [.. retrievedGuides.Select(c => new RetrievedGuide(c.CiteId, c.Heading, c.SourcePath, c.Snippet))];
+            : [.. guideContext.Select(c => new GuideContextEntry(c.CiteId, c.Heading, c.SourcePath, c.Snippet))];
         MayorPromptPayload payload = new(briefing, previousAgenda, agendaDirectives, guides);
         return JsonSerializer.Serialize(payload, UserMessageJson);
     }
@@ -51,10 +51,10 @@ internal sealed record MayorPromptPayload(
     [property: JsonPropertyName("briefing")]         MayorBriefing                  Briefing,
     [property: JsonPropertyName("previous_agenda")]  MayorAgenda?                   PreviousAgenda,
     [property: JsonPropertyName("agenda_directives")] IReadOnlyList<string>         AgendaDirectives,
-    [property: JsonPropertyName("retrieved_guides")] IReadOnlyList<RetrievedGuide>? RetrievedGuides
+    [property: JsonPropertyName("guide_context")] IReadOnlyList<GuideContextEntry>? GuideContext
 );
 
-internal sealed record RetrievedGuide(
+internal sealed record GuideContextEntry(
     [property: JsonPropertyName("cite_id")] string CiteId,
     [property: JsonPropertyName("heading")] string Heading,
     [property: JsonPropertyName("source")]  string Source,

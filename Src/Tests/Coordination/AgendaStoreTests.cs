@@ -81,6 +81,6 @@ internal static class InputBuilder
         UpdateNotes:       "Quiet day. Carrying forward.",
         ShortTerm:         [],
         LongTerm:          [],
-        MinisterDirection: new Dictionary<string, string>()
+        CabinetDirection: new Dictionary<string, string>()
     );
 }

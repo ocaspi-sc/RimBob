@@ -43,8 +43,8 @@ public sealed class AgendaStore
                 UpdateNotes:       proposed.UpdateNotes,
                 ShortTerm:         proposed.ShortTerm,
                 LongTerm:          proposed.LongTerm,
-                MinisterDirection: proposed.MinisterDirection,
-                Citations:         proposed.Citations ?? []
+                CabinetDirection: proposed.CabinetDirection,
+                GuideCitations:    proposed.GuideCitations ?? []
             );
 
             if (_current is not null)
@@ -57,4 +57,3 @@ public sealed class AgendaStore
         }
     }
 }
-

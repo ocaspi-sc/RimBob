@@ -6,8 +6,6 @@
 
 ---
 
-Mayor Agenda says "revive all downed colonists" etc but they don't seem down to me.
-
 Is the agenda saved to a file that the dashboard reads from? is there history?
 
 Easy to automate:
@@ -18,6 +16,11 @@ Is the agenda saved to a file that the dashboard reads from? is there history?
 
 
 
+Migrate from codex chrome plugin to playwright for frontend
+
+
+
+Simplify AGENTS.md
 
 
 

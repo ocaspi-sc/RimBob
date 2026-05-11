@@ -29,8 +29,8 @@
       "cite_ids": ["g1"]
     }
   ],
-  "minister_direction": {},
-  "citations": [
+  "cabinet_direction": {},
+  "guide_citations": [
     {
       "cite_id": "g1",
       "source_path": "strategic-plan-y1-y2.md",

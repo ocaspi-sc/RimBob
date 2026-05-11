@@ -42,11 +42,11 @@ public static class StatusEndpoints
             BriefingCache   briefings,
             AgendaStore     agendaStore,
             PromptBuilder   prompts,
-            MayorRetriever  retriever,
+            MayorRagRetriever  retriever,
             CancellationToken ct) =>
         {
             MayorBriefing briefing = briefings.GetMayorBriefing();
-            IReadOnlyList<Citation> retrieved = await retriever.RetrieveAsync(briefing, [], ct);
+            IReadOnlyList<GuideCitation> retrieved = await retriever.RetrieveAsync(briefing, [], ct);
             string user = prompts.BuildMayorUserMessage(briefing, agendaStore.Current, [], retrieved);
             string system;
             try   { system = prompts.MayorSystemPrompt; }

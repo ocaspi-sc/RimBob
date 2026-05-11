@@ -9,7 +9,7 @@
 
 The Mayor is the player's chief advisor. Once per in-game day, it updates the **Agenda** — a living planning document containing ranked short-term priorities and long-term strategic goals — and writes a brief `update_notes` narrative explaining what changed and why.
 
-The Mayor does not micromanage. It maintains a strategic plan, directs the cabinet via `minister_direction` entries in the Agenda, and (post-M5) acknowledges severity-gated tactical alerts from feeder ministers. It does not issue actions; it issues advice.
+The Mayor does not micromanage. It maintains a strategic plan, directs the cabinet via `cabinet_direction` entries in the Agenda, and (post-M5) acknowledges severity-gated tactical alerts from feeder ministers. It does not issue actions; it issues advice.
 
 In `Suggest` mode (the only MVP mode) the player reads the Agenda and decides what to act on. Future `Auto` graduations are per-feeder-minister and per-advice-type, never to the Mayor itself.
 
@@ -25,7 +25,7 @@ In `Suggest` mode (the only MVP mode) the player reads the Agenda and decides wh
 
 ## RAG (M2)
 
-Each Mayor turn runs `MayorRetriever.RetrieveAsync` before the LLM call. A query string is built from the briefing (date, season, food, threat, wealth, weather, research, plus agenda directives) and embedded once via Gemini `gemini-embedding-001`; top-K chunks come back from `KnowledgeBase` and feed the prompt as `retrieved_guides[]`. The Mayor cites the ones it actually used by attaching `cite_id`s to the relevant short_term / long_term items; the full retrieved list is also stamped onto `MayorAgenda.citations[]` server-side for the dashboard. Disabled when `RimAi:Rag:Enabled = false` or no Gemini key is configured. → [`design/rag.md`](../rag.md).
+Each Mayor turn runs `MayorRagRetriever.RetrieveAsync` before the LLM call. A query string is built from the briefing (date, season, food, threat, wealth, weather, research, plus agenda directives) and embedded once via Gemini `gemini-embedding-001`; top-K chunks come back from `KnowledgeBase` and feed the prompt as `guide_context[]`. The Mayor cites the ones it actually used by attaching `cite_id`s to the relevant short_term / long_term items; the full retrieved list is also stamped onto `MayorAgenda.guide_citations[]` server-side for the dashboard. Disabled when `RimAi:Rag:Enabled = false` or no Gemini key is configured. → [`design/rag.md`](../rag.md).
 
 ---
 
@@ -67,7 +67,7 @@ The Mayor's LLM call at turn-end produces a **complete new `MayorAgenda`** — n
       { "id": "lt_1", "text": "Complete winter prep (food, heat, schedules) before day 30.", "status": "active" },
       { "id": "lt_2", "text": "Base expansion deferred to year 2.", "status": "deferred" }
     ],
-    "minister_direction": {}   // empty in M1; populated M3+
+    "cabinet_direction": {}   // empty in M1; populated M3+
   },
   "flags": [],
   "notes": "free-form rationale, logged not parsed"
@@ -88,7 +88,7 @@ The Mayor receives once per in-game day:
 - **CoS digest**: batched Medium flags from the last 24h, ministers' top advice candidates, recent incidents.
 - **Trend windows**: mood, wealth, food, threat-points over 7 in-game days.
 - **Recent player feedback**: aggregate Accept/Dismiss/Modify rates from the last 7 memos so the Mayor can adapt tone and granularity.
-- **Retrieved guide passages** for current quadrum (M4+).
+- **Guide context passages** for current quadrum (M4+).
 
 Note: in M1, the only feeder is the colony-wide briefing; CoS digest, trend windows, and feedback aggregation come online M2/M3/M5.
 

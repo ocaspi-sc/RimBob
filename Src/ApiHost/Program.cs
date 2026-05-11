@@ -58,7 +58,7 @@ builder.Services.AddSingleton<IngestionDispatcher>();
 
 builder.Services.AddSingleton<AdviceBus>();
 builder.Services.AddSingleton<AgendaStore>();
-builder.Services.AddSingleton<MayorRules>();
+builder.Services.AddSingleton<MayorAgendaRules>();
 builder.Services.AddSingleton<MayorStatus>();
 
 // ── RAG (M2) ───────────────────────────────────────────────────────────────
@@ -74,16 +74,16 @@ builder.Services.AddSingleton<EmbeddingCache>(sp =>
         : Path.Combine(builder.Environment.ContentRootPath, opts.Rag.CacheRoot);
     return new EmbeddingCache(cacheDir);
 });
-builder.Services.AddSingleton<MayorRetriever>(sp =>
+builder.Services.AddSingleton<MayorRagRetriever>(sp =>
 {
     RimAiOptions opts = sp.GetRequiredService<IOptions<RimAiOptions>>().Value;
     IEmbedder? embedder = ResolveEmbedder(opts, sp);
-    return new MayorRetriever(
+    return new MayorRagRetriever(
         kb:       sp.GetRequiredService<KnowledgeBase>(),
         embedder: embedder,
         enabled:  opts.Rag.Enabled,
         topK:     opts.Rag.TopK,
-        log:      sp.GetRequiredService<ILogger<MayorRetriever>>());
+        log:      sp.GetRequiredService<ILogger<MayorRagRetriever>>());
 });
 builder.Services.AddSingleton<Ingest>(sp =>
 {

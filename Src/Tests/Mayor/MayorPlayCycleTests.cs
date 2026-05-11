@@ -78,8 +78,8 @@ public sealed class MayorPlayCycleTests
     private static Task<MayorAgendaInput> CannedAgenda(string note) =>
         Task.FromResult(InputBuilder.Default with { UpdateNotes = note });
 
-    private static List<AgendaItem> SixActiveBullets() => Enumerable.Range(1, 6)
-        .Select(i => new AgendaItem($"st_{i}", $"Bullet {i}", AgendaItemStatus.Active))
+    private static List<AgendaPriority> SixActiveBullets() => Enumerable.Range(1, 6)
+        .Select(i => new AgendaPriority($"st_{i}", $"Bullet {i}", AgendaPriorityStatus.Active))
         .ToList();
 
     private sealed class Harness
@@ -101,9 +101,9 @@ public sealed class MayorPlayCycleTests
 
             LlmClient      llm       = new(NullLogger<LlmClient>.Instance, executor);
             KnowledgeBase  kb        = new();
-            MayorRetriever retriever = new(kb, embedder: null, enabled: false, topK: 0,
-                                           NullLogger<MayorRetriever>.Instance);
-            Mayor = new(Cache, new MayorRules(), Store, llm, new PromptBuilder(), Bus, new MayorStatus(),
+            MayorRagRetriever retriever = new(kb, embedder: null, enabled: false, topK: 0,
+                                           NullLogger<MayorRagRetriever>.Instance);
+            Mayor = new(Cache, new MayorAgendaRules(), Store, llm, new PromptBuilder(), Bus, new MayorStatus(),
                         retriever, NullLogger<MayorMinister>.Instance);
         }
     }

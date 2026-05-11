@@ -6,12 +6,12 @@ namespace RimAI.Knowledge;
 
 /// <summary>
 /// Builds a retrieval query for the Mayor from the daily briefing + agenda directives,
-/// embeds it once, and pulls top-K Chunks from the KnowledgeBase. Returns Citation
+/// embeds it once, and pulls top-K Chunks from the KnowledgeBase. Returns GuideCitation
 /// records ready to be slotted into the LLM prompt and the agenda output.
 /// Disabled retrievers (Enabled=false) short-circuit to an empty list — used when
 /// RimAi:Rag:Enabled is false in config.
 /// </summary>
-public sealed class MayorRetriever
+public sealed class MayorRagRetriever
 {
     private const int SnippetMaxChars = 320;
 
@@ -19,14 +19,14 @@ public sealed class MayorRetriever
     private readonly IEmbedder?              _embedder;
     private readonly int                     _topK;
     private readonly bool                    _enabled;
-    private readonly ILogger<MayorRetriever> _log;
+    private readonly ILogger<MayorRagRetriever> _log;
 
-    public MayorRetriever(
+    public MayorRagRetriever(
         KnowledgeBase           kb,
         IEmbedder?              embedder,
         bool                    enabled,
         int                     topK,
-        ILogger<MayorRetriever> log)
+        ILogger<MayorRagRetriever> log)
     {
         _kb       = kb;
         _embedder = embedder;
@@ -37,7 +37,7 @@ public sealed class MayorRetriever
 
     public bool Enabled => _enabled;
 
-    public async Task<IReadOnlyList<Citation>> RetrieveAsync(
+    public async Task<IReadOnlyList<GuideCitation>> RetrieveAsync(
         MayorBriefing         briefing,
         IReadOnlyList<string> agendaDirectives,
         CancellationToken     ct)
@@ -57,11 +57,11 @@ public sealed class MayorRetriever
         }
 
         IReadOnlyList<Chunk> hits = _kb.Retrieve(queryEmbedding, _topK);
-        List<Citation> citations = new(hits.Count);
+        List<GuideCitation> guideCitations = new(hits.Count);
         for (int i = 0; i < hits.Count; i++)
         {
             Chunk c = hits[i];
-            citations.Add(new Citation(
+            guideCitations.Add(new GuideCitation(
                 CiteId:     $"g{i + 1}",
                 SourcePath: c.Meta.SourcePath,
                 Heading:    c.Meta.SectionHeading,
@@ -70,9 +70,9 @@ public sealed class MayorRetriever
 
         _log.LogInformation(
             "Mayor RAG: retrieved {Count} chunks (topK={TopK}, query={QueryChars} chars)",
-            citations.Count, _topK, query.Length);
+            guideCitations.Count, _topK, query.Length);
 
-        return citations;
+        return guideCitations;
     }
 
     public static string BuildQuery(MayorBriefing b, IReadOnlyList<string> agendaDirectives)

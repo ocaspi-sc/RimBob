@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 using RimAI.Core.Advice;
 using RimAI.Core.Briefings;
 
-using Citation = RimAI.Core.Advice.Citation;
+using GuideCitation = RimAI.Core.Advice.GuideCitation;
 
 namespace RimAI.LLM;
 
@@ -26,7 +26,7 @@ public sealed class LlmClient
         MayorBriefing           briefing,
         MayorAgenda?            previous,
         IReadOnlyList<string>   agendaDirectives,
-        IReadOnlyList<Citation> retrievedGuides,
+        IReadOnlyList<GuideCitation> guideContext,
         CancellationToken       ct);
 
     private readonly Client?                                       _client;
@@ -128,16 +128,16 @@ public sealed class LlmClient
         MayorBriefing           briefing,
         MayorAgenda?            previousAgenda,
         IReadOnlyList<string>   agendaDirectives,
-        IReadOnlyList<Citation> retrievedGuides,
+        IReadOnlyList<GuideCitation> guideContext,
         CancellationToken       ct)
     {
         if (_mayorExecutor is not null)
-            return await _mayorExecutor(briefing, previousAgenda, agendaDirectives, retrievedGuides, ct);
+            return await _mayorExecutor(briefing, previousAgenda, agendaDirectives, guideContext, ct);
 
         if (_client is null)
             throw new InvalidOperationException("GEMINI_API_KEY not set — cannot call Mayor LLM.");
 
-        string userMessage = _prompts.BuildMayorUserMessage(briefing, previousAgenda, agendaDirectives, retrievedGuides);
+        string userMessage = _prompts.BuildMayorUserMessage(briefing, previousAgenda, agendaDirectives, guideContext);
         GenerateContentConfig config = new()
         {
             SystemInstruction = new Content { Parts = [new Part { Text = _prompts.MayorSystemPrompt }] },

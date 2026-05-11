@@ -15,38 +15,38 @@ namespace RimAI.Tests.Mayor;
 
 /// <summary>
 /// M2 RAG side-by-side: same briefing run with an empty KnowledgeBase vs. a
-/// preloaded one. Citations should appear only when retrieval has something to
+/// preloaded one. GuideCitations should appear only when retrieval has something to
 /// return.
 /// </summary>
 public sealed class MayorRagTests
 {
     [Fact]
-    public void RagVsNoRagFixture_CapturesCitationDiff()
+    public void RagVsNoRagFixture_CapturesGuideCitationDiff()
     {
         JsonObject noRag = ReadFixture("agenda-no-rag.json");
         JsonObject withRag = ReadFixture("agenda-with-rag.json");
 
-        noRag["citations"]!.AsArray().Should().BeEmpty();
-        withRag["citations"]!.AsArray().Should().NotBeEmpty();
+        noRag["guide_citations"]!.AsArray().Should().BeEmpty();
+        withRag["guide_citations"]!.AsArray().Should().NotBeEmpty();
         withRag["short_term"]![0]!["cite_ids"]!.AsArray()
             .Select(n => n!.GetValue<string>())
             .Should().Contain("g1");
     }
 
     [Fact]
-    public async Task NoRag_AgendaCitationsEmpty_PromptHasNoRetrievedGuides()
+    public async Task NoRag_AgendaGuideCitationsEmpty_PromptHasNoGuideContext()
     {
         Harness h = new(retriever: DisabledRetriever());
 
         await h.Mayor.RunPlayCycle(CancellationToken.None);
 
         h.Store.Current.Should().NotBeNull();
-        h.Store.Current!.Citations.Should().BeEmpty();
-        h.LastRetrievedGuides.Should().BeEmpty();
+        h.Store.Current!.GuideCitations.Should().BeEmpty();
+        h.LastGuideContext.Should().BeEmpty();
     }
 
     [Fact]
-    public async Task WithRag_AgendaCarriesCitationsAndPromptIncludesGuides()
+    public async Task WithRag_AgendaCarriesGuideCitationsAndPromptIncludesGuides()
     {
         ChunkMetadata meta = new("guides/strategic-plan-y1-y2.md", "Winter prep", 12, 18);
         Chunk c1 = new("c1", "Build a 60-day food buffer before winter.", meta, [1f, 0f, 0f]);
@@ -55,26 +55,26 @@ public sealed class MayorRagTests
 
         KnowledgeBase  kb        = new([c1, c2, c3]);
         StaticEmbedder embedder  = new([1f, 0f, 0f]);  // aligns with c1/c2
-        MayorRetriever retriever = new(kb, embedder, enabled: true, topK: 2,
-                                       NullLogger<MayorRetriever>.Instance);
+        MayorRagRetriever retriever = new(kb, embedder, enabled: true, topK: 2,
+                                       NullLogger<MayorRagRetriever>.Instance);
 
         Harness h = new(retriever);
 
         await h.Mayor.RunPlayCycle(CancellationToken.None);
 
         h.Store.Current.Should().NotBeNull();
-        h.Store.Current!.Citations.Should().HaveCount(2);
-        h.Store.Current.Citations[0].CiteId.Should().Be("g1");
-        h.Store.Current.Citations[0].Snippet.Should().Contain("60-day food buffer");
+        h.Store.Current!.GuideCitations.Should().HaveCount(2);
+        h.Store.Current.GuideCitations[0].CiteId.Should().Be("g1");
+        h.Store.Current.GuideCitations[0].Snippet.Should().Contain("60-day food buffer");
 
-        h.LastRetrievedGuides.Should().HaveCount(2);
-        h.LastRetrievedGuides.Select(c => c.SourcePath)
+        h.LastGuideContext.Should().HaveCount(2);
+        h.LastGuideContext.Select(c => c.SourcePath)
             .Should().AllBe("guides/strategic-plan-y1-y2.md");
     }
 
-    private static MayorRetriever DisabledRetriever()
+    private static MayorRagRetriever DisabledRetriever()
         => new(new KnowledgeBase(), embedder: null, enabled: false, topK: 0,
-               NullLogger<MayorRetriever>.Instance);
+               NullLogger<MayorRagRetriever>.Instance);
 
     private static JsonObject ReadFixture(string fileName)
     {
@@ -110,9 +110,9 @@ public sealed class MayorRagTests
         public AgendaStore        Store  { get; }
         public AdviceBus          Bus    { get; }
         public MayorMinister      Mayor  { get; }
-        public IReadOnlyList<Citation> LastRetrievedGuides { get; private set; } = [];
+        public IReadOnlyList<GuideCitation> LastGuideContext { get; private set; } = [];
 
-        public Harness(MayorRetriever retriever)
+        public Harness(MayorRagRetriever retriever)
         {
             Colony = new();
             Cache  = new(Colony, new TestLogger<BriefingCache>());
@@ -121,12 +121,12 @@ public sealed class MayorRagTests
 
             LlmClient.MayorCallExecutor executor = (_, _, _, retrieved, _) =>
             {
-                LastRetrievedGuides = retrieved;
+                LastGuideContext = retrieved;
                 return Task.FromResult(InputBuilder.Default with { UpdateNotes = "rag-test" });
             };
             LlmClient llm = new(NullLogger<LlmClient>.Instance, executor);
 
-            Mayor = new(Cache, new MayorRules(), Store, llm, new PromptBuilder(), Bus,
+            Mayor = new(Cache, new MayorAgendaRules(), Store, llm, new PromptBuilder(), Bus,
                         new MayorStatus(), retriever, NullLogger<MayorMinister>.Instance);
         }
     }
