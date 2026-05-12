@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Options;
 using Serilog;
+using Serilog.Formatting.Json;
 using RimAI.Coordination;
 using RimAI.Core.Ministers;
 using RimAI.Host;
@@ -16,10 +17,21 @@ var builder = WebApplication.CreateBuilder(args);
 // appsettings.Local.json is gitignored; safe place for the Gemini key in dev.
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: false);
 
+string logsDir = HostLogPaths.ResolveLogsDirectory(builder.Environment.ContentRootPath);
+Directory.CreateDirectory(logsDir);
+
 // ── Logging: Serilog reads from appsettings.json ───────────────────────────
 builder.Host.UseSerilog((ctx, services, cfg) =>
     cfg.ReadFrom.Configuration(ctx.Configuration)
-       .ReadFrom.Services(services));
+       .ReadFrom.Services(services)
+       .WriteTo.File(
+           path: Path.Combine(logsDir, "rimai-.log"),
+           rollingInterval: RollingInterval.Day,
+           outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+       .WriteTo.File(
+           formatter: new JsonFormatter(),
+           path: Path.Combine(logsDir, "decisions-.jsonl"),
+           rollingInterval: RollingInterval.Day));
 
 // ── Typed configuration ────────────────────────────────────────────────────
 builder.Services
@@ -128,6 +140,7 @@ builder.Services.AddSingleton<CabinetCycle>();
 builder.Services.AddHostedService<DayTickOrchestrator>();
 
 var app = builder.Build();
+app.Logger.LogInformation("Host logs directory: {LogsDirectory}", logsDir);
 
 // ── Middleware ─────────────────────────────────────────────────────────────
 app.UseDefaultFiles();
