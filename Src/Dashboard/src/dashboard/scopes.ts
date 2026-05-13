@@ -13,7 +13,7 @@ export type ScopeKey =
 
 export type ScopeKind = 'system' | 'minister';
 export type ScopeStatus = 'live' | 'planned';
-export type MinisterViewKey = 'prompt' | 'briefing' | 'rag' | 'rules' | 'advice';
+export type MinisterViewKey = 'prompt' | 'raw_llm' | 'briefing' | 'rag' | 'rules' | 'advice';
 
 export interface ScopeConfig {
   key: ScopeKey;
@@ -26,6 +26,7 @@ export interface ScopeConfig {
 
 export const ministerViews: Array<{ key: MinisterViewKey; label: string }> = [
   { key: 'prompt', label: 'System Prompt' },
+  { key: 'raw_llm', label: 'Raw LLM Output' },
   { key: 'briefing', label: 'Briefing' },
   { key: 'rag', label: 'RAG' },
   { key: 'rules', label: 'Rules' },

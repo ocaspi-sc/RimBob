@@ -11,19 +11,22 @@ namespace RimAI.Host.Endpoints;
 
 public static class MinisterEndpoints
 {
+    private static readonly IReadOnlyList<string> MinisterViews =
+        ["prompt", "raw_llm", "briefing", "rag", "rules", "advice"];
+
     private static readonly IReadOnlyList<MinisterScopeInfo> Scopes =
     [
         new("system", "SYSTEM", "system", true, ["overview"]),
-        new("mayor", "Mayor", "minister", true, ["prompt", "briefing", "rag", "rules", "advice"]),
-        new("food", "Food", "minister", true, ["prompt", "briefing", "rag", "rules", "advice"]),
-        new("construction", "Construction", "minister", false, ["prompt", "briefing", "rag", "rules", "advice"]),
-        new("defense", "Defense", "minister", false, ["prompt", "briefing", "rag", "rules", "advice"]),
-        new("welfare", "Welfare", "minister", false, ["prompt", "briefing", "rag", "rules", "advice"]),
-        new("medical", "Medical", "minister", false, ["prompt", "briefing", "rag", "rules", "advice"]),
-        new("research", "Research", "minister", false, ["prompt", "briefing", "rag", "rules", "advice"]),
-        new("industry", "Industry", "minister", false, ["prompt", "briefing", "rag", "rules", "advice"]),
-        new("economy", "Economy", "minister", false, ["prompt", "briefing", "rag", "rules", "advice"]),
-        new("chief_of_staff", "Chief of Staff", "minister", false, ["prompt", "briefing", "rag", "rules", "advice"]),
+        new("mayor", "Mayor", "minister", true, MinisterViews),
+        new("food", "Food", "minister", true, MinisterViews),
+        new("construction", "Construction", "minister", false, MinisterViews),
+        new("defense", "Defense", "minister", false, MinisterViews),
+        new("welfare", "Welfare", "minister", false, MinisterViews),
+        new("medical", "Medical", "minister", false, MinisterViews),
+        new("research", "Research", "minister", false, MinisterViews),
+        new("industry", "Industry", "minister", false, MinisterViews),
+        new("economy", "Economy", "minister", false, MinisterViews),
+        new("chief_of_staff", "Chief of Staff", "minister", false, MinisterViews),
     ];
 
     public static IEndpointRouteBuilder MapMinisterEndpoints(this IEndpointRouteBuilder app)
@@ -74,6 +77,41 @@ public static class MinisterEndpoints
                 title: "Prompt not wired",
                 detail: $"{scope.Label} prompt introspection is not wired yet.",
                 statusCode: StatusCodes.Status501NotImplemented);
+        });
+
+        app.MapGet("/api/ministers/{minister}/llm-output/latest", (
+            string minister,
+            RawLlmOutputStore outputs) =>
+        {
+            MinisterScopeInfo? scope = FindScope(minister);
+            if (scope is null || scope.Kind != "minister")
+                return Results.NotFound(new { error = $"Unknown minister scope '{minister}'." });
+
+            if (!scope.Ready)
+            {
+                return Results.Problem(
+                    title: "Raw LLM output not wired",
+                    detail: $"{scope.Label} is a planned minister scope; raw LLM output is not wired yet.",
+                    statusCode: StatusCodes.Status501NotImplemented);
+            }
+
+            RawLlmOutputSnapshot? snapshot = outputs.Latest(scope.Label);
+            if (snapshot is null)
+            {
+                return Results.Ok(new RawLlmOutputSnapshot(
+                    Minister: scope.Label,
+                    Provider: "Gemini",
+                    Model: LlmClient.DefaultModel,
+                    CapturedAt: DateTimeOffset.UtcNow,
+                    LatencyMs: 0,
+                    Status: "not_seen_yet",
+                    ParseMode: "not_applicable",
+                    SystemPromptChars: 0,
+                    UserPromptChars: 0,
+                    Text: ""));
+            }
+
+            return Results.Ok(snapshot);
         });
 
         app.MapGet("/api/ministers/{minister}/trace/latest", (

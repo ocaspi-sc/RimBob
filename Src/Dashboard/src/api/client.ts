@@ -10,6 +10,19 @@ export interface PromptPayload {
   user: string;
 }
 
+export interface RawLlmOutputPayload {
+  minister: string;
+  provider: string;
+  model: string;
+  capturedAt: string;
+  latencyMs: number;
+  status: string;
+  parseMode: string;
+  systemPromptChars: number;
+  userPromptChars: number;
+  text: string;
+}
+
 async function readJson<T>(url: string, signal?: AbortSignal): Promise<T> {
   const response = await fetch(url, { signal });
   if (!response.ok) {
@@ -52,6 +65,13 @@ export async function fetchPrompt(scope: ScopeKey, signal?: AbortSignal): Promis
     throw new Error(`${scope} prompt is not exposed yet`);
   }
   return await readJson<PromptPayload>(`/api/ministers/${scope}/prompt`, signal);
+}
+
+export async function fetchRawLlmOutput(scope: ScopeKey, signal?: AbortSignal): Promise<RawLlmOutputPayload> {
+  if (scope !== 'mayor' && scope !== 'food') {
+    throw new Error(`${scope} raw LLM output is not exposed yet`);
+  }
+  return await readJson<RawLlmOutputPayload>(`/api/ministers/${scope}/llm-output/latest`, signal);
 }
 
 export async function fetchTrace(scope: ScopeKey, signal?: AbortSignal): Promise<MinisterTrace> {

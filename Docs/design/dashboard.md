@@ -61,6 +61,7 @@ Each scope may show a small emoji marker. Future scopes are disabled or marked "
 Minister scopes use the fixed top tab bar:
 
 - System Prompt
+- Raw LLM Output
 - Briefing
 - RAG
 - Rules
@@ -140,6 +141,12 @@ SSE event contract:
 Shows the exact prompt material available for the selected minister.
 
 Mayor and Food are backed by `GET /api/ministers/{minister}/prompt`, with `/api/mayor/prompt` retained as a legacy Mayor route. Future ministers should use the same generalized read-only prompt endpoint when added. Until then, render a clear "not exposed yet" state.
+
+### Raw LLM Output
+
+Shows the unnormalized model response text for the selected minister, before schema parsing, tolerant repair, normalization, or advice rendering. This is a developer/debug view, rendered as a tab in the minister workspace.
+
+Backed by `GET /api/ministers/{minister}/llm-output/latest` for live ministers. The endpoint returns the latest raw Gemini response recorded in the current Host process, plus model, provider, capture time, latency, parse status, parse mode, and prompt character counts. If the request fails before Gemini returns text, record `request_failed` with the exception text so the view explains why no raw response exists. If no LLM call has happened since Host startup, render "no raw output yet" rather than an error. Do not infer raw output from normalized `AdviceItem`s or Agenda payloads.
 
 ### Briefing
 

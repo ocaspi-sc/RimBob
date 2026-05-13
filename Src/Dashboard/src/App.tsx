@@ -9,6 +9,7 @@ import { MinisterAdviceView } from './components/minister/MinisterAdviceView';
 import { MinisterBriefingView } from './components/minister/MinisterBriefingView';
 import { MinisterPromptView } from './components/minister/MinisterPromptView';
 import { MinisterRagView } from './components/minister/MinisterRagView';
+import { MinisterRawLlmView } from './components/minister/MinisterRawLlmView';
 import { MinisterRulesView } from './components/minister/MinisterRulesView';
 import { SystemOverview } from './components/system/SystemOverview';
 import { useAdviceFeed } from './hooks/useAdviceFeed';
@@ -136,6 +137,10 @@ function MinisterWorkspace({
 
   if (selectedView === 'briefing') {
     return <MinisterBriefingView scope={scope} />;
+  }
+
+  if (selectedView === 'raw_llm') {
+    return <MinisterRawLlmView scope={scope} />;
   }
 
   if (selectedView === 'rag') {

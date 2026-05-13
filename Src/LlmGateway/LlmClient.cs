@@ -43,15 +43,17 @@ public sealed class LlmClient
     private readonly FoodCallExecutor?                             _foodExecutor;
     private readonly PromptBuilder                                 _prompts;
     private readonly ILogger<LlmClient>                            _log;
+    private readonly RawLlmOutputStore?                            _rawOutputs;
 
     public const string DefaultModel = "gemini-2.5-flash";
 
     public bool IsConfigured => _client is not null || _pingExecutor is not null;
 
-    public LlmClient(string? apiKey, PromptBuilder prompts, ILogger<LlmClient> log)
+    public LlmClient(string? apiKey, PromptBuilder prompts, ILogger<LlmClient> log, RawLlmOutputStore? rawOutputs = null)
     {
-        _prompts = prompts;
-        _log     = log;
+        _prompts    = prompts;
+        _log        = log;
+        _rawOutputs = rawOutputs;
         // Constructor must not throw — Host needs to boot for /api/health
         // even when the key is absent (e.g. CI smoke tests).
         _client = string.IsNullOrWhiteSpace(apiKey) ? null : new Client(apiKey: apiKey);
@@ -68,6 +70,7 @@ public sealed class LlmClient
         _client       = null;
         _pingExecutor = null;
         _foodExecutor = null;
+        _rawOutputs   = null;
     }
 
     // Test-only ctor: injects a ping executor so PingAsync can be exercised without Gemini.
@@ -79,6 +82,7 @@ public sealed class LlmClient
         _pingExecutor = pingExecutor;
         _mayorExecutor = null;
         _foodExecutor = null;
+        _rawOutputs   = null;
     }
 
     // Test-only ctor: injects a Mayor agenda executor so play-cycle tests don't hit Gemini.
@@ -90,6 +94,7 @@ public sealed class LlmClient
         _pingExecutor  = null;
         _mayorExecutor = mayorExecutor;
         _foodExecutor  = null;
+        _rawOutputs    = null;
     }
 
     internal LlmClient(ILogger<LlmClient> log, FoodCallExecutor foodExecutor)
@@ -100,6 +105,7 @@ public sealed class LlmClient
         _pingExecutor = null;
         _mayorExecutor = null;
         _foodExecutor = foodExecutor;
+        _rawOutputs = null;
     }
 
     /// <summary>
@@ -174,12 +180,29 @@ public sealed class LlmClient
         };
 
         Stopwatch sw = Stopwatch.StartNew();
-        Google.GenAI.Types.GenerateContentResponse response = await _client.Models.GenerateContentAsync(
-            model:             DefaultModel,
-            contents:          userMessage,
-            config:            config,
-            cancellationToken: ct);
-        sw.Stop();
+        Google.GenAI.Types.GenerateContentResponse response;
+        try
+        {
+            response = await _client.Models.GenerateContentAsync(
+                model:             DefaultModel,
+                contents:          userMessage,
+                config:            config,
+                cancellationToken: ct);
+            sw.Stop();
+        }
+        catch (Exception ex)
+        {
+            sw.Stop();
+            RecordRawOutput(
+                minister: "Mayor",
+                userMessage: userMessage,
+                systemPrompt: _prompts.MayorSystemPrompt,
+                latencyMs: sw.ElapsedMilliseconds,
+                status: "request_failed",
+                parseMode: "not_applicable",
+                text: FormatRequestFailure(ex));
+            throw;
+        }
 
         string? text = response.Candidates?.FirstOrDefault()?.Content?.Parts?.FirstOrDefault()?.Text;
         if (string.IsNullOrWhiteSpace(text))
@@ -192,6 +215,14 @@ public sealed class LlmClient
         }
         catch (JsonException ex)
         {
+            RecordRawOutput(
+                minister: "Mayor",
+                userMessage: userMessage,
+                systemPrompt: _prompts.MayorSystemPrompt,
+                latencyMs: sw.ElapsedMilliseconds,
+                status: "parse_failed",
+                parseMode: "strict_json",
+                text: text);
             _log.LogError(ex, "Failed to parse Mayor agenda response as JSON. Raw text:\n{Text}", text);
             throw;
         }
@@ -200,6 +231,14 @@ public sealed class LlmClient
             throw new InvalidOperationException("Gemini agenda response deserialized to null.");
 
         string preview = parsed.UpdateNotes.Length > 200 ? parsed.UpdateNotes[..200] + "…" : parsed.UpdateNotes;
+        RecordRawOutput(
+            minister: "Mayor",
+            userMessage: userMessage,
+            systemPrompt: _prompts.MayorSystemPrompt,
+            latencyMs: sw.ElapsedMilliseconds,
+            status: "parsed",
+            parseMode: "strict_json",
+            text: text);
         _log.LogInformation(
             "Mayor LLM call complete: latency={LatencyMs}ms short_term={ShortCount} long_term={LongCount} update_notes=\"{Preview}\"",
             sw.ElapsedMilliseconds, parsed.ShortTerm.Count, parsed.LongTerm.Count, preview);
@@ -228,12 +267,29 @@ public sealed class LlmClient
         };
 
         Stopwatch sw = Stopwatch.StartNew();
-        Google.GenAI.Types.GenerateContentResponse response = await _client.Models.GenerateContentAsync(
-            model:             DefaultModel,
-            contents:          userMessage,
-            config:            config,
-            cancellationToken: ct);
-        sw.Stop();
+        Google.GenAI.Types.GenerateContentResponse response;
+        try
+        {
+            response = await _client.Models.GenerateContentAsync(
+                model:             DefaultModel,
+                contents:          userMessage,
+                config:            config,
+                cancellationToken: ct);
+            sw.Stop();
+        }
+        catch (Exception ex)
+        {
+            sw.Stop();
+            RecordRawOutput(
+                minister: "Food",
+                userMessage: userMessage,
+                systemPrompt: _prompts.FoodSystemPrompt,
+                latencyMs: sw.ElapsedMilliseconds,
+                status: "request_failed",
+                parseMode: "not_applicable",
+                text: FormatRequestFailure(ex));
+            throw;
+        }
 
         string? text = response.Candidates?.FirstOrDefault()?.Content?.Parts?.FirstOrDefault()?.Text;
         if (string.IsNullOrWhiteSpace(text))
@@ -275,10 +331,26 @@ public sealed class LlmClient
         }
         catch (JsonException parseEx)
         {
+            RecordRawOutput(
+                minister: "Food",
+                userMessage: userMessage,
+                systemPrompt: _prompts.FoodSystemPrompt,
+                latencyMs: sw.ElapsedMilliseconds,
+                status: "parse_failed",
+                parseMode: normalized ? "tolerant_normalization" : "strict_json",
+                text: text);
             _log.LogError(parseEx, "Failed to parse Food response as JSON. Raw text:\n{Text}", text);
             throw;
         }
 
+        RecordRawOutput(
+            minister: "Food",
+            userMessage: userMessage,
+            systemPrompt: _prompts.FoodSystemPrompt,
+            latencyMs: sw.ElapsedMilliseconds,
+            status: normalized ? "normalized" : "parsed",
+            parseMode: normalized ? "tolerant_normalization" : "strict_json",
+            text: text);
         _log.LogInformation(
             "Food LLM call complete: latency={LatencyMs}ms advice={AdviceCount} flags={FlagCount}",
             sw.ElapsedMilliseconds, parsed.Advice.Count, parsed.Flags.Count);
@@ -299,4 +371,28 @@ public sealed class LlmClient
             !string.IsNullOrWhiteSpace(advice.Body) &&
             !string.IsNullOrWhiteSpace(advice.Rationale));
 
+    private void RecordRawOutput(
+        string minister,
+        string userMessage,
+        string systemPrompt,
+        long latencyMs,
+        string status,
+        string parseMode,
+        string text)
+    {
+        _rawOutputs?.Record(new RawLlmOutputSnapshot(
+            Minister: minister,
+            Provider: "Gemini",
+            Model: DefaultModel,
+            CapturedAt: DateTimeOffset.UtcNow,
+            LatencyMs: latencyMs,
+            Status: status,
+            ParseMode: parseMode,
+            SystemPromptChars: systemPrompt.Length,
+            UserPromptChars: userMessage.Length,
+            Text: text));
+    }
+
+    private static string FormatRequestFailure(Exception ex) =>
+        $"No model response was returned.\n{ex.GetType().Name}: {ex.Message}";
 }

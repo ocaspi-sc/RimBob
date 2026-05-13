@@ -17,6 +17,7 @@ export const systemPanelRegistry: PanelConfig[] = [
 
 export const ministerPanelRegistry: PanelConfig[] = [
   { id: 'minister-prompt', title: 'System Prompt', scope: 'minister', view: 'prompt', requiredCapability: 'minister prompt endpoint' },
+  { id: 'minister-raw-llm', title: 'Raw LLM Output', scope: 'minister', view: 'raw_llm', requiredCapability: 'minister raw LLM output endpoint' },
   { id: 'minister-briefing', title: 'Briefing', scope: 'minister', view: 'briefing', requiredCapability: 'minister briefing endpoint' },
   { id: 'minister-rag', title: 'RAG', scope: 'minister', view: 'rag', requiredCapability: 'minister RAG endpoint or agenda citations' },
   { id: 'minister-rules', title: 'Rules', scope: 'minister', view: 'rules', requiredCapability: 'minister trace endpoint' },

@@ -55,6 +55,7 @@ builder.Services.AddHttpClient<RimApiClient>((sp, c) =>
     c.Timeout = TimeSpan.FromSeconds(10);
 });
 builder.Services.AddSingleton<PromptBuilder>();
+builder.Services.AddSingleton<RawLlmOutputStore>();
 builder.Services.AddSingleton<LlmClient>(sp =>
 {
     var opts = sp.GetRequiredService<IOptions<RimAiOptions>>().Value;
@@ -62,7 +63,8 @@ builder.Services.AddSingleton<LlmClient>(sp =>
     string? apiKey = Environment.GetEnvironmentVariable("GEMINI_API_KEY");
     if (string.IsNullOrWhiteSpace(apiKey)) apiKey = opts.GeminiApiKey;
     return new LlmClient(apiKey, sp.GetRequiredService<PromptBuilder>(),
-                                 sp.GetRequiredService<ILogger<LlmClient>>());
+                                 sp.GetRequiredService<ILogger<LlmClient>>(),
+                                 sp.GetRequiredService<RawLlmOutputStore>());
 });
 
 builder.Services.AddSingleton<ColonyState>();
