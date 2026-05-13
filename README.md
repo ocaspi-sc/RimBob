@@ -74,7 +74,7 @@ Run RimAI and the dashboard with the helper script:
 The script installs dashboard dependencies with `npm.cmd ci` if
 `node_modules` is missing, builds the dashboard into `Src/ApiHost/wwwroot`,
 then starts `RimAI.Host` in a minimized taskbar window named `RimAI Server`.
-Open the dashboard at:
+That window closes automatically when RimAI exits. Open the dashboard at:
 
 ```text
 http://localhost:5000

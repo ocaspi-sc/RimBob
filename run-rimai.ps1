@@ -74,7 +74,6 @@ function Start-HostTaskbarWindow {
 
     $childArgs = @(
         "-NoLogo",
-        "-NoExit",
         "-ExecutionPolicy",
         "Bypass",
         "-File",
@@ -101,8 +100,8 @@ function Start-HostTaskbarWindow {
 
     Write-Host ""
     Write-Host "RimAI host started in a minimized taskbar window named 'RimAI Server'."
-    Write-Host "Close that window, or stop dotnet inside it, to stop RimAI."
-    Write-Host "Use -Foreground to keep the server attached to this terminal."
+    Write-Host "The window closes automatically when RimAI exits."
+    Write-Host "Use -Foreground to keep the server attached to this terminal for debugging."
 }
 
 Require-Command "dotnet"
