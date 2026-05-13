@@ -130,6 +130,16 @@ Same shape. Different implementations per minister.
 
 ---
 
+## Advice quality contract
+
+All ministers should emit advice that is near-term, actionable, and possible in the current or short-term game state. The Mayor may reason about strategy, but even Mayor agenda items should prioritize concrete next moves over broad wish lists.
+
+Minister output should be sparse. A normal cycle should surface the most important few items and avoid exhaustive menus. Critical or unusually complex states can produce more, but the minister must still rank them with `priority_score`.
+
+Briefings should provide compact opportunity summaries rather than raw dumps. Spatial data is useful when it becomes actionable: distance/proximity buckets, nearest clusters, tile counts, and bottleneck signals are preferred over lists of every coordinate.
+
+---
+
 ## LLM output schema
 
 When the LLM is called (escalation path), it returns one or more `AdviceItem`s:
@@ -140,11 +150,12 @@ When the LLM is called (escalation path), it returns one or more `AdviceItem`s:
     {
       "advice_type": "food_security",   // closed enum, per minister
       "severity":    "high",            // low | medium | high | critical
+      "priority_score": 8,               // 1-10, first-class advice priority
       "title":       "Food situation tightening — start a second growing zone",
       "body":        "Days-of-food has dropped to 22 from 31 yesterday...",
       "rationale":   "rice matures in 8d, cold snap in 14d",
       "resource_requests": [
-        { "kind": "labor", "what": "more plant/cooking capacity this day", "why": "Food cannot close the gap without work time" },
+        { "kind": "labor", "what": "Cook work time today", "why": "Food cannot close the gap without cooked meals", "work_type": "Cook", "skill": "Cooking" },
         { "kind": "tile", "what": "~8x8 fertile growing footprint", "why": "current sowed area cannot cover winter buffer" }
       ],
       "suggested_actions": [
@@ -165,6 +176,8 @@ When the LLM is called (escalation path), it returns one or more `AdviceItem`s:
 
 Rules for the LLM:
 - `advice_type` is a **closed enum per minister**. The LLM picks from the list; no free-form advice types. (This is the unit the future autonomy dial graduates one at a time.)
+- `priority_score` is required on every advice item. Use it to rank player attention from 1-10; do not encode all priority into prose.
+- Advice must be concrete and currently possible or near-term. Do not emit grand strategy lists from feeder ministers; flag strategic pressure upward instead.
 - `resource_requests` are first-class advisory needs: "Food needs labor/tiles/items/etc." They do not allocate pawns, reserve tiles, or grant ownership of another minister's domain in MVP.
 - `suggested_actions` are advisory text — they are *not* executed in MVP, only rendered. Their `kind` is a closed enum so future Auto graduation can wire each kind to an HTN primitive.
 - The `notes` field is the upgrade seam. When a note pattern repeats and the LLM consistently writes the same advice off it, refinement promotes it into a rule.
@@ -209,9 +222,19 @@ Each minister owns either a production chain or a well-defined subsystem:
 
 ### Resource requests
 
-Ministers may request resources needed to satisfy their domain: tiles, labor capacity, items, buildings, bills, stockpile space, or attention from another subsystem. In MVP those requests are advisory only: they appear in `AdviceItem.resource_requests[]` and/or `AgentFlag.Requests`. A request does not grant ownership of the target resource and does not execute anything.
+Ministers may request resources needed to satisfy their domain: tiles, work-type-qualified labor, items, buildings, bills, stockpile space, or attention from another subsystem. In MVP those requests are advisory only: they appear in `AdviceItem.resource_requests[]` and/or `AgentFlag.Requests`. A request does not grant ownership of the target resource and does not execute anything.
 
 At Auto graduation, requests become inputs to the deferred planning/Labor path. Until then, "Food requests 2 cooks" means "tell the player cooking labor is needed," not "Food changes pawn priorities."
+
+Labor requests must be specific enough for a player or future Labor minister to act on. They should name the relevant work-tab type and, when useful, the skill signal that makes a pawn suitable. Routine hauling and cleaning should not be escalated into labor requests unless the briefing proves they are urgently blocking the minister's domain.
+
+### RimWorld work types
+
+RimAI needs a canonical `WorkType` enum that mirrors RimWorld's Work tab rather than inventing generic "labor" buckets. Work types are distinct from skills: `Cook` is a work type; `Cooking` is the skill. Some work types have no direct skill but still matter for priorities.
+
+MVP enum draft: `Firefight`, `Patient`, `Doctor`, `BedRest`, `Basic`, `Warden`, `Handle`, `Cook`, `Hunt`, `Construct`, `Grow`, `Mine`, `PlantCut`, `Smith`, `Tailor`, `Art`, `Craft`, `Haul`, `Clean`, `Research`. Expand from live defs/modded work types when ingestion exposes them.
+
+Resource requests may also carry optional `skill` when a skill threshold matters. Example: Food can request `work_type=Cook`, `skill=Cooking`, `quantity=1`; Food should not request vague "labor capacity."
 
 ### Action ownership map
 

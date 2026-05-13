@@ -27,11 +27,12 @@ Under the assisted-gameplay pivot ([`../DESIGN.md`](../DESIGN.md)), every minist
   "minister":        "Mayor",
   "advice_type":     "daily_digest",          // closed enum, per minister
   "severity":        "medium",                // low | medium | high | critical
+  "priority_score":  7,                       // 1-10, first-class ranking within/alongside severity
   "title":           "End of Day 12 — Food window closing, defense slack",
   "body":            "Markdown body. 2-6 short paragraphs.",
   "rationale":       "Why these were the most important items today.",
   "resource_requests": [
-    { "kind": "labor", "what": "2 cooking-capable colonists", "why": "meal stock below 2 days", "quantity": 2, "priority": "high", "requested_from": "Labor" },
+    { "kind": "labor", "what": "2 cooking-capable colonists", "why": "meal stock below 2 days", "quantity": 2, "priority": "high", "work_type": "Cook", "skill": "Cooking", "requested_from": "Labor" },
     { "kind": "building", "what": "1 cooler", "why": "freezer warming above safe temperature" }
   ],
   "suggested_actions": [
@@ -50,7 +51,10 @@ Under the assisted-gameplay pivot ([`../DESIGN.md`](../DESIGN.md)), every minist
 ```
 
 ### `severity`
-Mirrors `FlagSeverity` in [`communication.md`](communication.md). Drives dashboard visual treatment and (post-M5) whether the advice surfaces as a tactical-alert outside the daily cadence.
+Mirrors `FlagSeverity` in [`communication.md`](communication.md). Severity is semantic routing, not only UI decoration: the Mayor and CoS use it when deciding what enters the digest, what interrupts the player, and what can preempt other priorities. Rules may compute severity dynamically from live state.
+
+### `priority_score`
+Integer 1-10. This is a first-class output on every `AdviceItem`, used to rank advice within and across severity tiers. `severity` answers "how dangerous or interruptive is this?" while `priority_score` answers "how high should the player put this on today's list?" A High/6 can be urgent but bounded; a Medium/9 can be very important but not preemptive.
 
 ### `advice_type`
 Closed enum **per minister.** This is the unit the future autonomy dial graduates one at a time. E.g. Food's `food_security`, `harvest_now`, `expand_zone`, `hunt`, `trade_food_surplus`. Adding a new `advice_type` is a deliberate design step (matches "adding a new HTN compound" in the deferred world).
@@ -69,7 +73,9 @@ Closed enum across all ministers. A resource request states what the minister ne
 | `attention` | Priority from another subsystem or from the player. |
 | `trade_capacity` | Buying/selling/caravan bandwidth. |
 
-Each request carries `kind`, `what`, and short `why` text. It may also carry `quantity`, `priority`, and `requested_from` when the emitter can state them cleanly. These fields are still advisory in MVP: they describe need, not allocation.
+Each request carries `kind`, `what`, and short `why` text. It may also carry `quantity`, `priority`, `requested_from`, `work_type`, and `skill` when the emitter can state them cleanly. These fields are still advisory in MVP: they describe need, not allocation.
+
+Labor requests must name a RimWorld work-tab type when possible. "Labor capacity" is not acceptable output by itself; use concrete phrasing such as `work_type: "Cook"`, `skill: "Cooking"` or `work_type: "PlantCut"`, `skill: "Plants"`.
 
 ### `suggested_actions[].kind`
 Closed enum **across all ministers**. Each `kind` is a category that an `Auto`-graduated minister will eventually wire to an HTN primitive. These are the outward "do X" recommendations, distinct from `resource_requests[]` which describe prerequisites or needs. MVP catalogue:

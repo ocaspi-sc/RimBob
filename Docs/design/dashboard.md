@@ -216,6 +216,8 @@ Locked tabs render a unified empty-console panel (`MODULE LOCKED · Coming in M{
 ### Feeder alerts (M3) and tactical alerts (M5)
 M3 Alerts is the active feeder memo surface. It renders Food `AdviceItem`s from SSE `event: advice`, replayed on page load by `AdviceBus.ActiveAdvice()`. High/Critical visual treatment exists, but unread badges, tactical-alert stickiness, and Mayor-authored `tactical_alert` advice remain M5+.
 
+Alerts is also a debugging surface. The dashboard should render the advice payload it receives, including imperfect resource requests, instead of silently filtering or rewriting minister output. Quality gates for vague advice belong in rules, prompts, and response normalization.
+
 ---
 
 ## Modify modal

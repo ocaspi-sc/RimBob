@@ -17,7 +17,9 @@ Food security across the full nutrition chain:
 
 Food is broader than Agriculture. Farming is only one method inside the food chain; the minister is accountable for whether the colony can keep eating.
 
-Food does not own pawn allocation. It may request labor capacity, e.g. cooks, growers, hunters, haulers, but in Suggest mode that request is advice to the player. The deferred Labor minister owns actual pawn assignment once Auto exists.
+Food does not own pawn allocation. It may request work-type-qualified labor, e.g. `Cook`, `Grow`, `PlantCut`, `Hunt`, or urgent `Haul`, but in Suggest mode that request is advice to the player. The deferred Labor minister owns actual pawn assignment once Auto exists.
+
+Food advice should be near-term and actionable. Food should usually emit the most important few food-chain interventions, not a full strategic menu. If the right answer is strategic or cross-domain, Food should flag the pressure upward for the Mayor rather than overreaching.
 
 M3 runtime path:
 
@@ -66,6 +68,8 @@ M3 implemented facts:
 - `WildHarvestCandidates` and `WildAnimalCount` as first-pass opportunity counts.
 - Plants/Cooking skill coverage, stockpile cells, cooler count, net power, active threat, recent food incidents.
 
+Next briefing improvements should stay aggregated, especially for spatial data. Prefer compact summaries such as nearest edible-plant clusters, crop-zone readiness by rough proximity, freezer/storage proximity signals, and "kitchen-to-freezer distance" style facts over raw coordinate dumps.
+
 Deferred from the richer target briefing: exact zone-level yield, distance/risk scoring, kitchen/butchery bills, room temperature, item spoilage, and caravan provisioning.
 
 ---
@@ -98,9 +102,11 @@ Escalates when:
 - Multiple food-chain bottlenecks compete: no cooks, full freezer, low raw food, active threat.
 - Unusual food event appears: blight, toxic fallout, heat wave/freezer loss, animal revenge risk.
 - Drug/textile crops compete with food crops.
-- Caravan/trade food policy matters.
+- Food procurement pressure exists but the action belongs to Economy/Trade or the Mayor.
 
 M3 severity calibration: Food emits `High` for urgent shortage by default. `Critical` is reserved for true immediate starvation evidence, not just a low buffer.
+
+Food should compute severity and `priority_score` from live state when possible: days of food, nutrition confidence, colonist count, season/growing window, active threat, and whether a concrete action can be taken now.
 
 Bootstrap-escalation rule: the first memo should bias toward specific, player-usable advice when the current state supports it, such as crop choice, immediate sow/harvest priorities, hunting vs wild-harvest tradeoff, freezer need, or bill changes. If the current `FoodBriefing` cannot support that specificity, the minister should say so explicitly rather than pretending to know tile counts or exact layouts.
 
@@ -110,12 +116,14 @@ Bootstrap-escalation rule: the first memo should bias toward specific, player-us
 
 Food may request:
 
-- Tiles: growing zone area, wild harvest area, freezer expansion, food stockpile space.
-- Labor: growing, plant cutting, hunting, cooking, butchering, hauling.
+- Tiles: growing zone area, wild harvest area, freezer expansion, food stockpile space. Tile requests should include amount plus proximity/constraint text; Construction/Base Layout handles exact placement.
+- Labor: specific RimWorld work types such as `Cook`, `Grow`, `PlantCut`, `Hunt`, or urgent `Haul`. Avoid generic "labor capacity."
 - Items/buildings: coolers, butcher table, fueled/electric stove, shelves, power support.
 - Bills/settings: cook bill targets, butcher bill state, stockpile filters, forbid/unforbid food.
 
 In MVP, these are surfaced as suggested actions and flags. They are not writes. In Auto, these become inputs to HTN/Labor/RIMAPI execution.
+
+Trade is not a normal Food action in M3. Food may flag "food procurement needed" when local food paths are insufficient, but Economy/Trade or the Mayor owns the trade framing and caravan decision.
 
 ---
 

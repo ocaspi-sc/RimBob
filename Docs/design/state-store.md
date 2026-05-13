@@ -127,6 +127,8 @@ FoodBriefing
 
 M3 implemented `FoodBriefing` is intentionally narrower than the target above: it derives nutrition source, fallback nutrition from meal/raw counts, days-of-food, crop breakdown, ready harvest count, wild harvest candidates, wild animal count, stockpile cells, Plants/Cooking coverage, cooler/power signals, season, active threat, and recent food incident names. It does not yet compute exact food-zone yield, distance/risk scores, bill state, room temperature, spoilage timers, or caravan provisioning.
 
+Spatial briefing data should be aggregated before it reaches ministers. Prefer actionable summaries such as nearest edible-plant clusters, rough distance/proximity buckets, tile-count requests, kitchen-to-freezer distance, and storage/crop adjacency signals. Do not serialize raw plant, animal, building, or tile lists into a minister briefing unless a specific rule proves it needs that detail.
+
 **Defense:**
 ```
 DefenseBriefing

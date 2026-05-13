@@ -107,6 +107,8 @@ Every in-game action should eventually map to one primary owning minister. The f
 
 ## Core Principles
 
+**Advice must be actionable.** Ministers should emit near-term, currently possible recommendations, not speculative strategy lists. The Mayor may still reason strategically, but even the Agenda should prioritize concrete next moves. -> [`design/advice.md`](design/advice.md), [`design/ministers.md`](design/ministers.md)
+
 **Suggest by default; autonomy is per-minister and opt-in.** MVP ships with every advisor in `Suggest` mode. Graduating an advisor to `Auto` is a deliberate, per-minister event gated by track record + explicit player consent. → [`design/advice.md`](design/advice.md)
 
 **Ministers do not talk to each other directly.** All coordination is via flags. CoS arbitrates conflicts; the Mayor synthesises a daily digest. → [`design/communication.md`](design/communication.md)
@@ -172,6 +174,9 @@ Decisions made and the reasoning behind them. Append; do not delete.
 | M3 Food feeder ships as rules-first plus LLM escalation | Food is the first full feeder minister. It derives a focused `FoodBriefing`, emits `AdviceItem`s and `AgentFlag`s, escalates ambiguous crop/hunt/freezer tradeoffs to Gemini, and feeds active Medium+ flags into the Mayor through `CabinetCycle` / `FlagChannel`. Food remains suggest-only: resource requests are rendered, not executed. See [`design/ministers/food.md`](design/ministers/food.md), [`design/communication.md`](design/communication.md), and [`design/dashboard.md`](design/dashboard.md). |
 | Minister wake reason is explicit `PlayCycleContext`, not hidden runtime state | A feeder minister's first live cycle is a real execution trigger, not game state. Rather than smuggling bootstrap behavior through a singleton tracker, the runtime should pass a typed `PlayCycleContext` (`StartupBootstrap`, `CabinetRefresh`, later `FlagFired`, `Heartbeat`, `ScheduledWakeupFired`) into `RunPlayCycle`. That keeps lifecycle semantics visible in code, tests, and docs. See [`design/ministers.md`](design/ministers.md). |
 | Host file logs resolve to stable `./logs/` paths | Relative Serilog file sinks were landing under `Src/ApiHost/logs/` when the Host started from its project directory, which made log discovery inconsistent. Host now resolves local repo runs to root `./logs/` and falls back to `<content-root>/logs/` outside the repo layout. See [`design/architecture.md`](design/architecture.md). |
+| Advice carries both severity and priority score | `severity` remains semantic routing input for the Mayor, CoS, and tactical alert behavior. A first-class `priority_score` from 1-10 ranks importance within a severity tier for dashboard sorting, debugging, and future arbitration. Rules may compute both dynamically from live state. See [`design/advice.md`](design/advice.md). |
+| Ministers use canonical RimWorld work types for labor requests | Labor/resource requests must name the relevant RimWorld work-tab type when they request pawn time. Text such as "labor capacity" is too vague for advice, logs, or future Auto wiring. Work types are distinct from skills: e.g. `Cook` is a work type, `Cooking` is the skill signal. See [`design/ministers.md`](design/ministers.md). |
+| Briefings prefer compact opportunity summaries over raw dumps | Spatial and operational data should be summarized into actionable aggregates: nearest harvest clusters, proximity buckets, tile counts, and bottleneck signals. Do not bloat minister briefings with raw plant/tile/building lists unless a future rule proves it needs them. See [`design/state-store.md`](design/state-store.md) and [`design/ministers/food.md`](design/ministers/food.md). |
 
 ---
 
