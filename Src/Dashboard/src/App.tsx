@@ -1,236 +1,164 @@
-import { useEffect, useRef, useState } from 'react';
-import { AgendaTab, PromptFull } from './components/AgendaTab';
-import { Sidebar } from './components/Sidebar';
-import { AlertsTab } from './components/AlertsTab';
-import { BriefingTab } from './components/BriefingTab';
-import { fetchLatestAgenda, triggerRefresh } from './api/agenda';
-import { fetchColonySnapshot } from './api/colony';
-import { fetchStatus } from './api/status';
-import { subscribeAgendaUpdates } from './api/adviceStream';
-import type { MayorAgenda } from './types/agenda';
+import { useState } from 'react';
+import { fetchColonySnapshot, fetchStatus, fetchSystemHealth } from './api/client';
+import { ministerPanelRegistry, panelIdFor } from './dashboard/panelRegistry';
+import { findScope, ministerViews, scopeConfigs, type MinisterViewKey, type ScopeConfig, type ScopeKey } from './dashboard/scopes';
+import { DashboardHeader } from './components/layout/DashboardHeader';
+import { ColonySidebar } from './components/layout/ColonySidebar';
+import { ScopeRail } from './components/layout/ScopeRail';
+import { ViewTabs } from './components/layout/ViewTabs';
+import { MinisterAdviceView } from './components/minister/MinisterAdviceView';
+import { MinisterBriefingView } from './components/minister/MinisterBriefingView';
+import { MinisterPromptView } from './components/minister/MinisterPromptView';
+import { MinisterRagView } from './components/minister/MinisterRagView';
+import { MinisterRulesView } from './components/minister/MinisterRulesView';
+import { SystemOverview } from './components/system/SystemOverview';
+import { useAdviceFeed } from './hooks/useAdviceFeed';
+import { usePollingResource } from './hooks/usePollingResource';
 import type { AdviceItem } from './types/advice';
-import type { ColonySnapshot } from './types/colony';
-import type { RimAIStatus } from './types/status';
+import type { MayorAgenda } from './types/agenda';
+import type { DashboardEvent, SystemHealth } from './types/system';
 
-type TabKey = 'agenda' | 'prompt' | 'alerts' | 'briefing' | 'log' | 'autonomy';
-
-const tabs: Array<{ key: TabKey; label: string; ready: boolean; note?: string }> = [
-  { key: 'agenda',   label: 'Agenda',   ready: true },
-  { key: 'prompt',   label: 'Prompt',   ready: true },
-  { key: 'alerts',   label: 'Alerts',   ready: true },
-  { key: 'briefing', label: 'Briefing', ready: true },
-  { key: 'log',      label: 'Log',      ready: false, note: 'Coming in M2' },
-  { key: 'autonomy', label: 'Autonomy', ready: false, note: 'Coming in M2' },
-];
-
+const StatusPollMs = 3_000;
 const SnapshotPollMs = 5_000;
-const StatusPollMs   = 3_000;
-
-type ChipState = 'ok' | 'warn' | 'error' | 'active';
-
-function StatusChip({ label, state, sub }: { label: string; state: ChipState; sub?: string }) {
-  return (
-    <span className={`status-chip ${state}`}>
-      <span className="chip-dot" aria-hidden />
-      {label}
-      {sub && <span className="chip-sub">{sub}</span>}
-    </span>
-  );
-}
+const SystemHealthPollMs = 5_000;
 
 export default function App() {
-  const [agenda, setAgenda]     = useState<MayorAgenda | null>(null);
-  const [previous, setPrevious] = useState<MayorAgenda | null>(null);
-  const [advice, setAdvice]     = useState<AdviceItem[]>([]);
-  const [snapshot, setSnapshot] = useState<ColonySnapshot | null>(null);
-  const [active, setActive]     = useState<TabKey>('agenda');
-  const [status, setStatus]     = useState<RimAIStatus | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
-  const refreshAbort = useRef<AbortController | null>(null);
+  const [selectedScope, setSelectedScope] = useState<ScopeKey>('system');
+  const [selectedView, setSelectedView] = useState<MinisterViewKey>('advice');
 
-  useEffect(() => {
-    let cancelled = false;
-    fetchLatestAgenda()
-      .then(latest => { if (!cancelled && latest) setAgenda(latest); })
-      .catch(err => console.error('initial fetchLatestAgenda failed', err));
+  const status = usePollingResource(fetchStatus, StatusPollMs);
+  const snapshot = usePollingResource(fetchColonySnapshot, SnapshotPollMs);
+  const systemHealth = usePollingResource(fetchSystemHealth, SystemHealthPollMs);
+  const feed = useAdviceFeed();
 
-    const unsubscribe = subscribeAgendaUpdates(
-      next => {
-        setAgenda(curr => {
-          if (curr && curr.version === next.version) return curr;
-          setPrevious(curr);
-          return next;
-        });
-      },
-      item => {
-        setAdvice(curr => {
-          const filtered = curr.filter(existing => existing.id !== item.id);
-          return [item, ...filtered].sort(compareAdvice);
-        });
-      },
-    );
+  const activeScope = findScope(selectedScope);
+  const isSystem = activeScope.kind === 'system';
 
-    return () => {
-      cancelled = true;
-      unsubscribe();
-    };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    const ctrl = new AbortController();
-
-    const load = async () => {
-      try {
-        const s = await fetchColonySnapshot(ctrl.signal);
-        if (!cancelled) setSnapshot(s);
-      } catch (err) {
-        if (!cancelled && (err as Error).name !== 'AbortError') {
-          console.error('fetchColonySnapshot failed', err);
-        }
-      }
-    };
-
-    void load();
-    const timer = setInterval(() => void load(), SnapshotPollMs);
-
-    return () => {
-      cancelled = true;
-      ctrl.abort();
-      clearInterval(timer);
-    };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    const ctrl = new AbortController();
-
-    const load = async () => {
-      try {
-        const s = await fetchStatus(ctrl.signal);
-        if (!cancelled) setStatus(s);
-      } catch (err) {
-        if (!cancelled && (err as Error).name !== 'AbortError') {
-          console.error('fetchStatus failed', err);
-        }
-      }
-    };
-
-    void load();
-    const timer = setInterval(() => void load(), StatusPollMs);
-
-    return () => {
-      cancelled = true;
-      ctrl.abort();
-      clearInterval(timer);
-    };
-  }, []);
-
-  const handleRefresh = async () => {
-    if (refreshing) return;
-    refreshAbort.current?.abort();
-    const ctrl = new AbortController();
-    refreshAbort.current = ctrl;
-    setRefreshing(true);
-    try {
-      await triggerRefresh(ctrl.signal);
-    } catch (err) {
-      if ((err as Error).name !== 'AbortError') {
-        console.error('triggerRefresh failed', err);
-      }
-    } finally {
-      setRefreshing(false);
+  const handleScopeSelect = (scope: ScopeKey) => {
+    setSelectedScope(scope);
+    if (findScope(scope).kind === 'minister') {
+      setSelectedView('advice');
     }
   };
 
-  const mayorChipState: ChipState = !status
-    ? 'warn'
-    : status.mayor_running
-    ? 'active'
-    : status.mayor_last_error
-    ? 'error'
-    : 'ok';
-
-  const mayorChipSub = status?.mayor_running ? 'Running' : status?.mayor_last_error ? 'Error' : 'Idle';
-
   return (
-    <main className="app-shell">
-      <header className="topbar panel-box">
-        <div>
-          <div className="kicker">RimWorld Advisory Cabinet</div>
-          <h1>RimAI Command</h1>
-        </div>
-        <div className="topbar-status">
-          <StatusChip label="SERVER" state="ok" />
-          <StatusChip
-            label="RIMAPI"
-            state={status ? (status.rimapi_reachable ? 'ok' : 'warn') : 'warn'}
-          />
-          <StatusChip
-            label="GEMINI"
-            state={status ? (status.llm_configured ? 'ok' : 'error') : 'warn'}
-          />
-          <StatusChip label="MAYOR" state={mayorChipState} sub={mayorChipSub} />
-          <span className="divider" />
-          <button
-            className={`refresh-btn ${refreshing ? 'refreshing' : ''}`}
-            onClick={() => void handleRefresh()}
-            disabled={refreshing}
-            title="Re-run briefing and generate a new agenda"
-          >
-            {refreshing ? 'Refreshing…' : 'Refresh'}
-          </button>
-        </div>
-      </header>
+    <main className="dashboard-v2-shell">
+      <DashboardHeader
+        status={status.data}
+        stream={feed.stream}
+      />
 
-      <div className="command-grid">
-        <nav className="tab-rail panel-box" aria-label="Dashboard sections">
-          {tabs.map(t => (
-            <button
-              key={t.key}
-              className={`tab-button ${active === t.key ? 'active' : ''}`}
-              disabled={!t.ready}
-              onClick={() => t.ready && setActive(t.key)}
-              title={t.note}
-            >
-              <span>{t.label}</span>
-              {!t.ready && <small>{t.note}</small>}
-            </button>
-          ))}
-        </nav>
+      <div className="dashboard-v2-grid">
+        <ScopeRail
+          activeScope={selectedScope}
+          scopes={scopeConfigs}
+          onSelect={handleScopeSelect}
+        />
 
-        <section className="main-console panel-box">
-          {active === 'agenda' && <AgendaTab agenda={agenda} previous={previous} status={status} />}
-          {active === 'alerts' && <AlertsTab advice={advice} />}
-          {active === 'briefing' && <BriefingTab />}
-          {active === 'prompt' && (
-            <div className="prompt-page">
-              <PromptFull />
-            </div>
-          )}
-          {active !== 'agenda' && active !== 'prompt' && active !== 'alerts' && active !== 'briefing' && (
-            <div className="empty-console">
-              <span className="empty-code">MODULE LOCKED</span>
-              {tabs.find(t => t.key === active)?.note ?? 'Coming soon'}
-            </div>
+        <section className="main-workspace panel-shell" aria-label="Dashboard main workspace">
+          {isSystem ? (
+            <SystemOverview
+              status={status.data}
+              health={systemHealth.data}
+              healthError={systemHealth.error}
+              stream={feed.stream}
+              events={feed.events}
+            />
+          ) : (
+            <>
+              <WorkspaceTitle scope={activeScope} view={selectedView} />
+              <ViewTabs
+                activeView={selectedView}
+                views={ministerViews}
+                onSelect={setSelectedView}
+              />
+              <div className="panel-registry-note minister-registry">
+                <span>{panelIdFor(activeScope.key, selectedView)}</span>
+                {ministerPanelRegistry.map(panel => (
+                  <code key={panel.id}>{panel.view}</code>
+                ))}
+              </div>
+              <MinisterWorkspace
+                activeAdvice={feed.feed.activeAdvice}
+                agenda={feed.agenda}
+                events={feed.events}
+                previousAgenda={feed.previousAgenda}
+                scope={activeScope}
+                selectedView={selectedView}
+                systemHealth={systemHealth.data}
+              />
+            </>
           )}
         </section>
 
-        <Sidebar snapshot={snapshot} />
+        <ColonySidebar
+          snapshot={snapshot.data}
+          error={snapshot.error}
+        />
       </div>
     </main>
   );
 }
 
-function severityRank(severity: AdviceItem['severity']): number {
-  if (severity === 'critical') return 3;
-  if (severity === 'high') return 2;
-  if (severity === 'medium') return 1;
-  return 0;
+function WorkspaceTitle({
+  scope,
+  view,
+}: {
+  scope: ScopeConfig;
+  view: MinisterViewKey;
+}) {
+  const viewLabel = ministerViews.find(item => item.key === view)?.label ?? view;
+  return (
+    <header className="workspace-title">
+      <div>
+        <span className="scope-emoji" aria-hidden>{scope.emoji}</span>
+        <span className="eyebrow">{scope.status === 'live' ? 'Live scope' : 'Planned scope'}</span>
+        <h2>{scope.label}</h2>
+      </div>
+      <strong>{viewLabel}</strong>
+    </header>
+  );
 }
 
-function compareAdvice(a: AdviceItem, b: AdviceItem): number {
-  const severityDelta = severityRank(b.severity) - severityRank(a.severity);
-  if (severityDelta !== 0) return severityDelta;
-  return b.priority_score - a.priority_score;
+function MinisterWorkspace({
+  activeAdvice,
+  agenda,
+  events,
+  previousAgenda,
+  scope,
+  selectedView,
+  systemHealth,
+}: {
+  activeAdvice: AdviceItem[];
+  agenda: MayorAgenda | null;
+  events: DashboardEvent[];
+  previousAgenda: MayorAgenda | null;
+  scope: ScopeConfig;
+  selectedView: MinisterViewKey;
+  systemHealth: SystemHealth | null;
+}) {
+  if (selectedView === 'prompt') {
+    return <MinisterPromptView scope={scope} />;
+  }
+
+  if (selectedView === 'briefing') {
+    return <MinisterBriefingView scope={scope} />;
+  }
+
+  if (selectedView === 'rag') {
+    return <MinisterRagView scope={scope} agenda={agenda} systemHealth={systemHealth} />;
+  }
+
+  if (selectedView === 'rules') {
+    return <MinisterRulesView scope={scope} events={events} advice={activeAdvice} />;
+  }
+
+  return (
+    <MinisterAdviceView
+      scope={scope}
+      agenda={agenda}
+      previousAgenda={previousAgenda}
+      advice={activeAdvice}
+    />
+  );
 }

@@ -72,8 +72,10 @@ builder.Services.AddSingleton<IngestionDispatcher>();
 builder.Services.AddSingleton<AdviceBus>();
 builder.Services.AddSingleton<AgendaStore>();
 builder.Services.AddSingleton<FlagChannel>();
+builder.Services.AddSingleton<MinisterTraceStore>();
 builder.Services.AddSingleton<MayorAgendaRules>();
 builder.Services.AddSingleton<MayorStatus>();
+builder.Services.AddSingleton<SseDiagnostics>();
 
 // ── RAG (M2) ───────────────────────────────────────────────────────────────
 // Embedder isn't in DI — null-when-unconfigured doesn't compose well with the
@@ -154,6 +156,8 @@ app.MapAgendaEndpoints();
 app.MapAutonomyEndpoints();
 app.MapColonyEndpoints();
 app.MapStatusEndpoints();
+app.MapMinisterEndpoints();
+app.MapSystemEndpoints();
 
 // ── Startup checks ─────────────────────────────────────────────────────────
 app.Lifetime.ApplicationStarted.Register(() =>

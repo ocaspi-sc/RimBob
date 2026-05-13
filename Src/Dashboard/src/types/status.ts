@@ -7,5 +7,6 @@ export interface RimAIStatus {
   mayor_running: boolean;
   mayor_started_at: string | null;   // ISO 8601 UTC
   mayor_completed_at: string | null; // ISO 8601 UTC
+  mayor_last_llm_success_at?: string | null;
   mayor_last_error: string | null;
 }

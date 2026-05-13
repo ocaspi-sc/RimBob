@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Threading.Channels;
 using RimAI.Coordination;
 using RimAI.Core.Advice;
+using RimAI.Host;
 
 namespace RimAI.Host.Endpoints;
 
@@ -24,6 +25,7 @@ public static class AgendaStreamEndpoint
         HttpContext ctx,
         AgendaStore store,
         AdviceBus bus,
+        SseDiagnostics diagnostics,
         ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
@@ -42,14 +44,15 @@ public static class AgendaStreamEndpoint
 
         bus.AgendaUpdated += OnAgenda;
         bus.AdvicePublished += OnAdvice;
+        diagnostics.Connected();
         log.LogInformation("SSE client connected");
 
         try
         {
             if (store.Current is { } current)
-                await WriteAgendaAsync(ctx, current, ct);
+                await WriteAgendaAsync(ctx, current, diagnostics, ct);
             foreach (AdviceItem advice in bus.ActiveAdvice())
-                await WriteAdviceAsync(ctx, advice, ct);
+                await WriteAdviceAsync(ctx, advice, diagnostics, ct);
 
             while (!ct.IsCancellationRequested)
             {
@@ -62,45 +65,65 @@ public static class AgendaStreamEndpoint
                     while (channel.Reader.TryRead(out SseMessage? e))
                     {
                         if (e.Agenda is not null)
-                            await WriteAgendaAsync(ctx, e.Agenda, ct);
+                            await WriteAgendaAsync(ctx, e.Agenda, diagnostics, ct);
                         if (e.Advice is not null)
-                            await WriteAdviceAsync(ctx, e.Advice, ct);
+                            await WriteAdviceAsync(ctx, e.Advice, diagnostics, ct);
                     }
                 }
                 else
                 {
-                    await WritePingAsync(ctx, ct);
+                    await WritePingAsync(ctx, diagnostics, ct);
                 }
             }
         }
         catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            diagnostics.Error(ex.Message);
+            throw;
+        }
         finally
         {
             bus.AgendaUpdated -= OnAgenda;
             bus.AdvicePublished -= OnAdvice;
             channel.Writer.TryComplete();
+            diagnostics.Disconnected();
             log.LogInformation("SSE client disconnected");
         }
     }
 
-    private static async Task WriteAgendaAsync(HttpContext ctx, MayorAgenda agenda, CancellationToken ct)
+    private static async Task WriteAgendaAsync(
+        HttpContext ctx,
+        MayorAgenda agenda,
+        SseDiagnostics diagnostics,
+        CancellationToken ct)
     {
         string payload = JsonSerializer.Serialize(agenda, Json);
         await ctx.Response.WriteAsync($"event: agenda_update\nid: {agenda.Version}\ndata: {payload}\n\n", ct);
         await ctx.Response.Body.FlushAsync(ct);
+        diagnostics.EventSent("agenda_update", agenda.Version.ToString());
     }
 
-    private static async Task WriteAdviceAsync(HttpContext ctx, AdviceItem advice, CancellationToken ct)
+    private static async Task WriteAdviceAsync(
+        HttpContext ctx,
+        AdviceItem advice,
+        SseDiagnostics diagnostics,
+        CancellationToken ct)
     {
         string payload = JsonSerializer.Serialize(advice, Json);
         await ctx.Response.WriteAsync($"event: advice\nid: {advice.Id}\ndata: {payload}\n\n", ct);
         await ctx.Response.Body.FlushAsync(ct);
+        diagnostics.EventSent("advice", advice.Id);
     }
 
-    private static async Task WritePingAsync(HttpContext ctx, CancellationToken ct)
+    private static async Task WritePingAsync(
+        HttpContext ctx,
+        SseDiagnostics diagnostics,
+        CancellationToken ct)
     {
         await ctx.Response.WriteAsync("event: ping\ndata: {}\n\n", ct);
         await ctx.Response.Body.FlushAsync(ct);
+        diagnostics.EventSent("ping");
     }
 
     private sealed record SseMessage(MayorAgenda? Agenda, AdviceItem? Advice)

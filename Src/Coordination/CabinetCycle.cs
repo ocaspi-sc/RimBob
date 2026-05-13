@@ -7,6 +7,7 @@ namespace RimAI.Coordination;
 public sealed class CabinetCycle(
     IngestionDispatcher ingestion,
     IEnumerable<IMinister> ministers,
+    MinisterTraceStore traces,
     ILogger<CabinetCycle> log)
 {
     public Task RunAsync(CancellationToken ct) => RunAsync(PlayCycleContext.CabinetRefresh, ct);
@@ -21,12 +22,27 @@ public sealed class CabinetCycle(
         if (food is not null)
         {
             log.LogInformation("Cabinet cycle: running Food before Mayor");
-            await food.RunPlayCycle(cycle, ct);
+            await RunMinisterAsync(food, cycle, ct);
         }
 
         if (mayor is null)
             throw new InvalidOperationException("Cabinet cycle could not resolve Mayor minister.");
 
-        await mayor.RunPlayCycle(cycle, ct);
+        await RunMinisterAsync(mayor, cycle, ct);
+    }
+
+    private async Task RunMinisterAsync(IMinister minister, PlayCycleContext cycle, CancellationToken ct)
+    {
+        traces.Begin(minister.Name, cycle);
+        try
+        {
+            await minister.RunPlayCycle(cycle, ct);
+            traces.Complete(minister.Name);
+        }
+        catch (Exception ex)
+        {
+            traces.Fail(minister.Name, ex);
+            throw;
+        }
     }
 }

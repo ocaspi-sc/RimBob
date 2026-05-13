@@ -19,6 +19,19 @@ export interface ColonistsSummary {
   count: number;
   adults: number;
   children: number;
+  pawns?: PawnLine[];
+  additionalNotShown?: number | null;
+}
+
+export interface PawnLine {
+  name: string;
+  age: number;
+  mood: number;
+  health: number;
+  hunger: number;
+  isDowned: boolean;
+  currentJob: string | null;
+  topSkill: string | null;
 }
 
 export interface MedicalState {
