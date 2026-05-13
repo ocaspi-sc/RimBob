@@ -65,11 +65,39 @@ $env:GEMINI_API_KEY = "your-key-here"
 
 The env var wins when both are set. Don't put the key in `appsettings.json` or `appsettings.Development.json` — both are tracked.
 
-Build the dashboard into the host static assets:
+Run RimAI and the dashboard with the helper script:
+
+```powershell
+.\run-rimai.ps1
+```
+
+The script installs dashboard dependencies with `npm.cmd ci` if
+`node_modules` is missing, builds the dashboard into `Src/ApiHost/wwwroot`,
+then starts `RimAI.Host`. Open the dashboard at:
+
+```text
+http://localhost:5000
+```
+
+For a faster repeat run after dependencies and dashboard assets are already
+current:
+
+```powershell
+.\run-rimai.ps1 -SkipDashboardBuild -NoRestore
+```
+
+If local PowerShell script execution is blocked on the machine, run it through
+an explicit process policy override:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\run-rimai.ps1
+```
+
+Manual equivalent:
 
 ```powershell
 cd Src/Dashboard
-npm run build
+npm.cmd run build
 ```
 
 Run the host:
@@ -79,19 +107,13 @@ cd Src/ApiHost
 dotnet run
 ```
 
-Open the dashboard at:
-
-```text
-http://localhost:5000
-```
-
 ## Verification
 
 Run the dashboard build:
 
 ```powershell
 cd Src/Dashboard
-npm run build
+npm.cmd run build
 ```
 
 Run the .NET test suite:
@@ -111,4 +133,3 @@ Start with:
 - `Docs/design/dashboard.md` for dashboard behavior and HTTP/SSE contract
 
 When design decisions change, update the relevant design doc in the same turn.
-
