@@ -76,8 +76,8 @@
 
 ## Claude skills to build (see ROADMAP)
 
-- [ ] `minister-review` skill (now also reads `FeedbackEvent`s).
-- [ ] `fixture-gen` skill (can synthesize from Modify events).
+- [x] `minister-refine` skill (proposal-first review of decision logs and future Pushbacks).
+- [ ] `fixture-gen` skill (can synthesize from Pushback events).
 - [ ] `briefing-check` skill.
 - [ ] `rule-promote` skill.
 

@@ -186,11 +186,11 @@ The handoff is intentionally simple: write the prompt to `.plans/<minister>-<tas
 - **Refinement loops.** Promoting an escalation cluster into a rule is a code-edit task — exactly Claude Code's strength.
 - **Dev workflows in general.** Any minister-authored tooling (skills below) can be a Claude Code prompt rather than a bespoke C# pipeline.
 
-Skills worth building (each is just a prompt file plus a thin invocation):
+Skills worth building (each is a repo-local workflow skill, optionally with thin helper scripts):
 
 | Skill | Purpose |
 |---|---|
-| `minister-review` | Run refinement for a minister: read log, identify patterns, surface candidates |
+| `minister-refine` | Run proposal-first refinement for a minister: read logs and pushbacks, classify quality gaps, and surface rule, prompt, briefing, or fixture candidates |
 | `fixture-gen` | Given a scenario description, generate a fixture JSON |
 | `rule-promote` | Given a log cluster, generate a candidate Rules.cs change |
 | `briefing-check` | Validate a briefing against its schema; flag derivation errors |

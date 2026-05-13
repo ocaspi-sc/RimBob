@@ -149,7 +149,7 @@
 
 **Done when:** for one minister, the refinement loop reads its **own pushback list**, identifies a cluster of consistent corrections (e.g. 6 pushbacks all saying "no hunting in winter"), generates a candidate `Rules.cs` change, runs it against fixtures, and surfaces the diff for human approval. One rule is promoted end-to-end.
 
-**Demo:** run the `minister-review` skill against Food's pushback list; see a proposed rule + fixture pass-rate diff; approve; observe rule appear in `Rules.cs`.
+**Demo:** run the `minister-refine` skill against Food's pushback list; see a proposed rule + fixture pass-rate diff; approve; observe rule appear in `Rules.cs`.
 
 **Scope:**
 - Refinement-mode tooling for at least one minister.
@@ -188,7 +188,7 @@
 
 These skills would accelerate minister-specific development sessions:
 
-- `minister-review` — review a minister's recent decision log (with feedback events) and surface rule-promotion candidates
+- `minister-refine` — proposal-first review of a minister's decision logs and pushbacks; surface rule, prompt, briefing, or fixture candidates
 - `fixture-gen` — generate scenario fixture JSON from a described situation
 - `briefing-check` — validate a briefing against its schema and flag derivation errors
 - `rule-promote` — take an LLM escalation pattern and generate a candidate Rules.cs change
