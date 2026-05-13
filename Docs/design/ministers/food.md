@@ -67,32 +67,29 @@ M3 implemented facts:
 - `FoodUnits`, `MealsCount`, `RawFoodCount`, `ReadyToHarvest`, crop breakdown.
 - `WildHarvestCandidates` and `WildAnimalCount` as first-pass opportunity counts.
 - Plants/Cooking skill coverage, stockpile cells, cooler count, net power, active threat, recent food incidents.
+- Aggregated spatial/operational summaries: crop-zone summaries, nearest wild-harvest clusters, kitchen/cooking-building presence, butcher-table presence, food-storage summary, kitchen-to-stockpile distance when positions exist, and data-coverage flags.
 
-Next briefing improvements should stay aggregated, especially for spatial data. Prefer compact summaries such as nearest edible-plant clusters, crop-zone readiness by rough proximity, freezer/storage proximity signals, and "kitchen-to-freezer distance" style facts over raw coordinate dumps.
+Spatial briefing data stays aggregated. Food receives proximity strings, counts, and coverage flags rather than raw plant/tile/building lists.
 
-Deferred from the richer target briefing: exact zone-level yield, distance/risk scoring, kitchen/butchery bills, room temperature, item spoilage, and caravan provisioning.
+Deferred from the richer target briefing: exact zone-level yield, hunting risk scoring, kitchen/butchery bills, room temperature, item spoilage, work-priority state, and caravan/trade availability.
 
 ---
 
 ## Rules layer (target ~80% coverage)
 
-Known first-pass rules:
+Implemented M3 rules:
 
 | Rule | Condition | Output |
 |---|---|---|
 | `maintain_security_threshold` | DaysOfFood >= 30 AND no urgent spoilage/harvest issue | No advice |
-| `nutrition_signal_gap` | Food units exist but nutrition is unknown/fallback-derived | ManageFoodStockpile, stockpile audit |
-| `emergency_food_flag` | DaysOfFood < 7 | FoodSecurity High, flag Mayor |
-| `low_food_flag` | DaysOfFood < 15 | FoodSecurity High |
-| `harvest_mature_crops` | MatureCropTiles > 0 OR wild harvest at rot/freeze risk | HarvestNow |
-| `plant_before_winter` | DaysToWinter < 20 AND growing capacity available | ExpandGrowingCapacity, prefer rice unless guide/context says otherwise |
-| `hunt_if_low_no_crops` | DaysOfFood < 20 AND no timely harvest path | HuntForFood |
-| `meals_understocked` | MealsPerColonist < 5 AND DaysOfFood > 7 | ManageCookBills, request cooking labor |
-| `meal_quality_upgrade` | MealsPerColonist >= 10 AND CookSkillLevel >= 6 AND DaysOfFood > 30 | ManageCookBills, fine meals acceptable |
-| `meal_quality_downgrade` | DaysOfFood < 20 OR active raid | ManageCookBills, simple meals only |
-| `butcher_backlog` | Butcherable corpses/meat backlog and safe kitchen | ManageButcherBills |
-| `freezer_at_capacity` | FreezerCapacity.Used > 90% | ManageFreezer or ManageFoodStockpile |
-| `spoilage_risk` | FreezerTemperature > 0C for stored perishables | ManageFreezer Critical |
+| `nutrition_signal_gap` | Food units exist but nutrition is unknown/fallback-derived | ManageFoodStockpile, stockpile audit, Medium priority 6 |
+| `unknown_food_state` | No food units and no reliable nutrition estimate | FoodSecurity High, attention flag |
+| `emergency_food_flag` | DaysOfFood < 7 | FoodSecurity High/Critical, dynamic priority, local harvest/cook actions, procurement pressure flag only when no local path is visible |
+| `harvest_mature_crops` | Ready harvest count > 0 | HarvestNow, nearest crop-zone summary when available; labor request only if urgent or Plants coverage is missing |
+| `meals_understocked` | Meals below two per colonist, days > 7, raw food exists | ManageCookBills, simple meal target, cooking labor only if urgent/no cook coverage |
+| `wild_harvest_available` | DaysOfFood < 20, no ready crop harvest, edible wild cluster exists | WildHarvest, mark nearest edible cluster; no routine labor request unless urgent/no Plants coverage |
+| `expand_growing_capacity` | DaysOfFood < 20 and growing window remains open | ExpandGrowingCapacity, Tile request with quantity and placement constraints |
+| `freezer_missing` | Food exists, no cooler visible, buffer is otherwise stable | ManageFreezer, building request to Construction |
 
 Escalates when:
 
@@ -107,6 +104,8 @@ Escalates when:
 M3 severity calibration: Food emits `High` for urgent shortage by default. `Critical` is reserved for true immediate starvation evidence, not just a low buffer.
 
 Food should compute severity and `priority_score` from live state when possible: days of food, nutrition confidence, colonist count, season/growing window, active threat, and whether a concrete action can be taken now.
+
+Advice IDs should be stable per rule issue (for example `food_emergency_food_flag`) so the active alert surface replaces the same unresolved issue across refreshes instead of stacking duplicate cards. Historical logging can still record each emission separately later.
 
 Bootstrap-escalation rule: the first memo should bias toward specific, player-usable advice when the current state supports it, such as crop choice, immediate sow/harvest priorities, hunting vs wild-harvest tradeoff, freezer need, or bill changes. If the current `FoodBriefing` cannot support that specificity, the minister should say so explicitly rather than pretending to know tile counts or exact layouts.
 
@@ -123,7 +122,7 @@ Food may request:
 
 In MVP, these are surfaced as suggested actions and flags. They are not writes. In Auto, these become inputs to HTN/Labor/RIMAPI execution.
 
-Trade is not a normal Food action in M3. Food may flag "food procurement needed" when local food paths are insufficient, but Economy/Trade or the Mayor owns the trade framing and caravan decision.
+Trade is not a normal Food action in M3. Food may flag "food procurement needed" when local food paths are insufficient, but Economy/Trade or the Mayor owns the trade framing and caravan decision. Food rules should not tell the player to caravan or trade unless the briefing eventually carries explicit current trade availability.
 
 ---
 
@@ -165,6 +164,8 @@ Hard cases:
 Topics: `["food", "farming", "crops", "wild harvest", "hunting", "freezer", "cooking", "nutrition", "spoilage"]`
 
 Retrieval required for: crop choice decisions, seasonal timing, freezer/cooking policy, first devilstrand/drug crop decision, biome-specific food recovery.
+
+RAG is subordinate to live state. Guide passages can justify crop, bill, freezer, and seasonal choices, but they must not invent a current trade route, exact plant location, or available work capacity that the briefing does not show.
 
 ---
 

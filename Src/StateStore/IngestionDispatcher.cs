@@ -93,6 +93,7 @@ public sealed class IngestionDispatcher(
                     Hunger:     basic.Hunger,
                     IsDowned:   med?.IsDowned ?? false,
                     IsDead:     med?.IsDead   ?? false,
+                    Position:   MapPosition(basic.Position),
                     CurrentJob: work?.CurrentJob,
                     Skills:     sk.Select(s => new ColonistSkill(s.Name, s.Level, PassionName(s.Passion))).ToList(),
                     Traits:     tr.Select(t => t.Name).ToList()
@@ -118,10 +119,10 @@ public sealed class IngestionDispatcher(
         );
 
     private static PlantRegistry MapPlants(IReadOnlyList<PlantDto> plants) =>
-        new(plants.Select(p => new PlantRecord(p.Id, p.Def, p.Growth, p.IsCrop, p.ZoneId)).ToList());
+        new(plants.Select(p => new PlantRecord(p.Id, p.Def, p.Growth, p.IsCrop, p.ZoneId, MapPosition(p.Position))).ToList());
 
     private static AnimalRegistry MapAnimals(IReadOnlyList<AnimalDto> animals) =>
-        new(animals.Select(a => new AnimalRecord(a.Id, a.Def, a.Tame, a.Health)).ToList());
+        new(animals.Select(a => new AnimalRecord(a.Id, a.Def, a.Tame, a.Health, MapPosition(a.Position))).ToList());
 
     private static StockpileLedger MapStockpiles(IReadOnlyList<ZoneDto> zones)
     {
@@ -130,7 +131,7 @@ public sealed class IngestionDispatcher(
         // ItemsByDef here stays empty by design.
         List<StockpileZone> stockpileZones = zones
             .Where(z => string.Equals(z.Type, "StockpileZone", StringComparison.OrdinalIgnoreCase))
-            .Select(z => new StockpileZone(z.Id, z.Type, z.Label, z.Cells?.Count ?? 0))
+            .Select(z => new StockpileZone(z.Id, z.Type, z.Label, z.Cells?.Count ?? 0, CenterOf(z.Cells)))
             .ToList();
 
         return new StockpileLedger(stockpileZones, new Dictionary<string, int>());
@@ -138,7 +139,19 @@ public sealed class IngestionDispatcher(
 
     private static IReadOnlyList<BuildingRecord> MapBuildings(IReadOnlyList<BuildingDto> bs) =>
         // RIMAPI doesn't expose hp / power_on / is_working — default to "fine, unknown".
-        bs.Select(b => new BuildingRecord(b.Id.ToString(), b.Def, Hp: 1.0f, PowerOn: null, IsWorking: null)).ToList();
+        bs.Select(b => new BuildingRecord(b.Id.ToString(), b.Def, Hp: 1.0f, PowerOn: null, IsWorking: null, Position: MapPosition(b.Position))).ToList();
+
+    private static MapPosition? MapPosition(PositionDto? position) =>
+        position is null ? null : new MapPosition(position.X, position.Y, position.Z);
+
+    private static MapPosition? CenterOf(IReadOnlyList<PositionDto>? cells)
+    {
+        if (cells is null || cells.Count == 0) return null;
+        int x = (int)Math.Round(cells.Average(c => c.X));
+        int y = (int)Math.Round(cells.Average(c => c.Y));
+        int z = (int)Math.Round(cells.Average(c => c.Z));
+        return new MapPosition(x, y, z);
+    }
 
     private static IReadOnlyList<HostileLord> MapLords(IReadOnlyList<LordDto> lords) =>
         lords.Select(l => new HostileLord(

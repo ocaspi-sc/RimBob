@@ -65,7 +65,7 @@ export default function App() {
       item => {
         setAdvice(curr => {
           const filtered = curr.filter(existing => existing.id !== item.id);
-          return [item, ...filtered].sort((a, b) => severityRank(b.severity) - severityRank(a.severity));
+          return [item, ...filtered].sort(compareAdvice);
         });
       },
     );
@@ -227,4 +227,10 @@ function severityRank(severity: AdviceItem['severity']): number {
   if (severity === 'high') return 2;
   if (severity === 'medium') return 1;
   return 0;
+}
+
+function compareAdvice(a: AdviceItem, b: AdviceItem): number {
+  const severityDelta = severityRank(b.severity) - severityRank(a.severity);
+  if (severityDelta !== 0) return severityDelta;
+  return b.priority_score - a.priority_score;
 }

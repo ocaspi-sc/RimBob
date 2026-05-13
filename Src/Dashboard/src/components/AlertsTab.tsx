@@ -29,6 +29,7 @@ export function AlertsTab({ advice }: Props) {
             <div className="advice-card-top">
               <span className="advice-minister">{item.minister}</span>
               <span className="advice-type">{item.advice_type}</span>
+              <span className="priority-pill">P{item.priority_score}</span>
               <span className={`severity-pill ${item.severity}`}>{item.severity}</span>
             </div>
             <h3>{item.title}</h3>
@@ -42,7 +43,8 @@ export function AlertsTab({ advice }: Props) {
                     <li key={`${item.id}-req-${idx}`}>
                       <strong>{req.kind}</strong>
                       <span>{req.what}</span>
-                      <small>{req.why}{req.requested_from ? ` · requested from ${req.requested_from}` : ''}</small>
+                      <small>{req.why}</small>
+                      <small className="request-meta">{formatRequestMeta(req)}</small>
                     </li>
                   ))}
                 </ul>
@@ -66,4 +68,16 @@ export function AlertsTab({ advice }: Props) {
       </div>
     </div>
   );
+}
+
+function formatRequestMeta(req: AdviceItem['resource_requests'][number]): string {
+  const parts = [
+    req.priority ? `priority ${req.priority}` : null,
+    req.quantity != null ? `quantity ${req.quantity}` : null,
+    req.requested_from ? `requested from ${req.requested_from}` : null,
+    req.work_type ? `work type ${req.work_type}` : null,
+    req.skill ? `skill ${req.skill}` : null,
+  ].filter((part): part is string => part != null && part.length > 0);
+
+  return parts.length > 0 ? parts.join(' | ') : 'no request metadata';
 }

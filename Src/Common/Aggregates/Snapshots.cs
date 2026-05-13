@@ -16,6 +16,8 @@ public sealed record EconomyLedger(
 
 public sealed record ColonistRegistry(IReadOnlyList<ColonistRecord> Colonists);
 
+public sealed record MapPosition(int X, int Y, int Z);
+
 public sealed record ColonistRecord(
     string Id,
     string Name,
@@ -26,6 +28,7 @@ public sealed record ColonistRecord(
     float  Hunger,
     bool   IsDowned,
     bool   IsDead,
+    MapPosition? Position,
     string? CurrentJob,
     IReadOnlyList<ColonistSkill> Skills,
     IReadOnlyList<string>        Traits
@@ -40,7 +43,7 @@ public sealed record StockpileLedger(
     IReadOnlyDictionary<string, int> ItemsByDef
 );
 
-public sealed record StockpileZone(string Id, string Type, string? Label, int CellCount);
+public sealed record StockpileZone(string Id, string Type, string? Label, int CellCount, MapPosition? Center = null);
 
 public sealed record BuildingRegistry(IReadOnlyList<BuildingRecord> Buildings);
 
@@ -49,7 +52,8 @@ public sealed record BuildingRecord(
     string Def,
     float  Hp,
     bool?  PowerOn,
-    bool?  IsWorking
+    bool?  IsWorking,
+    MapPosition? Position = null
 );
 
 public sealed record PowerNetwork(float ProductionW, float ConsumptionW, float StoredWd, float CapacityWd);
@@ -87,7 +91,8 @@ public sealed record PlantRecord(
     string Def,
     float Growth,
     bool IsCrop,
-    string? ZoneId
+    string? ZoneId,
+    MapPosition? Position = null
 );
 
 public sealed record AnimalRegistry(IReadOnlyList<AnimalRecord> Animals);
@@ -96,7 +101,8 @@ public sealed record AnimalRecord(
     string Id,
     string Def,
     bool Tame,
-    float Health
+    float Health,
+    MapPosition? Position = null
 );
 
 /// <summary>

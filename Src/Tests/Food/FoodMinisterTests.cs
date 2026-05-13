@@ -92,7 +92,7 @@ public sealed class FoodMinisterTests
         h.SetFoodDays(35f);
 
         await h.Minister.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
-        h.SetFoodDays(12f, wildAnimals: 2);
+        h.SetFoodDays(12f, wildAnimals: 2, dateTimeRaw: "5th of Decembary, 5500, 14h");
         await h.Minister.RunPlayCycle(PlayCycleContext.CabinetRefresh, CancellationToken.None);
 
         h.PublishedAdvice.Should().ContainSingle().Which.Id.Should().Be("llm_food");
@@ -132,13 +132,13 @@ public sealed class FoodMinisterTests
             Minister = new(Cache, new Rules(), new AgendaStore(), Bus, Flags, llm, retriever, NullLogger<MinisterOfFood>.Instance);
         }
 
-        public void SetFoodDays(float days, int wildAnimals = 0)
+        public void SetFoodDays(float days, int wildAnimals = 0, string dateTimeRaw = "5th of Aprimay, 5500, 14h")
         {
-            Colony.Economy.Update(new EconomyLedger(300_000, 0f, "", "", false, "5th of Aprimay, 5500, 14h"));
+            Colony.Economy.Update(new EconomyLedger(300_000, 0f, "", "", false, dateTimeRaw));
             Colony.Colonists.Update(new ColonistRegistry([
-                new ColonistRecord("p1", "P1", 30, "Female", 1f, 0.7f, 1f, false, false, null, [], []),
-                new ColonistRecord("p2", "P2", 30, "Female", 1f, 0.7f, 1f, false, false, null, [], []),
-                new ColonistRecord("p3", "P3", 30, "Female", 1f, 0.7f, 1f, false, false, null, [], [])
+                new ColonistRecord("p1", "P1", 30, "Female", 1f, 0.7f, 1f, false, false, null, null, [], []),
+                new ColonistRecord("p2", "P2", 30, "Female", 1f, 0.7f, 1f, false, false, null, null, [], []),
+                new ColonistRecord("p3", "P3", 30, "Female", 1f, 0.7f, 1f, false, false, null, null, [], [])
             ]));
             Colony.Resources.Update(new ResourceSummary(100, 0f, 80, days * FoodNutrition.NutritionPerColonistPerDay * 3, 20, 20, 0, 0, 0f));
             Colony.Buildings.Update(new BuildingRegistry([new BuildingRecord("cooler1", "Cooler", 1f, null, null)]));

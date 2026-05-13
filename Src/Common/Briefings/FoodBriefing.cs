@@ -17,16 +17,38 @@ public sealed record FoodBriefing(
     int RawFoodCount,
     int ReadyToHarvest,
     IReadOnlyList<FoodCropSummary> CropBreakdown,
+    IReadOnlyList<FoodCropZoneSummary> CropZoneSummaries,
     int WildHarvestCandidates,
+    IReadOnlyList<WildHarvestCluster> WildHarvestClusters,
     int WildAnimalCount,
     int StockpileCells,
     FoodSkillSnapshot Skills,
     FoodInfrastructureSnapshot Infrastructure,
+    FoodStorageSummary Storage,
+    FoodKitchenSummary Kitchen,
+    FoodDataCoverage DataCoverage,
     bool ActiveThreat,
     IReadOnlyList<string> RecentFoodIncidents
 ) : IBriefing;
 
 public sealed record FoodCropSummary(string Def, int Count, float AverageGrowth);
+
+public sealed record FoodCropZoneSummary(
+    string Def,
+    string? ZoneId,
+    int Count,
+    float AverageGrowth,
+    int ReadyCount,
+    string? Proximity
+);
+
+public sealed record WildHarvestCluster(
+    string Def,
+    int Count,
+    float AverageGrowth,
+    string? Proximity,
+    string? Reference
+);
 
 public sealed record FoodSkillSnapshot(
     int BestPlants,
@@ -40,6 +62,29 @@ public sealed record FoodInfrastructureSnapshot(
     bool PowerNetPositive,
     float NetPowerW,
     int FoodStockpileZones
+);
+
+public sealed record FoodStorageSummary(
+    int StockpileZones,
+    int StockpileCells,
+    int? NearestKitchenDistanceCells,
+    string? NearestKitchenProximity
+);
+
+public sealed record FoodKitchenSummary(
+    int CookingBuildings,
+    int ButcherTables,
+    bool HasCookingBuilding,
+    bool HasButcherTable
+);
+
+public sealed record FoodDataCoverage(
+    bool HasPlantPositions,
+    bool HasAnimalPositions,
+    bool HasZoneCells,
+    bool HasBuildingPositions,
+    bool HasWorkPriorities,
+    bool HasTradeAvailability
 );
 
 public static class FoodNutrition

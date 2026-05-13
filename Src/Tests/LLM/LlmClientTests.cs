@@ -253,11 +253,16 @@ public sealed class LlmClientTests
         RawFoodCount: 0,
         ReadyToHarvest: 0,
         CropBreakdown: [],
+        CropZoneSummaries: [],
         WildHarvestCandidates: 0,
+        WildHarvestClusters: [],
         WildAnimalCount: 0,
         StockpileCells: 0,
         Skills: new FoodSkillSnapshot(5, 0, 1, 0),
         Infrastructure: new FoodInfrastructureSnapshot(0, true, 0f, 0),
+        Storage: new FoodStorageSummary(0, 0, null, null),
+        Kitchen: new FoodKitchenSummary(0, 0, false, false),
+        DataCoverage: new FoodDataCoverage(false, false, false, false, false, false),
         ActiveThreat: false,
         RecentFoodIncidents: []
     );

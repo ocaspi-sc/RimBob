@@ -50,8 +50,13 @@ public sealed class IngestionDispatcherTests
         s.Economy.Value.DateTimeRaw.Should().Be("5th of Aprimay, 5500, 14h");
         s.Colonists.Value.Colonists.Should().HaveCount(1);
         s.Colonists.Value.Colonists[0].Name.Should().Be("Alice");
+        s.Colonists.Value.Colonists[0].Position.Should().BeEquivalentTo(new { X = 10, Y = 0, Z = 20 });
         s.Colonists.Value.Colonists[0].IsDowned.Should().BeFalse();
         s.Colonists.Value.Colonists[0].IsDead.Should().BeFalse();
+        s.Plants.Value.Plants.Single().Position.Should().BeEquivalentTo(new { X = 12, Y = 0, Z = 22 });
+        s.Animals.Value.Animals.Single().Position.Should().BeEquivalentTo(new { X = 40, Y = 0, Z = 45 });
+        s.Stockpiles.Value.Zones.Single().Center.Should().BeEquivalentTo(new { X = 2, Y = 0, Z = 2 });
+        s.Buildings.Value.Buildings.Single().Position.Should().BeEquivalentTo(new { X = 5, Y = 0, Z = 5 });
         s.Power.Value.ProductionW.Should().Be(2000f);
         s.Threats.Value.Lords.Should().ContainSingle()
             .Which.JobType.Should().Be("Raid");
@@ -112,7 +117,7 @@ public sealed class IngestionDispatcherTests
         var pawn = new ColonistDetailedDto(
             Pawn: new ColonistBasicDto(
                 Id: 1, Name: "Alice", Gender: "Female", Age: 28,
-                Health: 1.0f, Mood: 0.7f, Hunger: 1.0f, Position: null),
+                Health: 1.0f, Mood: 0.7f, Hunger: 1.0f, Position: new PositionDto(10, 0, 20)),
             Detailes: new ColonistDetailsDto(
                 WorkInfo: new PawnWorkInfoDto(
                     Skills: [new SkillDto("Plants", 12, 2)],
@@ -135,19 +140,21 @@ public sealed class IngestionDispatcherTests
         var farm = new FarmSummaryDto(50, 0.6f, 5, [new CropBreakdownDto("Rice", 30, 0.7f)]);
         var plants = new List<PlantDto>
         {
-            new("plant1", "BerryBush", 1.0f, null, false, null)
+            new("plant1", "BerryBush", 1.0f, new PositionDto(12, 0, 22), false, null)
         };
         var animals = new List<AnimalDto>
         {
-            new("animal1", "Hare", null, false, 1.0f, null)
+            new("animal1", "Hare", null, false, 1.0f, new PositionDto(40, 0, 45))
         };
         var zones = new List<ZoneDto>
         {
-            new("z1", "StockpileZone", "main", [], null)
+            new("z1", "StockpileZone", "main",
+                [new PositionDto(1, 0, 1), new PositionDto(3, 0, 3)],
+                null)
         };
         var buildings = new List<BuildingDto>
         {
-            new(1, "Bed", "wooden bed", "Building_Bed", null)
+            new(1, "Bed", "wooden bed", "Building_Bed", new PositionDto(5, 0, 5))
         };
         var power = new PowerInfoDto(2000f, 1500f, 100f, 500f);
         var weather = new WeatherDto("Clear", 18f, 0f);

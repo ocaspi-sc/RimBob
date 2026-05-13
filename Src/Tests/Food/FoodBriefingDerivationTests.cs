@@ -85,6 +85,43 @@ public sealed class FoodBriefingDerivationTests
         b.Infrastructure.PowerNetPositive.Should().BeTrue();
     }
 
+    [Fact]
+    public void Compute_DerivesCompactSpatialAndOperationalSummaries()
+    {
+        ColonyState s = StateWithColonists(1);
+        s.Buildings.Update(new BuildingRegistry([
+            new BuildingRecord("stove", "FueledStove", 1f, null, null, new MapPosition(10, 0, 10)),
+            new BuildingRecord("butcher", "ButcherTable", 1f, null, null, new MapPosition(12, 0, 10))
+        ]));
+        s.Stockpiles.Update(new StockpileLedger([
+            new StockpileZone("stock", "StockpileZone", "food", 9, new MapPosition(14, 0, 10))
+        ], new Dictionary<string, int>()));
+        s.Plants.Update(new PlantRegistry([
+            new PlantRecord("berry1", "BerryBush", 0.9f, false, null, new MapPosition(18, 0, 10)),
+            new PlantRecord("berry2", "BerryBush", 0.95f, false, null, new MapPosition(20, 0, 10)),
+            new PlantRecord("rice1", "Rice", 0.86f, true, "zone-rice", new MapPosition(11, 0, 10))
+        ]));
+        s.Animals.Update(new AnimalRegistry([
+            new AnimalRecord("hare1", "Hare", false, 1f, new MapPosition(30, 0, 10))
+        ]));
+
+        FoodBriefing b = FoodBriefingDerivation.Compute(s);
+
+        b.Kitchen.HasCookingBuilding.Should().BeTrue();
+        b.Kitchen.HasButcherTable.Should().BeTrue();
+        b.Storage.NearestKitchenDistanceCells.Should().Be(4);
+        b.Storage.NearestKitchenProximity.Should().Contain("from kitchen");
+        b.WildHarvestClusters.Should().ContainSingle()
+            .Which.Proximity.Should().Contain("from kitchen");
+        b.CropZoneSummaries.Should().ContainSingle().Which.ReadyCount.Should().Be(1);
+        b.DataCoverage.HasPlantPositions.Should().BeTrue();
+        b.DataCoverage.HasAnimalPositions.Should().BeTrue();
+        b.DataCoverage.HasZoneCells.Should().BeTrue();
+        b.DataCoverage.HasBuildingPositions.Should().BeTrue();
+        b.DataCoverage.HasWorkPriorities.Should().BeFalse();
+        b.DataCoverage.HasTradeAvailability.Should().BeFalse();
+    }
+
     private static ColonyState StateWithColonists(int count)
     {
         ColonyState s = new();
@@ -100,6 +137,7 @@ public sealed class FoodBriefingDerivationTests
                 Hunger: 1f,
                 IsDowned: false,
                 IsDead: false,
+                Position: null,
                 CurrentJob: null,
                 Skills: [new ColonistSkill("Plants", 10, "Major"), new ColonistSkill("Cooking", 8, "Minor")],
                 Traits: []))

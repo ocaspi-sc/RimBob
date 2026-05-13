@@ -214,9 +214,9 @@ Locked tabs render a unified empty-console panel (`MODULE LOCKED · Coming in M{
 - Footer line shows `briefing v{n} · tick {gameTick}` so the player can correlate sidebar values with the current agenda version.
 
 ### Feeder alerts (M3) and tactical alerts (M5)
-M3 Alerts is the active feeder memo surface. It renders Food `AdviceItem`s from SSE `event: advice`, replayed on page load by `AdviceBus.ActiveAdvice()`. High/Critical visual treatment exists, but unread badges, tactical-alert stickiness, and Mayor-authored `tactical_alert` advice remain M5+.
+M3 Alerts is the active feeder memo surface. It renders Food `AdviceItem`s from SSE `event: advice`, replayed on page load by `AdviceBus.ActiveAdvice()`. Cards show severity plus `priority_score` and are ordered by severity first, then priority score. High/Critical visual treatment exists, but unread badges, tactical-alert stickiness, and Mayor-authored `tactical_alert` advice remain M5+.
 
-Alerts is also a debugging surface. The dashboard should render the advice payload it receives, including imperfect resource requests, instead of silently filtering or rewriting minister output. Quality gates for vague advice belong in rules, prompts, and response normalization.
+Alerts is also a debugging surface. The dashboard should render the advice payload it receives, including imperfect resource requests, instead of silently filtering or rewriting minister output. Resource request rows show `kind`, `what`, `why`, and any supplied `quantity`, `priority`, `requested_from`, `work_type`, and `skill`. Quality gates for vague advice belong in rules, prompts, and response normalization.
 
 ---
 

@@ -325,6 +325,7 @@ public sealed class MayorBriefingDerivationTests
             Id: name, Name: name, Age: 30, Gender: "Male",
             Health: health, Mood: mood, Hunger: 1.0f,
             IsDowned: isDowned, IsDead: isDead,
+            Position: null,
             CurrentJob: null,
             Skills: skills ?? [],
             Traits: traits ?? []

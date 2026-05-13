@@ -1295,8 +1295,16 @@ body {
   color: #6a7f94;
 }
 
-.severity-pill {
+.priority-pill {
   margin-left: auto;
+  border: 1px solid rgba(86, 207, 251, 0.42);
+  border-radius: 999px;
+  padding: 2px 8px;
+  color: #bde5ff;
+  font-variant-numeric: tabular-nums;
+}
+
+.severity-pill {
   border: 1px solid rgba(159, 176, 194, 0.2);
   border-radius: 999px;
   padding: 2px 8px;
@@ -1365,6 +1373,13 @@ body {
 .advice-block li small {
   grid-column: 2;
   color: #6a7f94;
+}
+
+.advice-block li small.request-meta {
+  color: #8ea0b5;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .briefing-switch {

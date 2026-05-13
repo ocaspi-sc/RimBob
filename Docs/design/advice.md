@@ -106,6 +106,8 @@ A memo about a raid that already happened must auto-archive — staleness is cor
 ### `supersedes`
 When an advisor replaces an earlier still-active advice (e.g. a midday revision of the morning's defense alert), `supersedes` carries the old id. The dashboard collapses the chain into the newest version with the older versions in a history sub-view.
 
+For M3 feeder alerts, rules should prefer stable same-issue ids when there is no explicit history chain yet. Re-emitting `food_emergency_food_flag` replaces the active card for that issue instead of creating another duplicate alert. Later decision-log work can preserve each emission while the active dashboard remains deduplicated.
+
 ### `autonomy_at_issue`
 The autonomy mode the issuing minister was in when the advice was emitted. Always `Suggest` in MVP. Recorded so future `Auto`-mode advice items can be distinguished in the log.
 

@@ -43,6 +43,8 @@ Make Food advice behave like useful in-game coaching instead of a noisy strategy
 
 ## Phase 2 - Food Briefing Data, Aggregated
 
+Status: implemented for source-supported fields. RIMAPI DTOs expose plant/animal/building positions and zone cells, so Phase 2 preserves those in aggregates and derives compact Food briefing summaries. Work-priority state and trade/caravan availability remain explicit coverage gaps.
+
 1. Investigate live RIMAPI DTOs for spatial fields.
    - Plants: determine whether wild edible plants and crop plants expose map coordinates.
    - Buildings/zones: determine whether stockpiles, kitchen benches, coolers, and freezers expose position or room data.
@@ -61,6 +63,8 @@ Make Food advice behave like useful in-game coaching instead of a noisy strategy
    - If exact positions are unavailable, advice should state the supported aggregate instead of inventing precision.
 
 ## Phase 3 - Food Rules
+
+Status: implemented. Food rules now compute severity/priority dynamically, use stable same-issue advice ids, suppress day-one trade/caravan advice, emit concrete bill/harvest/growing/freezer suggestions, and only request labor when urgent or coverage is missing.
 
 1. Add dynamic severity and priority helpers.
    - Inputs: days of food, nutrition confidence, colonist count, season/growing window, active threat, immediate action availability, missing infrastructure.
@@ -86,6 +90,8 @@ Make Food advice behave like useful in-game coaching instead of a noisy strategy
 
 ## Phase 4 - Food Prompt and RAG Contract
 
+Status: implemented. The Food system prompt now requires sparse near-term output, `priority_score`, concrete actions, work-type-qualified labor requests, live-state-first RAG usage, and trade/procurement as flag-only unless live trade context exists.
+
 1. Update `food.system.md`.
    - Require near-term actionable output.
    - Require `priority_score`.
@@ -104,6 +110,8 @@ Make Food advice behave like useful in-game coaching instead of a noisy strategy
 
 ## Phase 5 - Dashboard Rendering
 
+Status: implemented. Alerts render severity plus `priority_score`, sort active advice by severity then priority, and show all resource request metadata without filtering producer output.
+
 1. Render `priority_score`.
    - Show severity and `priority_score` together, e.g. `High - Priority 8/10`.
    - Sort primarily by severity/priority as appropriate, but keep raw payload visible.
@@ -117,6 +125,8 @@ Make Food advice behave like useful in-game coaching instead of a noisy strategy
    - Do not rewrite producer output in the frontend.
 
 ## Phase 6 - Tests
+
+Status: implemented for this slice. Backend tests cover priority/work metadata schema, Food rule behavior, compact briefing summaries, prompt contract language, shared LLM response normalization, and existing SSE/advice paths. Dashboard coverage is build-time TypeScript verification for this slice.
 
 1. Schema tests.
    - `AdviceItem` serializes/deserializes `priority_score`.
@@ -143,6 +153,8 @@ Make Food advice behave like useful in-game coaching instead of a noisy strategy
    - Mayor prompt/flag digest still sees severity and does not depend on dashboard-only priority rendering.
 
 ## Phase 7 - Verification
+
+Status: verified on 2026-05-13. `dotnet build Src\RimAI.sln --no-restore`, `dotnet test Src\Tests\RimAI.Tests.csproj --no-restore --no-build`, and `npm.cmd run build` passed. RimAI was restarted with `run-rimai.ps1` and `/api/health` returned OK. Live Food output against a real save could not be confirmed in this pass because RIMAPI at `localhost:8765` was not reachable; `/api/briefings/food/latest` returned the empty fallback briefing.
 
 1. Stop any running `RimAI.Host` before build if DLLs are locked.
 2. Run backend build.
