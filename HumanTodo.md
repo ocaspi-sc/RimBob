@@ -37,20 +37,26 @@ Simplify AGENTS.md
 - All of the LABOR ones just say "LABOR labor capacity " wdym labor capacity ? Also should specify what kind of skill is required for the task.
 - "Wild harvest" one: it should say exactly where are the nearest edible plants, and suggest action to mark them for harvest.
 
-## Dashboard v2: brainstorm session.
+## Dashboard v2
 full redesign of the dashboard.
+First we brainstorm. don't make any changes yet.
 - left side: have a tab for each minister, with emojis.
 - Add a SYSTEM tab for info about llm usage, logs, etc.
 - Top of main area: bar of Tabs for our main views: System Prompt, Briefing, RAG, Rules, Advice.
 Each view is structured into sections as relevant for each type, for readbility and ease of navigation.
 - Remove The pushback buttons for now
-- Right side is fine
+- Right sidebar: don't need to break up into section since just a few items in each. add a small panel for each colonist. 
 - Header is fine
-Read the design docs to see if i missed something important. do we have a place for triggers?
+- Read the design docs to see if i missed something important. e.g. do we have a place that shows triggers?
+
 
 Then research either/or
 - frontend dashboard skill for ai agents
 - react library for dashboards with good support for collapsible panels and data
+
+
+ Scan Github repos references for ideas
+-
 
 ## Rename the whole project from RimAI to RimBob
 
