@@ -12,7 +12,7 @@ namespace RimAI.Host.Endpoints;
 public static class MinisterEndpoints
 {
     private static readonly IReadOnlyList<string> MinisterViews =
-        ["prompt", "raw_llm", "briefing", "rag", "rules", "advice"];
+        ["prompt", "briefing", "rag", "rules", "raw_llm", "advice"];
 
     private static readonly IReadOnlyList<MinisterScopeInfo> Scopes =
     [

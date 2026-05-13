@@ -472,6 +472,16 @@ code {
   grid-template-columns: minmax(180px, 1fr) 120px minmax(260px, 2fr);
 }
 
+.dense-row > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.resource-table .dense-row {
+  grid-template-columns: minmax(84px, 0.7fr) minmax(150px, 1.2fr) minmax(240px, 2fr) minmax(96px, 0.75fr);
+  align-items: start;
+}
+
 .dense-row.header {
   color: var(--muted);
   text-transform: uppercase;

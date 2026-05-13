@@ -162,7 +162,7 @@ function AdviceCard({ item }: { item: AdviceItem }) {
       <blockquote>{item.rationale}</blockquote>
       {item.resource_requests.length > 0 && (
         <DisclosureSection title="Resource requests" defaultOpen meta={`${item.resource_requests.length} requests`}>
-          <div className="dense-table">
+          <div className="dense-table resource-table">
             <div className="dense-row header">
               <span>Kind</span>
               <span>What</span>

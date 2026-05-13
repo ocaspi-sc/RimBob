@@ -26,10 +26,10 @@ export interface ScopeConfig {
 
 export const ministerViews: Array<{ key: MinisterViewKey; label: string }> = [
   { key: 'prompt', label: 'System Prompt' },
-  { key: 'raw_llm', label: 'Raw LLM Output' },
   { key: 'briefing', label: 'Briefing' },
   { key: 'rag', label: 'RAG' },
   { key: 'rules', label: 'Rules' },
+  { key: 'raw_llm', label: 'Raw LLM Output' },
   { key: 'advice', label: 'Advice' },
 ];
 

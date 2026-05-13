@@ -61,10 +61,10 @@ Each scope may show a small emoji marker. Future scopes are disabled or marked "
 Minister scopes use the fixed top tab bar:
 
 - System Prompt
-- Raw LLM Output
 - Briefing
 - RAG
 - Rules
+- Raw LLM Output
 - Advice
 
 Each view renders structured sections. Large objects use the standard disclosure pattern: a real button header with `aria-expanded` / `aria-controls`, plus a conditionally rendered panel in normal document flow.
@@ -216,6 +216,7 @@ Use this especially for RAG, Rules traces, logs, future ministers, token/cost me
 - Left rail, main workspace, and sidebar own their overflow; avoid whole-page scrolling on desktop.
 - Text wraps within panels.
 - Use compact tables only for debug surfaces: Rules, RAG, logs, active flags, resource requests, and endpoint coverage.
+- Resource request tables keep short fields (`Kind`, `Meta`) narrow, make `Why` the widest column, and wrap text inside cells rather than forcing horizontal overflow.
 - Avoid decorative hero sections, oversized empty cards, and one-note color themes.
 
 ## Deferred
