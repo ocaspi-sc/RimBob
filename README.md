@@ -73,7 +73,8 @@ Run RimAI and the dashboard with the helper script:
 
 The script installs dashboard dependencies with `npm.cmd ci` if
 `node_modules` is missing, builds the dashboard into `Src/ApiHost/wwwroot`,
-then starts `RimAI.Host`. Open the dashboard at:
+then starts `RimAI.Host` in a minimized taskbar window named `RimAI Server`.
+Open the dashboard at:
 
 ```text
 http://localhost:5000
@@ -84,6 +85,13 @@ current:
 
 ```powershell
 .\run-rimai.ps1 -SkipDashboardBuild -NoRestore
+```
+
+For debugging, or when an agent needs terminal output captured in the current
+shell, keep the server attached instead:
+
+```powershell
+.\run-rimai.ps1 -Foreground
 ```
 
 If local PowerShell script execution is blocked on the machine, run it through

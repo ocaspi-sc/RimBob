@@ -109,6 +109,8 @@ Food publishes a complete active-advice snapshot each successful play cycle. The
 
 Emergency Food output should avoid vague catch-all wording such as "audit" or generic `note` actions. If the briefing has reported `FoodUnits` but no meal/raw-food category, Food should say that the reported food units need reachable stockpile visibility. If the briefing shows no harvest/cook path, Food should still emit concrete food-chain setup work when possible: emergency growing tiles, Grow/PlantCut labor, a campfire/stove request, and simple-meal bill/cook labor when raw food exists. Food may request trade capacity only when no stored, harvestable, cookable, or sowable path is visible.
 
+Crop selection should be grounded in deterministic yield math, not only prompt/RAG intuition. Food should have a shared crop-math helper/table that rules can call directly and that escalation can expose to the LLM as computed crop candidates. At minimum it should score rice/potato/corn by grow time, harvest yield/nutrition per tile, expected nutrition before winter, fertility sensitivity, current growing-window days, and available Plants/cooking constraints. The LLM may use guides to explain or adjust a candidate, but it should not invent the math.
+
 Bootstrap-escalation rule: the first memo should bias toward specific, player-usable advice when the current state supports it, such as crop choice, immediate sow/harvest priorities, hunting vs wild-harvest tradeoff, freezer need, or bill changes. If the current `FoodBriefing` cannot support that specificity, the minister should say so explicitly rather than pretending to know tile counts or exact layouts.
 
 ---
@@ -167,7 +169,7 @@ Topics: `["food", "farming", "crops", "wild harvest", "hunting", "freezer", "coo
 
 Retrieval required for: crop choice decisions, seasonal timing, freezer/cooking policy, first devilstrand/drug crop decision, biome-specific food recovery.
 
-RAG is subordinate to live state. Guide passages can justify crop, bill, freezer, and seasonal choices, but they must not invent a current trade route, exact plant location, or available work capacity that the briefing does not show.
+RAG is subordinate to live state and deterministic crop math. Guide passages can justify crop, bill, freezer, and seasonal choices, but they must not invent a current trade route, exact plant location, available work capacity, or crop yield calculation that the briefing/crop-math helper does not support.
 
 ---
 

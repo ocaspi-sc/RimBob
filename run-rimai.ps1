@@ -4,7 +4,9 @@ param(
     [switch]$SkipDashboardInstall,
     [switch]$NoRestore,
     [string]$Configuration = "Debug",
-    [string]$ListenUrl = ""
+    [string]$ListenUrl = "",
+    [switch]$Foreground,
+    [switch]$HostOnly
 )
 
 $ErrorActionPreference = "Stop"
@@ -40,10 +42,75 @@ function Require-Command {
     }
 }
 
-Require-Command "dotnet"
-Require-Command "npm.cmd"
+function Set-ServerWindowTitle {
+    try {
+        $Host.UI.RawUI.WindowTitle = "RimAI Server"
+    }
+    catch {
+        # Some terminals do not expose RawUI title changes.
+    }
+}
 
-if (-not $SkipDashboardInstall -and -not (Test-Path $nodeModulesDir)) {
+function Start-HostForeground {
+    Set-ServerWindowTitle
+
+    Invoke-Step "Starting RimAI host" {
+        Push-Location $hostDir
+        try {
+            & dotnet @dotnetArgs
+        }
+        finally {
+            Pop-Location
+        }
+    }
+}
+
+function Start-HostTaskbarWindow {
+    if ([string]::IsNullOrWhiteSpace($PSCommandPath)) {
+        throw "Cannot start RimAI in a taskbar window because the script path is unavailable."
+    }
+
+    Require-Command "powershell.exe"
+
+    $childArgs = @(
+        "-NoLogo",
+        "-NoExit",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "`"$PSCommandPath`"",
+        "-HostOnly",
+        "-Configuration",
+        $Configuration
+    )
+
+    if ($NoRestore) {
+        $childArgs += "-NoRestore"
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($ListenUrl)) {
+        $childArgs += "-ListenUrl"
+        $childArgs += $ListenUrl
+    }
+
+    Start-Process `
+        -FilePath "powershell.exe" `
+        -WorkingDirectory $repoRoot `
+        -WindowStyle Minimized `
+        -ArgumentList $childArgs
+
+    Write-Host ""
+    Write-Host "RimAI host started in a minimized taskbar window named 'RimAI Server'."
+    Write-Host "Close that window, or stop dotnet inside it, to stop RimAI."
+    Write-Host "Use -Foreground to keep the server attached to this terminal."
+}
+
+Require-Command "dotnet"
+if (-not $HostOnly) {
+    Require-Command "npm.cmd"
+}
+
+if (-not $HostOnly -and -not $SkipDashboardInstall -and -not (Test-Path $nodeModulesDir)) {
     Invoke-Step "Installing dashboard dependencies" {
         Push-Location $dashboardDir
         try {
@@ -54,11 +121,11 @@ if (-not $SkipDashboardInstall -and -not (Test-Path $nodeModulesDir)) {
         }
     }
 }
-elseif (-not (Test-Path $nodeModulesDir)) {
+elseif (-not $HostOnly -and -not (Test-Path $nodeModulesDir)) {
     Write-Warning "Dashboard dependencies are missing. Build may fail because node_modules does not exist."
 }
 
-if (-not $SkipDashboardBuild) {
+if (-not $HostOnly -and -not $SkipDashboardBuild) {
     Invoke-Step "Building dashboard into Src\ApiHost\wwwroot" {
         Push-Location $dashboardDir
         try {
@@ -94,14 +161,11 @@ else {
 }
 
 Write-Host "RIMAPI expected at: http://localhost:8765/"
-Write-Host "Press Ctrl+C to stop RimAI."
 
-Invoke-Step "Starting RimAI host" {
-    Push-Location $hostDir
-    try {
-        & dotnet @dotnetArgs
-    }
-    finally {
-        Pop-Location
-    }
+if ($HostOnly -or $Foreground) {
+    Write-Host "Press Ctrl+C to stop RimAI."
+    Start-HostForeground
+}
+else {
+    Start-HostTaskbarWindow
 }

@@ -23,6 +23,7 @@
 
 ## Next (post-M3 follow-ups)
 
+- [ ] Add deterministic Food crop-yield math (`FoodCropMath`/candidate table) so rules can choose rice/potato/corn from grow time, nutrition per tile, fertility sensitivity, days to winter, and current food buffer; expose computed candidates to Food LLM escalation instead of asking Gemini to invent the math.
 - [ ] Add polished guide-citation footnotes on feeder memo cards.
 - [ ] Add Food decision log persistence so M6 refinement has shipped advice traces.
 - [ ] Improve Food hunting target risk/value scoring from live animal data.

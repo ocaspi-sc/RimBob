@@ -6,13 +6,9 @@
 
 ---
 
-Is the agenda saved to a file that the dashboard reads from? is there history?
+Refine System prompts for agents - how systemtically?
 
-Migrate from codex chrome plugin to playwright for frontend
-
-Refine System prompts for agents - how?
-
-Simplify AGENTS.md
+Simplify / improve AGENTS.md
 
 ## Fill out Guide corpus (download and create guides)
 
@@ -26,6 +22,26 @@ Simplify AGENTS.md
 
 
 
+ Scan Github repos references for ideas
+-
+
+## Rename the whole project from RimAI to RimBob
+
+<!-- entries go here -->
+- [ ] [2026-05-09] #dashboard #ux Add button to dashboard "what was sent" / prompt-introspection screen that copies the full system + user prompt to the clipboard. Pairs with the manual-fallback flow (`logs/mayor-prompt-latest.md`, `POST /api/agenda/manual`) for when Gemini is rate-limited.
+
+
+----------------
+DONE
+---------------
+
+
+Is the agenda saved to a file that the dashboard reads from? is there history?
+
+
+Migrate from codex chrome plugin to playwright for frontend
+
+
 
 ## About the Food minister's Advice / Alerts:
 - The first alert "Resource requests  attention  food" - wdym attention? why not Trade? 
@@ -36,6 +52,9 @@ Simplify AGENTS.md
 - In general, the most basic actions like hauling cleaning etc should be automated by the game, and only request labor for urgent cases.
 - All of the LABOR ones just say "LABOR labor capacity " wdym labor capacity ? Also should specify what kind of skill is required for the task.
 - "Wild harvest" one: it should say exactly where are the nearest edible plants, and suggest action to mark them for harvest.
+
+
+
 
 ## Dashboard v2
 full redesign of the dashboard.
@@ -54,11 +73,3 @@ Then research either/or
 - frontend dashboard skill for ai agents
 - react library for dashboards with good support for collapsible panels and data
 
-
- Scan Github repos references for ideas
--
-
-## Rename the whole project from RimAI to RimBob
-
-<!-- entries go here -->
-- [ ] [2026-05-09] #dashboard #ux Add button to dashboard "what was sent" / prompt-introspection screen that copies the full system + user prompt to the clipboard. Pairs with the manual-fallback flow (`logs/mayor-prompt-latest.md`, `POST /api/agenda/manual`) for when Gemini is rate-limited.
