@@ -9,7 +9,9 @@ public sealed class CabinetCycle(
     IEnumerable<IMinister> ministers,
     ILogger<CabinetCycle> log)
 {
-    public async Task RunAsync(CancellationToken ct)
+    public Task RunAsync(CancellationToken ct) => RunAsync(PlayCycleContext.CabinetRefresh, ct);
+
+    public async Task RunAsync(PlayCycleContext cycle, CancellationToken ct)
     {
         await ingestion.RefreshAllAsync(ct);
 
@@ -19,12 +21,12 @@ public sealed class CabinetCycle(
         if (food is not null)
         {
             log.LogInformation("Cabinet cycle: running Food before Mayor");
-            await food.RunPlayCycle(ct);
+            await food.RunPlayCycle(cycle, ct);
         }
 
         if (mayor is null)
             throw new InvalidOperationException("Cabinet cycle could not resolve Mayor minister.");
 
-        await mayor.RunPlayCycle(ct);
+        await mayor.RunPlayCycle(cycle, ct);
     }
 }

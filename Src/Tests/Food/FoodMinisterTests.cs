@@ -16,43 +16,84 @@ namespace RimAI.Tests.Food;
 public sealed class FoodMinisterTests
 {
     [Fact]
-    public async Task StableRuleDecision_DoesNotCallLlm()
+    public async Task FirstCycle_StableState_BootstrapsThroughLlm()
     {
-        bool called = false;
+        int calls = 0;
         Harness h = new((_, _, _, _) =>
         {
-            called = true;
+            calls++;
             return Task.FromResult(new FoodLlmResponse([], []));
         });
         h.SetFoodDays(35f);
 
-        await h.Minister.RunPlayCycle(CancellationToken.None);
+        await h.Minister.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
 
-        called.Should().BeFalse();
+        calls.Should().Be(1);
         h.PublishedAdvice.Should().BeEmpty();
     }
 
     [Fact]
-    public async Task RuleDecision_PublishesAdviceAndFlag()
+    public async Task SecondCycle_StableState_UsesRulesWithoutLlm()
     {
-        Harness h = new((_, _, _, _) => Task.FromResult(new FoodLlmResponse([], [])));
+        int calls = 0;
+        Harness h = new((_, _, _, _) =>
+        {
+            calls++;
+            return Task.FromResult(new FoodLlmResponse([], []));
+        });
+        h.SetFoodDays(35f);
+
+        await h.Minister.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
+        await h.Minister.RunPlayCycle(PlayCycleContext.CabinetRefresh, CancellationToken.None);
+
+        calls.Should().Be(1);
+        h.PublishedAdvice.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task BootstrapFailure_FallsBackToRules()
+    {
+        Harness h = new((_, _, _, _) => throw new InvalidOperationException("boom"));
         h.SetFoodDays(4f);
 
-        await h.Minister.RunPlayCycle(CancellationToken.None);
+        await h.Minister.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
 
         h.PublishedAdvice.Should().ContainSingle().Which.AdviceType.Should().Be("food_security");
         h.Flags.Active(FlagSeverity.Medium).Should().ContainSingle().Which.Domain.Should().Be("food");
     }
 
     [Fact]
-    public async Task Escalation_UsesFoodLlmResponse()
+    public async Task RuleDecision_PublishesAdviceAndFlag_AfterBootstrap()
     {
-        Harness h = new((_, _, _, _) => Task.FromResult(new FoodLlmResponse(
-            [FoodAdvice("llm_food")],
-            [new AgentFlag("food:llm", "Food", FlagSeverity.Medium, "food", "LLM food flag")])));
-        h.SetFoodDays(12f, wildAnimals: 2);
+        Harness h = new((_, _, _, _) => Task.FromResult(new FoodLlmResponse([], [])));
+        h.SetFoodDays(35f);
 
-        await h.Minister.RunPlayCycle(CancellationToken.None);
+        await h.Minister.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
+        h.SetFoodDays(4f);
+        await h.Minister.RunPlayCycle(PlayCycleContext.CabinetRefresh, CancellationToken.None);
+
+        h.PublishedAdvice.Should().ContainSingle().Which.AdviceType.Should().Be("food_security");
+        h.Flags.Active(FlagSeverity.Medium).Should().ContainSingle().Which.Domain.Should().Be("food");
+    }
+
+    [Fact]
+    public async Task Escalation_UsesFoodLlmResponse_AfterBootstrap()
+    {
+        int calls = 0;
+        Harness h = new((_, _, _, _) =>
+        {
+            calls++;
+            return Task.FromResult(calls == 1
+                ? new FoodLlmResponse([], [])
+                : new FoodLlmResponse(
+                    [FoodAdvice("llm_food")],
+                    [new AgentFlag("food:llm", "Food", FlagSeverity.Medium, "food", "LLM food flag")]));
+        });
+        h.SetFoodDays(35f);
+
+        await h.Minister.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
+        h.SetFoodDays(12f, wildAnimals: 2);
+        await h.Minister.RunPlayCycle(PlayCycleContext.CabinetRefresh, CancellationToken.None);
 
         h.PublishedAdvice.Should().ContainSingle().Which.Id.Should().Be("llm_food");
         h.Flags.Active(FlagSeverity.Medium).Should().ContainSingle().Which.Summary.Should().Be("LLM food flag");

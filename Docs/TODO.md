@@ -28,6 +28,7 @@
 - [ ] Improve Food hunting target risk/value scoring from live animal data.
 - [ ] Expand Food briefing with bill state, freezer room temperature, and spoilage timers when RIMAPI exposes them.
 - [x] `Briefing` tab renders latest Mayor/Food briefing JSON.
+- [x] One-time bootstrap escalation now runs through explicit `PlayCycleContext.StartupBootstrap`; Food uses it in M3.
 
 ## Later (M5 — Feedback loop)
 
@@ -60,7 +61,7 @@
 - [ ] Candidate minister promotion criteria (CMO, Research, Trade, Treasury).
 - [ ] Memo cadence calibration: severity-gated tactical alerts vs. strict daily.
 - [ ] Dashboard: notification UX (in-page only vs. browser notifications).
-- [ ] `ColonyContext` still carries the pre-Agenda WealthPolicy/ExpansionPolicy/etc. fields — refactor to expose `MayorPosture` directly when the first feeder minister lands (M3).
+- [ ] Retire or narrow legacy `ColonyContext` on the rules path now that minister wake reasons moved to `PlayCycleContext` and feeder ministers use agenda-derived briefing context.
 
 ## Auto epic (M7 — defer until then)
 

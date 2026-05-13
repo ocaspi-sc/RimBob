@@ -15,7 +15,7 @@ public sealed class DayTickOrchestrator : BackgroundService
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(2);
 
     private readonly ColonyState _colony;
-    private readonly Func<CancellationToken, Task> _runCycle;
+    private readonly Func<PlayCycleContext, CancellationToken, Task> _runCycle;
     private readonly string _cycleName;
     private readonly ILogger<DayTickOrchestrator> _log;
     private readonly Func<CancellationToken, Task> _refresh;
@@ -39,7 +39,7 @@ public sealed class DayTickOrchestrator : BackgroundService
         ColonyState colony,
         string cycleName,
         ILogger<DayTickOrchestrator> log,
-        Func<CancellationToken, Task> runCycle,
+        Func<PlayCycleContext, CancellationToken, Task> runCycle,
         Func<CancellationToken, Task>? refresh)
     {
         _colony = colony;
@@ -68,7 +68,7 @@ public sealed class DayTickOrchestrator : BackgroundService
                     _log.LogInformation(
                         "Startup ingestion complete (tick={Tick}, day={Day}); firing initial {Cycle} cycle",
                         tick, day, _cycleName);
-                    await _runCycle(ct);
+                    await _runCycle(PlayCycleContext.StartupBootstrap, ct);
                 }
                 else if (day != _lastDay)
                 {
@@ -76,7 +76,7 @@ public sealed class DayTickOrchestrator : BackgroundService
                         "Day rollover: {Previous} -> {Current} (tick={Tick}); waking {Cycle}",
                         _lastDay, day, tick, _cycleName);
                     _lastDay = day;
-                    await _runCycle(ct);
+                    await _runCycle(PlayCycleContext.CabinetRefresh, ct);
                 }
             }
             catch (OperationCanceledException)

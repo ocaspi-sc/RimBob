@@ -37,7 +37,7 @@ public sealed class Mayor(
 
     public string Name => "Mayor";
 
-    public async Task RunPlayCycle(CancellationToken ct)
+    public async Task RunPlayCycle(PlayCycleContext cycle, CancellationToken ct)
     {
         status.Begin();
         string? cycleError = null;

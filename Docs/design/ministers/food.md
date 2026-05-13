@@ -22,9 +22,10 @@ Food does not own pawn allocation. It may request labor capacity, e.g. cooks, gr
 M3 runtime path:
 
 1. `CabinetCycle` refreshes ingestion, runs Food, then runs the Mayor.
-2. Food reads `FoodBriefing` from `BriefingCache`, evaluates `Rules.cs`, and emits `AdviceItem`s plus optional `AgentFlag`s.
-3. If rules return `Escalate`, Food calls Gemini with `food.system.md`, `FoodBriefing`, `MinisterBriefingContext`, and food-focused `guide_context`.
-4. The Mayor reads active Medium+ flags and reflects relevant Food pressure in `state_of_the_union.food`, `update_notes`, and short-term priorities.
+2. Food follows the universal minister bootstrap rule from [`design/ministers.md`](../ministers.md): on the first live cycle after Host startup, or the first cycle after the minister is newly introduced into a save, it should bootstrap via escalation rather than trusting only coarse deterministic rules.
+3. After bootstrap, Food reads `FoodBriefing` from `BriefingCache`, evaluates `Rules.cs`, and emits `AdviceItem`s plus optional `AgentFlag`s.
+4. If rules return `Escalate`, Food calls Gemini with `food.system.md`, `FoodBriefing`, `MinisterBriefingContext`, and food-focused `guide_context`.
+5. The Mayor reads active Medium+ flags and reflects relevant Food pressure in `state_of_the_union.food`, `update_notes`, and short-term priorities.
 
 ---
 
@@ -91,6 +92,7 @@ Known first-pass rules:
 
 Escalates when:
 
+- The first live Food cycle needs a concrete bootstrap memo, even if a coarse deterministic shortage rule also matches.
 - Crop choice involves real trade-offs: rice vs potatoes vs corn vs hydroponics.
 - Hunting target value/risk is ambiguous.
 - Multiple food-chain bottlenecks compete: no cooks, full freezer, low raw food, active threat.
@@ -99,6 +101,8 @@ Escalates when:
 - Caravan/trade food policy matters.
 
 M3 severity calibration: Food emits `High` for urgent shortage by default. `Critical` is reserved for true immediate starvation evidence, not just a low buffer.
+
+Bootstrap-escalation rule: the first memo should bias toward specific, player-usable advice when the current state supports it, such as crop choice, immediate sow/harvest priorities, hunting vs wild-harvest tradeoff, freezer need, or bill changes. If the current `FoodBriefing` cannot support that specificity, the minister should say so explicitly rather than pretending to know tile counts or exact layouts.
 
 ---
 

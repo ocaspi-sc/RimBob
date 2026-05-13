@@ -239,24 +239,53 @@ public sealed class LlmClient
         if (string.IsNullOrWhiteSpace(text))
             throw new InvalidOperationException("Gemini returned empty response for Food call.");
 
-        FoodLlmResponse? parsed;
+        bool normalized = false;
+        FoodLlmResponse parsed;
         try
         {
-            parsed = JsonSerializer.Deserialize<FoodLlmResponse>(text, ResponseJson);
+            LlmAdviceNormalizationContext normalizeContext = new(
+                Minister: "Food",
+                Domain: "food",
+                BriefingVersion: briefing.BriefingVersion,
+                GameTick: briefing.GameTick,
+                Date: briefing.Date,
+                DefaultAdviceType: nameof(FoodAdviceType.FoodSecurity),
+                DefaultRationale: "Food LLM escalation selected this recommendation.",
+                GuideContext: guideContext);
+
+            parsed = LlmResponseParser.ParseOrNormalize(
+                text,
+                ResponseJson,
+                root =>
+                {
+                    NormalizedAdviceResponse normalizedResponse =
+                        LlmAdviceResponseNormalizer.Normalize(root, normalizeContext, ResponseJson);
+                    return new FoodLlmResponse(
+                        normalizedResponse.Advice,
+                        normalizedResponse.Flags,
+                        normalizedResponse.Notes);
+                },
+                ex =>
+                {
+                    normalized = true;
+                    _log.LogWarning(ex, "Food response did not match strict schema; attempting tolerant normalization.");
+                });
         }
-        catch (JsonException ex)
+        catch (JsonException parseEx)
         {
-            _log.LogError(ex, "Failed to parse Food response as JSON. Raw text:\n{Text}", text);
+            _log.LogError(parseEx, "Failed to parse Food response as JSON. Raw text:\n{Text}", text);
             throw;
         }
-
-        if (parsed is null)
-            throw new InvalidOperationException("Gemini Food response deserialized to null.");
 
         _log.LogInformation(
             "Food LLM call complete: latency={LatencyMs}ms advice={AdviceCount} flags={FlagCount}",
             sw.ElapsedMilliseconds, parsed.Advice.Count, parsed.Flags.Count);
+        if (normalized)
+            _log.LogWarning(
+                "Food response normalized from non-strict schema: advice={AdviceCount} flags={FlagCount}",
+                parsed.Advice.Count, parsed.Flags.Count);
 
         return parsed;
     }
+
 }

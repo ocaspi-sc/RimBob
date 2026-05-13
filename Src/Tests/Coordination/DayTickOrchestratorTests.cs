@@ -22,6 +22,7 @@ public sealed class DayTickOrchestratorTests
         await RunOneCycleAsync(sut);
 
         mayor.WakeCount.Should().Be(1);
+        mayor.Triggers.Should().ContainSingle().Which.Should().Be(PlayCycleTrigger.StartupBootstrap);
     }
 
     [Fact]
@@ -38,6 +39,7 @@ public sealed class DayTickOrchestratorTests
         colony.Economy.Update(new EconomyLedger(TicksPerDay * 4, 0, "", "", false, ""));
         await RunOneCycleAsync(sut);  // day rollover → fires again
         mayor.WakeCount.Should().Be(2);
+        mayor.Triggers.Should().Equal(PlayCycleTrigger.StartupBootstrap, PlayCycleTrigger.CabinetRefresh);
     }
 
     [Fact]
@@ -95,10 +97,12 @@ public sealed class DayTickOrchestratorTests
         public string Name => "FakeMayor";
         public int    WakeCount   { get; private set; }
         public bool   ThrowOnWake { get; init; }
+        public List<PlayCycleTrigger> Triggers { get; } = [];
 
-        public Task RunPlayCycle(CancellationToken ct)
+        public Task RunPlayCycle(PlayCycleContext context, CancellationToken ct)
         {
             WakeCount++;
+            Triggers.Add(context.Trigger);
             if (ThrowOnWake) throw new InvalidOperationException("boom");
             return Task.CompletedTask;
         }

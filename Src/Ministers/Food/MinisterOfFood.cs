@@ -21,10 +21,24 @@ public sealed class MinisterOfFood(
 {
     public string Name => "Food";
 
-    public async Task RunPlayCycle(CancellationToken ct)
+    public async Task RunPlayCycle(PlayCycleContext cycle, CancellationToken ct)
     {
         FoodBriefing briefing = briefings.GetFoodBriefing();
         MinisterBriefingContext context = BuildContext();
+
+        if (cycle.IsBootstrap)
+        {
+            log.LogInformation("Food bootstrap: forcing first live cycle escalation");
+            bool bootstrapped = await RunEscalationAsync(
+                briefing,
+                context,
+                new Escalate("bootstrap_first_live_cycle", new { briefing.BriefingVersion, briefing.GameTick }),
+                ct);
+            if (bootstrapped) return;
+
+            log.LogWarning("Food bootstrap escalation failed; falling back to normal rules evaluation.");
+        }
+
         RulesResult result = rules.Evaluate(briefing, ColonyContext.Default);
 
         switch (result)
@@ -44,7 +58,7 @@ public sealed class MinisterOfFood(
 
     public Task RunRefinement(CancellationToken ct) => Task.CompletedTask;
 
-    private async Task RunEscalationAsync(
+    private async Task<bool> RunEscalationAsync(
         FoodBriefing briefing,
         MinisterBriefingContext context,
         Escalate escalate,
@@ -58,11 +72,13 @@ public sealed class MinisterOfFood(
             log.LogInformation(
                 "Food escalation reason={Reason} advice={AdviceCount} flags={FlagCount}",
                 escalate.Reason, response.Advice.Count, response.Flags.Count);
+            return true;
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             log.LogWarning(ex, "Food escalation failed; no advice emitted this cycle. reason={Reason}", escalate.Reason);
+            return false;
         }
     }
 

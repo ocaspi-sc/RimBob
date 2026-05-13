@@ -53,6 +53,8 @@ If a decision affects multiple docs, update the most specific one and add a cros
 - **Agent plans location:** store agent-created plans in `/.plans`.
 - **Design sessions:** focus is exploration and documentation. Don't write code unless asked.
 - **Build sessions:** focus is implementation. Don't redesign unless a blocker is found.
+- **After build verification:** run RimAI again and verify the Host is reachable, especially if the build required stopping a live `RimAI.Host` process.
+- **Local run verification:** prefer `.\run-rimai.ps1` as the default launcher after builds; use manual `npm.cmd run build` / `dotnet run` only when debugging one side of the stack.
 
 ---
 

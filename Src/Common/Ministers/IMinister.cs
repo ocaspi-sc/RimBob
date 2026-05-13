@@ -9,8 +9,8 @@ public interface IMinister
 {
     string Name { get; }
 
-    /// <summary>Called by the Orchestrator when this minister's briefing has changed.</summary>
-    Task RunPlayCycle(CancellationToken ct);
+    /// <summary>Called by the Orchestrator with the typed wake reason for this cycle.</summary>
+    Task RunPlayCycle(PlayCycleContext context, CancellationToken ct);
 
     /// <summary>Called manually or on schedule to tighten the rules layer.</summary>
     Task RunRefinement(CancellationToken ct);

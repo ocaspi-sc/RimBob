@@ -45,6 +45,8 @@
 ### Core
 Shared types, contracts, domain model. **No external dependencies.** Everything else may depend on Core; Core depends on nothing.
 
+Current runtime note: the live minister contract is `IMinister.RunPlayCycle(PlayCycleContext, CancellationToken)`, and `PlayCycleContext` / `PlayCycleTrigger` live under `Common/Ministers/`.
+
 ```
 Core/
 ├── Aggregates/
@@ -74,12 +76,13 @@ Core/
 │   ├── FeedbackEvent.cs    // Accept | Dismiss | Modify
 │   └── AutonomyMode.cs     // Off | Suggest | Auto (per-minister)
 ├── Ministers/
-│   ├── IMinister.cs        // RunPlayCycle(WakeupTrigger, ct) + RunRefinement(ct)
+│   ├── IMinister.cs        // RunPlayCycle(PlayCycleContext, ct) + RunRefinement(ct)
 │   ├── IMinisterRules.cs   // Evaluate(briefing, context) → Decision | Escalate
-│   ├── ColonyContext.cs    // shared posture propagated to all ministers
+│   ├── ColonyContext.cs    // legacy shared posture on the rules path; phased out by agenda-derived briefing context
 │   ├── MinisterGoal.cs
-│   ├── WakeupTrigger.cs    // BriefingChanged | FlagFired | Heartbeat | ScheduledWakeupFired(payload)
-│   └── ScheduledWakeup.cs  // FireAt + Payload; at most one pending per minister
+│   ├── PlayCycleContext.cs // typed wake reason for minister play cycles
+│   ├── ScheduledWakeup.cs  // FireAt + Payload; at most one pending per minister
+│   └── PlayCycleTrigger.cs // StartupBootstrap | CabinetRefresh | FlagFired | Heartbeat | ScheduledWakeupFired
 ├── Labor/                  // Deferred — Auto epic
 │   ├── LaborRequest.cs
 │   ├── WorkType.cs
@@ -132,17 +135,20 @@ Planner/                     // Deferred — Auto epic
 ```
 
 ### Coordination
-The shared coordination layer between ministers. Owns the flag channel (cross-minister signaling, consumed by the Mayor and CoS). The bulletin board half is **deferred — Auto epic**.
+The shared coordination layer between ministers. Owns the flag channel (cross-minister signaling, consumed by the Mayor and CoS) and constructs `PlayCycleContext` values for minister wakes. The bulletin board half is **deferred — Auto epic**.
 
 ```
 Coordination/
+├── CabinetCycle.cs           // runs current feeder stack + Mayor with PlayCycleContext
 ├── AdviceBus.cs              // in-process emitter; Host bridges it to the SSE feed
 ├── AgendaStore.cs            // versioned MayorAgenda store + 30-day history ring
-├── DayTickOrchestrator.cs    // BackgroundService; refreshes ColonyState each poll, fires Mayor on startup + day rollover
+├── DayTickOrchestrator.cs    // BackgroundService; refreshes ColonyState each poll, fires startup/bootstrap + later cabinet cycles
 ├── MayorStatus.cs            // tracks IsRunning / StartedAt / CompletedAt / LastError; surfaced via /api/status
 ├── FlagChannel.cs            // flag emission, routing, severity tiers, expiry
 └── BulletinBoard.cs          // Deferred — Auto epic. LaborRequest lifecycle.
 ```
+
+`PlayCycleContext` is owned by `Common/Ministers/`; `Coordination/` constructs and passes it, but does not define the type.
 
 The advice bus is the single inspectable surface for colony advice. A dashboard view should show every memo traceable to `minister → briefing → rule_or_llm_path → AdviceItem`.
 
@@ -202,6 +208,12 @@ LLM/
     ├── welfare.system.md
     └── labor.system.md       // minimal; Labor rarely escalates
 ```
+
+LLM response parsing is shared infrastructure. Provider output is parsed against the strict contract first; if the JSON is valid but shaped like a useful near miss, `LlmAdviceResponseNormalizer` maps it into the runtime advice/flag contract using the caller's minister/domain context and logs that normalization occurred. Normalization may repair schema shape, casing, simplified resource requests, and string flags; it must not invent game facts or execute actions.
+
+Current implementation files:
+- `LlmResponseParser.cs` owns the shared strict-first parsing helper and JSON utility functions.
+- `LlmAdviceResponseNormalizer.cs` owns generic `AdviceItem` / `AgentFlag` normalization for feeder-minister LLM responses.
 
 ### Knowledge
 RAG layer.
@@ -285,16 +297,24 @@ public interface IMinisterRules<TBriefing>
 public interface IMinister
 {
     string Name { get; }
-    Task RunPlayCycle(WakeupTrigger trigger, CancellationToken ct);  // trigger: why we were woken
-    Task RunRefinement(CancellationToken ct);                        // called manually or on schedule
+    Task RunPlayCycle(PlayCycleContext context, CancellationToken ct);  // context: why we were woken
+    Task RunRefinement(CancellationToken ct);                           // called manually or on schedule
 }
 
 // Why a minister was woken — passed into RunPlayCycle by the Orchestrator
-public abstract record WakeupTrigger;
-public record BriefingChanged                      : WakeupTrigger;
-public record FlagFired(AgentFlag Flag)            : WakeupTrigger;
-public record Heartbeat                            : WakeupTrigger;
-public record ScheduledWakeupFired(string Payload) : WakeupTrigger;
+public enum PlayCycleTrigger
+{
+    StartupBootstrap,
+    CabinetRefresh,
+    FlagFired,
+    Heartbeat,
+    ScheduledWakeupFired
+}
+
+public sealed record PlayCycleContext(
+    PlayCycleTrigger Trigger,
+    AgentFlag? Flag = null,
+    string? WakeupPayload = null);
 
 // Domain registration for the HTN planner — Deferred (Auto epic)
 public interface IDomain

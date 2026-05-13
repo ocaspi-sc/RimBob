@@ -21,16 +21,50 @@ Minister
 
 **Play mode** (live game, suggest-only):
 ```
-Briefing version changes OR relevant flag fires OR scheduled wakeup fires
+PlayCycleContext trigger arrives
+  → Minister.RunPlayCycle(context)
   → Rules.Evaluate(briefing)
   → RulesResult.Decision(advice, flags)              →  emit to AdviceBus + flag channel
   → RulesResult.Decision(... ScheduledWakeup = ...)  →  also registers a future wakeup
   → RulesResult.Escalate(reason)                     →  LLM call → emit to AdviceBus + flag channel
 ```
 
-**Wakeup triggers:** `BriefingChanged` | `FlagFired(flag)` | `Heartbeat` | `ScheduledWakeupFired(payload)`
+**Play-cycle context:** ministers are woken with a typed `PlayCycleContext`, not via hidden runtime services or minister-specific side channels.
 
-The Orchestrator passes the trigger into `RunPlayCycle` so ministers can inspect why they were woken (e.g. a rules branch that only runs on `ScheduledWakeupFired`).
+```csharp
+public enum PlayCycleTrigger
+{
+    StartupBootstrap,
+    CabinetRefresh,
+    FlagFired,
+    Heartbeat,
+    ScheduledWakeupFired
+}
+
+public sealed record PlayCycleContext(
+    PlayCycleTrigger Trigger,
+    AgentFlag? Flag = null,
+    string? WakeupPayload = null)
+{
+    public bool IsBootstrap => Trigger == PlayCycleTrigger.StartupBootstrap;
+}
+```
+
+Current runtime only uses a subset of these triggers. `StartupBootstrap` is used for the first live cycle after Host startup, and `CabinetRefresh` is used for the normal cabinet cycle after ingestion refresh. The others remain the intended extension points for future wake paths.
+
+### First live cycle bootstrap
+
+Every feeder minister gets one special-case escape hatch on its first live cycle after Host startup, or the first cycle after that minister is newly introduced into a save: **bootstrap via escalation first, then return to normal rules-first behavior**.
+
+Rationale:
+- The first memo establishes the minister's initial read of the colony for the player.
+- Early rules are intentionally coarse and often only sufficient for steady-state triage.
+- A generic first memo ("food low", "construction needed", "defense weak") is usually less useful than a grounded first-pass plan.
+
+Constraints:
+- This is a one-time bootstrap behavior, not a standing exception to rules-first.
+- If the briefing cannot support concrete advice, the minister should say that explicitly rather than fabricate precision.
+- Mayor remains separate: the Mayor already writes an LLM-backed agenda on wake, so this bootstrap rule is primarily for feeder ministers.
 
 > **Deferred (Auto epic):** when a minister graduates to `Auto` for some advice type, that decision path additionally produces HTN goals which feed the planner / Labor / RIMAPI writes. Until then, output is `AdviceItem`s only.
 
@@ -52,7 +86,20 @@ Refinement IS the minister. Not a separate agent — the same minister in a diff
 
 ---
 
-## IMinisterRules — the shared interface
+## IMinister and IMinisterRules — the shared interfaces
+
+Play-cycle trigger handling belongs on the minister entrypoint, not in a hidden singleton and not split across separate event-specific methods.
+
+```csharp
+public interface IMinister
+{
+    string Name { get; }
+    Task RunPlayCycle(PlayCycleContext context, CancellationToken ct);
+    Task RunRefinement(CancellationToken ct);
+}
+```
+
+The trigger/context is execution metadata, not game-state data. Rules remain focused on briefing-derived domain logic unless a specific minister chooses to branch at the minister layer before or after `Rules.Evaluate`.
 
 All ministers implement the same interface. This is the contract refinement works against, the test harness targets, and the planner depends on.
 
@@ -122,7 +169,7 @@ Rules for the LLM:
 - `suggested_actions` are advisory text — they are *not* executed in MVP, only rendered. Their `kind` is a closed enum so future Auto graduation can wire each kind to an HTN primitive.
 - The `notes` field is the upgrade seam. When a note pattern repeats and the LLM consistently writes the same advice off it, refinement promotes it into a rule.
 - Minister LLMs never name colonists, specify blueprints, or choose methods. Those would matter under Auto; under Suggest, the player decides.
-- **`scheduled_wakeup` rules:** at most one pending wakeup per minister. A newer emission supersedes the older (logged as a supersession event). The payload is an opaque string — logged but never parsed by the system. It is the minister's note to itself. `fire_in_hours` is real-time; tick-mapping to in-game speed is deferred. When a wakeup fires, the minister runs its normal evaluation cycle (rules first); the payload arrives in the `WakeupTrigger` and is available to rules that choose to inspect it. A wakeup does not bypass the rules layer. Rules may also emit a `ScheduledWakeup` directly from `Decision` without escalating.
+- **`scheduled_wakeup` rules:** at most one pending wakeup per minister. A newer emission supersedes the older (logged as a supersession event). The payload is an opaque string — logged but never parsed by the system. It is the minister's note to itself. `fire_in_hours` is real-time; tick-mapping to in-game speed is deferred. When a wakeup fires, the minister runs its normal evaluation cycle (rules first); the payload arrives in `PlayCycleContext.WakeupPayload` and is available to rules that choose to inspect it. A wakeup does not bypass the rules layer. Rules may also emit a `ScheduledWakeup` directly from `Decision` without escalating.
 - Use structured output (bullets, key-value)
 - Use emojis
 

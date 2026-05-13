@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using RimAI.Coordination;
 using RimAI.Core.Advice;
+using RimAI.Core.Ministers;
 using RimAI.Knowledge;
 using RimAI.LLM;
 using MayorMinister = RimAI.Ministers.Mayor.Mayor;
@@ -19,7 +20,7 @@ public sealed class MayorPlayCycleTests
     {
         Harness h = new((_, _, _, _, _, _) => CannedAgenda("first"));
 
-        await h.Mayor.RunPlayCycle(CancellationToken.None);
+        await h.Mayor.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
 
         h.Store.Current.Should().NotBeNull();
         h.Store.Current!.Version.Should().Be(1);
@@ -33,8 +34,8 @@ public sealed class MayorPlayCycleTests
         int call = 0;
         Harness h = new((_, _, _, _, _, _) => CannedAgenda($"v{++call}"));
 
-        await h.Mayor.RunPlayCycle(CancellationToken.None);
-        await h.Mayor.RunPlayCycle(CancellationToken.None);
+        await h.Mayor.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
+        await h.Mayor.RunPlayCycle(PlayCycleContext.CabinetRefresh, CancellationToken.None);
 
         h.Store.Current!.Version.Should().Be(2);
         h.Store.Current.UpdateNotes.Should().Be("v2");
@@ -57,7 +58,7 @@ public sealed class MayorPlayCycleTests
             });
         });
 
-        await h.Mayor.RunPlayCycle(CancellationToken.None);
+        await h.Mayor.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
 
         call.Should().Be(2);
         h.Store.Current.Should().NotBeNull();
@@ -69,7 +70,7 @@ public sealed class MayorPlayCycleTests
     {
         Harness h = new((_, _, _, _, _, _) => throw new InvalidOperationException("boom"));
 
-        await h.Mayor.RunPlayCycle(CancellationToken.None);
+        await h.Mayor.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
 
         h.Store.Current.Should().BeNull();
         h.PublishedAgendas.Should().BeEmpty();

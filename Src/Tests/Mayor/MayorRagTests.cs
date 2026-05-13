@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using System.Text.Json.Nodes;
 using RimAI.Coordination;
 using RimAI.Core.Advice;
+using RimAI.Core.Ministers;
 using RimAI.Knowledge;
 using RimAI.LLM;
 using MayorMinister = RimAI.Ministers.Mayor.Mayor;
@@ -38,7 +39,7 @@ public sealed class MayorRagTests
     {
         Harness h = new(retriever: DisabledRetriever());
 
-        await h.Mayor.RunPlayCycle(CancellationToken.None);
+        await h.Mayor.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
 
         h.Store.Current.Should().NotBeNull();
         h.Store.Current!.GuideCitations.Should().BeEmpty();
@@ -60,7 +61,7 @@ public sealed class MayorRagTests
 
         Harness h = new(retriever);
 
-        await h.Mayor.RunPlayCycle(CancellationToken.None);
+        await h.Mayor.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
 
         h.Store.Current.Should().NotBeNull();
         h.Store.Current!.GuideCitations.Should().HaveCount(2);
