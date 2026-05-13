@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import { fetchLatestAgenda, parseAdviceEvent, parseAgendaEvent } from '../api/client';
+import { fetchLatestAgenda, parseAdviceEvent, parseAdviceSnapshotEvent, parseAgendaEvent } from '../api/client';
 import type { MayorAgenda } from '../types/agenda';
 import type { AdviceItem } from '../types/advice';
 import type { DashboardEvent, FeedState, StreamDiagnostics } from '../types/system';
@@ -98,6 +98,32 @@ export function useAdviceFeed(): AdviceFeedState {
       }
     });
 
+    source.addEventListener('advice_snapshot', raw => {
+      const event = raw as MessageEvent;
+      try {
+        const snapshot = parseAdviceSnapshotEvent(event);
+        const snapshotMinister = snapshot.minister;
+        setActiveAdvice(current => {
+          if (!snapshotMinister) return [...snapshot.advice].sort(compareAdvice);
+
+          const filtered = current.filter(item => !sameMinister(item.minister, snapshotMinister));
+          return [...snapshot.advice, ...filtered].sort(compareAdvice);
+        });
+        setAdviceEvents(count => count + 1);
+        recordStreamEvent(setStream, source.readyState, 'advice_snapshot', event.lastEventId);
+        pushEvent(
+          setEvents,
+          snapshotMinister ?? 'Advice',
+          'advice_snapshot',
+          'info',
+          `${snapshot.advice.length} active advice item${snapshot.advice.length === 1 ? '' : 's'}`,
+        );
+      } catch (error) {
+        recordStreamError(setStream, source.readyState);
+        pushEvent(setEvents, 'SSE', 'parse_error', 'error', `Failed to parse advice_snapshot: ${String(error)}`);
+      }
+    });
+
     source.addEventListener('ping', () => {
       recordStreamEvent(setStream, source.readyState, 'ping', null);
     });
@@ -146,6 +172,10 @@ function severityRank(severity: AdviceItem['severity']): number {
   if (severity === 'high') return 2;
   if (severity === 'medium') return 1;
   return 0;
+}
+
+function sameMinister(a: string, b: string): boolean {
+  return a.localeCompare(b, undefined, { sensitivity: 'accent' }) === 0;
 }
 
 function recordStreamEvent(

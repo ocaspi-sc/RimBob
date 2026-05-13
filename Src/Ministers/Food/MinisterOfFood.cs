@@ -44,7 +44,7 @@ public sealed class MinisterOfFood(
         switch (result)
         {
             case Decision decision:
-                Publish(decision.Advice, decision.Flags);
+                PublishSnapshot(decision.Advice, decision.Flags);
                 log.LogInformation(
                     "Food rules decision trace={Trace} advice={AdviceCount} flags={FlagCount}",
                     decision.Trace, decision.Advice.Count, decision.Flags.Count);
@@ -68,7 +68,7 @@ public sealed class MinisterOfFood(
         {
             IReadOnlyList<GuideCitation> citations = await retriever.RetrieveAsync(briefing, ct);
             FoodLlmResponse response = await llm.CallFoodAsync(briefing, context, citations, ct);
-            Publish(response.Advice, response.Flags);
+            PublishSnapshot(response.Advice, response.Flags);
             log.LogInformation(
                 "Food escalation reason={Reason} advice={AdviceCount} flags={FlagCount}",
                 escalate.Reason, response.Advice.Count, response.Flags.Count);
@@ -82,10 +82,9 @@ public sealed class MinisterOfFood(
         }
     }
 
-    private void Publish(IReadOnlyList<AdviceItem> advice, IReadOnlyList<AgentFlag> emittedFlags)
+    private void PublishSnapshot(IReadOnlyList<AdviceItem> advice, IReadOnlyList<AgentFlag> emittedFlags)
     {
-        foreach (AdviceItem item in advice)
-            bus.Publish(item);
+        bus.ReplaceMinisterAdvice(Name, advice);
         foreach (AgentFlag flag in emittedFlags)
             flags.Publish(flag);
     }

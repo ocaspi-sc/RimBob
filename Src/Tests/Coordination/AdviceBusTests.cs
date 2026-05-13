@@ -41,25 +41,64 @@ public sealed class AdviceBusTests
     public void PublishAdvice_RetainsActiveAdviceForReplay()
     {
         AdviceBus bus = new();
-        AdviceItem item = new(
-            Id: "a1",
-            Minister: "Food",
-            AdviceType: "food_security",
-            Severity: AdviceSeverity.High,
-            PriorityScore: AdvicePriorityScore.DefaultForSeverity(AdviceSeverity.High),
-            Title: "Food low",
-            Body: "Body",
-            Rationale: "Rationale",
-            ResourceRequests: [],
-            SuggestedActions: [],
-            GuideCitationIds: [],
-            IssuedAt: DateTimeOffset.UtcNow,
-            ExpiresAt: DateTimeOffset.UtcNow.AddHours(1));
+        AdviceItem item = Advice("a1", "Food");
 
         bus.Publish(item);
 
         bus.ActiveAdvice().Should().ContainSingle().Which.Id.Should().Be("a1");
     }
+
+    [Fact]
+    public void ReplaceMinisterAdvice_ReplacesOnlyThatMinistersActiveSet()
+    {
+        AdviceBus bus = new();
+        bus.Publish(Advice("old_food", "Food"));
+        bus.Publish(Advice("old_defense", "Defense"));
+        List<AdviceSnapshot> snapshots = [];
+        List<AdviceItem> published = [];
+        bus.AdviceSnapshotPublished += snapshots.Add;
+        bus.AdvicePublished += published.Add;
+
+        bus.ReplaceMinisterAdvice("Food", [Advice("new_food", "Food")]);
+
+        bus.ActiveAdvice().Select(a => a.Id).Should().BeEquivalentTo(["new_food", "old_defense"]);
+        snapshots.Should().ContainSingle();
+        snapshots[0].Minister.Should().Be("Food");
+        snapshots[0].Advice.Should().ContainSingle().Which.Id.Should().Be("new_food");
+        published.Should().ContainSingle().Which.Id.Should().Be("new_food");
+    }
+
+    [Fact]
+    public void ReplaceMinisterAdvice_EmptySnapshotClearsMinisterAdvice()
+    {
+        AdviceBus bus = new();
+        bus.Publish(Advice("old_food", "Food"));
+        bus.Publish(Advice("old_defense", "Defense"));
+        List<AdviceSnapshot> snapshots = [];
+        bus.AdviceSnapshotPublished += snapshots.Add;
+
+        bus.ReplaceMinisterAdvice("Food", []);
+
+        bus.ActiveAdvice().Should().ContainSingle().Which.Id.Should().Be("old_defense");
+        snapshots.Should().ContainSingle();
+        snapshots[0].Minister.Should().Be("Food");
+        snapshots[0].Advice.Should().BeEmpty();
+    }
+
+    private static AdviceItem Advice(string id, string minister) => new(
+        Id: id,
+        Minister: minister,
+        AdviceType: "food_security",
+        Severity: AdviceSeverity.High,
+        PriorityScore: AdvicePriorityScore.DefaultForSeverity(AdviceSeverity.High),
+        Title: "Food low",
+        Body: "Body",
+        Rationale: "Rationale",
+        ResourceRequests: [],
+        SuggestedActions: [],
+        GuideCitationIds: [],
+        IssuedAt: DateTimeOffset.UtcNow,
+        ExpiresAt: DateTimeOffset.UtcNow.AddHours(1));
 }
 
 internal static class InputBuilderExtensions

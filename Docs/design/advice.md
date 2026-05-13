@@ -108,6 +108,14 @@ When an advisor replaces an earlier still-active advice (e.g. a midday revision 
 
 For M3 feeder alerts, rules should prefer stable same-issue ids when there is no explicit history chain yet. Re-emitting `food_emergency_food_flag` replaces the active card for that issue instead of creating another duplicate alert. Later decision-log work can preserve each emission while the active dashboard remains deduplicated.
 
+### Active advice snapshots
+
+The active advice surface is the issuing minister's latest successful view, not an append-only feed. Each minister play cycle should compute its current active `AdviceItem` set and publish it as a minister-scoped snapshot. `AdviceBus` replaces prior active cards from that minister with the new set atomically; an empty snapshot means the minister currently sees no active advice.
+
+This is separate from history. Later decision-log persistence should retain every emitted advice item and feedback event, but the dashboard's active cards should not keep stale bootstrap or prior-cycle advice merely because their wall-clock TTL has not expired.
+
+If a cycle fails before producing a rules result or successful LLM response, keep the previous active snapshot rather than clearing it. Clear only after a successful empty or non-empty snapshot.
+
 ### `autonomy_at_issue`
 The autonomy mode the issuing minister was in when the advice was emitted. Always `Suggest` in MVP. Recorded so future `Auto`-mode advice items can be distinguished in the log.
 

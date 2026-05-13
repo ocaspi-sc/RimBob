@@ -127,6 +127,12 @@ These endpoints are observability surfaces only. They do not mutate game state.
 
 `GET /api/advice/stream` remains the live stream for agenda and advice events. V2 also treats the stream itself as observable data: SYSTEM should show whether the connection is open, how many events have arrived, the last event type/id/time, and any recent stream error.
 
+SSE event contract:
+
+- `agenda_update`: full current `MayorAgenda`.
+- `advice_snapshot`: active `AdviceItem[]` snapshot. `minister: null` means replace the whole active-advice list, used on stream replay/reconnect. `minister: "Food"` means replace only that minister's active cards.
+- `advice`: single `AdviceItem`, retained for append-style compatibility and event timelines. Snapshot events are authoritative for removing stale cards.
+
 ## Minister View Detail
 
 ### System Prompt

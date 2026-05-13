@@ -77,6 +77,23 @@ public sealed class FoodMinisterTests
     }
 
     [Fact]
+    public async Task RuleDecision_ReplacesBootstrapAdviceSnapshot()
+    {
+        Harness h = new((_, _, _, _) => Task.FromResult(new FoodLlmResponse(
+            [FoodAdvice("bootstrap_1"), FoodAdvice("bootstrap_2")],
+            [])));
+        h.SetFoodDays(35f);
+
+        await h.Minister.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
+        h.Bus.ActiveAdvice().Select(a => a.Id).Should().BeEquivalentTo(["bootstrap_1", "bootstrap_2"]);
+
+        h.SetFoodDays(4f);
+        await h.Minister.RunPlayCycle(PlayCycleContext.CabinetRefresh, CancellationToken.None);
+
+        h.Bus.ActiveAdvice().Should().ContainSingle().Which.Id.Should().Be("food_emergency_food_flag");
+    }
+
+    [Fact]
     public async Task Escalation_UsesFoodLlmResponse_AfterBootstrap()
     {
         int calls = 0;
@@ -111,8 +128,8 @@ public sealed class FoodMinisterTests
         ResourceRequests: [],
         SuggestedActions: [],
         GuideCitationIds: [],
-        IssuedAt: DateTimeOffset.UnixEpoch,
-        ExpiresAt: DateTimeOffset.UnixEpoch.AddHours(4));
+        IssuedAt: DateTimeOffset.UtcNow,
+        ExpiresAt: DateTimeOffset.UtcNow.AddHours(4));
 
     private sealed class Harness
     {

@@ -1,5 +1,5 @@
 import type { MayorAgenda } from '../types/agenda';
-import type { AdviceItem } from '../types/advice';
+import type { AdviceItem, AdviceSnapshot } from '../types/advice';
 import type { ColonySnapshot } from '../types/colony';
 import type { RimAIStatus } from '../types/status';
 import type { MinisterTrace, SystemHealth } from '../types/system';
@@ -64,4 +64,8 @@ export function parseAgendaEvent(event: MessageEvent): MayorAgenda {
 
 export function parseAdviceEvent(event: MessageEvent): AdviceItem {
   return JSON.parse(event.data) as AdviceItem;
+}
+
+export function parseAdviceSnapshotEvent(event: MessageEvent): AdviceSnapshot {
+  return JSON.parse(event.data) as AdviceSnapshot;
 }

@@ -32,3 +32,8 @@ export interface AdviceItem {
   expires_at: string;
   issued_in_game_tick?: string | null;
 }
+
+export interface AdviceSnapshot {
+  minister?: string | null;
+  advice: AdviceItem[];
+}

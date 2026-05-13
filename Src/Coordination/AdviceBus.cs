@@ -13,6 +13,7 @@ public sealed class AdviceBus
 
     public event Action<AgendaUpdated>? AgendaUpdated;
     public event Action<AdviceItem>?    AdvicePublished;
+    public event Action<AdviceSnapshot>? AdviceSnapshotPublished;
 
     public void Publish(AgendaUpdated e) => AgendaUpdated?.Invoke(e);
     public void Publish(AdviceItem item)
@@ -25,15 +26,55 @@ public sealed class AdviceBus
         AdvicePublished?.Invoke(item);
     }
 
+    public void ReplaceMinisterAdvice(string minister, IReadOnlyList<AdviceItem> advice)
+    {
+        if (string.IsNullOrWhiteSpace(minister))
+            throw new ArgumentException("Minister name is required.", nameof(minister));
+
+        foreach (AdviceItem item in advice)
+        {
+            if (!string.Equals(item.Minister, minister, StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException(
+                    $"Advice item '{item.Id}' belongs to '{item.Minister}', not '{minister}'.",
+                    nameof(advice));
+        }
+
+        IReadOnlyList<AdviceItem> currentMinisterAdvice;
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+
+        lock (_lock)
+        {
+            PruneExpired(now);
+
+            List<string> existingIds = _activeAdvice
+                .Where(kv => string.Equals(kv.Value.Minister, minister, StringComparison.OrdinalIgnoreCase))
+                .Select(kv => kv.Key)
+                .ToList();
+            foreach (string id in existingIds)
+                _activeAdvice.Remove(id);
+
+            foreach (AdviceItem item in advice)
+            {
+                if (item.ExpiresAt > now)
+                    _activeAdvice[item.Id] = item;
+            }
+
+            currentMinisterAdvice = SortAdvice(_activeAdvice.Values
+                .Where(item => string.Equals(item.Minister, minister, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+        }
+
+        AdviceSnapshotPublished?.Invoke(new AdviceSnapshot(minister, currentMinisterAdvice));
+        foreach (AdviceItem item in currentMinisterAdvice)
+            AdvicePublished?.Invoke(item);
+    }
+
     public IReadOnlyList<AdviceItem> ActiveAdvice()
     {
         lock (_lock)
         {
             PruneExpired(DateTimeOffset.UtcNow);
-            return _activeAdvice.Values
-                .OrderByDescending(a => a.Severity)
-                .ThenByDescending(a => a.IssuedAt)
-                .ToList();
+            return SortAdvice(_activeAdvice.Values).ToList();
         }
     }
 
@@ -46,6 +87,13 @@ public sealed class AdviceBus
         foreach (string id in expired)
             _activeAdvice.Remove(id);
     }
+
+    private static IOrderedEnumerable<AdviceItem> SortAdvice(IEnumerable<AdviceItem> advice) =>
+        advice
+            .OrderByDescending(a => a.Severity)
+            .ThenByDescending(a => a.PriorityScore)
+            .ThenByDescending(a => a.IssuedAt);
 }
 
 public sealed record AgendaUpdated(MayorAgenda Agenda);
+public sealed record AdviceSnapshot(string? Minister, IReadOnlyList<AdviceItem> Advice);

@@ -25,7 +25,7 @@ M3 runtime path:
 
 1. `CabinetCycle` refreshes ingestion, runs Food, then runs the Mayor.
 2. Food follows the universal minister bootstrap rule from [`design/ministers.md`](../ministers.md): on the first live cycle after Host startup, or the first cycle after the minister is newly introduced into a save, it should bootstrap via escalation rather than trusting only coarse deterministic rules.
-3. After bootstrap, Food reads `FoodBriefing` from `BriefingCache`, evaluates `Rules.cs`, and emits `AdviceItem`s plus optional `AgentFlag`s.
+3. After bootstrap, Food reads `FoodBriefing` from `BriefingCache`, evaluates `Rules.cs`, and publishes the full current Food `AdviceItem` snapshot plus optional `AgentFlag`s.
 4. If rules return `Escalate`, Food calls Gemini with `food.system.md`, `FoodBriefing`, `MinisterBriefingContext`, and food-focused `guide_context`.
 5. The Mayor reads active Medium+ flags and reflects relevant Food pressure in `state_of_the_union.food`, `update_notes`, and short-term priorities.
 
@@ -105,7 +105,7 @@ M3 severity calibration: Food emits `High` for urgent shortage by default. `Crit
 
 Food should compute severity and `priority_score` from live state when possible: days of food, nutrition confidence, colonist count, season/growing window, active threat, and whether a concrete action can be taken now.
 
-Advice IDs should be stable per rule issue (for example `food_emergency_food_flag`) so the active alert surface replaces the same unresolved issue across refreshes instead of stacking duplicate cards. Historical logging can still record each emission separately later.
+Food publishes a complete active-advice snapshot each successful play cycle. The snapshot replaces earlier active Food cards, including bootstrap LLM cards with unique ids, so the dashboard reflects Food's latest view instead of accumulating stale prior-cycle advice. Advice IDs should still be stable per rule issue where possible (for example `food_emergency_food_flag`) because stable ids make logs, tests, and future supersession chains easier to read. Historical logging can still record each emission separately later.
 
 Bootstrap-escalation rule: the first memo should bias toward specific, player-usable advice when the current state supports it, such as crop choice, immediate sow/harvest priorities, hunting vs wild-harvest tradeoff, freezer need, or bill changes. If the current `FoodBriefing` cannot support that specificity, the minister should say so explicitly rather than pretending to know tile counts or exact layouts.
 

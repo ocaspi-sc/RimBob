@@ -29,6 +29,7 @@
 - [ ] Expand Food briefing with bill state, freezer room temperature, and spoilage timers when RIMAPI exposes them.
 - [x] `Briefing` tab renders latest Mayor/Food briefing JSON.
 - [x] One-time bootstrap escalation now runs through explicit `PlayCycleContext.StartupBootstrap`; Food uses it in M3.
+- [x] Food active advice now publishes as a minister-scoped snapshot, so bootstrap LLM cards are replaced by the next successful Food cycle instead of lingering by unique id.
 
 ## Later (M5 — Feedback loop)
 
