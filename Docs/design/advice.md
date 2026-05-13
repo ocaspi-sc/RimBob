@@ -37,7 +37,7 @@ Under the assisted-gameplay pivot ([`../DESIGN.md`](../DESIGN.md)), every minist
   ],
   "suggested_actions": [
     { "kind": "designate_zone", "what": "growing zone, ~8x8, fertile soil south of kitchen" },
-    { "kind": "build",          "what": "two more sandbag sections covering the east approach" }
+    { "kind": "place_blueprint", "what": "two more sandbag sections covering the east approach" }
   ],
   "guide_citations":       ["strategic-plan-y1-y2.md#fall-checklist"],
   "briefing_ref":    { "minister": "Mayor", "version": 142, "hash": "sha256:..." },
@@ -83,9 +83,12 @@ Closed enum **across all ministers**. Each `kind` is a category that an `Auto`-g
 | Kind | Meaning (MVP: text-only) |
 |---|---|
 | `designate_zone` | Create / resize / move a zone (growing, stockpile, dumping, ...) |
-| `build` | Place a blueprint (structure, furniture, defense). |
+| `mark_harvest` | Mark mature crops or wild edible plants for harvest. |
+| `place_blueprint` | Place a build blueprint (structure, furniture, defense). |
+| `production_bill` | Create or adjust a production bill or target count. |
 | `set_priority` | Adjust per-pawn work priorities. |
 | `set_schedule` | Adjust per-pawn schedule slots. |
+| `set_stockpile_zone` | Create, expose, or adjust a stockpile zone/filter for a specific resource. |
 | `draft` | Draft / undraft a colonist or group. |
 | `forbid` | Forbid / unforbid items or buildings. |
 | `research` | Set or change the research target. |

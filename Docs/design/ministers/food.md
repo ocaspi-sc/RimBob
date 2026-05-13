@@ -82,9 +82,9 @@ Implemented M3 rules:
 | Rule | Condition | Output |
 |---|---|---|
 | `maintain_security_threshold` | DaysOfFood >= 30 AND no urgent spoilage/harvest issue | No advice |
-| `nutrition_signal_gap` | Food units exist but nutrition is unknown/fallback-derived | ManageFoodStockpile, stockpile audit, Medium priority 6 |
-| `unknown_food_state` | No food units and no reliable nutrition estimate | FoodSecurity High, attention flag |
-| `emergency_food_flag` | DaysOfFood < 7 | FoodSecurity High/Critical, dynamic priority, local harvest/cook actions, procurement pressure flag only when no local path is visible |
+| `nutrition_signal_gap` | Food units exist but nutrition is unknown/fallback-derived | ManageFoodStockpile, request reachable stockpile visibility, Medium priority 6 |
+| `unknown_food_state` | No food units and no reliable nutrition estimate | FoodSecurity High, request visible reachable food stockpile |
+| `emergency_food_flag` | DaysOfFood < 7 | FoodSecurity High/Critical, dynamic priority, concrete intake/cooking/growing requests and actions |
 | `harvest_mature_crops` | Ready harvest count > 0 | HarvestNow, nearest crop-zone summary when available; labor request only if urgent or Plants coverage is missing |
 | `meals_understocked` | Meals below two per colonist, days > 7, raw food exists | ManageCookBills, simple meal target, cooking labor only if urgent/no cook coverage |
 | `wild_harvest_available` | DaysOfFood < 20, no ready crop harvest, edible wild cluster exists | WildHarvest, mark nearest edible cluster; no routine labor request unless urgent/no Plants coverage |
@@ -106,6 +106,8 @@ M3 severity calibration: Food emits `High` for urgent shortage by default. `Crit
 Food should compute severity and `priority_score` from live state when possible: days of food, nutrition confidence, colonist count, season/growing window, active threat, and whether a concrete action can be taken now.
 
 Food publishes a complete active-advice snapshot each successful play cycle. The snapshot replaces earlier active Food cards, including bootstrap LLM cards with unique ids, so the dashboard reflects Food's latest view instead of accumulating stale prior-cycle advice. Advice IDs should still be stable per rule issue where possible (for example `food_emergency_food_flag`) because stable ids make logs, tests, and future supersession chains easier to read. Historical logging can still record each emission separately later.
+
+Emergency Food output should avoid vague catch-all wording such as "audit" or generic `note` actions. If the briefing has reported `FoodUnits` but no meal/raw-food category, Food should say that the reported food units need reachable stockpile visibility. If the briefing shows no harvest/cook path, Food should still emit concrete food-chain setup work when possible: emergency growing tiles, Grow/PlantCut labor, a campfire/stove request, and simple-meal bill/cook labor when raw food exists. Food may request trade capacity only when no stored, harvestable, cookable, or sowable path is visible.
 
 Bootstrap-escalation rule: the first memo should bias toward specific, player-usable advice when the current state supports it, such as crop choice, immediate sow/harvest priorities, hunting vs wild-harvest tradeoff, freezer need, or bill changes. If the current `FoodBriefing` cannot support that specificity, the minister should say so explicitly rather than pretending to know tile counts or exact layouts.
 

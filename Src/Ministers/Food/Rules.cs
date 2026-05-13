@@ -18,11 +18,11 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                     FoodAdviceType.ManageFoodStockpile,
                     AdviceSeverity.Medium,
                     6,
-                    "Food stockpile needs audit",
-                    "RIMAPI reports food units but no nutrition. Audit meals/raw food before treating this as a shortage.",
+                    "Food stockpile categories need verification",
+                    "RIMAPI reports food units but no nutrition. Identify whether those items are meals or raw food before treating this as a shortage.",
                     "Missing nutrition would make days-of-food unreliable; use the fallback counts until upstream data is fixed.",
-                    [new(ResourceRequestKind.Attention, "manual food stockpile audit", "nutrition_source is unknown or fallback-derived")],
-                    [new(SuggestedActionKind.Note, "Check whether stored food is edible meals/raw food and whether it is reachable.")],
+                    [new(ResourceRequestKind.StockpileSpace, "reachable food stockpile visibility", "nutrition_source is unknown or fallback-derived")],
+                    [new(SuggestedActionKind.SetStockpileZone, "Confirm the stored food is edible and reachable; move it into a visible food stockpile if needed.")],
                     false);
 
             return DecisionFor(briefing, "unknown_food_state",
@@ -32,8 +32,8 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 "Food state unknown",
                 "No reliable food stockpile signal is available. Treat this as a food-security check, not confirmed starvation.",
                 "The food chain cannot safely decide without stockpile visibility.",
-                [new(ResourceRequestKind.Attention, "immediate stockpile check", "food_units and nutrition are both unavailable")],
-                [new(SuggestedActionKind.Note, "Inspect food stockpiles in-game and refresh RimAI after the stockpile is visible.")],
+                [new(ResourceRequestKind.StockpileSpace, "visible reachable food stockpile", "food_units and nutrition are both unavailable")],
+                [new(SuggestedActionKind.SetStockpileZone, "Create or expose a reachable food stockpile, then refresh RimAI once food is visible.")],
                 true);
         }
 
@@ -47,8 +47,8 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 severity,
                 FoodBufferPriority(briefing, days),
                 "Food crisis within a week",
-                $"Food covers about {days:F1} days for {briefing.ColonistCount} colonists. Stabilize local food paths before routine work.",
-                "Food below 7 days is an urgent survival risk. Food flags procurement pressure upward if local harvest/cooking paths cannot close it.",
+                $"Food covers about {days:F1} days for {briefing.ColonistCount} colonists. Set up immediate intake, cooking, and growing capacity before routine work.",
+                "Food below 7 days is an urgent survival risk. Food owns the next food-chain steps; cross-minister requests carry only the build, tile, and labor needs.",
                 EmergencyRequests(briefing, severity),
                 EmergencyActions(briefing),
                 true);
@@ -65,7 +65,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 $"{briefing.ReadyToHarvest} crop tiles are ready to harvest. Pull them in before weather, rot, or task drift wastes the buffer.",
                 "Mature crops are a deterministic food-chain opportunity.",
                 PlantLaborIfNeeded(briefing, days, "PlantCut work for ready crops", "mature crops only help once harvested"),
-                [new(SuggestedActionKind.Note, HarvestActionText(briefing))],
+                [new(SuggestedActionKind.MarkHarvest, HarvestActionText(briefing))],
                 days < 15f);
         }
 
@@ -94,7 +94,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 WildHarvestBody(briefing, days),
                 "Wild harvest is lower-risk than hunting when no mature crops are ready.",
                 PlantLaborIfNeeded(briefing, days, "PlantCut work for wild harvest", "wild harvest requires plant work"),
-                [new(SuggestedActionKind.Note, WildHarvestActionText(briefing))],
+                [new(SuggestedActionKind.MarkHarvest, WildHarvestActionText(briefing))],
                 days < 10f);
 
         if (days < 20f && CanSowBeforeWinter(briefing))
@@ -134,7 +134,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 "Food exists but no cooler is visible. Preserve surplus before warm weather or large harvests.",
                 "The Food minister owns freezer need; Construction owns the actual build work.",
                 [new(ResourceRequestKind.Building, "cooler-backed freezer or cold room", "stored food can spoil without temperature control", RequestedFrom: "Construction")],
-                [new(SuggestedActionKind.Build, "Plan a freezer/cold-room upgrade near food storage.")],
+                [new(SuggestedActionKind.PlaceBlueprint, "Plan a freezer/cold-room upgrade near food storage.")],
                 false);
 
         if (days >= 30f)
@@ -220,6 +220,12 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
     private static IReadOnlyList<ResourceRequest> EmergencyRequests(FoodBriefing briefing, AdviceSeverity severity)
     {
         List<ResourceRequest> requests = [];
+        if (briefing.FoodUnits > 0 && briefing.MealsCount == 0 && briefing.RawFoodCount == 0)
+            requests.Add(new ResourceRequest(ResourceRequestKind.StockpileSpace,
+                $"reachable stockpile visibility for {briefing.FoodUnits} reported food units",
+                "food_units exists, but no meal or raw-food category is visible to Food",
+                Quantity: briefing.FoodUnits,
+                Priority: severity));
         if (briefing.ReadyToHarvest > 0 || briefing.WildHarvestCandidates > 0)
             requests.Add(new ResourceRequest(ResourceRequestKind.Labor,
                 "PlantCut work today",
@@ -228,7 +234,35 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 RequestedFrom: "Labor",
                 WorkType: WorkType.PlantCut,
                 Skill: "Plants"));
+        if (CanSowBeforeWinter(briefing))
+        {
+            int growingTiles = GrowingTileRequest(briefing);
+            requests.Add(new ResourceRequest(ResourceRequestKind.Tile,
+                $"{growingTiles} emergency food growing tiles",
+                "food buffer is below 7 days and the growing window is still open",
+                Quantity: growingTiles,
+                Priority: severity,
+                RequestedFrom: "Construction"));
+            requests.Add(new ResourceRequest(ResourceRequestKind.Labor,
+                "Grow work for emergency food zone",
+                "new food growing tiles only help once sown",
+                Priority: severity,
+                RequestedFrom: "Labor",
+                WorkType: WorkType.Grow,
+                Skill: "Plants"));
+        }
+        if (!briefing.Kitchen.HasCookingBuilding)
+            requests.Add(new ResourceRequest(ResourceRequestKind.Building,
+                "campfire or stove for simple meals",
+                "the food chain cannot turn raw food into meals without a cooking building",
+                Priority: severity,
+                RequestedFrom: "Construction"));
         if (briefing.RawFoodCount > 0)
+        {
+            requests.Add(new ResourceRequest(ResourceRequestKind.Bill,
+                $"cook simple meals until {SimpleMealTarget(briefing)}",
+                "raw food must become meals during an urgent shortage",
+                Priority: severity));
             requests.Add(new ResourceRequest(ResourceRequestKind.Labor,
                 "Cook work today",
                 "raw food must become meals during an urgent shortage",
@@ -236,10 +270,11 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 RequestedFrom: "Labor",
                 WorkType: WorkType.Cook,
                 Skill: "Cooking"));
+        }
         if (requests.Count == 0)
-            requests.Add(new ResourceRequest(ResourceRequestKind.Attention,
-                "food procurement pressure",
-                "local harvest/cooking paths are not visible; Mayor/Economy should know procurement may be needed",
+            requests.Add(new ResourceRequest(ResourceRequestKind.TradeCapacity,
+                "emergency food acquisition path",
+                "no stored, harvestable, cookable, or sowable food path is visible in the briefing",
                 Priority: severity,
                 RequestedFrom: "Mayor"));
         return requests;
@@ -248,14 +283,24 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
     private static IReadOnlyList<SuggestedAction> EmergencyActions(FoodBriefing briefing)
     {
         List<SuggestedAction> actions = [];
+        if (briefing.FoodUnits > 0 && briefing.MealsCount == 0 && briefing.RawFoodCount == 0)
+            actions.Add(new SuggestedAction(SuggestedActionKind.SetStockpileZone,
+                $"Find the {briefing.FoodUnits} reported food units and make them visible in a reachable food stockpile; if they are not edible, treat the buffer as zero."));
         if (briefing.ReadyToHarvest > 0)
-            actions.Add(new SuggestedAction(SuggestedActionKind.Note, HarvestActionText(briefing)));
+            actions.Add(new SuggestedAction(SuggestedActionKind.MarkHarvest, HarvestActionText(briefing)));
         if (briefing.WildHarvestCandidates > 0)
-            actions.Add(new SuggestedAction(SuggestedActionKind.Note, WildHarvestActionText(briefing)));
+            actions.Add(new SuggestedAction(SuggestedActionKind.MarkHarvest, WildHarvestActionText(briefing)));
+        if (!briefing.Kitchen.HasCookingBuilding)
+            actions.Add(new SuggestedAction(SuggestedActionKind.PlaceBlueprint, "Place a campfire or stove so raw food can become meals."));
         if (briefing.RawFoodCount > 0)
-            actions.Add(new SuggestedAction(SuggestedActionKind.Note, CookBillActionText(briefing)));
+        {
+            actions.Add(new SuggestedAction(SuggestedActionKind.ProductionBill, CookBillActionText(briefing)));
+            actions.Add(new SuggestedAction(SuggestedActionKind.SetPriority, "Put the best cook on Cook work until simple meals are stocked."));
+        }
+        if (CanSowBeforeWinter(briefing))
+            actions.Add(new SuggestedAction(SuggestedActionKind.DesignateZone, $"Create about {GrowingTileRequest(briefing)} emergency rice growing tiles; use fertile soil near storage when possible."));
         if (actions.Count == 0)
-            actions.Add(new SuggestedAction(SuggestedActionKind.Note, "Audit reachable food immediately; no harvest/cook path is visible in the briefing."));
+            actions.Add(new SuggestedAction(SuggestedActionKind.Trade, "Open an emergency food acquisition path because no stored, harvestable, cookable, or sowable food path is visible."));
         return actions.Take(3).ToList();
     }
 
@@ -286,10 +331,10 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
     {
         List<SuggestedAction> actions =
         [
-            new(SuggestedActionKind.Note, CookBillActionText(briefing))
+            new(SuggestedActionKind.ProductionBill, CookBillActionText(briefing))
         ];
         if (!briefing.Kitchen.HasCookingBuilding)
-            actions.Add(new SuggestedAction(SuggestedActionKind.Build, "Place a campfire or stove before relying on cooked-meal advice."));
+            actions.Add(new SuggestedAction(SuggestedActionKind.PlaceBlueprint, "Place a campfire or stove before relying on cooked-meal advice."));
         return actions;
     }
 

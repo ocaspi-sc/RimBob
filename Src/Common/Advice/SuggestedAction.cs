@@ -16,9 +16,12 @@ public sealed record SuggestedAction(
 public enum SuggestedActionKind
 {
     DesignateZone,
-    Build,
+    MarkHarvest,
+    PlaceBlueprint,
+    ProductionBill,
     SetPriority,
     SetSchedule,
+    SetStockpileZone,
     Draft,
     Forbid,
     Research,

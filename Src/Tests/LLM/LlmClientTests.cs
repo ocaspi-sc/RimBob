@@ -238,6 +238,26 @@ public sealed class LlmClientTests
         roundTripped.ResourceRequests.Single().Skill.Should().Be("Cooking");
     }
 
+    [Fact]
+    public void SuggestedActionKinds_SerializeWithSelfDocumentingNames()
+    {
+        JsonSerializerOptions json = new() { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
+        IReadOnlyList<SuggestedAction> actions =
+        [
+            new SuggestedAction(SuggestedActionKind.MarkHarvest, "mark crops"),
+            new SuggestedAction(SuggestedActionKind.PlaceBlueprint, "place stove"),
+            new SuggestedAction(SuggestedActionKind.ProductionBill, "cook meals"),
+            new SuggestedAction(SuggestedActionKind.SetStockpileZone, "set food stockpile")
+        ];
+
+        string serialized = JsonSerializer.Serialize(actions, json);
+
+        serialized.Should().Contain("\"kind\":\"mark_harvest\"");
+        serialized.Should().Contain("\"kind\":\"place_blueprint\"");
+        serialized.Should().Contain("\"kind\":\"production_bill\"");
+        serialized.Should().Contain("\"kind\":\"set_stockpile_zone\"");
+    }
+
     private static FoodBriefing FoodBriefing(float days) => new(
         BriefingVersion: 1,
         Date: new DateStamp("5th of Aprimay, 5500, 14h", 5500, "Aprimay", 5, 14),

@@ -35,7 +35,7 @@ public sealed class FoodRulesTests
     }
 
     [Fact]
-    public void NearStarvationWithoutLocalFood_EmitsCriticalWithAttentionFlag()
+    public void NearStarvationWithoutLocalFood_SetsUpFoodChain()
     {
         FoodBriefing briefing = Briefing(days: 0.4f) with
         {
@@ -43,7 +43,11 @@ public sealed class FoodRulesTests
             MealsCount = 0,
             RawFoodCount = 0,
             ReadyToHarvest = 0,
-            WildHarvestCandidates = 0
+            WildHarvestCandidates = 0,
+            Kitchen = new FoodKitchenSummary(0, 0, false, false),
+            Infrastructure = new FoodInfrastructureSnapshot(0, true, 500f, 0),
+            Storage = new FoodStorageSummary(0, 0, null, null),
+            StockpileCells = 0
         };
 
         Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
@@ -52,9 +56,45 @@ public sealed class FoodRulesTests
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
         advice.Severity.Should().Be(AdviceSeverity.Critical);
         advice.PriorityScore.Should().Be(10);
-        advice.ResourceRequests.Should().ContainSingle()
-            .Which.Kind.Should().Be(ResourceRequestKind.Attention);
+        advice.ResourceRequests.Should().Contain(r => r.Kind == ResourceRequestKind.Tile);
+        advice.ResourceRequests.Should().Contain(r => r.Kind == ResourceRequestKind.Building);
+        advice.ResourceRequests.Should().Contain(r => r.Kind == ResourceRequestKind.Labor && r.WorkType == WorkType.Grow);
+        advice.ResourceRequests.Should().NotContain(r => r.Kind == ResourceRequestKind.Attention);
+        advice.SuggestedActions.Should().Contain(a => a.Kind == SuggestedActionKind.DesignateZone);
+        advice.SuggestedActions.Should().Contain(a => a.Kind == SuggestedActionKind.PlaceBlueprint);
+        advice.SuggestedActions.Should().NotContain(a => a.Kind == SuggestedActionKind.Note);
         decision.Flags.Should().ContainSingle().Which.Severity.Should().Be(FlagSeverity.Critical);
+    }
+
+    [Fact]
+    public void NearStarvationWithUnclassifiedFood_RequestsStockpileVisibilityAndSetup()
+    {
+        FoodBriefing briefing = Briefing(days: 0.4f) with
+        {
+            FoodUnits = 46,
+            MealsCount = 0,
+            RawFoodCount = 0,
+            ReadyToHarvest = 0,
+            WildHarvestCandidates = 0,
+            Kitchen = new FoodKitchenSummary(0, 1, false, true),
+            Infrastructure = new FoodInfrastructureSnapshot(0, true, 500f, 0),
+            Storage = new FoodStorageSummary(0, 0, null, null),
+            StockpileCells = 0
+        };
+
+        Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
+            .Should().BeOfType<Decision>().Subject;
+
+        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        advice.ResourceRequests.Should().Contain(r =>
+            r.Kind == ResourceRequestKind.StockpileSpace &&
+            r.Quantity == 46);
+        advice.ResourceRequests.Should().Contain(r => r.Kind == ResourceRequestKind.Tile);
+        advice.ResourceRequests.Should().Contain(r => r.Kind == ResourceRequestKind.Building);
+        advice.ResourceRequests.Should().NotContain(r => r.Kind == ResourceRequestKind.Attention);
+        advice.SuggestedActions.Should().Contain(a => a.Kind == SuggestedActionKind.SetStockpileZone);
+        advice.SuggestedActions.Should().Contain(a => a.Kind == SuggestedActionKind.DesignateZone);
+        advice.SuggestedActions.Should().Contain(a => a.Kind == SuggestedActionKind.PlaceBlueprint);
     }
 
     [Fact]
@@ -88,7 +128,7 @@ public sealed class FoodRulesTests
         advice.AdviceType.Should().Be("manage_cook_bills");
         advice.ResourceRequests.Should().Contain(r => r.Kind == ResourceRequestKind.Bill);
         advice.ResourceRequests.Should().NotContain(r => r.Kind == ResourceRequestKind.Labor);
-        advice.SuggestedActions.Should().Contain(a => a.Kind == SuggestedActionKind.Note);
+        advice.SuggestedActions.Should().Contain(a => a.Kind == SuggestedActionKind.ProductionBill);
     }
 
     [Fact]
