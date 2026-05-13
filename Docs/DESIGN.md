@@ -9,7 +9,8 @@
 
 An AI advisor system for RimWorld. The human plays the colony; RimAI watches the live game state and sends suggestions — like a cabinet of advisors writing memos. A self-improving LLM cabinet, led by the Mayor, surfaces strategic memos to a dashboard the player reads alongside the game. Over time, advice gets sharper, more advisor types come online, and individual advisors can graduate from *suggesting* to *acting* — but only when explicitly trusted by the player.
 
-This is not an RL agent and (for the MVP) not an autonomous player. Strategy and judgment come from LLMs. Output is suggestions, not RIMAPI writes. Each minister improves its own rules through the player's accept / dismiss / modify feedback on its memos.
+This is not an RL agent and (for the MVP) not an autonomous player. Strategy and judgment come from LLMs.
+For the MVP, Output is only advice to player, not RIMAPI writes.
 
 ---
 
@@ -40,7 +41,7 @@ This is not an RL agent and (for the MVP) not an autonomous player. Strategy and
 ├──────────────────────────────────────────────┤
 │  Cabinet Layer                               │
 │  Chief of Staff + feeder ministers           │
-│  Each minister: Rules → maybe LLM            │
+│  Each minister: Rules → LLM escalations      │
 │  Ministers read Agenda for direction         │
 │  Flag Channel (cross-minister signaling)     │
 ├──────────────────────────────────────────────┤
@@ -55,7 +56,7 @@ This is not an RL agent and (for the MVP) not an autonomous player. Strategy and
 Two operational modes run in parallel:
 
 - **Play mode** — live game loop; ministers wake on briefing changes, evaluate rules, escalate to LLM when needed, emit `AdviceItem`s onto the AdviceBus.
-- **Refinement** — async; each minister reviews its own decision log (now enriched with player Accept / Dismiss / Pushback signals), proposes rule changes, tests against fixtures, promotes on approval.
+- **Refinement** — async; performed by the smart coding agent creating the system, not by the minister llm. review the decision log (future: enriched with human Pushbacks). Improve the ministers workflow: rules, system prompt, briefing.
 
 → See [`design/architecture.md`](design/architecture.md) for code structure and stack.
 
@@ -107,7 +108,9 @@ Every in-game action should eventually map to one primary owning minister. The f
 
 ## Core Principles
 
-**Advice must be actionable.** Ministers should emit near-term, currently possible recommendations, not speculative strategy lists. The Mayor may still reason strategically, but even the Agenda should prioritize concrete next moves. -> [`design/advice.md`](design/advice.md), [`design/ministers.md`](design/ministers.md)
+**Ministers output is actionable Advice.** Ministers understand what needs to be done and . 
+
+**Only the Mayor strategically**, but even the Agenda should prioritize concrete next moves. -> [`design/advice.md`](design/advice.md), [`design/ministers.md`](design/ministers.md)
 
 **Suggest by default; autonomy is per-minister and opt-in.** MVP ships with every advisor in `Suggest` mode. Graduating an advisor to `Auto` is a deliberate, per-minister event gated by track record + explicit player consent. → [`design/advice.md`](design/advice.md)
 
@@ -116,8 +119,6 @@ Every in-game action should eventually map to one primary owning minister. The f
 **Briefings are the quality lever.** Tight, focused, ~500 tokens per minister. The state store computes derived facts so the LLM doesn't have to. → [`design/state-store.md`](design/state-store.md)
 
 **Rules first, LLM second.** The rules layer handles the majority of decisions cheaply. The LLM earns its cost on genuine judgment calls. → [`design/ministers.md`](design/ministers.md)
-
-**Refinement is the minister.** Each minister improves its own rules. Not a separate agent — the same minister in a different mode. Player feedback (Accept / Dismiss / Pushback) is the primary training signal. → [`design/evaluation.md`](design/evaluation.md)
 
 > **Deferred principle (Auto epic):** *Only Labor touches pawn allocation.* Re-engaged when the first minister graduates to `Auto` and needs to issue RIMAPI pawn writes. Until then, no minister touches pawn allocation. → [`design/ministers/labor.md`](design/ministers/labor.md), [`design/planning.md`](design/planning.md)
 
@@ -146,7 +147,6 @@ Decisions made and the reasoning behind them. Append; do not delete.
 | No direct minister-to-minister comms | Observable flag + board model is debuggable; direct messaging becomes spaghetti |
 | No modules (all roles are real ministers) | Modules dilute briefing focus; briefing quality is the primary lever |
 | Rules-first, LLM-on-escalation | LLMs are expensive and slow; rules handle the common case cheaply |
-| Refinement is the minister, not a companion | Same entity, different mode; cleaner than a meta-agent per minister |
 | v1 human-gated rule promotion | Self-modification without audit accumulates drift; automate once fixture suite is strong |
 | Microsoft.SemanticKernel.Memory rejected | Mid-migration API churn; in-process cosine store is sufficient and debuggable |
 | Unified IMinisterRules interface | Standard shape enables shared test harness, code-gen templates, consistent rule-refinement behaviour |
@@ -174,6 +174,7 @@ Decisions made and the reasoning behind them. Append; do not delete.
 | M3 Food feeder ships as rules-first plus LLM escalation | Food is the first full feeder minister. It derives a focused `FoodBriefing`, emits `AdviceItem`s and `AgentFlag`s, escalates ambiguous crop/hunt/freezer tradeoffs to Gemini, and feeds active Medium+ flags into the Mayor through `CabinetCycle` / `FlagChannel`. Food remains suggest-only: resource requests are rendered, not executed. See [`design/ministers/food.md`](design/ministers/food.md), [`design/communication.md`](design/communication.md), and [`design/dashboard.md`](design/dashboard.md). |
 | Minister wake reason is explicit `PlayCycleContext`, not hidden runtime state | A feeder minister's first live cycle is a real execution trigger, not game state. Rather than smuggling bootstrap behavior through a singleton tracker, the runtime should pass a typed `PlayCycleContext` (`StartupBootstrap`, `CabinetRefresh`, later `FlagFired`, `Heartbeat`, `ScheduledWakeupFired`) into `RunPlayCycle`. That keeps lifecycle semantics visible in code, tests, and docs. See [`design/ministers.md`](design/ministers.md). |
 | Host file logs resolve to stable `./logs/` paths | Relative Serilog file sinks were landing under `Src/ApiHost/logs/` when the Host started from its project directory, which made log discovery inconsistent. Host now resolves local repo runs to root `./logs/` and falls back to `<content-root>/logs/` outside the repo layout. See [`design/architecture.md`](design/architecture.md). |
+| Local launcher gives the Host a taskbar-visible server window | Normal local runs should leave an obvious Windows taskbar affordance so the player can find or stop RimAI while playing. `run-rimai.ps1` therefore starts `RimAI.Host` in a minimized PowerShell window named `RimAI Server`; `-Foreground` keeps the old attached-console behavior for debugging and verification. See [`design/architecture.md`](design/architecture.md). |
 | Advice carries both severity and priority score | `severity` remains semantic routing input for the Mayor, CoS, and tactical alert behavior. A first-class `priority_score` from 1-10 ranks importance within a severity tier for dashboard sorting, debugging, and future arbitration. Rules may compute both dynamically from live state. See [`design/advice.md`](design/advice.md). |
 | Suggested action kind names should describe the UI/game operation | `suggested_actions[].kind` values should be explicit enough to stand alone in the dashboard and future Auto mapping. Prefer names like `mark_harvest`, `place_blueprint`, `production_bill`, and `set_stockpile_zone` over terse or generic labels such as `build` or `note` when a structured operation exists. See [`design/advice.md`](design/advice.md). |
 | Ministers use canonical RimWorld work types for labor requests | Labor/resource requests must name the relevant RimWorld work-tab type when they request pawn time. Text such as "labor capacity" is too vague for advice, logs, or future Auto wiring. Work types are distinct from skills: e.g. `Cook` is a work type, `Cooking` is the skill signal. See [`design/ministers.md`](design/ministers.md). |
