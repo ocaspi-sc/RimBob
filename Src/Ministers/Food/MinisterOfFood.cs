@@ -90,9 +90,10 @@ public sealed class MinisterOfFood(
             flags.Publish(flag);
     }
 
-    private MinisterBriefingContext BuildContext()
+    private MinisterBriefingContext BuildContext() => BuildContext(agendaStore.Current);
+
+    public static MinisterBriefingContext BuildContext(MayorAgenda? agenda)
     {
-        MayorAgenda? agenda = agendaStore.Current;
         if (agenda is null) return MinisterBriefingContext.Empty;
 
         string? direction = agenda.CabinetDirection.TryGetValue("food", out string? exact)

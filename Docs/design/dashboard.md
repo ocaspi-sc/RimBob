@@ -68,6 +68,8 @@ Minister scopes use the fixed top tab bar:
 
 Each view renders structured sections. Large objects use the standard disclosure pattern: a real button header with `aria-expanded` / `aria-controls`, plus a conditionally rendered panel in normal document flow.
 
+Panel registries are frontend implementation details. Do not render registry ids or the full registered view list inside the normal minister workspace; the selected tab already provides that orientation.
+
 ### SYSTEM View
 
 SYSTEM is not a minister and does not show minister tabs. It starts as one overview page with compact panels. Split it later into `Runtime`, `LLM`, `RAG`, and `Logs` only if the overview becomes too large.
@@ -106,6 +108,7 @@ Dashboard v2 initially uses:
 - `GET /api/briefings/mayor/latest`
 - `GET /api/briefings/food/latest`
 - `GET /api/mayor/prompt`
+- `GET /api/ministers/{minister}/prompt` for Mayor and Food prompt introspection.
 - `GET /api/colony/snapshot`
 
 ### V2 Introspection Endpoints
@@ -115,7 +118,6 @@ Dashboard v2 adds or plans read-only introspection:
 - `GET /api/ministers`
 - `GET /api/ministers/{minister}/trace/latest`
 - `GET /api/system/health`
-- `GET /api/ministers/{minister}/prompt`
 - `GET /api/ministers/{minister}/rag/latest`
 - `GET /api/system/logs/recent`
 
@@ -131,7 +133,7 @@ These endpoints are observability surfaces only. They do not mutate game state.
 
 Shows the exact prompt material available for the selected minister.
 
-Mayor is backed by `/api/mayor/prompt`. Food and future ministers should use generalized read-only prompt endpoints when added. Until then, render a clear "not exposed yet" state.
+Mayor and Food are backed by `GET /api/ministers/{minister}/prompt`, with `/api/mayor/prompt` retained as a legacy Mayor route. Future ministers should use the same generalized read-only prompt endpoint when added. Until then, render a clear "not exposed yet" state.
 
 ### Briefing
 

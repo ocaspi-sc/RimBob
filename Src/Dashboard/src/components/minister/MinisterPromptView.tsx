@@ -6,7 +6,12 @@ import { EmptyState } from '../shared/EmptyState';
 import { JsonTree, summarizeValue, tryParseJson } from '../shared/JsonTree';
 
 export function MinisterPromptView({ scope }: { scope: ScopeConfig }) {
-  const prompt = useAsyncResource(signal => fetchPrompt(scope.key, signal), [scope.key]);
+  const prompt = useAsyncResource(
+    signal => scope.status === 'live'
+      ? fetchPrompt(scope.key, signal)
+      : Promise.resolve(null),
+    [scope.key, scope.status],
+  );
 
   if (scope.status !== 'live') {
     return <EmptyState code="PROMPT NOT WIRED">{scope.label} is a planned minister scope.</EmptyState>;
@@ -18,8 +23,8 @@ export function MinisterPromptView({ scope }: { scope: ScopeConfig }) {
 
   if (prompt.error || !prompt.data) {
     return (
-      <EmptyState code="PROMPT NOT EXPOSED">
-        {prompt.error ?? `${scope.label} prompt endpoint is not exposed yet.`}
+      <EmptyState code="PROMPT UNAVAILABLE">
+        {prompt.error ?? `${scope.label} prompt endpoint returned no payload.`}
       </EmptyState>
     );
   }

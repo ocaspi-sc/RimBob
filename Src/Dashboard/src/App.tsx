@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { fetchColonySnapshot, fetchStatus, fetchSystemHealth } from './api/client';
-import { ministerPanelRegistry, panelIdFor } from './dashboard/panelRegistry';
 import { findScope, ministerViews, scopeConfigs, type MinisterViewKey, type ScopeConfig, type ScopeKey } from './dashboard/scopes';
 import { DashboardHeader } from './components/layout/DashboardHeader';
 import { ColonySidebar } from './components/layout/ColonySidebar';
@@ -72,12 +71,6 @@ export default function App() {
                 views={ministerViews}
                 onSelect={setSelectedView}
               />
-              <div className="panel-registry-note minister-registry">
-                <span>{panelIdFor(activeScope.key, selectedView)}</span>
-                {ministerPanelRegistry.map(panel => (
-                  <code key={panel.id}>{panel.view}</code>
-                ))}
-              </div>
               <MinisterWorkspace
                 activeAdvice={feed.feed.activeAdvice}
                 agenda={feed.agenda}

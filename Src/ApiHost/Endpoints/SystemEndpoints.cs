@@ -88,6 +88,7 @@ public static class SystemEndpoints
                     Coverage("/api/briefings/mayor/latest", "available", "Mayor briefing inspector source."),
                     Coverage("/api/briefings/food/latest", "available", "Food briefing inspector source."),
                     Coverage("/api/mayor/prompt", "available", "Mayor prompt inspector source."),
+                    Coverage("/api/ministers/{minister}/prompt", "partial", "Generalized prompt inspector for Mayor and Food."),
                     Coverage("/api/ministers/{minister}/trace/latest", "partial", "Wake trigger visible; rule/LLM path details not exposed yet."),
                     Coverage("/api/ministers/{minister}/rag/latest", "not_exposed_yet", "Planned RAG retrieval inspector."),
                     Coverage("/api/system/logs/recent", "not_exposed_yet", "Planned bounded log tail."),

@@ -48,10 +48,10 @@ export async function fetchBriefing(scope: ScopeKey, signal?: AbortSignal): Prom
 }
 
 export async function fetchPrompt(scope: ScopeKey, signal?: AbortSignal): Promise<PromptPayload> {
-  if (scope !== 'mayor') {
+  if (scope !== 'mayor' && scope !== 'food') {
     throw new Error(`${scope} prompt is not exposed yet`);
   }
-  return await readJson<PromptPayload>('/api/mayor/prompt', signal);
+  return await readJson<PromptPayload>(`/api/ministers/${scope}/prompt`, signal);
 }
 
 export async function fetchTrace(scope: ScopeKey, signal?: AbortSignal): Promise<MinisterTrace> {

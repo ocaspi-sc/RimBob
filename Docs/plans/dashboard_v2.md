@@ -101,6 +101,7 @@ V2 is a read-and-react dashboard. Do not add RIMAPI write buttons, direct contro
 - `GET /api/briefings/mayor/latest`
 - `GET /api/briefings/food/latest`
 - `GET /api/mayor/prompt`
+- `GET /api/ministers/{minister}/prompt` for Mayor and Food prompt introspection.
 - `GET /api/colony/snapshot`
 
 ### Read-Only Introspection Endpoints
@@ -108,12 +109,12 @@ V2 is a read-and-react dashboard. Do not add RIMAPI write buttons, direct contro
 Initial v2 adds or plans these surfaces:
 
 - `GET /api/ministers`
+- `GET /api/ministers/{minister}/prompt`
 - `GET /api/ministers/{minister}/trace/latest`
 - `GET /api/system/health`
 
 Planned next:
 
-- `GET /api/ministers/{minister}/prompt`
 - `GET /api/ministers/{minister}/rag/latest`
 - `GET /api/system/logs/recent`
 
