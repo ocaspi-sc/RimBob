@@ -22,6 +22,7 @@ export function SystemOverview({
   stream: StreamDiagnostics;
 }) {
   const backendSse = health?.sse;
+  const llmStatus = health?.llm.status ?? status?.llm_status ?? ((status?.llm_configured ?? health?.llm.configured) ? 'ready' : 'missing_key');
 
   return (
     <div className="system-overview">
@@ -58,11 +59,13 @@ export function SystemOverview({
             <h2>Gemini</h2>
           </div>
           <div className="stacked-lines">
-            <StatusPill tone={(status?.llm_configured ?? health?.llm.configured) ? 'ok' : 'error'}>
-              {(status?.llm_configured ?? health?.llm.configured) ? 'configured' : 'missing key'}
+            <StatusPill tone={llmToneFor(llmStatus)}>
+              {llmStatus.replace(/_/g, ' ')}
             </StatusPill>
+            <InfoLine label="Configured" value={(status?.llm_configured ?? health?.llm.configured) ? 'yes' : 'no'} />
+            <InfoLine label="Last event" value={formatMaybeDate(health?.llm.last_event_at ?? status?.llm_last_event_at ?? null)} />
             <InfoLine label="Last success" value={formatMaybeDate(health?.llm.last_success_at ?? status?.mayor_last_llm_success_at ?? null)} />
-            <InfoLine label="Last error" value={health?.llm.last_error ?? status?.mayor_last_error ?? 'none'} />
+            <InfoLine label="Last error" value={shorten(health?.llm.last_error ?? status?.llm_last_error ?? status?.mayor_last_error ?? 'none')} />
             <InfoLine label="Token usage" value={health?.llm.token_usage ?? 'not exposed yet'} />
           </div>
         </div>
@@ -148,4 +151,15 @@ function formatMaybeDate(iso: string | null): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;
   return date.toLocaleString();
+}
+
+function llmToneFor(status: string): 'ok' | 'warn' | 'error' | 'idle' {
+  if (status === 'missing_key' || status === 'request_failed' || status === 'parse_failed') return 'error';
+  if (status === 'ready' || status === 'not_seen_yet') return 'warn';
+  if (status === 'parsed' || status === 'normalized') return 'ok';
+  return 'warn';
+}
+
+function shorten(value: string): string {
+  return value.length > 180 ? `${value.slice(0, 180)}...` : value;
 }

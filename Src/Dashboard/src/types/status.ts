@@ -2,6 +2,9 @@ export interface RimAIStatus {
   server: string;
   rimapi_reachable: boolean;
   llm_configured: boolean;
+  llm_status: string;
+  llm_last_event_at: string | null;
+  llm_last_error: string | null;
   briefing_version: number;
   agenda_version: number | null;
   mayor_running: boolean;

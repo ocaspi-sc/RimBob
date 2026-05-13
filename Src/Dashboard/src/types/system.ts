@@ -55,6 +55,8 @@ export interface SystemHealth {
   llm: {
     provider: string;
     configured: boolean;
+    status: string;
+    last_event_at: string | null;
     last_success_at: string | null;
     last_error: string | null;
     token_usage: string;

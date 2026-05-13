@@ -9,6 +9,9 @@ export function DashboardHeader({
   status: RimAIStatus | null;
   stream: StreamDiagnostics;
 }) {
+  const llmStatus = status?.llm_status ?? (status?.llm_configured ? 'ready' : 'missing_key');
+  const llmTone = llmToneFor(llmStatus);
+  const llmLabel = llmLabelFor(llmStatus);
   const mayorTone = !status
     ? 'idle'
     : status.mayor_last_error
@@ -26,10 +29,22 @@ export function DashboardHeader({
       <div className="header-status">
         <StatusPill tone={status ? 'ok' : 'idle'}>Host {status?.server ?? 'checking'}</StatusPill>
         <StatusPill tone={status?.rimapi_reachable ? 'ok' : 'warn'}>RIMAPI {status?.rimapi_reachable ? 'live' : 'waiting'}</StatusPill>
-        <StatusPill tone={status?.llm_configured ? 'ok' : 'error'}>LLM {status?.llm_configured ? 'ready' : 'missing key'}</StatusPill>
+        <StatusPill tone={status ? llmTone : 'idle'}>LLM {status ? llmLabel : 'checking'}</StatusPill>
         <StatusPill tone={stream.state === 'open' ? 'ok' : stream.state === 'error' ? 'warn' : 'idle'}>SSE {stream.state}</StatusPill>
         <StatusPill tone={mayorTone}>Mayor {status?.mayor_running ? 'running' : status?.mayor_last_error ? 'error' : 'idle'}</StatusPill>
       </div>
     </header>
   );
+}
+
+function llmToneFor(status: string): 'ok' | 'warn' | 'error' | 'idle' {
+  if (status === 'missing_key' || status === 'request_failed' || status === 'parse_failed') return 'error';
+  if (status === 'ready' || status === 'not_seen_yet') return 'warn';
+  if (status === 'parsed' || status === 'normalized') return 'ok';
+  return 'warn';
+}
+
+function llmLabelFor(status: string): string {
+  if (status === 'missing_key') return 'missing key';
+  return status.replace(/_/g, ' ');
 }

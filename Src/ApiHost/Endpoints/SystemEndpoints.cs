@@ -22,6 +22,7 @@ public static class SystemEndpoints
             FlagChannel flags,
             KnowledgeBase knowledge,
             LlmClient llm,
+            RawLlmOutputStore rawOutputs,
             MayorStatus mayor,
             SseDiagnostics sse,
             MinisterTraceStore traces) =>
@@ -33,6 +34,7 @@ public static class SystemEndpoints
             string guidesRoot = ResolvePath(env.ContentRootPath, opts.Rag.GuidesRoot);
             string cacheRoot = ResolvePath(env.ContentRootPath, opts.Rag.CacheRoot);
             IReadOnlyList<AgentFlag> activeFlags = flags.Active();
+            RawLlmOutputSnapshot? latestLlm = rawOutputs.LatestAny();
 
             return Results.Ok(new
             {
@@ -56,8 +58,10 @@ public static class SystemEndpoints
                 {
                     provider = "Gemini",
                     configured = llm.IsConfigured,
+                    status = LlmStatus(llm.IsConfigured, latestLlm),
+                    last_event_at = latestLlm?.CapturedAt,
                     last_success_at = mayor.LastLlmSuccessAt,
-                    last_error = mayor.LastError,
+                    last_error = LlmLastError(latestLlm) ?? mayor.LastError,
                     token_usage = "not_exposed_yet",
                 },
                 rag = new
@@ -107,4 +111,16 @@ public static class SystemEndpoints
         Path.IsPathRooted(configuredPath)
             ? configuredPath
             : Path.Combine(contentRoot, configuredPath);
+
+    private static string LlmStatus(bool configured, RawLlmOutputSnapshot? latest)
+    {
+        if (!configured) return "missing_key";
+        if (latest is null) return "ready";
+        return latest.Status;
+    }
+
+    private static string? LlmLastError(RawLlmOutputSnapshot? latest) =>
+        latest?.Status is "request_failed" or "parse_failed"
+            ? latest.Text
+            : null;
 }

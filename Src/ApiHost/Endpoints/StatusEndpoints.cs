@@ -21,14 +21,19 @@ public static class StatusEndpoints
             AgendaStore     agendaStore,
             BriefingCache   briefings,
             LlmClient       llm,
+            RawLlmOutputStore rawOutputs,
             MayorStatus     mayor) =>
         {
             MayorBriefing briefing = briefings.GetMayorBriefing();
+            RawLlmOutputSnapshot? latestLlm = rawOutputs.LatestAny();
             return Results.Ok(new
             {
                 server            = "ok",
                 rimapi_reachable  = colony.Economy.Version > 0,
                 llm_configured    = llm.IsConfigured,
+                llm_status        = LlmStatus(llm.IsConfigured, latestLlm),
+                llm_last_event_at = latestLlm?.CapturedAt,
+                llm_last_error    = LlmLastError(latestLlm),
                 briefing_version  = briefing.BriefingVersion,
                 agenda_version    = agendaStore.Current?.Version,
                 mayor_running     = mayor.IsRunning,
@@ -59,4 +64,16 @@ public static class StatusEndpoints
 
         return app;
     }
+
+    private static string LlmStatus(bool configured, RawLlmOutputSnapshot? latest)
+    {
+        if (!configured) return "missing_key";
+        if (latest is null) return "ready";
+        return latest.Status;
+    }
+
+    private static string? LlmLastError(RawLlmOutputSnapshot? latest) =>
+        latest?.Status is "request_failed" or "parse_failed"
+            ? latest.Text
+            : null;
 }

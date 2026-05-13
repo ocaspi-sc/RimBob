@@ -80,7 +80,8 @@ SYSTEM owns:
 - Runtime status and Mayor run state.
 - RIMAPI reachability.
 - SSE diagnostics: connection state, active/total connections, event count, last event, last error.
-- LLM health and usage placeholders.
+- LLM health: key configuration is not enough for a green state; latest raw output status drives the health pill, so request/parse failures such as quota exhaustion render degraded/error until a later successful response supersedes them.
+- LLM usage placeholders.
 - RAG health and corpus/cache placeholders.
 - Endpoint and data coverage markers.
 - Recent event/advice timeline.

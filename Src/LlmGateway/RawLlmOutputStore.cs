@@ -33,6 +33,16 @@ public sealed class RawLlmOutputStore
                 .ToList();
         }
     }
+
+    public RawLlmOutputSnapshot? LatestAny()
+    {
+        lock (_lock)
+        {
+            return _latest.Values
+                .OrderByDescending(snapshot => snapshot.CapturedAt)
+                .FirstOrDefault();
+        }
+    }
 }
 
 public sealed record RawLlmOutputSnapshot(
