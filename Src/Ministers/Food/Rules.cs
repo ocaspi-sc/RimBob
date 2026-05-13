@@ -18,9 +18,9 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                     FoodAdviceType.ManageFoodStockpile,
                     AdviceSeverity.Medium,
                     "Food stockpile needs audit",
-                    "RIMAPI reports food units but no nutrition. Audit meals/raw food before treating this as a shortage.",
-                    "Missing nutrition would make days-of-food unreliable; use the fallback counts until upstream data is fixed.",
-                    [new(ResourceRequestKind.Attention, "manual food stockpile audit", "nutrition_source is unknown or fallback-derived")],
+                "RIMAPI reports food units but no nutrition. Audit meals/raw food before treating this as a shortage.",
+                "Missing nutrition would make days-of-food unreliable; use the fallback counts until upstream data is fixed.",
+                [new(ResourceRequestKind.Attention, "manual food stockpile audit", "nutrition_source is unknown or fallback-derived")],
                     [new(SuggestedActionKind.Note, "Check whether stored food is edible meals/raw food and whether it is reachable.")],
                     false);
 
@@ -45,7 +45,8 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 $"Food covers about {days:F1} days for {briefing.ColonistCount} colonists. Stabilize meals before other routine work.",
                 "Food below 7 days is an urgent survival risk but not auto-executed in MVP.",
                 [
-                    new(ResourceRequestKind.Labor, "plant cutting/cooking/hauling capacity today", "food buffer is below 7 days", Priority: AdviceSeverity.High, RequestedFrom: "Labor"),
+                    new(ResourceRequestKind.Labor, "PlantCut work today", "food buffer is below 7 days", Priority: AdviceSeverity.High, RequestedFrom: "Labor", WorkType: WorkType.PlantCut, Skill: "Plants"),
+                    new(ResourceRequestKind.Labor, "Cook work today", "food buffer is below 7 days", Priority: AdviceSeverity.High, RequestedFrom: "Labor", WorkType: WorkType.Cook, Skill: "Cooking"),
                     new(ResourceRequestKind.TradeCapacity, "buy edible food if a trader is reachable", "rules cannot guarantee a timely harvest")
                 ],
                 [
@@ -61,7 +62,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 "Mature crops are ready",
                 $"{briefing.ReadyToHarvest} crop tiles are ready to harvest. Pull them in before weather, rot, or labor drift wastes the buffer.",
                 "Mature crops are a deterministic food-chain opportunity.",
-                [new(ResourceRequestKind.Labor, "plant cutting capacity", "mature crops only help once harvested", RequestedFrom: "Labor")],
+                [new(ResourceRequestKind.Labor, "PlantCut work for ready crops", "mature crops only help once harvested", RequestedFrom: "Labor", WorkType: WorkType.PlantCut, Skill: "Plants")],
                 [new(SuggestedActionKind.Note, "Manually prioritize harvest designations for the ready food crops.")],
                 days < 15f);
 
@@ -74,7 +75,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 "A raw-food buffer still needs cooking throughput to become safe daily nutrition.",
                 [
                     new(ResourceRequestKind.Bill, "cook simple meals to a small buffer", "meal count is below two per colonist"),
-                    new(ResourceRequestKind.Labor, "cooking work time", "raw food has to become meals", RequestedFrom: "Labor")
+                    new(ResourceRequestKind.Labor, "Cook work time", "raw food has to become meals", RequestedFrom: "Labor", WorkType: WorkType.Cook, Skill: "Cooking")
                 ],
                 [new(SuggestedActionKind.Note, "Check stove bills and keep simple meals stocked before upgrading meal quality.")],
                 false);
@@ -91,7 +92,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 "Wild food can extend the buffer",
                 $"{briefing.WildHarvestCandidates} harvestable wild plants are visible while food is below 20 days.",
                 "Wild harvest is lower-risk than hunting when no mature crops are ready.",
-                [new(ResourceRequestKind.Labor, "plant cutting capacity", "wild harvest requires plant work", RequestedFrom: "Labor")],
+                [new(ResourceRequestKind.Labor, "PlantCut work for wild harvest", "wild harvest requires plant work", RequestedFrom: "Labor", WorkType: WorkType.PlantCut, Skill: "Plants")],
                 [new(SuggestedActionKind.Note, "Designate safe nearby edible wild plants for harvest.")],
                 false);
 
@@ -138,6 +139,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             Minister: MinisterName,
             AdviceType: adviceType,
             Severity: severity,
+            PriorityScore: AdvicePriorityScore.DefaultForSeverity(severity),
             Title: title,
             Body: body,
             Rationale: rationale,

@@ -104,6 +104,7 @@ public sealed class FoodMinisterTests
         Minister: "Food",
         AdviceType: "hunt_for_food",
         Severity: AdviceSeverity.Medium,
+        PriorityScore: AdvicePriorityScore.DefaultForSeverity(AdviceSeverity.Medium),
         Title: "Hunt carefully",
         Body: "Use safe targets.",
         Rationale: "LLM selected hunting path.",

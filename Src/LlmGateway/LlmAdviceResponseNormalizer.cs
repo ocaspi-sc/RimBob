@@ -23,6 +23,13 @@ internal sealed record NormalizedAdviceResponse(
 
 internal static class LlmAdviceResponseNormalizer
 {
+    public static FoodLlmResponse NormalizeStrictResponse(FoodLlmResponse response) =>
+        response with
+        {
+            Advice = NormalizeStrictAdviceItems(response.Advice),
+            Flags = NormalizeStrictFlags(response.Flags)
+        };
+
     public static NormalizedAdviceResponse Normalize(
         JsonNode root,
         LlmAdviceNormalizationContext context,
@@ -61,10 +68,11 @@ internal static class LlmAdviceResponseNormalizer
     {
         AdviceItem? strict = LlmResponseParser.TryDeserialize<AdviceItem>(node, json);
         if (strict is not null && !string.IsNullOrWhiteSpace(strict.Id))
-            return strict;
+            return NormalizeStrictAdvice(strict);
 
         string rawType = LlmResponseParser.ReadString(node["advice_type"]) ?? context.DefaultAdviceType;
         AdviceSeverity severity = ParseAdviceSeverity(LlmResponseParser.ReadString(node["severity"]), AdviceSeverity.Medium);
+        int priorityScore = ParsePriorityScore(node["priority_score"], severity);
         string adviceType = LlmResponseParser.ToSnakeCase(rawType);
         if (string.IsNullOrWhiteSpace(adviceType))
             adviceType = LlmResponseParser.ToSnakeCase(context.DefaultAdviceType);
@@ -81,6 +89,7 @@ internal static class LlmAdviceResponseNormalizer
             Minister: context.Minister,
             AdviceType: adviceType,
             Severity: severity,
+            PriorityScore: priorityScore,
             Title: title,
             Body: body,
             Rationale: rationale,
@@ -137,7 +146,7 @@ internal static class LlmAdviceResponseNormalizer
             ResourceRequest? strict = LlmResponseParser.TryDeserialize<ResourceRequest>(item, json);
             if (strict is not null && !string.IsNullOrWhiteSpace(strict.What))
             {
-                requests.Add(strict);
+                requests.Add(NormalizeResourceRequest(strict));
                 continue;
             }
 
@@ -153,6 +162,14 @@ internal static class LlmAdviceResponseNormalizer
             ResourceRequestKind kind = ParseResourceKind(rawType, description);
             string what = LlmResponseParser.ReadString(item["what"]) ?? FormatResourceWhat(rawType, amount, unit);
             int? quantity = LlmResponseParser.TryReadIntegerQuantity(item["amount"]);
+            WorkType? workType = ParseWorkType(LlmResponseParser.ReadString(item["work_type"])) ??
+                                 InferWorkType(rawType, what, description);
+            string? skill = LlmResponseParser.ReadString(item["skill"]) ?? DefaultSkill(workType);
+            if (kind == ResourceRequestKind.Labor && workType is null)
+            {
+                kind = ResourceRequestKind.Attention;
+                description = $"{description} Normalized as attention because the labor request did not name a RimWorld work type.";
+            }
 
             requests.Add(new ResourceRequest(
                 Kind: kind,
@@ -160,7 +177,9 @@ internal static class LlmAdviceResponseNormalizer
                 Why: description,
                 Quantity: quantity,
                 Priority: severity >= AdviceSeverity.High ? severity : null,
-                RequestedFrom: DefaultRequester(kind, context)));
+                RequestedFrom: DefaultRequester(kind, context),
+                WorkType: workType,
+                Skill: skill));
         }
 
         return requests;
@@ -218,6 +237,13 @@ internal static class LlmAdviceResponseNormalizer
         return fallback;
     }
 
+    private static int ParsePriorityScore(JsonNode? node, AdviceSeverity severity)
+    {
+        int? value = LlmResponseParser.TryReadIntegerQuantity(node);
+        if (value is null) return AdvicePriorityScore.DefaultForSeverity(severity);
+        return AdvicePriorityScore.Normalize(value.Value, severity);
+    }
+
     private static FlagSeverity InferFlagSeverity(string raw)
     {
         string normalized = LlmResponseParser.NormalizeIdentifier(raw);
@@ -244,6 +270,109 @@ internal static class LlmAdviceResponseNormalizer
         if (normalized.Contains("component") || normalized.Contains("steel") || normalized.Contains("item")) return ResourceRequestKind.Item;
         return ResourceRequestKind.Attention;
     }
+
+    private static IReadOnlyList<AdviceItem> NormalizeStrictAdviceItems(IReadOnlyList<AdviceItem> advice) =>
+        advice.Select(NormalizeStrictAdvice).ToArray();
+
+    private static AdviceItem NormalizeStrictAdvice(AdviceItem advice) =>
+        advice with
+        {
+            PriorityScore = AdvicePriorityScore.Normalize(advice.PriorityScore, advice.Severity),
+            ResourceRequests = advice.ResourceRequests.Select(NormalizeResourceRequest).ToArray()
+        };
+
+    private static IReadOnlyList<AgentFlag> NormalizeStrictFlags(IReadOnlyList<AgentFlag> flags) =>
+        flags.Select(flag => flag with
+        {
+            Requests = flag.Requests?.Select(NormalizeResourceRequest).ToArray()
+        }).ToArray();
+
+    private static ResourceRequest NormalizeResourceRequest(ResourceRequest request)
+    {
+        WorkType? workType = request.WorkType ?? InferWorkType(request.Kind.ToString(), request.What, request.Why);
+        string? skill = string.IsNullOrWhiteSpace(request.Skill) ? DefaultSkill(workType) : request.Skill;
+        ResourceRequestKind kind = request.Kind;
+        string why = request.Why;
+
+        if (kind == ResourceRequestKind.Labor && workType is null)
+        {
+            kind = ResourceRequestKind.Attention;
+            why = $"{why} Normalized as attention because the labor request did not name a RimWorld work type.";
+        }
+
+        return request with
+        {
+            Kind = kind,
+            Why = why,
+            WorkType = workType,
+            Skill = skill
+        };
+    }
+
+    private static WorkType? ParseWorkType(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+        string normalized = LlmResponseParser.NormalizeIdentifier(raw);
+        foreach (WorkType workType in Enum.GetValues<WorkType>())
+        {
+            if (LlmResponseParser.NormalizeIdentifier(workType.ToString()) == normalized)
+                return workType;
+        }
+
+        return AliasWorkType(normalized);
+    }
+
+    private static WorkType? InferWorkType(params string?[] values)
+    {
+        string joined = string.Join(" ", values.Where(value => !string.IsNullOrWhiteSpace(value)));
+        string normalized = LlmResponseParser.NormalizeIdentifier(joined);
+        if (string.IsNullOrWhiteSpace(normalized)) return null;
+        return AliasWorkType(normalized);
+    }
+
+    private static WorkType? AliasWorkType(string normalized)
+    {
+        if (normalized.Contains("firefight")) return WorkType.Firefight;
+        if (normalized.Contains("patient")) return WorkType.Patient;
+        if (normalized.Contains("doctor") || normalized.Contains("tend") || normalized.Contains("medicine")) return WorkType.Doctor;
+        if (normalized.Contains("bedrest")) return WorkType.BedRest;
+        if (normalized.Contains("warden")) return WorkType.Warden;
+        if (normalized.Contains("handle") || normalized.Contains("animal")) return WorkType.Handle;
+        if (normalized.Contains("cook") || normalized.Contains("meal") || normalized.Contains("stove")) return WorkType.Cook;
+        if (normalized.Contains("hunt")) return WorkType.Hunt;
+        if (normalized.Contains("construct") || normalized.Contains("build") || normalized.Contains("repair")) return WorkType.Construct;
+        if (normalized.Contains("grow") || normalized.Contains("sow") || normalized.Contains("farm")) return WorkType.Grow;
+        if (normalized.Contains("mine")) return WorkType.Mine;
+        if (normalized.Contains("plantcut") || normalized.Contains("harvest") || normalized.Contains("forage") || normalized.Contains("berry")) return WorkType.PlantCut;
+        if (normalized.Contains("smith")) return WorkType.Smith;
+        if (normalized.Contains("tailor")) return WorkType.Tailor;
+        if (normalized.Contains("art") || normalized.Contains("sculpt")) return WorkType.Art;
+        if (normalized.Contains("craft")) return WorkType.Craft;
+        if (normalized.Contains("haul")) return WorkType.Haul;
+        if (normalized.Contains("clean")) return WorkType.Clean;
+        if (normalized.Contains("research")) return WorkType.Research;
+        if (normalized.Contains("basic")) return WorkType.Basic;
+        return null;
+    }
+
+    private static string? DefaultSkill(WorkType? workType) => workType switch
+    {
+        WorkType.Doctor => "Medicine",
+        WorkType.Warden => "Social",
+        WorkType.Handle => "Animals",
+        WorkType.Cook => "Cooking",
+        WorkType.Hunt => "Shooting",
+        WorkType.Construct => "Construction",
+        WorkType.Grow => "Plants",
+        WorkType.Mine => "Mining",
+        WorkType.PlantCut => "Plants",
+        WorkType.Smith => "Crafting",
+        WorkType.Tailor => "Crafting",
+        WorkType.Art => "Artistic",
+        WorkType.Craft => "Crafting",
+        WorkType.Research => "Intellectual",
+        _ => null
+    };
 
     private static string? DefaultRequester(ResourceRequestKind kind, LlmAdviceNormalizationContext context) => kind switch
     {

@@ -7,6 +7,8 @@ export interface ResourceRequest {
   quantity?: number | null;
   priority?: AdviceSeverity | null;
   requested_from?: string | null;
+  work_type?: string | null;
+  skill?: string | null;
 }
 
 export interface SuggestedAction {
@@ -19,6 +21,7 @@ export interface AdviceItem {
   minister: string;
   advice_type: string;
   severity: AdviceSeverity;
+  priority_score: number;
   title: string;
   body: string;
   rationale: string;

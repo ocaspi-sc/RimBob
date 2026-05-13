@@ -46,6 +46,7 @@ public sealed class AdviceBusTests
             Minister: "Food",
             AdviceType: "food_security",
             Severity: AdviceSeverity.High,
+            PriorityScore: AdvicePriorityScore.DefaultForSeverity(AdviceSeverity.High),
             Title: "Food low",
             Body: "Body",
             Rationale: "Rationale",

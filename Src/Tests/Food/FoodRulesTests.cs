@@ -28,7 +28,9 @@ public sealed class FoodRulesTests
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
         advice.AdviceType.Should().Be("food_security");
         advice.Severity.Should().Be(AdviceSeverity.High);
-        advice.ResourceRequests.Should().Contain(r => r.Kind == ResourceRequestKind.Labor);
+        advice.PriorityScore.Should().Be(AdvicePriorityScore.DefaultForSeverity(AdviceSeverity.High));
+        advice.ResourceRequests.Should().Contain(r => r.Kind == ResourceRequestKind.Labor && r.WorkType == WorkType.PlantCut);
+        advice.ResourceRequests.Should().Contain(r => r.Kind == ResourceRequestKind.Labor && r.WorkType == WorkType.Cook);
         decision.Flags.Should().ContainSingle().Which.Severity.Should().Be(FlagSeverity.High);
     }
 
@@ -55,6 +57,7 @@ public sealed class FoodRulesTests
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
         advice.AdviceType.Should().Be("manage_cook_bills");
         advice.ResourceRequests.Should().Contain(r => r.Kind == ResourceRequestKind.Bill);
+        advice.ResourceRequests.Should().Contain(r => r.Kind == ResourceRequestKind.Labor && r.WorkType == WorkType.Cook && r.Skill == "Cooking");
         advice.SuggestedActions.Should().Contain(a => a.Kind == SuggestedActionKind.Note);
     }
 

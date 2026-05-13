@@ -18,7 +18,11 @@ public sealed record ResourceRequest(
     [property: JsonPropertyName("priority")]
     AdviceSeverity? Priority = null,
     [property: JsonPropertyName("requested_from")]
-    string? RequestedFrom = null);
+    string? RequestedFrom = null,
+    [property: JsonPropertyName("work_type")]
+    WorkType? WorkType = null,
+    [property: JsonPropertyName("skill")]
+    string? Skill = null);
 
 [JsonConverter(typeof(SnakeCaseLowerEnumConverter<ResourceRequestKind>))]
 public enum ResourceRequestKind

@@ -269,7 +269,9 @@ public sealed class LlmClient
                 {
                     normalized = true;
                     _log.LogWarning(ex, "Food response did not match strict schema; attempting tolerant normalization.");
-                });
+                },
+                IsStrictFoodResponse);
+            parsed = LlmAdviceResponseNormalizer.NormalizeStrictResponse(parsed);
         }
         catch (JsonException parseEx)
         {
@@ -287,5 +289,14 @@ public sealed class LlmClient
 
         return parsed;
     }
+
+    private static bool IsStrictFoodResponse(FoodLlmResponse response) =>
+        response.Advice.All(advice =>
+            !string.IsNullOrWhiteSpace(advice.Id) &&
+            !string.IsNullOrWhiteSpace(advice.Minister) &&
+            !string.IsNullOrWhiteSpace(advice.AdviceType) &&
+            !string.IsNullOrWhiteSpace(advice.Title) &&
+            !string.IsNullOrWhiteSpace(advice.Body) &&
+            !string.IsNullOrWhiteSpace(advice.Rationale));
 
 }

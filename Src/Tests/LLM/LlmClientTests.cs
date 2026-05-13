@@ -126,21 +126,116 @@ public sealed class LlmClientTests
         NormalizedAdviceResponse response = LlmResponseParser.ParseOrNormalize(
             raw,
             json,
-            root => LlmAdviceResponseNormalizer.Normalize(root, context, json));
+            root => LlmAdviceResponseNormalizer.Normalize(root, context, json),
+            isStrictValid: _ => false);
 
         response.Advice.Should().HaveCount(2);
         response.Advice[0].Id.Should().StartWith("food_llm_manage_cook_bills_");
         response.Advice[0].Minister.Should().Be("Food");
         response.Advice[0].AdviceType.Should().Be("manage_cook_bills");
         response.Advice[0].Severity.Should().Be(AdviceSeverity.High);
+        response.Advice[0].PriorityScore.Should().Be(AdvicePriorityScore.DefaultForSeverity(AdviceSeverity.High));
         response.Advice[0].Title.Should().Be("Manage Cook Bills");
         response.Advice[0].Body.Should().Contain("Cook simple meals");
         response.Advice[0].ResourceRequests.Should().ContainSingle()
             .Which.Kind.Should().Be(ResourceRequestKind.Labor);
+        response.Advice[0].ResourceRequests.Single().WorkType.Should().Be(WorkType.Cook);
+        response.Advice[0].ResourceRequests.Single().Skill.Should().Be("Cooking");
         response.Flags.Should().HaveCount(3);
         response.Flags[0].Id.Should().Be("food:food_shortage_critical");
         response.Flags[0].Severity.Should().Be(RimAI.Core.Ministers.FlagSeverity.High);
         response.Flags[2].Summary.Should().Be("No Freezer");
+    }
+
+    [Fact]
+    public void AdviceNormalizer_ClampsPriorityScoreAndDowngradesVagueLabor()
+    {
+        const string raw = """
+        {
+          "advice": [
+            {
+              "advice_type": "FoodSecurity",
+              "severity": "Medium",
+              "priority_score": 99,
+              "message": "Food needs attention.",
+              "resource_requests": [
+                {
+                  "kind": "labor",
+                  "what": "labor capacity",
+                  "why": "needs labor capacity"
+                }
+              ]
+            }
+          ],
+          "flags": [],
+          "notes": "Vague labor should not pass through as labor."
+        }
+        """;
+        JsonSerializerOptions json = new() { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
+        FoodBriefing briefing = FoodBriefing(10f);
+        LlmAdviceNormalizationContext context = new(
+            Minister: "Food",
+            Domain: "food",
+            BriefingVersion: briefing.BriefingVersion,
+            GameTick: briefing.GameTick,
+            Date: briefing.Date,
+            DefaultAdviceType: nameof(FoodAdviceType.FoodSecurity),
+            DefaultRationale: "Food LLM escalation selected this recommendation.",
+            GuideContext: []);
+
+        NormalizedAdviceResponse response = LlmResponseParser.ParseOrNormalize(
+            raw,
+            json,
+            root => LlmAdviceResponseNormalizer.Normalize(root, context, json),
+            isStrictValid: _ => false);
+
+        AdviceItem advice = response.Advice.Should().ContainSingle().Subject;
+        advice.PriorityScore.Should().Be(AdvicePriorityScore.Max);
+        ResourceRequest request = advice.ResourceRequests.Should().ContainSingle().Subject;
+        request.Kind.Should().Be(ResourceRequestKind.Attention);
+        request.WorkType.Should().BeNull();
+        request.Why.Should().Contain("did not name a RimWorld work type");
+    }
+
+    [Fact]
+    public void AdviceSchema_RoundTripsPriorityScoreAndResourceWorkMetadata()
+    {
+        JsonSerializerOptions json = new() { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
+        AdviceItem item = new(
+            Id: "a1",
+            Minister: "Food",
+            AdviceType: "manage_cook_bills",
+            Severity: AdviceSeverity.High,
+            PriorityScore: 9,
+            Title: "Cook meals",
+            Body: "Body",
+            Rationale: "Rationale",
+            ResourceRequests:
+            [
+                new ResourceRequest(
+                    ResourceRequestKind.Labor,
+                    "Cook work today",
+                    "meals are understocked",
+                    Quantity: 1,
+                    Priority: AdviceSeverity.High,
+                    RequestedFrom: "Labor",
+                    WorkType: WorkType.Cook,
+                    Skill: "Cooking")
+            ],
+            SuggestedActions: [],
+            GuideCitationIds: [],
+            IssuedAt: DateTimeOffset.UnixEpoch,
+            ExpiresAt: DateTimeOffset.UnixEpoch.AddHours(4));
+
+        string serialized = JsonSerializer.Serialize(item, json);
+        AdviceItem? roundTripped = JsonSerializer.Deserialize<AdviceItem>(serialized, json);
+
+        serialized.Should().Contain("\"priority_score\":9");
+        serialized.Should().Contain("\"work_type\":\"cook\"");
+        roundTripped.Should().NotBeNull();
+        roundTripped!.PriorityScore.Should().Be(9);
+        roundTripped.ResourceRequests.Single().WorkType.Should().Be(WorkType.Cook);
+        roundTripped.ResourceRequests.Single().Skill.Should().Be("Cooking");
     }
 
     private static FoodBriefing FoodBriefing(float days) => new(

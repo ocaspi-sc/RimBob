@@ -9,12 +9,14 @@ internal static class LlmResponseParser
         string text,
         JsonSerializerOptions json,
         Func<JsonNode, T> normalize,
-        Action<JsonException>? onStrictParseFailed = null)
+        Action<JsonException>? onStrictParseFailed = null,
+        Func<T, bool>? isStrictValid = null)
     {
         try
         {
             T? parsed = JsonSerializer.Deserialize<T>(text, json);
-            if (parsed is not null) return parsed;
+            if (parsed is not null && (isStrictValid is null || isStrictValid(parsed)))
+                return parsed;
         }
         catch (JsonException ex)
         {
