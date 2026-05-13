@@ -10,7 +10,8 @@ Dashboard v2 is a from-scratch React implementation inside the existing dashboar
 
 ## Product Posture
 
-- Read-only in v2: no RIMAPI write controls, no autonomy toggles, and no feedback/Pushback controls.
+- Game-read-only in v2: no RIMAPI write controls, no autonomy toggles, and no feedback/Pushback controls.
+- Manual Run buttons may trigger RimAI re-evaluation, but they never issue RimWorld/RIMAPI write commands.
 - Localhost-only: Host binds loopback and serves the dashboard plus `/api/*`.
 - Dense second-monitor operations console, not a landing page.
 - Explanation-first: every recommendation should have a visible place for prompt, briefing, RAG, rules/trigger trace, and current advice.
@@ -28,10 +29,12 @@ Dashboard v2 is a from-scratch React implementation inside the existing dashboar
 
 Dashboard v2 uses four stable regions:
 
-- Header: product title, runtime status, refresh/build context where exposed.
+- Header: product title, runtime status, and global manual trigger.
 - Left rail: scope selector.
 - Main workspace: SYSTEM overview or minister inspector tabs.
 - Right sidebar: compact colony facts plus colonist cards.
+
+The header exposes `Run Cabinet Now` as the global manual trigger. Minister workspaces expose `Run {Minister} Now` beside the selected minister's last-run time from trace health. The selected view is already visible in the tab bar and should not be repeated beside the run button. Planned ministers show a disabled `Not Wired` control.
 
 ### Left Rail: Scopes
 
@@ -68,6 +71,8 @@ Minister scopes use the fixed top tab bar:
 - Advice
 
 Each view renders structured sections. Large objects use the standard disclosure pattern: a real button header with `aria-expanded` / `aria-controls`, plus a conditionally rendered panel in normal document flow.
+
+The dashboard persists the last selected scope and minister view in browser `localStorage` so normal page reloads return to the same inspected place. Stored values are validated against the fixed scope/view registries and fall back to SYSTEM / Advice if stale.
 
 Panel registries are frontend implementation details. Do not render registry ids or the full registered view list inside the normal minister workspace; the selected tab already provides that orientation.
 
@@ -106,11 +111,14 @@ Dashboard v2 initially uses:
 
 - `GET /api/status`
 - `GET /api/advice/stream`
+- `POST /api/cabinet/trigger`
+- `POST /api/ministers/{minister}/trigger` for wired ministers.
 - `GET /api/agenda/latest`
 - `GET /api/briefings/mayor/latest`
 - `GET /api/briefings/food/latest`
 - `GET /api/mayor/prompt`
 - `GET /api/ministers/{minister}/prompt` for Mayor and Food prompt introspection.
+- `POST /api/ministers/{minister}/llm-output/manual` for Food-only developer fallback ingestion of a pasted raw model response.
 - `GET /api/colony/snapshot`
 
 ### V2 Introspection Endpoints
@@ -124,6 +132,16 @@ Dashboard v2 adds or plans read-only introspection:
 - `GET /api/system/logs/recent`
 
 These endpoints are observability surfaces only. They do not mutate game state.
+
+### Manual Triggers
+
+Manual trigger endpoints are dashboard controls for RimAI evaluation, not game controls:
+
+- `POST /api/cabinet/trigger`: refreshes live state, then runs all wired live ministers in dependency order. Current order is Food before Mayor.
+- `POST /api/ministers/{minister}/trigger`: refreshes live state, then runs only the selected wired minister.
+- `POST /api/agenda/refresh`: legacy alias for the cabinet trigger. Keep it for compatibility; new v2 UI should call `/api/cabinet/trigger`.
+
+All manual trigger paths use `PlayCycleTrigger.ManualTrigger` and set the wakeup payload to `dashboard` for trace visibility. They remain suggest-only and do not call RIMAPI write endpoints.
 
 ### Advice SSE
 
@@ -148,6 +166,8 @@ Mayor and Food are backed by `GET /api/ministers/{minister}/prompt`, with `/api/
 Shows the unnormalized model response text for the selected minister, before schema parsing, tolerant repair, normalization, or advice rendering. This is a developer/debug view, rendered as a tab in the minister workspace.
 
 Backed by `GET /api/ministers/{minister}/llm-output/latest` for live ministers. The endpoint returns the latest raw Gemini response recorded in the current Host process, plus model, provider, capture time, latency, parse status, parse mode, and prompt character counts. If the request fails before Gemini returns text, record `request_failed` with the exception text so the view explains why no raw response exists. If no LLM call has happened since Host startup, render "no raw output yet" rather than an error. Do not infer raw output from normalized `AdviceItem`s or Agenda payloads.
+
+Developer fallback: `POST /api/ministers/food/llm-output/manual` accepts a raw Food LLM JSON object or `{ "text": "<json>" }`, records it as provider `Codex` / model `codex-subagent`, parses it through the Food response parser, and publishes the resulting Food advice snapshot. This is an observability and fallback path only; it does not call RIMAPI write endpoints and does not exist for unwired ministers.
 
 ### Briefing
 

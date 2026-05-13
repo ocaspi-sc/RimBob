@@ -82,7 +82,7 @@ Core/
 │   ├── MinisterGoal.cs
 │   ├── PlayCycleContext.cs // typed wake reason for minister play cycles
 │   ├── ScheduledWakeup.cs  // FireAt + Payload; at most one pending per minister
-│   └── PlayCycleTrigger.cs // StartupBootstrap | CabinetRefresh | FlagFired | Heartbeat | ScheduledWakeupFired
+│   └── PlayCycleTrigger.cs // StartupBootstrap | CabinetRefresh | ManualTrigger | FlagFired | Heartbeat | ScheduledWakeupFired
 ├── Labor/                  // Deferred — Auto epic
 │   ├── LaborRequest.cs
 │   ├── WorkType.cs
@@ -237,9 +237,10 @@ ApiHost/                              // project: RimAI.Host
 ├── appsettings.json                  // Serilog config + RimAi (ListenUrl, RimApiBaseUrl, PingLlmOnStartup)
 ├── appsettings.Development.json
 ├── Endpoints/
+│   ├── CabinetEndpoints.cs           // POST /api/cabinet/trigger, /api/ministers/{minister}/trigger
 │   ├── AgendaStreamEndpoint.cs       // GET  /api/advice/stream      (SSE)
 │   ├── AgendaEndpoints.cs            // GET  /api/agenda/{latest|history}
-│   │                                 // POST /api/agenda/refresh     (demand-trigger)
+│   │                                 // POST /api/agenda/refresh     (legacy manual-trigger alias)
 │   ├── ColonyEndpoints.cs            // GET  /api/colony/snapshot    (latest MayorBriefing)
 │   ├── StatusEndpoints.cs            // GET  /api/status             (server + Mayor run state)
 │   │                                 // GET  /api/mayor/prompt       (next system + user message)
@@ -313,6 +314,7 @@ public enum PlayCycleTrigger
 {
     StartupBootstrap,
     CabinetRefresh,
+    ManualTrigger,
     FlagFired,
     Heartbeat,
     ScheduledWakeupFired

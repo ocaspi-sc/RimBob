@@ -153,6 +153,7 @@ app.UseStaticFiles();
 // ── API endpoints ──────────────────────────────────────────────────────────
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok", service = "RimAI" }));
 
+app.MapCabinetEndpoints();
 app.MapAgendaStream();
 app.MapAgendaEndpoints();
 app.MapAutonomyEndpoints();

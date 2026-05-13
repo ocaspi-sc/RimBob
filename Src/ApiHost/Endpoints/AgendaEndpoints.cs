@@ -32,13 +32,13 @@ public static class AgendaEndpoints
             return Results.Ok(filtered);
         });
 
-        // Demand-triggered briefing refresh + new agenda generation.
+        // Legacy dashboard demand-trigger. Prefer POST /api/cabinet/trigger.
         app.MapPost("/api/agenda/refresh", async (
             CabinetCycle cabinet,
             CancellationToken ct) =>
         {
             await cabinet.RunAsync(ct);
-            return Results.Ok(new { refreshed = true });
+            return Results.Ok(new { refreshed = true, scope = "cabinet", trigger = "ManualTrigger" });
         });
 
         // Manual fallback: when Gemini is unreachable / rate-limited, paste a

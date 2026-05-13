@@ -36,6 +36,7 @@ public enum PlayCycleTrigger
 {
     StartupBootstrap,
     CabinetRefresh,
+    ManualTrigger,
     FlagFired,
     Heartbeat,
     ScheduledWakeupFired
@@ -50,7 +51,7 @@ public sealed record PlayCycleContext(
 }
 ```
 
-Current runtime only uses a subset of these triggers. `StartupBootstrap` is used for the first live cycle after Host startup, and `CabinetRefresh` is used for the normal cabinet cycle after ingestion refresh. The others remain the intended extension points for future wake paths.
+Current runtime only uses a subset of these triggers. `StartupBootstrap` is used for the first live cycle after Host startup, `CabinetRefresh` is used for the normal cabinet cycle after day rollover, and `ManualTrigger` is used when the dashboard player presses `Run Cabinet Now` or `Run {Minister} Now`. Manual dashboard triggers set `WakeupPayload = "dashboard"` for trace visibility. The others remain the intended extension points for future wake paths.
 
 ### First live cycle bootstrap
 

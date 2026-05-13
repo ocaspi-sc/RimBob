@@ -10,7 +10,7 @@ public sealed class CabinetCycle(
     MinisterTraceStore traces,
     ILogger<CabinetCycle> log)
 {
-    public Task RunAsync(CancellationToken ct) => RunAsync(PlayCycleContext.CabinetRefresh, ct);
+    public Task RunAsync(CancellationToken ct) => RunAsync(PlayCycleContext.ManualTrigger, ct);
 
     public async Task RunAsync(PlayCycleContext cycle, CancellationToken ct)
     {
@@ -22,16 +22,27 @@ public sealed class CabinetCycle(
         if (food is not null)
         {
             log.LogInformation("Cabinet cycle: running Food before Mayor");
-            await RunMinisterAsync(food, cycle, ct);
+            await RunResolvedMinisterAsync(food, cycle, ct);
         }
 
         if (mayor is null)
             throw new InvalidOperationException("Cabinet cycle could not resolve Mayor minister.");
 
-        await RunMinisterAsync(mayor, cycle, ct);
+        await RunResolvedMinisterAsync(mayor, cycle, ct);
     }
 
-    private async Task RunMinisterAsync(IMinister minister, PlayCycleContext cycle, CancellationToken ct)
+    public async Task<MinisterTriggerResult?> TriggerMinisterAsync(string ministerKey, CancellationToken ct)
+    {
+        await ingestion.RefreshAllAsync(ct);
+
+        IMinister? minister = ResolveMinister(ministerKey);
+        if (minister is null) return null;
+
+        await RunResolvedMinisterAsync(minister, PlayCycleContext.ManualTrigger, ct);
+        return new MinisterTriggerResult(MinisterKey(minister.Name), minister.Name, PlayCycleContext.ManualTrigger.Trigger.ToString());
+    }
+
+    private async Task RunResolvedMinisterAsync(IMinister minister, PlayCycleContext cycle, CancellationToken ct)
     {
         traces.Begin(minister.Name, cycle);
         try
@@ -45,4 +56,15 @@ public sealed class CabinetCycle(
             throw;
         }
     }
+
+    private IMinister? ResolveMinister(string ministerKey)
+    {
+        string normalized = MinisterKey(ministerKey);
+        return ministers.FirstOrDefault(m => MinisterKey(m.Name).Equals(normalized, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string MinisterKey(string name) =>
+        name.Trim().Replace(" ", "_", StringComparison.Ordinal).ToLowerInvariant();
 }
+
+public sealed record MinisterTriggerResult(string Scope, string Minister, string Trigger);

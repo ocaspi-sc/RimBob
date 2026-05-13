@@ -6,6 +6,7 @@ public enum PlayCycleTrigger
 {
     StartupBootstrap,
     CabinetRefresh,
+    ManualTrigger,
     FlagFired,
     Heartbeat,
     ScheduledWakeupFired
@@ -20,4 +21,5 @@ public sealed record PlayCycleContext(
 
     public static PlayCycleContext StartupBootstrap { get; } = new(PlayCycleTrigger.StartupBootstrap);
     public static PlayCycleContext CabinetRefresh { get; } = new(PlayCycleTrigger.CabinetRefresh);
+    public static PlayCycleContext ManualTrigger { get; } = new(PlayCycleTrigger.ManualTrigger, WakeupPayload: "dashboard");
 }

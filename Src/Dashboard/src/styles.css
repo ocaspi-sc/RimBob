@@ -107,6 +107,59 @@ code {
   min-width: 0;
 }
 
+.header-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.trigger-button {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(98, 216, 230, 0.42);
+  border-radius: 7px;
+  background: rgba(98, 216, 230, 0.09);
+  color: var(--text);
+  padding: 6px 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.trigger-button.global {
+  border-color: rgba(80, 211, 141, 0.55);
+  background: rgba(80, 211, 141, 0.12);
+}
+
+.trigger-button:hover:not(:disabled) {
+  border-color: rgba(98, 216, 230, 0.8);
+  background: rgba(98, 216, 230, 0.16);
+}
+
+.trigger-button.global:hover:not(:disabled) {
+  border-color: rgba(80, 211, 141, 0.85);
+  background: rgba(80, 211, 141, 0.19);
+}
+
+.trigger-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.trigger-error {
+  flex-basis: 100%;
+  color: var(--error);
+  font-size: 0.76rem;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
 .status-pill {
   min-height: 30px;
   display: inline-flex;
@@ -257,8 +310,19 @@ code {
   grid-column: 2;
 }
 
-.workspace-title strong {
-  color: var(--cyan);
+.workspace-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.last-run-time {
+  color: var(--muted);
+  font-size: 0.78rem;
+  white-space: nowrap;
 }
 
 .view-tabs {
@@ -915,6 +979,7 @@ code {
     align-items: stretch;
   }
 
+  .header-controls,
   .header-status {
     width: 100%;
     display: grid;
@@ -922,11 +987,16 @@ code {
     justify-content: stretch;
   }
 
-  .status-pill {
+  .status-pill,
+  .trigger-button {
     width: 100%;
     min-width: 0;
     justify-content: center;
     white-space: normal;
+    text-align: center;
+  }
+
+  .trigger-error {
     text-align: center;
   }
 

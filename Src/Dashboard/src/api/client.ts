@@ -23,12 +23,36 @@ export interface RawLlmOutputPayload {
   text: string;
 }
 
+export interface ManualTriggerPayload {
+  triggered: boolean;
+  scope: string;
+  minister?: string;
+  trigger: string;
+}
+
 async function readJson<T>(url: string, signal?: AbortSignal): Promise<T> {
   const response = await fetch(url, { signal });
   if (!response.ok) {
     throw new Error(`${url} returned ${response.status}`);
   }
   return await response.json() as T;
+}
+
+async function postJson<T>(url: string, signal?: AbortSignal): Promise<T> {
+  const response = await fetch(url, { method: 'POST', signal });
+  if (!response.ok) {
+    throw new Error(`${url} returned ${response.status}: ${await readErrorDetail(response)}`);
+  }
+  return await response.json() as T;
+}
+
+async function readErrorDetail(response: Response): Promise<string> {
+  try {
+    const body = await response.json() as { title?: string; detail?: string; error?: string };
+    return body.detail ?? body.error ?? body.title ?? response.statusText;
+  } catch {
+    return response.statusText;
+  }
 }
 
 export async function fetchStatus(signal?: AbortSignal): Promise<RimAIStatus> {
@@ -76,6 +100,14 @@ export async function fetchRawLlmOutput(scope: ScopeKey, signal?: AbortSignal): 
 
 export async function fetchTrace(scope: ScopeKey, signal?: AbortSignal): Promise<MinisterTrace> {
   return await readJson<MinisterTrace>(`/api/ministers/${scope}/trace/latest`, signal);
+}
+
+export async function triggerCabinet(signal?: AbortSignal): Promise<ManualTriggerPayload> {
+  return await postJson<ManualTriggerPayload>('/api/cabinet/trigger', signal);
+}
+
+export async function triggerMinister(scope: ScopeKey, signal?: AbortSignal): Promise<ManualTriggerPayload> {
+  return await postJson<ManualTriggerPayload>(`/api/ministers/${scope}/trigger`, signal);
 }
 
 export function parseAgendaEvent(event: MessageEvent): MayorAgenda {
