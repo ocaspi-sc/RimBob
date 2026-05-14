@@ -15,6 +15,7 @@ Refine one RimAI minister from evidence. Default to an evidence-backed proposal;
    - Also check future pushbacks at `Src/Cabinet/<Minister>/Pushbacks/*.jsonl`. If absent, continue from logs and say Pushbacks are not wired yet.
 
 2. Summarize logs.
+   - Check durable replay records first at `logs/replay/<minister>-*.jsonl`; these are the preferred input for before/after comparisons.
    - Run the helper:
      ```powershell
      py .agents\skills\minister-refine\scripts\summarize_decision_log.py --repo . --minister Food --days 7
@@ -24,8 +25,8 @@ Refine one RimAI minister from evidence. Default to an evidence-backed proposal;
    - Check whether records are replayable: briefing payload or ref, trigger/context, active flags/agenda context, prompt/raw LLM output when relevant, normalized output, feedback/Pushback, and outcome. If fields are missing, classify that as a `Logging gap`.
 
 3. Build a replay set.
-   - Prefer a historic corpus sampled from decision logs and Pushbacks that covers the repeated pattern plus nearby non-target cases.
-   - Fall back to fixtures only when historic records are not replayable yet, and say that the comparison is fixture-only.
+   - Prefer a historic corpus sampled from `logs/replay/<minister>-*.jsonl`, then enrich it from decision logs and Pushbacks when useful.
+   - Fall back to decision logs when replay records are absent or incomplete. Fall back to fixtures only when historic records are not replayable yet, and say that the comparison is fixture-only.
    - Keep the same input corpus for before/after. Do not judge an improvement from a single hand-picked example.
 
 4. Classify each finding.

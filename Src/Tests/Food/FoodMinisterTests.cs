@@ -77,6 +77,28 @@ public sealed class FoodMinisterTests
     }
 
     [Fact]
+    public async Task RuleDecision_PersistsReplayRecord_AfterBootstrap()
+    {
+        CapturingReplayWriter replay = new();
+        Harness h = new((_, _, _, _) => Task.FromResult(new FoodLlmResponse([], [])), replay);
+        h.SetFoodDays(35f);
+
+        await h.Minister.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
+        h.SetFoodDays(4f);
+        await h.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
+
+        replay.Records.Should().Contain(r => r.Path == "rules" && r.RuleTrace == "emergency_food_flag");
+        MinisterReplayRecord record = replay.Records.Single(r => r.Path == "rules" && r.RuleTrace == "emergency_food_flag");
+        record.Minister.Should().Be("Food");
+        record.Trigger.Should().Be(nameof(PlayCycleTrigger.ManualTrigger));
+        record.WakeupPayload.Should().Be("dashboard");
+        record.Briefing.Should().BeOfType<FoodBriefing>();
+        record.Context.Should().BeOfType<MinisterBriefingContext>();
+        record.Advice.Should().ContainSingle().Which.AdviceType.Should().Be("food_security");
+        record.Flags.Should().ContainSingle().Which.Domain.Should().Be("food");
+    }
+
+    [Fact]
     public async Task RuleDecision_ReplacesBootstrapAdviceSnapshot()
     {
         Harness h = new((_, _, _, _) => Task.FromResult(new FoodLlmResponse(
@@ -116,6 +138,33 @@ public sealed class FoodMinisterTests
         h.Flags.Active(FlagSeverity.Medium).Should().ContainSingle().Which.Summary.Should().Be("LLM food flag");
     }
 
+    [Fact]
+    public async Task EscalationFailure_PersistsFailedReplayRecord()
+    {
+        CapturingReplayWriter replay = new();
+        int calls = 0;
+        Harness h = new((_, _, _, _) =>
+        {
+            calls++;
+            if (calls == 1) return Task.FromResult(new FoodLlmResponse([], []));
+            throw new InvalidOperationException("quota exhausted");
+        }, replay);
+        h.SetFoodDays(35f);
+
+        await h.Minister.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
+        h.SetFoodDays(12f, wildAnimals: 2, dateTimeRaw: "5th of Decembary, 5500, 14h");
+        await h.Minister.RunPlayCycle(PlayCycleContext.CabinetRefresh, CancellationToken.None);
+
+        replay.Records.Should().Contain(r => r.Path == "llm_failed");
+        MinisterReplayRecord record = replay.Records.Single(r => r.Path == "llm_failed");
+        record.EscalationReason.Should().Contain("hunting path");
+        record.Error.Should().NotBeNull();
+        record.Error!.Type.Should().Be(nameof(InvalidOperationException));
+        record.Error.Message.Should().Be("quota exhausted");
+        record.Advice.Should().BeEmpty();
+        record.Flags.Should().BeEmpty();
+    }
+
     private static AdviceItem FoodAdvice(string id) => new(
         Id: id,
         Minister: "Food",
@@ -139,13 +188,13 @@ public sealed class FoodMinisterTests
         public MinisterOfFood Minister { get; }
         public List<AdviceItem> PublishedAdvice { get; } = [];
 
-        public Harness(LlmClient.FoodCallExecutor executor)
+        public Harness(LlmClient.FoodCallExecutor executor, IReplayCorpusWriter? replay = null)
         {
             Cache = new(Colony, new TestLogger<BriefingCache>());
             Bus.AdvicePublished += PublishedAdvice.Add;
             LlmClient llm = new(NullLogger<LlmClient>.Instance, executor);
             FoodRagRetriever retriever = new(new KnowledgeBase(), null, false, 0, NullLogger<FoodRagRetriever>.Instance);
-            Minister = new(Cache, new Rules(), new AgendaStore(), Bus, Flags, llm, retriever, NullLogger<MinisterOfFood>.Instance);
+            Minister = new(Cache, new Rules(), new AgendaStore(), Bus, Flags, llm, retriever, NullLogger<MinisterOfFood>.Instance, replay);
         }
 
         public void SetFoodDays(float days, int wildAnimals = 0, string dateTimeRaw = "5th of Aprimay, 5500, 14h")
@@ -161,6 +210,17 @@ public sealed class FoodMinisterTests
             Colony.Animals.Update(new AnimalRegistry(Enumerable.Range(0, wildAnimals)
                 .Select(i => new AnimalRecord($"a{i}", "Hare", false, 1f))
                 .ToList()));
+        }
+    }
+
+    private sealed class CapturingReplayWriter : IReplayCorpusWriter
+    {
+        public List<MinisterReplayRecord> Records { get; } = [];
+
+        public Task WriteAsync(MinisterReplayRecord record, CancellationToken ct)
+        {
+            Records.Add(record);
+            return Task.CompletedTask;
         }
     }
 }

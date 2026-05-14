@@ -411,10 +411,20 @@ Two event types are logged to `logs/decisions-YYYYMMDD.jsonl` (JSONL, one object
 Valid `trigger` values: `briefing_change` | `flag_fired` | `heartbeat` | `scheduled_wakeup`.
 For `scheduled_wakeup`, the event also includes `"wakeup_payload": "<string>"`.
 
+Refinement also writes a replay corpus under `logs/replay/<minister>-YYYYMMDD.jsonl`.
+Those records are append-only, schema-versioned, and optimized for future
+before/after benchmarking: trigger, wake payload, flag, full briefing,
+minister context, rule trace or escalation reason, RAG citations, normalized
+advice/flags, LLM metadata/raw output when present, and non-fatal error
+summaries. The writer must not change live advice behavior; persistence
+failures are warnings. The first runtime producer is Food, covering `rules`,
+`llm`, and `llm_failed` paths.
+
 **Sinks:**
 - In local repo runs, these `logs/...` paths resolve to repo-root `./logs/` even when Host starts from `Src/ApiHost/` or an IDE profile. Outside the repo layout, Host falls back to `<content-root>/logs/`.
 - `logs/rimai-YYYYMMDD.log` — human-readable rolling log (Info+).
 - `logs/decisions-YYYYMMDD.jsonl` — structured JSON, all events from `RimAI.State` and `RimAI.Ministers` namespaces (Debug+). This is the file refinement reads.
+- `logs/replay/<minister>-YYYYMMDD.jsonl` - durable replay corpus records for minister benchmarking and refinement.
 - Tests write to `logs/test-YYYYMMDD-HHmmss.jsonl` (one file per `dotnet test` invocation, shared across all test classes).
 
 ---

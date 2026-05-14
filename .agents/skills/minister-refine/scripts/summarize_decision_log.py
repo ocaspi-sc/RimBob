@@ -140,6 +140,107 @@ def read_pushbacks(repo: Path, minister: str) -> dict[str, Any]:
     }
 
 
+def replay_file_stem(minister: str) -> str:
+    chars: list[str] = []
+    for c in minister.strip().lower():
+        if c.isalnum() or c in {"-", "_"}:
+            chars.append(c)
+        elif c.isspace():
+            chars.append("-")
+    return "".join(chars) or "unknown"
+
+
+def read_replay_corpus(repo: Path, minister: str, cutoff: datetime | None) -> dict[str, Any]:
+    replay_dir = repo / "logs" / "replay"
+    stem = replay_file_stem(minister)
+    if not replay_dir.exists():
+        return {
+            "path": str(replay_dir),
+            "exists": False,
+            "files": [],
+            "records": 0,
+        }
+
+    counters: dict[str, Counter[str]] = {
+        "schema_versions": Counter(),
+        "paths": Counter(),
+        "rule_traces": Counter(),
+        "escalation_reasons": Counter(),
+        "error_types": Counter(),
+    }
+    files = sorted(replay_dir.glob(f"{stem}-*.jsonl"))
+    records = 0
+    records_with_raw_output = 0
+    records_with_guide_citations = 0
+    parse_errors = 0
+    examples: list[dict[str, Any]] = []
+
+    for path in files:
+        with path.open("r", encoding="utf-8-sig") as handle:
+            for line_no, line in enumerate(handle, start=1):
+                if not line.strip():
+                    continue
+                try:
+                    record = json.loads(line)
+                except json.JSONDecodeError:
+                    parse_errors += 1
+                    continue
+
+                captured_at = parse_timestamp(record.get("captured_at"))
+                if cutoff is not None and captured_at is not None and captured_at < cutoff:
+                    continue
+
+                records += 1
+                counters["schema_versions"][str(record.get("schema_version") or "unknown")] += 1
+                counters["paths"][str(record.get("path") or "unknown")] += 1
+                if record.get("rule_trace"):
+                    counters["rule_traces"][str(record["rule_trace"])] += 1
+                if record.get("escalation_reason"):
+                    counters["escalation_reasons"][str(record["escalation_reason"])] += 1
+
+                error = record.get("error")
+                if isinstance(error, dict) and error.get("type"):
+                    counters["error_types"][str(error["type"])] += 1
+
+                llm = record.get("llm")
+                if isinstance(llm, dict) and llm.get("raw_output"):
+                    records_with_raw_output += 1
+                citations = record.get("guide_citations")
+                if isinstance(citations, list) and len(citations) > 0:
+                    records_with_guide_citations += 1
+
+                if len(examples) < 8:
+                    examples.append({
+                        "file": str(path),
+                        "line": line_no,
+                        "captured_at": record.get("captured_at"),
+                        "path": record.get("path"),
+                        "rule_trace": record.get("rule_trace"),
+                        "escalation_reason": record.get("escalation_reason"),
+                        "advice_count": len(record.get("advice") or []),
+                        "flag_count": len(record.get("flags") or []),
+                        "error_type": error.get("type") if isinstance(error, dict) else None,
+                    })
+
+    return {
+        "path": str(replay_dir),
+        "exists": True,
+        "files": [str(p) for p in files],
+        "records": records,
+        "json_parse_errors": parse_errors,
+        "records_with_raw_output": records_with_raw_output,
+        "records_with_guide_citations": records_with_guide_citations,
+        "counts": {
+            "schema_versions": top(counters["schema_versions"]),
+            "paths": top(counters["paths"]),
+            "rule_traces": top(counters["rule_traces"]),
+            "escalation_reasons": top(counters["escalation_reasons"]),
+            "error_types": top(counters["error_types"]),
+        },
+        "examples": examples,
+    }
+
+
 def top(counter: Counter[str], limit: int = 10, minimum: int = 1) -> list[dict[str, Any]]:
     return [
         {"value": value, "count": count}
@@ -265,6 +366,7 @@ def main() -> int:
             "warnings_and_errors": top(counters["warnings_and_errors"]),
         },
         "repeated_patterns": repeated_patterns,
+        "replay_corpus": read_replay_corpus(repo, args.minister, cutoff),
         "pushbacks": read_pushbacks(repo, args.minister),
         "examples": examples,
     }

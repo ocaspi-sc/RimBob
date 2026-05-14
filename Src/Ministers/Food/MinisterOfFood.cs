@@ -17,7 +17,9 @@ public sealed class MinisterOfFood(
     FlagChannel flags,
     LlmClient llm,
     FoodRagRetriever retriever,
-    ILogger<MinisterOfFood> log) : IMinister
+    ILogger<MinisterOfFood> log,
+    IReplayCorpusWriter? replay = null,
+    RawLlmOutputStore? rawOutputs = null) : IMinister
 {
     public string Name => "Food";
 
@@ -30,6 +32,7 @@ public sealed class MinisterOfFood(
         {
             log.LogInformation("Food bootstrap: forcing first live cycle escalation");
             bool bootstrapped = await RunEscalationAsync(
+                cycle,
                 briefing,
                 context,
                 new Escalate("bootstrap_first_live_cycle", new { briefing.BriefingVersion, briefing.GameTick }),
@@ -45,13 +48,31 @@ public sealed class MinisterOfFood(
         {
             case Decision decision:
                 PublishSnapshot(decision.Advice, decision.Flags);
+                await PersistReplayAsync(new MinisterReplayRecord(
+                    SchemaVersion: 1,
+                    CapturedAt: DateTimeOffset.UtcNow,
+                    Minister: Name,
+                    Trigger: cycle.Trigger.ToString(),
+                    WakeupPayload: cycle.WakeupPayload,
+                    Flag: cycle.Flag,
+                    Path: "rules",
+                    Briefing: briefing,
+                    Context: context,
+                    RuleTrace: decision.Trace,
+                    EscalationReason: null,
+                    EscalationContext: null,
+                    GuideCitations: null,
+                    Advice: decision.Advice,
+                    Flags: decision.Flags,
+                    Error: null,
+                    Llm: null), ct);
                 log.LogInformation(
                     "Food rules decision trace={Trace} advice={AdviceCount} flags={FlagCount}",
                     decision.Trace, decision.Advice.Count, decision.Flags.Count);
                 break;
 
             case Escalate escalate:
-                await RunEscalationAsync(briefing, context, escalate, ct);
+                await RunEscalationAsync(cycle, briefing, context, escalate, ct);
                 break;
         }
     }
@@ -59,16 +80,37 @@ public sealed class MinisterOfFood(
     public Task RunRefinement(CancellationToken ct) => Task.CompletedTask;
 
     private async Task<bool> RunEscalationAsync(
+        PlayCycleContext cycle,
         FoodBriefing briefing,
         MinisterBriefingContext context,
         Escalate escalate,
         CancellationToken ct)
     {
+        DateTimeOffset llmAttemptStarted = DateTimeOffset.UtcNow;
+        IReadOnlyList<GuideCitation> citations = [];
         try
         {
-            IReadOnlyList<GuideCitation> citations = await retriever.RetrieveAsync(briefing, ct);
+            citations = await retriever.RetrieveAsync(briefing, ct);
             FoodLlmResponse response = await llm.CallFoodAsync(briefing, context, citations, ct);
             PublishSnapshot(response.Advice, response.Flags);
+            await PersistReplayAsync(new MinisterReplayRecord(
+                SchemaVersion: 1,
+                CapturedAt: DateTimeOffset.UtcNow,
+                Minister: Name,
+                Trigger: cycle.Trigger.ToString(),
+                WakeupPayload: cycle.WakeupPayload,
+                Flag: cycle.Flag,
+                Path: "llm",
+                Briefing: briefing,
+                Context: context,
+                RuleTrace: null,
+                EscalationReason: escalate.Reason,
+                EscalationContext: escalate.Context,
+                GuideCitations: citations,
+                Advice: response.Advice,
+                Flags: response.Flags,
+                Error: null,
+                Llm: BuildLlmMetadata(llmAttemptStarted)), ct);
             log.LogInformation(
                 "Food escalation reason={Reason} advice={AdviceCount} flags={FlagCount}",
                 escalate.Reason, response.Advice.Count, response.Flags.Count);
@@ -77,9 +119,48 @@ public sealed class MinisterOfFood(
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
+            await PersistReplayAsync(new MinisterReplayRecord(
+                SchemaVersion: 1,
+                CapturedAt: DateTimeOffset.UtcNow,
+                Minister: Name,
+                Trigger: cycle.Trigger.ToString(),
+                WakeupPayload: cycle.WakeupPayload,
+                Flag: cycle.Flag,
+                Path: "llm_failed",
+                Briefing: briefing,
+                Context: context,
+                RuleTrace: null,
+                EscalationReason: escalate.Reason,
+                EscalationContext: escalate.Context,
+                GuideCitations: citations,
+                Advice: [],
+                Flags: [],
+                Error: new ReplayErrorSummary(ex.GetType().Name, ex.Message),
+                Llm: BuildLlmMetadata(llmAttemptStarted)), ct);
             log.LogWarning(ex, "Food escalation failed; no advice emitted this cycle. reason={Reason}", escalate.Reason);
             return false;
         }
+    }
+
+    private Task PersistReplayAsync(MinisterReplayRecord record, CancellationToken ct) =>
+        replay?.WriteAsync(record, ct) ?? Task.CompletedTask;
+
+    private ReplayLlmMetadata? BuildLlmMetadata(DateTimeOffset since)
+    {
+        RawLlmOutputSnapshot? snapshot = rawOutputs?.Latest(Name);
+        if (snapshot is null) return null;
+        if (snapshot.CapturedAt < since) return null;
+
+        return new ReplayLlmMetadata(
+            Provider: snapshot.Provider,
+            Model: snapshot.Model,
+            CapturedAt: snapshot.CapturedAt,
+            SystemPromptChars: snapshot.SystemPromptChars,
+            UserPromptChars: snapshot.UserPromptChars,
+            Status: snapshot.Status,
+            ParseMode: snapshot.ParseMode,
+            LatencyMs: snapshot.LatencyMs,
+            RawOutput: snapshot.Text);
     }
 
     private void PublishSnapshot(IReadOnlyList<AdviceItem> advice, IReadOnlyList<AgentFlag> emittedFlags)

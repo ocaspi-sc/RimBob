@@ -76,7 +76,7 @@ Refinement must compare proposed changes against a corpus of historical minister
 
 Each replayable record should preserve enough data to rerun the minister path offline: minister, trigger/context, briefing payload or recoverable briefing ref, active flags and Agenda context, RAG citation ids when used, prompt/system-prompt version or hash, raw LLM output when the path was LLM, normalized advice/flags, feedback/Pushback, and observed outcome when available.
 
-Current local runs already write `logs/decisions-YYYYMMDD.jsonl`, and some entries include full briefing JSON. That is useful seed material, but the durable target is a structured replay corpus rather than scraping dashboard state or in-memory raw-output stores. If a refinement cannot replay a candidate because fields are missing, the correct output is a logging/corpus gap, not a rule promotion.
+Current local runs write broad audit events to `logs/decisions-YYYYMMDD.jsonl`. Food also writes a structured replay corpus to `logs/replay/food-YYYYMMDD.jsonl` for its rules, LLM, and LLM-failure paths. That corpus is the durable benchmarking input; decision logs remain useful seed material and cross-checks. If a refinement cannot replay a candidate because fields are missing, the correct output is a logging/corpus gap, not a rule promotion.
 
 Before/after comparison should report at least: corpus size, target-cluster size, unchanged non-target count, escalation-vs-rule path changes, advice type changes, priority changes, resource request/action diffs, flag diffs, schema validity, and any missing fields that reduced confidence.
 
