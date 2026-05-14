@@ -37,7 +37,7 @@ public sealed class LlmClient
         IReadOnlyList<GuideCitation> guideContext,
         CancellationToken ct);
 
-    private readonly Client?                                       _client;
+    private readonly IReadOnlyList<Client>                         _clients;
     private readonly Func<CancellationToken, Task<string?>>?       _pingExecutor;
     private readonly MayorCallExecutor?                            _mayorExecutor;
     private readonly FoodCallExecutor?                             _foodExecutor;
@@ -47,27 +47,38 @@ public sealed class LlmClient
 
     public const string DefaultModel = "gemini-2.5-flash";
 
-    public bool IsConfigured => _client is not null || _pingExecutor is not null;
+    public bool IsConfigured => _clients.Count > 0 || _pingExecutor is not null;
+    public int ConfiguredKeyCount => _clients.Count;
 
     public LlmClient(string? apiKey, PromptBuilder prompts, ILogger<LlmClient> log, RawLlmOutputStore? rawOutputs = null)
+        : this(SingleKey(apiKey), prompts, log, rawOutputs)
+    {
+    }
+
+    public LlmClient(IReadOnlyList<string> apiKeys, PromptBuilder prompts, ILogger<LlmClient> log, RawLlmOutputStore? rawOutputs = null)
     {
         _prompts    = prompts;
         _log        = log;
         _rawOutputs = rawOutputs;
         // Constructor must not throw — Host needs to boot for /api/health
         // even when the key is absent (e.g. CI smoke tests).
-        _client = string.IsNullOrWhiteSpace(apiKey) ? null : new Client(apiKey: apiKey);
+        string[] normalizedKeys = apiKeys
+            .Where(key => !string.IsNullOrWhiteSpace(key))
+            .Select(key => key.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        _clients = normalizedKeys.Select(key => new Client(apiKey: key)).ToArray();
         _pingExecutor = null;
         _mayorExecutor = null;
         _foodExecutor = null;
     }
 
-    // Test-only ctor: simulates the "no GEMINI_API_KEY set" case.
+    // Test-only ctor: simulates the no Gemini keys configured case.
     internal LlmClient(ILogger<LlmClient> log)
     {
         _log          = log;
         _prompts      = null!;
-        _client       = null;
+        _clients      = [];
         _pingExecutor = null;
         _foodExecutor = null;
         _rawOutputs   = null;
@@ -78,7 +89,7 @@ public sealed class LlmClient
     {
         _log          = log;
         _prompts      = null!;
-        _client       = null;
+        _clients      = [];
         _pingExecutor = pingExecutor;
         _mayorExecutor = null;
         _foodExecutor = null;
@@ -90,7 +101,7 @@ public sealed class LlmClient
     {
         _log           = log;
         _prompts       = null!;
-        _client        = null;
+        _clients       = [];
         _pingExecutor  = null;
         _mayorExecutor = mayorExecutor;
         _foodExecutor  = null;
@@ -101,7 +112,7 @@ public sealed class LlmClient
     {
         _log          = log;
         _prompts      = null!;
-        _client       = null;
+        _clients      = [];
         _pingExecutor = null;
         _mayorExecutor = null;
         _foodExecutor = foodExecutor;
@@ -116,7 +127,7 @@ public sealed class LlmClient
     {
         if (!IsConfigured)
         {
-            _log.LogWarning("Gemini ping skipped — GEMINI_API_KEY not set");
+            _log.LogWarning("Gemini ping skipped - no Gemini API keys configured");
             return false;
         }
 
@@ -129,11 +140,13 @@ public sealed class LlmClient
             }
             else
             {
-                Google.GenAI.Types.GenerateContentResponse response = await _client!.Models.GenerateContentAsync(
-                    model: DefaultModel,
-                    contents: "Reply with a single word: pong",
-                    cancellationToken: ct);
-                reply = response.Candidates?.FirstOrDefault()?.Content?.Parts?.FirstOrDefault()?.Text;
+                GenerateContentResult result = await GenerateContentWithFallbackAsync(
+                    "ping",
+                    client => client.Models.GenerateContentAsync(
+                        model: DefaultModel,
+                        contents: "Reply with a single word: pong",
+                        cancellationToken: ct));
+                reply = result.Response.Candidates?.FirstOrDefault()?.Content?.Parts?.FirstOrDefault()?.Text;
             }
 
             if (string.IsNullOrWhiteSpace(reply))
@@ -168,8 +181,8 @@ public sealed class LlmClient
         if (_mayorExecutor is not null)
             return await _mayorExecutor(briefing, previousAgenda, agendaDirectives, guideContext, activeFlags ?? [], ct);
 
-        if (_client is null)
-            throw new InvalidOperationException("GEMINI_API_KEY not set — cannot call Mayor LLM.");
+        if (_clients.Count == 0)
+            throw new InvalidOperationException("No Gemini API keys configured - cannot call Mayor LLM.");
 
         string userMessage = _prompts.BuildMayorUserMessage(briefing, previousAgenda, agendaDirectives, guideContext, activeFlags);
         GenerateContentConfig config = new()
@@ -180,14 +193,16 @@ public sealed class LlmClient
         };
 
         Stopwatch sw = Stopwatch.StartNew();
-        Google.GenAI.Types.GenerateContentResponse response;
+        GenerateContentResult result;
         try
         {
-            response = await _client.Models.GenerateContentAsync(
-                model:             DefaultModel,
-                contents:          userMessage,
-                config:            config,
-                cancellationToken: ct);
+            result = await GenerateContentWithFallbackAsync(
+                "Mayor",
+                client => client.Models.GenerateContentAsync(
+                    model:             DefaultModel,
+                    contents:          userMessage,
+                    config:            config,
+                    cancellationToken: ct));
             sw.Stop();
         }
         catch (Exception ex)
@@ -200,11 +215,12 @@ public sealed class LlmClient
                 latencyMs: sw.ElapsedMilliseconds,
                 status: "request_failed",
                 parseMode: "not_applicable",
+                apiKeyIndex: null,
                 text: FormatRequestFailure(ex));
             throw;
         }
 
-        string? text = response.Candidates?.FirstOrDefault()?.Content?.Parts?.FirstOrDefault()?.Text;
+        string? text = result.Response.Candidates?.FirstOrDefault()?.Content?.Parts?.FirstOrDefault()?.Text;
         if (string.IsNullOrWhiteSpace(text))
             throw new InvalidOperationException("Gemini returned empty response for Mayor agenda call.");
 
@@ -222,6 +238,7 @@ public sealed class LlmClient
                 latencyMs: sw.ElapsedMilliseconds,
                 status: "parse_failed",
                 parseMode: "strict_json",
+                apiKeyIndex: result.ApiKeyIndex,
                 text: text);
             _log.LogError(ex, "Failed to parse Mayor agenda response as JSON. Raw text:\n{Text}", text);
             throw;
@@ -238,6 +255,7 @@ public sealed class LlmClient
             latencyMs: sw.ElapsedMilliseconds,
             status: "parsed",
             parseMode: "strict_json",
+            apiKeyIndex: result.ApiKeyIndex,
             text: text);
         _log.LogInformation(
             "Mayor LLM call complete: latency={LatencyMs}ms short_term={ShortCount} long_term={LongCount} update_notes=\"{Preview}\"",
@@ -255,8 +273,8 @@ public sealed class LlmClient
         if (_foodExecutor is not null)
             return await _foodExecutor(briefing, context, guideContext, ct);
 
-        if (_client is null)
-            throw new InvalidOperationException("GEMINI_API_KEY not set - cannot call Food LLM.");
+        if (_clients.Count == 0)
+            throw new InvalidOperationException("No Gemini API keys configured - cannot call Food LLM.");
 
         string userMessage = _prompts.BuildFoodUserMessage(briefing, context, guideContext);
         GenerateContentConfig config = new()
@@ -267,14 +285,16 @@ public sealed class LlmClient
         };
 
         Stopwatch sw = Stopwatch.StartNew();
-        Google.GenAI.Types.GenerateContentResponse response;
+        GenerateContentResult result;
         try
         {
-            response = await _client.Models.GenerateContentAsync(
-                model:             DefaultModel,
-                contents:          userMessage,
-                config:            config,
-                cancellationToken: ct);
+            result = await GenerateContentWithFallbackAsync(
+                "Food",
+                client => client.Models.GenerateContentAsync(
+                    model:             DefaultModel,
+                    contents:          userMessage,
+                    config:            config,
+                    cancellationToken: ct));
             sw.Stop();
         }
         catch (Exception ex)
@@ -287,11 +307,12 @@ public sealed class LlmClient
                 latencyMs: sw.ElapsedMilliseconds,
                 status: "request_failed",
                 parseMode: "not_applicable",
+                apiKeyIndex: null,
                 text: FormatRequestFailure(ex));
             throw;
         }
 
-        string? text = response.Candidates?.FirstOrDefault()?.Content?.Parts?.FirstOrDefault()?.Text;
+        string? text = result.Response.Candidates?.FirstOrDefault()?.Content?.Parts?.FirstOrDefault()?.Text;
         if (string.IsNullOrWhiteSpace(text))
             throw new InvalidOperationException("Gemini returned empty response for Food call.");
 
@@ -314,6 +335,7 @@ public sealed class LlmClient
                 latencyMs: sw.ElapsedMilliseconds,
                 status: "parse_failed",
                 parseMode: parseMode,
+                apiKeyIndex: result.ApiKeyIndex,
                 text: text);
             _log.LogError(parseEx, "Failed to parse Food response as JSON. Raw text:\n{Text}", text);
             throw;
@@ -326,6 +348,7 @@ public sealed class LlmClient
             latencyMs: sw.ElapsedMilliseconds,
             status: normalized ? "normalized" : "parsed",
             parseMode: parseMode,
+            apiKeyIndex: result.ApiKeyIndex,
             text: text);
         _log.LogInformation(
             "Food LLM call complete: latency={LatencyMs}ms advice={AdviceCount} flags={FlagCount}",
@@ -345,12 +368,15 @@ public sealed class LlmClient
         long latencyMs,
         string status,
         string parseMode,
+        int? apiKeyIndex,
         string text)
     {
         _rawOutputs?.Record(new RawLlmOutputSnapshot(
             Minister: minister,
             Provider: "Gemini",
             Model: DefaultModel,
+            ApiKeyIndex: apiKeyIndex,
+            ApiKeyLabel: ApiKeyLabel(apiKeyIndex),
             CapturedAt: DateTimeOffset.UtcNow,
             LatencyMs: latencyMs,
             Status: status,
@@ -362,4 +388,54 @@ public sealed class LlmClient
 
     private static string FormatRequestFailure(Exception ex) =>
         $"No model response was returned.\n{ex.GetType().Name}: {ex.Message}";
+
+    private async Task<GenerateContentResult> GenerateContentWithFallbackAsync(
+        string operation,
+        Func<Client, Task<GenerateContentResponse>> call)
+    {
+        for (int i = 0; i < _clients.Count; i++)
+        {
+            try
+            {
+                GenerateContentResponse response = await call(_clients[i]);
+                return new GenerateContentResult(response, i + 1);
+            }
+            catch (Exception ex) when (i + 1 < _clients.Count && IsApiKeyFallbackCandidate(ex))
+            {
+                _log.LogWarning(
+                    ex,
+                    "Gemini {Operation} failed with quota/key error on configured key {KeyIndex}; trying next configured key.",
+                    operation,
+                    i + 1);
+            }
+        }
+
+        throw new InvalidOperationException("No Gemini API keys configured.");
+    }
+
+    private static bool IsApiKeyFallbackCandidate(Exception ex)
+    {
+        string text = ex.ToString();
+        return text.Contains("quota", StringComparison.OrdinalIgnoreCase)
+               || text.Contains("rate limit", StringComparison.OrdinalIgnoreCase)
+               || text.Contains("rate-limits", StringComparison.OrdinalIgnoreCase)
+               || text.Contains("resource_exhausted", StringComparison.OrdinalIgnoreCase)
+               || text.Contains("permission_denied", StringComparison.OrdinalIgnoreCase)
+               || text.Contains("api key not valid", StringComparison.OrdinalIgnoreCase)
+               || text.Contains("exceeded", StringComparison.OrdinalIgnoreCase)
+               || text.Contains("429", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static IReadOnlyList<string> SingleKey(string? apiKey) =>
+        string.IsNullOrWhiteSpace(apiKey) ? [] : [apiKey];
+
+    private static string? ApiKeyLabel(int? apiKeyIndex) =>
+        apiKeyIndex switch
+        {
+            null => null,
+            1 => "primary",
+            _ => $"fallback_{apiKeyIndex.Value - 1}"
+        };
+
+    private sealed record GenerateContentResult(GenerateContentResponse Response, int ApiKeyIndex);
 }

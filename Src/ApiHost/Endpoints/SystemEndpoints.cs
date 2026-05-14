@@ -58,6 +58,7 @@ public static class SystemEndpoints
                 {
                     provider = "Gemini",
                     configured = llm.IsConfigured,
+                    configured_key_count = llm.ConfiguredKeyCount,
                     status = LlmStatus(llm.IsConfigured, latestLlm),
                     last_event_at = latestLlm?.CapturedAt,
                     last_success_at = mayor.LastLlmSuccessAt,

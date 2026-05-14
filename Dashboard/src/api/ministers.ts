@@ -11,6 +11,8 @@ export interface RawLlmOutputPayload {
   minister: string;
   provider: string;
   model: string;
+  apiKeyIndex: number | null;
+  apiKeyLabel: string | null;
   capturedAt: string;
   latencyMs: number;
   status: string;

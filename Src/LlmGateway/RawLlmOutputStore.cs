@@ -49,6 +49,8 @@ public sealed record RawLlmOutputSnapshot(
     string Minister,
     string Provider,
     string Model,
+    int? ApiKeyIndex,
+    string? ApiKeyLabel,
     DateTimeOffset CapturedAt,
     long LatencyMs,
     string Status,

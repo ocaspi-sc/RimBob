@@ -59,12 +59,10 @@ builder.Services.AddSingleton<RawLlmOutputStore>();
 builder.Services.AddSingleton<LlmClient>(sp =>
 {
     var opts = sp.GetRequiredService<IOptions<RimAiOptions>>().Value;
-    // Env var wins so an explicit GEMINI_API_KEY override still works.
-    string? apiKey = Environment.GetEnvironmentVariable("GEMINI_API_KEY");
-    if (string.IsNullOrWhiteSpace(apiKey)) apiKey = opts.GeminiApiKey;
-    return new LlmClient(apiKey, sp.GetRequiredService<PromptBuilder>(),
-                                 sp.GetRequiredService<ILogger<LlmClient>>(),
-                                 sp.GetRequiredService<RawLlmOutputStore>());
+    IReadOnlyList<string> apiKeys = ResolveGeminiApiKeys(opts);
+    return new LlmClient(apiKeys, sp.GetRequiredService<PromptBuilder>(),
+                                  sp.GetRequiredService<ILogger<LlmClient>>(),
+                                  sp.GetRequiredService<RawLlmOutputStore>());
 });
 
 builder.Services.AddSingleton<ColonyState>();
@@ -132,11 +130,38 @@ builder.Services.AddSingleton<Ingest>(sp =>
 static IEmbedder? ResolveEmbedder(RimAiOptions opts, IServiceProvider sp)
 {
     if (!opts.Rag.Enabled) return null;
-    string? apiKey = Environment.GetEnvironmentVariable("GEMINI_API_KEY");
-    if (string.IsNullOrWhiteSpace(apiKey)) apiKey = opts.GeminiApiKey;
-    if (string.IsNullOrWhiteSpace(apiKey)) return null;
-    return new GeminiEmbedder(apiKey, opts.Rag.EmbeddingModel,
+    IReadOnlyList<string> apiKeys = ResolveGeminiApiKeys(opts);
+    if (apiKeys.Count == 0) return null;
+    return new GeminiEmbedder(apiKeys, opts.Rag.EmbeddingModel,
         sp.GetRequiredService<ILogger<GeminiEmbedder>>());
+}
+
+static IReadOnlyList<string> ResolveGeminiApiKeys(RimAiOptions opts)
+{
+    List<string> keys = [];
+    AddGeminiKeys(keys, SplitGeminiKeyList(Environment.GetEnvironmentVariable("GEMINI_API_KEYS")));
+    AddGeminiKeys(keys, opts.GeminiApiKeys);
+    return keys
+        .Where(key => !string.IsNullOrWhiteSpace(key))
+        .Select(key => key.Trim())
+        .Distinct(StringComparer.Ordinal)
+        .ToArray();
+}
+
+static void AddGeminiKeys(List<string> keys, IEnumerable<string>? values)
+{
+    if (values is null) return;
+    foreach (string key in values)
+    {
+        if (!string.IsNullOrWhiteSpace(key)) keys.Add(key);
+    }
+}
+
+static IReadOnlyList<string> SplitGeminiKeyList(string? raw)
+{
+    if (string.IsNullOrWhiteSpace(raw)) return [];
+    char[] separators = [';', ',', '\r', '\n'];
+    return raw.Split(separators, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 }
 
 builder.Services.AddSingleton<Mayor>();
@@ -196,11 +221,11 @@ app.Lifetime.ApplicationStarted.Register(() =>
             if (!llm.IsConfigured)
             {
                 Log.Warning("Gemini API key not set — LLM calls will fail at runtime");
-                Console.WriteLine("✗ Gemini API key not set (env GEMINI_API_KEY or RimAi.GeminiApiKey in appsettings.Local.json)");
+                Console.WriteLine("✗ Gemini API key not set (env GEMINI_API_KEYS or RimAi.GeminiApiKeys in appsettings.Local.json)");
             }
             else if (opts.PingLlmOnStartup)
             {
-                Console.WriteLine("✓ Gemini API key present");
+                Console.WriteLine($"✓ Gemini API key(s) present: {llm.ConfiguredKeyCount}");
                 using var pingCts =
                     CancellationTokenSource.CreateLinkedTokenSource(app.Lifetime.ApplicationStopping);
                 pingCts.CancelAfter(TimeSpan.FromSeconds(5));

@@ -30,7 +30,7 @@
 - Solution + project skeletons matching [`design/architecture.md`](design/architecture.md) structure (Core, Ingestion, State, LLM, Ministers, Knowledge, Host, **Dashboard**).
 - `RimApiClient` with one working endpoint.
 - RIMAPI license posture documented.
-- Google GenAI SDK wired (Gemini Developer API), `GEMINI_API_KEY` env var, and startup `LlmClient.PingAsync()` smoke check.
+- Google GenAI SDK wired (Gemini Developer API), ordered `GEMINI_API_KEYS` / `RimAi.GeminiApiKeys` config, and startup `LlmClient.PingAsync()` smoke check.
 - React+TS dashboard scaffold inside `Dashboard/`, served as static assets by Host (or via Vite dev proxy in development).
 - Host exposes `/api/health` and an empty `/api/advice/stream` SSE endpoint.
 - CI skeleton (build + test + dashboard build).

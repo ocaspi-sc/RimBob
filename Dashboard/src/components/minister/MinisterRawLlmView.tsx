@@ -46,6 +46,7 @@ export function MinisterRawLlmView({ scope }: { scope: ScopeConfig }) {
   }
 
   const parsed = tryParseJson(output.data.text);
+  const apiKeyLabel = formatApiKey(output.data.apiKeyLabel, output.data.apiKeyIndex);
 
   return (
     <div className="minister-view raw-llm-view">
@@ -58,6 +59,7 @@ export function MinisterRawLlmView({ scope }: { scope: ScopeConfig }) {
       <div className="prompt-meta">
         <span>{output.data.provider}</span>
         <span>{output.data.model}</span>
+        <span>{apiKeyLabel}</span>
         <span>{output.data.status.replace(/_/g, ' ')}</span>
         <span>{output.data.latencyMs.toLocaleString()} ms</span>
         <span>{new Date(output.data.capturedAt).toLocaleString()}</span>
@@ -77,6 +79,8 @@ export function MinisterRawLlmView({ scope }: { scope: ScopeConfig }) {
             minister: output.data.minister,
             provider: output.data.provider,
             model: output.data.model,
+            api_key_index: output.data.apiKeyIndex,
+            api_key_label: output.data.apiKeyLabel,
             captured_at: output.data.capturedAt,
             latency_ms: output.data.latencyMs,
             status: output.data.status,
@@ -88,4 +92,10 @@ export function MinisterRawLlmView({ scope }: { scope: ScopeConfig }) {
       </DisclosureSection>
     </div>
   );
+}
+
+function formatApiKey(label: string | null, index: number | null): string {
+  if (index === null) return 'api key n/a';
+  const readable = label?.replace(/_/g, ' ') ?? (index === 1 ? 'primary' : `fallback ${index - 1}`);
+  return `api key ${readable} (#${index})`;
 }

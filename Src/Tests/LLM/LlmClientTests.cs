@@ -50,23 +50,13 @@ public sealed class LlmClientTests
     }
 
     [Fact]
-    public async Task Constructor_DoesNotThrow_AndPingReturnsFalse_WhenGeminiKeyMissing()
+    public async Task Constructor_DoesNotThrow_AndPingReturnsFalse_WhenGeminiKeysMissing()
     {
-        const string keyName = "GEMINI_API_KEY";
-        var previous = Environment.GetEnvironmentVariable(keyName);
-        try
-        {
-            Environment.SetEnvironmentVariable(keyName, null);
+        var sut = new LlmClient(NullLogger<LlmClient>.Instance);
 
-            var sut = new LlmClient(NullLogger<LlmClient>.Instance);
-
-            sut.IsConfigured.Should().BeFalse();
-            (await sut.PingAsync(CancellationToken.None)).Should().BeFalse();
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable(keyName, previous);
-        }
+        sut.IsConfigured.Should().BeFalse();
+        sut.ConfiguredKeyCount.Should().Be(0);
+        (await sut.PingAsync(CancellationToken.None)).Should().BeFalse();
     }
 
     [Fact]

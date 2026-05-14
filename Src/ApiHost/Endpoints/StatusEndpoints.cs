@@ -31,6 +31,7 @@ public static class StatusEndpoints
                 server            = "ok",
                 rimapi_reachable  = colony.Economy.Version > 0,
                 llm_configured    = llm.IsConfigured,
+                llm_key_count      = llm.ConfiguredKeyCount,
                 llm_status        = LlmStatus(llm.IsConfigured, latestLlm),
                 llm_last_event_at = latestLlm?.CapturedAt,
                 llm_last_error    = LlmLastError(latestLlm),

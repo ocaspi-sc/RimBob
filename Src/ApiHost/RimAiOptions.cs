@@ -13,13 +13,12 @@ public sealed class RimAiOptions
     public bool PingLlmOnStartup { get; init; } = true;
 
     /// <summary>
-    /// Optional. Local-dev convenience: store the Gemini key in appsettings.Local.json
-    /// (gitignored) instead of the GEMINI_API_KEY env var. Program.cs bridges this into
-    /// the env var on startup so LlmClient and the rest of the system stay unchanged.
-    /// Leave empty to fall back to the env var. Never put a key in appsettings.json or
-    /// appsettings.Development.json — both are tracked.
+    /// Optional ordered Gemini keys for quota/key failures. Local dev can place
+    /// these in appsettings.Local.json; env var GEMINI_API_KEYS can provide a
+    /// semicolon/comma/newline separated list. Never put keys in appsettings.json
+    /// or appsettings.Development.json - both are tracked.
     /// </summary>
-    public string? GeminiApiKey { get; init; }
+    public string[] GeminiApiKeys { get; init; } = [];
 
     public RagOptions Rag { get; init; } = new();
 }
