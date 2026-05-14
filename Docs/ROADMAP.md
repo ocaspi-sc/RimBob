@@ -137,7 +137,7 @@
 **Scope:**
 - **Pushback** is the renamed Modify action. Semantics: the player explains in natural language why the minister is wrong, rather than editing `suggested_actions` text.
 - `FeedbackEvent` schema (memo id, action, player note, timestamp, in-game tick).
-- Each minister owns and persists its own pushback list under `Src/Cabinet/<Minister>/Pushbacks/`. Pushbacks are scoped — the Mayor doesn't see Food's pushbacks and vice versa.
+- Each minister owns and persists its own pushback list. Exact storage paths and payload shapes live in source and tests. Pushbacks are scoped — the Mayor doesn't see Food's pushbacks and vice versa.
 - Dashboard buttons + Pushback modal (free-text textarea, prompt: *"Tell the minister why he's wrong."*).
 - Per-minister pushback view in the dashboard (replaces the old "decision log" tab idea — there's no global log, only per-minister lists).
 - Pushbacks injected into the issuing minister's next prompt as a "recent player corrections" section, capped to the last N entries by age and advice priority.

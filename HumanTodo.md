@@ -136,8 +136,6 @@ See [`Docs/DESIGN.md`](Docs/DESIGN.md) decision log and Open Questions sections 
 
 Refine system prompts for agents - how systematically?
 
-Simplify / improve AGENTS.md
-
 ### Fill out guide corpus
 
 Download and create guides.

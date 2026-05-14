@@ -18,7 +18,7 @@ For the MVP, Output is only advice to player, not RIMAPI writes.
 
 1. **Advise well.** Suggestions should match what a thoughtful human player would recognise as good. The player keeps control; RimAI earns trust one accepted memo at a time.
 2. **Grounded in community knowledge.** Advice is informed by actual RimWorld guides, not just LLM training data.
-3. **Self-improving from real feedback.** Accept / Dismiss / Pushback on each memo is the primary training signal; implicit state-watching is a fallback. The system gets better the more the player uses it.
+3. **Self-improving from real feedback.** Accept / Dismiss / Pushback on each memo is the explicit training signal. The system gets better the more the player uses it.
 4. **Transparent.** Every memo carries its rationale, suggested actions, and the briefing it was based on. A single dashboard view should explain what the cabinet is recommending and why.
 5. **Cheap by default.** LLMs are called only when judgment is genuinely needed. Rules handle routine; the LLM handles exceptions.
 6. **Debuggable over clever.** Prefer deterministic, inspectable behaviour over emergent complexity.
@@ -56,7 +56,7 @@ For the MVP, Output is only advice to player, not RIMAPI writes.
 
 Two operational modes run in parallel:
 
-- **Play mode** — live game loop; ministers wake on briefing changes, evaluate rules, escalate to LLM when needed, emit `AdviceItem`s onto the AdviceBus.
+- **Play mode** — live game loop; the Mayor updates the Agenda, while feeder ministers wake on briefing changes, evaluate rules, escalate to LLM when needed, and emit `AdviceItem`s onto the AdviceBus.
 - **Refinement** — async; performed by the smart coding agent creating the system, not by the minister llm. review the decision log (future: enriched with human Pushbacks). Improve the ministers workflow: rules, system prompt, briefing.
 
 → See [`design/architecture.md`](design/architecture.md) for code structure and stack.
@@ -156,7 +156,7 @@ Decisions made and the reasoning behind them. Append; do not delete.
 | HTN / bulletin board / Labor solver deferred until first Auto graduation | Their entire purpose is to allocate pawns. Under suggest-only there is no consumer. Design docs preserve only the durable Auto-epic intent and boundaries so future work starts from prior decisions without freezing stale implementation details. |
 | Per-minister `Off / Suggest / Auto` autonomy dial named as a future construct | First-class concept in the design language even though only `Suggest` is implemented. Lets future docs reference the dial without re-introducing it; sets player expectations early. |
 | External advisor dashboard (React + TS) served by `RimAI.Host` over HTTP+SSE | Web UI iterates faster than desktop, runs cross-platform alongside the game, and reuses the SSE pattern already in play with RIMAPI. Adds a JS toolchain to the repo — accepted cost. Localhost-only auth posture. |
-| Explicit feedback only; ministers own their own pushback lists | Accept / Dismiss / **Pushback** is the entire training signal in MVP. Pushback replaces the earlier "Modify" action — instead of editing suggested-action text, the player tells the minister *why he's wrong* in natural language. Each minister persists its own scoped pushback list under `Src/Cabinet/<Minister>/Pushbacks/`; pushbacks are injected into that minister's next prompt and clustered at refinement time. **Implicit state-diff inference is dropped from MVP** — the explicit channel is load-bearing and the kind-to-field mapping was speculative. → [`design/advice.md`](design/advice.md) |
+| Explicit feedback only; ministers own their own pushback lists | Accept / Dismiss / **Pushback** is the entire training signal in MVP. Pushback replaces the earlier "Modify" action — instead of editing suggested-action text, the player tells the minister *why he's wrong* in natural language. Each minister persists its own scoped pushback list; exact storage paths and payload shapes live in source and tests. Pushbacks are injected into that minister's next prompt and clustered at refinement time. **Implicit state-diff inference is dropped from MVP** — the explicit channel is load-bearing and the kind-to-field mapping was speculative. → [`design/advice.md`](design/advice.md) |
 | LLM provider switched to Gemini Developer API via `Google.GenAI` | First-party .NET SDK with a clean migration path to Vertex AI, plus first-party embedding models for the M4 RAG slice. |
 | Gemini uses one ordered key list | Quota and key failures should not stop live advisory play when the user has a second key available. Host config resolves one ordered list from `GEMINI_API_KEYS` or `RimAi.GeminiApiKeys`; generation and RAG embedding calls try the next key only for quota/rate-limit/key failures. Secrets stay in env vars or gitignored `appsettings.Local.json`. See [`design/architecture.md`](design/architecture.md). |
 | `RimAI.Agents` split into `RimAI.LLM` + `RimAI.Ministers` | Makes dependency direction explicit (`Ministers` → `LLM`), keeps the LLM wrapper independently testable, and aligns project names with cabinet terminology. |

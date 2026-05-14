@@ -34,7 +34,7 @@ The trigger phrases below are reinforcements, not the only condition. If any of 
 | RAG, knowledge base | `Docs/design/rag.md` |
 | Evaluation, improvement loop | `Docs/design/evaluation.md` |
 | Code structure, stack, interfaces | `Docs/design/architecture.md` |
-| RIMAPI endpoints, conventions, controller catalogue | [`Docs/design/rimapi.md`](Docs/design/RimAPI.md) |
+| RIMAPI endpoints, conventions, controller catalogue | [`Docs/design/RimAPI.md`](Docs/design/RimAPI.md) |
 | Food minister, food chain, harvesting/cooking/storage | `Docs/design/ministers/food.md` |
 | Specific minister | `Docs/design/ministers/<name>.md` |
 | HTN, planning *(deferred — Auto epic)* | `Docs/design/planning.md` |
@@ -44,6 +44,8 @@ If a decision affects multiple docs, update the most specific one and add a cros
 
 **When creating a new design doc, also add a row to the routing table above** so future sessions can find it.
 
+**Design docs should not mirror code.** Use them for durable decisions, ownership boundaries, runtime contracts, and open questions. Exact class signatures, DTO fields, endpoint payloads, fixture schemas, enum inventories, and current rule lists belong in source and tests.
+
 ---
 
 ## Session discipline
@@ -51,6 +53,7 @@ If a decision affects multiple docs, update the most specific one and add a cros
 - **At session start:** read `Docs/DESIGN.md`, `HumanTodo.md`, and any doc relevant to the session's focus.
 - **At session end:** offer to update `HumanTodo.md` with any new tasks uncovered.
 - **Agent plans location:** store agent-created plans in `/.plans`.
+- **Question-heavy prompts:** when the user asks conceptual, design, "should we", "why", or "what about" questions, answer/review first and don't rush to implementation. Only change code when the user clearly asks for implementation; still update docs if the discussion creates or changes a design decision.
 - **Design sessions:** focus is exploration and documentation. Don't write code unless asked.
 - **Build sessions:** focus is implementation. Don't redesign unless a blocker is found.
 - **After build verification:** run RimAI again and verify the Host is reachable, especially if the build required stopping a live `RimAI.Host` process.
@@ -61,11 +64,11 @@ If a decision affects multiple docs, update the most specific one and add a cros
 
 ## Code conventions
 
-- Use `// TODO:` comments liberally in code files to mark known gaps, unverified field names, deferred writes, and anything that needs revisiting before the next slice ships. TODOs are the audit surface between slices.
+- Use `// TODO:` comments for known gaps, unverified field names, deferred writes, and anything with concrete revisit value before the next slice ships. TODOs are the audit surface between slices; avoid filler TODOs.
 - All projects use `.NET 9`, `C#` latest features.
 - Async everywhere that touches I/O.
 - No code in `RimAI.Core` that takes external dependencies — it's pure domain types.
-- Every new minister gets its own directory under `Src/Cabinet/<Name>/`.
+- Every new minister gets its own directory under `Src/Ministers/<Name>/`.
 - `Rules.cs` is the first file in every minister directory. It must compile and have tests before the LLM is wired.
 - Fixture JSON files live in `Src/Tests/<MinisterName>/Fixtures/`.
 - avoid using var for types
@@ -84,11 +87,11 @@ When in doubt about architecture, read `Docs/DESIGN.md` first.
 ## Important constraints
 
 - **Suggest by default; autonomy is per-minister and opt-in.** MVP ships with every advisor in `Suggest`; only `Suggest` is honored. See `Docs/design/advice.md`.
-- **Output is `AdviceItem`s, not actions.** Ministers do not call RIMAPI write endpoints in MVP.
+- **Output is advice, not actions.** The Mayor publishes the Agenda; feeder ministers publish `AdviceItem`s. No minister calls RIMAPI write endpoints in MVP.
 - **No direct minister-to-minister communication.** All coordination is flags; CoS arbitrates; Mayor synthesises.
 - **LLMs are called only on escalation.** Rules handle the common case.
 - **v1: human approval required for rule promotion.** Auto-approve is a post-MVP feature.
 - **Briefings are the quality lever.** Keep them tight (~500 tokens). Derived facts belong in the state store, not in the LLM prompt.
-- **Player Accept / Dismiss / Modify is the primary refinement signal.** Implicit state-diff is fallback.
+- **Player Accept / Dismiss / Pushback is the explicit refinement signal.** Implicit state-diff feedback is out of MVP.
 - **Dashboard is localhost-only.** Host binds `127.0.0.1`. Never `0.0.0.0`.
 - **Deferred (Auto epic):** HTN planner, bulletin board, Labor solver, RIMAPI write coverage, "only Labor touches pawn allocation." Re-engaged at M7. Don't implement before then.
