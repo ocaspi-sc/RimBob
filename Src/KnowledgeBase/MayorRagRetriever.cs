@@ -13,13 +13,7 @@ namespace RimAI.Knowledge;
 /// </summary>
 public sealed class MayorRagRetriever
 {
-    private const int SnippetMaxChars = 320;
-
-    private readonly KnowledgeBase           _kb;
-    private readonly IEmbedder?              _embedder;
-    private readonly int                     _topK;
-    private readonly bool                    _enabled;
-    private readonly ILogger<MayorRagRetriever> _log;
+    private readonly RagRetriever<MayorBriefing> _retriever;
 
     public MayorRagRetriever(
         KnowledgeBase           kb,
@@ -28,86 +22,23 @@ public sealed class MayorRagRetriever
         int                     topK,
         ILogger<MayorRagRetriever> log)
     {
-        _kb       = kb;
-        _embedder = embedder;
-        _enabled  = enabled && embedder is not null;
-        _topK     = topK > 0 ? topK : 3;
-        _log      = log;
+        _retriever = new RagRetriever<MayorBriefing>(
+            kb,
+            embedder,
+            enabled,
+            RetrievalProfile.Mayor.WithConfiguredTopK(topK),
+            new MayorRagQueryBuilder(),
+            log);
     }
 
-    public bool Enabled => _enabled;
+    public bool Enabled => _retriever.Enabled;
 
-    public async Task<IReadOnlyList<GuideCitation>> RetrieveAsync(
+    public Task<IReadOnlyList<GuideCitation>> RetrieveAsync(
         MayorBriefing         briefing,
         IReadOnlyList<string> agendaDirectives,
-        CancellationToken     ct)
-    {
-        if (!_enabled || _kb.Count == 0 || _embedder is null) return [];
+        CancellationToken     ct) =>
+        _retriever.RetrieveAsync(briefing, agendaDirectives, ct);
 
-        string query = BuildQuery(briefing, agendaDirectives);
-        float[] queryEmbedding;
-        try
-        {
-            queryEmbedding = await _embedder.EmbedAsync(query, ct);
-        }
-        catch (Exception ex)
-        {
-            _log.LogWarning(ex, "Mayor retrieval embedding failed; proceeding without RAG this turn.");
-            return [];
-        }
-
-        IReadOnlyList<Chunk> hits = _kb.Retrieve(queryEmbedding, _topK);
-        List<GuideCitation> guideCitations = new(hits.Count);
-        for (int i = 0; i < hits.Count; i++)
-        {
-            Chunk c = hits[i];
-            guideCitations.Add(new GuideCitation(
-                CiteId:     $"g{i + 1}",
-                SourcePath: c.Meta.SourcePath,
-                Heading:    c.Meta.SectionHeading,
-                Snippet:    Truncate(c.Text, SnippetMaxChars)));
-        }
-
-        _log.LogInformation(
-            "Mayor RAG: retrieved {Count} chunks (topK={TopK}, query={QueryChars} chars)",
-            guideCitations.Count, _topK, query.Length);
-
-        return guideCitations;
-    }
-
-    public static string BuildQuery(MayorBriefing b, IReadOnlyList<string> agendaDirectives)
-    {
-        List<string> parts = new(8);
-
-        if (b.Date.Quadrum is not null && b.Date.Day is not null)
-            parts.Add($"Y{b.Date.Year ?? 0} {b.Date.Quadrum} day {b.Date.Day}.");
-        if (b.Season.CurrentSeason is not null)
-            parts.Add($"Season: {b.Season.CurrentSeason}.");
-        if (b.Season.DaysToWinter is { } dtw)
-            parts.Add($"Days to winter: {dtw}.");
-
-        parts.Add($"Colonists: {b.Colonists.Count}; mood {b.Mood.AverageMood:F2}; downed {b.Medical.Downed}.");
-        if (b.Food.EstimatedDaysOfFood is { } days)
-            parts.Add($"Food: {days:F1} days; stockpile {b.Food.EstimatedFoodUnitsInStockpile}.");
-        if (b.Threat.ActiveRaid)
-            parts.Add($"Active raid: {b.Threat.HostileLordCount} hostile groups, {b.Threat.TotalThreatPoints:F0} threat points.");
-        parts.Add($"Wealth: {b.Wealth.Colony:F0}.");
-        parts.Add($"Weather: {b.Weather.Def}, {b.Weather.TemperatureC:F1}°C.");
-        if (b.Research.CurrentProject is not null)
-            parts.Add($"Research: {b.Research.CurrentProject}.");
-
-        foreach (string directive in agendaDirectives)
-            parts.Add(directive);
-
-        parts.Add("Which RimWorld guide passages give the most relevant strategic advice?");
-        return string.Join(' ', parts);
-    }
-
-    private static string Truncate(string text, int max)
-    {
-        if (text.Length <= max) return text;
-        int cut = text.LastIndexOf(' ', Math.Min(max, text.Length - 1));
-        if (cut < max / 2) cut = max;
-        return text[..cut].TrimEnd() + "…";
-    }
+    public static string BuildQuery(MayorBriefing b, IReadOnlyList<string> agendaDirectives) =>
+        MayorRagQueryBuilder.Build(b, agendaDirectives);
 }

@@ -202,6 +202,8 @@ Verification:
 
 ## Phase 5 - Generalize RAG retrieval
 
+Status: complete on 2026-05-15.
+
 Problem:
 
 Mayor and Food RAG retrievers duplicate enablement checks, embedding, top-K retrieval, citation creation, and snippet truncation.
@@ -224,6 +226,20 @@ Implementation order:
 Acceptance:
 
 - A new minister can add RAG by defining a query builder and profile.
+
+Implementation result:
+
+- Expanded `RetrievalProfile` with minister name, citation prefix, top-K, snippet length, and snippet suffix.
+- Added shared `RagRetriever<TBriefing>` for enablement checks, embedding, top-K retrieval, citation creation, snippet truncation, and retrieval logging.
+- Added `MayorRagQueryBuilder` and `FoodRagQueryBuilder` while keeping the old static `BuildQuery` entry points.
+- Kept the existing `MayorRagRetriever` and `FoodRagRetriever` constructor surfaces as compatibility wrappers.
+- Added focused Food profile coverage and query-builder compatibility tests.
+
+Verification:
+
+- `dotnet test Src\Tests\RimAI.Tests.csproj --no-restore` passed: 133/133.
+- `dotnet build Src\RimAI.sln --no-restore` passed with 0 warnings.
+- Host was restarted from the rebuilt output and `GET http://127.0.0.1:5000/api/system/health` returned 200.
 
 ## Phase 6 - Split ingestion mapping from orchestration
 
@@ -308,10 +324,9 @@ Acceptance:
 
 ## Suggested execution order
 
-1. Phase 5 - RAG retriever generalization.
-2. Phase 6 - ingestion mapper extraction.
-3. Phase 7 - derivation helpers.
-4. Phase 8 - briefing cache generalization.
+1. Phase 6 - ingestion mapper extraction.
+2. Phase 7 - derivation helpers.
+3. Phase 8 - briefing cache generalization.
 
 Completed:
 
@@ -319,3 +334,4 @@ Completed:
 - Phase 2 - LLM normalization split.
 - Phase 3 - minister registry.
 - Phase 4 - endpoint coverage catalog.
+- Phase 5 - RAG retriever generalization.
