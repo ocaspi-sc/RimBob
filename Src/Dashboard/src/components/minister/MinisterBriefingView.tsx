@@ -1,4 +1,4 @@
-import { fetchBriefing } from '../../api/client';
+import { fetchBriefing } from '../../api/ministers';
 import type { ScopeConfig } from '../../dashboard/scopes';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { CoverageBadge } from '../shared/DataCoverage';

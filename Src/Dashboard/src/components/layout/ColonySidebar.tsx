@@ -4,12 +4,14 @@ import { MetricCard } from '../shared/MetricCard';
 
 export function ColonySidebar({
   error,
+  loadedAt,
   snapshot,
 }: {
   error: string | null;
+  loadedAt: string | null;
   snapshot: ColonySnapshot | null;
 }) {
-  if (error) {
+  if (error && !snapshot) {
     return (
       <aside className="colony-sidebar panel-shell">
         <EmptyState code="COLONY SNAPSHOT FAILED">{error}</EmptyState>
@@ -80,8 +82,11 @@ export function ColonySidebar({
         )}
       </section>
 
-      <footer className="sidebar-footer">
-        briefing v{snapshot.briefingVersion}
+      <footer className={`sidebar-footer ${error ? 'warn' : ''}`}>
+        <span>briefing v{snapshot.briefingVersion}{loadedAt ? ` | updated ${formatLoadedAt(loadedAt)}` : ''}</span>
+        {error && (
+          <strong role="status">Snapshot poll failed; showing last successful data.</strong>
+        )}
       </footer>
     </aside>
   );
@@ -113,4 +118,10 @@ function formatDate(snapshot: ColonySnapshot): string {
     return `${date.quadrum} ${date.day}, Y${date.year}`;
   }
   return date.raw;
+}
+
+function formatLoadedAt(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }

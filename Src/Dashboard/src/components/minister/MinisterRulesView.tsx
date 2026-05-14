@@ -1,4 +1,4 @@
-import { fetchTrace } from '../../api/client';
+import { fetchTrace } from '../../api/ministers';
 import type { ScopeConfig } from '../../dashboard/scopes';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
 import type { AdviceItem } from '../../types/advice';

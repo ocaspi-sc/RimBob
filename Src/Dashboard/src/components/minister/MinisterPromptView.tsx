@@ -1,4 +1,4 @@
-import { fetchPrompt } from '../../api/client';
+import { fetchPrompt } from '../../api/ministers';
 import type { ScopeConfig } from '../../dashboard/scopes';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { DisclosureSection } from '../shared/DisclosureSection';

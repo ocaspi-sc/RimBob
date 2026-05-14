@@ -1,4 +1,4 @@
-import { fetchRawLlmOutput } from '../../api/client';
+import { fetchRawLlmOutput } from '../../api/ministers';
 import type { ScopeConfig } from '../../dashboard/scopes';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { DisclosureSection } from '../shared/DisclosureSection';
