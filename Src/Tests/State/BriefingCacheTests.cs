@@ -1,5 +1,6 @@
 using FluentAssertions;
 using RimAI.Core.Aggregates;
+using RimAI.Core.Briefings;
 using RimAI.State;
 using RimAI.Tests.Infrastructure;
 
@@ -60,5 +61,40 @@ public sealed class BriefingCacheTests
 
         s.Economy.Update(new EconomyLedger(1, 0, "", "", false, ""));
         cache.GetMayorBriefing().Should().NotBeSameAs(afterMap);
+    }
+
+    [Fact]
+    public void GetFoodBriefing_NoVersionChange_ReturnsSameInstance()
+    {
+        ColonyState state = new();
+        BriefingCache cache = new(state, new TestLogger<BriefingCache>());
+
+        FoodBriefing first = cache.GetFoodBriefing();
+        FoodBriefing second = cache.GetFoodBriefing();
+
+        second.Should().BeSameAs(first);
+    }
+
+    [Fact]
+    public void GetFoodBriefing_AfterAggregateUpdate_ReturnsNewInstance()
+    {
+        ColonyState state = new();
+        BriefingCache cache = new(state, new TestLogger<BriefingCache>());
+
+        FoodBriefing first = cache.GetFoodBriefing();
+        state.Resources.Update(new ResourceSummary(
+            TotalItems: 10,
+            TotalMarketValue: 0f,
+            FoodTotal: 6,
+            TotalNutrition: 9.6f,
+            MealsCount: 2,
+            RawFoodCount: 4,
+            MedicineTotal: 0,
+            WeaponCount: 0,
+            WeaponValue: 0f));
+        FoodBriefing second = cache.GetFoodBriefing();
+
+        second.Should().NotBeSameAs(first);
+        second.BriefingVersion.Should().Be(2);
     }
 }

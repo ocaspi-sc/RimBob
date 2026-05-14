@@ -327,6 +327,8 @@ Verification:
 
 ## Phase 8 - Generalize briefing cache entries
 
+Status: complete on 2026-05-15.
+
 Problem:
 
 `BriefingCache` has repeated cache/recompute/version/logging flow for each briefing type. This will get noisier as Construction and Defense arrive.
@@ -346,6 +348,20 @@ Acceptance:
 
 - Adding a new briefing does not require duplicating the full cache pattern.
 
+Implementation result:
+
+- Added generic `CachedBriefing<TBriefing>` for version comparison, recompute versioning, changed-aggregate detection, and debug logging.
+- `BriefingCache` now owns named Mayor/Food cache entries and preserves `GetMayorBriefing()` / `GetFoodBriefing()` as the public methods.
+- Added Food briefing cache tests for cache hits and aggregate invalidation.
+- Preserved existing Mayor cache invalidation and structured logging behavior.
+
+Verification:
+
+- `dotnet test Src\Tests\RimAI.Tests.csproj --no-restore` passed: 142/142.
+- `dotnet build Src\RimAI.sln --no-restore` passed with 0 warnings.
+- Host was restarted from the rebuilt output and `GET http://127.0.0.1:5000/api/system/health` returned 200.
+- `GET http://127.0.0.1:5000/api/ministers` returned 200.
+
 ## Guardrails
 
 - Keep `RimAI.Core` pure.
@@ -357,7 +373,7 @@ Acceptance:
 
 ## Suggested execution order
 
-1. Phase 8 - briefing cache generalization.
+All recommended refactoring phases are complete.
 
 Completed:
 
@@ -368,3 +384,4 @@ Completed:
 - Phase 5 - RAG retriever generalization.
 - Phase 6 - ingestion mapper extraction.
 - Phase 7 - derivation helpers.
+- Phase 8 - briefing cache generalization.
