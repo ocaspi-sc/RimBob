@@ -1,188 +1,147 @@
-# RimAI — Knowledge Base and RAG
+# RimAI - Knowledge Base and RAG
 
-> **Living document.** See `CLAUDE.md` for update rules.
+> **Living document.** See `AGENTS.md` for update rules.
+> This doc records retrieval policy and guide-corpus decisions. Exact classes,
+> config keys, chunking implementation, embedding model names, cache files, and
+> API payloads live in source and tests.
 
 ---
 
 ## Purpose
 
-Ground minister reasoning in actual RimWorld community knowledge rather than relying on LLM training data alone. Game mechanics and community-optimal strategies are ingested once at startup and retrieved at LLM call time.
+Ground minister reasoning in actual RimWorld community knowledge rather than
+relying on LLM training data alone. Game mechanics and community-optimal
+strategies are ingested from curated guide docs and retrieved when an LLM
+escalation needs them.
+
+RAG supports judgment. It must not replace live state, deterministic rules, or
+briefing-derived facts.
 
 ---
 
-## Two-tier content strategy
+## Two-Tier Content Strategy
 
-**Tier 1 — System prompt (evergreen content)**
-Distilled, stable strategic knowledge baked into each minister's system prompt. Cached at the LLM API layer (prompt caching). Does not hit the vector store.
+### Tier 1: System Prompt
 
-- Food: crop choice rules, seasonal priorities, food math
-- Defense: raid tier benchmarks, killbox principles, weapon recommendations
-- Construction: build order heuristics, material choices, power math
-- Welfare: mood modifier sources, recreation building efficiency
-- Mayor: two-year strategic plan (Y1-Y2 guide)
+Evergreen strategic knowledge can live in minister system prompts when it is
+stable, compact, and broadly useful.
 
-**Tier 2 — RAG retrieval (long-tail)**
-Specific, situational, or detailed content retrieved at call time. Used when the situation likely needs guide knowledge that isn't in the system prompt.
+Examples:
 
-- Specific event handling (infestations, mechanoid clusters, toxic fallout)
-- DLC-specific mechanics (Royalty quests, Biotech genes, Ideology rituals)
-- Edge-case farm decisions (devilstrand timing, drug crop yield math)
-- Defense against unusual raid compositions
+- Food: crop choice principles, seasonal priorities, food math.
+- Defense: raid benchmarks, killbox principles, weapon guidance.
+- Construction: build order, materials, power heuristics.
+- Welfare: mood and recreation principles.
+- Mayor: early colony strategic frame.
 
----
+Tier 1 should stay concise. Do not paste whole guides into prompts.
 
-## Implementation
+### Tier 2: Retrieval
 
-### Mayor data flow
+Specific, situational, or long-tail knowledge is retrieved at LLM call time.
 
-```mermaid
-flowchart TD
-    RimAPI["RIMAPI read endpoints"] --> Dispatcher["IngestionDispatcher"]
-    Dispatcher --> State["ColonyState aggregates"]
-    State --> Derivation["MayorBriefingDerivation"]
-    Derivation --> Briefing["MayorBriefing<br/>derived colony facts"]
+Examples:
 
-    Briefing --> Rules["MayorAgendaRules"]
-    Rules --> Directives["agenda_directives<br/>rule-generated constraints"]
-
-    Briefing --> Query["MayorRagRetriever.BuildQuery"]
-    Directives --> Query
-    Query --> QueryEmbedding["Gemini query embedding"]
-
-    Guides["Docs/guides/**/*.md"] --> Ingest["Ingest.SplitByHeadings"]
-    Ingest --> ChunkEmbedding["Gemini chunk embeddings"]
-    ChunkEmbedding --> Cache["var/embeddings cache"]
-    Cache --> KB["KnowledgeBase<br/>in-process cosine store"]
-
-    QueryEmbedding --> KB
-    KB --> GuideCitations["GuideCitation[]<br/>g1, g2, ... snippets"]
-
-    Briefing --> Prompt["PromptBuilder"]
-    Directives --> Prompt
-    GuideCitations --> Prompt
-    Prompt --> LLM["Mayor LLM call"]
-    LLM --> AgendaInput["MayorAgendaInput<br/>may include item cite_ids"]
-    GuideCitations --> Stamp["Server stamps full guide_citations"]
-    AgendaInput --> Stamp
-    Stamp --> Agenda["MayorAgenda"]
-    Agenda --> Store["AgendaStore + AdviceBus"]
-    Store --> Dashboard["Dashboard / SSE"]
-```
-
-`MayorBriefingDerivation` answers "what is true about the colony?" and writes structured facts. `MayorAgendaRules` answers "what must the Mayor pay attention to?" and writes agenda directives. `MayorRagRetriever` uses both the facts and directives to retrieve guide passages before the Mayor LLM call.
-
-### In-process cosine store
-
-No vector DB framework. Small corpus; simple store is sufficient and debuggable.
-
-```csharp
-public class KnowledgeBase
-{
-    private List<Chunk> _chunks;
-
-    record Chunk(float[] Embedding, string Text, ChunkMetadata Meta);
-
-    public IEnumerable<string> Retrieve(float[] queryEmbedding, int topK = 5)
-        => _chunks
-            .OrderByDescending(c => CosineSimilarity(c.Embedding, queryEmbedding))
-            .Take(topK)
-            .Select(c => c.Text);
-
-    static float CosineSimilarity(float[] a, float[] b) { ... }
-}
-```
-
-On-disk JSON cache of embeddings keyed by chunk hash (SHA-256 of text content). Re-runs don't re-embed unless content changes.
-
-### Upgrade path
-
-If corpus exceeds ~5,000 chunks or query latency becomes noticeable, swap `KnowledgeBase` backend to Qdrant or sqlite-vss. Interface stays the same; only the implementation changes.
+- Infestations, mechanoid clusters, toxic fallout.
+- DLC-specific mechanics.
+- Edge-case crop decisions.
+- Unusual raid compositions.
+- Detailed guide snippets that would bloat a system prompt.
 
 ---
 
-## Guide corpus
+## Retrieval Flow
 
-```
-Docs/guides/
-├── strategic-plan-y1-y2.md          // Y1-Y2 colony strategy, distilled
-└── beginner/
-    ├── beginner-survival-tips.md     // Steam guide (1.4, 2023) — colonist setup, research path
-    ├── survival-tactics.md           // rimworldhub.com — first 15 min, base layout, mood breaks
-    ├── wealth-management.md          // gamepadsquire.com — raid-point math, trade beacons, 60/140 rule
-    ├── killbox-design.md             // thegamer.com — 10 killbox design principles
-    ├── first-steps.md                // bisecthosting.com — scenario selection, 8-step build order
-    ├── tips-and-tricks.md            // blogs.plitch.com — 11 tips
-    └── failed-fetches.md             // wiki URLs blocked by 403 — copy manually
-```
+At design level:
 
-`Ingest.cs` points to this path via config — `Src/KnowledgeBase/` stays pure C# infrastructure.
+1. State store derives a minister briefing.
+2. Rules decide whether they can handle the situation.
+3. If escalation needs guide knowledge, the retriever builds a query from live
+   facts, rule directives, and minister context.
+4. Relevant guide chunks are passed into the LLM prompt.
+5. Returned advice may cite guide ids.
+6. The server stamps retriever-provided citation metadata onto the final output
+   so the dashboard can render evidence.
 
-Each minister session should identify which guides are most relevant and add them. Suggested additions:
+Exact retriever classes, chunk metadata, embedding calls, and cache behavior are
+implementation details.
 
-| Minister | Guides to add |
+---
+
+## Store And Cache Policy
+
+The current guide corpus is small enough for an in-process cosine store. Avoid
+external vector infrastructure until corpus size, latency, or tooling demands
+it.
+
+Embedding cache behavior must be deterministic and debuggable: unchanged guide
+text should not be re-embedded on every run, and stale cache handling should be
+visible in diagnostics.
+
+If the corpus grows large enough that local retrieval becomes slow or awkward,
+revisit Qdrant, sqlite-vss, or another vector backend behind the same design
+contract.
+
+---
+
+## Guide Corpus
+
+The guide corpus lives under `Docs/guides/`. Source code should treat guides as
+repo docs/content, not as C# infrastructure.
+
+Each minister session should identify which guides matter for that minister and
+add them deliberately. Suggested areas:
+
+| Minister | Guide areas |
 |---|---|
-| Food | RimWorld wiki crop tables, food math guide |
-| Defense | Killbox guide, raid composition wiki, mechanoid guide |
-| Construction | Power math, room stats (beauty, cleanliness), biome-specific tips |
-| Welfare | Mood modifier reference, recreation building guide |
-| Mayor | General strategy tier list, wealth management wiki page |
+| Food | crop tables, food math, freezer/cooking policy |
+| Defense | killboxes, raids, mechanoids, weapons |
+| Construction | power math, room stats, biome-specific build concerns |
+| Welfare | mood modifiers, recreation, schedules |
+| Mayor | general strategy, wealth pressure, early-game pacing |
+
+Guide provenance and freshness matter. When a guide is copied or summarized,
+record enough source context that a future agent can refresh or challenge it.
 
 ---
 
-## Retrieval per minister
+## Retrieval Per Minister
 
-Each minister has a retrieval profile — a query template and topic filter:
+Each minister may have a retrieval profile: topic filters, a query strategy,
+result count, and whether retrieval is required for a particular escalation.
 
-```csharp
-public class RetrievalProfile
-{
-    public string[] TopicFilters  { get; }  // e.g. ["food", "farming", "hunting"]
-    public string   QueryTemplate { get; }  // "{situation} in {season}, what should I do?"
-    public int      TopK          { get; }  // default 3
-    public bool     RequiredForEscalation { get; }  // skip retrieval on rules path
-}
-```
-
-Retrieval only runs on the LLM escalation path. Rules evaluations don't use RAG.
+Rules evaluations do not need RAG. Retrieval belongs on the LLM escalation path
+unless a specific rule is intentionally asking for guide-backed judgment.
 
 ---
 
-## When a rule needs guide knowledge
+## Guide-Knowledge Escalation
 
-A rule can flag that it needs guide knowledge before it can fire:
+Rules can decide that a situation needs guide knowledge rather than firing a
+local heuristic. The escalation reason should make the missing judgment clear,
+for example crop timing, unusual threat response, or biome-specific recovery.
 
-```csharp
-// In Food Rules.cs
-if (briefing.Season == Season.Fall && briefing.DaysToWinter < 15)
-{
-    // This decision benefits from guide knowledge — escalate with context
-    return new Escalate(
-        reason: "First devilstrand harvest decision — guide knowledge needed",
-        context: new { briefing.DevilstrandGrowth, briefing.DaysToWinter }
-    );
-}
-```
-
-The escalation reason flags that RAG retrieval for "devilstrand harvest timing" should be included in the LLM prompt.
+The LLM may use guide context to explain or choose among options, but it must
+not invent live facts that the briefing did not provide.
 
 ---
 
-## M2 implementation (resolved decisions)
+## M2 Resolved Design
 
-- **Embedding model:** Gemini `gemini-embedding-001` via `Google.GenAI` 1.6.1. Configured under `RimAi:Rag:EmbeddingModel`. (`text-embedding-004` was the original choice but is not exposed on the v1beta endpoint that the SDK currently targets.) 3072-dim by default; free tier handles the current ~50-chunk corpus.
-- **Chunking:** semantic by H1/H2/H3 markdown headings. Sections exceeding `Ingest.MaxChunkChars` (≈ 800 tokens) are split on paragraph boundaries; deeper headings (H4+) stay inside the parent chunk. Implementation: `Src/KnowledgeBase/Ingest.cs::SplitByHeadings`.
-- **Cache:** SHA-256-keyed JSON files under `var/embeddings/` (configurable via `RimAi:Rag:CacheRoot`). Append-only for M2 — corpus is small; GC is post-MVP.
-- **Retrieval:** `MayorRagRetriever` builds a query string from the briefing (date, season, food, threat, wealth, weather, research, plus agenda directives) and pulls `topK` chunks. Disabled (or missing-key) cleanly short-circuits to an empty list — the Mayor still runs.
-- **Tier 1 status:** evergreen prompt distillation is not part of the shipped M2 implementation. The Mayor currently consumes guide knowledge through Tier 2 `guide_context[]`; distillation is a follow-up if prompt traces show under-use of retrieved passages.
+- Mayor RAG is live through Tier 2 retrieval.
+- Retrieved guide context is passed to the Mayor prompt.
+- Server-stamped guide citations give the dashboard enough evidence to render
+  source snippets even when the LLM omits citations.
+- Missing or disabled retrieval should degrade cleanly: the Mayor can still run
+  without guide context.
+- Tier 1 prompt distillation remains a follow-up if prompt traces show the Mayor
+  underusing retrieved passages.
 
-### GuideCitation rendering
+---
 
-Each retrieved chunk becomes a `GuideCitation { cite_id, source_path, heading, snippet }` (snippet truncated to ~320 chars). The Mayor's prompt receives them as a `guide_context[]` array; the LLM may attach `cite_id`s to specific `short_term[]` / `long_term[]` items via the optional `cite_ids` field. The Mayor's `MayorAgenda.guide_citations[]` is server-stamped from the retriever's output regardless of what the LLM emits, so the dashboard always has the snippet text to render.
+## Open Questions
 
-When `RimAi:Rag:Enabled` is `false`, retrieval is skipped, `guide_context` is omitted from the prompt, and `MayorAgenda.guide_citations` is empty.
-
-## Open questions
-
-- [ ] Guide freshness: RimWorld updates change mechanics. How do we flag stale guide content?
-- [ ] Per-minister guide curation: who decides which guides are relevant? Add to each minister's session scope (re-engaged at M3 when Food lands).
-- [ ] Tier 1 (evergreen content baked into system prompts): not yet implemented — Mayor still relies on Tier 2 retrieval for guide knowledge. Revisit once we measure the Mayor under-using Tier 2 hits.
+- [ ] How do we flag stale guide content after RimWorld updates?
+- [ ] Who approves minister-specific guide additions?
+- [ ] When should evergreen knowledge move from retrieval into a system prompt?
+- [ ] What corpus size or latency threshold justifies a vector-store upgrade?

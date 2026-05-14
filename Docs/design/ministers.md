@@ -1,208 +1,157 @@
-# RimAI — Minister Design
+# RimAI - Minister Design
 
-> **Living document.** See `CLAUDE.md` for update rules.
+> **Living document.** See `AGENTS.md` for update rules.
+> This doc records durable minister behavior and domain boundaries. Exact C#
+> signatures, enum members, fixture JSON shape, and rule helper names live in
+> source and tests.
 
 ---
 
-## The universal minister shape
+## Universal Minister Shape
 
-Every minister — from Labor to Mayor — has the same structure. What differs is the escalation rate and the domain.
+Every minister has the same broad shape:
 
-```
-Minister
-├── Briefing          focused state snapshot, ~500 tokens, computed by state store
-├── Rules layer       deterministic code; handles majority of decisions
-├── LLM call          judgment; invoked only on escalation
-├── Decision log      every decision recorded with inputs, path, outcome
-└── Refinement        same minister, different context; reviews log, promotes rules
-```
+- A focused briefing computed by the state store.
+- A deterministic rules layer for common cases.
+- LLM escalation for judgment calls.
+- Decision and replay logging for audit and refinement.
+- A refinement mode that proposes rule, prompt, briefing, fixture, or RAG
+  changes from real prior behavior.
 
-### Two operational modes
+What differs by minister is the domain, escalation rate, and advice vocabulary.
 
-**Play mode** (live game, suggest-only):
-```
-PlayCycleContext trigger arrives
-  → Minister.RunPlayCycle(context)
-  → Rules.Evaluate(briefing)
-  → RulesResult.Decision(advice, flags)              →  emit to AdviceBus + flag channel
-  → RulesResult.Decision(... ScheduledWakeup = ...)  →  also registers a future wakeup
-  → RulesResult.Escalate(reason)                     →  LLM call → emit to AdviceBus + flag channel
-```
+---
 
-**Play-cycle context:** ministers are woken with a typed `PlayCycleContext`, not via hidden runtime services or minister-specific side channels.
+## Play Mode
 
-```csharp
-public enum PlayCycleTrigger
-{
-    StartupBootstrap,
-    CabinetRefresh,
-    ManualTrigger,
-    FlagFired,
-    Heartbeat,
-    ScheduledWakeupFired
-}
+Play mode is live and suggest-only. A typed play-cycle context wakes a minister;
+the minister reads its briefing, evaluates deterministic rules first, and either
+emits advice/flags or escalates to the LLM.
 
-public sealed record PlayCycleContext(
-    PlayCycleTrigger Trigger,
-    AgentFlag? Flag = null,
-    string? WakeupPayload = null)
-{
-    public bool IsBootstrap => Trigger == PlayCycleTrigger.StartupBootstrap;
-}
-```
+The durable trigger vocabulary is:
 
-Current runtime only uses a subset of these triggers. `StartupBootstrap` is used for the first live cycle after Host startup, `CabinetRefresh` is used for the normal cabinet cycle after day rollover, and `ManualTrigger` is used when the dashboard player presses `Run Cabinet Now` or `Run {Minister} Now`. Manual dashboard triggers set `WakeupPayload = "dashboard"` for trace visibility. The others remain the intended extension points for future wake paths.
+- `StartupBootstrap`
+- `CabinetRefresh`
+- `ManualTrigger`
+- `FlagFired`
+- `Heartbeat`
+- `ScheduledWakeupFired`
 
-### First live cycle bootstrap
+Exact C# contracts live in `Src/Common/Ministers/`. Current runtime uses startup
+bootstrap, cabinet refresh, and manual dashboard triggers; the other trigger
+names are reserved extension points.
 
-Every feeder minister gets one special-case escape hatch on its first live cycle after Host startup, or the first cycle after that minister is newly introduced into a save: **bootstrap via escalation first, then return to normal rules-first behavior**.
+### First Live Cycle Bootstrap
+
+Every feeder minister gets one special case on its first live cycle after Host
+startup, or the first cycle after that minister is newly introduced into a save:
+bootstrap via escalation first, then return to normal rules-first behavior.
 
 Rationale:
-- The first memo establishes the minister's initial read of the colony for the player.
-- Early rules are intentionally coarse and often only sufficient for steady-state triage.
-- A generic first memo ("food low", "construction needed", "defense weak") is usually less useful than a grounded first-pass plan.
+
+- The first memo establishes the minister's initial read of the colony.
+- Early rules are intentionally coarse and may only cover steady-state triage.
+- A grounded first-pass plan is more useful than a generic "domain is weak"
+  card.
 
 Constraints:
-- This is a one-time bootstrap behavior, not a standing exception to rules-first.
-- If the briefing cannot support concrete advice, the minister should say that explicitly rather than fabricate precision.
-- Mayor remains separate: the Mayor already writes an LLM-backed agenda on wake, so this bootstrap rule is primarily for feeder ministers.
 
-> **Deferred (Auto epic):** when a minister graduates to `Auto` for some advice type, that decision path additionally produces HTN goals which feed the planner / Labor / RIMAPI writes. Until then, output is `AdviceItem`s only.
+- Bootstrap is one-time behavior, not a standing exception to rules-first.
+- If the briefing cannot support concrete advice, the minister should say that
+  rather than fabricate precision.
+- Mayor remains separate: the Mayor already writes an LLM-backed agenda on wake.
 
-**Refinement** (async, between sessions or on-demand):
-```
-RunRefinement()
-  → Read own pushback list (Src/Cabinet/<Minister>/Pushbacks/)
-  → Read own escalation history (rule misfires, LLM call patterns)
-  → Cluster pushbacks by theme (recurring corrections in the player's words)
-  → Propose Rules.cs / prompt changes (code-gen with tools)
-  → Run proposals against fixture suite
-  → Gate on approval (human in v1; auto above confidence threshold post-MVP)
-  → Promote approved changes to Rules.cs  ← "rule promotion"
-```
-
-Each minister **owns its own pushback list** — the player's natural-language explanations of why that minister was wrong. Pushbacks are scoped: the Mayor doesn't see Food's pushbacks. They flow into the issuing minister's next prompt as "recent player corrections" (M5) and serve as the refinement corpus (M6). Implicit state-diff is *not* part of MVP — see [`advice.md`](advice.md).
-
-Refinement IS the minister. Not a separate agent — the same minister in a different mode, with different tools available (code read/write, fixture runner) and different context (its pushback list instead of a briefing).
+Scheduled wakeups may be registered by rules or escalation output. A fired
+wakeup still runs the normal rules-first evaluation cycle; its payload is an
+opaque note to the minister, not system-parsed control data.
 
 ---
 
-## IMinister and IMinisterRules — the shared interfaces
+## Refinement Mode
 
-Play-cycle trigger handling belongs on the minister entrypoint, not in a hidden singleton and not split across separate event-specific methods.
+Refinement is async, between sessions or on demand. The minister reviews its own
+pushbacks, decision history, replay corpus, prompt traces, and fixtures; then it
+proposes changes for human approval.
 
-```csharp
-public interface IMinister
-{
-    string Name { get; }
-    Task RunPlayCycle(PlayCycleContext context, CancellationToken ct);
-    Task RunRefinement(CancellationToken ct);
-}
-```
+Each minister owns its own pushback list. Pushbacks are scoped: the Mayor does
+not see Food's pushbacks, and Food does not see Defense's. Pushbacks can inform
+the issuing minister's next prompt and later provide the refinement corpus.
+Implicit state-diff feedback is not part of MVP; see [`advice.md`](advice.md).
 
-The trigger/context is execution metadata, not game-state data. Rules remain focused on briefing-derived domain logic unless a specific minister chooses to branch at the minister layer before or after `Rules.Evaluate`.
-
-All ministers implement the same interface. This is the contract refinement works against, the test harness targets, and the planner depends on.
-
-```csharp
-public interface IMinisterRules<TBriefing>
-{
-    RulesResult Evaluate(TBriefing briefing, ColonyContext context);
-}
-
-public abstract class RulesResult { }
-
-public class Decision : RulesResult
-{
-    public List<AdviceItem>   Advice          { get; init; }  // see design/advice.md
-    public List<AgentFlag>    Flags           { get; init; }
-    public string             Trace           { get; init; }  // which rule fired
-    public ScheduledWakeup?   ScheduledWakeup { get; init; }  // optional; see below
-}
-
-public class Escalate : RulesResult
-{
-    public string Reason       { get; init; }  // why rules couldn't decide
-    public object Context      { get; init; }  // additional context for LLM
-}
-```
-
-Same shape. Different implementations per minister.
+Refinement is the same minister in a different mode, not a separate product
+actor. Code-shaped refinement work may use dev-agent tooling, but human approval
+is required before rule, prompt, briefing, fixture, or RAG changes are promoted.
 
 ---
 
-## Advice quality contract
+## Shared Runtime Contract
 
-All ministers should emit advice that is near-term, actionable, and possible in the current or short-term game state. The Mayor may reason about strategy, but even Mayor agenda items should prioritize concrete next moves over broad wish lists.
+All ministers implement the same behavioral contract:
 
-Minister output should be sparse. A normal cycle should surface the most important few items and avoid exhaustive menus. Critical or unusually complex states can produce more, but the minister must still assign one clear `priority`.
+- Entry point receives execution metadata: why the minister woke and any
+  relevant flag or wakeup payload.
+- Rules evaluate briefing-derived domain facts.
+- Rules may return advice/flags, schedule a future wakeup, or escalate.
+- Escalation returns normalized advice/flags through the same public surfaces.
+- Output remains `AdviceItem`s and flags in MVP, never RIMAPI writes.
 
-Briefings should provide compact opportunity summaries rather than raw dumps. Spatial data is useful when it becomes actionable: distance/proximity buckets, nearest clusters, tile counts, and bottleneck signals are preferred over lists of every coordinate.
-
----
-
-## LLM output schema
-
-When the LLM is called (escalation path), it returns one or more `AdviceItem`s:
-
-```jsonc
-{
-  "advice": [
-    {
-      "advice_type": "food_security",   // closed enum, per minister
-      "priority":    "high",            // low | medium | high | critical
-      "title":       "Food situation tightening — start a second growing zone",
-      "body":        "Days-of-food has dropped to 22 from 31 yesterday...",
-      "rationale":   "rice matures in 8d, cold snap in 14d",
-      "resource_requests": [
-        { "kind": "labor", "request": "Cook work time today", "reason": "Food cannot close the gap without cooked meals", "work_type": "Cook", "skill": "Cooking" },
-        { "kind": "tile", "request": "~8x8 fertile growing footprint", "reason": "current sowed area cannot cover winter buffer" }
-      ],
-      "suggested_actions": [
-        { "kind": "designate_zone", "instruction": "growing zone, ~8x8, fertile soil south of kitchen" },
-        { "kind": "set_priority",   "instruction": "raise Plants priority for Hannah and Ben" }
-      ],
-      "expires_in_in_game_hours": 24
-    }
-  ],
-  "flags": [ /* AgentFlag[] */ ],
-  "scheduled_wakeup": {              // optional; omit or null = no wakeup
-    "fire_in_hours": 192,            // real-time hours (8 in-game days ≈ 192h at default speed)
-    "payload": "crop_maturity_check" // opaque string; passed back verbatim when wakeup fires
-  },
-  "notes": "free-form rationale, logged not parsed in v1"
-}
-```
-
-Rules for the LLM:
-- `advice_type` is a **closed enum per minister**. The LLM picks from the list; no free-form advice types. (This is the unit the future autonomy dial graduates one at a time.)
-- `priority` is required on every advice item. Use `low | medium | high | critical`; do not encode urgency only into prose.
-- Advice must be concrete and currently possible or near-term. Do not emit grand strategy lists from feeder ministers; flag strategic pressure upward instead.
-- `resource_requests` are first-class advisory needs: "Food needs labor/tiles/items/etc." They do not allocate pawns, reserve tiles, or grant ownership of another minister's domain in MVP.
-- `suggested_actions` are advisory text — they are *not* executed in MVP, only rendered. Their `kind` is a closed enum so future Auto graduation can wire each kind to an HTN primitive.
-- The `notes` field is the upgrade seam. When a note pattern repeats and the LLM consistently writes the same advice off it, refinement promotes it into a rule.
-- Minister LLMs never name colonists, specify blueprints, or choose methods. Those would matter under Auto; under Suggest, the player decides.
-- **`scheduled_wakeup` rules:** at most one pending wakeup per minister. A newer emission supersedes the older (logged as a supersession event). The payload is an opaque string — logged but never parsed by the system. It is the minister's note to itself. `fire_in_hours` is real-time; tick-mapping to in-game speed is deferred. When a wakeup fires, the minister runs its normal evaluation cycle (rules first); the payload arrives in `PlayCycleContext.WakeupPayload` and is available to rules that choose to inspect it. A wakeup does not bypass the rules layer. Rules may also emit a `ScheduledWakeup` directly from `Decision` without escalating.
-- Use structured output (bullets, key-value)
-- Use emojis
-
-See [`advice.md`](advice.md) for the full `AdviceItem` schema and feedback lifecycle.
+The exact interfaces and result types are code contracts. Check
+`Src/Common/Ministers/`, `Src/Common/Advice/`, and the relevant test fixtures
+before editing implementation.
 
 ---
 
-## The rules layer in practice
+## Advice Quality Contract
 
-The rules layer is a C# class per minister. Pure, no I/O, deterministic.
+All ministers should emit advice that is near-term, actionable, and possible in
+the current or short-term game state. The Mayor may reason about strategy, but
+even Mayor agenda items should prioritize concrete next moves over broad wish
+lists.
 
-**It should handle the common case.** Escalation rate varies by minister — Labor and Food are mostly mechanical, Mayor and CoS are mostly judgment. Targets get calibrated per minister once it's shipped; the improve loop drives them down over time.
+Minister output should be sparse. A normal cycle should surface the most
+important few items and avoid exhaustive menus. Critical or unusually complex
+states can produce more, but each item must still have one clear `priority`.
 
-**Authoring rules:** write the most important rule first (the one that handles the highest-frequency case), then the second most important, etc. The Evaluate method tries rules in priority order and returns on first match. An unmatched briefing escalates.
+Briefings should provide compact opportunity summaries rather than raw dumps.
+Spatial data is useful when it becomes actionable: distance/proximity buckets,
+nearest clusters, tile counts, and bottleneck signals are preferred over lists
+of every coordinate.
 
-**Keeping rules honest:** every rule has a name (string constant). Decision log records which rule fired. Bad outcomes with the same rule name → that rule is a candidate for revision.
+When an LLM is called, it must produce the same execution-facing fields the
+runtime accepts: advice type, priority, title/body/rationale, resource requests,
+suggested actions, optional flags, optional scheduled wakeup, and trace notes.
+See [`advice.md`](advice.md) for the advice schema and feedback lifecycle.
+
+LLM rules:
+
+- Advice types are closed per minister.
+- `priority` is required on every advice item.
+- Feeder ministers emit concrete operational advice, not grand strategy menus.
+- `resource_requests` describe needs; they do not allocate pawns or reserve
+  another minister's resource in MVP.
+- `suggested_actions` are advisory text in MVP.
+- Trace notes are for logging/refinement, not player-facing advice.
 
 ---
 
-## Cabinet domain ownership
+## Rules Layer
+
+The rules layer is pure, deterministic C# with no I/O. It handles the common
+case cheaply; the LLM earns its cost only when judgment is needed.
+
+Authoring rules:
+
+- Put the highest-value, highest-frequency rule first.
+- Return on the first match unless the minister intentionally produces a
+  multi-item snapshot.
+- Give every rule a stable name so logs and replay records can attribute
+  behavior.
+- Treat recurring LLM output as a candidate for rule promotion, not as a reason
+  to keep escalating forever.
+
+---
+
+## Cabinet Domain Ownership
 
 Each minister owns either a production chain or a well-defined subsystem:
 
@@ -220,195 +169,164 @@ Each minister owns either a production chain or a well-defined subsystem:
 | Chief of Staff | Flag triage and conflict arbitration; owns no direct production chain |
 | Labor | Deferred Auto-epic assignment solver; owns pawn allocation only after Auto re-engages |
 
-### Resource requests
+### Resource Requests
 
-Ministers may request resources needed to satisfy their domain: tiles, work-type-qualified labor, items, buildings, bills, stockpile space, or attention from another subsystem. In MVP those requests are advisory only: they appear in `AdviceItem.resource_requests[]` and/or `AgentFlag.Requests`. A request does not grant ownership of the target resource and does not execute anything.
+Ministers may request resources needed to satisfy their domain: tiles,
+work-type-qualified labor, items, buildings, bills, stockpile space, or
+attention from another subsystem. In MVP those requests are advisory only: they
+appear in `AdviceItem.resource_requests[]` and/or flags. A request does not
+grant ownership of the target resource and does not execute anything.
 
-At Auto graduation, requests become inputs to the deferred planning/Labor path. Until then, "Food requests 2 cooks" means "tell the player cooking labor is needed," not "Food changes pawn priorities."
+Labor requests must be specific enough for a player or future Labor minister to
+act on. They should name the relevant RimWorld work-tab type when possible, and
+the skill signal when a skill threshold matters. Routine hauling and cleaning
+should not become labor requests unless they are urgently blocking the domain.
 
-Labor requests must be specific enough for a player or future Labor minister to act on. They should name the relevant work-tab type and, when useful, the skill signal that makes a pawn suitable. Routine hauling and cleaning should not be escalated into labor requests unless the briefing proves they are urgently blocking the minister's domain.
+Canonical work-type names are a code contract. Do not maintain a duplicate enum
+list in this doc; use `Src/Common/Advice/WorkType.cs` and expand it from live
+defs/modded work types when ingestion supports that.
 
-### RimWorld work types
+---
 
-RimAI needs a canonical `WorkType` enum that mirrors RimWorld's Work tab rather than inventing generic "labor" buckets. Work types are distinct from skills: `Cook` is a work type; `Cooking` is the skill. Some work types have no direct skill but still matter for priorities.
+## Action Ownership Map
 
-MVP enum draft: `Firefight`, `Patient`, `Doctor`, `BedRest`, `Basic`, `Warden`, `Handle`, `Cook`, `Hunt`, `Construct`, `Grow`, `Mine`, `PlantCut`, `Smith`, `Tailor`, `Art`, `Craft`, `Haul`, `Clean`, `Research`. Expand from live defs/modded work types when ingestion exposes them.
+Every game action eventually gets one primary owner. Other ministers may be
+requesters when the action serves their chain. In MVP this is advisory only;
+requester/owner language does not execute writes or allocate pawns.
 
-Resource requests may also carry optional `skill` when a skill threshold matters. Example: Food can request `work_type=Cook`, `skill=Cooking`, `quantity=1`; Food should not request vague "labor capacity."
-
-### Action ownership map
-
-Every game action eventually gets one primary **owner**. Other ministers may be **requesters** when the action serves their chain. In MVP this is advisory only; requester/owner language does not execute writes or allocate pawns.
-
-#### Food and survival
+### Food And Survival
 
 | Action family | Owner | Common requesters | Notes |
 |---|---|---|---|
-| Sow food crops, choose food crop, expand food growing zone | Food | Mayor, Economy | Food owns nutrition timing and crop choice; Economy may request cash crops, but food security wins when scarce |
-| Harvest crops, wild berries/agave, ambrosia-for-food | Food | Welfare, Economy | Ambrosia drug policy can involve Welfare/Economy; nutrition pressure belongs to Food |
-| Hunt for food | Food | Defense, Economy | Food owns need/target recommendation; Defense may veto or flag dangerous hunts |
-| Butcher animals/corpses for meat | Food | Economy | Human/insect corpse policy may involve Welfare, but meat pipeline belongs to Food |
-| Cook meals, choose meal type, set cook/butcher bill targets | Food | Welfare, Medical | Welfare can request fine meals; Medical can request safe food for sick pawns |
-| Manage freezer, food stockpile, spoilage response | Food | Construction | Food owns the need; Construction owns requested coolers, walls, doors, power work |
+| Sow food crops, choose food crop, expand food growing zone | Food | Mayor, Economy | Food owns nutrition timing and crop choice |
+| Harvest crops, wild berries/agave, ambrosia-for-food | Food | Welfare, Economy | Nutrition pressure belongs to Food |
+| Hunt for food | Food | Defense, Economy | Food owns need/target recommendation; Defense may veto dangerous hunts |
+| Butcher animals/corpses for meat | Food | Economy | Human/insect corpse policy may involve Welfare |
+| Cook meals, choose meal type, set cook/butcher bill targets | Food | Welfare, Medical | Welfare can request fine meals; Medical can request safe food |
+| Manage freezer, food stockpile, spoilage response | Food | Construction | Food owns the need; Construction owns requested assets |
 
-#### Base and infrastructure
+### Base And Infrastructure
 
 | Action family | Owner | Common requesters | Notes |
 |---|---|---|---|
 | Build rooms, walls, doors, floors, roofs, furniture | Construction | All ministers | Construction owns build feasibility, placement, materials, and layout cost |
-| Build power generation, batteries, conduits, switches | Construction | Food, Industry, Defense, Medical | Requester owns why power matters; Construction owns power design |
-| Build temperature systems: coolers, heaters, vents | Construction | Food, Welfare, Medical, Industry | Freezer need is Food; hospital safety is Medical; asset build is Construction |
-| Build production benches | Construction | Industry, Food, Medical, Research | Industry/Food/Medical own the production need; Construction owns placing/building the bench |
-| Manage material/component stockpiles | Construction | Industry, Defense | Construction owns base material availability; Industry owns production input buffers |
-| Dumping zones, stone chunk flow, base cleanup infrastructure | Construction | Industry, Welfare | Cleaning labor is not owned here; infrastructure and zone purpose are |
+| Build power generation, batteries, conduits, switches | Construction | Food, Industry, Defense, Medical | Requester owns why power matters |
+| Build temperature systems | Construction | Food, Welfare, Medical, Industry | Freezer need is Food; asset build is Construction |
+| Build production benches | Construction | Industry, Food, Medical, Research | Requester owns production need |
+| Manage material/component stockpiles | Construction | Industry, Defense | Construction owns base material availability |
+| Dumping zones, stone chunk flow, cleanup infrastructure | Construction | Industry, Welfare | Infrastructure and zone purpose, not cleaning labor |
 
-#### Industry and goods
+### Industry And Goods
 
 | Action family | Owner | Common requesters | Notes |
 |---|---|---|---|
-| Stonecutting, smelting, machining, fabrication | Industry | Construction, Defense, Economy | Construction requests blocks/components; Defense requests weapons/armor; Economy requests sale goods |
-| Tailoring, apparel quality, textile processing | Industry | Welfare, Defense, Economy | Welfare requests temperature/mood apparel; Defense requests armor; Economy requests trade goods |
-| Smithing, weapons, armor, shield belts | Industry | Defense, Economy | Defense owns combat requirement; Industry owns making the item |
-| Drug production, chemfuel, refinery outputs | Industry | Medical, Welfare, Economy, Defense | Policy is hard-case shared context; production ownership stays Industry |
+| Stonecutting, smelting, machining, fabrication | Industry | Construction, Defense, Economy | Requesters define need; Industry makes goods |
+| Tailoring, apparel quality, textile processing | Industry | Welfare, Defense, Economy | Welfare requests clothing; Defense requests armor |
+| Smithing, weapons, armor, shield belts | Industry | Defense, Economy | Defense owns combat requirement |
+| Drug production, chemfuel, refinery outputs | Industry | Medical, Welfare, Economy, Defense | Policy can cross domains |
 | Art, statues, quality furniture production | Industry | Welfare, Economy, Construction | Welfare requests beauty; Economy requests sale value |
 
-#### Defense and emergencies
+### Defense And Emergencies
 
 | Action family | Owner | Common requesters | Notes |
 |---|---|---|---|
 | Draft/undraft, combat positioning, retreat/hold advice | Defense | Mayor, Medical | Pawn allocation remains player/Labor in Suggest mode |
-| Weapon readiness, loadout recommendations, armor readiness | Defense | Industry | Defense owns what is needed; Industry owns crafting it |
-| Killbox, traps, turrets, defensive wall intent | Defense | Construction, Industry | Defense owns defensive doctrine; Construction owns build feasibility |
-| Firefighting, breach response, infestation response | Defense | Construction, Medical | Treat as emergency response; Construction handles repairs after threat stabilizes |
-| Prisoner combat risk and escape response | Defense | Welfare, Economy | Ongoing prisoner care/trade is not Defense unless threat is active |
+| Weapon readiness, loadout recommendations, armor readiness | Defense | Industry | Defense owns what is needed |
+| Killbox, traps, turrets, defensive wall intent | Defense | Construction, Industry | Construction owns build feasibility |
+| Firefighting, breach response, infestation response | Defense | Construction, Medical | Treat as emergency response |
+| Prisoner combat risk and escape response | Defense | Welfare, Economy | Care/trade is not Defense unless threat is active |
 
-#### Welfare and health
+### Welfare And Health
 
 | Action family | Owner | Common requesters | Notes |
 |---|---|---|---|
-| Recreation, comfort, beauty, sleep quality, room impressiveness | Welfare | Construction, Industry | Welfare owns the pawn-need reason; Construction/Industry own requested assets |
-| Schedules, joy/work/sleep balance, mental-break prevention | Welfare | Medical, Defense | In Suggest mode these are advice only; Labor owns Auto assignment later |
-| Relationships, social fights, ideology mood pressure | Welfare | Mayor | Ideology is Welfare unless it becomes large enough for its own subsystem |
+| Recreation, comfort, beauty, sleep quality, room impressiveness | Welfare | Construction, Industry | Welfare owns the pawn-need reason |
+| Schedules, joy/work/sleep balance, mental-break prevention | Welfare | Medical, Defense | Suggest-only until Labor/Auto |
+| Relationships, social fights, ideology mood pressure | Welfare | Mayor | Split later only if complexity justifies it |
 | Triage, tending, disease monitoring, surgery, hospital readiness | Medical | Welfare, Construction, Industry | Split from Welfare because cadence/severity differ |
-| Medicine stock, hospital beds, sterile room, vitals risk | Medical | Construction, Industry, Economy | Medical owns readiness; requesters provide assets or purchases |
+| Medicine stock, hospital beds, sterile room, vitals risk | Medical | Construction, Industry, Economy | Medical owns readiness |
 
-#### Strategy, research, and economy
+### Strategy, Research, And Economy
 
 | Action family | Owner | Common requesters | Notes |
 |---|---|---|---|
-| Research queue and tech path | Research | Mayor, Defense, Food, Industry, Medical | Mayor sets strategic posture; Research owns queue mechanics and dependency path |
-| Trade offers, buying scarce resources, selling surplus | Economy | Food, Medical, Defense, Industry | Requester owns need; Economy owns trade decision and wealth impact |
-| Caravan formation/provisioning purpose | Economy | Food, Defense, Medical | Food owns nutrition sufficiency; Defense owns escort risk; Economy owns trip purpose |
-| Wealth pressure, stockpile liquidation, trade-good strategy | Economy | Mayor, Industry | Mayor sets posture; Economy owns operational wealth management |
-| Colony-wide goals and priority ordering | Mayor | All ministers | Mayor owns strategy, not operational action |
-| Conflicting flags and same-tick priority conflicts | Chief of Staff | All ministers | CoS arbitrates framing/priority, not execution |
+| Research queue and tech path | Research | Mayor, Defense, Food, Industry, Medical | Mayor sets posture; Research owns queue mechanics |
+| Trade offers, buying scarce resources, selling surplus | Economy | Food, Medical, Defense, Industry | Requester owns need; Economy owns trade decision |
+| Caravan formation/provisioning purpose | Economy | Food, Defense, Medical | Food/Defense/Medical own sufficiency and risk inputs |
+| Wealth pressure, stockpile liquidation, trade-good strategy | Economy | Mayor, Industry | Mayor sets posture; Economy manages wealth |
+| Colony-wide goals and priority ordering | Mayor | All ministers | Mayor owns strategy, not routine operation |
+| Conflicting flags and same-tick priority conflicts | Chief of Staff | All ministers | CoS arbitrates framing/priority |
 
-#### Hard cases to keep explicit
+### Hard Cases
 
 | Hard case | Provisional handling |
 |---|---|
 | Psychoid/smokeleaf/beer | Industry owns production; Welfare owns drug policy; Economy owns sale strategy |
 | Devilstrand | Food comments on growing opportunity cost; Industry owns textile use; Economy owns sale value |
-| Animals | Food owns slaughter pressure; Economy owns sale/trade; Defense owns combat animals; a future Animals minister is possible |
-| Prisoners | Welfare owns living conditions; Medical owns health; Economy owns ransom/slavery/trade questions; Defense owns escape/riot risk |
-| Ideology/rituals | Welfare owns mood pressure for now; split later only if rules/prompts become noisy |
+| Animals | Food owns slaughter pressure; Economy owns sale/trade; Defense owns combat animals; future Animals minister possible |
+| Prisoners | Welfare owns living conditions; Medical owns health; Economy owns ransom/slavery/trade; Defense owns escape/riot risk |
+| Ideology/rituals | Welfare owns mood pressure until rules/prompts become noisy |
 | Multi-map/caravans | Economy owns purpose; Defense owns threat; Food/Medical own provisioning sufficiency; full multi-map support deferred |
 
 ---
 
-## Escalation triggers
+## Escalation Triggers
 
 Rules should escalate when:
-- No rule matches the current briefing state
-- Competing goals are within a small margin and context would break the tie
-- An unusual event type is detected (enum value not covered by rules)
-- A guide passage is likely to change the decision (tagged in rule: `RequiresGuideKnowledge = true`)
 
-Rules should NOT escalate for:
-- Simple threshold checks with known response (food < 30 days → food_security goal, always)
-- Routine maintenance decisions (harvest when mature crops exist)
-- Anything that has been wrong < 5% of the time across 20+ logged instances
+- No rule matches the current briefing state.
+- Competing goals are close enough that context should break the tie.
+- An unusual event type appears.
+- Guide knowledge is likely to change the decision.
 
----
+Rules should not escalate for:
 
-## Refinement — detail
-
-### What refinement has access to
-
-Refinement also needs a historic replay corpus: prior briefing/prompt/output records that can be rerun offline to compare before/after behavior for a candidate rule, prompt, briefing, or RAG change.
-
-Refinement reads the decision and escalation logs and can edit `Rules.cs`, prompts, and fixtures. For code-shaped work it can shell out to **Claude Code** by writing a prompt to `.plans/<minister>-<task>.md` — see [`evaluation.md`](evaluation.md) for the full tooling story. Fixtures are the regression net.
-
-### Typical refinement session flow
-
-Before promotion, compare current output and candidate output on the same historical corpus, then run fixtures as the curated regression net.
-
-Read recent escalations with observed outcomes, cluster by reason, draft a rule that would have matched, run fixtures, surface diff + fixture results for human approval. Promotions are logged.
-
-Auto-approve is post-MVP and per-minister opt-in; specifics deferred until the fixture suite is mature.
+- Simple threshold checks with known responses.
+- Routine maintenance decisions.
+- Patterns that fixtures and replay history already prove rules handle well.
 
 ---
 
-## Fixture testing
+## Fixture Testing
 
-Each minister has a fixture suite: a set of canned briefings with known-good expected outputs.
+Each minister has fixtures: canned briefings with expected outcomes. Fixture
+paths and JSON shape are test contracts, not design-doc contracts. Use the test
+project as the source of truth.
 
-```
-Tests/
-└── Food/
-    └── Fixtures/
-        ├── food-shortage-day-40.json        # briefing + expected goals
-        ├── fall-harvest-window.json
-        ├── cold-snap-imminent.json
-        ├── surplus-with-trader-approaching.json
-        └── first-devilstrand-decision.json
-```
-
-**Fixture format:**
-```json
-{
-  "description": "Food shortage on day 40, fall, trader approaching in 3 days",
-  "briefing": { ... },
-  "expected_advice": ["food_security", "trade_food_surplus"],
-  "expected_top_advice_type": "food_security",
-  "expected_priority_min": "high",
-  "should_escalate": false,
-  "notes": "Rules should handle this; trade is secondary to food security"
-}
-```
-
-Player Accept events and Pushback entries on shipped advice are also raw material for new fixtures — see `fixture-gen` in [`evaluation.md`](evaluation.md).
-
-Fixtures run on every CI push. A rule change that breaks a fixture is a regression.
+Player Accept events and Pushback entries on shipped advice are raw material for
+new fixtures. A rule change that breaks a fixture is a regression unless the
+fixture is intentionally updated with a clear rationale.
 
 ---
 
-## Zone ownership
+## Zone Ownership
 
-Zones (stockpile, growing, dumping, home, allowed) are owned by the minister whose domain they serve. No dedicated Minister of Zoning — zones are means to other ministers' ends, not a domain of their own.
+Zones are owned by the minister whose domain they serve. There is no dedicated
+Minister of Zoning because zones are means to other ministers' ends.
 
 | Zone type | Owning minister | Notes |
 |---|---|---|
-| Food stockpile | Food | Co-located with freezer; minister knows food quantities and spoilage risk |
-| Material / component stockpile | Construction | Co-located with workshops; minister knows material flow and build queue |
+| Food stockpile | Food | Co-located with freezer; Food knows food quantities and spoilage risk |
+| Material / component stockpile | Construction | Co-located with workshops; Construction knows material flow and build queue |
 | Ammo / weapon stockpile | Defense | Near killbox or armoury |
-| Medicine stockpile | Welfare | Near hospital; minister tracks medical supply chain |
+| Medicine stockpile | Medical | Near hospital; Medical tracks medical supply chain |
 | Growing zone | Food | Placement, size, crop assignment |
-| Dumping zone | Construction | Rock chunks, corpses, waste — base hygiene |
+| Dumping zone | Construction | Rock chunks, corpses, waste; base hygiene |
 | Home zone | Mayor / CoS | Colony-wide; no minister claims it |
 | Allowed zone | Mayor / CoS | Colony-wide; no minister claims it |
 
-**In Suggest mode:** conflicting zone advice from two ministers surfaces as two cards on the dashboard. The player resolves it. No system-level arbitration needed.
+In Suggest mode, conflicting zone advice from two ministers surfaces as two
+cards and the player resolves it. At Auto graduation, CoS must arbitrate
+contested writes before RIMAPI commands are issued.
 
-**At M7 (Auto graduation):** when zone suggestions can be auto-applied via RIMAPI, the CoS gets a zone-conflict resolution rule. Last-write-wins is not acceptable; CoS arbitrates by domain priority for contested tiles: Defense > Food > Construction > Welfare.
-
-**Layout efficiency** (pawn travel distance, zone placement relative to workstations) is owned by **Construction** as an extension of its `RoomProgram` brief — not a new minister. See `design/ministers/construction.md`.
+Layout efficiency belongs to Construction as an extension of its room/base
+program, not a new minister.
 
 ---
 
-## Open questions
+## Open Questions
 
-- [ ] How is refinement triggered? Manually via `/refine` slash command? Nightly? After N escalations?
+- [ ] How is refinement triggered: manual command, threshold, schedule, or a mix?
 - [ ] Where are refinement session transcripts logged for audit?
-- [ ] Should fixture generation be automated (a `fixture-gen` Claude skill)?
-- [ ] Define the confidence threshold for post-MVP auto-approve
+- [ ] Should fixture generation be automated by a repo-local skill?
+- [ ] Define the confidence threshold for any post-MVP auto-approve path.

@@ -9,6 +9,7 @@
 ## Captured by /todo
 
 <!-- entries go here -->
+- [x] [2026-05-14] #doc #debt Avoid over-specifying code-documented details in design docs.
 - [ ] [2026-05-14] #spike #backend #debt Review RimAI C# codebase and propose refactorings. [plan](.plans/recommended-refactorings.md)
 - [ ] [2026-05-14] #debt #doc Rename RimAI to RimBob.
 - [ ] [2026-05-09] #spike #llm #test Benchmark optional TOON prompt encoding. [plan](Docs/plans/toon-prompt-encoding-spike.md)

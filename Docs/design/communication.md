@@ -1,136 +1,140 @@
-# RimAI — Inter-Minister Communication
+# RimAI - Inter-Minister Communication
 
-> **Living document.** See `CLAUDE.md` for update rules.
+> **Living document.** See `AGENTS.md` for update rules.
+> This doc records coordination semantics. Exact flag records, context records,
+> and endpoint/log fields live in source and tests.
 
 ---
 
-## The rule
+## The Rule
 
 **Ministers do not talk to each other directly.**
 
-All coordination is via two shared channels:
-1. **Flag channel** — publish observable needs, incidents, and escalations. Consumed by CoS and folded into the Mayor's daily digest.
-2. **Bulletin board** — *Deferred (Auto epic).* Was the labor-request channel; no consumer in suggest-only MVP. Re-engaged at M7. See [`ministers/labor.md`](ministers/labor.md).
+All coordination uses shared, observable channels:
 
-No bilateral messaging. No shared mutable state between ministers. If two ministers genuinely need to coordinate frequently and directly, that is a signal they should be one minister.
+1. **Flag channel** - ministers publish needs, incidents, and escalations for
+   CoS/Mayor synthesis.
+2. **Bulletin board** - deferred Auto-epic labor/request channel, re-engaged at
+   M7 with Labor.
 
----
-
-## Flag channel
-
-Flags are how ministers signal needs upward and sideways. The CoS consumes them; the Mayor reads a daily digest of Medium flags; Critical flags preempt everything.
-
-M3 runtime status: before a separate CoS loop exists, `FlagChannel` is an in-process active-flag store. Food publishes flags into it; the Mayor reads active Medium+ flags during the same `CabinetCycle` and folds them into the next agenda prompt. This is a Mayor-side bridge, not direct minister-to-minister communication.
-
-### Flag schema
-
-```csharp
-public class AgentFlag
-{
-    public string         Id;                // for cancellation / deduplication
-    public string         SourceMinister;    // "Food"
-    public FlagSeverity   Severity;          // Critical, High, Medium, Low
-    public string         Domain;            // "food", "defense", "medical", ...
-    public string         Summary;           // "Food supply below 5 days"
-    public ResourceRequest[]? Requests;      // optional resources needed to resolve it
-    public string?        Detail;            // rule name, trace, or LLM rationale
-    public DateTime?      ExpiresAt;         // auto-expiry
-}
-```
-
-`Requests` uses the same `ResourceRequest` schema as `AdviceItem.resource_requests[]` in [`advice.md`](advice.md). In MVP the field is advisory only; it lets CoS and Mayor see what a minister needs without granting allocation authority.
-
-### Severity tiers
-
-| Tier | Handled by | Examples | Behaviour |
-|---|---|---|---|
-| **Critical** | Immediate preemption | Active raid, fire, infestation | Defense can interrupt all other ministers' work |
-| **High** | Chief of Staff / Mayor-side bridge in M3 | Colonist downed, food shortage, disease | CoS resolves or escalates to Mayor |
-| **Medium** | Mayor daily digest | Research complete, wall breach, mood declining | Batched, not acted on immediately |
-| **Low** | Labor queue, when free | Beautification, surplus trade opportunity | Deferred until capacity available |
-
-### Severity calibration
-
-- The emitting minister **self-rates**. This is the most common source of flag-inflation bugs.
-- The Chief of Staff may **downgrade** a flag (with reasoning logged). CoS cannot upgrade.
-- Ministers cannot upgrade their own past flags — they re-emit a new flag with higher severity, creating an audit trail.
-- Flag severity distribution per minister is logged and surfaced during refinement sessions.
-
-### Flag lifecycle
-
-```
-Emitted → Active → Resolved (by CoS action or natural expiry)
-                 → Superseded (same minister emits updated flag for same issue)
-                 → Expired (ExpiresAt passed with no action)
-```
+No bilateral messaging, no minister-to-minister method calls, and no shared
+mutable state between ministers. If two ministers need frequent direct
+coordination, that may mean the boundary is wrong.
 
 ---
 
-## Cross-domain context in briefings
+## Flag Channel
 
-Ministers cannot read each other's briefings. But a minister's briefing can include a **context block** with summarized cross-domain facts that affect its decisions.
+Flags are how ministers signal needs upward and sideways. They are not player
+advice by themselves; they are routing and arbitration inputs.
 
-Example: `FoodBriefing.ActiveThreats: bool` — Food doesn't need to understand the raid; it just needs to know "don't plant right now."
+M3 runtime bridge: before a separate CoS loop exists, Food publishes active
+flags and the Mayor reads active Medium+ flags during the same cabinet cycle.
+This is a Mayor-side bridge, not direct minister communication.
 
-These cross-domain facts are computed by the state store as derived views, not by ministers. They flow through briefing derivations, not through minister-to-minister calls.
+Design-level flag fields:
 
----
+- Stable id for dedupe/supersession.
+- Source minister.
+- Severity.
+- Domain/summary/detail.
+- Optional resource requests.
+- Expiry/supersession metadata.
 
-## Chief of Staff as the arbitration layer
+Exact shape lives in `Src/Common/Ministers/AgentFlag.cs`.
 
-When two ministers emit conflicting flags that would produce contradictory or duplicative advice (both want to write a memo about the same colonist crisis, both think their angle is the right framing), the CoS arbitrates before the Mayor's digest builds.
+Flag resource requests use the same semantics as advice resource requests:
+advisory needs, not allocation authority.
 
-CoS sees:
-- All active flags with their full trace
-- Mayor's current posture and `colony_objective`
+### Severity Tiers
 
-CoS outputs:
-- A priority ruling (which flag's framing leads the Mayor's memo)
-- Optionally a downgrade of the losing flag
-- Optionally a flag to the Mayor if the conflict represents a strategic tension worth noting in the memo body
+| Tier | Meaning | Typical handling |
+|---|---|---|
+| Critical | Immediate colony/colonist danger | Preempt normal flow |
+| High | Important tactical or near-term issue | CoS/Mayor-side bridge |
+| Medium | Digest-worthy pressure | Batched into Mayor synthesis |
+| Low | Background opportunity or cleanup | Deferred until capacity exists |
 
-CoS does not directly produce advice items, issue labor requests, or write to RIMAPI. It shapes the digest the Mayor receives.
+### Severity Calibration
 
-> **Deferred:** the original CoS role of arbitrating bulletin-board priority via Labor is paused with the rest of the Auto epic.
+- The emitting minister self-rates.
+- CoS may downgrade with a logged reason; it cannot upgrade.
+- A minister upgrades by emitting a new higher-severity flag, preserving audit
+  history.
+- Flag severity distribution per minister should be visible during refinement.
 
----
+### Lifecycle
 
-## Mayor → ministers: the Agenda
-
-The Mayor's direction to ministers is a **read-only broadcast via the Agenda**. Ministers never receive direct messages from the Mayor; they read the relevant section of the current `MayorAgenda` in their briefing context.
-
-```csharp
-public class MinisterBriefingContext
-{
-    public MayorPosture  Posture          { get; }  // economic + military stance
-    public string?       AgendaDirection  { get; }  // cabinet_direction entry for this minister (null in M1)
-    public string[]      ShortTermDomains { get; }  // ranked domain list from agenda.short_term
-}
-```
-
-`AgendaDirection` is the `cabinet_direction[ministerName]` string from the current Agenda, injected as a prefix into the minister's LLM prompt. It tells the minister where the Mayor wants their attention focused this day.
-
-`ShortTermDomains` is a simple ranked list (e.g. `["food","defense","welfare"]`) derived from the Agenda's `short_term` priorities. Ministers use it in their rules layer to rank competing issues without needing to parse the full Agenda.
-
-This is not a message; it does not fire any wake event. Ministers apply posture adjustments to their goal priorities when they next evaluate. The Mayor is the only writer of the Agenda — ministers never mutate it.
-
-→ See [`design/agenda.md`](agenda.md) for the full Agenda schema.
+Flags move through active, resolved, superseded, or expired states. Same-minister
+same-issue updates should replace or supersede rather than spam the active view.
 
 ---
 
-## What does NOT exist
+## Cross-Domain Context In Briefings
 
-- No direct method calls from one minister to another.
-- No shared mutable data structures ministers write to.
-- No pub/sub event bus between ministers (the AdviceBus is one-way: ministers → Host → dashboard, not minister → minister).
-- No "ministry chat room."
+Ministers cannot read each other's briefings. A minister's own briefing may
+include summarized cross-domain facts that affect its decisions.
 
-These would create hidden coupling, debugging nightmares, and circular dependencies. The flag + board model is sufficient and observable.
+Example: Food does not need raid details; it may only need an `active threat`
+signal to avoid planting advice during combat.
+
+These facts are computed by the state store as derived views, not exchanged by
+ministers.
 
 ---
 
-## Open questions
+## Chief Of Staff
 
-- [ ] Should the CoS flag channel be FIFO or priority-sorted? Priority-sorted risks starvation of Low flags; FIFO is unfair to Critical. Likely: priority queue with aging (Low flags eventually get promoted if waiting too long).
-- [ ] Flag deduplication: if Food emits "food shortage" every tick, should the board suppress duplicates? Propose: same minister, same summary → update existing flag, don't add new one.
-- [ ] How long are flags retained in history for improve-mode audit?
+CoS is the arbitration layer for conflicts and duplicate framing.
+
+CoS can:
+
+- Dedupe overlapping flags.
+- Choose which framing leads the Mayor's memo.
+- Downgrade flags with reasons.
+- Decide whether something becomes a tactical alert or normal digest input.
+- Surface strategic tensions to the Mayor.
+
+CoS does not produce routine player advice, issue labor requests, mutate the
+Agenda, or call RIMAPI.
+
+The first implementation can be a Mayor-side deterministic helper while feeder
+volume is low. Split into a separate loop only when traffic justifies it.
+
+The original CoS role of bulletin-board arbitration is deferred with the Auto
+epic.
+
+---
+
+## Mayor To Ministers: Agenda Broadcast
+
+The Mayor's direction to ministers is a read-only broadcast through the current
+Agenda. Ministers read relevant posture and cabinet-direction context when they
+next evaluate.
+
+This is not a message and does not fire a wake event. The Mayor is the only
+writer of the Agenda.
+
+See [`agenda.md`](agenda.md).
+
+---
+
+## What Does Not Exist
+
+- Direct calls from one minister to another.
+- Shared mutable minister-owned data structures.
+- A pub/sub chat bus between ministers.
+- A ministry chat room.
+
+These create hidden coupling. Flags, briefings, and Agenda broadcast are enough
+for the current suggest-only design.
+
+---
+
+## Open Questions
+
+- [ ] Should flag retrieval be strict priority, FIFO with priority gates, or
+      priority with aging?
+- [ ] What exact dedupe key should active flags use?
+- [ ] How long are flag histories retained for refinement?
+- [ ] When does CoS need to split from Mayor-side helper into its own loop?

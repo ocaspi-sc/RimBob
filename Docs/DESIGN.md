@@ -23,6 +23,7 @@ For the MVP, Output is only advice to player, not RIMAPI writes.
 5. **Cheap by default.** LLMs are called only when judgment is genuinely needed. Rules handle routine; the LLM handles exceptions.
 6. **Debuggable over clever.** Prefer deterministic, inspectable behaviour over emergent complexity.
 7. **Suggest by default; autonomy is opt-in.** Per-minister `Off / Suggest / Auto` dial. MVP ships with `Suggest` only; `Auto` graduations come later, one minister at a time, behind explicit player consent.
+8. **Docs capture intent, code captures detail.** Design docs record decisions, ownership boundaries, runtime contracts, and open questions. Exact class signatures, helper names, enum members, DTO fields, endpoint payloads, fixture shapes, and current rule inventories live in source and tests.
 
 ---
 
@@ -152,7 +153,7 @@ Decisions made and the reasoning behind them. Append; do not delete.
 | Unified IMinisterRules interface | Standard shape enables shared test harness, code-gen templates, consistent rule-refinement behaviour |
 | Pivot to assisted-gameplay advisor (suggest-only MVP) | Original "autonomous player" framing required full RIMAPI write coverage, HTN execution spine, and a year-long success metric before any user value. Advisor framing ships value at M1 (a single useful memo) and turns player feedback into the primary training signal — strictly better than "did the colony survive year 1." |
 | Mayor-first MVP; per-domain ministers feed the digest | Strategic memos are the natural advisory voice. Building Mayor first lets a single minister demonstrate the whole loop (briefing → LLM → memo → feedback) before fanning out to a cabinet. |
-| HTN / bulletin board / Labor solver deferred until first Auto graduation | Their entire purpose is to allocate pawns. Under suggest-only there is no consumer. Design docs preserved verbatim, marked `Deferred — Auto epic`, so the future autonomy work doesn't redesign from scratch. |
+| HTN / bulletin board / Labor solver deferred until first Auto graduation | Their entire purpose is to allocate pawns. Under suggest-only there is no consumer. Design docs preserve only the durable Auto-epic intent and boundaries so future work starts from prior decisions without freezing stale implementation details. |
 | Per-minister `Off / Suggest / Auto` autonomy dial named as a future construct | First-class concept in the design language even though only `Suggest` is implemented. Lets future docs reference the dial without re-introducing it; sets player expectations early. |
 | External advisor dashboard (React + TS) served by `RimAI.Host` over HTTP+SSE | Web UI iterates faster than desktop, runs cross-platform alongside the game, and reuses the SSE pattern already in play with RIMAPI. Adds a JS toolchain to the repo — accepted cost. Localhost-only auth posture. |
 | Explicit feedback only; ministers own their own pushback lists | Accept / Dismiss / **Pushback** is the entire training signal in MVP. Pushback replaces the earlier "Modify" action — instead of editing suggested-action text, the player tells the minister *why he's wrong* in natural language. Each minister persists its own scoped pushback list under `Src/Cabinet/<Minister>/Pushbacks/`; pushbacks are injected into that minister's next prompt and clustered at refinement time. **Implicit state-diff inference is dropped from MVP** — the explicit channel is load-bearing and the kind-to-field mapping was speculative. → [`design/advice.md`](design/advice.md) |
@@ -191,6 +192,7 @@ Decisions made and the reasoning behind them. Append; do not delete.
 | Dashboard is an inspection surface, not a translation layer | Dashboard v2 is primarily for debugging and operating RimAI while the player keeps control in RimWorld. It should preserve backend contract names and raw captured data wherever practical, especially in Prompt, Briefing, Rules, RAG, and Raw LLM Output tabs. Friendly rendering is allowed for the Advice view, but raw/debug views must not rename, paraphrase, or hide source fields. See [`design/dashboard.md`](design/dashboard.md). |
 | Refinement requires historic before/after replay | Rule, prompt, briefing, and RAG refinements should be tested against a corpus of historical minister inputs before promotion. Fixtures remain the curated regression net, but the replay corpus answers what the change would have done to real prior turns. Missing replay fields are a logging/corpus gap, not evidence for promotion. See [`design/evaluation.md`](design/evaluation.md). |
 | Food persists replay corpus records | Food writes append-only records under `logs/replay/food-YYYYMMDD.jsonl` for rule, LLM, and LLM-failure paths. Records preserve the briefing/context, wake trigger, flags, RAG citations, emitted advice/flags, and LLM raw-output metadata needed for future before/after benchmarking. See [`design/architecture.md`](design/architecture.md) and [`design/evaluation.md`](design/evaluation.md). |
+| Design docs should not mirror code | Design docs should preserve durable decisions, ownership boundaries, runtime contracts, and open questions. Avoid duplicating exact C# signatures, enum inventories, DTO fields, endpoint payload details, fixture schemas, or current rule lists that source and tests document better. Link to code/tests when exact implementation shape matters. |
 
 ---
 
@@ -200,14 +202,14 @@ Decisions made and the reasoning behind them. Append; do not delete.
 |---|---|
 | [`design/architecture.md`](design/architecture.md) | Stack, project structure, library choices, interfaces |
 | [`design/dashboard.md`](design/dashboard.md) | React+TS advisor dashboard: layout, HTTP+SSE contract, auth posture |
-| [`design/advice.md`](design/advice.md) | `AdviceItem` schema, Accept/Dismiss/Pushback lifecycle, minister-owned pushback lists |
+| [`design/advice.md`](design/advice.md) | `AdviceItem` semantics, Accept/Dismiss/Pushback lifecycle, minister-owned pushback lists |
 | [`design/ministers.md`](design/ministers.md) | Minister shape, rules system, LLM escalation, rule refinement |
 | [`design/state-store.md`](design/state-store.md) | Aggregates, briefings, cadences, versioning |
-| [`design/communication.md`](design/communication.md) | Flag schema, severity, inter-minister comms rules |
+| [`design/communication.md`](design/communication.md) | Flag semantics, severity, inter-minister comms rules |
 | [`design/rag.md`](design/rag.md) | Knowledge base, ingestion, retrieval strategy |
 | [`design/evaluation.md`](design/evaluation.md) | Decision logging, improvement framework, fixture testing |
-| [`design/agenda.md`](design/agenda.md) | Mayor's Agenda: living plan schema, cabinet_direction interface, dashboard layout, API contract |
-| [`design/ministers/mayor.md`](design/ministers/mayor.md) | Mayor scope, Agenda update schema (MVP centerpiece) |
+| [`design/agenda.md`](design/agenda.md) | Mayor's Agenda: living plan semantics, cabinet_direction, dashboard/API behavior |
+| [`design/ministers/mayor.md`](design/ministers/mayor.md) | Mayor scope and Agenda update responsibilities (MVP centerpiece) |
 | [`design/ministers/chief-of-staff.md`](design/ministers/chief-of-staff.md) | CoS scope, arbitration logic |
 | [`design/ministers/food.md`](design/ministers/food.md) | Food scope, briefing, rules |
 | [`design/ministers/defense.md`](design/ministers/defense.md) | Defense scope, briefing, rules |

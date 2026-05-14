@@ -1,185 +1,221 @@
 # Minister of Food - Minister Design
 
 > **Living document.** See `AGENTS.md` for update rules.
-> Slice: M3 - first feeder advisor for the Mayor's daily memo. Replaces the old Agriculture minister.
-> Implementation status: first runtime slice is `FoodBriefing` + rules-first `MinisterOfFood` with Gemini escalation, `AdviceItem` output, and flags into the Mayor.
+> Food is the first feeder advisor. This doc records domain ownership and
+> design constraints; exact advice enum values, briefing fields, rule names,
+> parser behavior, and fixture expectations live in code/tests.
 
 ---
 
 ## Domain
 
-Food security across the full nutrition chain:
+Food owns food security across the full nutrition chain:
 
-- Acquisition: crops, wild harvest, hunting-for-food, emergency trade flags.
-- Processing: butchering, cooking, meal mix, food-preserving bills.
-- Storage: food stockpiles, freezer capacity, freezer temperature, spoilage risk.
-- Recovery: blight, cold snap, food poisoning, lost freezer, caravan drain, post-raid interruptions.
+- Acquisition: crops, wild harvest, hunting-for-food, and emergency procurement
+  pressure.
+- Processing: butchering, cooking, meal mix, and preserving bills.
+- Storage: food stockpiles, freezer capacity, freezer temperature, and spoilage
+  risk.
+- Recovery: blight, cold snap, food poisoning, lost freezer, caravan drain, and
+  post-raid interruptions.
 
-Food is broader than Agriculture. Farming is only one method inside the food chain; the minister is accountable for whether the colony can keep eating.
+Food is broader than Agriculture. Farming is only one method inside the chain;
+the minister is accountable for whether the colony can keep eating.
 
-Food does not own pawn allocation. It may request work-type-qualified labor, e.g. `Cook`, `Grow`, `PlantCut`, `Hunt`, or urgent `Haul`, but in Suggest mode that request is advice to the player. The deferred Labor minister owns actual pawn assignment once Auto exists.
+Food does not own pawn allocation. It may request work-type-qualified labor,
+but in Suggest mode that request is advice to the player. The deferred Labor
+minister owns actual pawn assignment once Auto exists.
 
-Food advice should be near-term and actionable. Food should usually emit the most important few food-chain interventions, not a full strategic menu. If the right answer is strategic or cross-domain, Food should flag the pressure upward for the Mayor rather than overreaching.
-
-M3 runtime path:
-
-1. `CabinetCycle` refreshes ingestion, runs Food, then runs the Mayor.
-2. Food follows the universal minister bootstrap rule from [`design/ministers.md`](../ministers.md): on the first live cycle after Host startup, or the first cycle after the minister is newly introduced into a save, it should bootstrap via escalation rather than trusting only coarse deterministic rules.
-3. After bootstrap, Food reads `FoodBriefing` from `BriefingCache`, evaluates `Rules.cs`, and publishes the full current Food `AdviceItem` snapshot plus optional `AgentFlag`s.
-4. If rules return `Escalate`, Food calls Gemini with `food.system.md`, `FoodBriefing`, `MinisterBriefingContext`, and food-focused `guide_context`.
-5. The Mayor reads active Medium+ flags and reflects relevant Food pressure in `state_of_the_union.food`, `update_notes`, and short-term priorities.
+Food advice should be near-term and actionable. It should usually emit only the
+most important food-chain interventions. If the right answer is strategic or
+cross-domain, Food should flag pressure upward rather than overreach.
 
 ---
 
-## Advice types
+## Runtime Role
 
-Closed enum draft for M3:
+Food follows the universal minister shape:
 
-```csharp
-public enum FoodAdviceType
-{
-    FoodSecurity,
-    ExpandGrowingCapacity,
-    HarvestNow,
-    WildHarvest,
-    HuntForFood,
-    ManageCookBills,
-    ManageButcherBills,
-    ManageFreezer,
-    ManageFoodStockpile,
-    TradeForFood,
-    RecoverFromFoodEvent
-}
-```
+- First live cycle may bootstrap through escalation for a grounded first read.
+- Normal cycles are rules-first.
+- Escalation uses the Food system prompt, Food briefing, current minister
+  context, and food-focused guide context when available.
+- Food publishes a complete active-advice snapshot on successful cycles.
+- Medium+ Food pressure can feed Mayor synthesis through flags.
 
-Adding an advice type is a design decision because it becomes a future autonomy-dial unit.
+Everything remains suggest-only in MVP.
+
+---
+
+## Advice Types
+
+Food advice types are a closed code contract and future autonomy-dial units.
+Adding or removing one is a design decision, but the exact enum list belongs in
+`Src/Common/Advice/FoodAdviceType.cs`.
+
+Food advice types should cover food security, growing capacity, harvest,
+wild-harvest, hunting, cooking, butchering, freezer/storage, trade/procurement
+pressure, and food-event recovery.
 
 ---
 
 ## Briefing
 
-See [`design/state-store.md`](../state-store.md#food) for the full field list.
+Food's briefing should answer:
 
-M3 implemented facts:
+- Is the current food buffer safe?
+- Is the nutrition signal trusted, fallback-derived, or missing?
+- Which chain stage is limiting: acquisition, cooking, storage, freezer, labor,
+  season, active threat, or data coverage?
+- What immediate opportunity exists: ready harvest, edible wild cluster, crop
+  expansion, meal production, storage visibility, freezer/building request, or
+  escalation?
+- What facts are missing and therefore should temper advice confidence?
 
-- `EstimatedDaysOfFood`: reported nutrition when available, otherwise conservative meal/raw-food fallback.
-- `NutritionSource`: `reported`, `fallback_meal_raw_counts`, or `unknown`.
-- `FoodUnits`, `MealsCount`, `RawFoodCount`, `ReadyToHarvest`, crop breakdown.
-- `WildHarvestCandidates` and `WildAnimalCount` as first-pass opportunity counts.
-- Plants/Cooking skill coverage, stockpile cells, cooler count, net power, active threat, recent food incidents.
-- Aggregated spatial/operational summaries: crop-zone summaries, nearest wild-harvest clusters, kitchen/cooking-building presence, butcher-table presence, food-storage summary, kitchen-to-stockpile distance when positions exist, and data-coverage flags.
+Spatial and operational data stays aggregated. Food should receive counts,
+proximity strings, nearest clusters, distances, and coverage flags rather than
+raw plant/tile/building lists.
 
-Spatial briefing data stays aggregated. Food receives proximity strings, counts, and coverage flags rather than raw plant/tile/building lists.
+The implemented briefing can be narrower than the target. Use
+`FoodBriefing`, `FoodBriefingDerivation`, and Food briefing tests for current
+fields.
 
-Deferred from the richer target briefing: exact zone-level yield, hunting risk scoring, kitchen/butchery bills, room temperature, item spoilage, work-priority state, and caravan/trade availability.
+Deferred richer signals include exact zone yield, hunting risk scoring, bill
+state, freezer room temperature, spoilage timers, work-priority state, and
+caravan/trade availability.
 
 ---
 
-## Rules layer (target ~80% coverage)
+## Rules And Escalation
 
-Implemented M3 rules:
+Rules should cover obvious food-chain states: safe buffer, unknown or unreliable
+nutrition signal, emergency shortage, mature harvest, understocked meals with raw
+food, wild harvest availability, growing capacity, and missing freezer/storage
+support.
 
-| Rule | Condition | Output |
-|---|---|---|
-| `maintain_security_threshold` | DaysOfFood >= 30 AND no urgent spoilage/harvest issue | No advice |
-| `nutrition_signal_gap` | Food units exist but nutrition is unknown/fallback-derived | ManageFoodStockpile, request reachable stockpile visibility, Medium priority 6 |
-| `unknown_food_state` | No food units and no reliable nutrition estimate | FoodSecurity High, request visible reachable food stockpile |
-| `emergency_food_flag` | DaysOfFood < 7 | FoodSecurity High/Critical, dynamic priority, concrete intake/cooking/growing requests and actions |
-| `harvest_mature_crops` | Ready harvest count > 0 | HarvestNow, nearest crop-zone summary when available; labor request only if urgent or Plants coverage is missing |
-| `meals_understocked` | Meals below two per colonist, days > 7, raw food exists | ManageCookBills, simple meal target, cooking labor only if urgent/no cook coverage |
-| `wild_harvest_available` | DaysOfFood < 20, no ready crop harvest, edible wild cluster exists | WildHarvest, mark nearest edible cluster; no routine labor request unless urgent/no Plants coverage |
-| `expand_growing_capacity` | DaysOfFood < 20 and growing window remains open | ExpandGrowingCapacity, Tile request with quantity and placement constraints |
-| `freezer_missing` | Food exists, no cooler visible, buffer is otherwise stable | ManageFreezer, building request to Construction |
+Rules should compute priority from live state where possible: days of food,
+nutrition confidence, colonist count, season/growing window, active threat, and
+whether a concrete action can be taken now.
 
-Escalates when:
+Escalate when:
 
-- The first live Food cycle needs a concrete bootstrap memo, even if a coarse deterministic shortage rule also matches.
-- Crop choice involves real trade-offs: rice vs potatoes vs corn vs hydroponics.
+- The first live Food cycle needs a concrete bootstrap memo.
+- Crop choice involves real trade-offs.
 - Hunting target value/risk is ambiguous.
-- Multiple food-chain bottlenecks compete: no cooks, full freezer, low raw food, active threat.
-- Unusual food event appears: blight, toxic fallout, heat wave/freezer loss, animal revenge risk.
+- Multiple bottlenecks compete.
+- An unusual food event appears.
 - Drug/textile crops compete with food crops.
-- Food procurement pressure exists but the action belongs to Economy/Trade or the Mayor.
+- Food procurement pressure exists but execution belongs to Economy/Trade or
+  Mayor.
 
-M3 priority calibration: Food emits `High` for urgent shortage by default. `Critical` is reserved for true immediate starvation evidence, not just a low buffer.
+`Critical` should mean immediate starvation evidence, not merely a low buffer.
 
-Food should compute advice `priority` from live state when possible: days of food, nutrition confidence, colonist count, season/growing window, active threat, and whether a concrete action can be taken now.
-
-Food publishes a complete active-advice snapshot each successful play cycle. The snapshot replaces earlier active Food cards, including bootstrap LLM cards with unique ids, so the dashboard reflects Food's latest view instead of accumulating stale prior-cycle advice. Advice IDs should still be stable per rule issue where possible (for example `food_emergency_food_flag`) because stable ids make logs, tests, and future supersession chains easier to read. Historical logging can still record each emission separately later.
-
-Emergency Food output should avoid vague catch-all wording such as "audit" or generic `note` actions. If the briefing has reported `FoodUnits` but no meal/raw-food category, Food should say that the reported food units need reachable stockpile visibility. If the briefing shows no harvest/cook path, Food should still emit concrete food-chain setup work when possible: emergency growing tiles, Grow/PlantCut labor, a campfire/stove request, and simple-meal bill/cook labor when raw food exists. Food may request trade capacity only when no stored, harvestable, cookable, or sowable path is visible.
-
-Food LLM `notes` are trace labels, not player advice. They should stay terse and use the same vocabulary as advice: "reported food units need reachable stockpile visibility," not "unclassified edible items," "identification," or "audit."
-
-Crop selection should be grounded in deterministic yield math, not only prompt/RAG intuition. Food should have a shared crop-math helper/table that rules can call directly and that escalation can expose to the LLM as computed crop candidates. At minimum it should score rice/potato/corn by grow time, harvest yield/nutrition per tile, expected nutrition before winter, fertility sensitivity, current growing-window days, and available Plants/cooking constraints. The LLM may use guides to explain or adjust a candidate, but it should not invent the math.
-
-Bootstrap-escalation rule: the first memo should bias toward specific, player-usable advice when the current state supports it, such as crop choice, immediate sow/harvest priorities, hunting vs wild-harvest tradeoff, freezer need, or bill changes. If the current `FoodBriefing` cannot support that specificity, the minister should say so explicitly rather than pretending to know tile counts or exact layouts.
+Food publishes active advice as a minister snapshot. Stable same-issue ids are
+preferred where possible so the dashboard updates the current card instead of
+accumulating duplicates.
 
 ---
 
-## Resource requests
+## Output Quality
+
+Emergency Food output should avoid vague catch-all wording such as "audit" or
+generic `note` actions when the briefing supports a concrete next step.
+
+If reported food units exist but meal/raw-food classification is missing, Food
+should say that reachable stockpile visibility is needed. If no harvest/cook
+path is visible, it should still request or suggest concrete setup work when the
+briefing supports it: emergency growing tiles, relevant work-type labor, cooking
+building, or simple meal bill.
+
+Food may request trade capacity only when no stored, harvestable, cookable, or
+sowable path is visible.
+
+Food LLM notes are trace labels, not player advice. Keep them terse and aligned
+with advice vocabulary.
+
+Crop selection should be grounded in deterministic yield math exposed to both
+rules and LLM escalation. The LLM may use guides to explain or adjust a
+candidate, but it should not invent crop math.
+
+---
+
+## Resource Requests
 
 Food may request:
 
-- Tiles: growing zone area, wild harvest area, freezer expansion, food stockpile space. Tile requests should include amount plus proximity/constraint text; Construction/Base Layout handles exact placement.
-- Labor: specific RimWorld work types such as `Cook`, `Grow`, `PlantCut`, `Hunt`, or urgent `Haul`. Avoid generic "labor capacity."
-- Items/buildings: coolers, butcher table, fueled/electric stove, shelves, power support.
-- Bills/settings: cook bill targets, butcher bill state, stockpile filters, forbid/unforbid food.
+- Tiles: growing area, wild harvest area, freezer expansion, stockpile space.
+- Labor: specific RimWorld work types such as cooking, growing, plant cutting,
+  hunting, or urgent hauling.
+- Items/buildings: coolers, butcher table, stove/campfire, shelves, power
+  support.
+- Bills/settings: cook bill targets, butcher bill state, stockpile filters,
+  forbid/unforbid food.
 
-In MVP, these are surfaced as suggested actions and flags. They are not writes. In Auto, these become inputs to HTN/Labor/RIMAPI execution.
+In MVP these are rendered as advice and flags. They are not writes. In Auto,
+they become inputs to the deferred planner/Labor/RIMAPI path.
 
-Trade is not a normal Food action in M3. Food may flag "food procurement needed" when local food paths are insufficient, but Economy/Trade or the Mayor owns the trade framing and caravan decision. Food rules should not tell the player to caravan or trade unless the briefing eventually carries explicit current trade availability.
+Trade is not a normal Food action in M3. Food may flag procurement need when
+local paths are insufficient, but Economy/Trade or Mayor owns trade framing.
 
 ---
 
-## Owned action families
-
-Clear-cut Food ownership:
+## Owned Action Families
 
 | Action family | Food ownership |
 |---|---|
-| Growing zones for food crops | Owns size, crop, timing, urgency |
-| Wild plant harvest for nutrition | Owns target and timing |
-| Hunting for nutrition | Owns need and target recommendation; Defense may flag combat risk |
-| Butchering | Owns bill need and backlog |
-| Cooking | Owns bill type and stock target |
-| Food stockpile/freezer | Owns filters, capacity need, spoilage urgency |
-| Food emergency trade flag | Owns need; future Trade/Treasury owns execution |
+| Growing zones for food crops | Size, crop, timing, urgency |
+| Wild plant harvest for nutrition | Target and timing |
+| Hunting for nutrition | Need and target recommendation, with Defense risk veto possible |
+| Butchering | Bill need and backlog |
+| Cooking | Bill type and stock target |
+| Food stockpile/freezer | Filters, capacity need, spoilage urgency |
+| Food emergency trade flag | Need; future Economy/Trade owns execution |
 
 Hard cases:
 
-- Psychoid/smokeleaf/devilstrand: Food can comment on tile opportunity cost, but Trade/Treasury or Welfare may own the strategic reason to grow it.
-- Animal breeding/culling/training: likely future Animal/Logistics subdomain; Food only owns slaughter-for-food pressure for now.
-- Nutrient paste: Food owns the food-chain recommendation; Welfare owns the mood cost context.
-- Caravan provisioning: Food owns nutrition sufficiency; future Trade/Travel owner owns caravan execution.
+- Psychoid/smokeleaf/devilstrand: Food can comment on tile opportunity cost;
+  Industry, Economy, or Welfare owns the strategic reason.
+- Animal breeding/culling/training: Food only owns slaughter-for-food pressure
+  for now.
+- Nutrient paste: Food owns the food-chain recommendation; Welfare owns mood
+  cost.
+- Caravan provisioning: Food owns nutrition sufficiency; future travel/trade
+  owner owns execution.
 
 ---
 
-## Success metrics
+## Success Metrics
 
-- `DaysOfFoodRemaining` stays above 20 for >90% of in-game days in year 1.
+- Food buffer stays healthy for most of year 1.
 - No colonist death from starvation in year 1.
-- Freezer has food surplus heading into each winter.
-- Cooked meals remain stocked without wasting ingredients during shortage windows.
-- Escalation rate below 20% after rule refinement has run.
+- Freezer/storage path supports surplus heading into winter.
+- Cooked meals stay stocked without wasting ingredients during shortage windows.
+- Escalation rate falls as replay-backed rules mature.
 
 ---
 
-## RAG retrieval profile
+## RAG Retrieval Profile
 
-Topics: `["food", "farming", "crops", "wild harvest", "hunting", "freezer", "cooking", "nutrition", "spoilage"]`
+Food retrieval topics include food, farming, crops, wild harvest, hunting,
+freezer, cooking, nutrition, and spoilage.
 
-Retrieval required for: crop choice decisions, seasonal timing, freezer/cooking policy, first devilstrand/drug crop decision, biome-specific food recovery.
+Retrieval is useful for crop choice, seasonal timing, freezer/cooking policy,
+first devilstrand/drug-crop decisions, and biome-specific food recovery.
 
-RAG is subordinate to live state and deterministic crop math. Guide passages can justify crop, bill, freezer, and seasonal choices, but they must not invent a current trade route, exact plant location, available work capacity, or crop yield calculation that the briefing/crop-math helper does not support.
+RAG is subordinate to live state and deterministic crop math. Guide passages can
+justify choices, but they must not invent current trade routes, exact plant
+locations, work capacity, or yield calculations absent from briefing/code.
 
 ---
 
-## Open questions / TODO
+## Open Questions / TODO
 
-- [ ] Define exact DaysOfFood thresholds; 30/20/15/7 are placeholders.
-- [ ] Hunting value/risk scoring for target selection.
-- [ ] How does Food account for caravan provisioning and food removed from the home map?
-- [ ] Decide ownership for drug/textile crops once Trade/Treasury exists.
-- [ ] Decide whether animal economy deserves its own minister or stays a Food hard case.
-- [ ] Map every RIMAPI food-chain read/write endpoint before Auto graduation.
+- [ ] Define exact food-buffer thresholds from play data.
+- [ ] Add deterministic crop-yield math and computed crop candidates.
+- [ ] Improve hunting value/risk scoring.
+- [ ] Account for caravan provisioning and food removed from the home map.
+- [ ] Decide ownership for drug/textile crops once Economy/Industry/Welfare are
+      live.
+- [ ] Decide whether animal economy deserves its own minister or stays a Food
+      hard case.
+- [ ] Map Food-chain RIMAPI writes before any Auto graduation.

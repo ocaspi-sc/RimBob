@@ -1,63 +1,56 @@
-# Chief of Staff — Minister Design
+# Chief of Staff - Minister Design
 
-> **Living document.** See `CLAUDE.md` for update rules.
-> Slice: 6. Depends on: all five cabinet ministers operational.
+> **Living document.** See `AGENTS.md` for update rules.
+> CoS is the cabinet arbitration role. This doc records responsibilities and
+> boundaries, not final schemas or rule code.
 
 ---
 
 ## Role
 
-Flag triage and conflict arbitration. The CoS sits between the cabinet and the Mayor.
+Chief of Staff sits between feeder ministers and the Mayor. Its job is to make
+cabinet pressure coherent before it reaches the player.
 
-- Resolves High-tier conflicts within the same tick.
-- Batches Medium flags into the Mayor's daily digest.
-- Can downgrade flags (with reasoning logged).
-- Does NOT issue labor requests or RIMAPI writes.
+CoS can:
 
----
+- Dedupe overlapping flags.
+- Choose lead framing when multiple ministers describe the same issue.
+- Downgrade inflated flags with a logged reason.
+- Decide whether a flag becomes a tactical alert or normal Mayor input.
+- Surface strategic tensions to the Mayor.
 
-## Escalation rate target
-
-~70%. Arbitration is judgment by definition. Rules handle the most mechanical resolutions (Defense Critical always wins; Low flags always defer). Everything contested escalates.
-
----
-
-## Known rules
-
-- `critical_always_wins`: if any Critical flag exists, all other priority work defers to it.
-- `single_high_auto_resolve`: if only one High flag is active, resolve it without LLM.
-- `defer_low_when_high_active`: Low flags queue when any High or Critical is active.
-- `flag_dedup`: if two flags from the same minister have identical summaries, keep the newer; drop the older.
+CoS does not issue labor requests, produce routine player advice, mutate the
+Agenda, or call RIMAPI.
 
 ---
 
-## LLM output schema
+## Implementation Posture
 
-```jsonc
-{
-  "resolutions": [
-    {
-      "flag_id": "...",
-      "action": "forward_to_mayor | resolve | downgrade | defer",
-      "priority_ruling": "food_wins | defense_wins | split",
-      "rationale": "..."
-    }
-  ],
-  "mayor_digest": {
-    "summary": "...",
-    "flags": [ /* Medium flags batched */ ],
-    "strategic_tensions": [ /* patterns worth Mayor attention */ ]
-  },
-  "flags": [ /* AgentFlag[] CoS emits to Mayor */ ],
-  "notes": "..."
-}
-```
+Keep CoS split in the design language, but do not overbuild runtime structure
+while feeder volume is low. The first pass may be a Mayor-side deterministic
+helper. A separate loop/process is justified only when active flag traffic makes
+the helper hard to reason about.
 
 ---
 
-## Open questions / TODO
+## Rules And Escalation
 
-- [ ] Define exact resolution action enum
-- [ ] Should CoS have its own briefing, or just read the flag channel?
-- [ ] How does CoS handle three-way contention (Construction, Defense, and Food all want the same colonist at High)?
-- [ ] Flag aging: should Low flags auto-escalate to Medium after N in-game hours of being ignored?
+Rules should handle mechanical arbitration:
+
+- Critical threat flags preempt normal work.
+- Single high-priority flags need little arbitration.
+- Low flags defer behind high/critical pressure.
+- Same-source duplicate flags should update/supersede rather than stack.
+
+Escalate when multiple serious flags compete, when two ministers should share a
+single player-facing framing, or when priority depends on Mayor posture.
+
+---
+
+## Open Questions / TODO
+
+- [ ] Define first CoS resolution actions when implementation starts.
+- [ ] Decide whether CoS needs its own briefing or only the active flag set plus
+      Mayor posture.
+- [ ] Define three-way contention handling.
+- [ ] Decide whether ignored Low flags age upward.

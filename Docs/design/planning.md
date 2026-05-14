@@ -1,120 +1,82 @@
-# RimAI — Planning: HTN
+# RimAI - Planning / HTN
 
-> ⚠️ **DEFERRED — Auto epic.** Not built in MVP.
-> Under the assisted-gameplay pivot ([`../DESIGN.md`](../DESIGN.md)), ministers emit `AdviceItem`s instead of HTN goals; there is no planner consumer in `Suggest`-only mode. The HTN engine and primitive contract land at M7 when the first minister graduates from `Suggest` to `Auto`.
-> This document is preserved verbatim so M7 design starts from where the original work left off, not from scratch.
+> **DEFERRED - Auto epic.** Not built in MVP.
+> In suggest-only mode, ministers emit `AdviceItem`s and there is no planner
+> consumer. Re-engage this doc at M7+ when a minister is ready to graduate from
+> `Suggest` to `Auto`.
 
----
-
-> **Living document.** See `CLAUDE.md` for update rules.
-
----
-
-## Overview
-
-The HTN planner decomposes minister goals into primitive tasks. It is shared infrastructure — ministers register their own domains, the engine is neutral.
-
-The bulletin board (work assignment to colonists) is a separate concern owned by Labor, not the planner. See [`design/ministers/labor.md`](ministers/labor.md).
+> **Living document.** See `AGENTS.md` for update rules.
+> This doc records planning intent and boundaries, not committed interfaces.
 
 ---
 
-## HTN — Hierarchical Task Network
+## Purpose
 
-### Vocabulary
+The future planner decomposes trusted minister advice into executable steps.
+It exists only when RimAI is allowed to act through RIMAPI writes.
 
-- **Primitive task** — directly executable. Either a RIMAPI write call or a `PostLaborRequest` to the bulletin board.
-- **Compound task** — a named outcome with multiple methods. E.g. `EnsureFoodSecurity`.
-- **Method** — a precondition (lambda over briefing) + an ordered list of subtasks. The planner picks the first method whose preconditions hold.
-
-Planning = recursive expansion: take the top-level compound (from the LLM's top-priority `goal_id`), find a matching method, expand subtasks, recurse until all are primitive.
-
-### Domain registration
-
-Each minister registers its domain at startup. The planner engine is shared; the domains are per-minister.
-
-```csharp
-planner.RegisterDomain(new FoodDomain());
-planner.RegisterDomain(new DefenseDomain());
-// etc.
-```
-
-A domain is a collection of compound tasks + their methods. It references its minister's briefing type.
-
-### World-state representation
-
-Preconditions are lambdas over the minister's current briefing. **No forward simulation.** Methods operate on what is observably true now; the world updates between planner runs. Ministers' plans are small (1–3 primitives typically); re-planning on briefing change is cheap.
-
-Forward simulation belongs at the Mayor/CoS level for multi-day strategic trades, not in per-minister planners.
-
-### When the planner runs
-
-- After LLM call updates goals.
-- After a flag fires.
-- After a primitive completes or fails.
-- Hourly heartbeat as safety net.
-
-### Plan persistence
-
-**Fresh plan each run.** No patching across runs. Compounds are small; a stale plan is more dangerous than a recomputed one.
-
-### Example domain (Food)
-
-```
-Compound: EnsureFoodSecurity
-├── Method "already_secure"
-│   pre:  daysOfFood >= target
-│   tasks: []
-├── Method "harvest_now"
-│   pre:  matureCropTiles > 0 AND plantsLaborAvailable
-│   tasks: [PostLaborRequest(Plants, Harvest, matureZones)]
-├── Method "expand_zone"
-│   pre:  hasGrowableSoil AND season.allowsPlanting AND constructionLaborAvailable
-│   tasks: [ChooseCrop, DesignateZone(RIMAPI), PostLaborRequest(Plants, Sow, newZone)]
-├── Method "hunt"
-│   pre:  huntableAnimalsNearby AND shootingLaborAvailable
-│   tasks: [PostLaborRequest(Hunting, Hunt, targets)]
-└── Method "emergency_trade_flag"
-    pre:  silverAboveThreshold AND traderApproaching
-    tasks: [EmitFlag(FlagSeverity.High, "request_food_trade")]
-```
+The planner is shared infrastructure. Ministers own domain methods and advice
+semantics; Labor owns pawn assignment; the planner coordinates execution shape.
 
 ---
 
-## Primitive contract
+## Vocabulary
 
-Every primitive declares two things:
+- **Compound task:** an outcome that needs decomposition.
+- **Method:** one way to satisfy a compound task, gated by current state.
+- **Primitive task:** an executable write or a request to another execution
+  owner such as Labor.
+- **Observed success:** the state-store signal proving a primitive worked.
 
-```csharp
-public interface IPrimitive
-{
-    Task Execute();
-    ObservabilityContract Observable { get; }
-}
-
-public class ObservabilityContract
-{
-    public string BriefingField { get; }    // e.g. "DaysOfFoodRemaining"
-    public Predicate<object> SuccessWhen { get; }
-    public TimeSpan Timeout { get; }
-}
-```
-
-`WatchedPrimitive` wraps every primitive. On execute, it registers a watcher. If `SuccessWhen` is not true within `Timeout`, the primitive is marked stuck.
-
-### Failure modes
-
-| Mode | Behaviour |
-|---|---|
-| Precondition false at plan time | Backtrack, try sibling method |
-| Primitive stuck (timeout, no observable effect) | Raise flag, replan with cooldown on failed method |
-| RIMAPI write rejected | Log, raise High flag, fall back to next method |
-
-Stuck-primitive detection is a first-class concern, not an afterthought. It is the most common silent failure in agent systems that talk to a slow world.
+Exact interfaces should be designed when Auto work starts, using the codebase at
+that time as source of truth.
 
 ---
 
-## Open questions
+## Design Boundaries
 
-- [ ] How are compound tasks versioned? (If Food adds a new method mid-playthrough, does the in-progress plan replan?)
-- [ ] Priority inheritance: if a High request spawns a Critical sub-request, does the sub-request inherit Critical?
-- [ ] Stuck timeout values — need calibration against real RIMAPI response times
+- No planner work in MVP.
+- No RIMAPI writes before per-minister Auto graduation.
+- No minister except Labor touches pawn allocation.
+- Planning should operate on state-store facts and replan when facts change.
+- Plans should stay small and inspectable; avoid speculative multi-day forward
+  simulation in first Auto slices.
+- Failed or stuck primitives must produce observable logs/flags rather than
+  silent retries.
+
+---
+
+## Failure Model
+
+The Auto planner must explicitly handle:
+
+- Preconditions no longer true.
+- RIMAPI write rejected or unavailable.
+- Primitive appears stuck because observed state did not change.
+- Competing requests need the same pawn/resource.
+- A higher-priority flag interrupts current execution.
+
+The response should be logged, visible to dashboard/system inspection, and
+available to refinement.
+
+---
+
+## Re-Engagement Checklist
+
+Before implementing planner code:
+
+- [ ] Pick one minister/advice type as the first Auto candidate.
+- [ ] Map required RIMAPI writes and read-back observability.
+- [ ] Define the smallest primitive contract needed for that candidate.
+- [ ] Define how Labor receives pawn-allocation requests.
+- [ ] Add fixtures/replay records for success, rejection, and stuck cases.
+- [ ] Add dashboard visibility for active/stuck Auto execution.
+
+---
+
+## Open Questions
+
+- [ ] How are compound/method versions tracked across playthroughs?
+- [ ] How does priority inheritance work across sub-requests?
+- [ ] What stuck timeout values match real RIMAPI response times?
+- [ ] When is forward simulation worth adding, if ever?

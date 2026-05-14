@@ -1,70 +1,79 @@
 # RimAI Advisor Dashboard
 
-> Living document. Dashboard design changes should be recorded here in the same turn they are accepted.
+> **Living document.** Dashboard design changes should be recorded here in the
+> same turn they are accepted.
+> This doc records dashboard purpose, information architecture, and behavioral
+> contracts. Exact routes, payload fields, React component names, and API client
+> types live in Host and Dashboard source.
+
+---
 
 ## Purpose
 
-The dashboard is the player's view into RimAI. It is a read-and-react surface for assisted RimWorld play: the player reads the cabinet's advice, inspects the evidence behind it, and keeps control inside RimWorld.
+The dashboard is the player's read-and-react surface for assisted RimWorld play.
+The player reads advice, inspects evidence, and keeps control inside RimWorld.
 
-Dashboard v2 is a from-scratch React implementation inside the existing dashboard package. Keep the Vite package, build output, and Host serving model; treat the previous dashboard UI as reference material only.
+It is also the primary debugging and inspection surface for RimAI. It should
+show what the backend, ministers, prompts, briefings, parsers, traces, and logs
+actually produced. Prefer contract names and lightly formatted source data over
+heavy UI translation. Raw/debug tabs must preserve captured backend payloads.
 
-The dashboard is also the primary debugging and inspection surface for RimAI. It should reveal what the backend, ministers, prompts, briefings, parsers, and traces actually produced. Prefer contract names and lightly formatted source data over heavy UI translation. When a view changes labels, groups fields, or derives summaries, that transformation should be obvious and local to that view; raw/debug tabs must preserve the captured contract rather than presenting a rewritten version.
+Dashboard v2 is a from-scratch React implementation inside the existing
+dashboard package. Keep the Vite package, build output, and Host serving model;
+treat the previous UI as reference only.
+
+---
 
 ## Product Posture
 
-- Game-read-only in v2: no RIMAPI write controls, no autonomy toggles, and no feedback/Pushback controls.
-- Manual Run buttons may trigger RimAI re-evaluation, but they never issue RimWorld/RIMAPI write commands.
+- Game-read-only in v2: no RIMAPI write controls, no autonomy toggles, and no
+  feedback/Pushback controls.
+- Manual Run buttons may trigger RimAI re-evaluation, never RimWorld writes.
 - Localhost-only: Host binds loopback and serves the dashboard plus `/api/*`.
 - Dense second-monitor operations console, not a landing page.
-- Explanation-first: every recommendation should have a visible place for prompt, briefing, RAG, rules/trigger trace, and current advice.
-- Debug-first: preserve backend contract language and raw captured data unless the view is explicitly a player-facing advice view.
+- Explanation-first: every recommendation needs an inspection path for prompt,
+  briefing, RAG, rules/trace, raw LLM output, and current advice.
+- Debug-first: preserve backend contract language except in explicitly
+  player-facing advice views.
+
+---
 
 ## Stack And Serving
 
-- React 18 + TypeScript, built with Vite in root-level `Dashboard/`.
-- Production output is bundled into `Src/ApiHost/wwwroot` and served by `RimAI.Host`.
+- React + TypeScript, built with Vite in root-level `Dashboard/`.
+- Production output is bundled into the Host web root and served by
+  `RimAI.Host`.
 - Dashboard consumes Host HTTP endpoints and the advice SSE stream.
-- No frontend state-management library is required; local state plus small polling/SSE hooks is enough for v2.
+- Local state plus focused polling/SSE hooks is enough for v2; do not add broad
+  state-management infrastructure without a concrete need.
+
+---
 
 ## Information Architecture
 
-### Shell
-
-Dashboard v2 uses four stable regions:
+Dashboard v2 has four stable regions:
 
 - Header: product title, runtime status, and global manual trigger.
-- Left rail: scope selector.
+- Left rail: inspected scope selector.
 - Main workspace: SYSTEM overview or minister inspector tabs.
 - Right sidebar: compact colony facts plus colonist cards.
 
-The header exposes `Run Cabinet Now` as the global manual trigger. Minister workspaces expose `Run {Minister} Now` beside the selected minister's last-run time from trace health. The selected view is already visible in the tab bar and should not be repeated beside the run button. Planned ministers show a disabled `Not Wired` control.
+The header exposes `Run Cabinet Now`. Minister workspaces expose
+`Run {Minister} Now` beside the selected minister's last-run time. The selected
+view is already visible in the tab bar and should not be repeated beside the run
+button. Planned ministers show disabled/not-wired controls.
 
-### Left Rail: Scopes
+### Scopes
+
+Live scopes are SYSTEM, Mayor, and Food. Future scopes remain visible but
+disabled or marked not wired until backend data exists: Construction, Defense,
+Welfare, Medical, Research, Industry, Economy, and Chief of Staff.
 
 The left rail selects the inspected scope, not the view.
 
-Live scopes:
-
-- SYSTEM
-- Mayor
-- Food
-
-Visible future scopes:
-
-- Construction
-- Defense
-- Welfare
-- Medical
-- Research
-- Industry
-- Economy
-- Chief of Staff
-
-Each scope may show a small emoji marker. Future scopes are disabled or marked "not wired" until backend data exists.
-
 ### Minister Views
 
-Minister scopes use the fixed top tab bar:
+Minister scopes use a fixed top tab bar:
 
 - System Prompt
 - Briefing
@@ -73,172 +82,177 @@ Minister scopes use the fixed top tab bar:
 - Raw LLM Output
 - Advice
 
-Each view renders structured sections. Large objects use the standard disclosure pattern: a real button header with `aria-expanded` / `aria-controls`, plus a conditionally rendered panel in normal document flow.
+Large objects use the standard disclosure pattern: a real button header with
+`aria-expanded` / `aria-controls`, plus a conditionally rendered panel in normal
+document flow.
 
-The dashboard persists the last selected scope and minister view in browser `localStorage` so normal page reloads return to the same inspected place. Stored values are validated against the fixed scope/view registries and fall back to SYSTEM / Advice if stale.
+The dashboard persists the last selected scope and view in browser storage.
+Stored values are validated against known registries and fall back safely when
+stale.
 
-Panel registries are frontend implementation details. Do not render registry ids or the full registered view list inside the normal minister workspace; the selected tab already provides that orientation.
+Panel registries are frontend implementation details. Do not render registry ids
+or the full registered view list inside the normal minister workspace.
 
 ### Dynamic Debug Surfaces
 
-Debug and inspection views should be schema-tolerant. `Rules`, `RAG`, `Raw LLM Output`, endpoint coverage, traces, logs, and unknown future minister data should render through shared inspector primitives instead of per-field bespoke components. The inspector layer should infer useful display from the payload: summary fields when configured, uniform arrays as tables, objects as key/value sections, and unknown nested values through a JSON/tree renderer.
+Rules, RAG, Raw LLM Output, endpoint coverage, traces, logs, and unknown future
+minister data should render through shared inspector primitives where practical.
+The inspector layer may infer useful display from payload shape: summary fields,
+tables for uniform arrays, object sections, and JSON/tree fallback.
 
-Player-facing views stay curated. `Advice`, Mayor Agenda, and the colony sidebar may keep hand-shaped layouts because they are read during play and need stronger hierarchy than a generic schema browser.
+Player-facing views stay curated. Advice, Mayor Agenda, and the colony sidebar
+may keep hand-shaped layouts because they are read during play.
 
-Prefer small targeted dependencies over a full table/grid framework for v2. `react-json-view-lite` is the current JSON/tree dependency because it provides collapse/expand, React 18 support, TypeScript types, and no transitive dependencies. Generic object/array inference, fallback sections, and dashboard-specific formatting should remain local code. Add a headless table library only if debug tables need real sorting, filtering, column visibility, resizing, or virtualization.
-
-JSON inspectors start fully expanded and should preserve their open/closed state across parent polling or SSE re-renders when the payload content has not changed.
+JSON inspectors should preserve open/closed state across polling or SSE
+re-renders when the payload content has not changed.
 
 ### SYSTEM View
 
-SYSTEM is not a minister and does not show minister tabs. It starts as one overview page with compact panels. Split it later into `Runtime`, `LLM`, `RAG`, and `Logs` only if the overview becomes too large.
+SYSTEM is not a minister and does not show minister tabs. It starts as one
+overview page with compact panels. Split it later only if the overview becomes
+too large.
 
 SYSTEM owns:
 
-- Runtime status and Mayor run state.
+- Runtime and Mayor/cabinet run state.
 - RIMAPI reachability.
-- SSE diagnostics: connection state, active/total connections, event count, last event, last error.
-- LLM health: key configuration is not enough for a green state; latest raw output status drives the health pill, so request/parse failures such as quota exhaustion render degraded/error until a later successful response supersedes them.
+- SSE diagnostics.
+- LLM health from actual request/parse status, not only key configuration.
 - LLM usage placeholders.
 - RAG health and corpus/cache placeholders.
 - Endpoint and data coverage markers.
 - Recent event/advice timeline.
-- Log paths and future bounded log tail.
+- Log and replay-corpus metadata.
 
 ### Right Sidebar
 
 The right sidebar is always-on colony context independent of selected scope.
 
-Render compact facts first, then one small panel per colonist:
+Render compact facts first, then one small panel per colonist: date/tick/season,
+colonist count, mood, medical/downed/dead signals, food days, wealth, power,
+threat, weather, research, and colonist cards where available.
 
-- Date, tick, season.
-- Colonist count, mood, break risk, medical/downed/dead signals.
-- Food days, wealth, power, threat, weather, research where available.
-- Colonist cards: name, mood, health, hunger, current job, top skill, downed/dead state.
+If a sidebar poll fails after a successful snapshot, keep rendering the last
+snapshot and show a compact stale/error note. Do not replace the whole sidebar
+with a failure panel unless no snapshot has ever loaded in this page session.
 
-If a sidebar poll fails after a previous successful snapshot, keep rendering the last successful snapshot and show a compact stale/error note in the footer. Do not replace the whole sidebar with a failure panel unless no snapshot has ever loaded in this page session.
+---
 
 ## Data Contracts
 
-### Current Endpoints
+The dashboard talks only to bounded Host APIs. Exact route lists and payload
+types live in `Src/ApiHost/Endpoints/`, `Dashboard/src/api/`, and
+`Dashboard/src/types/`.
 
-Dashboard v2 initially uses:
+Design-level endpoint families:
 
-- `GET /api/status`
-- `GET /api/advice/stream`
-- `POST /api/cabinet/trigger`
-- `POST /api/ministers/{minister}/trigger` for wired ministers.
-- `GET /api/agenda/latest`
-- `GET /api/briefings/mayor/latest`
-- `GET /api/briefings/food/latest`
-- `GET /api/mayor/prompt`
-- `GET /api/ministers/{minister}/prompt` for Mayor and Food prompt introspection.
-- `POST /api/ministers/{minister}/llm-output/manual` for Food-only developer fallback ingestion of a pasted raw model response.
-- `GET /api/colony/snapshot`
+- Runtime/status and system health.
+- Advice SSE stream.
+- Manual cabinet/minister triggers.
+- Agenda and active advice reads.
+- Latest minister prompt, briefing, RAG, trace, and raw LLM output.
+- Colony snapshot/sidebar data.
+- Bounded log and replay-corpus metadata.
+- Developer-only manual raw LLM ingestion for Food while provider quota is a
+  practical blocker.
 
-### V2 Introspection Endpoints
+All observability endpoints are read-only unless explicitly named as a manual
+RimAI re-evaluation trigger. They never mutate game state.
 
-Dashboard v2 adds or plans read-only introspection:
-
-- `GET /api/ministers`
-- `GET /api/ministers/{minister}/trace/latest`
-- `GET /api/system/health`
-- `GET /api/ministers/{minister}/rag/latest`
-- `GET /api/system/logs/recent`
-
-These endpoints are observability surfaces only. They do not mutate game state.
+`/api/system/health` owns dashboard-visible metadata for known log and
+diagnostic artifacts. It should expose bounded metadata such as location,
+patterns, counts, byte totals, latest write time, and recent-file summaries, not
+raw log file contents or full replay payloads.
 
 ### Manual Triggers
 
-Manual trigger endpoints are dashboard controls for RimAI evaluation, not game controls:
+Manual triggers are RimAI evaluation controls, not game controls:
 
-- `POST /api/cabinet/trigger`: refreshes live state, then runs all wired live ministers in dependency order. Current order is Food before Mayor.
-- `POST /api/ministers/{minister}/trigger`: refreshes live state, then runs only the selected wired minister.
-- `POST /api/agenda/refresh`: legacy alias for the cabinet trigger. Keep it for compatibility; new v2 UI should call `/api/cabinet/trigger`.
+- Cabinet trigger: refresh live state, then run wired live ministers in the
+  dependency order.
+- Minister trigger: refresh live state, then run only the selected wired
+  minister.
+- Legacy Mayor/agenda refresh routes may remain aliases for compatibility.
 
-All manual trigger paths use `PlayCycleTrigger.ManualTrigger` and set the wakeup payload to `dashboard` for trace visibility. They remain suggest-only and do not call RIMAPI write endpoints.
+Manual trigger traces must be visible in the dashboard. The current trigger
+should remain suggest-only and must not call RIMAPI write endpoints.
 
 ### Advice SSE
 
-`GET /api/advice/stream` remains the live stream for agenda and advice events. V2 also treats the stream itself as observable data: SYSTEM should show whether the connection is open, how many events have arrived, the last event type/id/time, and any recent stream error.
+The advice stream is the live source for agenda and active-advice events.
+SYSTEM should show connection state, event counts, last event metadata, and
+recent errors.
 
-SSE event contract:
+Design event types:
 
-- `agenda_update`: full current `MayorAgenda`.
-- `advice_snapshot`: active `AdviceItem[]` snapshot. `minister: null` means replace the whole active-advice list, used on stream replay/reconnect. `minister: "Food"` means replace only that minister's active cards.
-- `advice`: single `AdviceItem`, retained for append-style compatibility and event timelines. Snapshot events are authoritative for removing stale cards.
+- Agenda update: full current Mayor agenda.
+- Advice snapshot: authoritative active advice set, either global or
+  minister-scoped.
+- Single advice item: retained for compatibility and event timelines; snapshots
+  are authoritative for removing stale cards.
+
+---
 
 ## Minister View Detail
 
 ### System Prompt
 
-Shows the exact prompt material available for the selected minister.
-
-Mayor and Food are backed by `GET /api/ministers/{minister}/prompt`, with `/api/mayor/prompt` retained as a legacy Mayor route. Future ministers should use the same generalized read-only prompt endpoint when added. Until then, render a clear "not exposed yet" state.
+Shows the exact prompt material available for the selected minister. Future
+ministers should use generalized read-only prompt inspection when wired. Until a
+minister exposes prompt data, render a clear not-exposed state.
 
 ### Raw LLM Output
 
-Shows the unnormalized model response text for the selected minister, before schema parsing, tolerant repair, normalization, or advice rendering. This is a developer/debug view, rendered as a tab in the minister workspace.
+Shows captured provider output before schema parsing, tolerant repair,
+normalization, or advice rendering. This is a developer/debug view.
 
-Backed by `GET /api/ministers/{minister}/llm-output/latest` for live ministers. The endpoint returns the latest raw Gemini response recorded in the current Host process, plus model, provider, Gemini configured-key index and label (`primary` for index 1, `fallback_1` for index 2, `fallback_2` for index 3, etc.), capture time, latency, parse status, parse mode, and prompt character counts. It exposes which configured key was used, never the key value. If the request fails before Gemini returns text, record `request_failed` with the exception text so the view explains why no raw response exists. If no LLM call has happened since Host startup, render "no raw output yet" rather than an error. Do not infer raw output from normalized `AdviceItem`s or Agenda payloads.
+Do not rename fields, paraphrase values, collapse keys, or replace the captured
+payload in this tab. Syntax highlighting, indentation, and copy controls are
+acceptable. Schema translation belongs in parser/normalizer code and in the
+Advice view, not in raw-output inspection.
 
-Do not rename fields, paraphrase values, collapse keys, or replace the captured payload in the Raw LLM Output tab. Syntax highlighting, indentation, and copy controls are acceptable; schema translation belongs in parser/normalizer code and in the Advice view, not in the raw-output inspector.
+If no LLM call has happened in the current Host process, render "no raw output
+yet" rather than an error. If a request fails before provider text arrives,
+surface the failure state so the view explains why no raw response exists.
 
-Developer fallback: `POST /api/ministers/food/llm-output/manual` accepts a raw Food LLM JSON object or `{ "text": "<json>" }`, records it as provider `Codex` / model `codex-subagent`, parses it through the Food response parser, and publishes the resulting Food advice snapshot. This is an observability and fallback path only; it does not call RIMAPI write endpoints and does not exist for unwired ministers.
+Developer fallback ingestion for Food is an observability and quota workaround
+only. It records and parses pasted raw output through the same backend parser;
+it does not call RIMAPI write endpoints and does not imply support for unwired
+ministers.
 
 ### Briefing
 
-Shows the latest minister briefing grouped into readable sections rather than raw JSON.
-
-Mayor sections:
-
-- Overview
-- People
-- Food and resources
-- Infrastructure
-- Welfare and threat
-- Environment
-- Research
-
-Food sections:
-
-- Food status
-- Crops
-- Wild harvest
-- Skills and labor signals
-- Infrastructure and storage
-- Kitchen and butchery
-- Data coverage
-- Recent food incidents
+Shows the latest minister briefing grouped into readable sections rather than
+dumping raw JSON as the only view. Include raw/source inspection where useful,
+but keep the primary view scannable.
 
 ### RAG
 
-Shows retrieval status, guide context, citations, snippets, and cache/embedding status when exposed. Until dedicated RAG endpoints exist, Mayor may derive partial context from agenda citations and prompt context; other ministers should render explicit degraded coverage states.
+Shows retrieval status, guide context, citations, snippets, and cache/embedding
+status when exposed. Until a minister has dedicated RAG data, render explicit
+degraded or not-exposed coverage states.
 
 ### Rules
 
-The Rules view is the home for triggers and decision path visibility. It should answer: "Why did RimAI say this now?"
+The Rules view answers: "Why did RimAI say this now?"
 
-Show:
-
-- Last wake trigger.
-- Rules versus LLM escalation path when available.
-- Rule fired or escalation reason when available.
-- Active flag or scheduled wakeup payload when available.
-- Advice emitted.
-- Flags emitted.
-- Briefing version and game tick when available.
-- Last error.
+Show trigger, rules-vs-LLM path, rule fired or escalation reason, relevant flag
+or wakeup payload, emitted advice/flags, briefing version/tick when available,
+and last error.
 
 ### Advice
 
-Mayor Advice renders the Agenda as the Mayor's player-facing output.
+Mayor Advice renders the Agenda as the Mayor's player-facing output. Feeder
+minister Advice renders active `AdviceItem`s sorted by priority. Cards show
+rationale, suggested actions, resource requests, citations, issue id or
+supersession when available, and coverage gaps. No feedback buttons are shown in
+v2.
 
-Feeder minister Advice renders active `AdviceItem`s sorted by `priority`. Cards show rationale, suggested actions, resource requests, citations, issue id/supersession when available, and coverage gaps. No feedback buttons are shown in v2.
+---
 
 ## Data Coverage
 
-Every debug or inspector surface should distinguish empty data from unavailable data:
+Every debug or inspector surface should distinguish:
 
 - `available`: exposed and fresh enough to render.
 - `missing`: needed, but no endpoint or field exists yet.
@@ -246,28 +260,43 @@ Every debug or inspector surface should distinguish empty data from unavailable 
 - `unsupported`: intentionally out of scope for this slice.
 - `stale`: present but older than expected.
 
-Use this especially for RAG, Rules traces, logs, future ministers, token/cost metrics, and endpoint coverage.
+Use this especially for RAG, Rules traces, logs, future ministers, token/cost
+metrics, and endpoint coverage.
+
+---
 
 ## Visual Rules
 
 - Dark command-center UI with dense spacing and clear hierarchy.
-- Left rail, main workspace, and sidebar own their overflow; avoid whole-page scrolling on desktop.
+- Left rail, main workspace, and sidebar own their overflow; avoid whole-page
+  scrolling on desktop.
 - Text wraps within panels.
-- Use compact tables only for debug surfaces: Rules, RAG, logs, active flags, resource requests, and endpoint coverage.
-- Debug tables should use contract names by default. Friendly aliases are allowed only when they clarify an already-stable contract and do not hide what field the backend sent.
-- Resource request tables expose schema fields with execution-facing labels: `Kind`, `Request`, `Reason`, `Qty`, `Owner`, `Work / Skill`, and `Priority`. `Request` and `Reason` are the wire-field names for resource requests, not just UI aliases. Avoid catch-all labels such as `Meta`; compact columns stay narrow, `Reason` gets the widest column, and text wraps inside cells rather than forcing horizontal overflow.
-- Suggested action cards render `kind` plus `instruction`; do not introduce generic `what` labels in the dashboard or new raw minister output.
-- Avoid decorative hero sections, oversized empty cards, and one-note color themes.
+- Use compact tables only for debug surfaces.
+- Debug tables use contract names by default. Friendly aliases are allowed only
+  when they clarify a stable contract and do not hide the backend field.
+- Resource request tables expose execution-facing fields with enough width for
+  `Reason`; avoid catch-all labels such as `Meta`.
+- Suggested action cards render `kind` plus `instruction`; do not introduce
+  generic `what` labels in the dashboard or new raw minister output.
+- Avoid decorative hero sections, oversized empty cards, and one-note color
+  themes.
+
+---
 
 ## Deferred
 
-- Feedback/Pushback UI returns only when the feedback lifecycle is actively wired.
-- Autonomy controls return only with the M7+ autonomy work.
+- Feedback/Pushback UI returns only when the feedback lifecycle is actively
+  wired.
+- Autonomy controls return only with M7+ autonomy work.
 - Pawn/item image caching waits until text-first v2 is stable.
 - RIMAPI write/control surfaces remain out of scope for suggest-only MVP.
 
+---
+
 ## Open Questions
 
-- Should SYSTEM split into multiple tabs after log and RAG health surfaces mature?
-- Which decision-log fields should become durable trace history versus in-memory recent-run state?
-- Should browser notification behavior be scoped to tactical alerts only?
+- [ ] Should SYSTEM split into multiple tabs after log and RAG health surfaces
+      mature?
+- [ ] Which decision-log fields should become durable trace history versus
+      in-memory recent-run state?
+- [ ] Should browser notifications be scoped to tactical alerts only?

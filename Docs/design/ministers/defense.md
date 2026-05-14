@@ -1,135 +1,115 @@
-# Defense Minister — Minister Design
+# Defense Minister - Minister Design
 
-> **Living document.** See `CLAUDE.md` for update rules.
-> Slice: M5 — feeder advisor; flag-severity-gated tactical alerts route via this minister into the dashboard.
->
-> ⚠️ **Pivot translation needed.** Pre-pivot `goal_id` / HTN vocabulary in this doc maps to `advice_type` and `tactical_alert` advice items under the assisted-gameplay model ([`../../DESIGN.md`](../../DESIGN.md)). Full rewrite when the M5 slice opens.
+> **Living document.** See `AGENTS.md` for update rules.
+> Defense is a future feeder advisor. This doc records durable scope and
+> escalation boundaries, not prebuilt enums, HTN steps, or write commands.
 
 ---
 
 ## Domain
 
-Active threats, combat, fortifications, killbox design. Owns all pawn-in-combat decisions. Can emit Critical flags that preempt all other ministers.
+Defense owns threat response:
+
+- Active raids, sieges, infestations, fires threatening key structures, and
+  other emergencies.
+- Combat posture, draft/retreat/hold recommendations, and tactical warnings.
+- Fortification intent: killbox need, defensive wall intent, turret/trap need.
+- Weapon and armor readiness as combat requirements.
+- Post-threat repair/triage pressure routed to the relevant owner.
+
+Construction owns building the fortifications. Industry owns producing weapons
+or armor. Medical owns casualty treatment. Defense owns why those assets matter
+for threat readiness.
 
 ---
 
-## goal_id enum
+## First Slice Shape
 
-```csharp
-public enum DefenseGoal
-{
-    RespondToActiveRaid,      // active raid in progress
-    HardenPerimeter,          // fortify walls, add turrets, improve killbox
-    ManageArsenal,            // weapon upgrades, ammo, repair
-    EstablishKillbox,         // build/improve the chokepoint
-    MechClusterResponse,      // mechanoid cluster specific response
-    SiegeResponse,            // enemy siege camp active
-    PostRaidRecovery,         // triage after combat, repair breaches
-    MonitorThreatTrend        // no active threat, but raid points rising
-}
-```
+Defense should begin as rules-first, suggest-only advice with tactical-alert
+authority for truly urgent states.
 
----
+Likely first advice areas:
 
-## Briefing
+- Active raid or infestation response.
+- Breach or fire threatening critical structures.
+- Missing basic defensive posture for colony size/wealth.
+- Weapon readiness below the current threat level.
+- Post-raid repair or medical pressure flagged to owners.
 
-Key fields:
-- `ActiveRaid`: type (tribal/pirate/mech), faction, point value, composition if scouted
-- `PerimeterState`: wall integrity by sector, breach locations, fire status
-- `Colonists`: shooters (name, skill, weapon, health, position), melee fighters
-- `Turrets`: active count, damaged, power-online
-- `KillboxState`: chokepoint locations, trap state, turret coverage
-- `ThreatHistory`: last 5 raids — composition, point value, outcome, casualties
-- `SeasonalThreats`: predicted incoming events
-- `WealthTier`: current raid point ceiling (from wealth + colony age)
+Exact advice types should be defined when the Defense implementation slice
+starts.
 
 ---
 
-## Rules layer (target ~40% coverage)
+## Briefing Direction
 
-Most Defense decisions require context. Rules handle the clear-cut cases.
+Defense briefing should answer:
 
-| Rule | Condition | Output |
-|---|---|---|
-| `active_raid_critical` | ActiveRaid != null | RespondToActiveRaid (Critical) |
-| `breach_detected` | PerimeterState has any breach | HardenPerimeter (High) |
-| `no_killbox_yet` | KillboxState.Exists == false AND colonistCount >= 3 | EstablishKillbox (High) |
-| `weapon_below_threshold` | Any shooter has weapon tier < 2 AND no active raid | ManageArsenal (Medium) |
-| `post_raid_repair` | LastRaidEndedWithinTicks(500) AND any breach | PostRaidRecovery (High) |
-| `wealth_tier_warning` | WealthTier increased AND defenseScore < wealthTier | HardenPerimeter (Medium) |
+- Is there an active threat?
+- What is the threat type, approach, and known composition?
+- Which colonists are combat-capable right now?
+- What weapons, armor, turrets, traps, or chokepoints exist?
+- Are walls/perimeter/killbox assets intact?
+- What recent threats changed readiness expectations?
+- What build or production requests should be sent to Construction/Industry?
 
-**Escalates when:**
-- Active raid with unusual composition (requires tactical response)
-- Mech cluster or siege (specialized doctrine)
-- Killbox design decisions
-- Weapon upgrade trade-offs
-- Any Critical flag evaluation that involves nuance
+Exact briefing fields belong in code/tests once Defense ships.
 
 ---
 
-## RIMAPI writes owned
+## Critical Flag Authority
 
-- Combat orders (draft, undraft, force attack, flee)
-- Trap designation
-- Blueprint: fortification structures (only layout decisions — Construction builds them)
-- Turret placement designation
-- Killzone / no-go zone designation
+Defense is the natural owner of Critical threat flags, but `Critical` should be
+reserved for states that can immediately cost colonists or the colony:
 
-Labor requests posted:
-- Construct fortifications (Construction labor)
-- Weapon crafting (Crafting labor)
-- Medical treatment of combat casualties (Welfare/CMO labor)
+- Active raid or violent threat.
+- Active fire spreading toward key structures.
+- Active infestation or breach inside the base.
+
+All other Defense concerns should normally emit High or lower.
 
 ---
 
-## Critical flag authority
+## Escalation Boundaries
 
-Defense is the only minister that can emit Critical severity flags and preempt all other ministers. This authority is used only for:
-- Active raid
-- Active fire spreading toward key structures
-- Active infestation inside the base
+Rules should handle obvious active-threat, breach, and readiness threshold
+states. Escalate for:
 
-All other Defense concerns emit High or lower.
-
----
-
-## HTN domain
-
-```
-RespondToActiveRaid
-├── killbox_available → DraftShooters, HoldKillboxPosition, ManageTurrets
-├── no_killbox → DraftAll, FallbackToInterior, EmitFlag(EstablishKillbox, High)
-└── escalate → LLM (unusual composition, mech/siege, overwhelming force)
-
-HardenPerimeter
-├── materials_available → PostLaborRequest(Construction, Fortify, breachZones)
-├── no_materials → EmitFlag(RequestMaterials, High)
-└── killbox_needs_design → escalate (LLM: layout decisions)
-```
+- Unusual raid compositions.
+- Mech clusters, sieges, and special threats.
+- Tactical response trade-offs.
+- Killbox/layout decisions.
+- Weapon upgrade trade-offs.
 
 ---
 
-## Success metrics
+## Resource Requests
 
-- Zero colonist deaths from raids that were successfully defended (defended = at least one raider died)
-- Killbox functional before first major raid (day ~30-45 Cassandra)
-- No raid losses where defense tier exceeded raid points
-- Escalation rate below 45% after rule refinement
+Defense may request:
 
----
+- Construction: walls, doors, barricades, traps, turret infrastructure.
+- Industry: weapons, armor, ammo/modded combat supplies.
+- Medical: treatment capacity after combat.
+- Labor/player attention: urgent draft or positioning decisions in Suggest mode.
 
-## RAG retrieval profile
-
-Topics: `["raid", "combat", "killbox", "defense", "turret", "mechanoid", "siege", "fortification", "weapons"]`
-Retrieval required for: any escalated tactical decision, mech cluster response, killbox design.
+Requests remain advice in MVP and do not issue RIMAPI writes.
 
 ---
 
-## Open questions / TODO
+## Success Metrics
 
-- [ ] Exact weapon tier definitions (tier 1 = pistols/bows, tier 2 = bolt-action, tier 3 = chain shotgun, etc.)
-- [ ] How does Defense coordinate with Construction on fortification builds? (Flag? Direct labor request?)
-- [ ] Retreat logic: when does Defense recommend retreat vs hold?
-- [ ] Poison ship / psychic ship handling (these are one-time events with unique responses)
-- [ ] Royalty/Biotech threat variants (deferred until DLC scope added)
-- [ ] How does Defense handle no-killbox early game (first week)?
+- No avoidable colonist deaths from threats the colony was prepared to handle.
+- Defensive posture is established before major threat escalation.
+- Weapon/readiness gaps are visible before raids exploit them.
+- Critical alerts are rare and trustworthy.
+- Escalation rate falls as common threat patterns become rules.
+
+---
+
+## Open Questions / TODO
+
+- [ ] Define first Defense advice types.
+- [ ] Define weapon/readiness scoring from live data.
+- [ ] Define how Defense requests fortification work from Construction.
+- [ ] Decide retreat-vs-hold thresholds.
+- [ ] Add DLC/modded threat handling only when scope requires it.
