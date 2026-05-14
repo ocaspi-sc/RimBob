@@ -243,6 +243,8 @@ Verification:
 
 ## Phase 6 - Split ingestion mapping from orchestration
 
+Status: complete on 2026-05-15.
+
 Problem:
 
 `IngestionDispatcher` currently performs RIMAPI fan-out, aggregate mapping, and state writes in one class.
@@ -266,6 +268,21 @@ Acceptance:
 
 - Dispatcher reads as a refresh workflow.
 - Mapping behavior remains independently testable.
+
+Implementation result:
+
+- Extracted `PawnAggregateMapper`, `MapAggregateMapper`, `ResourceAggregateMapper`, and `ThreatAggregateMapper`.
+- Reduced `IngestionDispatcher` to home-map selection, parallel RIMAPI fetch orchestration, aggregate mapper calls, and state writes.
+- Added direct mapper tests for incident ordering/history limits and research sentinel handling.
+- Kept existing `IngestionDispatcherTests` as end-to-end mapper regression coverage.
+- Used the dispatcher logger for selected-map diagnostics, removing the previous unread logger warning.
+
+Verification:
+
+- `dotnet test Src\Tests\RimAI.Tests.csproj --no-restore` passed: 135/135.
+- `dotnet build Src\RimAI.sln --no-restore` passed with 0 warnings.
+- Host was restarted from the rebuilt output and `GET http://127.0.0.1:5000/api/system/health` returned 200.
+- `GET http://127.0.0.1:5000/api/ministers` returned 200.
 
 ## Phase 7 - Extract shared derivation helpers
 
@@ -324,9 +341,8 @@ Acceptance:
 
 ## Suggested execution order
 
-1. Phase 6 - ingestion mapper extraction.
-2. Phase 7 - derivation helpers.
-3. Phase 8 - briefing cache generalization.
+1. Phase 7 - derivation helpers.
+2. Phase 8 - briefing cache generalization.
 
 Completed:
 
@@ -335,3 +351,4 @@ Completed:
 - Phase 3 - minister registry.
 - Phase 4 - endpoint coverage catalog.
 - Phase 5 - RAG retriever generalization.
+- Phase 6 - ingestion mapper extraction.
