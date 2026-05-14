@@ -1,12 +1,11 @@
 ---
 name: todo
-description: Invoked when the user types exactly "/todo". Appends one short tagged entry to the "Captured by /todo" section in HumanTodo.md. It never creates plan files.
-version: 1.0.0
+description: Invoked when the user types exactly "/todo". Appends one short tagged entry to the "Captured by /todo" section in HumanTodo.md, then commits that new line to master. It never creates plan files.
 ---
 
 # /todo Skill
 
-Appends one tagged line to the `## Captured by /todo` section in `HumanTodo.md`.
+Appends one tagged line to the `## Captured by /todo` section in `HumanTodo.md`, then commits that line immediately to `master`.
 
 This skill is intentionally low-context. For `/todo X`, use `X` directly, write one short line, and do not inspect the broader conversation for plans or extra detail.
 
@@ -39,7 +38,14 @@ This skill is intentionally low-context. For `/todo X`, use `X` directly, write 
    ```
    Use today's date from the current date context if available.
 
-4. **Confirm** in one line what was added. No more than one sentence.
+4. **Commit only the new todo line to `master`**:
+   - Check `git branch --show-current`. If it is not `master`, do not switch branches silently; report that `/todo` needs `master` before it can auto-commit.
+   - Check `git diff -- HumanTodo.md` before staging. If `HumanTodo.md` already has unrelated edits, use partial staging so only the new `/todo` line is staged.
+   - Stage only `HumanTodo.md` changes that belong to this `/todo` entry. Do not stage unrelated files.
+   - Commit immediately with message `Capture todo: <short description>`.
+   - If `git add` or `git commit` is blocked by permissions or an index lock, request the required approval and retry once.
+
+5. **Confirm** in one line what was added and include the commit hash. No more than one sentence.
 
 ## Rules
 
@@ -49,5 +55,6 @@ This skill is intentionally low-context. For `/todo X`, use `X` directly, write 
 - Do not quote existing todo contents in the reply.
 - Do not modify `Docs/ROADMAP.md` unless the user explicitly asks to change milestone order.
 - Do not ask for confirmation before writing; just write and report.
+- Do not leave the new `/todo` entry uncommitted unless the commit failed; if it failed, say so explicitly.
 - Keep the description on the todo line short (12 words or fewer).
 - If the user passes args (e.g. `/todo add a dark mode toggle to dashboard`), use those args directly rather than inferring from context.
