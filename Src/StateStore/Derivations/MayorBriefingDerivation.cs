@@ -1,8 +1,8 @@
 using RimAI.Core.Aggregates;
 using RimAI.Core.Briefings;
+using RimAI.State.Derivations.Common;
 using RimAI.State.Parsing;
 using WeatherSnapshot = RimAI.Core.Briefings.WeatherSnapshot;
-using AggWeather      = RimAI.Core.Aggregates.WeatherSnapshot;
 
 namespace RimAI.State.Derivations;
 
@@ -36,17 +36,13 @@ public static class MayorBriefingDerivation
     private const float StressedTopMood = 0.50f;
     private const float ContentMood = 0.65f;
 
-    // Quadrum order in temperate biomes; winter = Decembary.
-    private static readonly string[] Quadrums = ["Aprimay", "Jugust", "Septober", "Decembary"];
-    private const int DaysPerQuadrum = 15;
-
     public static MayorBriefing Compute(ColonyState s, long briefingVersion = 0)
     {
-        var date     = RimDateParser.Parse(s.Economy.Value.DateTimeRaw);
-        var season   = DeriveSeason(date);
+        DateStamp date = RimDateParser.Parse(s.Economy.Value.DateTimeRaw);
+        SeasonContext season = SeasonDeriver.Derive(date);
         // Dead colonists stay in the registry until the next ingestion drops them,
         // but the briefing should reflect the living colony only.
-        var pawns    = s.Colonists.Value.Colonists.Where(p => !p.IsDead).ToList();
+        IReadOnlyList<ColonistRecord> pawns = PawnDeriver.LivingColonists(s.Colonists.Value.Colonists);
 
         var colonists = DeriveColonistsSummary(pawns);
         var skills    = DeriveSkillCoverage(pawns);
@@ -72,26 +68,6 @@ public static class MayorBriefingDerivation
     }
 
     // ── Derivations ───────────────────────────────────────────────────────────
-
-    private static SeasonContext DeriveSeason(DateStamp date)
-    {
-        if (date.Quadrum is null || date.Day is null)
-            return new SeasonContext(null, null, null);
-
-        var idx = Array.FindIndex(Quadrums,
-            q => q.Equals(date.Quadrum, StringComparison.OrdinalIgnoreCase));
-        if (idx < 0)
-            return new SeasonContext(date.Quadrum, null, null);
-
-        var daysToNext   = DaysPerQuadrum - date.Day.Value + 1;
-        var winterIdx    = Array.IndexOf(Quadrums, "Decembary");
-        var quadrumsAway = (winterIdx - idx + 4) % 4;
-        var daysToWinter = quadrumsAway == 0
-            ? 0
-            : (quadrumsAway - 1) * DaysPerQuadrum + daysToNext;
-
-        return new SeasonContext(Quadrums[idx], daysToNext, daysToWinter);
-    }
 
     private static ColonistsSummary DeriveColonistsSummary(IReadOnlyList<ColonistRecord> pawns)
     {
@@ -140,10 +116,7 @@ public static class MayorBriefingDerivation
         var byDef = new Dictionary<string, SkillCoverageEntry>();
         foreach (var def in StrategicSkillDefs)
         {
-            var skills = pawns
-                .SelectMany(p => p.Skills)
-                .Where(s => string.Equals(s.Def, def, StringComparison.OrdinalIgnoreCase))
-                .ToList();
+            var skills = PawnDeriver.SkillsFor(pawns, def);
             if (skills.Count == 0)
             {
                 byDef[def] = new SkillCoverageEntry(0, 0, 0);
@@ -229,16 +202,13 @@ public static class MayorBriefingDerivation
             var n = bs.Count(pred);
             if (n > 0) strategic[label] = n;
         }
-        Tally("Beds",        b => b.Def.Contains("Bed", StringComparison.OrdinalIgnoreCase) &&
-                                  !b.Def.Contains("Hospital", StringComparison.OrdinalIgnoreCase));
-        Tally("HospitalBeds",b => b.Def.Contains("Hospital", StringComparison.OrdinalIgnoreCase));
-        Tally("Batteries",   b => b.Def.Contains("Battery", StringComparison.OrdinalIgnoreCase));
-        Tally("Turrets",     b => b.Def.Contains("Turret", StringComparison.OrdinalIgnoreCase));
-        Tally("Generators",  b => b.Def.Contains("Generator", StringComparison.OrdinalIgnoreCase) ||
-                                  b.Def.Contains("SolarPanel", StringComparison.OrdinalIgnoreCase) ||
-                                  b.Def.Contains("WindTurbine", StringComparison.OrdinalIgnoreCase));
-        Tally("Coolers",     b => b.Def.Contains("Cooler", StringComparison.OrdinalIgnoreCase));
-        Tally("Heaters",     b => b.Def.Contains("Heater", StringComparison.OrdinalIgnoreCase));
+        Tally("Beds", BuildingClassifier.IsBed);
+        Tally("HospitalBeds", BuildingClassifier.IsHospitalBed);
+        Tally("Batteries", BuildingClassifier.IsBattery);
+        Tally("Turrets", BuildingClassifier.IsTurret);
+        Tally("Generators", BuildingClassifier.IsGenerator);
+        Tally("Coolers", BuildingClassifier.IsCooler);
+        Tally("Heaters", BuildingClassifier.IsHeater);
 
         return new BuildingsSummary(
             Total:       bs.Count,
@@ -265,14 +235,7 @@ public static class MayorBriefingDerivation
     {
         // Hostile lord heuristic: any lord whose JobType names a hostile activity.
         // TODO: confirm against live RIMAPI — Lord faction-hostility may be a better signal.
-        bool IsHostile(HostileLord l) =>
-            l.JobType is not null && (
-                l.JobType.Contains("Raid",    StringComparison.OrdinalIgnoreCase) ||
-                l.JobType.Contains("Siege",   StringComparison.OrdinalIgnoreCase) ||
-                l.JobType.Contains("Assault", StringComparison.OrdinalIgnoreCase) ||
-                l.JobType.Contains("Sapper",  StringComparison.OrdinalIgnoreCase));
-
-        var hostiles = board.Lords.Where(IsHostile).ToList();
+        IReadOnlyList<HostileLord> hostiles = ThreatDeriver.HostileLords(board);
 
         return new ThreatSnapshot(
             ActiveRaid:        hostiles.Count > 0,

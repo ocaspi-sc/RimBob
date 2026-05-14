@@ -286,6 +286,8 @@ Verification:
 
 ## Phase 7 - Extract shared derivation helpers
 
+Status: complete on 2026-05-15.
+
 Problem:
 
 Mayor and Food derivations both compute living pawns, season context, skill summaries, threat heuristics, building categories, and distance/proximity concepts.
@@ -308,6 +310,20 @@ Acceptance:
 
 - Mayor and Food derivations are shorter without losing readability.
 - Common helpers are still pure and dependency-free.
+
+Implementation result:
+
+- Added common derivation helpers: `SeasonDeriver`, `PawnDeriver`, `ThreatDeriver`, `BuildingClassifier`, and `MapDistance`.
+- Mayor and Food derivations now share season math, living-colonist filtering, skill scans, hostile-threat classification, building classification, and map distance/proximity helpers.
+- Kept minister-specific briefing composition, wording, thresholds, and output records inside the Mayor/Food derivation classes.
+- Added direct tests for the new common helpers.
+
+Verification:
+
+- `dotnet test Src\Tests\RimAI.Tests.csproj --no-restore` passed: 140/140.
+- `dotnet build Src\RimAI.sln --no-restore` passed with 0 warnings.
+- Host was restarted from the rebuilt output and `GET http://127.0.0.1:5000/api/system/health` returned 200.
+- `GET http://127.0.0.1:5000/api/ministers` returned 200.
 
 ## Phase 8 - Generalize briefing cache entries
 
@@ -341,8 +357,7 @@ Acceptance:
 
 ## Suggested execution order
 
-1. Phase 7 - derivation helpers.
-2. Phase 8 - briefing cache generalization.
+1. Phase 8 - briefing cache generalization.
 
 Completed:
 
@@ -352,3 +367,4 @@ Completed:
 - Phase 4 - endpoint coverage catalog.
 - Phase 5 - RAG retriever generalization.
 - Phase 6 - ingestion mapper extraction.
+- Phase 7 - derivation helpers.
