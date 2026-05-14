@@ -55,6 +55,7 @@ If a decision affects multiple docs, update the most specific one and add a cros
 - **Build sessions:** focus is implementation. Don't redesign unless a blocker is found.
 - **After build verification:** run RimAI again and verify the Host is reachable, especially if the build required stopping a live `RimAI.Host` process.
 - **Local run verification:** prefer `.\run-rimai.ps1` as the default launcher after builds. It starts the Host in a minimized taskbar window that closes when RimAI exits; use `.\run-rimai.ps1 -Foreground` when you need terminal output captured in the current shell. Use manual `npm.cmd run build` / `dotnet run` only when debugging one side of the stack.
+- **Dashboard metadata coupling:** when adding or changing backend logs, replay corpus files, prompt dumps, traces, or diagnostic artifacts, update the dashboard-visible metadata in the same turn (`/api/system/health` or another bounded system endpoint, Dashboard types, and the relevant System/Logs UI). If the artifact is intentionally not exposed yet, add a concrete `HumanTodo.md` follow-up and mention the omission in the final response.
 
 ---
 

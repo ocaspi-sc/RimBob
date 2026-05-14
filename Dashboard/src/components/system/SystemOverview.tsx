@@ -23,6 +23,7 @@ export function SystemOverview({
 }) {
   const backendSse = health?.sse;
   const llmStatus = health?.llm.status ?? status?.llm_status ?? ((status?.llm_configured ?? health?.llm.configured) ? 'ready' : 'missing_key');
+  const replay = health?.logs.replay_corpus;
 
   return (
     <div className="system-overview">
@@ -112,8 +113,29 @@ export function SystemOverview({
           <InfoLine label="Log directory" value={health?.logs.directory ?? 'not exposed'} />
           <InfoLine label="Human log" value={health?.logs.human_log_pattern ?? 'not exposed'} />
           <InfoLine label="Decision log" value={health?.logs.decision_log_pattern ?? 'not exposed'} />
+          <InfoLine label="Replay corpus" value={replay?.pattern ?? 'not exposed'} />
+          <InfoLine label="Replay files" value={replay ? `${replay.file_count} files / ${formatBytes(replay.total_bytes)}` : 'not exposed'} />
+          <InfoLine label="Latest replay" value={formatMaybeDate(replay?.latest_write_at ?? null)} />
           <InfoLine label="Recent log endpoint" value={health?.logs.recent_endpoint ?? 'not exposed yet'} />
         </div>
+        {replay && replay.files.length > 0 && (
+          <div className="dense-table replay-table">
+            <div className="dense-row header">
+              <span>Minister</span>
+              <span>File</span>
+              <span>Size</span>
+              <span>Updated</span>
+            </div>
+            {replay.files.map(file => (
+              <div className="dense-row" key={file.path}>
+                <span>{file.minister}</span>
+                <span>{file.name}</span>
+                <span>{formatBytes(file.size_bytes)}</span>
+                <span>{formatMaybeDate(file.last_write_at)}</span>
+              </div>
+            ))}
+          </div>
+        )}
         {health && health.traces.length > 0 && (
           <div className="dense-table trace-table">
             <div className="dense-row header">
@@ -162,4 +184,10 @@ function llmToneFor(status: string): 'ok' | 'warn' | 'error' | 'idle' {
 
 function shorten(value: string): string {
   return value.length > 180 ? `${value.slice(0, 180)}...` : value;
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }

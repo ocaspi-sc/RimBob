@@ -22,6 +22,24 @@ export interface SseHealth {
   lastError: string | null;
 }
 
+export interface ReplayCorpusFile {
+  minister: string;
+  name: string;
+  path: string;
+  size_bytes: number;
+  last_write_at: string;
+}
+
+export interface ReplayCorpusMetadata {
+  directory: string;
+  pattern: string;
+  exists: boolean;
+  file_count: number;
+  total_bytes: number;
+  latest_write_at: string | null;
+  files: ReplayCorpusFile[];
+}
+
 export interface MinisterTrace {
   minister: string;
   trigger: string;
@@ -55,6 +73,7 @@ export interface SystemHealth {
   llm: {
     provider: string;
     configured: boolean;
+    configured_key_count: number;
     status: string;
     last_event_at: string | null;
     last_success_at: string | null;
@@ -75,6 +94,7 @@ export interface SystemHealth {
     directory: string;
     human_log_pattern: string;
     decision_log_pattern: string;
+    replay_corpus: ReplayCorpusMetadata;
     recent_endpoint: string;
   };
   traces: MinisterTrace[];

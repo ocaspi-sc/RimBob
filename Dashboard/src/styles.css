@@ -520,6 +520,11 @@ code {
   gap: 4px;
 }
 
+.replay-table,
+.trace-table {
+  margin-top: 12px;
+}
+
 .dense-row {
   display: grid;
   grid-template-columns: 1fr 120px 120px minmax(180px, 2fr);

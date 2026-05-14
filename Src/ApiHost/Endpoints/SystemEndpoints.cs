@@ -81,6 +81,7 @@ public static class SystemEndpoints
                     directory = logsDir,
                     human_log_pattern = Path.Combine(logsDir, "rimai-*.log"),
                     decision_log_pattern = Path.Combine(logsDir, "decisions-*.jsonl"),
+                    replay_corpus = ReplayCorpusMetadata(logsDir),
                     recent_endpoint = "not_exposed_yet",
                 },
                 traces = traces.LatestAll(),
@@ -114,6 +115,70 @@ public static class SystemEndpoints
         Path.IsPathRooted(configuredPath)
             ? configuredPath
             : Path.Combine(contentRoot, configuredPath);
+
+    private static object ReplayCorpusMetadata(string logsDir)
+    {
+        string replayDir = Path.Combine(logsDir, "replay");
+        string pattern = Path.Combine(replayDir, "*-*.jsonl");
+        if (!Directory.Exists(replayDir))
+        {
+            return new
+            {
+                directory = replayDir,
+                pattern,
+                exists = false,
+                file_count = 0,
+                total_bytes = 0L,
+                latest_write_at = (DateTimeOffset?)null,
+                files = Array.Empty<object>(),
+            };
+        }
+
+        DirectoryInfo directory = new(replayDir);
+        FileInfo[] allFiles = directory
+            .EnumerateFiles("*.jsonl")
+            .OrderByDescending(file => file.LastWriteTimeUtc)
+            .ToArray();
+        FileInfo[] recentFiles = allFiles.Take(20).ToArray();
+        object[] files = recentFiles
+            .Select(file => (object)new
+            {
+                minister = ReplayMinisterFromFileName(file.Name),
+                name = file.Name,
+                path = file.FullName,
+                size_bytes = file.Length,
+                last_write_at = UtcDateTimeOffset(file.LastWriteTimeUtc),
+            })
+            .ToArray();
+
+        return new
+        {
+            directory = replayDir,
+            pattern,
+            exists = true,
+            file_count = allFiles.Length,
+            total_bytes = allFiles.Sum(file => file.Length),
+            latest_write_at = recentFiles.Length == 0
+                ? (DateTimeOffset?)null
+                : UtcDateTimeOffset(recentFiles[0].LastWriteTimeUtc),
+            files,
+        };
+    }
+
+    private static string ReplayMinisterFromFileName(string fileName)
+    {
+        string stem = Path.GetFileNameWithoutExtension(fileName);
+        int dash = stem.LastIndexOf('-');
+        if (dash <= 0) return stem;
+
+        string suffix = stem[(dash + 1)..];
+        return suffix.Length == 8 && suffix.All(char.IsDigit)
+            ? stem[..dash]
+            : stem;
+    }
+
+    private static DateTimeOffset UtcDateTimeOffset(DateTime value) =>
+        new(DateTime.SpecifyKind(value, DateTimeKind.Utc));
 
     private static string LlmStatus(bool configured, RawLlmOutputSnapshot? latest)
     {
