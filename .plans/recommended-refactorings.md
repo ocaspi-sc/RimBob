@@ -2,22 +2,26 @@
 
 ## Goal
 
-Turn the codebase review recommendations into a safe, ordered refactoring sequence. The plan keeps behavior stable, preserves the suggest-only MVP boundary, and avoids broad reshaping before the current advice-schema migration compiles again.
+Turn the codebase review recommendations into a safe, ordered refactoring sequence. The plan keeps behavior stable, preserves the suggest-only MVP boundary, and avoids broad reshaping before the next targeted cleanup is ready.
 
-## Current blocker
+## Current status
 
-The repo is mid-migration from `AdviceSeverity` / `PriorityScore` to `AdvicePriority`. `RimAI.Core` compiles, but downstream projects still reference the removed members.
+As of 2026-05-15, the original advice-schema blocker is cleared.
 
-Known failing surfaces:
+Verified state:
 
-- `Src/LlmGateway/LlmAdviceResponseNormalizer.cs`
-- `Src/LlmGateway/FoodLlmResponseParser.cs`
-- `Src/Coordination/AdviceBus.cs`
-- Food, LLM, and Coordination tests
+- Worktree was clean before verification, except later unrelated `HumanTodo.md` edits.
+- `rg` finds no live `AdviceSeverity` / `AdvicePriorityScore` references. Remaining `PriorityScore` text is legacy compatibility parsing/test naming.
+- `dotnet test Src\Tests\RimAI.Tests.csproj --no-restore --no-build` passed: 120/120.
+- `dotnet build Src\RimAI.sln --no-restore` compiled through `RimAI.Tests`, then failed only because a live `RimAI.Host` process locked ApiHost output DLLs.
 
-Do this first. Do not start structural refactors while the primary contract does not compile.
+Operational note:
+
+- Stop the running Host before a full solution build. DLL-lock failures such as `MSB3021` / `MSB3027` are not evidence that the schema blocker returned.
 
 ## Phase 0 - Baseline and scope lock
+
+Status: complete for the advice-schema blocker.
 
 1. Record current failure with `dotnet build Src\RimAI.sln --no-restore`.
 2. Search for old schema names:
@@ -34,6 +38,8 @@ Acceptance:
 - The first implementation slice has a narrow file list.
 
 ## Phase 1 - Finish the advice priority schema
+
+Status: complete.
 
 Decision to make:
 
@@ -55,10 +61,13 @@ Implementation tasks:
 
 Verification:
 
-- `dotnet build Src\RimAI.sln --no-restore`
-- `dotnet test Src\Tests\RimAI.Tests.csproj --no-restore --no-build`
+- `dotnet test Src\Tests\RimAI.Tests.csproj --no-restore --no-build` passed on 2026-05-15.
+- `dotnet build Src\RimAI.sln --no-restore` reached the Host copy step and was blocked only by a running `RimAI.Host` process locking output DLLs.
+- Rerun full build after stopping Host when a clean full-build signal is needed.
 
 ## Phase 2 - Extract LLM advice normalization
+
+Status: next recommended refactor.
 
 Problem:
 
@@ -250,12 +259,14 @@ Acceptance:
 
 ## Suggested execution order
 
-1. Phase 1 - advice schema repair.
-2. Phase 2 - LLM normalization split.
-3. Phase 3 - minister registry.
-4. Phase 4 - endpoint coverage catalog.
-5. Phase 5 - RAG retriever generalization.
-6. Phase 6 - ingestion mapper extraction.
-7. Phase 7 - derivation helpers.
-8. Phase 8 - briefing cache generalization.
+1. Phase 2 - LLM normalization split.
+2. Phase 3 - minister registry.
+3. Phase 4 - endpoint coverage catalog.
+4. Phase 5 - RAG retriever generalization.
+5. Phase 6 - ingestion mapper extraction.
+6. Phase 7 - derivation helpers.
+7. Phase 8 - briefing cache generalization.
 
+Completed:
+
+- Phase 1 - advice schema repair.

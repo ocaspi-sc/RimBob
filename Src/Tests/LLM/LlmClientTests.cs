@@ -116,7 +116,7 @@ public sealed class LlmClientTests
         NormalizedAdviceResponse response = LlmResponseParser.ParseOrNormalize(
             raw,
             json,
-            root => LlmAdviceResponseNormalizer.Normalize(root, context, json),
+            root => AdviceResponseNormalizer.Normalize(root, context, json),
             isStrictValid: _ => false);
 
         response.Advice.Should().HaveCount(2);
@@ -174,7 +174,7 @@ public sealed class LlmClientTests
         NormalizedAdviceResponse response = LlmResponseParser.ParseOrNormalize(
             raw,
             json,
-            root => LlmAdviceResponseNormalizer.Normalize(root, context, json),
+            root => AdviceResponseNormalizer.Normalize(root, context, json),
             isStrictValid: _ => false);
 
         AdviceItem advice = response.Advice.Should().ContainSingle().Subject;

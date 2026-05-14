@@ -1,0 +1,96 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using FluentAssertions;
+using RimAI.Core.Advice;
+using RimAI.Core.Briefings;
+using RimAI.LLM;
+
+namespace RimAI.Tests.LLM;
+
+public sealed class AdviceNormalizationTests
+{
+    private static readonly JsonSerializerOptions Json = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+    };
+
+    [Fact]
+    public void AdviceJsonCompatibility_MapsLegacyPriorityScore()
+    {
+        JsonNode? score = JsonNode.Parse("8");
+
+        AdvicePriority priority = AdviceJsonCompatibility.ParseAdvicePriority(
+            raw: null,
+            legacyPriorityScore: score,
+            fallback: AdvicePriority.Low);
+
+        priority.Should().Be(AdvicePriority.High);
+    }
+
+    [Fact]
+    public void WorkTypeInference_MapsAliasesAndDefaultSkills()
+    {
+        WorkTypeInference.Parse("plant cut").Should().Be(WorkType.PlantCut);
+        WorkTypeInference.Infer("forage berries near storage").Should().Be(WorkType.PlantCut);
+        WorkTypeInference.DefaultSkill(WorkType.Cook).Should().Be("Cooking");
+    }
+
+    [Fact]
+    public void ResourceRequestNormalizer_RepairsLegacyAliasesAndWorkType()
+    {
+        JsonNode? root = JsonNode.Parse("""
+        [
+          {
+            "kind": "labor",
+            "what": "cook simple meals",
+            "why": "meal stock is low"
+          }
+        ]
+        """);
+
+        IReadOnlyList<ResourceRequest> requests = ResourceRequestNormalizer.Normalize(
+            root,
+            AdvicePriority.High,
+            Context(),
+            Json);
+
+        ResourceRequest request = requests.Should().ContainSingle().Subject;
+        request.Kind.Should().Be(ResourceRequestKind.Labor);
+        request.WorkType.Should().Be(WorkType.Cook);
+        request.Skill.Should().Be("Cooking");
+        request.Priority.Should().Be(AdvicePriority.High);
+        request.RequestedFrom.Should().Be("Labor");
+    }
+
+    [Fact]
+    public void SuggestedActionNormalizer_RepairsLegacyActionsAndTextFallback()
+    {
+        JsonNode? root = JsonNode.Parse("""
+        [
+          {
+            "kind": "production_bill",
+            "what": "cook simple meals"
+          },
+          "check whether berries are reachable"
+        ]
+        """);
+
+        IReadOnlyList<SuggestedAction> actions = SuggestedActionNormalizer.Normalize(root, Json);
+
+        actions.Should().HaveCount(2);
+        actions[0].Kind.Should().Be(SuggestedActionKind.ProductionBill);
+        actions[0].What.Should().Be("cook simple meals");
+        actions[1].Kind.Should().Be(SuggestedActionKind.Note);
+        actions[1].What.Should().Be("check whether berries are reachable");
+    }
+
+    private static LlmAdviceNormalizationContext Context() => new(
+        Minister: "Food",
+        Domain: "food",
+        BriefingVersion: 1,
+        GameTick: 300_000,
+        Date: new DateStamp("5th of Aprimay, 5500, 14h", 5500, "Aprimay", 5, 14),
+        DefaultAdviceType: "food_security",
+        DefaultRationale: "Food LLM escalation selected this recommendation.",
+        GuideContext: []);
+}

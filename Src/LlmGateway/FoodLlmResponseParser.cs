@@ -29,7 +29,7 @@ public static class FoodLlmResponseParser
         {
             return new FoodLlmParseResult(
                 StampRuntimeMetadata(
-                    LlmAdviceResponseNormalizer.NormalizeStrictResponse(strict),
+                    AdviceResponseNormalizer.NormalizeStrictResponse(strict),
                     briefing),
                 "strict_json",
                 Normalized: false);
@@ -48,13 +48,13 @@ public static class FoodLlmResponseParser
         JsonNode root = JsonNode.Parse(text) ??
             throw new JsonException("LLM response JSON parsed to null.");
         NormalizedAdviceResponse normalizedResponse =
-            LlmAdviceResponseNormalizer.Normalize(root, normalizeContext, ResponseJson);
+            AdviceResponseNormalizer.Normalize(root, normalizeContext, ResponseJson);
         FoodLlmResponse parsed = new(
             normalizedResponse.Advice,
             normalizedResponse.Flags,
             normalizedResponse.Notes);
 
-        parsed = LlmAdviceResponseNormalizer.NormalizeStrictResponse(parsed);
+        parsed = AdviceResponseNormalizer.NormalizeStrictResponse(parsed);
         return new FoodLlmParseResult(
             parsed,
             "tolerant_normalization",
