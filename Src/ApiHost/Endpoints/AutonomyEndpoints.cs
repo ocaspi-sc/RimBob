@@ -10,6 +10,9 @@ public static class AutonomyEndpoints
 {
     public static IEndpointRouteBuilder MapAutonomyEndpoints(this IEndpointRouteBuilder app)
     {
+        EndpointCoverageCatalog coverage = app.ServiceProvider.GetRequiredService<EndpointCoverageCatalog>();
+        coverage.Register("/api/autonomy", "available", "Per-minister autonomy dial read surface; MVP values remain suggest-only.");
+
         app.MapGet("/api/autonomy", () =>
             Results.Ok(new Dictionary<string, AutonomyMode> { ["Mayor"] = AutonomyMode.Suggest }));
 

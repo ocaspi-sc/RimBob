@@ -164,7 +164,7 @@ Verification:
 
 ## Phase 4 - Centralize endpoint coverage metadata
 
-Status: next recommended refactor.
+Status: complete on 2026-05-15.
 
 Problem:
 
@@ -185,6 +185,20 @@ Implementation notes:
 Acceptance:
 
 - Endpoint coverage rows are no longer hand-maintained inside `SystemEndpoints`.
+
+Implementation result:
+
+- Added `EndpointCoverageCatalog` / `EndpointCoverageContext` under the Host endpoints layer.
+- Endpoint modules now register their coverage rows beside route mapping.
+- `SystemEndpoints` now projects `endpoint_coverage` from the catalog instead of owning the coverage list.
+- Kept registry-derived coverage notes for minister prompt, trigger, raw-output, manual-ingest, trace, and RAG endpoints.
+
+Verification:
+
+- `dotnet test Src\Tests\RimAI.Tests.csproj --no-restore` passed: 131/131.
+- `dotnet build Src\RimAI.sln --no-restore` passed with 0 warnings.
+- Host was restarted from the rebuilt output and `GET http://127.0.0.1:5000/api/system/health` returned catalog-backed endpoint coverage rows.
+- `GET http://127.0.0.1:5000/api/ministers` returned 200.
 
 ## Phase 5 - Generalize RAG retrieval
 
@@ -294,14 +308,14 @@ Acceptance:
 
 ## Suggested execution order
 
-1. Phase 4 - endpoint coverage catalog.
-2. Phase 5 - RAG retriever generalization.
-3. Phase 6 - ingestion mapper extraction.
-4. Phase 7 - derivation helpers.
-5. Phase 8 - briefing cache generalization.
+1. Phase 5 - RAG retriever generalization.
+2. Phase 6 - ingestion mapper extraction.
+3. Phase 7 - derivation helpers.
+4. Phase 8 - briefing cache generalization.
 
 Completed:
 
 - Phase 1 - advice schema repair.
 - Phase 2 - LLM normalization split.
 - Phase 3 - minister registry.
+- Phase 4 - endpoint coverage catalog.

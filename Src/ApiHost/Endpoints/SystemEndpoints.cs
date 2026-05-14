@@ -12,6 +12,10 @@ public static class SystemEndpoints
 {
     public static IEndpointRouteBuilder MapSystemEndpoints(this IEndpointRouteBuilder app)
     {
+        EndpointCoverageCatalog coverage = app.ServiceProvider.GetRequiredService<EndpointCoverageCatalog>();
+        coverage.Register("/api/system/health", "available", "Runtime, LLM, RAG, logs, traces, and endpoint coverage metadata.");
+        coverage.Register("/api/system/logs/recent", "not_exposed_yet", "Planned bounded log tail.");
+
         app.MapGet("/api/system/health", (
             IOptions<RimAiOptions> options,
             IWebHostEnvironment env,
@@ -26,6 +30,7 @@ public static class SystemEndpoints
             MayorStatus mayor,
             SseDiagnostics sse,
             MinisterRegistry registry,
+            EndpointCoverageCatalog endpointCoverage,
             MinisterTraceStore traces) =>
         {
             RimAiOptions opts = options.Value;
@@ -36,9 +41,6 @@ public static class SystemEndpoints
             string cacheRoot = ResolvePath(env.ContentRootPath, opts.Rag.CacheRoot);
             IReadOnlyList<AgentFlag> activeFlags = flags.Active();
             RawLlmOutputSnapshot? latestLlm = rawOutputs.LatestAny();
-            string promptMinisterNames = CapabilityNames(registry, descriptor => descriptor.HasPrompt);
-            string triggerMinisterNames = CapabilityNames(registry, descriptor => descriptor.CanManualTrigger);
-            string rawOutputMinisterNames = CapabilityNames(registry, descriptor => descriptor.HasRawLlmOutput);
 
             return Results.Ok(new
             {
@@ -89,40 +91,11 @@ public static class SystemEndpoints
                     recent_endpoint = "not_exposed_yet",
                 },
                 traces = traces.LatestAll(),
-                endpoint_coverage = new[]
-                {
-                    Coverage("/api/status", "available", "Host, RIMAPI, LLM, briefing, and Mayor status."),
-                    Coverage("/api/advice/stream", "available", "SSE agenda and active advice feed."),
-                    Coverage("/api/cabinet/trigger", "available", "Manual dashboard trigger for all live ministers; suggest-only, no RIMAPI writes."),
-                    Coverage("/api/agenda/latest", agendaStore.Current is null ? "missing" : "available", "Current Mayor agenda."),
-                    Coverage("/api/colony/snapshot", "available", "Latest Mayor briefing for sidebar telemetry."),
-                    Coverage("/api/briefings/mayor/latest", "available", "Mayor briefing inspector source."),
-                    Coverage("/api/briefings/food/latest", "available", "Food briefing inspector source."),
-                    Coverage("/api/mayor/prompt", "available", "Mayor prompt inspector source."),
-                    Coverage("/api/ministers/{minister}/prompt", "partial", $"Generalized prompt inspector for {promptMinisterNames}."),
-                    Coverage("/api/ministers/{minister}/trigger", "partial", $"Manual dashboard trigger for wired ministers: {triggerMinisterNames}. Planned scopes are not wired yet."),
-                    Coverage("/api/ministers/{minister}/llm-output/latest", "partial", $"Latest raw Gemini response for {rawOutputMinisterNames} after an LLM call occurs."),
-                    Coverage("/api/ministers/{minister}/trace/latest", "partial", "Wake trigger visible; rule/LLM path details not exposed yet."),
-                    Coverage("/api/ministers/{minister}/rag/latest", "not_exposed_yet", "Planned RAG retrieval inspector."),
-                    Coverage("/api/system/logs/recent", "not_exposed_yet", "Planned bounded log tail."),
-                },
+                endpoint_coverage = endpointCoverage.Snapshot(new EndpointCoverageContext(agendaStore, registry)),
             });
         });
 
         return app;
-    }
-
-    private static object Coverage(string endpoint, string state, string note) =>
-        new { endpoint, state, note };
-
-    private static string CapabilityNames(MinisterRegistry registry, Func<MinisterDescriptor, bool> capability)
-    {
-        string[] labels = registry.Ministers
-            .Where(descriptor => descriptor.Ready && capability(descriptor))
-            .Select(descriptor => descriptor.Label)
-            .ToArray();
-
-        return labels.Length == 0 ? "no wired ministers" : string.Join(" and ", labels);
     }
 
     private static string ResolvePath(string contentRoot, string configuredPath) =>

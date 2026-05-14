@@ -14,6 +14,22 @@ public static class MinisterEndpoints
 {
     public static IEndpointRouteBuilder MapMinisterEndpoints(this IEndpointRouteBuilder app)
     {
+        EndpointCoverageCatalog coverage = app.ServiceProvider.GetRequiredService<EndpointCoverageCatalog>();
+        coverage.Register(
+            "/api/ministers/{minister}/prompt",
+            _ => "partial",
+            context => $"Generalized prompt inspector for {context.CapabilityNames(descriptor => descriptor.HasPrompt)}.");
+        coverage.Register(
+            "/api/ministers/{minister}/llm-output/latest",
+            _ => "partial",
+            context => $"Latest raw Gemini response for {context.CapabilityNames(descriptor => descriptor.HasRawLlmOutput)} after an LLM call occurs.");
+        coverage.Register(
+            "/api/ministers/{minister}/llm-output/manual",
+            _ => "partial",
+            context => $"Developer manual raw LLM ingestion for {context.CapabilityNames(descriptor => descriptor.HasManualLlmOutput)}.");
+        coverage.Register("/api/ministers/{minister}/trace/latest", "partial", "Wake trigger visible; rule/LLM path details not exposed yet.");
+        coverage.Register("/api/ministers/{minister}/rag/latest", "not_exposed_yet", "Planned RAG retrieval inspector.");
+
         app.MapGet("/api/ministers", (MinisterRegistry registry) =>
             Results.Ok(registry.Scopes.Select(MinisterScopeInfo.FromDescriptor)));
 

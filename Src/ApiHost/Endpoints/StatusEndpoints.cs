@@ -16,6 +16,10 @@ public static class StatusEndpoints
 {
     public static IEndpointRouteBuilder MapStatusEndpoints(this IEndpointRouteBuilder app)
     {
+        EndpointCoverageCatalog coverage = app.ServiceProvider.GetRequiredService<EndpointCoverageCatalog>();
+        coverage.Register("/api/status", "available", "Host, RIMAPI, LLM, briefing, and Mayor status.");
+        coverage.Register("/api/mayor/prompt", "available", "Mayor prompt inspector source.");
+
         app.MapGet("/api/status", (
             ColonyState     colony,
             AgendaStore     agendaStore,

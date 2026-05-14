@@ -16,6 +16,15 @@ public static class AgendaEndpoints
 
     public static IEndpointRouteBuilder MapAgendaEndpoints(this IEndpointRouteBuilder app)
     {
+        EndpointCoverageCatalog coverage = app.ServiceProvider.GetRequiredService<EndpointCoverageCatalog>();
+        coverage.Register(
+            "/api/agenda/latest",
+            context => context.AgendaStore.Current is null ? "missing" : "available",
+            _ => "Current Mayor agenda.");
+        coverage.Register("/api/agenda/history", "available", "Bounded Mayor agenda history.");
+        coverage.Register("/api/agenda/refresh", "available", "Legacy alias for manual cabinet trigger.");
+        coverage.Register("/api/agenda/manual", "available", "Developer manual Mayor agenda fallback ingestion.");
+
         app.MapGet("/api/agenda/latest", (AgendaStore store) =>
             store.Current is { } current ? Results.Ok(current) : Results.NoContent());
 

@@ -73,6 +73,7 @@ builder.Services.AddSingleton<AdviceBus>();
 builder.Services.AddSingleton<AgendaStore>();
 builder.Services.AddSingleton<FlagChannel>();
 builder.Services.AddSingleton<MinisterRegistry>();
+builder.Services.AddSingleton<EndpointCoverageCatalog>();
 builder.Services.AddSingleton<MinisterTraceStore>();
 builder.Services.AddSingleton<IReplayCorpusWriter>(sp =>
     new ReplayCorpusWriter(

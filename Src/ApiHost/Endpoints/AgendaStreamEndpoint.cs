@@ -17,6 +17,10 @@ public static class AgendaStreamEndpoint
 
     public static IEndpointRouteBuilder MapAgendaStream(this IEndpointRouteBuilder app)
     {
+        app.ServiceProvider
+            .GetRequiredService<EndpointCoverageCatalog>()
+            .Register("/api/advice/stream", "available", "SSE agenda and active advice feed.");
+
         app.MapGet("/api/advice/stream", HandleAsync);
         return app;
     }

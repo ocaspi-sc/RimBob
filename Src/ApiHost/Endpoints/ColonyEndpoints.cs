@@ -11,6 +11,11 @@ public static class ColonyEndpoints
 {
     public static IEndpointRouteBuilder MapColonyEndpoints(this IEndpointRouteBuilder app)
     {
+        EndpointCoverageCatalog coverage = app.ServiceProvider.GetRequiredService<EndpointCoverageCatalog>();
+        coverage.Register("/api/colony/snapshot", "available", "Latest Mayor briefing for sidebar telemetry.");
+        coverage.Register("/api/briefings/mayor/latest", "available", "Mayor briefing inspector source.");
+        coverage.Register("/api/briefings/food/latest", "available", "Food briefing inspector source.");
+
         app.MapGet("/api/colony/snapshot", (BriefingCache cache) =>
             Results.Ok(cache.GetMayorBriefing()));
 

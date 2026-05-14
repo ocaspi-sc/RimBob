@@ -10,6 +10,13 @@ public static class CabinetEndpoints
 {
     public static IEndpointRouteBuilder MapCabinetEndpoints(this IEndpointRouteBuilder app)
     {
+        EndpointCoverageCatalog coverage = app.ServiceProvider.GetRequiredService<EndpointCoverageCatalog>();
+        coverage.Register("/api/cabinet/trigger", "available", "Manual dashboard trigger for all live ministers; suggest-only, no RIMAPI writes.");
+        coverage.Register(
+            "/api/ministers/{minister}/trigger",
+            _ => "partial",
+            context => $"Manual dashboard trigger for wired ministers: {context.CapabilityNames(descriptor => descriptor.CanManualTrigger)}. Planned scopes are not wired yet.");
+
         app.MapPost("/api/cabinet/trigger", async (
             CabinetCycle cabinet,
             CancellationToken ct) =>
