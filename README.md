@@ -22,10 +22,10 @@ deferred until the later Auto epic.
 
 ```text
 Docs/                  Design docs, roadmap, TODOs, and RimWorld guides
+Dashboard/             React + TypeScript dashboard
 Src/ApiHost/           ASP.NET host, REST endpoints, SSE stream, dashboard serving
 Src/Common/            Pure domain types and shared contracts
 Src/Coordination/      Advice bus, agenda store, tick orchestration, flag channel
-Src/Dashboard/         React + TypeScript dashboard
 Src/GameStateSync/     RIMAPI HTTP/SSE ingestion client
 Src/LlmGateway/        Gemini client and prompt builder
 Src/Ministers/         Minister implementations and rules
@@ -47,7 +47,7 @@ The host binds to localhost only. Do not expose it on `0.0.0.0`.
 Install dashboard dependencies:
 
 ```powershell
-cd Src/Dashboard
+cd Dashboard
 npm install
 ```
 
@@ -104,7 +104,7 @@ powershell -ExecutionPolicy Bypass -File .\run-rimai.ps1
 Manual equivalent:
 
 ```powershell
-cd Src/Dashboard
+cd Dashboard
 npm.cmd run build
 ```
 
@@ -120,7 +120,7 @@ dotnet run
 Run the dashboard build:
 
 ```powershell
-cd Src/Dashboard
+cd Dashboard
 npm.cmd run build
 ```
 

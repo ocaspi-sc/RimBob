@@ -262,7 +262,7 @@ that needs the Host attached to the current terminal.
 **Configuration.** Non-secret config lives in `appsettings.json` under the `RimAi` section (typed via `RimAiOptions`). The Gemini key may be set either via the `GEMINI_API_KEY` env var (preferred for CI / production) or via `RimAi.GeminiApiKey` in `appsettings.Local.json` (gitignored — local dev convenience only). The env var wins when both are present. `appsettings.json` and `appsettings.Development.json` are tracked, so never put secrets in those. `Program.cs` resolves the key once during DI registration and passes it as a string into `LlmClient` — the LLM project does not depend on `IConfiguration`. `LlmClient` tolerates a missing key (constructor does not throw, `IsConfigured` is false, `PingAsync` returns false) so the Host can boot for `/api/health` smoke checks without credentials.
 
 ### Dashboard
-React + TypeScript advisor UI. Built with Vite. Output served as static assets by Host (or via Vite dev proxy in development).
+Root-level React + TypeScript advisor UI. Built with Vite from `Dashboard/`. Production output is emitted to `Src/ApiHost/wwwroot` and served as static assets by Host; dev mode can use Vite's `/api` proxy.
 
 ```
 Dashboard/

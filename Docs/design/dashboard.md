@@ -18,7 +18,7 @@ Dashboard v2 is a from-scratch React implementation inside the existing dashboar
 
 ## Stack And Serving
 
-- React 18 + TypeScript, built with Vite in `Src/Dashboard`.
+- React 18 + TypeScript, built with Vite in root-level `Dashboard/`.
 - Production output is bundled into `Src/ApiHost/wwwroot` and served by `RimAI.Host`.
 - Dashboard consumes Host HTTP endpoints and the advice SSE stream.
 - No frontend state-management library is required; local state plus small polling/SSE hooks is enough for v2.

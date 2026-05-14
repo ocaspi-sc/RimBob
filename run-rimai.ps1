@@ -12,7 +12,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $repoRoot = $PSScriptRoot
-$dashboardDir = Join-Path $repoRoot "Src\Dashboard"
+$dashboardDir = Join-Path $repoRoot "Dashboard"
 $hostDir = Join-Path $repoRoot "Src\ApiHost"
 $hostProject = Join-Path $hostDir "RimAI.Host.csproj"
 $nodeModulesDir = Join-Path $dashboardDir "node_modules"

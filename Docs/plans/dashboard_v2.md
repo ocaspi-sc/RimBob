@@ -127,7 +127,7 @@ All endpoints are read-only.
 Keep package/build infrastructure and replace the app implementation:
 
 ```text
-Src/Dashboard/src/
+Dashboard/src/
   App.tsx
   api/
     client.ts
@@ -247,7 +247,7 @@ Do not stream arbitrary files into the UI. A later endpoint should return a boun
 
 ## Test Plan
 
-- `npm.cmd run build` from `Src/Dashboard`.
+- `npm.cmd run build` from `Dashboard`.
 - `dotnet build Src/RimAI.sln --no-restore`.
 - Verify Host still serves the built dashboard.
 - Browser-check desktop and narrow viewport layout.
