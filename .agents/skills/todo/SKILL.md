@@ -1,20 +1,22 @@
 ---
 name: todo
-description: Invoked when the user types exactly "/todo". Captures the current idea, task, or plan from the conversation and appends a tagged entry to todo.md at the project root. If the discussion includes a plan (steps, design decisions, a technical approach), also saves it to Docs/plans/ and links to it from the entry.
+description: Invoked when the user types exactly "/todo". Appends one short tagged entry to the "Captured by /todo" section in HumanTodo.md. It never creates plan files.
 version: 1.0.0
 ---
 
 # /todo Skill
 
-Appends a tagged line to `todo.md` (project root) from whatever the user just said or is currently discussing.
+Appends one tagged line to the `## Captured by /todo` section in `HumanTodo.md`.
+
+This skill is intentionally low-context. For `/todo X`, use `X` directly, write one short line, and do not inspect the broader conversation for plans or extra detail.
 
 ## Steps
 
 1. **Derive the entry content** from either:
-   - The args passed after `/todo` (if any), or
-   - The most recent idea / decision / task discussed in the conversation.
+   - The args passed after `/todo` (if any). This is the normal path.
+   - If no args were passed, use only the immediately preceding user idea or task. Do not scan the whole conversation.
 
-2. **Pick tags** — one or more short hashtags that classify the entry. Choose from:
+2. **Pick tags** - one or more short hashtags that classify the entry. Choose from:
    | Tag | Meaning |
    |---|---|
    | `#idea` | Exploratory, not committed |
@@ -31,23 +33,21 @@ Appends a tagged line to `todo.md` (project root) from whatever the user just sa
    | `#question` | Open question, needs decision |
    Pick the two or three most relevant. Combine freely.
 
-3. **Check for a plan** — if the conversation includes a multi-step plan, design breakdown, or technical approach worth preserving:
-   - Derive a short kebab-case filename from the topic (e.g. `feedback-loop-design.md`).
-   - Write the plan to `Docs/plans/<filename>`.
-   - Include a `[plan](Docs/plans/<filename>)` link in the todo line.
-
-4. **Append to `todo.md`** — insert the new line just after the `<!-- entries go here -->` comment, with this format:
+3. **Append to `HumanTodo.md`** - insert the new line just after the `<!-- entries go here -->` comment in the `## Captured by /todo` section, with this format:
+   ```md
+   - [ ] [YYYY-MM-DD] #tag1 #tag2 Short imperative description.
    ```
-   - [ ] [YYYY-MM-DD] #tag1 #tag2 Short imperative description. [plan](Docs/plans/filename.md)
-   ```
-   Omit the `[plan](…)` part if there is no plan.
-   Use today's date (from the `currentDate` context if available).
+   Use today's date from the current date context if available.
 
-5. **Confirm** in one line what was added (and the plan filename if one was saved). No more than two sentences.
+4. **Confirm** in one line what was added. No more than one sentence.
 
 ## Rules
 
-- Do not modify `Docs/TODO.md` or `Docs/ROADMAP.md` — those are milestone-tracked.
+- Do not recreate `Docs/TODO.md` or root `todo.md`; `HumanTodo.md` is the single todo surface.
+- Do not create or update files under `Docs/plans/`. `/todo` is short-line capture only.
+- Do not read or summarize the full `HumanTodo.md` unless a tool requires a narrow context snippet for insertion.
+- Do not quote existing todo contents in the reply.
+- Do not modify `Docs/ROADMAP.md` unless the user explicitly asks to change milestone order.
 - Do not ask for confirmation before writing; just write and report.
-- Keep the description on the todo line short (≤ 12 words). Depth goes in the plan doc.
+- Keep the description on the todo line short (12 words or fewer).
 - If the user passes args (e.g. `/todo add a dark mode toggle to dashboard`), use those args directly rather than inferring from context.

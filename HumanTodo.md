@@ -1,75 +1,185 @@
-# RimAI — Human Todo
+# RimAI - Human Todo
 
-> Loose capture of future ideas, spikes, and "what if" tasks from the human.
-> Anything serious that gets promoted belongs in `Docs/TODO.md` or `Docs/ROADMAP.md`.
-> Add entries with `/todo`. Format: `- [ ] [date] #tag … description [plan](Docs/plans/…)`
+> Single task inbox and execution board for RimAI.
+> Big milestone sequencing belongs in `Docs/ROADMAP.md`.
+> `/todo` entries go under "Captured by /todo"; promote serious items into the execution board when they become active work.
 
 ---
 
-Refine System prompts for agents - how systemtically?
+## Captured by /todo
+
+<!-- entries go here -->
+- [ ] [2026-05-14] #spike #backend #debt Review RimAI C# codebase and propose refactorings.
+- [ ] [2026-05-14] #debt #doc Rename RimAI to RimBob.
+- [ ] [2026-05-09] #spike #llm #test Benchmark optional TOON prompt encoding. [plan](Docs/plans/toon-prompt-encoding-spike.md)
+- [ ] [2026-05-09] #dashboard #ux Add button to dashboard "what was sent" / prompt-introspection screen that copies the full system + user prompt to the clipboard. Pairs with the manual-fallback flow (`logs/mayor-prompt-latest.md`, `POST /api/agenda/manual`) for when Gemini is rate-limited.
+
+---
+
+## Execution Board
+
+> Moved to done when shipped, not when coded. Keep this list short.
+> Big items belong in `Docs/ROADMAP.md`. This is day-to-day work.
+
+### Now (live-state gaps)
+
+- [ ] **PawnMedicalInfo wiring.** `PawnMedicalInfoDto.IsDowned` and `Hediffs` flow through the DTO but `MayorBriefingDerivation.DeriveMedical` still uses a `Health < 0.30` heuristic. Plumb `is_downed` + life-threatening hediffs into `ColonistRecord` so Mayor can distinguish "anesthetised" from "dying".
+- [ ] **`/resources/stored` integration.** Currently `Materials` dictionary is empty (only Medicine/Weapons rollups). When a stockpile zone has items and `/resources/stored` returns non-empty, populate per-def material counts so the Mayor can talk about steel, components, etc.
+- [ ] **`total_nutrition == 0` upstream investigation.** RIMAPI returns 0 nutrition even when `food_total > 0` and meals exist on map. Check whether this is a bug we can patch around (e.g. compute from `meals_count * 0.9 + raw_food_count * 0.05`) or a deeper RIMAPI gap.
+
+### Current implementation order
+
+1. [ ] **Stabilize Mayor inputs.** Finish the remaining live-state data gaps above; M3 now includes fallback food nutrition so Food is not blocked by `total_nutrition == 0`.
+2. [x] **Ship Food M3 end to end.** Briefing fields, initial rules, first flag contract, Mayor digest ingestion, dashboard rendering for `resource_requests`, then fixtures.
+3. [ ] **Add minimal CoS handling.** Implement the Mayor-side helper for dedupe, lead framing, and tactical-alert vs digest routing before multiple feeders exist.
+4. [ ] **Add Construction.** Food's first live dependencies are cooler / power / room / storage recommendations, not Defense coupling.
+5. [ ] **Add Defense.**
+6. [ ] **Resolve Welfare / Medical sequencing.** Decide whether they land together or whether Medical becomes its own follow-on slice (`M4.5` / second wave), then implement Welfare.
+7. [ ] **Wire Pushback feedback.** Land M5 only after multiple ministers are emitting advice.
+
+### Next (post-M3 follow-ups)
+
+- [ ] Add deterministic Food crop-yield math (`FoodCropMath`/candidate table) so rules can choose rice/potato/corn from grow time, nutrition per tile, fertility sensitivity, days to winter, and current food buffer; expose computed candidates to Food LLM escalation instead of asking Gemini to invent the math.
+- [ ] Add polished guide-citation footnotes on feeder memo cards.
+- [ ] Add Food decision log persistence so M6 refinement has shipped advice traces.
+- [ ] Improve Food hunting target risk/value scoring from live animal data.
+- [ ] Expand Food briefing with bill state, freezer room temperature, and spoilage timers when RIMAPI exposes them.
+- [x] `Briefing` tab renders latest Mayor/Food briefing JSON.
+- [x] One-time bootstrap escalation now runs through explicit `PlayCycleContext.StartupBootstrap`; Food uses it in M3.
+- [x] Food active advice now publishes as a minister-scoped snapshot, so bootstrap LLM cards are replaced by the next successful Food cycle instead of lingering by unique id.
+
+### Later (M5 - Feedback loop)
+
+- [ ] `POST /api/agenda/{version}/item/{id}/feedback` writes a `FeedbackEvent` to the decision log.
+- [ ] Wire dashboard Accept / Dismiss / Pushback buttons (Pushback modal opens an editable text field, posts `pushback_text`).
+- [ ] `Decision Log` tab renders the last N `FeedbackEvent`s with the originating Agenda bullet.
+- [ ] Per-minister persistent pushback list (each minister owns + carries forward player corrections).
+
+### Design TODOs (deferred)
+
+#### Doc alignment
+
+- [ ] Extend the action ownership sketch into a full RIMAPI action/endpoint catalogue, preserving owner/requester/executor labels.
+- [ ] Reconcile the Medical/Welfare boundary across docs (`Docs/DESIGN.md` still describes Welfare as owning medical sub-blocks, while `Docs/design/ministers.md` splits Medical into its own subsystem).
+- [ ] Update `Docs/design/dashboard.md` to remove stale Modify / `modified_actions` / implicit-feedback language and align it with Pushback-only feedback.
+- [ ] Expand the roadmap beyond the first cabinet wave: explicitly schedule Industry, Medical, Research, and Economy instead of leaving them only in post-MVP notes.
+
+#### Cabinet rollout planning
+
+- [ ] Add scope docs for Industry, Medical, Research, and Economy once their first slices are scheduled.
+- [x] Food minister M3 prep: replace remaining code-facing Agriculture names with Food where the M3 runtime touched it (`FoodBriefing`, `MinisterOfFood`, fixtures under `Src/Tests/Food/Fixtures/`).
+- [ ] Per-minister `advice_type` enums - define in each minister's session.
+- [ ] Per-minister scope docs (`RimAI.Ministers/<name>/scope.md`) - write after first slice ships.
+- [ ] Construction: placement / layout strategy (Base Layout Minister candidate).
+- [ ] Define the minimum viable CoS arbitration rule set for M4: dedupe same-issue flags, choose lead framing when multiple ministers point at the same problem, and decide when a flag becomes a tactical alert versus Mayor-digest input.
+- [ ] Decide whether Medical should stay coupled to Welfare in the rollout plan or become its own slice after Welfare.
+
+#### Longer-tail design
+
+- [ ] Candidate minister promotion criteria (CMO, Research, Trade, Treasury).
+- [ ] Memo cadence calibration: flag-severity-gated tactical alerts vs. strict daily.
+- [ ] Dashboard: notification UX (in-page only vs. browser notifications).
+- [ ] Retire or narrow legacy `ColonyContext` on the rules path now that minister wake reasons moved to `PlayCycleContext` and feeder ministers use agenda-derived briefing context.
+
+### Auto epic (M7 - defer until then)
+
+- [ ] HTN engine (`Planner/`) per [`Docs/design/planning.md`](Docs/design/planning.md).
+- [ ] Bulletin board (`Coordination/BulletinBoard.cs`) per [`Docs/design/communication.md`](Docs/design/communication.md).
+- [ ] Labor / assignment solver per [`Docs/design/ministers/labor.md`](Docs/design/ministers/labor.md).
+- [ ] RIMAPI write-endpoint coverage map.
+- [ ] Per-(minister, advice_type) autonomy dial wired with real Auto execution.
+- [ ] Autonomy dial UI with confirmation step.
+
+### Claude skills to build (see ROADMAP)
+
+- [x] `minister-refine` skill (proposal-first review of decision logs and future Pushbacks).
+- [ ] `fixture-gen` skill (can synthesize from Pushback events).
+- [ ] `briefing-check` skill.
+- [ ] `rule-promote` skill.
+
+### Known open questions
+
+See [`Docs/DESIGN.md`](Docs/DESIGN.md) decision log and Open Questions sections in sub-docs, especially [`Docs/design/advice.md`](Docs/design/advice.md) and [`Docs/design/dashboard.md`](Docs/design/dashboard.md).
+
+### Done
+
+- [x] Initial DESIGN.md written.
+- [x] Strategic plan Y1-Y2 guide written (`Docs/guides/strategic-plan-y1-y2.md`).
+- [x] Mayor system prompt drafted; rewritten for Agenda schema in M1 W4.
+- [x] Split `RimAI.Agents` into `RimAI.LLM` + `RimAI.Ministers`.
+- [x] HTN design discussed and documented (now deferred - Auto epic).
+- [x] Minister shape (rules + escalation + optimizer) decided.
+- [x] No-modules decision made.
+- [x] No-direct-minister-comms rule established.
+- [x] **Pivot to assisted-gameplay advisor** - DESIGN, ROADMAP, architecture, ministers, communication, mayor docs rewritten; planning + labor marked deferred; new `design/dashboard.md` and `design/advice.md` created; CLAUDE.md routing table updated.
+- [x] **M0 - Repo lit.** Solution + projects, RIMAPI handshake, Google.GenAI ping, Dashboard scaffold, Host with `/api/health` + SSE skeleton, localhost-only bind, CI building both .NET and Dashboard.
+- [x] **M1 W1 - Core types.** `MayorAgenda`, `AgendaPriority`, `AgendaPriorityStatus`, `MayorPosture`, `AutonomyMode`, `FeedbackAction`, `FeedbackEvent`, `MayorAgendaInput` under `RimAI.Core.Advice`. Snake-case wire format.
+- [x] **M1 W2 - Mayor minister.** `RimAI.Ministers` project with `MayorAgendaRules` (4 agenda directives) and `Mayor` skeleton implementing `IMinister`.
+- [x] **M1 W3 - Coordination.** `RimAI.Coordination` project: `AdviceBus`, `AgendaStore` (30-day ring), `DayTickOrchestrator` (`BackgroundService` polling `Tick / 60000`), `FlagChannel` stub.
+- [x] **M1 W4 - LLM call.** `mayor.system.md` rewritten; `PromptBuilder`; `LlmClient.CallMayorAsync` with `responseMimeType=application/json`; Mayor wired end-to-end (briefing -> rules -> LLM -> store -> bus) with retry-on-cap-violation.
+- [x] **M1 W5 - Host wiring.** DI registrations; SSE handler at `/api/advice/stream` (replay-on-connect, drop-oldest channel, 15s ping); `/api/agenda/{latest,history}` REST; `/api/autonomy` placeholder.
+- [x] **M1 W6 - Dashboard.** Agenda tab renders the live SSE feed: posture badges, state-of-the-union, what-changed, ranked short-term cards with delta badges (`NEW`/`UPDATED`/`DONE`/`DEFERRED`), long-term list. Feedback buttons disabled.
+- [x] **M1 W7 - Tests.** 22 tests across MayorAgendaRules, Mayor play cycle, AgendaStore, AdviceBus, DayTickOrchestrator. 62/62 total passing.
+- [x] **M1 W8 - Doc reconciliation.** ROADMAP M1 + this file rewritten to reflect Agenda pivot; agenda.md / dashboard.md SSE envelope simplified to `data: {full MayorAgenda}`.
+- [x] **M1.5 - Live operability.** Wake Mayor on Host startup, periodic `IngestionDispatcher` calls in `DayTickOrchestrator`, `state_of_the_union` per-category dict, `MayorAgenda.GeneratedAt`, `MayorStatus`, `/api/colony/snapshot`, `/api/status`, `/api/mayor/prompt`, `POST /api/agenda/refresh`, dark command-center dashboard with sidebar telemetry + Refresh button.
+- [x] **RIMAPI gap closure.** `ColonistDetailedDto` rewritten for actual nested v2 shape (`pawn` + `detailes.work_info` + `detailes.medical_info`) - names, ages, mood, skills, traits, current_job now populate. New `/resources/summary` and `/research/progress` endpoints in `RimApiClient` feed `ResourceSummary` + `ResearchInfo` aggregates. Mayor system prompt teaches the model what `food.estimated_days_of_food == null` means (request stockpile audit, do not assume starvation). `Docs/design/RimAPI.md` annotated with verified shapes for the three controllers.
+- [x] **M2 - Grounded reasoning / RAG.** `RimAI.Knowledge` now has an in-process cosine store, markdown guide ingestion from `Docs/guides`, Gemini embedding + disk cache under `var/embeddings`, Mayor retrieval via `guide_context[]`, server-stamped `MayorAgenda.guide_citations[]`, `AgendaPriority.cite_ids`, and RAG-vs-no-RAG fixture snapshots under `Src/Tests/Mayor/Fixtures/rag-vs-norag/`. Tier 1 evergreen prompt distillation and polished dashboard footnote rendering are follow-ups.
+- [x] **Advice resource requests.** `AdviceItem.resource_requests[]` and `AgentFlag.Requests` now share a `ResourceRequest` schema so ministers can request labor, tiles, items, buildings, bills, stockpile space, attention, or trade capacity without executing allocation in MVP.
+
+---
+
+## Loose Notes
+
+Refine system prompts for agents - how systematically?
 
 Simplify / improve AGENTS.md
 
-## Fill out Guide corpus (download and create guides)
+### Fill out guide corpus
 
-## Get Dashboard inspiration from existing mods
+Download and create guides.
 
-## some actions are very straighforward - we might be able to get away with adding them to execution layer already in the MVP:
-- Mark nearby fully grown trees to cut down if we need wood
-- Mark berries / animal to hunt
-- Modify Priorities
-- Basicially any simple action
+### Get dashboard inspiration from existing mods
 
+### Simple actions that may be straightforward enough for MVP execution
 
+- Mark nearby fully grown trees to cut down if we need wood.
+- Mark berries / animal to hunt.
+- Modify priorities.
+- Basically any simple action.
 
- Scan Github repos references for ideas
--
+### Scan GitHub repos for reference ideas
 
-## Rename the whole project from RimAI to RimBob
+### Older notes
 
-<!-- entries go here -->
-- [ ] [2026-05-09] #dashboard #ux Add button to dashboard "what was sent" / prompt-introspection screen that copies the full system + user prompt to the clipboard. Pairs with the manual-fallback flow (`logs/mayor-prompt-latest.md`, `POST /api/agenda/manual`) for when Gemini is rate-limited.
+Is the agenda saved to a file that the dashboard reads from? Is there history?
 
+Migrate from Codex Chrome plugin to Playwright for frontend.
 
-----------------
-DONE
----------------
+### About the Food minister's Advice / Alerts
 
+- The first alert "Resource requests attention food" - what does attention mean? Why not Trade?
+- It is bad day-one advice; do not suggest sending caravans to traders.
+- Too many things are generated. Focus on important and currently possible short-term actions; let the Mayor handle grand strategy.
+- Alerts priorities use numbers 1-10.
+- "Manage Food Stockpile" requested labor; why not tiles to be marked as storage?
+- The most basic actions like hauling and cleaning should be automated by the game, and only request labor for urgent cases.
+- LABOR requests should specify what kind of work type or skill is required.
+- "Wild harvest" should say exactly where the nearest edible plants are and suggest marking them for harvest.
 
-Is the agenda saved to a file that the dashboard reads from? is there history?
+### Dashboard v2
 
+Full redesign of the dashboard. First brainstorm; do not make changes yet.
 
-Migrate from codex chrome plugin to playwright for frontend
+- Left side: tab for each minister, with emojis.
+- Add a SYSTEM tab for info about LLM usage, logs, etc.
+- Top of main area: tabs for System Prompt, Briefing, RAG, Rules, Advice.
+- Each view is structured into sections for readability and navigation.
+- Remove the pushback buttons for now.
+- Right sidebar: no need to break up into sections when there are just a few items in each. Add a small panel for each colonist.
+- Header is fine.
+- Read the design docs to see if something important is missing, e.g. whether we show triggers.
 
+Then research either/or:
 
-
-## About the Food minister's Advice / Alerts:
-- The first alert "Resource requests  attention  food" - wdym attention? why not Trade? 
-- also it's bad advice - this is day one, i'm not going to be sending out carvans to traders?
-- Too many things are generated. focus on the important + possible currently or short term. let the mayor worry about the grand strategy.
-- Alerts priorities use numbers 1-10
-- "Manage Food Stockpile" requested labor, why not tiles to be marked as storage (action)?
-- In general, the most basic actions like hauling cleaning etc should be automated by the game, and only request labor for urgent cases.
-- All of the LABOR ones just say "LABOR labor capacity " wdym labor capacity ? Also should specify what kind of skill is required for the task.
-- "Wild harvest" one: it should say exactly where are the nearest edible plants, and suggest action to mark them for harvest.
-
-
-
-
-## Dashboard v2
-full redesign of the dashboard.
-First we brainstorm. don't make any changes yet.
-- left side: have a tab for each minister, with emojis.
-- Add a SYSTEM tab for info about llm usage, logs, etc.
-- Top of main area: bar of Tabs for our main views: System Prompt, Briefing, RAG, Rules, Advice.
-Each view is structured into sections as relevant for each type, for readbility and ease of navigation.
-- Remove The pushback buttons for now
-- Right sidebar: don't need to break up into section since just a few items in each. add a small panel for each colonist. 
-- Header is fine
-- Read the design docs to see if i missed something important. e.g. do we have a place that shows triggers?
-
-
-Then research either/or
-- frontend dashboard skill for ai agents
-- react library for dashboards with good support for collapsible panels and data
-
+- Frontend dashboard skill for AI agents.
+- React library for dashboards with good support for collapsible panels and data.

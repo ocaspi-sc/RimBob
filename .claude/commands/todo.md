@@ -1,29 +1,24 @@
 ---
-description: Capture an idea or task into HumanTodo.md with tags. Optionally saves a plan to Docs/plans/ and links it.
+description: Capture one short idea or task into the "Captured by /todo" section in HumanTodo.md with tags. Never saves a plan.
 allowed-tools: Read, Edit, Write
 ---
 
 ## Context
 
 - Today's date: !`date /t`
-- Current HumanTodo.md: !`type HumanTodo.md`
 
 ## Your task
 
-Append one new entry to `HumanTodo.md` in this project, just after the `<!-- entries go here -->` comment.
+Append one new entry to `HumanTodo.md` in this project, just after the `<!-- entries go here -->` comment in the `## Captured by /todo` section.
 
-**Input:** Use `$ARGUMENTS` if the user provided a description after `/todo`. Otherwise derive the task from the most recent idea or decision in the conversation.
+**Input:** Use `$ARGUMENTS` directly if the user provided a description after `/todo`. Otherwise derive the task from only the immediately preceding user idea or decision. Do not inspect the broader conversation for plan material.
 
 **Entry format:**
-```
+```md
 - [ ] [YYYY-MM-DD] #tag1 #tag2 Short imperative description.
 ```
-Or, if a plan is being saved:
-```
-- [ ] [YYYY-MM-DD] #tag1 #tag2 Short imperative description. [plan](Docs/plans/filename.md)
-```
 
-**Tag vocabulary** — pick the 2–3 most relevant:
+**Tag vocabulary** - pick the 2-3 most relevant:
 
 | Tag | Meaning |
 |---|---|
@@ -40,9 +35,10 @@ Or, if a plan is being saved:
 | `#debt` | Tech debt / refactor |
 | `#question` | Open question, needs decision |
 
-**Plan rule:** If the conversation contains a multi-step design approach or technical plan worth preserving, write it to `Docs/plans/<kebab-name>.md` and add the `[plan](…)` link. Otherwise omit the link entirely.
-
 **Constraints:**
-- Keep the description ≤ 12 words.
-- Do NOT touch `Docs/TODO.md` or `Docs/ROADMAP.md`.
-- Confirm in one sentence what was added (and plan filename if saved).
+- Keep the description 12 words or fewer.
+- Do NOT recreate `Docs/TODO.md` or root `todo.md`.
+- Do NOT create or update files under `Docs/plans/`.
+- Do NOT read, paste, or summarize the full `HumanTodo.md`; use only the minimum file context needed to insert after the marker.
+- Do NOT touch `Docs/ROADMAP.md` unless the user explicitly asks to change milestone order.
+- Confirm in one sentence what was added.

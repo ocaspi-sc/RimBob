@@ -24,7 +24,7 @@ The trigger phrases below are reinforcements, not the only condition. If any of 
 |---|---|
 | High-level principles, design goals | `Docs/DESIGN.md` |
 | Build order, milestones | `Docs/ROADMAP.md` |
-| Actionable tasks | `Docs/TODO.md` |
+| Actionable tasks | `HumanTodo.md` |
 | Minister shape, rules system, rule refinement | `Docs/design/ministers.md` |
 | Advice schema, feedback lifecycle, autonomy dial | `Docs/design/advice.md` |
 | Dashboard UI, HTTP+SSE contract, auth posture | `Docs/design/dashboard.md` |
@@ -48,8 +48,8 @@ If a decision affects multiple docs, update the most specific one and add a cros
 
 ## Session discipline
 
-- **At session start:** read `Docs/DESIGN.md`, `Docs/TODO.md`, and any doc relevant to the session's focus.
-- **At session end:** offer to update `Docs/TODO.md` with any new tasks uncovered.
+- **At session start:** read `Docs/DESIGN.md`, `HumanTodo.md`, and any doc relevant to the session's focus.
+- **At session end:** offer to update `HumanTodo.md` with any new tasks uncovered.
 - **Agent plans location:** store agent-created plans in `/.plans`.
 - **Design sessions:** focus is exploration and documentation. Don't write code unless asked.
 - **Build sessions:** focus is implementation. Don't redesign unless a blocker is found.
