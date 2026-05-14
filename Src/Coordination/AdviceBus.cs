@@ -90,8 +90,7 @@ public sealed class AdviceBus
 
     private static IOrderedEnumerable<AdviceItem> SortAdvice(IEnumerable<AdviceItem> advice) =>
         advice
-            .OrderByDescending(a => a.Severity)
-            .ThenByDescending(a => a.PriorityScore)
+            .OrderByDescending(a => a.Priority)
             .ThenByDescending(a => a.IssuedAt);
 }
 

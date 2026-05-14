@@ -1,7 +1,7 @@
 # Defense Minister — Minister Design
 
 > **Living document.** See `CLAUDE.md` for update rules.
-> Slice: M5 — feeder advisor; severity-gated tactical alerts route via this minister into the dashboard.
+> Slice: M5 — feeder advisor; flag-severity-gated tactical alerts route via this minister into the dashboard.
 >
 > ⚠️ **Pivot translation needed.** Pre-pivot `goal_id` / HTN vocabulary in this doc maps to `advice_type` and `tactical_alert` advice items under the assisted-gameplay model ([`../../DESIGN.md`](../../DESIGN.md)). Full rewrite when the M5 slice opens.
 

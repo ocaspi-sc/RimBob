@@ -112,7 +112,7 @@ The Mayor's turn is the only thing that mutates the Agenda. Ministers never writ
 |---|---|---|---|
 | `MayorAgenda` | Living plan; free-text bullets | Mayor | Updated once/day |
 | `AdviceItem` | Ephemeral tactical item | Feeder ministers (M3+) | On trigger |
-| `tactical_alert` (M5+) | Urgent one-shot alert | Mayor or feeder | On severity spike |
+| `tactical_alert` (M5+) | Urgent one-shot alert | Mayor or feeder | On flag severity spike |
 
 In MVP (M1), only the Agenda exists. The `AdviceItem` schema is preserved as the feeder-minister output format, ready for M3.
 

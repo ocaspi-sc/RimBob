@@ -28,9 +28,17 @@ public sealed class FoodPromptTests
         PromptBuilder builder = new();
 
         builder.FoodSystemPrompt.Should().Contain("near-term, actionable, currently possible advice");
-        builder.FoodSystemPrompt.Should().Contain("priority_score from 1 to 10");
+        builder.FoodSystemPrompt.Should().Contain("priority: low, medium, high, or critical");
+        builder.FoodSystemPrompt.Should().Contain("kind and instruction fields");
+        builder.FoodSystemPrompt.Should().Contain("kind, request, reason");
+        builder.FoodSystemPrompt.Should().NotContain("kind, what, why");
         builder.FoodSystemPrompt.Should().Contain("Do not ask for generic \"labor capacity\"");
         builder.FoodSystemPrompt.Should().Contain("Trade-for-food is not day-one local advice");
+        builder.FoodSystemPrompt.Should().Contain("reported food units need reachable stockpile visibility");
+        builder.FoodSystemPrompt.Should().Contain("Do not infer they are edible");
+        builder.FoodSystemPrompt.Should().Contain("notes field is a terse trace label");
+        builder.FoodSystemPrompt.Should().Contain("Do not start notes with \"Briefing indicates\"");
+        builder.FoodSystemPrompt.Should().Contain("do not use speculative prose");
         builder.FoodSystemPrompt.Should().Contain("Do not invent coordinates");
     }
 }

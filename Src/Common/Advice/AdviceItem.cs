@@ -13,10 +13,8 @@ public sealed record AdviceItem(
     string Minister,
     [property: JsonPropertyName("advice_type")]
     string AdviceType,
-    [property: JsonPropertyName("severity")]
-    AdviceSeverity Severity,
-    [property: JsonPropertyName("priority_score")]
-    int PriorityScore,
+    [property: JsonPropertyName("priority")]
+    AdvicePriority Priority,
     [property: JsonPropertyName("title")]
     string Title,
     [property: JsonPropertyName("body")]

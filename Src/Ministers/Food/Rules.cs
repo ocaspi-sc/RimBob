@@ -16,8 +16,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             if (briefing.FoodUnits > 0)
                 return DecisionFor(briefing, "nutrition_signal_gap",
                     FoodAdviceType.ManageFoodStockpile,
-                    AdviceSeverity.Medium,
-                    6,
+                    AdvicePriority.Medium,
                     "Food stockpile categories need verification",
                     "RIMAPI reports food units but no nutrition. Identify whether those items are meals or raw food before treating this as a shortage.",
                     "Missing nutrition would make days-of-food unreliable; use the fallback counts until upstream data is fixed.",
@@ -27,8 +26,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
 
             return DecisionFor(briefing, "unknown_food_state",
                 FoodAdviceType.FoodSecurity,
-                AdviceSeverity.High,
-                8,
+                AdvicePriority.High,
                 "Food state unknown",
                 "No reliable food stockpile signal is available. Treat this as a food-security check, not confirmed starvation.",
                 "The food chain cannot safely decide without stockpile visibility.",
@@ -41,26 +39,24 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
 
         if (days < 7f)
         {
-            AdviceSeverity severity = FoodBufferSeverity(briefing, days);
+            AdvicePriority priority = FoodBufferPriority(briefing, days);
             return DecisionFor(briefing, "emergency_food_flag",
                 FoodAdviceType.FoodSecurity,
-                severity,
-                FoodBufferPriority(briefing, days),
+                priority,
                 "Food crisis within a week",
                 $"Food covers about {days:F1} days for {briefing.ColonistCount} colonists. Set up immediate intake, cooking, and growing capacity before routine work.",
                 "Food below 7 days is an urgent survival risk. Food owns the next food-chain steps; cross-minister requests carry only the build, tile, and labor needs.",
-                EmergencyRequests(briefing, severity),
+                EmergencyRequests(briefing, priority),
                 EmergencyActions(briefing),
                 true);
         }
 
         if (briefing.ReadyToHarvest > 0)
         {
-            AdviceSeverity severity = days < 15f ? AdviceSeverity.High : AdviceSeverity.Medium;
+            AdvicePriority priority = days < 15f ? AdvicePriority.High : AdvicePriority.Medium;
             return DecisionFor(briefing, "harvest_mature_crops",
                 FoodAdviceType.HarvestNow,
-                severity,
-                days < 15f ? 8 : 6,
+                priority,
                 "Mature crops are ready",
                 $"{briefing.ReadyToHarvest} crop tiles are ready to harvest. Pull them in before weather, rot, or task drift wastes the buffer.",
                 "Mature crops are a deterministic food-chain opportunity.",
@@ -75,8 +71,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             IReadOnlyList<SuggestedAction> actions = CookBillActions(briefing);
             return DecisionFor(briefing, "meals_understocked",
                 FoodAdviceType.ManageCookBills,
-                AdviceSeverity.Medium,
-                days < 10f ? 7 : 6,
+                AdvicePriority.Medium,
                 "Cooked meals are understocked",
                 $"Only {briefing.MealsCount} meals are reported for {briefing.ColonistCount} colonists while raw food exists.",
                 "A raw-food buffer still needs cooking throughput to become safe daily nutrition.",
@@ -88,8 +83,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         if (days < 20f && briefing.WildHarvestCandidates > 0 && briefing.ReadyToHarvest == 0)
             return DecisionFor(briefing, "wild_harvest_available",
                 FoodAdviceType.WildHarvest,
-                days < 10f ? AdviceSeverity.High : AdviceSeverity.Medium,
-                days < 10f ? 8 : 6,
+                days < 10f ? AdvicePriority.High : AdvicePriority.Medium,
                 "Wild food can extend the buffer",
                 WildHarvestBody(briefing, days),
                 "Wild harvest is lower-risk than hunting when no mature crops are ready.",
@@ -100,8 +94,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         if (days < 20f && CanSowBeforeWinter(briefing))
             return DecisionFor(briefing, "expand_growing_capacity",
                 FoodAdviceType.ExpandGrowingCapacity,
-                days < 12f ? AdviceSeverity.High : AdviceSeverity.Medium,
-                days < 12f ? 8 : 7,
+                days < 12f ? AdvicePriority.High : AdvicePriority.Medium,
                 "Expand food growing capacity",
                 $"Food covers about {days:F1} days and the growing window is still open. Add a compact food crop zone instead of waiting for hunting or trade.",
                 "A tile request is more actionable than a vague labor request; Construction/Base Layout owns exact placement later.",
@@ -128,8 +121,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         if (briefing.Infrastructure.Coolers == 0 && days >= 20f && briefing.FoodUnits > 0)
             return DecisionFor(briefing, "freezer_missing",
                 FoodAdviceType.ManageFreezer,
-                AdviceSeverity.Medium,
-                5,
+                AdvicePriority.Medium,
                 "Food storage needs freezer support",
                 "Food exists but no cooler is visible. Preserve surplus before warm weather or large harvests.",
                 "The Food minister owns freezer need; Construction owns the actual build work.",
@@ -149,8 +141,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         FoodBriefing briefing,
         string trace,
         FoodAdviceType type,
-        AdviceSeverity severity,
-        int priorityScore,
+        AdvicePriority priority,
         string title,
         string body,
         string rationale,
@@ -164,8 +155,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             Id: $"{MinisterName.ToLowerInvariant()}_{trace}",
             Minister: MinisterName,
             AdviceType: adviceType,
-            Severity: severity,
-            PriorityScore: AdvicePriorityScore.Normalize(priorityScore, severity),
+            Priority: priority,
             Title: title,
             Body: body,
             Rationale: rationale,
@@ -173,7 +163,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             SuggestedActions: actions,
             GuideCitationIds: [],
             IssuedAt: now,
-            ExpiresAt: now.AddHours(severity >= AdviceSeverity.High ? 4 : 24),
+            ExpiresAt: now.AddHours(priority >= AdvicePriority.High ? 4 : 24),
             IssuedInGameTick: FormatTick(briefing),
             BriefingRef: new BriefingRef(MinisterName, briefing.BriefingVersion, $"food:{briefing.BriefingVersion}")
         );
@@ -182,7 +172,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             ? [new AgentFlag(
                 Id: $"{Domain}:{trace}",
                 SourceMinister: MinisterName,
-                Severity: ToFlagSeverity(severity),
+                Severity: ToFlagSeverity(priority),
                 Domain: Domain,
                 Summary: title,
                 Requests: requests,
@@ -193,31 +183,16 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         return new Decision([advice], flags, trace);
     }
 
-    private static AdviceSeverity FoodBufferSeverity(FoodBriefing briefing, float days)
+    private static AdvicePriority FoodBufferPriority(FoodBriefing briefing, float days)
     {
         bool noImmediateLocalFood = briefing.MealsCount == 0 &&
                                     briefing.RawFoodCount == 0 &&
                                     briefing.ReadyToHarvest == 0 &&
                                     briefing.WildHarvestCandidates == 0;
-        return days < 1f && noImmediateLocalFood ? AdviceSeverity.Critical : AdviceSeverity.High;
+        return days < 1f && noImmediateLocalFood ? AdvicePriority.Critical : AdvicePriority.High;
     }
 
-    private static int FoodBufferPriority(FoodBriefing briefing, float days)
-    {
-        int baseScore = days switch
-        {
-            < 1f => 10,
-            < 3f => 9,
-            < 7f => 8,
-            < 15f => 7,
-            < 20f => 6,
-            _ => 5
-        };
-        if (briefing.ActiveThreat && baseScore < AdvicePriorityScore.Max) baseScore++;
-        return AdvicePriorityScore.Normalize(baseScore, FoodBufferSeverity(briefing, days));
-    }
-
-    private static IReadOnlyList<ResourceRequest> EmergencyRequests(FoodBriefing briefing, AdviceSeverity severity)
+    private static IReadOnlyList<ResourceRequest> EmergencyRequests(FoodBriefing briefing, AdvicePriority priority)
     {
         List<ResourceRequest> requests = [];
         if (briefing.FoodUnits > 0 && briefing.MealsCount == 0 && briefing.RawFoodCount == 0)
@@ -225,12 +200,12 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 $"reachable stockpile visibility for {briefing.FoodUnits} reported food units",
                 "food_units exists, but no meal or raw-food category is visible to Food",
                 Quantity: briefing.FoodUnits,
-                Priority: severity));
+                Priority: priority));
         if (briefing.ReadyToHarvest > 0 || briefing.WildHarvestCandidates > 0)
             requests.Add(new ResourceRequest(ResourceRequestKind.Labor,
                 "PlantCut work today",
                 "food buffer is below 7 days and harvestable food exists",
-                Priority: severity,
+                Priority: priority,
                 RequestedFrom: "Labor",
                 WorkType: WorkType.PlantCut,
                 Skill: "Plants"));
@@ -241,12 +216,12 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 $"{growingTiles} emergency food growing tiles",
                 "food buffer is below 7 days and the growing window is still open",
                 Quantity: growingTiles,
-                Priority: severity,
+                Priority: priority,
                 RequestedFrom: "Construction"));
             requests.Add(new ResourceRequest(ResourceRequestKind.Labor,
                 "Grow work for emergency food zone",
                 "new food growing tiles only help once sown",
-                Priority: severity,
+                Priority: priority,
                 RequestedFrom: "Labor",
                 WorkType: WorkType.Grow,
                 Skill: "Plants"));
@@ -255,18 +230,18 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             requests.Add(new ResourceRequest(ResourceRequestKind.Building,
                 "campfire or stove for simple meals",
                 "the food chain cannot turn raw food into meals without a cooking building",
-                Priority: severity,
+                Priority: priority,
                 RequestedFrom: "Construction"));
         if (briefing.RawFoodCount > 0)
         {
             requests.Add(new ResourceRequest(ResourceRequestKind.Bill,
                 $"cook simple meals until {SimpleMealTarget(briefing)}",
                 "raw food must become meals during an urgent shortage",
-                Priority: severity));
+                Priority: priority));
             requests.Add(new ResourceRequest(ResourceRequestKind.Labor,
                 "Cook work today",
                 "raw food must become meals during an urgent shortage",
-                Priority: severity,
+                Priority: priority,
                 RequestedFrom: "Labor",
                 WorkType: WorkType.Cook,
                 Skill: "Cooking"));
@@ -275,7 +250,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             requests.Add(new ResourceRequest(ResourceRequestKind.TradeCapacity,
                 "emergency food acquisition path",
                 "no stored, harvestable, cookable, or sowable food path is visible in the briefing",
-                Priority: severity,
+                Priority: priority,
                 RequestedFrom: "Mayor"));
         return requests;
     }
@@ -389,11 +364,11 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
     private static int GrowingTileRequest(FoodBriefing briefing) =>
         Math.Clamp(briefing.ColonistCount * 12, 12, 72);
 
-    private static FlagSeverity ToFlagSeverity(AdviceSeverity severity) => severity switch
+    private static FlagSeverity ToFlagSeverity(AdvicePriority priority) => priority switch
     {
-        AdviceSeverity.Critical => FlagSeverity.Critical,
-        AdviceSeverity.High => FlagSeverity.High,
-        AdviceSeverity.Medium => FlagSeverity.Medium,
+        AdvicePriority.Critical => FlagSeverity.Critical,
+        AdvicePriority.High => FlagSeverity.High,
+        AdvicePriority.Medium => FlagSeverity.Medium,
         _ => FlagSeverity.Low
     };
 

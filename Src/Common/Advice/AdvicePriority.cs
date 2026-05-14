@@ -2,8 +2,8 @@ using System.Text.Json.Serialization;
 
 namespace RimAI.Core.Advice;
 
-[JsonConverter(typeof(SnakeCaseLowerEnumConverter<AdviceSeverity>))]
-public enum AdviceSeverity
+[JsonConverter(typeof(SnakeCaseLowerEnumConverter<AdvicePriority>))]
+public enum AdvicePriority
 {
     Low = 0,
     Medium = 1,

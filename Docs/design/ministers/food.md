@@ -101,13 +101,15 @@ Escalates when:
 - Drug/textile crops compete with food crops.
 - Food procurement pressure exists but the action belongs to Economy/Trade or the Mayor.
 
-M3 severity calibration: Food emits `High` for urgent shortage by default. `Critical` is reserved for true immediate starvation evidence, not just a low buffer.
+M3 priority calibration: Food emits `High` for urgent shortage by default. `Critical` is reserved for true immediate starvation evidence, not just a low buffer.
 
-Food should compute severity and `priority_score` from live state when possible: days of food, nutrition confidence, colonist count, season/growing window, active threat, and whether a concrete action can be taken now.
+Food should compute advice `priority` from live state when possible: days of food, nutrition confidence, colonist count, season/growing window, active threat, and whether a concrete action can be taken now.
 
 Food publishes a complete active-advice snapshot each successful play cycle. The snapshot replaces earlier active Food cards, including bootstrap LLM cards with unique ids, so the dashboard reflects Food's latest view instead of accumulating stale prior-cycle advice. Advice IDs should still be stable per rule issue where possible (for example `food_emergency_food_flag`) because stable ids make logs, tests, and future supersession chains easier to read. Historical logging can still record each emission separately later.
 
 Emergency Food output should avoid vague catch-all wording such as "audit" or generic `note` actions. If the briefing has reported `FoodUnits` but no meal/raw-food category, Food should say that the reported food units need reachable stockpile visibility. If the briefing shows no harvest/cook path, Food should still emit concrete food-chain setup work when possible: emergency growing tiles, Grow/PlantCut labor, a campfire/stove request, and simple-meal bill/cook labor when raw food exists. Food may request trade capacity only when no stored, harvestable, cookable, or sowable path is visible.
+
+Food LLM `notes` are trace labels, not player advice. They should stay terse and use the same vocabulary as advice: "reported food units need reachable stockpile visibility," not "unclassified edible items," "identification," or "audit."
 
 Crop selection should be grounded in deterministic yield math, not only prompt/RAG intuition. Food should have a shared crop-math helper/table that rules can call directly and that escalation can expose to the LLM as computed crop candidates. At minimum it should score rice/potato/corn by grow time, harvest yield/nutrition per tile, expected nutrition before winter, fertility sensitivity, current growing-window days, and available Plants/cooking constraints. The LLM may use guides to explain or adjust a candidate, but it should not invent the math.
 

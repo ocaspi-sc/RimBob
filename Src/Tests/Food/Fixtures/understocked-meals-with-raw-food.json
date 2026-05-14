@@ -2,6 +2,6 @@
   "description": "Raw food exists but cooked meals are below buffer",
   "expected_advice": ["manage_cook_bills"],
   "expected_top_advice_type": "manage_cook_bills",
-  "expected_severity_min": "Medium",
+  "expected_priority_min": "Medium",
   "should_escalate": false
 }

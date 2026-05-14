@@ -9,14 +9,14 @@ namespace RimAI.Core.Advice;
 public sealed record ResourceRequest(
     [property: JsonPropertyName("kind")]
     ResourceRequestKind Kind,
-    [property: JsonPropertyName("what")]
+    [property: JsonPropertyName("request")]
     string What,
-    [property: JsonPropertyName("why")]
+    [property: JsonPropertyName("reason")]
     string Why,
     [property: JsonPropertyName("quantity")]
     int? Quantity = null,
     [property: JsonPropertyName("priority")]
-    AdviceSeverity? Priority = null,
+    AdvicePriority? Priority = null,
     [property: JsonPropertyName("requested_from")]
     string? RequestedFrom = null,
     [property: JsonPropertyName("work_type")]

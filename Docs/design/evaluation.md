@@ -34,7 +34,7 @@ Every decision — whether from the rules layer or LLM escalation — writes one
   "rule_fired": "expand_zone_when_food_low",
   "escalation_reason": null,
   "decision": {
-    "advice": [{ "advice_type": "expand_growing_capacity", "severity": "Medium" }],
+    "advice": [{ "advice_type": "expand_growing_capacity", "priority": "medium" }],
     "flags": []
   },
   "rationale": "DaysOfFoodRemaining(22) < threshold(30), no mature crops, season allows planting",

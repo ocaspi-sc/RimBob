@@ -147,15 +147,14 @@ function MayorAdvice({
 
 function AdviceCard({ item }: { item: AdviceItem }) {
   return (
-    <article className={`advice-card v2 ${item.severity}`}>
+    <article className={`advice-card v2 ${item.priority}`}>
       <header>
         <div>
           <span className="eyebrow">{item.advice_type}</span>
           <h3>{item.title}</h3>
         </div>
         <div className="advice-badges">
-          <span>{item.severity}</span>
-          <span>P{item.priority_score}</span>
+          <span>{item.priority}</span>
         </div>
       </header>
       <p>{item.body}</p>
@@ -165,16 +164,22 @@ function AdviceCard({ item }: { item: AdviceItem }) {
           <div className="dense-table resource-table">
             <div className="dense-row header">
               <span>Kind</span>
-              <span>What</span>
-              <span>Why</span>
-              <span>Meta</span>
+              <span>Request</span>
+              <span>Reason</span>
+              <span>Qty</span>
+              <span>Owner</span>
+              <span>Work / Skill</span>
+              <span>Priority</span>
             </div>
             {item.resource_requests.map((request, index) => (
               <div className="dense-row" key={`${item.id}-request-${index}`}>
-                <span>{request.kind}</span>
-                <span>{request.what}</span>
-                <span>{request.why}</span>
-                <span>{request.work_type ?? request.skill ?? request.requested_from ?? '-'}</span>
+                <span>{formatLabel(request.kind)}</span>
+                <span>{request.request}</span>
+                <span>{request.reason}</span>
+                <span>{formatQuantity(request.quantity)}</span>
+                <span>{request.requested_from ?? '-'}</span>
+                <span>{formatWorkSkill(request.work_type, request.skill)}</span>
+                <span>{formatLabel(request.priority)}</span>
               </div>
             ))}
           </div>
@@ -186,7 +191,7 @@ function AdviceCard({ item }: { item: AdviceItem }) {
             {item.suggested_actions.map((action, index) => (
               <div key={`${item.id}-action-${index}`}>
                 <strong>{action.kind}</strong>
-                <span>{action.what}</span>
+                <span>{action.instruction}</span>
               </div>
             ))}
           </div>
@@ -228,4 +233,22 @@ function formatTime(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;
   return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatLabel(value: string | null | undefined): string {
+  if (!value) return '-';
+  return value
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, char => char.toUpperCase());
+}
+
+function formatQuantity(value: number | null | undefined): string {
+  return value === null || value === undefined ? '-' : value.toLocaleString();
+}
+
+function formatWorkSkill(workType: string | null | undefined, skill: string | null | undefined): string {
+  const parts = [workType, skill]
+    .filter((value): value is string => Boolean(value))
+    .map(formatLabel);
+  return parts.length > 0 ? parts.join(' / ') : '-';
 }

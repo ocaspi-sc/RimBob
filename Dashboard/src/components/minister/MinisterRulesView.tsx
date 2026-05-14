@@ -58,15 +58,13 @@ export function MinisterRulesView({
         <div className="dense-table">
           <div className="dense-row header">
             <span>Type</span>
-            <span>Severity</span>
             <span>Priority</span>
             <span>Title</span>
           </div>
           {ministerAdvice.map(item => (
             <div className="dense-row" key={item.id}>
               <span>{item.advice_type}</span>
-              <span>{item.severity}</span>
-              <span>{item.priority_score}</span>
+              <span>{item.priority}</span>
               <span>{item.title}</span>
             </div>
           ))}

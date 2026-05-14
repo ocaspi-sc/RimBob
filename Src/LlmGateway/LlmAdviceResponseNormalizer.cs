@@ -67,19 +67,21 @@ internal static class LlmAdviceResponseNormalizer
         JsonSerializerOptions json)
     {
         AdviceItem? strict = LlmResponseParser.TryDeserialize<AdviceItem>(node, json);
-        if (strict is not null && !string.IsNullOrWhiteSpace(strict.Id))
+        if (strict is not null && node["priority"] is not null && IsCompleteStrictAdvice(strict))
             return NormalizeStrictAdvice(strict);
 
         string rawType = LlmResponseParser.ReadString(node["advice_type"]) ?? context.DefaultAdviceType;
-        AdviceSeverity severity = ParseAdviceSeverity(LlmResponseParser.ReadString(node["severity"]), AdviceSeverity.Medium);
-        int priorityScore = ParsePriorityScore(node["priority_score"], severity);
+        AdvicePriority priority = ParseAdvicePriority(
+            LlmResponseParser.ReadString(node["priority"]) ?? LlmResponseParser.ReadString(node["severity"]),
+            node["priority_score"],
+            AdvicePriority.Medium);
         string adviceType = LlmResponseParser.ToSnakeCase(rawType);
         if (string.IsNullOrWhiteSpace(adviceType))
             adviceType = LlmResponseParser.ToSnakeCase(context.DefaultAdviceType);
         string title = LlmResponseParser.ReadString(node["title"]) ?? LlmResponseParser.HumanizeIdentifier(rawType);
         string body = LlmResponseParser.ReadString(node["body"]) ?? LlmResponseParser.ReadString(node["message"]) ?? title;
         string rationale = LlmResponseParser.ReadString(node["rationale"]) ?? notes ?? context.DefaultRationale;
-        IReadOnlyList<ResourceRequest> requests = NormalizeResourceRequests(node["resource_requests"], severity, context, json);
+        IReadOnlyList<ResourceRequest> requests = NormalizeResourceRequests(node["resource_requests"], priority, context, json);
         IReadOnlyList<SuggestedAction> actions = NormalizeSuggestedActions(node["suggested_actions"], json);
         IReadOnlyList<string> citationIds = NormalizeCitationIds(node, context.GuideContext);
         DateTimeOffset now = DateTimeOffset.UtcNow;
@@ -88,8 +90,7 @@ internal static class LlmAdviceResponseNormalizer
             Id: $"{context.Domain}_llm_{adviceType}_{context.GameTick}_{index + 1}",
             Minister: context.Minister,
             AdviceType: adviceType,
-            Severity: severity,
-            PriorityScore: priorityScore,
+            Priority: priority,
             Title: title,
             Body: body,
             Rationale: rationale,
@@ -97,7 +98,7 @@ internal static class LlmAdviceResponseNormalizer
             SuggestedActions: actions,
             GuideCitationIds: citationIds,
             IssuedAt: now,
-            ExpiresAt: now.AddHours(severity >= AdviceSeverity.High ? 4 : 24),
+            ExpiresAt: now.AddHours(priority >= AdvicePriority.High ? 4 : 24),
             IssuedInGameTick: FormatTick(context.Date),
             BriefingRef: new BriefingRef(context.Minister, context.BriefingVersion, $"{context.Domain}:{context.BriefingVersion}")
         );
@@ -111,7 +112,22 @@ internal static class LlmAdviceResponseNormalizer
     {
         AgentFlag? strict = LlmResponseParser.TryDeserialize<AgentFlag>(node, json);
         if (strict is not null && !string.IsNullOrWhiteSpace(strict.Id))
-            return strict;
+        {
+            bool requestsComplete = strict.Requests is null ||
+                                    strict.Requests.All(request =>
+                                        !string.IsNullOrWhiteSpace(request.What) &&
+                                        !string.IsNullOrWhiteSpace(request.Why));
+            return requestsComplete
+                ? strict
+                : strict with
+                {
+                    Requests = NormalizeResourceRequests(
+                        node["requests"],
+                        MapFlagSeverityToAdvicePriority(strict.Severity),
+                        context,
+                        json)
+                };
+        }
 
         string? raw = LlmResponseParser.ReadString(node);
         if (string.IsNullOrWhiteSpace(raw)) return null;
@@ -132,7 +148,7 @@ internal static class LlmAdviceResponseNormalizer
 
     private static IReadOnlyList<ResourceRequest> NormalizeResourceRequests(
         JsonNode? node,
-        AdviceSeverity severity,
+        AdvicePriority priority,
         LlmAdviceNormalizationContext context,
         JsonSerializerOptions json)
     {
@@ -156,11 +172,14 @@ internal static class LlmAdviceResponseNormalizer
                              "attention";
             string? amount = LlmResponseParser.ReadNumberAsString(item["amount"]);
             string? unit = LlmResponseParser.ReadString(item["unit"]);
-            string description = LlmResponseParser.ReadString(item["description"]) ??
+            string description = LlmResponseParser.ReadString(item["reason"]) ??
+                                 LlmResponseParser.ReadString(item["description"]) ??
                                  LlmResponseParser.ReadString(item["why"]) ??
                                  $"{context.Minister} LLM requested this resource.";
             ResourceRequestKind kind = ParseResourceKind(rawType, description);
-            string what = LlmResponseParser.ReadString(item["what"]) ?? FormatResourceWhat(rawType, amount, unit);
+            string what = LlmResponseParser.ReadString(item["request"]) ??
+                          LlmResponseParser.ReadString(item["what"]) ??
+                          FormatResourceWhat(rawType, amount, unit);
             int? quantity = LlmResponseParser.TryReadIntegerQuantity(item["amount"]);
             WorkType? workType = ParseWorkType(LlmResponseParser.ReadString(item["work_type"])) ??
                                  InferWorkType(rawType, what, description);
@@ -176,7 +195,7 @@ internal static class LlmAdviceResponseNormalizer
                 What: what,
                 Why: description,
                 Quantity: quantity,
-                Priority: severity >= AdviceSeverity.High ? severity : null,
+                Priority: priority >= AdvicePriority.High ? priority : null,
                 RequestedFrom: DefaultRequester(kind, context),
                 WorkType: workType,
                 Skill: skill));
@@ -198,6 +217,16 @@ internal static class LlmAdviceResponseNormalizer
             if (strict is not null && !string.IsNullOrWhiteSpace(strict.What))
             {
                 actions.Add(strict);
+                continue;
+            }
+
+            string? instruction = LlmResponseParser.ReadString(item["instruction"]) ??
+                                  LlmResponseParser.ReadString(item["what"]);
+            if (!string.IsNullOrWhiteSpace(instruction))
+            {
+                actions.Add(new SuggestedAction(
+                    ParseSuggestedActionKind(LlmResponseParser.ReadString(item["kind"])),
+                    instruction));
                 continue;
             }
 
@@ -226,22 +255,44 @@ internal static class LlmAdviceResponseNormalizer
         return ids;
     }
 
-    private static AdviceSeverity ParseAdviceSeverity(string? raw, AdviceSeverity fallback)
+    private static AdvicePriority ParseAdvicePriority(string? raw, JsonNode? legacyPriorityScore, AdvicePriority fallback)
     {
-        if (string.IsNullOrWhiteSpace(raw)) return fallback;
-        foreach (AdviceSeverity severity in Enum.GetValues<AdviceSeverity>())
+        if (!string.IsNullOrWhiteSpace(raw))
         {
-            if (LlmResponseParser.NormalizeIdentifier(severity.ToString()) == LlmResponseParser.NormalizeIdentifier(raw))
-                return severity;
+            string normalized = LlmResponseParser.NormalizeIdentifier(raw);
+            foreach (AdvicePriority priority in Enum.GetValues<AdvicePriority>())
+            {
+                if (LlmResponseParser.NormalizeIdentifier(priority.ToString()) == normalized)
+                    return priority;
+            }
         }
+
+        int? score = LlmResponseParser.TryReadIntegerQuantity(legacyPriorityScore);
+        if (score is >= 10) return AdvicePriority.Critical;
+        if (score is >= 8) return AdvicePriority.High;
+        if (score is >= 5) return AdvicePriority.Medium;
+        if (score is >= 1) return AdvicePriority.Low;
         return fallback;
     }
 
-    private static int ParsePriorityScore(JsonNode? node, AdviceSeverity severity)
+    private static bool IsCompleteStrictAdvice(AdviceItem advice) =>
+        !string.IsNullOrWhiteSpace(advice.Id) &&
+        advice.ResourceRequests.All(request =>
+            !string.IsNullOrWhiteSpace(request.What) &&
+            !string.IsNullOrWhiteSpace(request.Why)) &&
+        advice.SuggestedActions.All(action =>
+            !string.IsNullOrWhiteSpace(action.What));
+
+    private static SuggestedActionKind ParseSuggestedActionKind(string? raw)
     {
-        int? value = LlmResponseParser.TryReadIntegerQuantity(node);
-        if (value is null) return AdvicePriorityScore.DefaultForSeverity(severity);
-        return AdvicePriorityScore.Normalize(value.Value, severity);
+        if (string.IsNullOrWhiteSpace(raw)) return SuggestedActionKind.Note;
+        string normalized = LlmResponseParser.NormalizeIdentifier(raw);
+        foreach (SuggestedActionKind kind in Enum.GetValues<SuggestedActionKind>())
+        {
+            if (LlmResponseParser.NormalizeIdentifier(kind.ToString()) == normalized)
+                return kind;
+        }
+        return SuggestedActionKind.Note;
     }
 
     private static FlagSeverity InferFlagSeverity(string raw)
@@ -257,6 +308,14 @@ internal static class LlmAdviceResponseNormalizer
 
         return FlagSeverity.Medium;
     }
+
+    private static AdvicePriority MapFlagSeverityToAdvicePriority(FlagSeverity severity) => severity switch
+    {
+        FlagSeverity.Critical => AdvicePriority.Critical,
+        FlagSeverity.High => AdvicePriority.High,
+        FlagSeverity.Medium => AdvicePriority.Medium,
+        _ => AdvicePriority.Low
+    };
 
     private static ResourceRequestKind ParseResourceKind(string rawType, string description)
     {
@@ -277,7 +336,6 @@ internal static class LlmAdviceResponseNormalizer
     private static AdviceItem NormalizeStrictAdvice(AdviceItem advice) =>
         advice with
         {
-            PriorityScore = AdvicePriorityScore.Normalize(advice.PriorityScore, advice.Severity),
             ResourceRequests = advice.ResourceRequests.Select(NormalizeResourceRequest).ToArray()
         };
 

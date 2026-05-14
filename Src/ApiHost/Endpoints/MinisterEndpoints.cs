@@ -1,3 +1,4 @@
+using System.Text.Json;
 using RimAI.Coordination;
 using RimAI.Core.Advice;
 using RimAI.Core.Briefings;
@@ -114,6 +115,92 @@ public static class MinisterEndpoints
             return Results.Ok(snapshot);
         });
 
+        app.MapPost("/api/ministers/{minister}/llm-output/manual", async (
+            string minister,
+            JsonElement body,
+            BriefingCache briefings,
+            AgendaStore agendaStore,
+            PromptBuilder prompts,
+            FoodRagRetriever foodRetriever,
+            RawLlmOutputStore outputs,
+            AdviceBus bus,
+            FlagChannel flags,
+            CancellationToken ct) =>
+        {
+            MinisterScopeInfo? scope = FindScope(minister);
+            if (scope is null || scope.Kind != "minister")
+                return Results.NotFound(new { error = $"Unknown minister scope '{minister}'." });
+
+            if (!string.Equals(scope.Key, "food", StringComparison.OrdinalIgnoreCase))
+            {
+                return Results.Problem(
+                    title: "Manual LLM output not wired",
+                    detail: $"{scope.Label} does not have manual LLM output ingestion yet.",
+                    statusCode: StatusCodes.Status501NotImplemented);
+            }
+
+            string text = ReadManualLlmOutputText(body);
+            if (string.IsNullOrWhiteSpace(text))
+                return Results.BadRequest(new { error = "Manual LLM output text is required." });
+
+            FoodBriefing briefing = briefings.GetFoodBriefing();
+            MinisterBriefingContext context = MinisterOfFood.BuildContext(agendaStore.Current);
+            IReadOnlyList<GuideCitation> retrieved = await foodRetriever.RetrieveAsync(briefing, ct);
+            string user = prompts.BuildFoodUserMessage(briefing, context, retrieved);
+            string system = ReadPromptOrPlaceholder(() => prompts.FoodSystemPrompt);
+            DateTimeOffset capturedAt = DateTimeOffset.UtcNow;
+
+            try
+            {
+                FoodLlmParseResult parseResult = FoodLlmResponseParser.Parse(text, briefing, retrieved);
+                outputs.Record(new RawLlmOutputSnapshot(
+                    Minister: scope.Label,
+                    Provider: "Codex",
+                    Model: "codex-subagent",
+                    CapturedAt: capturedAt,
+                    LatencyMs: 0,
+                    Status: parseResult.Normalized ? "manual_normalized" : "manual_parsed",
+                    ParseMode: parseResult.ParseMode,
+                    SystemPromptChars: system.Length,
+                    UserPromptChars: user.Length,
+                    Text: text));
+
+                bus.ReplaceMinisterAdvice(scope.Label, parseResult.Response.Advice);
+                foreach (AgentFlag flag in parseResult.Response.Flags)
+                    flags.Publish(flag);
+
+                return Results.Ok(new
+                {
+                    accepted = true,
+                    minister = scope.Label,
+                    status = parseResult.Normalized ? "manual_normalized" : "manual_parsed",
+                    parse_mode = parseResult.ParseMode,
+                    advice_count = parseResult.Response.Advice.Count,
+                    flag_count = parseResult.Response.Flags.Count,
+                    notes = parseResult.Response.Notes
+                });
+            }
+            catch (JsonException ex)
+            {
+                outputs.Record(new RawLlmOutputSnapshot(
+                    Minister: scope.Label,
+                    Provider: "Codex",
+                    Model: "codex-subagent",
+                    CapturedAt: capturedAt,
+                    LatencyMs: 0,
+                    Status: "manual_parse_failed",
+                    ParseMode: "strict_json",
+                    SystemPromptChars: system.Length,
+                    UserPromptChars: user.Length,
+                    Text: text));
+                return Results.BadRequest(new
+                {
+                    error = "Manual LLM output could not be parsed as Food advice JSON.",
+                    detail = ex.Message
+                });
+            }
+        });
+
         app.MapGet("/api/ministers/{minister}/trace/latest", (
             string minister,
             MinisterTraceStore traces) =>
@@ -161,6 +248,29 @@ public static class MinisterEndpoints
         {
             return $"(prompt file not found: {ex.FileName})";
         }
+    }
+
+    private static string ReadManualLlmOutputText(JsonElement body)
+    {
+        if (body.ValueKind == JsonValueKind.Object)
+        {
+            if (body.TryGetProperty("text", out JsonElement textProperty) &&
+                textProperty.ValueKind == JsonValueKind.String)
+            {
+                return textProperty.GetString() ?? "";
+            }
+
+            if (body.TryGetProperty("raw", out JsonElement rawProperty) &&
+                rawProperty.ValueKind == JsonValueKind.String)
+            {
+                return rawProperty.GetString() ?? "";
+            }
+        }
+
+        if (body.ValueKind == JsonValueKind.String)
+            return body.GetString() ?? "";
+
+        return body.GetRawText();
     }
 
     private sealed record MinisterScopeInfo(

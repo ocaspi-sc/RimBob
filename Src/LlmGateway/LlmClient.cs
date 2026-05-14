@@ -295,39 +295,15 @@ public sealed class LlmClient
         if (string.IsNullOrWhiteSpace(text))
             throw new InvalidOperationException("Gemini returned empty response for Food call.");
 
-        bool normalized = false;
         FoodLlmResponse parsed;
+        string parseMode = "strict_json";
+        bool normalized = false;
         try
         {
-            LlmAdviceNormalizationContext normalizeContext = new(
-                Minister: "Food",
-                Domain: "food",
-                BriefingVersion: briefing.BriefingVersion,
-                GameTick: briefing.GameTick,
-                Date: briefing.Date,
-                DefaultAdviceType: nameof(FoodAdviceType.FoodSecurity),
-                DefaultRationale: "Food LLM escalation selected this recommendation.",
-                GuideContext: guideContext);
-
-            parsed = LlmResponseParser.ParseOrNormalize(
-                text,
-                ResponseJson,
-                root =>
-                {
-                    NormalizedAdviceResponse normalizedResponse =
-                        LlmAdviceResponseNormalizer.Normalize(root, normalizeContext, ResponseJson);
-                    return new FoodLlmResponse(
-                        normalizedResponse.Advice,
-                        normalizedResponse.Flags,
-                        normalizedResponse.Notes);
-                },
-                ex =>
-                {
-                    normalized = true;
-                    _log.LogWarning(ex, "Food response did not match strict schema; attempting tolerant normalization.");
-                },
-                IsStrictFoodResponse);
-            parsed = LlmAdviceResponseNormalizer.NormalizeStrictResponse(parsed);
+            FoodLlmParseResult parseResult = FoodLlmResponseParser.Parse(text, briefing, guideContext);
+            parsed = parseResult.Response;
+            parseMode = parseResult.ParseMode;
+            normalized = parseResult.Normalized;
         }
         catch (JsonException parseEx)
         {
@@ -337,7 +313,7 @@ public sealed class LlmClient
                 systemPrompt: _prompts.FoodSystemPrompt,
                 latencyMs: sw.ElapsedMilliseconds,
                 status: "parse_failed",
-                parseMode: normalized ? "tolerant_normalization" : "strict_json",
+                parseMode: parseMode,
                 text: text);
             _log.LogError(parseEx, "Failed to parse Food response as JSON. Raw text:\n{Text}", text);
             throw;
@@ -349,7 +325,7 @@ public sealed class LlmClient
             systemPrompt: _prompts.FoodSystemPrompt,
             latencyMs: sw.ElapsedMilliseconds,
             status: normalized ? "normalized" : "parsed",
-            parseMode: normalized ? "tolerant_normalization" : "strict_json",
+            parseMode: parseMode,
             text: text);
         _log.LogInformation(
             "Food LLM call complete: latency={LatencyMs}ms advice={AdviceCount} flags={FlagCount}",
@@ -361,15 +337,6 @@ public sealed class LlmClient
 
         return parsed;
     }
-
-    private static bool IsStrictFoodResponse(FoodLlmResponse response) =>
-        response.Advice.All(advice =>
-            !string.IsNullOrWhiteSpace(advice.Id) &&
-            !string.IsNullOrWhiteSpace(advice.Minister) &&
-            !string.IsNullOrWhiteSpace(advice.AdviceType) &&
-            !string.IsNullOrWhiteSpace(advice.Title) &&
-            !string.IsNullOrWhiteSpace(advice.Body) &&
-            !string.IsNullOrWhiteSpace(advice.Rationale));
 
     private void RecordRawOutput(
         string minister,

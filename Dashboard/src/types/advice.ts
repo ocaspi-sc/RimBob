@@ -1,11 +1,11 @@
-export type AdviceSeverity = 'low' | 'medium' | 'high' | 'critical';
+export type AdvicePriority = 'low' | 'medium' | 'high' | 'critical';
 
 export interface ResourceRequest {
   kind: string;
-  what: string;
-  why: string;
+  request: string;
+  reason: string;
   quantity?: number | null;
-  priority?: AdviceSeverity | null;
+  priority?: AdvicePriority | null;
   requested_from?: string | null;
   work_type?: string | null;
   skill?: string | null;
@@ -13,15 +13,14 @@ export interface ResourceRequest {
 
 export interface SuggestedAction {
   kind: string;
-  what: string;
+  instruction: string;
 }
 
 export interface AdviceItem {
   id: string;
   minister: string;
   advice_type: string;
-  severity: AdviceSeverity;
-  priority_score: number;
+  priority: AdvicePriority;
   title: string;
   body: string;
   rationale: string;

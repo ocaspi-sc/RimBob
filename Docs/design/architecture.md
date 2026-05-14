@@ -70,7 +70,7 @@ Core/
 │   └── FlagSeverity.cs
 ├── Advice/
 │   ├── AdviceItem.cs       // see design/advice.md for schema
-│   ├── AdviceSeverity.cs
+│   ├── AdvicePriority.cs
 │   ├── ResourceRequest.cs
 │   ├── SuggestedAction.cs
 │   ├── FeedbackEvent.cs    // Accept | Dismiss | Modify
@@ -341,7 +341,7 @@ public record AdviceItem(
     string             Id,
     string             Minister,
     string             AdviceType,
-    AdviceSeverity     Severity,
+    AdvicePriority     Priority,
     string             Title,
     string             Body,
     string             Rationale,

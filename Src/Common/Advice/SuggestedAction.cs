@@ -9,7 +9,7 @@ namespace RimAI.Core.Advice;
 public sealed record SuggestedAction(
     [property: JsonPropertyName("kind")]
     SuggestedActionKind Kind,
-    [property: JsonPropertyName("what")]
+    [property: JsonPropertyName("instruction")]
     string What);
 
 [JsonConverter(typeof(SnakeCaseLowerEnumConverter<SuggestedActionKind>))]

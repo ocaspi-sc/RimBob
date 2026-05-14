@@ -13,7 +13,7 @@
 | M1.5 | Live operability — startup briefing, periodic ingestion, sidebar telemetry, on-demand Refresh, run-state + prompt-introspection endpoints | Done |
 | M2 | Grounded reasoning (RAG) — Mayor cites guide passages; measurable agenda-quality improvement before adding feeders | Done |
 | M3 | First feeder advisor (Food) — sub-briefing into the Mayor; first cross-minister flag | Implemented |
-| M4 | First cabinet wave — Construction, Defense, Welfare feeding the Mayor; severity-gated tactical alerts surface independently of the daily digest | Not started |
+| M4 | First cabinet wave — Construction, Defense, Welfare feeding the Mayor; flag-severity-gated tactical alerts surface independently of the daily digest | Not started |
 | M5 | Feedback loop — Accept / Dismiss / Pushback wired; each minister owns and persists its own pushback list | Not started |
 | M6 | Refinement loop closes — pushbacks drive the first promoted rule per minister | Not started |
 | M7 (post-MVP) | First Auto graduation — one minister's narrowest advice type (e.g. stockpile-zone suggestions) gains an `Auto` mode behind the dial. Re-engages deferred HTN / Labor pieces | Not started |
@@ -97,7 +97,7 @@
 
 ## M3 — First feeder advisor (Food)
 
-**Done when:** the Mayor's daily agenda visibly incorporates Food's sub-briefing; Food can emit a flag (e.g. "food crisis imminent") that the Mayor reflects in body or severity.
+**Done when:** the Mayor's daily agenda visibly incorporates Food's sub-briefing; Food can emit a flag (e.g. "food crisis imminent") that the Mayor reflects in body or priority.
 
 **Implementation:** M3 ships `FoodBriefing`, rules-first `MinisterOfFood`, Food Gemini escalation, Food RAG retrieval, active `FlagChannel`, `CabinetCycle` (Food before Mayor), SSE `advice` replay, Alerts rendering for Food `AdviceItem`s, and Mayor/Food briefing inspection.
 
@@ -114,7 +114,7 @@
 
 ## M4 — First cabinet wave
 
-**Done when:** Construction, Defense, Welfare each feed sub-briefings + flags into the Mayor; severity-gated **tactical alerts** can surface as their own dashboard items (separate from the daily digest) when a Critical or High flag fires.
+**Done when:** Construction, Defense, Welfare each feed sub-briefings + flags into the Mayor; flag-severity-gated **tactical alerts** can surface as their own dashboard items (separate from the daily digest) when a Critical or High flag fires.
 
 **Demo:** raid scenario — Defense emits Critical flag → tactical alert appears in dashboard immediately; next daily Mayor agenda summarises the incident and proposes follow-up.
 
@@ -122,7 +122,7 @@
 - Construction, Defense, Welfare ministers + their rules layers, in that order. Construction lands before Defense because Food's first live dependencies are build/storage/power concerns, not hunt-risk arbitration.
 - Their briefings.
 - Mayor-side CoS helper for cross-minister flag arbitration into the Mayor's digest; split into a separate runtime role later only if flag volume justifies it.
-- Tactical-alert advice type (severity ≥ High) bypasses the daily-tick cadence.
+- Tactical-alert advice type (`priority >= high`) bypasses the daily-tick cadence.
 
 ---
 
@@ -140,7 +140,7 @@
 - Each minister owns and persists its own pushback list under `Src/Cabinet/<Minister>/Pushbacks/`. Pushbacks are scoped — the Mayor doesn't see Food's pushbacks and vice versa.
 - Dashboard buttons + Pushback modal (free-text textarea, prompt: *"Tell the minister why he's wrong."*).
 - Per-minister pushback view in the dashboard (replaces the old "decision log" tab idea — there's no global log, only per-minister lists).
-- Pushbacks injected into the issuing minister's next prompt as a "recent player corrections" section, capped to the last N entries by age and severity.
+- Pushbacks injected into the issuing minister's next prompt as a "recent player corrections" section, capped to the last N entries by age and advice priority.
 - **Implicit-feedback / state-diff inference is dropped from the MVP.** The explicit Pushback channel is load-bearing; implicit signals were always a fallback and the cost wasn't justified.
 
 ---

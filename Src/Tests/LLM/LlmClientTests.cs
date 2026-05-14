@@ -133,8 +133,7 @@ public sealed class LlmClientTests
         response.Advice[0].Id.Should().StartWith("food_llm_manage_cook_bills_");
         response.Advice[0].Minister.Should().Be("Food");
         response.Advice[0].AdviceType.Should().Be("manage_cook_bills");
-        response.Advice[0].Severity.Should().Be(AdviceSeverity.High);
-        response.Advice[0].PriorityScore.Should().Be(AdvicePriorityScore.DefaultForSeverity(AdviceSeverity.High));
+        response.Advice[0].Priority.Should().Be(AdvicePriority.High);
         response.Advice[0].Title.Should().Be("Manage Cook Bills");
         response.Advice[0].Body.Should().Contain("Cook simple meals");
         response.Advice[0].ResourceRequests.Should().ContainSingle()
@@ -148,14 +147,13 @@ public sealed class LlmClientTests
     }
 
     [Fact]
-    public void AdviceNormalizer_ClampsPriorityScoreAndDowngradesVagueLabor()
+    public void AdviceNormalizer_MapsLegacyPriorityScoreAndDowngradesVagueLabor()
     {
         const string raw = """
         {
           "advice": [
             {
               "advice_type": "FoodSecurity",
-              "severity": "Medium",
               "priority_score": 99,
               "message": "Food needs attention.",
               "resource_requests": [
@@ -190,7 +188,7 @@ public sealed class LlmClientTests
             isStrictValid: _ => false);
 
         AdviceItem advice = response.Advice.Should().ContainSingle().Subject;
-        advice.PriorityScore.Should().Be(AdvicePriorityScore.Max);
+        advice.Priority.Should().Be(AdvicePriority.Critical);
         ResourceRequest request = advice.ResourceRequests.Should().ContainSingle().Subject;
         request.Kind.Should().Be(ResourceRequestKind.Attention);
         request.WorkType.Should().BeNull();
@@ -198,15 +196,14 @@ public sealed class LlmClientTests
     }
 
     [Fact]
-    public void AdviceSchema_RoundTripsPriorityScoreAndResourceWorkMetadata()
+    public void AdviceSchema_RoundTripsPriorityAndResourceWorkMetadata()
     {
         JsonSerializerOptions json = new() { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
         AdviceItem item = new(
             Id: "a1",
             Minister: "Food",
             AdviceType: "manage_cook_bills",
-            Severity: AdviceSeverity.High,
-            PriorityScore: 9,
+            Priority: AdvicePriority.High,
             Title: "Cook meals",
             Body: "Body",
             Rationale: "Rationale",
@@ -217,7 +214,7 @@ public sealed class LlmClientTests
                     "Cook work today",
                     "meals are understocked",
                     Quantity: 1,
-                    Priority: AdviceSeverity.High,
+                    Priority: AdvicePriority.High,
                     RequestedFrom: "Labor",
                     WorkType: WorkType.Cook,
                     Skill: "Cooking")
@@ -230,10 +227,18 @@ public sealed class LlmClientTests
         string serialized = JsonSerializer.Serialize(item, json);
         AdviceItem? roundTripped = JsonSerializer.Deserialize<AdviceItem>(serialized, json);
 
-        serialized.Should().Contain("\"priority_score\":9");
+        serialized.Should().Contain("\"priority\":\"high\"");
+        serialized.Should().NotContain("\"priority_score\"");
+        serialized.Should().NotContain("\"severity\"");
+        serialized.Should().Contain("\"request\":\"Cook work today\"");
+        serialized.Should().Contain("\"reason\":\"meals are understocked\"");
+        serialized.Should().NotContain("\"what\":\"Cook work today\"");
+        serialized.Should().NotContain("\"why\":\"meals are understocked\"");
         serialized.Should().Contain("\"work_type\":\"cook\"");
         roundTripped.Should().NotBeNull();
-        roundTripped!.PriorityScore.Should().Be(9);
+        roundTripped!.Priority.Should().Be(AdvicePriority.High);
+        roundTripped.ResourceRequests.Single().What.Should().Be("Cook work today");
+        roundTripped.ResourceRequests.Single().Why.Should().Be("meals are understocked");
         roundTripped.ResourceRequests.Single().WorkType.Should().Be(WorkType.Cook);
         roundTripped.ResourceRequests.Single().Skill.Should().Be("Cooking");
     }
@@ -253,9 +258,68 @@ public sealed class LlmClientTests
         string serialized = JsonSerializer.Serialize(actions, json);
 
         serialized.Should().Contain("\"kind\":\"mark_harvest\"");
+        serialized.Should().Contain("\"instruction\":\"mark crops\"");
         serialized.Should().Contain("\"kind\":\"place_blueprint\"");
         serialized.Should().Contain("\"kind\":\"production_bill\"");
         serialized.Should().Contain("\"kind\":\"set_stockpile_zone\"");
+        serialized.Should().NotContain("\"what\":\"mark crops\"");
+    }
+
+    [Fact]
+    public void FoodLlmResponseParser_StrictResponseStampsRuntimeMetadata()
+    {
+        const string raw = """
+        {
+          "advice": [
+            {
+              "id": "manual_food",
+              "minister": "Food",
+              "advice_type": "food_security",
+              "priority": "high",
+              "title": "Set up the food chain",
+              "body": "Make storage visible, place cooking, and start growing.",
+              "rationale": "reported food units need reachable stockpile visibility.",
+              "resource_requests": [
+                {
+                  "kind": "stockpile_space",
+                  "request": "Reachable food stockpile space",
+                  "reason": "reported food units need reachable stockpile visibility"
+                }
+              ],
+              "suggested_actions": [],
+              "guide_citations": [],
+              "issued_at": "5500-04-08T16:00:00Z",
+              "expires_at": "5500-04-09T16:00:00Z"
+            }
+          ],
+          "flags": [
+            {
+              "id": "manual_flag",
+              "source_minister": "Food",
+              "severity": "high",
+              "domain": "food",
+              "summary": "Food chain setup needed.",
+              "requests": [],
+              "detail": "Manual fallback test.",
+              "expires_at": "5500-04-09T16:00:00Z"
+            }
+          ],
+          "notes": "food-chain-bootstrap"
+        }
+        """;
+        DateTimeOffset before = DateTimeOffset.UtcNow.AddSeconds(-1);
+
+        FoodLlmParseResult result = FoodLlmResponseParser.Parse(raw, FoodBriefing(0.21f), []);
+
+        result.ParseMode.Should().Be("strict_json");
+        result.Normalized.Should().BeFalse();
+        AdviceItem advice = result.Response.Advice.Should().ContainSingle().Subject;
+        advice.ResourceRequests.Should().ContainSingle().Which.What.Should().Be("Reachable food stockpile space");
+        advice.IssuedAt.Should().BeAfter(before);
+        advice.ExpiresAt.Should().BeAfter(DateTimeOffset.UtcNow);
+        advice.IssuedInGameTick.Should().Be("Y5500AprimayD5");
+        advice.BriefingRef.Should().Be(new BriefingRef("Food", 1, "food:1"));
+        result.Response.Flags.Should().ContainSingle().Which.ExpiresAt.Should().BeAfter(DateTimeOffset.UtcNow);
     }
 
     private static FoodBriefing FoodBriefing(float days) => new(

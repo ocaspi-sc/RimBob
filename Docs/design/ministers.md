@@ -135,7 +135,7 @@ Same shape. Different implementations per minister.
 
 All ministers should emit advice that is near-term, actionable, and possible in the current or short-term game state. The Mayor may reason about strategy, but even Mayor agenda items should prioritize concrete next moves over broad wish lists.
 
-Minister output should be sparse. A normal cycle should surface the most important few items and avoid exhaustive menus. Critical or unusually complex states can produce more, but the minister must still rank them with `priority_score`.
+Minister output should be sparse. A normal cycle should surface the most important few items and avoid exhaustive menus. Critical or unusually complex states can produce more, but the minister must still assign one clear `priority`.
 
 Briefings should provide compact opportunity summaries rather than raw dumps. Spatial data is useful when it becomes actionable: distance/proximity buckets, nearest clusters, tile counts, and bottleneck signals are preferred over lists of every coordinate.
 
@@ -150,18 +150,17 @@ When the LLM is called (escalation path), it returns one or more `AdviceItem`s:
   "advice": [
     {
       "advice_type": "food_security",   // closed enum, per minister
-      "severity":    "high",            // low | medium | high | critical
-      "priority_score": 8,               // 1-10, first-class advice priority
+      "priority":    "high",            // low | medium | high | critical
       "title":       "Food situation tightening — start a second growing zone",
       "body":        "Days-of-food has dropped to 22 from 31 yesterday...",
       "rationale":   "rice matures in 8d, cold snap in 14d",
       "resource_requests": [
-        { "kind": "labor", "what": "Cook work time today", "why": "Food cannot close the gap without cooked meals", "work_type": "Cook", "skill": "Cooking" },
-        { "kind": "tile", "what": "~8x8 fertile growing footprint", "why": "current sowed area cannot cover winter buffer" }
+        { "kind": "labor", "request": "Cook work time today", "reason": "Food cannot close the gap without cooked meals", "work_type": "Cook", "skill": "Cooking" },
+        { "kind": "tile", "request": "~8x8 fertile growing footprint", "reason": "current sowed area cannot cover winter buffer" }
       ],
       "suggested_actions": [
-        { "kind": "designate_zone", "what": "growing zone, ~8x8, fertile soil south of kitchen" },
-        { "kind": "set_priority",   "what": "raise Plants priority for Hannah and Ben" }
+        { "kind": "designate_zone", "instruction": "growing zone, ~8x8, fertile soil south of kitchen" },
+        { "kind": "set_priority",   "instruction": "raise Plants priority for Hannah and Ben" }
       ],
       "expires_in_in_game_hours": 24
     }
@@ -177,7 +176,7 @@ When the LLM is called (escalation path), it returns one or more `AdviceItem`s:
 
 Rules for the LLM:
 - `advice_type` is a **closed enum per minister**. The LLM picks from the list; no free-form advice types. (This is the unit the future autonomy dial graduates one at a time.)
-- `priority_score` is required on every advice item. Use it to rank player attention from 1-10; do not encode all priority into prose.
+- `priority` is required on every advice item. Use `low | medium | high | critical`; do not encode urgency only into prose.
 - Advice must be concrete and currently possible or near-term. Do not emit grand strategy lists from feeder ministers; flag strategic pressure upward instead.
 - `resource_requests` are first-class advisory needs: "Food needs labor/tiles/items/etc." They do not allocate pawns, reserve tiles, or grant ownership of another minister's domain in MVP.
 - `suggested_actions` are advisory text — they are *not* executed in MVP, only rendered. Their `kind` is a closed enum so future Auto graduation can wire each kind to an HTN primitive.
@@ -368,7 +367,7 @@ Tests/
   "briefing": { ... },
   "expected_advice": ["food_security", "trade_food_surplus"],
   "expected_top_advice_type": "food_security",
-  "expected_severity_min": "High",
+  "expected_priority_min": "high",
   "should_escalate": false,
   "notes": "Rules should handle this; trade is secondary to food security"
 }

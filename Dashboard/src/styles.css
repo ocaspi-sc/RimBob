@@ -541,9 +541,21 @@ code {
   overflow-wrap: anywhere;
 }
 
+.resource-table {
+  overflow-x: auto;
+}
+
 .resource-table .dense-row {
-  grid-template-columns: minmax(84px, 0.7fr) minmax(150px, 1.2fr) minmax(240px, 2fr) minmax(96px, 0.75fr);
+  grid-template-columns:
+    minmax(96px, 0.8fr)
+    minmax(180px, 1.25fr)
+    minmax(260px, 2fr)
+    minmax(54px, 0.45fr)
+    minmax(90px, 0.7fr)
+    minmax(118px, 0.85fr)
+    minmax(78px, 0.65fr);
   align-items: start;
+  min-width: 940px;
 }
 
 .dense-row.header {
@@ -938,6 +950,18 @@ code {
   margin-top: 12px;
   padding-top: 10px;
   border-top: 1px solid var(--line-soft);
+  display: grid;
+  gap: 5px;
+}
+
+.sidebar-footer.warn {
+  color: var(--warn);
+}
+
+.sidebar-footer strong {
+  color: var(--warn);
+  font-size: 0.75rem;
+  font-weight: 700;
 }
 
 @media (max-width: 1180px) {

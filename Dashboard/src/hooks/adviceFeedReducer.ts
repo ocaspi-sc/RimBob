@@ -118,7 +118,7 @@ export function adviceFeedReducer(
           state.events,
           action.advice.minister,
           'advice',
-          action.advice.severity === 'critical' ? 'warn' : 'info',
+          action.advice.priority === 'critical' ? 'warn' : 'info',
           action.advice.title,
         ),
       };
@@ -197,15 +197,13 @@ export function adviceFeedReducer(
 }
 
 function compareAdvice(a: AdviceItem, b: AdviceItem): number {
-  const severityDelta = severityRank(b.severity) - severityRank(a.severity);
-  if (severityDelta !== 0) return severityDelta;
-  return b.priority_score - a.priority_score;
+  return priorityRank(b.priority) - priorityRank(a.priority);
 }
 
-function severityRank(severity: AdviceItem['severity']): number {
-  if (severity === 'critical') return 3;
-  if (severity === 'high') return 2;
-  if (severity === 'medium') return 1;
+function priorityRank(priority: AdviceItem['priority']): number {
+  if (priority === 'critical') return 3;
+  if (priority === 'high') return 2;
+  if (priority === 'medium') return 1;
   return 0;
 }
 

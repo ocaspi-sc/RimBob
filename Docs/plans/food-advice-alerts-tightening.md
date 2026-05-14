@@ -2,14 +2,14 @@
 
 ## Goal
 
-Make Food advice behave like useful in-game coaching instead of a noisy strategy dump. Food should produce a small number of concrete, currently possible or short-term actions; use severity and priority consistently; request resources with enough structure for the player, Mayor, and future Labor/Construction ministers to understand; and keep briefings compact by summarizing spatial data.
+Make Food advice behave like useful in-game coaching instead of a noisy strategy dump. Food should produce a small number of concrete, currently possible or short-term actions; use `priority` consistently; request resources with enough structure for the player, Mayor, and future Labor/Construction ministers to understand; and keep briefings compact by summarizing spatial data.
 
 ## Design Decisions Captured
 
 - All ministers should prefer near-term, actionable, currently possible advice. The Mayor can reason strategically, but should still prioritize concrete next moves.
-- `severity` remains a semantic signal for Mayor/CoS routing and tactical alert behavior. It is not only a dashboard display field.
-- `priority_score` from 1-10 is a first-class `AdviceItem` output.
-- Rules may calculate `severity` and `priority_score` dynamically from live state.
+- `AdviceItem.priority` is the single urgency field for advice: `low | medium | high | critical`.
+- `AgentFlag.severity` remains a semantic signal for Mayor/CoS routing and tactical alert behavior.
+- Rules may calculate advice `priority` dynamically from live state.
 - Labor/resource requests must use canonical RimWorld work-tab types, not vague phrases like "labor capacity."
 - Work types and skills are distinct. Example: `Cook` is a work type; `Cooking` is the related skill.
 - Tile/zone requests should specify amount plus constraints/proximity; Construction/Base Layout owns exact placement.
@@ -19,11 +19,11 @@ Make Food advice behave like useful in-game coaching instead of a noisy strategy
 
 ## Phase 1 - Advice Schema
 
-1. Add `PriorityScore` to `AdviceItem`.
-   - Wire name: `priority_score`.
-   - Type: `int`.
-   - Valid range: 1-10.
-   - Validation/normalization should clamp or reject out-of-range LLM values.
+1. Add `priority` to `AdviceItem`.
+   - Wire name: `priority`.
+   - Type: enum.
+   - Valid values: `low | medium | high | critical`.
+   - Tolerant parsing may repair older `severity` / `priority_score` LLM values.
 
 2. Add canonical work type support.
    - Add a common `WorkType` enum that mirrors RimWorld Work tab concepts.
@@ -37,7 +37,7 @@ Make Food advice behave like useful in-game coaching instead of a noisy strategy
    - Do not add pawn assignment fields for MVP.
 
 4. Update shared LLM parsing/normalization.
-   - Require or synthesize `priority_score`.
+   - Require or synthesize `priority`.
    - Normalize common work type strings.
    - Reject or downgrade vague labor requests that do not specify a work type when `kind == labor`.
 
@@ -64,12 +64,12 @@ Status: implemented for source-supported fields. RIMAPI DTOs expose plant/animal
 
 ## Phase 3 - Food Rules
 
-Status: implemented. Food rules now compute severity/priority dynamically, use stable same-issue advice ids, suppress day-one trade/caravan advice, emit concrete bill/harvest/growing/freezer suggestions, and only request labor when urgent or coverage is missing.
+Status: implemented. Food rules now compute advice priority dynamically, use stable same-issue advice ids, suppress day-one trade/caravan advice, emit concrete bill/harvest/growing/freezer suggestions, and only request labor when urgent or coverage is missing.
 
-1. Add dynamic severity and priority helpers.
+1. Add dynamic priority helpers.
    - Inputs: days of food, nutrition confidence, colonist count, season/growing window, active threat, immediate action availability, missing infrastructure.
    - Reserve `Critical` for immediate starvation/hunger risk evidence.
-   - Use `priority_score` to distinguish same-severity advice.
+   - Use `priority` to rank advice urgency.
 
 2. Tighten output volume.
    - Normal Food cycle should emit the most important few advice items.
@@ -90,11 +90,11 @@ Status: implemented. Food rules now compute severity/priority dynamically, use s
 
 ## Phase 4 - Food Prompt and RAG Contract
 
-Status: implemented. The Food system prompt now requires sparse near-term output, `priority_score`, concrete actions, work-type-qualified labor requests, live-state-first RAG usage, and trade/procurement as flag-only unless live trade context exists.
+Status: implemented. The Food system prompt now requires sparse near-term output, `priority`, concrete actions, work-type-qualified labor requests, live-state-first RAG usage, and trade/procurement as flag-only unless live trade context exists.
 
 1. Update `food.system.md`.
    - Require near-term actionable output.
-   - Require `priority_score`.
+   - Require `priority`.
    - Require concrete `suggested_actions`.
    - Require work type on labor requests.
    - Ban vague labels such as "attention" and "labor capacity" unless a specific subsystem need is named.
@@ -105,19 +105,19 @@ Status: implemented. The Food system prompt now requires sparse near-term output
    - Guides must not override live impossibility.
 
 3. Keep advice sparse.
-   - Ask for top items, ranked by `priority_score`.
+   - Ask for top items, ranked by `priority`.
    - Allow extra items only for Critical or multi-bottleneck states.
 
 ## Phase 5 - Dashboard Rendering
 
-Status: implemented. Alerts render severity plus `priority_score`, sort active advice by severity then priority, and show all resource request metadata without filtering producer output.
+Status: implemented. Alerts render advice `priority`, sort active advice by that field, and show all resource request metadata without filtering producer output.
 
-1. Render `priority_score`.
-   - Show severity and `priority_score` together, e.g. `High - Priority 8/10`.
-   - Sort primarily by severity/priority as appropriate, but keep raw payload visible.
+1. Render `priority`.
+   - Show the enum value directly.
+   - Sort active advice by priority, but keep raw payload visible.
 
 2. Render resource request details without filtering.
-   - Show `kind`, `what`, `why`, `quantity`, `priority`, `requested_from`, `work_type`, and `skill` when present.
+   - Show `kind`, `request`, `reason`, `quantity`, `priority`, `requested_from`, `work_type`, and `skill` when present.
    - Do not hide vague requests; visible bad output is useful for debugging.
 
 3. Improve labels only.
@@ -129,7 +129,7 @@ Status: implemented. Alerts render severity plus `priority_score`, sort active a
 Status: implemented for this slice. Backend tests cover priority/work metadata schema, Food rule behavior, compact briefing summaries, prompt contract language, shared LLM response normalization, and existing SSE/advice paths. Dashboard coverage is build-time TypeScript verification for this slice.
 
 1. Schema tests.
-   - `AdviceItem` serializes/deserializes `priority_score`.
+   - `AdviceItem` serializes/deserializes `priority`.
    - `ResourceRequest` serializes/deserializes `work_type` and `skill`.
    - Invalid LLM priority scores are handled deterministically.
 
@@ -137,20 +137,20 @@ Status: implemented for this slice. Backend tests cover priority/work metadata s
    - Stable food produces no advice.
    - Day-one bootstrap does not suggest caravans/trade without trade context.
    - Urgent shortage gets High/Critical only when evidence warrants it.
-   - Priority score changes as days of food, season, and action availability change.
+   - Priority changes as days of food, season, and action availability change.
    - Labor requests name work type and skill when applicable.
    - Tile requests use quantity plus proximity/constraint text.
    - Wild harvest advice uses cluster/proximity data when available and avoids fake specificity when unavailable.
 
 3. Prompt/LLM tests.
-   - Food prompt includes closed advice types, `priority_score`, work type requirements, and sparse-output instruction.
+   - Food prompt includes closed advice types, `priority`, work type requirements, and sparse-output instruction.
    - Normalizer rejects or flags vague labor requests.
    - Gemini simplified output still normalizes through shared parsing.
 
 4. Integration/dashboard tests.
-   - SSE advice includes `priority_score`.
-   - Alerts tab renders priority score and resource request details.
-   - Mayor prompt/flag digest still sees severity and does not depend on dashboard-only priority rendering.
+   - SSE advice includes `priority`.
+   - Alerts tab renders priority and resource request details.
+   - Mayor prompt/flag digest still sees flag severity and does not depend on dashboard-only priority rendering.
 
 ## Phase 7 - Verification
 
@@ -167,7 +167,7 @@ Status: verified on 2026-05-13. `dotnet build Src\RimAI.sln --no-restore`, `dotn
 
 ## Open Implementation Questions
 
-- Should `priority_score` be required on Mayor Agenda priorities too, or only feeder `AdviceItem`s for this slice?
+- Should Mayor Agenda priorities need their own urgency field, or is ordered free text enough?
 - Should labor request `skill` be free text for MVP or a second canonical enum?
 - Should Food advice be role-based only in MVP, or may it name colonists when the briefing clearly identifies a best candidate?
 - Which RIMAPI endpoint is the source of truth for map positions and room/zone proximity?

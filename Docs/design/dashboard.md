@@ -8,6 +8,8 @@ The dashboard is the player's view into RimAI. It is a read-and-react surface fo
 
 Dashboard v2 is a from-scratch React implementation inside the existing dashboard package. Keep the Vite package, build output, and Host serving model; treat the previous dashboard UI as reference material only.
 
+The dashboard is also the primary debugging and inspection surface for RimAI. It should reveal what the backend, ministers, prompts, briefings, parsers, and traces actually produced. Prefer contract names and lightly formatted source data over heavy UI translation. When a view changes labels, groups fields, or derives summaries, that transformation should be obvious and local to that view; raw/debug tabs must preserve the captured contract rather than presenting a rewritten version.
+
 ## Product Posture
 
 - Game-read-only in v2: no RIMAPI write controls, no autonomy toggles, and no feedback/Pushback controls.
@@ -15,6 +17,7 @@ Dashboard v2 is a from-scratch React implementation inside the existing dashboar
 - Localhost-only: Host binds loopback and serves the dashboard plus `/api/*`.
 - Dense second-monitor operations console, not a landing page.
 - Explanation-first: every recommendation should have a visible place for prompt, briefing, RAG, rules/trigger trace, and current advice.
+- Debug-first: preserve backend contract language and raw captured data unless the view is explicitly a player-facing advice view.
 
 ## Stack And Serving
 
@@ -103,6 +106,8 @@ Render compact facts first, then one small panel per colonist:
 - Food days, wealth, power, threat, weather, research where available.
 - Colonist cards: name, mood, health, hunger, current job, top skill, downed/dead state.
 
+If a sidebar poll fails after a previous successful snapshot, keep rendering the last successful snapshot and show a compact stale/error note in the footer. Do not replace the whole sidebar with a failure panel unless no snapshot has ever loaded in this page session.
+
 ## Data Contracts
 
 ### Current Endpoints
@@ -167,6 +172,8 @@ Shows the unnormalized model response text for the selected minister, before sch
 
 Backed by `GET /api/ministers/{minister}/llm-output/latest` for live ministers. The endpoint returns the latest raw Gemini response recorded in the current Host process, plus model, provider, capture time, latency, parse status, parse mode, and prompt character counts. If the request fails before Gemini returns text, record `request_failed` with the exception text so the view explains why no raw response exists. If no LLM call has happened since Host startup, render "no raw output yet" rather than an error. Do not infer raw output from normalized `AdviceItem`s or Agenda payloads.
 
+Do not rename fields, paraphrase values, collapse keys, or replace the captured payload in the Raw LLM Output tab. Syntax highlighting, indentation, and copy controls are acceptable; schema translation belongs in parser/normalizer code and in the Advice view, not in the raw-output inspector.
+
 Developer fallback: `POST /api/ministers/food/llm-output/manual` accepts a raw Food LLM JSON object or `{ "text": "<json>" }`, records it as provider `Codex` / model `codex-subagent`, parses it through the Food response parser, and publishes the resulting Food advice snapshot. This is an observability and fallback path only; it does not call RIMAPI write endpoints and does not exist for unwired ministers.
 
 ### Briefing
@@ -217,7 +224,7 @@ Show:
 
 Mayor Advice renders the Agenda as the Mayor's player-facing output.
 
-Feeder minister Advice renders active `AdviceItem`s sorted by severity, then `priority_score`. Cards show rationale, suggested actions, resource requests, citations, issue id/supersession when available, and coverage gaps. No feedback buttons are shown in v2.
+Feeder minister Advice renders active `AdviceItem`s sorted by `priority`. Cards show rationale, suggested actions, resource requests, citations, issue id/supersession when available, and coverage gaps. No feedback buttons are shown in v2.
 
 ## Data Coverage
 
@@ -237,7 +244,9 @@ Use this especially for RAG, Rules traces, logs, future ministers, token/cost me
 - Left rail, main workspace, and sidebar own their overflow; avoid whole-page scrolling on desktop.
 - Text wraps within panels.
 - Use compact tables only for debug surfaces: Rules, RAG, logs, active flags, resource requests, and endpoint coverage.
-- Resource request tables keep short fields (`Kind`, `Meta`) narrow, make `Why` the widest column, and wrap text inside cells rather than forcing horizontal overflow.
+- Debug tables should use contract names by default. Friendly aliases are allowed only when they clarify an already-stable contract and do not hide what field the backend sent.
+- Resource request tables expose schema fields with execution-facing labels: `Kind`, `Request`, `Reason`, `Qty`, `Owner`, `Work / Skill`, and `Priority`. `Request` and `Reason` are the wire-field names for resource requests, not just UI aliases. Avoid catch-all labels such as `Meta`; compact columns stay narrow, `Reason` gets the widest column, and text wraps inside cells rather than forcing horizontal overflow.
+- Suggested action cards render `kind` plus `instruction`; do not introduce generic `what` labels in the dashboard or new raw minister output.
 - Avoid decorative hero sections, oversized empty cards, and one-note color themes.
 
 ## Deferred

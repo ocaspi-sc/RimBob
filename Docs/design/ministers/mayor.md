@@ -9,7 +9,7 @@
 
 The Mayor is the player's chief advisor. Once per in-game day, it updates the **Agenda** — a living planning document containing ranked short-term priorities and long-term strategic goals — and writes a brief `update_notes` narrative explaining what changed and why.
 
-The Mayor does not micromanage. It maintains a strategic plan, directs the cabinet via `cabinet_direction` entries in the Agenda, and (post-M5) acknowledges severity-gated tactical alerts from feeder ministers. It does not issue actions; it issues advice.
+The Mayor does not micromanage. It maintains a strategic plan, directs the cabinet via `cabinet_direction` entries in the Agenda, and (post-M5) acknowledges flag-severity-gated tactical alerts from feeder ministers. It does not issue actions; it issues advice.
 
 In `Suggest` mode (the only MVP mode) the player reads the Agenda and decides what to act on. Future `Auto` graduations are per-feeder-minister and per-advice-type, never to the Mayor itself.
 
@@ -76,7 +76,7 @@ The Mayor's LLM call at turn-end produces a **complete new `MayorAgenda`** — n
 
 ### Tactical alerts (M5+)
 
-Post-M5, extraordinary severity spikes produce a separate `AdviceItem` with `advice_type: "tactical_alert"`. These appear in the dashboard's **Alerts** tab alongside the Agenda. The Mayor's `advice_type` enum: `tactical_alert | strategic_pivot`.
+Post-M5, extraordinary flag severity spikes produce a separate `AdviceItem` with `advice_type: "tactical_alert"` and an advice `priority`. These appear in the dashboard's **Alerts** tab alongside the Agenda. The Mayor's `advice_type` enum: `tactical_alert | strategic_pivot`.
 
 ---
 
