@@ -1,3 +1,4 @@
+import { useCallback, useMemo, useRef } from 'react';
 import { JsonView } from 'react-json-view-lite';
 import 'react-json-view-lite/dist/index.css';
 
@@ -11,14 +12,18 @@ export type JsonValue =
 
 export function JsonTree({
   compactTopLevel = true,
-  expandDepth = 2,
+  expandDepth = Number.POSITIVE_INFINITY,
   value,
 }: {
   compactTopLevel?: boolean;
   expandDepth?: number;
   value: unknown;
 }) {
-  const json = toJsonValue(value);
+  const json = useStableJsonValue(value);
+  const shouldExpandNode = useCallback((level: number) => {
+    const visibleLevel = compactTopLevel ? level : level + 1;
+    return visibleLevel <= expandDepth;
+  }, [compactTopLevel, expandDepth]);
 
   if (Array.isArray(json) || isJsonRecord(json)) {
     return (
@@ -27,7 +32,7 @@ export function JsonTree({
           data={json}
           compactTopLevel={compactTopLevel}
           clickToExpandNode
-          shouldExpandNode={(level) => level < expandDepth}
+          shouldExpandNode={shouldExpandNode}
           style={jsonTreeStyles}
         />
       </div>
@@ -35,6 +40,26 @@ export function JsonTree({
   }
 
   return <div className="json-tree">{renderScalar(json)}</div>;
+}
+
+function useStableJsonValue(value: unknown): JsonValue {
+  const nextJson = useMemo(() => toJsonValue(value), [value]);
+  const nextFingerprint = useMemo(() => stringifyJsonValue(nextJson), [nextJson]);
+  const previous = useRef<{ fingerprint: string; json: JsonValue }>();
+
+  if (!previous.current || previous.current.fingerprint !== nextFingerprint) {
+    previous.current = { fingerprint: nextFingerprint, json: nextJson };
+  }
+
+  return previous.current.json;
+}
+
+function stringifyJsonValue(value: JsonValue): string {
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
 }
 
 export function tryParseJson(raw: string): unknown {

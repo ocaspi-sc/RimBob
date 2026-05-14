@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { DisclosureSection } from './DisclosureSection';
 import { EmptyState } from './EmptyState';
 import {
@@ -34,7 +34,7 @@ export function InspectorSurface({
   config?: InspectorSurfaceConfig;
   value: unknown;
 }) {
-  const json = toJsonValue(value);
+  const json = useMemo(() => toJsonValue(value), [value]);
 
   if (!isJsonRecord(json)) {
     return <UnknownValue value={json} />;

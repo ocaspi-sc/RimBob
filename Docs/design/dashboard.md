@@ -87,6 +87,8 @@ Player-facing views stay curated. `Advice`, Mayor Agenda, and the colony sidebar
 
 Prefer small targeted dependencies over a full table/grid framework for v2. `react-json-view-lite` is the current JSON/tree dependency because it provides collapse/expand, React 18 support, TypeScript types, and no transitive dependencies. Generic object/array inference, fallback sections, and dashboard-specific formatting should remain local code. Add a headless table library only if debug tables need real sorting, filtering, column visibility, resizing, or virtualization.
 
+JSON inspectors start fully expanded and should preserve their open/closed state across parent polling or SSE re-renders when the payload content has not changed.
+
 ### SYSTEM View
 
 SYSTEM is not a minister and does not show minister tabs. It starts as one overview page with compact panels. Split it later into `Runtime`, `LLM`, `RAG`, and `Logs` only if the overview becomes too large.
