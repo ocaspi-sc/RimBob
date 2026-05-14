@@ -77,7 +77,7 @@ function MayorAdvice({
         <span>{agenda.posture.military}</span>
       </section>
 
-      <DisclosureSection title="State of the Union" defaultOpen meta={`${Object.keys(agenda.state_of_the_union).length} categories`}>
+      <DisclosureSection title="🏛️ State of the Union" defaultOpen meta={`${Object.keys(agenda.state_of_the_union).length} categories`}>
         <div className="union-grid">
           {Object.entries(agenda.state_of_the_union).map(([key, value]) => (
             <article key={key}>
@@ -88,7 +88,7 @@ function MayorAdvice({
         </div>
       </DisclosureSection>
 
-      <DisclosureSection title="What changed" defaultOpen>
+      <DisclosureSection title="📝 What changed" defaultOpen>
         <p className="notes-copy">{agenda.update_notes}</p>
       </DisclosureSection>
 
@@ -106,7 +106,7 @@ function MayorAdvice({
           />
         ))}
         {closedShort.length > 0 && (
-          <DisclosureSection title="Closed this turn" meta={`${closedShort.length} items`}>
+          <DisclosureSection title="✅ Closed this turn" meta={`${closedShort.length} items`}>
             {closedShort.map(item => (
               <PriorityCard
                 key={item.id}
@@ -118,7 +118,7 @@ function MayorAdvice({
         )}
       </section>
 
-      <DisclosureSection title="Long-term goals" defaultOpen meta={`${agenda.long_term.length} items`}>
+      <DisclosureSection title="🎯 Long-term goals" defaultOpen meta={`${agenda.long_term.length} items`}>
         <div className="long-list">
           {agenda.long_term.map(item => (
             <div className={`long-row ${item.status}`} key={item.id}>
@@ -130,7 +130,7 @@ function MayorAdvice({
       </DisclosureSection>
 
       {Object.keys(agenda.cabinet_direction).length > 0 && (
-        <DisclosureSection title="Cabinet direction" meta={`${Object.keys(agenda.cabinet_direction).length} ministers`}>
+        <DisclosureSection title="🧭 Cabinet direction" meta={`${Object.keys(agenda.cabinet_direction).length} ministers`}>
           <div className="direction-grid">
             {Object.entries(agenda.cabinet_direction).map(([minister, direction]) => (
               <article key={minister}>
@@ -150,7 +150,7 @@ function AdviceCard({ item }: { item: AdviceItem }) {
     <article className={`advice-card v2 ${item.priority}`}>
       <header>
         <div>
-          <span className="eyebrow">{item.advice_type}</span>
+          <span className="eyebrow">💡 {item.advice_type}</span>
           <h3>{item.title}</h3>
         </div>
         <div className="advice-badges">
@@ -160,7 +160,7 @@ function AdviceCard({ item }: { item: AdviceItem }) {
       <p>{item.body}</p>
       <blockquote>{item.rationale}</blockquote>
       {item.resource_requests.length > 0 && (
-        <DisclosureSection title="Resource requests" defaultOpen meta={`${item.resource_requests.length} requests`}>
+        <DisclosureSection title="📦 Resource requests" defaultOpen meta={`${item.resource_requests.length} requests`}>
           <div className="dense-table resource-table">
             <div className="dense-row header">
               <span>Kind</span>
@@ -186,7 +186,7 @@ function AdviceCard({ item }: { item: AdviceItem }) {
         </DisclosureSection>
       )}
       {item.suggested_actions.length > 0 && (
-        <DisclosureSection title="Suggested actions" meta={`${item.suggested_actions.length} actions`}>
+        <DisclosureSection title="✅ Suggested actions" defaultOpen meta={`${item.suggested_actions.length} actions`}>
           <div className="action-list">
             {item.suggested_actions.map((action, index) => (
               <div key={`${item.id}-action-${index}`}>

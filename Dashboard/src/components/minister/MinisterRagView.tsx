@@ -20,15 +20,15 @@ export function MinisterRagView({
     <div className="minister-view rag-view">
       <header className="view-heading">
         <span className="eyebrow">{scope.label}</span>
-        <h2>RAG</h2>
+        <h2>📚 RAG</h2>
         <p>Guide retrieval and citations. Full per-minister retrieval traces are planned.</p>
       </header>
 
       <div className="metric-grid">
-        <MetricCard label="RAG" value={systemHealth?.rag.enabled ? 'enabled' : 'unknown'} />
-        <MetricCard label="Chunks" value={systemHealth?.rag.chunk_count ?? 'n/a'} />
-        <MetricCard label="Top K" value={systemHealth?.rag.top_k ?? 'n/a'} />
-        <MetricCard label="Endpoint" value="/rag/latest" note="not exposed yet" tone="warn" />
+        <MetricCard label="📚 RAG" value={systemHealth?.rag.enabled ? 'enabled' : 'unknown'} />
+        <MetricCard label="🧩 Chunks" value={systemHealth?.rag.chunk_count ?? 'n/a'} />
+        <MetricCard label="🎯 Top K" value={systemHealth?.rag.top_k ?? 'n/a'} />
+        <MetricCard label="🚧 Endpoint" value="/rag/latest" note="not exposed yet" tone="warn" />
       </div>
 
       {scope.key !== 'mayor' && (

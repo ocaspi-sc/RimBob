@@ -34,7 +34,7 @@ export function MinisterRawLlmView({ scope }: { scope: ScopeConfig }) {
       <div className="minister-view raw-llm-view">
         <header className="view-heading">
           <span className="eyebrow">{scope.label}</span>
-          <h2>Raw LLM Output</h2>
+          <h2>🧾 Raw LLM Output</h2>
           <p>Unnormalized model responses before schema parsing, tolerant repair, or advice rendering.</p>
         </header>
 
@@ -52,7 +52,7 @@ export function MinisterRawLlmView({ scope }: { scope: ScopeConfig }) {
     <div className="minister-view raw-llm-view">
       <header className="view-heading">
         <span className="eyebrow">{scope.label}</span>
-        <h2>Raw LLM Output</h2>
+        <h2>🧾 Raw LLM Output</h2>
         <p>Unnormalized model responses before schema parsing, tolerant repair, or advice rendering.</p>
       </header>
 
@@ -65,7 +65,7 @@ export function MinisterRawLlmView({ scope }: { scope: ScopeConfig }) {
         <span>{new Date(output.data.capturedAt).toLocaleString()}</span>
       </div>
 
-      <DisclosureSection title="Raw response" defaultOpen meta={`${output.data.text.length.toLocaleString()} chars`}>
+      <DisclosureSection title="📄 Raw response" defaultOpen meta={`${output.data.text.length.toLocaleString()} chars`}>
         {parsed === undefined ? (
           <pre className="text-dump">{output.data.text}</pre>
         ) : (
@@ -73,7 +73,7 @@ export function MinisterRawLlmView({ scope }: { scope: ScopeConfig }) {
         )}
       </DisclosureSection>
 
-      <DisclosureSection title="Capture metadata" meta={output.data.parseMode.replace(/_/g, ' ')}>
+      <DisclosureSection title="🧷 Capture metadata" meta={output.data.parseMode.replace(/_/g, ' ')}>
         <JsonTree
           value={{
             minister: output.data.minister,

@@ -24,13 +24,13 @@ export interface ScopeConfig {
   enabledViews: MinisterViewKey[];
 }
 
-export const ministerViews: Array<{ key: MinisterViewKey; label: string }> = [
-  { key: 'prompt', label: 'System Prompt' },
-  { key: 'briefing', label: 'Briefing' },
-  { key: 'rag', label: 'RAG' },
-  { key: 'rules', label: 'Rules' },
-  { key: 'raw_llm', label: 'Raw LLM Output' },
-  { key: 'advice', label: 'Advice' },
+export const ministerViews: Array<{ key: MinisterViewKey; label: string; emoji: string }> = [
+  { key: 'prompt', label: 'System Prompt', emoji: '🧠' },
+  { key: 'briefing', label: 'Briefing', emoji: '📋' },
+  { key: 'rag', label: 'RAG', emoji: '📚' },
+  { key: 'rules', label: 'Rules', emoji: '⚖️' },
+  { key: 'raw_llm', label: 'Raw LLM Output', emoji: '🧾' },
+  { key: 'advice', label: 'Advice', emoji: '💡' },
 ];
 
 const allMinisterViews = ministerViews.map(view => view.key);

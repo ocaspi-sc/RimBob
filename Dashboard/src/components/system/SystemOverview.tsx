@@ -42,22 +42,22 @@ export function SystemOverview({
         <div className="system-card runtime-card">
           <div className="section-heading">
             <span className="eyebrow">Runtime</span>
-            <h2>Host Loop</h2>
+            <h2>🖥️ Host Loop</h2>
           </div>
           <div className="metric-grid">
-            <MetricCard label="Host" value={status?.server ?? health?.runtime.server ?? 'checking'} tone={status ? 'ok' : 'neutral'} />
-            <MetricCard label="RIMAPI" value={(status?.rimapi_reachable ?? health?.runtime.rimapi_reachable) ? 'reachable' : 'waiting'} tone={(status?.rimapi_reachable ?? health?.runtime.rimapi_reachable) ? 'ok' : 'warn'} />
-            <MetricCard label="Agenda" value={health?.runtime.agenda_version ?? status?.agenda_version ?? 'none'} />
-            <MetricCard label="Advice" value={health?.runtime.active_advice_count ?? 'n/a'} />
-            <MetricCard label="Flags" value={health?.runtime.active_flag_count ?? 'n/a'} />
-            <MetricCard label="Mayor" value={status?.mayor_running ? 'running' : 'idle'} tone={status?.mayor_last_error ? 'error' : status?.mayor_running ? 'ok' : 'neutral'} />
+            <MetricCard label="🖥️ Host" value={status?.server ?? health?.runtime.server ?? 'checking'} tone={status ? 'ok' : 'neutral'} />
+            <MetricCard label="🔗 RIMAPI" value={(status?.rimapi_reachable ?? health?.runtime.rimapi_reachable) ? 'reachable' : 'waiting'} tone={(status?.rimapi_reachable ?? health?.runtime.rimapi_reachable) ? 'ok' : 'warn'} />
+            <MetricCard label="📜 Agenda" value={health?.runtime.agenda_version ?? status?.agenda_version ?? 'none'} />
+            <MetricCard label="💡 Advice" value={health?.runtime.active_advice_count ?? 'n/a'} />
+            <MetricCard label="🚩 Flags" value={health?.runtime.active_flag_count ?? 'n/a'} />
+            <MetricCard label="🏛️ Mayor" value={status?.mayor_running ? 'running' : 'idle'} tone={status?.mayor_last_error ? 'error' : status?.mayor_running ? 'ok' : 'neutral'} />
           </div>
         </div>
 
         <div className="system-card llm-card">
           <div className="section-heading">
             <span className="eyebrow">LLM</span>
-            <h2>Gemini</h2>
+            <h2>🤖 Gemini</h2>
           </div>
           <div className="stacked-lines">
             <StatusPill tone={llmToneFor(llmStatus)}>
@@ -74,7 +74,7 @@ export function SystemOverview({
         <div className="system-card rag-card">
           <div className="section-heading">
             <span className="eyebrow">RAG</span>
-            <h2>Knowledge</h2>
+            <h2>📚 Knowledge</h2>
           </div>
           <div className="stacked-lines">
             <InfoLine label="Enabled" value={health?.rag.enabled ? 'yes' : 'unknown'} />
@@ -87,28 +87,28 @@ export function SystemOverview({
         <div className="system-card sse-card">
           <div className="section-heading">
             <span className="eyebrow">Connection</span>
-            <h2>SSE Diagnostics</h2>
+            <h2>🔌 SSE Diagnostics</h2>
           </div>
           <div className="metric-grid compact">
-            <MetricCard label="Client" value={stream.state} tone={stream.state === 'open' ? 'ok' : stream.state === 'error' ? 'warn' : 'neutral'} />
-            <MetricCard label="Client events" value={stream.eventCount} />
-            <MetricCard label="Reconnects" value={stream.reconnectCount} tone={stream.reconnectCount > 0 ? 'warn' : 'neutral'} />
-            <MetricCard label="Server events" value={backendSse?.eventCount ?? 'n/a'} />
-            <MetricCard label="Connections" value={backendSse?.activeConnections ?? 'n/a'} />
-            <MetricCard label="Last event" value={stream.lastEventType ?? backendSse?.lastEventType ?? 'none'} />
+            <MetricCard label="🧭 Client" value={stream.state} tone={stream.state === 'open' ? 'ok' : stream.state === 'error' ? 'warn' : 'neutral'} />
+            <MetricCard label="📨 Client events" value={stream.eventCount} />
+            <MetricCard label="🔁 Reconnects" value={stream.reconnectCount} tone={stream.reconnectCount > 0 ? 'warn' : 'neutral'} />
+            <MetricCard label="📡 Server events" value={backendSse?.eventCount ?? 'n/a'} />
+            <MetricCard label="🔌 Connections" value={backendSse?.activeConnections ?? 'n/a'} />
+            <MetricCard label="🕒 Last event" value={stream.lastEventType ?? backendSse?.lastEventType ?? 'none'} />
           </div>
         </div>
       </section>
 
-      <DisclosureSection title="Endpoint and data coverage" defaultOpen meta={`${health?.endpoint_coverage.length ?? 0} surfaces`}>
+      <DisclosureSection title="🧭 Endpoint and data coverage" defaultOpen meta={`${health?.endpoint_coverage.length ?? 0} surfaces`}>
         <CoverageTable rows={health?.endpoint_coverage ?? []} />
       </DisclosureSection>
 
-      <DisclosureSection title="Recent events" defaultOpen meta={`${events.length} buffered`}>
+      <DisclosureSection title="🕒 Recent events" defaultOpen meta={`${events.length} buffered`}>
         <Timeline events={events} limit={16} />
       </DisclosureSection>
 
-      <DisclosureSection title="Logs and traces" meta={health?.logs.directory ?? 'not exposed'}>
+      <DisclosureSection title="🪵 Logs and traces" meta={health?.logs.directory ?? 'not exposed'}>
         <div className="stacked-lines">
           <InfoLine label="Log directory" value={health?.logs.directory ?? 'not exposed'} />
           <InfoLine label="Human log" value={health?.logs.human_log_pattern ?? 'not exposed'} />

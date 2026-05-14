@@ -41,22 +41,22 @@ export function ColonySidebar({
 
       <div className="sidebar-metrics">
         <MetricCard
-          label="Food"
+          label="🍲 Food"
           value={snapshot.food.estimatedDaysOfFood != null ? `${snapshot.food.estimatedDaysOfFood.toFixed(1)}d` : 'unknown'}
           tone={snapshot.food.estimatedDaysOfFood != null && snapshot.food.estimatedDaysOfFood < 7 ? 'warn' : 'neutral'}
         />
         <MetricCard
-          label="Mood"
+          label="🙂 Mood"
           value={`${Math.round(snapshot.mood.averageMood * 100)}%`}
           tone={snapshot.mood.breakRiskCount > 0 ? 'warn' : 'neutral'}
         />
         <MetricCard
-          label="Power"
+          label="⚡ Power"
           value={`${snapshot.power.netW >= 0 ? '+' : ''}${Math.round(snapshot.power.netW)} W`}
           tone={snapshot.power.netW < 0 ? 'warn' : 'neutral'}
         />
         <MetricCard
-          label="Threat"
+          label="🛡️ Threat"
           value={snapshot.threat.activeRaid ? 'raid' : 'clear'}
           tone={snapshot.threat.activeRaid ? 'error' : 'neutral'}
         />
@@ -70,7 +70,7 @@ export function ColonySidebar({
 
       <section className="colonist-panel">
         <div className="colonist-title">
-          <h3>Colonists</h3>
+          <h3>👥 Colonists</h3>
           <span>{snapshot.colonists.count}</span>
         </div>
         {pawns.length === 0 ? (

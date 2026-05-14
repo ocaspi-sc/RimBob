@@ -6,7 +6,7 @@ export function ViewTabs({
   onSelect,
 }: {
   activeView: MinisterViewKey;
-  views: Array<{ key: MinisterViewKey; label: string }>;
+  views: Array<{ key: MinisterViewKey; label: string; emoji?: string }>;
   onSelect: (view: MinisterViewKey) => void;
 }) {
   return (
@@ -20,6 +20,7 @@ export function ViewTabs({
           className={activeView === view.key ? 'active' : ''}
           onClick={() => onSelect(view.key)}
         >
+          {view.emoji && <span className="view-tab-emoji" aria-hidden>{view.emoji}</span>}
           {view.label}
         </button>
       ))}

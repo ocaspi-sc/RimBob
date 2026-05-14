@@ -82,6 +82,10 @@ Minister scopes use a fixed top tab bar:
 - Raw LLM Output
 - Advice
 
+Use small emoji cues in scope labels, view labels, player-facing section titles,
+and compact metric labels when they improve scan speed. Keep backend/debug
+payloads, table headers, and contract field names undecorated.
+
 Large objects use the standard disclosure pattern: a real button header with
 `aria-expanded` / `aria-controls`, plus a conditionally rendered panel in normal
 document flow.
@@ -247,6 +251,11 @@ minister Advice renders active `AdviceItem`s sorted by priority. Cards show
 rationale, suggested actions, resource requests, citations, issue id or
 supersession when available, and coverage gaps. No feedback buttons are shown in
 v2.
+
+Resource requests and suggested actions are actionable reading surfaces and
+should default open when an advice card mounts, including after browser refresh
+or a new active-advice snapshot. They may use lightweight emoji labels because
+they are player-facing action summaries, not raw backend payloads.
 
 ---
 

@@ -74,7 +74,7 @@ export function MinisterRulesView({
     <div className="minister-view rules-view">
       <header className="view-heading">
         <span className="eyebrow">{scope.label}</span>
-        <h2>Rules</h2>
+        <h2>⚖️ Rules</h2>
         <p>Wake triggers, rule/LLM path, flags, and recent event context.</p>
       </header>
 
@@ -84,11 +84,11 @@ export function MinisterRulesView({
         <InspectorSurface value={trace.data} config={traceInspectorConfig} />
       )}
 
-      <DisclosureSection title="Recent scope events" defaultOpen meta={`${ministerEvents.length} local events`}>
+      <DisclosureSection title="🕒 Recent scope events" defaultOpen meta={`${ministerEvents.length} local events`}>
         <Timeline events={ministerEvents} limit={12} />
       </DisclosureSection>
 
-      <DisclosureSection title="Active advice emitted" meta={`${ministerAdvice.length} active`}>
+      <DisclosureSection title="💡 Active advice emitted" meta={`${ministerAdvice.length} active`}>
         <DynamicTable
           rows={ministerAdvice}
           preferredColumns={activeAdviceColumns}

@@ -70,15 +70,15 @@ function groupBriefing(scope: string, briefing: unknown): BriefingGroup[] {
 
   if (scope === 'food') {
     return [
-      pickGroup('Food status', briefing, ['estimatedDaysOfFood', 'nutritionSource', 'reportedNutrition', 'fallbackNutrition', 'foodUnits', 'mealsCount', 'rawFoodCount', 'colonistCount'], true),
-      pickGroup('Crops', briefing, ['readyToHarvest', 'cropBreakdown', 'cropZoneSummaries']),
-      pickGroup('Wild harvest', briefing, ['wildHarvestCandidates', 'wildHarvestClusters', 'wildAnimalCount']),
-      pickGroup('Skills and labor signals', briefing, ['skills']),
-      pickGroup('Infrastructure and storage', briefing, ['infrastructure', 'storage', 'stockpileCells']),
-      pickGroup('Kitchen and butchery', briefing, ['kitchen']),
-      pickGroup('Data coverage', briefing, ['dataCoverage']),
-      pickGroup('Recent incidents', briefing, ['recentFoodIncidents', 'activeThreat']),
-      { title: 'Raw remaining fields', value: omitKeys(briefing, [
+      pickGroup('🍲 Food status', briefing, ['estimatedDaysOfFood', 'nutritionSource', 'reportedNutrition', 'fallbackNutrition', 'foodUnits', 'mealsCount', 'rawFoodCount', 'colonistCount'], true),
+      pickGroup('🌾 Crops', briefing, ['readyToHarvest', 'cropBreakdown', 'cropZoneSummaries']),
+      pickGroup('🌿 Wild harvest', briefing, ['wildHarvestCandidates', 'wildHarvestClusters', 'wildAnimalCount']),
+      pickGroup('🧑‍🍳 Skills and labor signals', briefing, ['skills']),
+      pickGroup('🏗️ Infrastructure and storage', briefing, ['infrastructure', 'storage', 'stockpileCells']),
+      pickGroup('🔥 Kitchen and butchery', briefing, ['kitchen']),
+      pickGroup('🧭 Data coverage', briefing, ['dataCoverage']),
+      pickGroup('⚠️ Recent incidents', briefing, ['recentFoodIncidents', 'activeThreat']),
+      { title: '🧾 Raw remaining fields', value: omitKeys(briefing, [
         'estimatedDaysOfFood', 'nutritionSource', 'reportedNutrition', 'fallbackNutrition', 'foodUnits', 'mealsCount',
         'rawFoodCount', 'colonistCount', 'readyToHarvest', 'cropBreakdown', 'cropZoneSummaries',
         'wildHarvestCandidates', 'wildHarvestClusters', 'wildAnimalCount', 'skills', 'infrastructure',
@@ -88,14 +88,14 @@ function groupBriefing(scope: string, briefing: unknown): BriefingGroup[] {
   }
 
   return [
-    pickGroup('Overview', briefing, ['briefingVersion', 'date', 'gameTick', 'season'], true),
-    pickGroup('People', briefing, ['colonists', 'skills', 'traits', 'medical', 'prisoners']),
-    pickGroup('Food and resources', briefing, ['food', 'resources']),
-    pickGroup('Infrastructure', briefing, ['power', 'buildings']),
-    pickGroup('Welfare and threat', briefing, ['mood', 'threat', 'wealth']),
-    pickGroup('Environment', briefing, ['weather']),
-    pickGroup('Research', briefing, ['research']),
-    { title: 'Raw remaining fields', value: omitKeys(briefing, [
+    pickGroup('🧭 Overview', briefing, ['briefingVersion', 'date', 'gameTick', 'season'], true),
+    pickGroup('👥 People', briefing, ['colonists', 'skills', 'traits', 'medical', 'prisoners']),
+    pickGroup('🍲 Food and resources', briefing, ['food', 'resources']),
+    pickGroup('🏗️ Infrastructure', briefing, ['power', 'buildings']),
+    pickGroup('🙂 Welfare and threat', briefing, ['mood', 'threat', 'wealth']),
+    pickGroup('🌦️ Environment', briefing, ['weather']),
+    pickGroup('🔬 Research', briefing, ['research']),
+    { title: '🧾 Raw remaining fields', value: omitKeys(briefing, [
       'briefingVersion', 'date', 'gameTick', 'season', 'colonists', 'skills', 'traits', 'medical',
       'prisoners', 'food', 'resources', 'power', 'buildings', 'mood', 'threat', 'wealth',
       'weather', 'research',

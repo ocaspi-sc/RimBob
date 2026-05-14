@@ -35,7 +35,7 @@ export function MinisterPromptView({ scope }: { scope: ScopeConfig }) {
     <div className="minister-view prompt-view">
       <header className="view-heading">
         <span className="eyebrow">{scope.label}</span>
-        <h2>System Prompt</h2>
+        <h2>🧠 System Prompt</h2>
         <p>Exact prompt material for the next LLM call where the backend exposes it.</p>
       </header>
 
@@ -44,7 +44,7 @@ export function MinisterPromptView({ scope }: { scope: ScopeConfig }) {
         <span>{prompt.data.user.length.toLocaleString()} user chars</span>
       </div>
 
-      <DisclosureSection title="User message" defaultOpen meta={summarizeValue(parsedUser ?? prompt.data.user)}>
+      <DisclosureSection title="👤 User message" defaultOpen meta={summarizeValue(parsedUser ?? prompt.data.user)}>
         {parsedUser === undefined ? (
           <pre className="text-dump">{prompt.data.user}</pre>
         ) : (
@@ -52,7 +52,7 @@ export function MinisterPromptView({ scope }: { scope: ScopeConfig }) {
         )}
       </DisclosureSection>
 
-      <DisclosureSection title="System prompt" meta={`${prompt.data.system.length.toLocaleString()} chars`}>
+      <DisclosureSection title="🧾 System prompt" meta={`${prompt.data.system.length.toLocaleString()} chars`}>
         <pre className="text-dump">{prompt.data.system}</pre>
       </DisclosureSection>
     </div>
