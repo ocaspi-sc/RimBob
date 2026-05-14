@@ -9,6 +9,7 @@
 ## Captured by /todo
 
 <!-- entries go here -->
+- [ ] [2026-05-15] #food #advice #schema Collapse Food advice into one priority-tagged step path. [plan](.plans/collapse-food-advice-steps.md)
 - [ ] [2026-05-15] #idea #llm #rag Provide ministers with more RAG knowledge.
 - [x] [2026-05-14] #doc #debt Avoid over-specifying code-documented details in design docs.
 - [ ] [2026-05-14] #spike #backend #debt Review RimAI C# codebase and propose refactorings. [plan](.plans/recommended-refactorings.md)
