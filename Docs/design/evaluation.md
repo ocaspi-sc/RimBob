@@ -70,6 +70,18 @@ Attribution is approximate — a colony is a complex system and many things happ
 
 ---
 
+## Historic replay corpus
+
+Refinement must compare proposed changes against a corpus of historical minister inputs before promotion. Fixtures are the small curated regression net; the historic corpus is the broader "what would this change have done to real prior turns?" check.
+
+Each replayable record should preserve enough data to rerun the minister path offline: minister, trigger/context, briefing payload or recoverable briefing ref, active flags and Agenda context, RAG citation ids when used, prompt/system-prompt version or hash, raw LLM output when the path was LLM, normalized advice/flags, feedback/Pushback, and observed outcome when available.
+
+Current local runs already write `logs/decisions-YYYYMMDD.jsonl`, and some entries include full briefing JSON. That is useful seed material, but the durable target is a structured replay corpus rather than scraping dashboard state or in-memory raw-output stores. If a refinement cannot replay a candidate because fields are missing, the correct output is a logging/corpus gap, not a rule promotion.
+
+Before/after comparison should report at least: corpus size, target-cluster size, unchanged non-target count, escalation-vs-rule path changes, advice type changes, priority changes, resource request/action diffs, flag diffs, schema validity, and any missing fields that reduced confidence.
+
+---
+
 ## Refinement — the three loops
 
 ### Deduplication — suppressing redundant proposals
@@ -86,9 +98,10 @@ Before surfacing any candidate rule or prompt change for approval, compute the *
 1. Minister reads escalation log, groups by reason.
 2. For clusters of ≥5 with consistent goal output: draft a rule that would have matched.
 3. Write candidate `Rules.cs` change.
-4. Run fixture suite.
-5. Surface for approval (human in v1).
-6. On approval: update `Rules.cs`, log promotion event.
+4. Replay before/after outputs on the historic corpus for that minister.
+5. Run fixture suite.
+6. Surface for approval (human in v1).
+7. On approval: update `Rules.cs`, log promotion event.
 
 **Goal:** over time, escalation rate for covered patterns drops to near zero.
 
@@ -96,11 +109,15 @@ Before surfacing any candidate rule or prompt change for approval, compute the *
 
 **Trigger:** a rule fires repeatedly and `observed_outcome` is `degraded`.
 
+Before any regression edit is approved, replay the current and candidate rule over the historical corpus. The candidate should improve degraded examples without changing stable prior outputs unless the diff is intentional and explained.
+
 Minister groups decisions by `rule_fired` × outcome and surfaces rules with a high degraded rate as candidates to modify, delete, or convert to escalation. Approval gate → `Rules.cs` change.
 
 ### Loop 3: Prompt / RAG iteration
 
 **Trigger:** LLM escalation produced a decision that was later `degraded`.
+
+Prompt/RAG changes use the same corpus rule: compare outputs before and after on historical prompts/briefings, not only on the single offending prompt.
 
 Replay the offending prompt with variations (system prompt edit, different RAG retrieval); if outputs improve, surface for approval. Approval gate → prompt file change.
 
@@ -113,6 +130,7 @@ Replay the offending prompt with variations (system prompt edit, different RAG r
 - Prevent regressions when rules change.
 - Provide known-good expected outputs for common scenarios.
 - Used by refinement to validate proposed changes.
+- Complement the historic corpus with hand-curated edge cases and expected outcomes.
 
 ### Format
 
@@ -162,6 +180,7 @@ All three loops require human approval before any `Rules.cs`, prompt, or retriev
 - The pattern (N examples from log)
 - The proposed change (diff)
 - Fixture results (before/after pass rate)
+- Historic replay results (before/after output diffs on real prior records)
 - The minister's rationale
 
 Human approves or rejects with a note. Rejection note is written to the refinement-session log so future improve runs don't re-propose the same change.
@@ -201,5 +220,6 @@ Skills worth building (each is a repo-local workflow skill, optionally with thin
 
 - [ ] How is refinement triggered? Manual slash command? After N escalations threshold? Nightly cron?
 - [ ] Where are refinement-session transcripts stored? (Separate log file per session?)
+- [ ] What retention policy and on-disk layout should the durable historic replay corpus use?
 - [ ] Should outcome attribution be per-goal or per-minister? (Did the specific goal succeed, or did the minister have a good day overall?)
 - [ ] How do we handle decisions where outcome is confounded by external events (e.g., a random disease outbreak masks a good food decision)?

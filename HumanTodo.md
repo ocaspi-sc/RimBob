@@ -41,7 +41,7 @@
 
 - [ ] Add deterministic Food crop-yield math (`FoodCropMath`/candidate table) so rules can choose rice/potato/corn from grow time, nutrition per tile, fertility sensitivity, days to winter, and current food buffer; expose computed candidates to Food LLM escalation instead of asking Gemini to invent the math.
 - [ ] Add polished guide-citation footnotes on feeder memo cards.
-- [ ] Add Food decision log persistence so M6 refinement has shipped advice traces.
+- [ ] Add durable Food decision/replay corpus persistence so M6 refinement can compare before/after outputs on historic inputs, not just fixtures.
 - [ ] Improve Food hunting target risk/value scoring from live animal data.
 - [ ] Expand Food briefing with bill state, freezer room temperature, and spoilage timers when RIMAPI exposes them.
 - [x] `Briefing` tab renders latest Mayor/Food briefing JSON.

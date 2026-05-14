@@ -335,9 +335,13 @@ Rules should NOT escalate for:
 
 ### What refinement has access to
 
+Refinement also needs a historic replay corpus: prior briefing/prompt/output records that can be rerun offline to compare before/after behavior for a candidate rule, prompt, briefing, or RAG change.
+
 Refinement reads the decision and escalation logs and can edit `Rules.cs`, prompts, and fixtures. For code-shaped work it can shell out to **Claude Code** by writing a prompt to `.plans/<minister>-<task>.md` — see [`evaluation.md`](evaluation.md) for the full tooling story. Fixtures are the regression net.
 
 ### Typical refinement session flow
+
+Before promotion, compare current output and candidate output on the same historical corpus, then run fixtures as the curated regression net.
 
 Read recent escalations with observed outcomes, cluster by reason, draft a rule that would have matched, run fixtures, surface diff + fixture results for human approval. Promotions are logged.
 

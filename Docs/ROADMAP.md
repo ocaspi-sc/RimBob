@@ -147,12 +147,13 @@
 
 ## M6 — Refinement loop closes
 
-**Done when:** for one minister, the refinement loop reads its **own pushback list**, identifies a cluster of consistent corrections (e.g. 6 pushbacks all saying "no hunting in winter"), generates a candidate `Rules.cs` change, runs it against fixtures, and surfaces the diff for human approval. One rule is promoted end-to-end.
+**Done when:** for one minister, the refinement loop reads its **own pushback list**, identifies a cluster of consistent corrections (e.g. 6 pushbacks all saying "no hunting in winter"), generates a candidate `Rules.cs` change, compares before/after outputs on a historic corpus of prior minister inputs, runs it against fixtures, and surfaces the diff for human approval. One rule is promoted end-to-end.
 
 **Demo:** run the `minister-refine` skill against Food's pushback list; see a proposed rule + fixture pass-rate diff; approve; observe rule appear in `Rules.cs`.
 
 **Scope:**
 - Refinement-mode tooling for at least one minister.
+- Historic replay corpus for before/after output comparison on real prior turns.
 - Pushback-clustering pass (LLM-assisted theme extraction over the minister's own pushback list).
 - Fixture suite at ≥10 scenarios for that minister.
 - Approval-gated promotion path.

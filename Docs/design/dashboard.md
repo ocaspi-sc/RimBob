@@ -79,6 +79,14 @@ The dashboard persists the last selected scope and minister view in browser `loc
 
 Panel registries are frontend implementation details. Do not render registry ids or the full registered view list inside the normal minister workspace; the selected tab already provides that orientation.
 
+### Dynamic Debug Surfaces
+
+Debug and inspection views should be schema-tolerant. `Rules`, `RAG`, `Raw LLM Output`, endpoint coverage, traces, logs, and unknown future minister data should render through shared inspector primitives instead of per-field bespoke components. The inspector layer should infer useful display from the payload: summary fields when configured, uniform arrays as tables, objects as key/value sections, and unknown nested values through a JSON/tree renderer.
+
+Player-facing views stay curated. `Advice`, Mayor Agenda, and the colony sidebar may keep hand-shaped layouts because they are read during play and need stronger hierarchy than a generic schema browser.
+
+Prefer small targeted dependencies over a full table/grid framework for v2. A lightweight JSON/tree package is acceptable if it improves accessibility, collapse behavior, and performance. Generic object/array inference, fallback sections, and dashboard-specific formatting should remain local code. Add a headless table library only if debug tables need real sorting, filtering, column visibility, resizing, or virtualization.
+
 ### SYSTEM View
 
 SYSTEM is not a minister and does not show minister tabs. It starts as one overview page with compact panels. Split it later into `Runtime`, `LLM`, `RAG`, and `Logs` only if the overview becomes too large.
