@@ -5,9 +5,53 @@ import type { AdviceItem } from '../../types/advice';
 import type { DashboardEvent } from '../../types/system';
 import { DisclosureSection } from '../shared/DisclosureSection';
 import { EmptyState } from '../shared/EmptyState';
-import { JsonTree } from '../shared/JsonTree';
-import { MetricCard } from '../shared/MetricCard';
+import { DynamicTable, InspectorSurface, type InspectorSurfaceConfig } from '../shared/Inspector';
 import { Timeline } from '../shared/Timeline';
+
+const traceInspectorConfig: InspectorSurfaceConfig = {
+  summaryKeys: [
+    'trigger',
+    'status',
+    'path',
+    'completedAt',
+    'completed_at',
+    'ruleFired',
+    'rule_fired',
+    'escalationReason',
+    'escalation_reason',
+  ],
+  defaultOpenKeys: ['flag', 'flags', 'advice', 'emittedAdvice', 'emitted_advice'],
+  preferredTables: [
+    {
+      key: 'advice',
+      preferredColumns: ['id', 'advice_type', 'priority', 'severity', 'title', 'issued_at'],
+    },
+    {
+      key: 'emittedAdvice',
+      title: 'emittedAdvice',
+      preferredColumns: ['id', 'advice_type', 'priority', 'severity', 'title', 'issued_at'],
+    },
+    {
+      key: 'emitted_advice',
+      title: 'emitted_advice',
+      preferredColumns: ['id', 'advice_type', 'priority', 'severity', 'title', 'issued_at'],
+    },
+    {
+      key: 'flags',
+      preferredColumns: ['id', 'source', 'severity', 'kind', 'summary', 'created_at'],
+    },
+  ],
+};
+
+const activeAdviceColumns = [
+  'advice_type',
+  'priority',
+  'severity',
+  'title',
+  'id',
+  'issued_at',
+  'expires_at',
+];
 
 export function MinisterRulesView({
   advice,
@@ -37,17 +81,7 @@ export function MinisterRulesView({
       {trace.error || !trace.data ? (
         <EmptyState code="TRACE NOT EXPOSED">{trace.error ?? 'No trace returned.'}</EmptyState>
       ) : (
-        <>
-          <div className="metric-grid">
-            <MetricCard label="Trigger" value={trace.data.trigger} />
-            <MetricCard label="Status" value={trace.data.status} />
-            <MetricCard label="Path" value={trace.data.path} tone={trace.data.path === 'not_exposed_yet' ? 'warn' : 'neutral'} />
-            <MetricCard label="Completed" value={formatDate(trace.data.completedAt)} />
-          </div>
-          <DisclosureSection title="Trace detail" defaultOpen meta={trace.data.note}>
-            <JsonTree value={trace.data} />
-          </DisclosureSection>
-        </>
+        <InspectorSurface value={trace.data} config={traceInspectorConfig} />
       )}
 
       <DisclosureSection title="Recent scope events" defaultOpen meta={`${ministerEvents.length} local events`}>
@@ -55,20 +89,11 @@ export function MinisterRulesView({
       </DisclosureSection>
 
       <DisclosureSection title="Active advice emitted" meta={`${ministerAdvice.length} active`}>
-        <div className="dense-table">
-          <div className="dense-row header">
-            <span>Type</span>
-            <span>Priority</span>
-            <span>Title</span>
-          </div>
-          {ministerAdvice.map(item => (
-            <div className="dense-row" key={item.id}>
-              <span>{item.advice_type}</span>
-              <span>{item.priority}</span>
-              <span>{item.title}</span>
-            </div>
-          ))}
-        </div>
+        <DynamicTable
+          rows={ministerAdvice}
+          preferredColumns={activeAdviceColumns}
+          emptyMessage={`${scope.label} has no active advice in the local SSE buffer.`}
+        />
       </DisclosureSection>
     </div>
   );
@@ -76,11 +101,4 @@ export function MinisterRulesView({
 
 function sameMinister(a: string, b: string): boolean {
   return a.localeCompare(b, undefined, { sensitivity: 'accent' }) === 0;
-}
-
-function formatDate(iso: string | null): string {
-  if (!iso) return 'not yet';
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  return date.toLocaleTimeString();
 }

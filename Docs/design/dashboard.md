@@ -85,7 +85,7 @@ Debug and inspection views should be schema-tolerant. `Rules`, `RAG`, `Raw LLM O
 
 Player-facing views stay curated. `Advice`, Mayor Agenda, and the colony sidebar may keep hand-shaped layouts because they are read during play and need stronger hierarchy than a generic schema browser.
 
-Prefer small targeted dependencies over a full table/grid framework for v2. A lightweight JSON/tree package is acceptable if it improves accessibility, collapse behavior, and performance. Generic object/array inference, fallback sections, and dashboard-specific formatting should remain local code. Add a headless table library only if debug tables need real sorting, filtering, column visibility, resizing, or virtualization.
+Prefer small targeted dependencies over a full table/grid framework for v2. `react-json-view-lite` is the current JSON/tree dependency because it provides collapse/expand, React 18 support, TypeScript types, and no transitive dependencies. Generic object/array inference, fallback sections, and dashboard-specific formatting should remain local code. Add a headless table library only if debug tables need real sorting, filtering, column visibility, resizing, or virtualization.
 
 ### SYSTEM View
 
