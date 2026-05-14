@@ -1,24 +1,27 @@
-# RimAI — Codex Instructions
+# RimAI - Codex Instructions
 
-This file is loaded by Codex at the start of every session. It defines how Codex should behave in this project.
+This file is loaded by Codex at the start of every session. Keep it as an operating manual for agents. Product design truth lives in `Docs/DESIGN.md` and the linked design docs.
 
 ---
 
-## Design doc maintenance (IMPORTANT)
+## Start Here
 
-**Global rule: any time the design changes, update the docs in the same turn.** This includes new decisions, revised constraints, new conventions, new components, renamed concepts, or anything a future session would otherwise have to re-derive. Don't wait for a trigger word, don't ask permission, don't defer to "later" — update the most relevant doc immediately and confirm with a one-line note.
+- Read `Docs/DESIGN.md`, `HumanTodo.md`, and the relevant focus doc before changing files.
+- When the user asks conceptual, design, "should we", "why", or "what about" questions, answer/review first. Do not rush to implementation unless clearly asked.
+- Design sessions are for exploration and docs. Do not write code unless asked.
+- Build sessions are for implementation. Do not redesign unless a blocker is found.
+- Store agent-created plans in `/.plans`. At session end, offer to update `HumanTodo.md` with new tasks uncovered.
 
-The trigger phrases below are reinforcements, not the only condition. If any of them appear in a design discussion, treat doc-update as mandatory:
-- "remember"
-- "always"
-- "from now on"
-- "going forward"
-- "whenever"
-- "note that"
-- "make sure"
-- "don't forget"
+---
 
-### Which doc to update
+## Documentation Discipline
+
+- Any design change updates docs in the same turn. Trigger words reinforce this rule; they are not required.
+- Update the most specific doc. If the decision affects multiple areas, add a cross-reference in `Docs/DESIGN.md`'s decision log.
+- When creating a new design doc, add it to the routing table below.
+- Design docs capture durable decisions, ownership boundaries, runtime contracts, and open questions. Source/tests own exact signatures, DTOs, endpoints, fixtures, enums, helpers, and current rule lists.
+
+### Design Doc Routing
 
 | Topic | Doc to update |
 |---|---|
@@ -37,61 +40,42 @@ The trigger phrases below are reinforcements, not the only condition. If any of 
 | RIMAPI endpoints, conventions, controller catalogue | [`Docs/design/RimAPI.md`](Docs/design/RimAPI.md) |
 | Food minister, food chain, harvesting/cooking/storage | `Docs/design/ministers/food.md` |
 | Specific minister | `Docs/design/ministers/<name>.md` |
-| HTN, planning *(deferred — Auto epic)* | `Docs/design/planning.md` |
-| Labor / assignment solver *(deferred — Auto epic)* | `Docs/design/ministers/labor.md` |
-
-If a decision affects multiple docs, update the most specific one and add a cross-reference in `Docs/DESIGN.md`'s decision log.
-
-**When creating a new design doc, also add a row to the routing table above** so future sessions can find it.
-
-**Design docs should not mirror code.** Use them for durable decisions, ownership boundaries, runtime contracts, and open questions. Exact class signatures, DTO fields, endpoint payloads, fixture schemas, enum inventories, and current rule lists belong in source and tests.
+| HTN, planning (deferred - Auto epic) | `Docs/design/planning.md` |
+| Labor / assignment solver (deferred - Auto epic) | `Docs/design/ministers/labor.md` |
 
 ---
 
-## Session discipline
+## Project Invariants
 
-- **At session start:** read `Docs/DESIGN.md`, `HumanTodo.md`, and any doc relevant to the session's focus.
-- **At session end:** offer to update `HumanTodo.md` with any new tasks uncovered.
-- **Agent plans location:** store agent-created plans in `/.plans`.
-- **Question-heavy prompts:** when the user asks conceptual, design, "should we", "why", or "what about" questions, answer/review first and don't rush to implementation. Only change code when the user clearly asks for implementation; still update docs if the discussion creates or changes a design decision.
-- **Design sessions:** focus is exploration and documentation. Don't write code unless asked.
-- **Build sessions:** focus is implementation. Don't redesign unless a blocker is found.
-- **After build verification:** run RimAI again and verify the Host is reachable, especially if the build required stopping a live `RimAI.Host` process.
-- **Local run verification:** prefer `.\run-rimai.ps1` as the default launcher after builds. It starts the Host in a minimized taskbar window that closes when RimAI exits; use `.\run-rimai.ps1 -Foreground` when you need terminal output captured in the current shell. Use manual `npm.cmd run build` / `dotnet run` only when debugging one side of the stack.
-- **Dashboard metadata coupling:** when adding or changing backend logs, replay corpus files, prompt dumps, traces, or diagnostic artifacts, update the dashboard-visible metadata in the same turn (`/api/system/health` or another bounded system endpoint, Dashboard types, and the relevant System/Logs UI). If the artifact is intentionally not exposed yet, add a concrete `HumanTodo.md` follow-up and mention the omission in the final response.
+- RimAI is an assisted-gameplay advisor for RimWorld. The player keeps control.
+- MVP is suggest-only. Per-minister `Auto` graduation is deferred until M7+ and requires explicit player consent.
+- Mayor publishes the Agenda. Feeder ministers publish `AdviceItem`s. No minister calls RIMAPI write endpoints in MVP.
+- No direct minister-to-minister communication. Coordination flows through flags; CoS arbitrates; Mayor synthesizes.
+- Rules handle common cases first. LLMs run only on escalation.
+- Briefings are the quality lever: keep them tight; derived facts belong in the state store, not prompts.
+- Player Accept / Dismiss / Pushback is the explicit refinement signal. Implicit state-diff feedback is out of MVP.
+- Dashboard and Host are localhost-only. Host binds `127.0.0.1`, never `0.0.0.0`.
+- Deferred Auto epic: HTN planner, bulletin board, Labor solver, RIMAPI write coverage, and "only Labor touches pawn allocation." Do not implement before M7.
 
 ---
 
-## Code conventions
+## Build And Verification
 
-- Use `// TODO:` comments for known gaps, unverified field names, deferred writes, and anything with concrete revisit value before the next slice ships. TODOs are the audit surface between slices; avoid filler TODOs.
-- All projects use `.NET 9`, `C#` latest features.
-- Async everywhere that touches I/O.
-- No code in `RimAI.Core` that takes external dependencies — it's pure domain types.
+- After build verification, run RimAI again and verify the Host is reachable, especially if a live `RimAI.Host` process was stopped.
+- Prefer `.\run-rimai.ps1` after builds. Use `.\run-rimai.ps1 -Foreground` when terminal output must stay attached.
+- Use manual `npm.cmd run build` / `dotnet run` only when debugging one side of the stack.
+- When adding backend logs, replay corpus files, prompt dumps, traces, or diagnostics, update dashboard-visible metadata in the same turn. If intentionally hidden, add a concrete `HumanTodo.md` follow-up and mention it in the final response.
+
+---
+
+## Repo Conventions
+
+- All projects use `.NET 9` and latest C#.
+- Use async for I/O.
+- Avoid `var`; spell out types.
+- No code in pure domain projects should take external dependencies.
 - Every new minister gets its own directory under `Src/Ministers/<Name>/`.
 - `Rules.cs` is the first file in every minister directory. It must compile and have tests before the LLM is wired.
 - Fixture JSON files live in `Src/Tests/<MinisterName>/Fixtures/`.
-- avoid using var for types
-- React collapsible UI should use the standard disclosure pattern: a real `<button>` header with `aria-expanded` / `aria-controls`, plus a conditionally rendered panel in normal document flow. Do not use ad hoc fixed-height panes or native `<details>` when layout needs to push following content down predictably.
-
----
-
-## What RimAI is
-
-An assisted-gameplay advisor for RimWorld. The human plays the colony; a cabinet of self-improving LLM ministers (led by the Mayor) sends suggestions to a React+TS dashboard. MVP is suggest-only; per-minister `Auto` graduations come later (M7+).
-
-When in doubt about architecture, read `Docs/DESIGN.md` first.
-
----
-
-## Important constraints
-
-- **Suggest by default; autonomy is per-minister and opt-in.** MVP ships with every advisor in `Suggest`; only `Suggest` is honored. See `Docs/design/advice.md`.
-- **Output is advice, not actions.** The Mayor publishes the Agenda; feeder ministers publish `AdviceItem`s. No minister calls RIMAPI write endpoints in MVP.
-- **No direct minister-to-minister communication.** All coordination is flags; CoS arbitrates; Mayor synthesises.
-- **LLMs are called only on escalation.** Rules handle the common case.
-- **v1: human approval required for rule promotion.** Auto-approve is a post-MVP feature.
-- **Briefings are the quality lever.** Keep them tight (~500 tokens). Derived facts belong in the state store, not in the LLM prompt.
-- **Player Accept / Dismiss / Pushback is the explicit refinement signal.** Implicit state-diff feedback is out of MVP.
-- **Dashboard is localhost-only.** Host binds `127.0.0.1`. Never `0.0.0.0`.
-- **Deferred (Auto epic):** HTN planner, bulletin board, Labor solver, RIMAPI write coverage, "only Labor touches pawn allocation." Re-engaged at M7. Don't implement before then.
+- Use `// TODO:` comments only for known gaps, unverified field names, deferred writes, or concrete revisit points before the next slice ships.
+- React collapsible UI uses the standard disclosure pattern: a real `<button>` header with `aria-expanded` / `aria-controls`, plus a conditionally rendered panel in normal flow.
