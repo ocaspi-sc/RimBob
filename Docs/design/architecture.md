@@ -79,6 +79,11 @@ is needed.
 `Src/Coordination/` owns cabinet scheduling, advice publication, agenda storage,
 flag routing, minister traces, status surfaces, and replay-corpus persistence.
 
+It also owns the runtime minister registry: the ordered list of live and planned
+minister scopes, readiness, dashboard views, and trigger/introspection
+capabilities. Host endpoints and cabinet scheduling consume that registry
+instead of maintaining separate hard-coded minister lists.
+
 The AdviceBus is the inspectable player-facing stream. Active advice is
 published as minister snapshots so stale prior-cycle cards can be replaced
 without losing audit history.

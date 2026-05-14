@@ -67,7 +67,7 @@ Verification:
 
 ## Phase 2 - Extract LLM advice normalization
 
-Status: next recommended refactor.
+Status: complete on 2026-05-15.
 
 Problem:
 
@@ -93,7 +93,24 @@ Acceptance:
 - Parser behavior stays covered by existing LLM tests.
 - The main normalizer reads as orchestration rather than a bag of parsing rules.
 
+Implementation result:
+
+- Replaced the old `LlmAdviceResponseNormalizer` bag of helpers with `AdviceResponseNormalizer`.
+- Extracted legacy priority parsing to `AdviceJsonCompatibility`.
+- Extracted resource request repair to `ResourceRequestNormalizer`.
+- Extracted suggested action repair to `SuggestedActionNormalizer`.
+- Extracted work-type alias/default-skill logic to `WorkTypeInference`.
+- Kept `FoodLlmResponseParser` as the Food-specific entry point.
+
+Verification:
+
+- `dotnet test Src\Tests\RimAI.Tests.csproj --no-restore` passed: 124/124.
+- `dotnet build Src\RimAI.sln --no-restore` passed after stopping the live Host that held ApiHost DLL locks.
+- Host was restarted from the rebuilt output and `GET http://127.0.0.1:5000/api/ministers` returned 200.
+
 ## Phase 3 - Add a minister registry
+
+Status: complete on 2026-05-15.
 
 Problem:
 
@@ -129,7 +146,25 @@ Acceptance:
 
 - Adding Construction later requires a descriptor and minister registration, not edits in every endpoint.
 
+Implementation result:
+
+- Added `MinisterRegistry` / `MinisterDescriptor` under Coordination as the runtime source of minister scope metadata.
+- Moved dashboard scope readiness, enabled views, cabinet order, manual trigger support, prompt support, raw-output support, and manual LLM ingestion support into descriptors.
+- Updated `CabinetCycle` to run live ministers through registry cabinet order (`Food` before `Mayor`).
+- Updated `/api/ministers`, minister prompt/raw-output/trace/manual-ingest endpoints, cabinet manual trigger routing, and system health coverage notes to consume the registry.
+- Added focused registry tests for dashboard scope order, cabinet order, key/label normalization, and manual trigger capability.
+
+Verification:
+
+- `dotnet test Src\Tests\RimAI.Tests.csproj --no-restore` passed: 131/131.
+- `dotnet build Src\RimAI.sln --no-restore` passed with 0 warnings.
+- Host was restarted from the rebuilt output and `GET http://127.0.0.1:5000/api/ministers` returned 200.
+- `GET http://127.0.0.1:5000/api/system/health` returned registry-derived minister coverage notes.
+- `GET http://127.0.0.1:5000/api/ministers/construction/prompt` returned the expected 501 planned-scope response.
+
 ## Phase 4 - Centralize endpoint coverage metadata
+
+Status: next recommended refactor.
 
 Problem:
 
@@ -259,14 +294,14 @@ Acceptance:
 
 ## Suggested execution order
 
-1. Phase 2 - LLM normalization split.
-2. Phase 3 - minister registry.
-3. Phase 4 - endpoint coverage catalog.
-4. Phase 5 - RAG retriever generalization.
-5. Phase 6 - ingestion mapper extraction.
-6. Phase 7 - derivation helpers.
-7. Phase 8 - briefing cache generalization.
+1. Phase 4 - endpoint coverage catalog.
+2. Phase 5 - RAG retriever generalization.
+3. Phase 6 - ingestion mapper extraction.
+4. Phase 7 - derivation helpers.
+5. Phase 8 - briefing cache generalization.
 
 Completed:
 
 - Phase 1 - advice schema repair.
+- Phase 2 - LLM normalization split.
+- Phase 3 - minister registry.

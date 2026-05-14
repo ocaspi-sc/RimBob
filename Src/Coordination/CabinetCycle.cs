@@ -7,6 +7,7 @@ namespace RimAI.Coordination;
 public sealed class CabinetCycle(
     IngestionDispatcher ingestion,
     IEnumerable<IMinister> ministers,
+    MinisterRegistry registry,
     MinisterTraceStore traces,
     ILogger<CabinetCycle> log)
 {
@@ -16,30 +17,30 @@ public sealed class CabinetCycle(
     {
         await ingestion.RefreshAllAsync(ct);
 
-        IMinister? food = ministers.FirstOrDefault(m => m.Name.Equals("Food", StringComparison.OrdinalIgnoreCase));
-        IMinister? mayor = ministers.FirstOrDefault(m => m.Name.Equals("Mayor", StringComparison.OrdinalIgnoreCase));
-
-        if (food is not null)
+        foreach (MinisterDescriptor descriptor in registry.CabinetMinisters)
         {
-            log.LogInformation("Cabinet cycle: running Food before Mayor");
-            await RunResolvedMinisterAsync(food, cycle, ct);
+            IMinister? minister = ResolveMinister(descriptor);
+            if (minister is null)
+                throw new InvalidOperationException($"Cabinet cycle could not resolve {descriptor.Label} minister.");
+
+            log.LogInformation("Cabinet cycle: running {Minister}", descriptor.Label);
+            await RunResolvedMinisterAsync(minister, cycle, ct);
         }
-
-        if (mayor is null)
-            throw new InvalidOperationException("Cabinet cycle could not resolve Mayor minister.");
-
-        await RunResolvedMinisterAsync(mayor, cycle, ct);
     }
 
     public async Task<MinisterTriggerResult?> TriggerMinisterAsync(string ministerKey, CancellationToken ct)
     {
+        MinisterDescriptor? descriptor = registry.FindMinister(ministerKey);
+        if (descriptor is not { Ready: true, CanManualTrigger: true }) return null;
+
         await ingestion.RefreshAllAsync(ct);
 
-        IMinister? minister = ResolveMinister(ministerKey);
-        if (minister is null) return null;
+        IMinister? minister = ResolveMinister(descriptor);
+        if (minister is null)
+            throw new InvalidOperationException($"Manual trigger could not resolve {descriptor.Label} minister.");
 
         await RunResolvedMinisterAsync(minister, PlayCycleContext.ManualTrigger, ct);
-        return new MinisterTriggerResult(MinisterKey(minister.Name), minister.Name, PlayCycleContext.ManualTrigger.Trigger.ToString());
+        return new MinisterTriggerResult(descriptor.Key, descriptor.Label, PlayCycleContext.ManualTrigger.Trigger.ToString());
     }
 
     private async Task RunResolvedMinisterAsync(IMinister minister, PlayCycleContext cycle, CancellationToken ct)
@@ -57,14 +58,10 @@ public sealed class CabinetCycle(
         }
     }
 
-    private IMinister? ResolveMinister(string ministerKey)
-    {
-        string normalized = MinisterKey(ministerKey);
-        return ministers.FirstOrDefault(m => MinisterKey(m.Name).Equals(normalized, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private static string MinisterKey(string name) =>
-        name.Trim().Replace(" ", "_", StringComparison.Ordinal).ToLowerInvariant();
+    private IMinister? ResolveMinister(MinisterDescriptor descriptor) =>
+        ministers.FirstOrDefault(m =>
+            MinisterRegistry.NormalizeKey(m.Name).Equals(descriptor.Key, StringComparison.OrdinalIgnoreCase) ||
+            m.Name.Equals(descriptor.Label, StringComparison.OrdinalIgnoreCase));
 }
 
 public sealed record MinisterTriggerResult(string Scope, string Minister, string Trigger);

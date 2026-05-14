@@ -12,30 +12,14 @@ namespace RimAI.Host.Endpoints;
 
 public static class MinisterEndpoints
 {
-    private static readonly IReadOnlyList<string> MinisterViews =
-        ["prompt", "briefing", "rag", "rules", "raw_llm", "advice"];
-
-    private static readonly IReadOnlyList<MinisterScopeInfo> Scopes =
-    [
-        new("system", "SYSTEM", "system", true, ["overview"]),
-        new("mayor", "Mayor", "minister", true, MinisterViews),
-        new("food", "Food", "minister", true, MinisterViews),
-        new("construction", "Construction", "minister", false, MinisterViews),
-        new("defense", "Defense", "minister", false, MinisterViews),
-        new("welfare", "Welfare", "minister", false, MinisterViews),
-        new("medical", "Medical", "minister", false, MinisterViews),
-        new("research", "Research", "minister", false, MinisterViews),
-        new("industry", "Industry", "minister", false, MinisterViews),
-        new("economy", "Economy", "minister", false, MinisterViews),
-        new("chief_of_staff", "Chief of Staff", "minister", false, MinisterViews),
-    ];
-
     public static IEndpointRouteBuilder MapMinisterEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapGet("/api/ministers", () => Results.Ok(Scopes));
+        app.MapGet("/api/ministers", (MinisterRegistry registry) =>
+            Results.Ok(registry.Scopes.Select(MinisterScopeInfo.FromDescriptor)));
 
         app.MapGet("/api/ministers/{minister}/prompt", async (
             string minister,
+            MinisterRegistry registry,
             BriefingCache briefings,
             AgendaStore agendaStore,
             PromptBuilder prompts,
@@ -44,8 +28,8 @@ public static class MinisterEndpoints
             FlagChannel flags,
             CancellationToken ct) =>
         {
-            MinisterScopeInfo? scope = FindScope(minister);
-            if (scope is null || scope.Kind != "minister")
+            MinisterDescriptor? scope = registry.FindMinister(minister);
+            if (scope is null)
                 return Results.NotFound(new { error = $"Unknown minister scope '{minister}'." });
 
             if (!scope.Ready)
@@ -53,6 +37,14 @@ public static class MinisterEndpoints
                 return Results.Problem(
                     title: "Prompt not wired",
                     detail: $"{scope.Label} is a planned minister scope; prompt introspection is not wired yet.",
+                    statusCode: StatusCodes.Status501NotImplemented);
+            }
+
+            if (!scope.HasPrompt)
+            {
+                return Results.Problem(
+                    title: "Prompt not wired",
+                    detail: $"{scope.Label} prompt introspection is not wired yet.",
                     statusCode: StatusCodes.Status501NotImplemented);
             }
 
@@ -82,13 +74,14 @@ public static class MinisterEndpoints
 
         app.MapGet("/api/ministers/{minister}/llm-output/latest", (
             string minister,
+            MinisterRegistry registry,
             RawLlmOutputStore outputs) =>
         {
-            MinisterScopeInfo? scope = FindScope(minister);
-            if (scope is null || scope.Kind != "minister")
+            MinisterDescriptor? scope = registry.FindMinister(minister);
+            if (scope is null)
                 return Results.NotFound(new { error = $"Unknown minister scope '{minister}'." });
 
-            if (!scope.Ready)
+            if (!scope.Ready || !scope.HasRawLlmOutput)
             {
                 return Results.Problem(
                     title: "Raw LLM output not wired",
@@ -120,6 +113,7 @@ public static class MinisterEndpoints
         app.MapPost("/api/ministers/{minister}/llm-output/manual", async (
             string minister,
             JsonElement body,
+            MinisterRegistry registry,
             BriefingCache briefings,
             AgendaStore agendaStore,
             PromptBuilder prompts,
@@ -129,11 +123,11 @@ public static class MinisterEndpoints
             FlagChannel flags,
             CancellationToken ct) =>
         {
-            MinisterScopeInfo? scope = FindScope(minister);
-            if (scope is null || scope.Kind != "minister")
+            MinisterDescriptor? scope = registry.FindMinister(minister);
+            if (scope is null)
                 return Results.NotFound(new { error = $"Unknown minister scope '{minister}'." });
 
-            if (!string.Equals(scope.Key, "food", StringComparison.OrdinalIgnoreCase))
+            if (!scope.HasManualLlmOutput)
             {
                 return Results.Problem(
                     title: "Manual LLM output not wired",
@@ -209,11 +203,12 @@ public static class MinisterEndpoints
 
         app.MapGet("/api/ministers/{minister}/trace/latest", (
             string minister,
+            MinisterRegistry registry,
             MinisterTraceStore traces) =>
         {
-            MinisterScopeInfo? scope = FindScope(minister);
+            MinisterDescriptor? scope = registry.FindMinister(minister);
 
-            if (scope is null || scope.Kind != "minister")
+            if (scope is null)
                 return Results.NotFound(new { error = $"Unknown minister scope '{minister}'." });
 
             MinisterTraceSnapshot? snapshot = traces.Latest(scope.Label);
@@ -240,9 +235,6 @@ public static class MinisterEndpoints
 
         return app;
     }
-
-    private static MinisterScopeInfo? FindScope(string key) =>
-        Scopes.FirstOrDefault(s => s.Key.Equals(key, StringComparison.OrdinalIgnoreCase));
 
     private static string ReadPromptOrPlaceholder(Func<string> read)
     {
@@ -284,5 +276,14 @@ public static class MinisterEndpoints
         string Label,
         string Kind,
         bool Ready,
-        IReadOnlyList<string> EnabledViews);
+        IReadOnlyList<string> EnabledViews)
+    {
+        public static MinisterScopeInfo FromDescriptor(MinisterDescriptor descriptor) =>
+            new(
+                descriptor.Key,
+                descriptor.Label,
+                descriptor.Kind,
+                descriptor.Ready,
+                descriptor.EnabledViews);
+    }
 }

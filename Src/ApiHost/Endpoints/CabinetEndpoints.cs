@@ -25,15 +25,20 @@ public static class CabinetEndpoints
 
         app.MapPost("/api/ministers/{minister}/trigger", async (
             string minister,
+            MinisterRegistry registry,
             CabinetCycle cabinet,
             CancellationToken ct) =>
         {
+            MinisterDescriptor? descriptor = registry.FindMinister(minister);
+            if (descriptor is null)
+                return Results.NotFound(new { error = $"Unknown minister scope '{minister}'." });
+
             MinisterTriggerResult? result = await cabinet.TriggerMinisterAsync(minister, ct);
             if (result is null)
             {
                 return Results.Problem(
                     title: "Minister not wired",
-                    detail: $"Minister '{minister}' is not wired for manual triggering.",
+                    detail: $"{descriptor.Label} is not wired for manual triggering.",
                     statusCode: StatusCodes.Status501NotImplemented);
             }
 

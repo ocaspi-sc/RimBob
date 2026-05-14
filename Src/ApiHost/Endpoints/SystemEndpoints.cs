@@ -25,6 +25,7 @@ public static class SystemEndpoints
             RawLlmOutputStore rawOutputs,
             MayorStatus mayor,
             SseDiagnostics sse,
+            MinisterRegistry registry,
             MinisterTraceStore traces) =>
         {
             RimAiOptions opts = options.Value;
@@ -35,6 +36,9 @@ public static class SystemEndpoints
             string cacheRoot = ResolvePath(env.ContentRootPath, opts.Rag.CacheRoot);
             IReadOnlyList<AgentFlag> activeFlags = flags.Active();
             RawLlmOutputSnapshot? latestLlm = rawOutputs.LatestAny();
+            string promptMinisterNames = CapabilityNames(registry, descriptor => descriptor.HasPrompt);
+            string triggerMinisterNames = CapabilityNames(registry, descriptor => descriptor.CanManualTrigger);
+            string rawOutputMinisterNames = CapabilityNames(registry, descriptor => descriptor.HasRawLlmOutput);
 
             return Results.Ok(new
             {
@@ -95,9 +99,9 @@ public static class SystemEndpoints
                     Coverage("/api/briefings/mayor/latest", "available", "Mayor briefing inspector source."),
                     Coverage("/api/briefings/food/latest", "available", "Food briefing inspector source."),
                     Coverage("/api/mayor/prompt", "available", "Mayor prompt inspector source."),
-                    Coverage("/api/ministers/{minister}/prompt", "partial", "Generalized prompt inspector for Mayor and Food."),
-                    Coverage("/api/ministers/{minister}/trigger", "partial", "Manual dashboard trigger for wired ministers; planned scopes are not wired yet."),
-                    Coverage("/api/ministers/{minister}/llm-output/latest", "partial", "Latest raw Gemini response for Mayor and Food after an LLM call occurs."),
+                    Coverage("/api/ministers/{minister}/prompt", "partial", $"Generalized prompt inspector for {promptMinisterNames}."),
+                    Coverage("/api/ministers/{minister}/trigger", "partial", $"Manual dashboard trigger for wired ministers: {triggerMinisterNames}. Planned scopes are not wired yet."),
+                    Coverage("/api/ministers/{minister}/llm-output/latest", "partial", $"Latest raw Gemini response for {rawOutputMinisterNames} after an LLM call occurs."),
                     Coverage("/api/ministers/{minister}/trace/latest", "partial", "Wake trigger visible; rule/LLM path details not exposed yet."),
                     Coverage("/api/ministers/{minister}/rag/latest", "not_exposed_yet", "Planned RAG retrieval inspector."),
                     Coverage("/api/system/logs/recent", "not_exposed_yet", "Planned bounded log tail."),
@@ -110,6 +114,16 @@ public static class SystemEndpoints
 
     private static object Coverage(string endpoint, string state, string note) =>
         new { endpoint, state, note };
+
+    private static string CapabilityNames(MinisterRegistry registry, Func<MinisterDescriptor, bool> capability)
+    {
+        string[] labels = registry.Ministers
+            .Where(descriptor => descriptor.Ready && capability(descriptor))
+            .Select(descriptor => descriptor.Label)
+            .ToArray();
+
+        return labels.Length == 0 ? "no wired ministers" : string.Join(" and ", labels);
+    }
 
     private static string ResolvePath(string contentRoot, string configuredPath) =>
         Path.IsPathRooted(configuredPath)
