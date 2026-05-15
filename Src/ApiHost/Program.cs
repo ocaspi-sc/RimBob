@@ -84,6 +84,7 @@ builder.Services.AddSingleton<IReplayCorpusWriter>(sp =>
     new ReplayCorpusWriter(
         Path.Combine(logsDir, "replay"),
         sp.GetRequiredService<ILogger<ReplayCorpusWriter>>()));
+builder.Services.AddSingleton<MinisterReplayRecorder>();
 builder.Services.AddSingleton<MayorAgendaRules>();
 builder.Services.AddSingleton<MayorStatus>();
 builder.Services.AddSingleton<SseDiagnostics>();

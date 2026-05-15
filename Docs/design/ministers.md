@@ -89,6 +89,12 @@ fixture-only. The diff should show the path taken, advice type, priority, title,
 resource requests, suggested actions, flags, and whether non-target cases stayed
 unchanged.
 
+Every minister LLM attempt must be replayable. The minister layer records the
+briefing, trigger/context, guide citations, normalized output, accepted manual
+substitute output, and failure details under the replay corpus. Provider raw
+output capture is useful metadata, but it is not a substitute for a minister
+replay record because it lacks the decision context and normalized output.
+
 ---
 
 ## Shared Runtime Contract

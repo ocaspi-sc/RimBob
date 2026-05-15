@@ -135,6 +135,7 @@ public static class MinisterEndpoints
             PromptBuilder prompts,
             FoodRagRetriever foodRetriever,
             RawLlmOutputStore outputs,
+            MinisterReplayRecorder replay,
             AdviceBus bus,
             FlagChannel flags,
             CancellationToken ct) =>
@@ -179,6 +180,21 @@ public static class MinisterEndpoints
                     SystemPromptChars: system.Length,
                     UserPromptChars: user.Length,
                     Text: text));
+                await replay.RecordAsync(new MinisterReplayEntry(
+                    Minister: scope.Label,
+                    Cycle: PlayCycleContext.ManualTrigger,
+                    Path: "llm",
+                    Briefing: briefing,
+                    Context: context,
+                    EscalationReason: "manual_llm_output_endpoint",
+                    EscalationContext: new { endpoint = "/api/ministers/{minister}/llm-output/manual" },
+                    GuideCitations: retrieved,
+                    Advice: parseResult.Response.Advice,
+                    Flags: parseResult.Response.Flags,
+                    StateSummary: stateSummary,
+                    LlmAttemptStarted: capturedAt,
+                    OutputKind: "advice_flags",
+                    Output: new { advice = parseResult.Response.Advice, flags = parseResult.Response.Flags }), ct);
 
                 bus.ReplaceMinisterAdvice(scope.Label, parseResult.Response.Advice, stateSummary);
                 foreach (AgentFlag flag in parseResult.Response.Flags)
@@ -212,6 +228,17 @@ public static class MinisterEndpoints
                     SystemPromptChars: system.Length,
                     UserPromptChars: user.Length,
                     Text: text));
+                await replay.RecordAsync(new MinisterReplayEntry(
+                    Minister: scope.Label,
+                    Cycle: PlayCycleContext.ManualTrigger,
+                    Path: "llm_failed",
+                    Briefing: briefing,
+                    Context: context,
+                    EscalationReason: "manual_llm_output_endpoint",
+                    EscalationContext: new { endpoint = "/api/ministers/{minister}/llm-output/manual" },
+                    GuideCitations: retrieved,
+                    Error: new ReplayErrorSummary(ex.GetType().Name, ex.Message),
+                    LlmAttemptStarted: capturedAt), ct);
                 return Results.BadRequest(new
                 {
                     error = "Manual LLM output could not be parsed as Food advice JSON.",

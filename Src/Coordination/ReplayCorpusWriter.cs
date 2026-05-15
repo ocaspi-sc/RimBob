@@ -102,7 +102,11 @@ public sealed record MinisterReplayRecord(
     [property: JsonPropertyName("error")]
     ReplayErrorSummary? Error,
     [property: JsonPropertyName("llm")]
-    ReplayLlmMetadata? Llm);
+    ReplayLlmMetadata? Llm,
+    [property: JsonPropertyName("output_kind")]
+    string? OutputKind = null,
+    [property: JsonPropertyName("output")]
+    object? Output = null);
 
 public sealed record ReplayErrorSummary(
     [property: JsonPropertyName("type")]
@@ -128,4 +132,8 @@ public sealed record ReplayLlmMetadata(
     [property: JsonPropertyName("latency_ms")]
     long? LatencyMs,
     [property: JsonPropertyName("raw_output")]
-    string? RawOutput);
+    string? RawOutput,
+    [property: JsonPropertyName("api_key_index")]
+    int? ApiKeyIndex = null,
+    [property: JsonPropertyName("api_key_label")]
+    string? ApiKeyLabel = null);

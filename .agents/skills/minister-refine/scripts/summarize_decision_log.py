@@ -164,12 +164,16 @@ def read_replay_corpus(repo: Path, minister: str, cutoff: datetime | None) -> di
     counters: dict[str, Counter[str]] = {
         "schema_versions": Counter(),
         "paths": Counter(),
+        "output_kinds": Counter(),
         "rule_traces": Counter(),
         "escalation_reasons": Counter(),
         "error_types": Counter(),
+        "llm_statuses": Counter(),
+        "llm_parse_modes": Counter(),
     }
     files = sorted(replay_dir.glob(f"{stem}-*.jsonl"))
     records = 0
+    records_with_output = 0
     records_with_raw_output = 0
     records_with_guide_citations = 0
     parse_errors = 0
@@ -193,6 +197,10 @@ def read_replay_corpus(repo: Path, minister: str, cutoff: datetime | None) -> di
                 records += 1
                 counters["schema_versions"][str(record.get("schema_version") or "unknown")] += 1
                 counters["paths"][str(record.get("path") or "unknown")] += 1
+                if record.get("output_kind"):
+                    counters["output_kinds"][str(record["output_kind"])] += 1
+                if record.get("output") is not None:
+                    records_with_output += 1
                 if record.get("rule_trace"):
                     counters["rule_traces"][str(record["rule_trace"])] += 1
                 if record.get("escalation_reason"):
@@ -205,6 +213,10 @@ def read_replay_corpus(repo: Path, minister: str, cutoff: datetime | None) -> di
                 llm = record.get("llm")
                 if isinstance(llm, dict) and llm.get("raw_output"):
                     records_with_raw_output += 1
+                if isinstance(llm, dict) and llm.get("status"):
+                    counters["llm_statuses"][str(llm["status"])] += 1
+                if isinstance(llm, dict) and llm.get("parse_mode"):
+                    counters["llm_parse_modes"][str(llm["parse_mode"])] += 1
                 citations = record.get("guide_citations")
                 if isinstance(citations, list) and len(citations) > 0:
                     records_with_guide_citations += 1
@@ -215,6 +227,7 @@ def read_replay_corpus(repo: Path, minister: str, cutoff: datetime | None) -> di
                         "line": line_no,
                         "captured_at": record.get("captured_at"),
                         "path": record.get("path"),
+                        "output_kind": record.get("output_kind"),
                         "rule_trace": record.get("rule_trace"),
                         "escalation_reason": record.get("escalation_reason"),
                         "advice_count": len(record.get("advice") or []),
@@ -228,14 +241,18 @@ def read_replay_corpus(repo: Path, minister: str, cutoff: datetime | None) -> di
         "files": [str(p) for p in files],
         "records": records,
         "json_parse_errors": parse_errors,
+        "records_with_output": records_with_output,
         "records_with_raw_output": records_with_raw_output,
         "records_with_guide_citations": records_with_guide_citations,
         "counts": {
             "schema_versions": top(counters["schema_versions"]),
             "paths": top(counters["paths"]),
+            "output_kinds": top(counters["output_kinds"]),
             "rule_traces": top(counters["rule_traces"]),
             "escalation_reasons": top(counters["escalation_reasons"]),
             "error_types": top(counters["error_types"]),
+            "llm_statuses": top(counters["llm_statuses"]),
+            "llm_parse_modes": top(counters["llm_parse_modes"]),
         },
         "examples": examples,
     }

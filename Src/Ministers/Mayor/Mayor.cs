@@ -24,16 +24,19 @@ public sealed class Mayor(
     MayorStatus         status,
     MayorRagRetriever      retriever,
     FlagChannel         flags,
-    ILogger<Mayor>      log
+    ILogger<Mayor>      log,
+    MinisterReplayRecorder? replay = null,
+    string? manualResponsePath = null
 ) : IMinister
 {
     private const int ShortTermCap = 5;
     private static readonly string PromptDumpPath     = Path.Combine("logs", "mayor-prompt-latest.md");
-    private static readonly string ManualResponsePath = Path.Combine("logs", "mayor-response.json");
+    private static readonly string DefaultManualResponsePath = Path.Combine("logs", "mayor-response.json");
     private static readonly JsonSerializerOptions ManualResponseJson = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
     };
+    private readonly string _manualResponsePath = manualResponsePath ?? DefaultManualResponsePath;
 
     public string Name => "Mayor";
 
@@ -56,10 +59,24 @@ public sealed class Mayor(
 
             DumpPrompt(briefing, previous, directiveSet.Directives, retrieved, activeFlags);
 
-            Core.Advice.MayorAgendaInput? input = TryLoadManualResponse();
+            Core.Advice.MayorAgendaInput? input = await TryLoadManualResponseAsync(
+                cycle,
+                briefing,
+                previous,
+                directiveSet.Directives,
+                retrieved,
+                activeFlags,
+                ct);
             if (input is null)
             {
-                input = await CallLlmWithRetryAsync(briefing, previous, directiveSet.Directives, retrieved, activeFlags, ct);
+                input = await CallLlmWithRetryAsync(
+                    cycle,
+                    briefing,
+                    previous,
+                    directiveSet.Directives,
+                    retrieved,
+                    activeFlags,
+                    ct);
                 if (input is null)
                 {
                     cycleError = "LLM call failed twice";
@@ -114,12 +131,14 @@ public sealed class Mayor(
     public Task RunRefinement(CancellationToken ct) => Task.CompletedTask;  // M6
 
     private async Task<Core.Advice.MayorAgendaInput?> CallLlmWithRetryAsync(
+        PlayCycleContext cycle,
         MayorBriefing briefing, Core.Advice.MayorAgenda? previous,
         IReadOnlyList<string> directives, IReadOnlyList<GuideCitation> retrieved,
         IReadOnlyList<AgentFlag> activeFlags, CancellationToken ct)
     {
         for (int attempt = 1; attempt <= 2; attempt++)
         {
+            DateTimeOffset llmAttemptStarted = DateTimeOffset.UtcNow;
             try
             {
                 Core.Advice.MayorAgendaInput input = await llm.CallMayorAsync(briefing, previous, directives, retrieved, activeFlags, ct);
@@ -131,15 +150,88 @@ public sealed class Mayor(
                     if (attempt == 2)
                     {
                         // Truncate rather than drop the whole agenda after the second try.
-                        return input with { ShortTerm = input.ShortTerm.Take(ShortTermCap).ToList() };
+                        Core.Advice.MayorAgendaInput capped = input with { ShortTerm = input.ShortTerm.Take(ShortTermCap).ToList() };
+                        await PersistReplayAsync(new MinisterReplayEntry(
+                            Minister: Name,
+                            Cycle: cycle,
+                            Path: "llm",
+                            Briefing: briefing,
+                            Context: BuildMayorReplayContext(previous, directives, activeFlags),
+                            EscalationReason: "mayor_agenda_update",
+                            EscalationContext: new
+                            {
+                                attempt,
+                                short_term_cap = ShortTermCap,
+                                short_term_count = input.ShortTerm.Count,
+                                truncated = true
+                            },
+                            GuideCitations: retrieved,
+                            LlmAttemptStarted: llmAttemptStarted,
+                            OutputKind: "mayor_agenda_input",
+                            Output: capped), ct);
+                        return capped;
                     }
+                    await PersistReplayAsync(new MinisterReplayEntry(
+                        Minister: Name,
+                        Cycle: cycle,
+                        Path: "llm_failed",
+                        Briefing: briefing,
+                        Context: BuildMayorReplayContext(previous, directives, activeFlags),
+                        EscalationReason: "mayor_agenda_update",
+                        EscalationContext: new
+                        {
+                            attempt,
+                            short_term_cap = ShortTermCap,
+                            short_term_count = input.ShortTerm.Count,
+                            validation = "short_term_over_cap",
+                            retrying = true
+                        },
+                        GuideCitations: retrieved,
+                        Error: new ReplayErrorSummary(
+                            "ValidationRejected",
+                            $"Mayor agenda short_term count {input.ShortTerm.Count} exceeded cap {ShortTermCap}."),
+                        LlmAttemptStarted: llmAttemptStarted,
+                        OutputKind: "mayor_agenda_input",
+                        Output: input), ct);
                     continue;
                 }
+                await PersistReplayAsync(new MinisterReplayEntry(
+                    Minister: Name,
+                    Cycle: cycle,
+                    Path: "llm",
+                    Briefing: briefing,
+                    Context: BuildMayorReplayContext(previous, directives, activeFlags),
+                    EscalationReason: "mayor_agenda_update",
+                    EscalationContext: new
+                    {
+                        attempt,
+                        short_term_cap = ShortTermCap,
+                        short_term_count = input.ShortTerm.Count
+                    },
+                    GuideCitations: retrieved,
+                    LlmAttemptStarted: llmAttemptStarted,
+                    OutputKind: "mayor_agenda_input",
+                    Output: input), ct);
                 return input;
             }
             catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
+                await PersistReplayAsync(new MinisterReplayEntry(
+                    Minister: Name,
+                    Cycle: cycle,
+                    Path: "llm_failed",
+                    Briefing: briefing,
+                    Context: BuildMayorReplayContext(previous, directives, activeFlags),
+                    EscalationReason: "mayor_agenda_update",
+                    EscalationContext: new
+                    {
+                        attempt,
+                        short_term_cap = ShortTermCap
+                    },
+                    GuideCitations: retrieved,
+                    Error: new ReplayErrorSummary(ex.GetType().Name, ex.Message),
+                    LlmAttemptStarted: llmAttemptStarted), ct);
                 if (attempt == 1)
                     log.LogWarning(ex, "Mayor LLM call failed (attempt 1); retrying once");
                 else
@@ -154,9 +246,16 @@ public sealed class Mayor(
     /// last successful Gemini call, parse it and return as the cycle's input. The user
     /// drops a response from another LLM there when Gemini is rate-limited.
     /// </summary>
-    private Core.Advice.MayorAgendaInput? TryLoadManualResponse()
+    private async Task<Core.Advice.MayorAgendaInput?> TryLoadManualResponseAsync(
+        PlayCycleContext cycle,
+        MayorBriefing briefing,
+        Core.Advice.MayorAgenda? previous,
+        IReadOnlyList<string> directives,
+        IReadOnlyList<GuideCitation> retrieved,
+        IReadOnlyList<AgentFlag> activeFlags,
+        CancellationToken ct)
     {
-        FileInfo fi = new(ManualResponsePath);
+        FileInfo fi = new(_manualResponsePath);
         if (!fi.Exists) return null;
 
         DateTime cutoff = status.LastLlmSuccessAt?.UtcDateTime ?? DateTime.MinValue;
@@ -164,38 +263,153 @@ public sealed class Mayor(
         {
             log.LogDebug(
                 "Mayor manual response file at {Path} is older than last LLM success ({Cutoff:O}); ignoring",
-                ManualResponsePath, cutoff);
+                _manualResponsePath, cutoff);
             return null;
         }
 
+        DateTimeOffset capturedAt = DateTimeOffset.UtcNow;
+        string body = "";
+        int systemPromptChars = 0;
+        int userPromptChars = 0;
         try
         {
-            string body = File.ReadAllText(ManualResponsePath);
+            body = await File.ReadAllTextAsync(_manualResponsePath, ct);
+            (systemPromptChars, userPromptChars) = ManualPromptLengths(
+                briefing,
+                previous,
+                directives,
+                retrieved,
+                activeFlags);
             Core.Advice.MayorAgendaInput? parsed =
                 JsonSerializer.Deserialize<Core.Advice.MayorAgendaInput>(body, ManualResponseJson);
             if (parsed is null)
             {
-                log.LogWarning("Mayor manual response at {Path} parsed to null; ignoring", ManualResponsePath);
+                await PersistReplayAsync(new MinisterReplayEntry(
+                    Minister: Name,
+                    Cycle: cycle,
+                    Path: "llm_failed",
+                    Briefing: briefing,
+                    Context: BuildMayorReplayContext(previous, directives, activeFlags),
+                    EscalationReason: "manual_llm_response_file",
+                    EscalationContext: new
+                    {
+                        source_path = _manualResponsePath,
+                        short_term_cap = ShortTermCap
+                    },
+                    GuideCitations: retrieved,
+                    Error: new ReplayErrorSummary("JsonNull", "Mayor manual response parsed to null."),
+                    Llm: ManualLlmMetadata("ManualFile", _manualResponsePath, capturedAt, systemPromptChars, userPromptChars,
+                        "manual_parse_failed", body)), ct);
+                log.LogWarning("Mayor manual response at {Path} parsed to null; ignoring", _manualResponsePath);
                 return null;
             }
 
             Core.Advice.MayorAgendaInput capped = parsed.ShortTerm.Count > ShortTermCap
                 ? parsed with { ShortTerm = parsed.ShortTerm.Take(ShortTermCap).ToList() }
                 : parsed;
+            await PersistReplayAsync(new MinisterReplayEntry(
+                Minister: Name,
+                Cycle: cycle,
+                Path: "llm",
+                Briefing: briefing,
+                Context: BuildMayorReplayContext(previous, directives, activeFlags),
+                EscalationReason: "manual_llm_response_file",
+                EscalationContext: new
+                {
+                    source_path = _manualResponsePath,
+                    short_term_cap = ShortTermCap,
+                    short_term_count = parsed.ShortTerm.Count,
+                    truncated = parsed.ShortTerm.Count > ShortTermCap
+                },
+                GuideCitations: retrieved,
+                Llm: ManualLlmMetadata("ManualFile", _manualResponsePath, capturedAt, systemPromptChars, userPromptChars,
+                    "manual_parsed", body),
+                OutputKind: "mayor_agenda_input",
+                Output: capped), ct);
 
             log.LogInformation(
                 "Mayor using manual response from {Path} (mtime={Mtime:O}, last LLM success={Cutoff:O})",
-                ManualResponsePath, fi.LastWriteTimeUtc, cutoff);
+                _manualResponsePath, fi.LastWriteTimeUtc, cutoff);
             return capped;
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
+            await PersistReplayAsync(new MinisterReplayEntry(
+                Minister: Name,
+                Cycle: cycle,
+                Path: "llm_failed",
+                Briefing: briefing,
+                Context: BuildMayorReplayContext(previous, directives, activeFlags),
+                EscalationReason: "manual_llm_response_file",
+                EscalationContext: new
+                {
+                    source_path = _manualResponsePath,
+                    short_term_cap = ShortTermCap
+                },
+                GuideCitations: retrieved,
+                Error: new ReplayErrorSummary(ex.GetType().Name, ex.Message),
+                Llm: ManualLlmMetadata("ManualFile", _manualResponsePath, capturedAt, systemPromptChars, userPromptChars,
+                    "manual_parse_failed", body)), ct);
             log.LogWarning(ex,
-                "Mayor manual response at {Path} failed to parse — falling through to Gemini",
-                ManualResponsePath);
+                "Mayor manual response at {Path} failed to parse - falling through to Gemini",
+                _manualResponsePath);
             return null;
         }
     }
+
+    private Task PersistReplayAsync(MinisterReplayEntry entry, CancellationToken ct) =>
+        replay?.RecordAsync(entry, ct) ?? Task.CompletedTask;
+
+    private static object BuildMayorReplayContext(
+        Core.Advice.MayorAgenda? previous,
+        IReadOnlyList<string> directives,
+        IReadOnlyList<AgentFlag> activeFlags) =>
+        new
+        {
+            previous_agenda_version = previous?.Version,
+            directives,
+            active_flags = activeFlags
+        };
+
+    private (int SystemPromptChars, int UserPromptChars) ManualPromptLengths(
+        MayorBriefing briefing,
+        Core.Advice.MayorAgenda? previous,
+        IReadOnlyList<string> directives,
+        IReadOnlyList<GuideCitation> retrieved,
+        IReadOnlyList<AgentFlag> activeFlags)
+    {
+        try
+        {
+            string system = prompts.MayorSystemPrompt;
+            string user = prompts.BuildMayorUserMessage(briefing, previous, directives, retrieved, activeFlags);
+            return (system.Length, user.Length);
+        }
+        catch (Exception ex)
+        {
+            log.LogDebug(ex, "Failed to capture Mayor manual response prompt lengths for replay metadata.");
+            return (0, 0);
+        }
+    }
+
+    private static ReplayLlmMetadata ManualLlmMetadata(
+        string provider,
+        string model,
+        DateTimeOffset capturedAt,
+        int systemPromptChars,
+        int userPromptChars,
+        string status,
+        string rawOutput) =>
+        new(
+            Provider: provider,
+            Model: model,
+            CapturedAt: capturedAt,
+            SystemPromptChars: systemPromptChars,
+            UserPromptChars: userPromptChars,
+            Status: status,
+            ParseMode: "manual_json",
+            LatencyMs: 0,
+            RawOutput: rawOutput);
 
     private void DumpPrompt(MayorBriefing briefing, Core.Advice.MayorAgenda? previous,
                             IReadOnlyList<string> directives, IReadOnlyList<GuideCitation> retrieved,

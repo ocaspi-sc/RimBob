@@ -90,6 +90,7 @@ public sealed class FoodMinisterTests
 
         replay.Records.Should().Contain(r => r.Path == "rules" && r.RuleTrace == "emergency_food_flag");
         MinisterReplayRecord record = replay.Records.Single(r => r.Path == "rules" && r.RuleTrace == "emergency_food_flag");
+        record.SchemaVersion.Should().Be(2);
         record.Minister.Should().Be("Food");
         record.Trigger.Should().Be(nameof(PlayCycleTrigger.ManualTrigger));
         record.WakeupPayload.Should().Be("dashboard");
@@ -137,10 +138,11 @@ public sealed class FoodMinisterTests
         await h.Minister.RunPlayCycle(PlayCycleContext.CabinetRefresh, CancellationToken.None);
 
         h.PublishedAdvice.Should().ContainSingle().Which.Id.Should().Be("llm_food");
-        h.Bus.ActiveSnapshot().StateSummaries.Should().ContainKey("Food")
+        IReadOnlyDictionary<string, string> stateSummaries = h.Bus.ActiveSnapshot().StateSummaries!;
+        stateSummaries.Should().ContainKey("Food")
             .WhoseValue.Should().Contain("Food stores show");
-        h.Bus.ActiveSnapshot().StateSummaries["Food"].Should().Contain("12.0 days");
-        h.Bus.ActiveSnapshot().StateSummaries["Food"].Should().NotBe("Food is below target and hunting may be viable.");
+        stateSummaries["Food"].Should().Contain("12.0 days");
+        stateSummaries["Food"].Should().NotBe("Food is below target and hunting may be viable.");
         h.Flags.Active(FlagSeverity.Medium).Should().ContainSingle().Which.Summary.Should().Be("LLM food flag");
     }
 
@@ -167,6 +169,7 @@ public sealed class FoodMinisterTests
         record.Error.Should().NotBeNull();
         record.Error!.Type.Should().Be(nameof(InvalidOperationException));
         record.Error.Message.Should().Be("quota exhausted");
+        record.SchemaVersion.Should().Be(2);
         record.Advice.Should().BeEmpty();
         record.Flags.Should().BeEmpty();
     }
@@ -200,7 +203,9 @@ public sealed class FoodMinisterTests
             Bus.AdvicePublished += PublishedAdvice.Add;
             LlmClient llm = new(NullLogger<LlmClient>.Instance, executor);
             FoodRagRetriever retriever = new(new KnowledgeBase(), null, false, 0, NullLogger<FoodRagRetriever>.Instance);
-            Minister = new(Cache, new Rules(), new AgendaStore(), Bus, Flags, llm, retriever, NullLogger<MinisterOfFood>.Instance, replay);
+            MinisterReplayRecorder? replayRecorder = replay is null ? null : new MinisterReplayRecorder(replay);
+            Minister = new(Cache, new Rules(), new AgendaStore(), Bus, Flags, llm, retriever,
+                NullLogger<MinisterOfFood>.Instance, replayRecorder);
         }
 
         public void SetFoodDays(float days, int wildAnimals = 0, string dateTimeRaw = "5th of Aprimay, 5500, 14h", string animalDef = "Hare")

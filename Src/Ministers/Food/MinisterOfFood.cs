@@ -18,8 +18,7 @@ public sealed class MinisterOfFood(
     LlmClient llm,
     FoodRagRetriever retriever,
     ILogger<MinisterOfFood> log,
-    IReplayCorpusWriter? replay = null,
-    RawLlmOutputStore? rawOutputs = null) : IMinister
+    MinisterReplayRecorder? replay = null) : IMinister
 {
     public string Name => "Food";
 
@@ -49,13 +48,9 @@ public sealed class MinisterOfFood(
             case Decision decision:
                 string ruleStateSummary = FoodStateSummary.Build(briefing);
                 PublishSnapshot(decision.Advice, decision.Flags, ruleStateSummary);
-                await PersistReplayAsync(new MinisterReplayRecord(
-                    SchemaVersion: 1,
-                    CapturedAt: DateTimeOffset.UtcNow,
+                await PersistReplayAsync(new MinisterReplayEntry(
                     Minister: Name,
-                    Trigger: cycle.Trigger.ToString(),
-                    WakeupPayload: cycle.WakeupPayload,
-                    Flag: cycle.Flag,
+                    Cycle: cycle,
                     Path: "rules",
                     Briefing: briefing,
                     Context: context,
@@ -65,9 +60,7 @@ public sealed class MinisterOfFood(
                     GuideCitations: null,
                     Advice: decision.Advice,
                     Flags: decision.Flags,
-                    StateSummary: ruleStateSummary,
-                    Error: null,
-                    Llm: null), ct);
+                    StateSummary: ruleStateSummary), ct);
                 log.LogInformation(
                     "Food rules decision trace={Trace} advice={AdviceCount} flags={FlagCount}",
                     decision.Trace, decision.Advice.Count, decision.Flags.Count);
@@ -96,13 +89,9 @@ public sealed class MinisterOfFood(
             FoodLlmResponse response = await llm.CallFoodAsync(briefing, context, citations, ct);
             string stateSummary = FoodStateSummary.Build(briefing);
             PublishSnapshot(response.Advice, response.Flags, stateSummary);
-            await PersistReplayAsync(new MinisterReplayRecord(
-                SchemaVersion: 1,
-                CapturedAt: DateTimeOffset.UtcNow,
+            await PersistReplayAsync(new MinisterReplayEntry(
                 Minister: Name,
-                Trigger: cycle.Trigger.ToString(),
-                WakeupPayload: cycle.WakeupPayload,
-                Flag: cycle.Flag,
+                Cycle: cycle,
                 Path: "llm",
                 Briefing: briefing,
                 Context: context,
@@ -113,8 +102,9 @@ public sealed class MinisterOfFood(
                 Advice: response.Advice,
                 Flags: response.Flags,
                 StateSummary: stateSummary,
-                Error: null,
-                Llm: BuildLlmMetadata(llmAttemptStarted)), ct);
+                LlmAttemptStarted: llmAttemptStarted,
+                OutputKind: "advice_flags",
+                Output: new { advice = response.Advice, flags = response.Flags }), ct);
             log.LogInformation(
                 "Food escalation reason={Reason} advice={AdviceCount} flags={FlagCount}",
                 escalate.Reason, response.Advice.Count, response.Flags.Count);
@@ -123,13 +113,9 @@ public sealed class MinisterOfFood(
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            await PersistReplayAsync(new MinisterReplayRecord(
-                SchemaVersion: 1,
-                CapturedAt: DateTimeOffset.UtcNow,
+            await PersistReplayAsync(new MinisterReplayEntry(
                 Minister: Name,
-                Trigger: cycle.Trigger.ToString(),
-                WakeupPayload: cycle.WakeupPayload,
-                Flag: cycle.Flag,
+                Cycle: cycle,
                 Path: "llm_failed",
                 Briefing: briefing,
                 Context: context,
@@ -137,36 +123,15 @@ public sealed class MinisterOfFood(
                 EscalationReason: escalate.Reason,
                 EscalationContext: escalate.Context,
                 GuideCitations: citations,
-                Advice: [],
-                Flags: [],
-                StateSummary: null,
                 Error: new ReplayErrorSummary(ex.GetType().Name, ex.Message),
-                Llm: BuildLlmMetadata(llmAttemptStarted)), ct);
+                LlmAttemptStarted: llmAttemptStarted), ct);
             log.LogWarning(ex, "Food escalation failed; no advice emitted this cycle. reason={Reason}", escalate.Reason);
             return false;
         }
     }
 
-    private Task PersistReplayAsync(MinisterReplayRecord record, CancellationToken ct) =>
-        replay?.WriteAsync(record, ct) ?? Task.CompletedTask;
-
-    private ReplayLlmMetadata? BuildLlmMetadata(DateTimeOffset since)
-    {
-        RawLlmOutputSnapshot? snapshot = rawOutputs?.Latest(Name);
-        if (snapshot is null) return null;
-        if (snapshot.CapturedAt < since) return null;
-
-        return new ReplayLlmMetadata(
-            Provider: snapshot.Provider,
-            Model: snapshot.Model,
-            CapturedAt: snapshot.CapturedAt,
-            SystemPromptChars: snapshot.SystemPromptChars,
-            UserPromptChars: snapshot.UserPromptChars,
-            Status: snapshot.Status,
-            ParseMode: snapshot.ParseMode,
-            LatencyMs: snapshot.LatencyMs,
-            RawOutput: snapshot.Text);
-    }
+    private Task PersistReplayAsync(MinisterReplayEntry entry, CancellationToken ct) =>
+        replay?.RecordAsync(entry, ct) ?? Task.CompletedTask;
 
     private void PublishSnapshot(
         IReadOnlyList<AdviceItem> advice,

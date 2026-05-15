@@ -40,7 +40,7 @@ public sealed class ReplayCorpusWriterTests
                 ExpiresAt: capturedAt.AddHours(4));
 
             MinisterReplayRecord record = new(
-                SchemaVersion: 1,
+                SchemaVersion: 2,
                 CapturedAt: capturedAt,
                 Minister: "Food",
                 Trigger: PlayCycleTrigger.CabinetRefresh.ToString(),
@@ -66,7 +66,11 @@ public sealed class ReplayCorpusWriterTests
                     Status: "parsed",
                     ParseMode: "strict_json",
                     LatencyMs: 30,
-                    RawOutput: "{\"advice\":[]}"));
+                    RawOutput: "{\"advice\":[]}",
+                    ApiKeyIndex: 2,
+                    ApiKeyLabel: "fallback_1"),
+                OutputKind: "advice_flags",
+                Output: new { advice = new[] { advice.Id }, flags = Array.Empty<string>() });
 
             await writer.WriteAsync(record, CancellationToken.None);
             await writer.WriteAsync(record, CancellationToken.None);
@@ -77,7 +81,7 @@ public sealed class ReplayCorpusWriterTests
 
             using JsonDocument document = JsonDocument.Parse(lines[0]);
             JsonElement root = document.RootElement;
-            root.GetProperty("schema_version").GetInt32().Should().Be(1);
+            root.GetProperty("schema_version").GetInt32().Should().Be(2);
             root.GetProperty("captured_at").GetString().Should().Contain("2026-05-14");
             root.GetProperty("minister").GetString().Should().Be("Food");
             root.GetProperty("trigger").GetString().Should().Be("CabinetRefresh");
@@ -90,6 +94,10 @@ public sealed class ReplayCorpusWriterTests
             root.GetProperty("guide_citations")[0].GetProperty("cite_id").GetString().Should().Be("food-guide-1");
             root.GetProperty("state_summary").GetString().Should().Be("Food is low and needs action.");
             root.GetProperty("llm").GetProperty("raw_output").GetString().Should().Be("{\"advice\":[]}");
+            root.GetProperty("llm").GetProperty("api_key_index").GetInt32().Should().Be(2);
+            root.GetProperty("llm").GetProperty("api_key_label").GetString().Should().Be("fallback_1");
+            root.GetProperty("output_kind").GetString().Should().Be("advice_flags");
+            root.GetProperty("output").GetProperty("advice").GetArrayLength().Should().Be(1);
             root.GetProperty("advice").GetArrayLength().Should().Be(1);
         }
         finally

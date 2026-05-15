@@ -36,6 +36,8 @@ Design requirements:
 - Record LLM prompt/output metadata when an LLM path is used.
 - Attach feedback, pushback, and observed outcome when those exist.
 - Keep enough data to explain why advice appeared and to seed replay records.
+- Every minister LLM attempt, including retries, validation rejects, provider
+  failures, and accepted manual substitutes, should have a replay record.
 
 Exact JSON fields are implementation details. Use the current log/replay writer
 and tests as the source of truth.

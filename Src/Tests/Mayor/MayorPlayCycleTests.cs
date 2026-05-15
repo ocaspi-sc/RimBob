@@ -1,3 +1,4 @@
+using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using RimAI.Coordination;
@@ -26,6 +27,25 @@ public sealed class MayorPlayCycleTests
         h.Store.Current!.Version.Should().Be(1);
         h.Store.Current.UpdateNotes.Should().Be("first");
         h.PublishedAgendas.Should().ContainSingle().Which.Version.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task FirstCycle_PersistsMayorLlmReplayRecord()
+    {
+        Harness h = new((_, _, _, _, _, _) => CannedAgenda("first"));
+
+        await h.Mayor.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
+
+        MinisterReplayRecord record = h.Replay.Records.Should().ContainSingle(r => r.Path == "llm").Subject;
+        record.SchemaVersion.Should().Be(2);
+        record.Minister.Should().Be("Mayor");
+        record.Trigger.Should().Be(nameof(PlayCycleTrigger.StartupBootstrap));
+        record.EscalationReason.Should().Be("mayor_agenda_update");
+        record.Context.Should().NotBeNull();
+        record.GuideCitations.Should().BeEmpty();
+        record.OutputKind.Should().Be("mayor_agenda_input");
+        record.Output.Should().BeOfType<MayorAgendaInput>()
+            .Which.UpdateNotes.Should().Be("first");
     }
 
     [Fact]
@@ -63,6 +83,10 @@ public sealed class MayorPlayCycleTests
         call.Should().Be(2);
         h.Store.Current.Should().NotBeNull();
         h.Store.Current!.ShortTerm.Should().HaveCount(5);
+        h.Replay.Records.Should().ContainSingle(r =>
+            r.Path == "llm_failed" && r.Error != null && r.Error.Type == "ValidationRejected");
+        h.Replay.Records.Should().ContainSingle(r =>
+            r.Path == "llm" && r.OutputKind == "mayor_agenda_input");
     }
 
     [Fact]
@@ -77,6 +101,9 @@ public sealed class MayorPlayCycleTests
         h.Store.Current.UpdateNotes.Should().Contain("LLM failed twice");
         h.Store.Current.ShortTerm.Should().Contain(item => item.Id == "bootstrap_replace_with_mayor_run");
         h.PublishedAgendas.Should().ContainSingle().Which.Version.Should().Be(1);
+        h.Replay.Records.Where(r => r.Path == "llm_failed")
+            .Should().HaveCount(2)
+            .And.AllSatisfy(r => r.Error!.Type.Should().Be(nameof(InvalidOperationException)));
     }
 
     [Fact]
@@ -92,8 +119,56 @@ public sealed class MayorPlayCycleTests
         h.PublishedAgendas.Should().BeEmpty();
     }
 
+    [Fact]
+    public async Task ManualResponseFile_PersistsReplayRecordWithoutCallingProvider()
+    {
+        int calls = 0;
+        Harness h = new((_, _, _, _, _, _) =>
+        {
+            calls++;
+            return CannedAgenda("provider");
+        });
+        WriteManualResponse(h, InputBuilder.Default with { UpdateNotes = "manual" });
+
+        await h.Mayor.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
+
+        calls.Should().Be(0);
+        h.Store.Current.Should().NotBeNull();
+        h.Store.Current!.UpdateNotes.Should().Be("manual");
+        MinisterReplayRecord record = h.Replay.Records.Should()
+            .ContainSingle(r => r.Path == "llm" && r.EscalationReason == "manual_llm_response_file")
+            .Subject;
+        record.Llm.Should().NotBeNull();
+        record.Llm!.Provider.Should().Be("ManualFile");
+        record.Llm.Status.Should().Be("manual_parsed");
+        record.OutputKind.Should().Be("mayor_agenda_input");
+    }
+
+    [Fact]
+    public async Task ManualResponseFileParseFailure_PersistsFailureThenFallsThroughToProvider()
+    {
+        Harness h = new((_, _, _, _, _, _) => CannedAgenda("fallback"));
+        Directory.CreateDirectory(Path.GetDirectoryName(h.ManualResponsePath)!);
+        File.WriteAllText(h.ManualResponsePath, "{");
+
+        await h.Mayor.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
+
+        h.Store.Current.Should().NotBeNull();
+        h.Store.Current!.UpdateNotes.Should().Be("fallback");
+        h.Replay.Records.Should().ContainSingle(r =>
+            r.Path == "llm_failed" && r.EscalationReason == "manual_llm_response_file");
+        h.Replay.Records.Should().ContainSingle(r =>
+            r.Path == "llm" && r.EscalationReason == "mayor_agenda_update");
+    }
+
     private static Task<MayorAgendaInput> CannedAgenda(string note) =>
         Task.FromResult(InputBuilder.Default with { UpdateNotes = note });
+
+    private static void WriteManualResponse(Harness h, MayorAgendaInput input)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(h.ManualResponsePath)!);
+        File.WriteAllText(h.ManualResponsePath, JsonSerializer.Serialize(input));
+    }
 
     private static List<AgendaPriority> SixActiveBullets() => Enumerable.Range(1, 6)
         .Select(i => new AgendaPriority($"st_{i}", $"Bullet {i}", AgendaPriorityStatus.Active))
@@ -106,6 +181,12 @@ public sealed class MayorPlayCycleTests
         public AgendaStore     Store    { get; }
         public AdviceBus       Bus      { get; }
         public MayorMinister   Mayor    { get; }
+        public CapturingReplayWriter Replay { get; } = new();
+        public string ManualResponsePath { get; } = Path.Combine(
+            Path.GetTempPath(),
+            "rimai-mayor-manual-response-tests",
+            Guid.NewGuid().ToString("N"),
+            "mayor-response.json");
         public List<MayorAgenda> PublishedAgendas { get; } = [];
 
         public Harness(LlmClient.MayorCallExecutor executor)
@@ -121,7 +202,19 @@ public sealed class MayorPlayCycleTests
             MayorRagRetriever retriever = new(kb, embedder: null, enabled: false, topK: 0,
                                            NullLogger<MayorRagRetriever>.Instance);
             Mayor = new(Cache, new MayorAgendaRules(), Store, llm, new PromptBuilder(), Bus, new MayorStatus(),
-                        retriever, new FlagChannel(), NullLogger<MayorMinister>.Instance);
+                        retriever, new FlagChannel(), NullLogger<MayorMinister>.Instance,
+                        new MinisterReplayRecorder(Replay), ManualResponsePath);
+        }
+    }
+
+    private sealed class CapturingReplayWriter : IReplayCorpusWriter
+    {
+        public List<MinisterReplayRecord> Records { get; } = [];
+
+        public Task WriteAsync(MinisterReplayRecord record, CancellationToken ct)
+        {
+            Records.Add(record);
+            return Task.CompletedTask;
         }
     }
 }
