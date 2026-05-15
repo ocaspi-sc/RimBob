@@ -82,6 +82,13 @@ Refinement is the same minister in a different mode, not a separate product
 actor. Code-shaped refinement work may use dev-agent tooling, but human approval
 is required before rule, prompt, briefing, fixture, or RAG changes are promoted.
 
+Any applied minister-logic change must close with a before/after advice diff on
+the same input corpus. Prefer historic replay records; if they are missing or
+not replayable, use the focused fixture/regression input and label the result
+fixture-only. The diff should show the path taken, advice type, priority, title,
+resource requests, suggested actions, flags, and whether non-target cases stayed
+unchanged.
+
 ---
 
 ## Shared Runtime Contract

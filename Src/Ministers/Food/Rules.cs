@@ -91,6 +91,20 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 [new(SuggestedActionKind.MarkHarvest, WildHarvestActionText(briefing))],
                 days < 10f);
 
+        if (days < 20f && CanSuggestHunting(briefing) && briefing.ReadyToHarvest == 0)
+        {
+            AdvicePriority priority = days < 10f ? AdvicePriority.High : AdvicePriority.Medium;
+            return DecisionFor(briefing, "hunt_low_risk_animals",
+                FoodAdviceType.HuntForFood,
+                priority,
+                "Mark low-risk animals for hunting",
+                HuntingBody(briefing, days),
+                "The briefing has healthy wild animals and no lower-risk harvest path; hunting is a concrete local food-acquisition step.",
+                HuntingRequests(briefing, priority),
+                HuntingActions(briefing),
+                days < 10f);
+        }
+
         if (days < 20f && CanSowBeforeWinter(briefing))
             return DecisionFor(briefing, "expand_growing_capacity",
                 FoodAdviceType.ExpandGrowingCapacity,
@@ -209,6 +223,22 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 RequestedFrom: "Labor",
                 WorkType: WorkType.PlantCut,
                 Skill: "Plants"));
+        if (CanSuggestHunting(briefing))
+        {
+            requests.Add(new ResourceRequest(ResourceRequestKind.Labor,
+                "Hunt work for selected animals",
+                "food buffer is below 7 days and low-risk wild animals are visible",
+                Priority: priority,
+                RequestedFrom: "Labor",
+                WorkType: WorkType.Hunt,
+                Skill: "Shooting"));
+            if (!briefing.Kitchen.HasButcherTable)
+                requests.Add(new ResourceRequest(ResourceRequestKind.Building,
+                    "butcher table for hunted animals",
+                    "hunted animals must be butchered before they become usable meals",
+                    Priority: priority,
+                    RequestedFrom: "Construction"));
+        }
         if (CanSowBeforeWinter(briefing))
         {
             int growingTiles = GrowingTileRequest(briefing);
@@ -265,6 +295,8 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             actions.Add(new SuggestedAction(SuggestedActionKind.MarkHarvest, HarvestActionText(briefing)));
         if (briefing.WildHarvestCandidates > 0)
             actions.Add(new SuggestedAction(SuggestedActionKind.MarkHarvest, WildHarvestActionText(briefing)));
+        if (CanSuggestHunting(briefing))
+            actions.Add(new SuggestedAction(SuggestedActionKind.MarkHunt, HuntingActionText(briefing)));
         if (!briefing.Kitchen.HasCookingBuilding)
             actions.Add(new SuggestedAction(SuggestedActionKind.PlaceBlueprint, "Place a campfire or stove so raw food can become meals."));
         if (briefing.RawFoodCount > 0)
@@ -313,6 +345,46 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         return actions;
     }
 
+    private static IReadOnlyList<ResourceRequest> HuntingRequests(FoodBriefing briefing, AdvicePriority priority)
+    {
+        List<ResourceRequest> requests =
+        [
+            new ResourceRequest(ResourceRequestKind.Labor,
+                "Hunt work for selected animals",
+                "low-risk wild animals are the best visible local food-acquisition path",
+                Priority: priority,
+                RequestedFrom: "Labor",
+                WorkType: WorkType.Hunt,
+                Skill: "Shooting")
+        ];
+        if (!briefing.Kitchen.HasButcherTable)
+            requests.Add(new ResourceRequest(ResourceRequestKind.Building,
+                "butcher table for hunted animals",
+                "hunting only helps the food chain after animals can be butchered",
+                Priority: priority,
+                RequestedFrom: "Construction"));
+        if (!briefing.Kitchen.HasCookingBuilding)
+            requests.Add(new ResourceRequest(ResourceRequestKind.Building,
+                "campfire or stove for meat meals",
+                "meat must be cooked into safe meals once butchered",
+                Priority: priority,
+                RequestedFrom: "Construction"));
+        return requests;
+    }
+
+    private static IReadOnlyList<SuggestedAction> HuntingActions(FoodBriefing briefing)
+    {
+        List<SuggestedAction> actions =
+        [
+            new SuggestedAction(SuggestedActionKind.MarkHunt, HuntingActionText(briefing))
+        ];
+        if (!briefing.Kitchen.HasButcherTable)
+            actions.Add(new SuggestedAction(SuggestedActionKind.PlaceBlueprint, "Place a butcher table so hunted animals can become meat."));
+        if (!briefing.Kitchen.HasCookingBuilding)
+            actions.Add(new SuggestedAction(SuggestedActionKind.PlaceBlueprint, "Place a campfire or stove so butchered meat can become meals."));
+        return actions.Take(3).ToList();
+    }
+
     private static IReadOnlyList<ResourceRequest> PlantLaborIfNeeded(FoodBriefing briefing, float days, string what, string why) =>
         ShouldRequestPlantLabor(briefing, days)
             ? [new ResourceRequest(ResourceRequestKind.Labor, what, why, RequestedFrom: "Labor", WorkType: WorkType.PlantCut, Skill: "Plants")]
@@ -352,6 +424,23 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         return $"Mark the nearest {cluster.Count} {cluster.Def} wild plants for harvest ({cluster.Proximity ?? "location unknown"}).";
     }
 
+    private static string HuntingBody(FoodBriefing briefing, float days)
+    {
+        WildHuntTarget target = briefing.WildHuntTargets[0];
+        string location = string.IsNullOrWhiteSpace(target.Proximity)
+            ? "with no location summary available"
+            : target.Proximity;
+        return $"Food covers about {days:F1} days and {target.Count} {LabelDef(target.Def)} are visible {location}. Mark a small, low-risk hunting batch and avoid predators, bonded animals, or anything the colony cannot cover safely.";
+    }
+
+    private static string HuntingActionText(FoodBriefing briefing)
+    {
+        WildHuntTarget target = briefing.WildHuntTargets[0];
+        int count = Math.Min(target.Count, Math.Max(1, briefing.ColonistCount * 2));
+        string location = string.IsNullOrWhiteSpace(target.Proximity) ? "location unknown" : target.Proximity;
+        return $"Mark up to {count} {LabelDef(target.Def)} for hunting ({location}); skip predators, tame/bonded animals, and high-revenge targets.";
+    }
+
     private static string CookBillActionText(FoodBriefing briefing) =>
         $"Set/check simple meal bill target around {SimpleMealTarget(briefing)} meals; keep fine meals off until the buffer is stable.";
 
@@ -361,8 +450,19 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
     private static bool CanSowBeforeWinter(FoodBriefing briefing) =>
         briefing.Season.DaysToWinter is null or > 10;
 
+    private static bool CanSuggestHunting(FoodBriefing briefing) =>
+        !briefing.ActiveThreat && briefing.WildHuntTargets.Count > 0;
+
     private static int GrowingTileRequest(FoodBriefing briefing) =>
         Math.Clamp(briefing.ColonistCount * 12, 12, 72);
+
+    private static string LabelDef(string def)
+    {
+        string label = def;
+        if (label.StartsWith("Animal_", StringComparison.OrdinalIgnoreCase))
+            label = label["Animal_".Length..];
+        return label.Replace('_', ' ').Trim().ToLowerInvariant();
+    }
 
     private static FlagSeverity ToFlagSeverity(AdvicePriority priority) => priority switch
     {

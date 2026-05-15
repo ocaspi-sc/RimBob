@@ -242,6 +242,7 @@ public sealed class LlmClientTests
         IReadOnlyList<SuggestedAction> actions =
         [
             new SuggestedAction(SuggestedActionKind.MarkHarvest, "mark crops"),
+            new SuggestedAction(SuggestedActionKind.MarkHunt, "mark animals"),
             new SuggestedAction(SuggestedActionKind.PlaceBlueprint, "place stove"),
             new SuggestedAction(SuggestedActionKind.ProductionBill, "cook meals"),
             new SuggestedAction(SuggestedActionKind.SetStockpileZone, "set food stockpile")
@@ -250,6 +251,7 @@ public sealed class LlmClientTests
         string serialized = JsonSerializer.Serialize(actions, json);
 
         serialized.Should().Contain("\"kind\":\"mark_harvest\"");
+        serialized.Should().Contain("\"kind\":\"mark_hunt\"");
         serialized.Should().Contain("\"instruction\":\"mark crops\"");
         serialized.Should().Contain("\"kind\":\"place_blueprint\"");
         serialized.Should().Contain("\"kind\":\"production_bill\"");
@@ -350,6 +352,7 @@ public sealed class LlmClientTests
         WildHarvestCandidates: 0,
         WildHarvestClusters: [],
         WildAnimalCount: 0,
+        WildHuntTargets: [],
         StockpileCells: 0,
         Skills: new FoodSkillSnapshot(5, 0, 1, 0),
         Infrastructure: new FoodInfrastructureSnapshot(0, true, 0f, 0),

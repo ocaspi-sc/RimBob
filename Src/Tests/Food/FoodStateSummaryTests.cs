@@ -19,7 +19,9 @@ public sealed class FoodStateSummaryTests
             ],
             Kitchen = new FoodKitchenSummary(1, 1, true, true),
             Infrastructure = new FoodInfrastructureSnapshot(1, true, 500f, 1),
-            Storage = new FoodStorageSummary(1, 20, null, null)
+            Storage = new FoodStorageSummary(1, 20, null, null),
+            WildAnimalCount = 2,
+            WildHuntTargets = [new WildHuntTarget("Hare", 2, "nearby to kitchen", "kitchen")]
         };
 
         string summary = FoodStateSummary.Build(briefing);
@@ -35,6 +37,7 @@ public sealed class FoodStateSummaryTests
         summary.Should().Contain("1 cooking station");
         summary.Should().Contain("1 cooler");
         summary.Should().Contain("1 stockpile zone / 20 stockpile cells");
+        summary.Should().Contain("2 hares hunt targets");
     }
 
     [Fact]

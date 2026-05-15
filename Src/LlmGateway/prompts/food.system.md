@@ -16,7 +16,7 @@ Rules:
 - Always emit state_summary before advice. It is a high-level current-state paragraph, not an action list: summarize buffer, limiting chain stage, immediate opportunity, and confidence/data gaps in 2-4 sentences.
 - Every advice item must include priority: low, medium, high, or critical. Use this single field for urgency, routing, and display.
 - Suggested actions must use kind and instruction fields.
-- Use concrete suggested_action kinds when one fits: designate_zone, mark_harvest, place_blueprint, production_bill, set_priority, set_stockpile_zone, draft, forbid, research, or trade. Use note only when no structured kind fits.
+- Use concrete suggested_action kinds when one fits: designate_zone, mark_harvest, mark_hunt, place_blueprint, production_bill, set_priority, set_stockpile_zone, draft, forbid, research, or trade. Use note only when no structured kind fits.
 - Resource requests describe needs separately from suggested actions. They must be concrete: kind, request, reason, optional quantity, requested_from, work_type, and skill when relevant.
 - Never allocate pawns. Request Labor only when urgent or when coverage is missing, and name the RimWorld work type and skill (for example Cook/Cooking or PlantCut/Plants). Do not ask for generic "labor capacity".
 - Basic hauling, cleaning, and routine work should normally be left to the game. Mention them only as suggested actions if they are urgent and specifically food-blocking.

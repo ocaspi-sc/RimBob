@@ -53,7 +53,8 @@ public static class FoodBriefingDerivation
             CropZoneSummaries: DeriveCropZoneSummaries(s, reference),
             WildHarvestCandidates: s.Plants.Value.Plants.Count(p => !p.IsCrop && p.Growth >= 0.85f),
             WildHarvestClusters: DeriveWildHarvestClusters(s, reference),
-            WildAnimalCount: s.Animals.Value.Animals.Count(a => !a.Tame && a.Health > 0.6f),
+            WildAnimalCount: s.Animals.Value.Animals.Count(IsHealthyWildAnimal),
+            WildHuntTargets: DeriveWildHuntTargets(s, reference),
             StockpileCells: s.Stockpiles.Value.Zones.Sum(z => z.CellCount),
             Skills: DeriveSkills(pawns),
             Infrastructure: DeriveInfrastructure(s),
@@ -160,6 +161,36 @@ public static class FoodBriefingDerivation
             .ToList();
     }
 
+    private static IReadOnlyList<WildHuntTarget> DeriveWildHuntTargets(
+        ColonyState s,
+        FoodReferencePoint? reference)
+    {
+        IReadOnlyList<AnimalRecord> candidates = s.Animals.Value.Animals
+            .Where(IsHealthyWildAnimal)
+            .Where(animal => !IsDangerousHuntDef(animal.Def))
+            .ToList();
+
+        return candidates
+            .GroupBy(animal => animal.Def, StringComparer.OrdinalIgnoreCase)
+            .Select(group =>
+            {
+                int? distance = MapDistance.Nearest(group.Select(animal => animal.Position), reference?.Position);
+                return new HuntCandidateSummary(
+                    new WildHuntTarget(
+                        Def: group.Key,
+                        Count: group.Count(),
+                        Proximity: MapDistance.ProximityLabel(distance, reference?.Name),
+                        Reference: reference?.Name),
+                    distance);
+            })
+            .OrderBy(candidate => HuntRiskRank(candidate.Target.Def))
+            .ThenBy(candidate => candidate.Distance ?? int.MaxValue)
+            .ThenByDescending(candidate => candidate.Target.Count)
+            .Select(candidate => candidate.Target)
+            .Take(3)
+            .ToList();
+    }
+
     private static FoodDataCoverage DeriveDataCoverage(ColonyState s, FoodItemClassification food) =>
         new(
             HasPlantPositions: s.Plants.Value.Plants.Any(p => p.Position is not null),
@@ -193,6 +224,48 @@ public static class FoodBriefingDerivation
         text.Contains("Food", StringComparison.OrdinalIgnoreCase) ||
         text.Contains("Poison", StringComparison.OrdinalIgnoreCase) ||
         text.Contains("ToxicFallout", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsHealthyWildAnimal(AnimalRecord animal) =>
+        !animal.Tame && animal.Health > 0.6f;
+
+    private static bool IsDangerousHuntDef(string def)
+    {
+        string normalized = def.ToLowerInvariant();
+        return ContainsAny(normalized,
+        [
+            "bear",
+            "boom",
+            "cobra",
+            "cougar",
+            "elephant",
+            "insect",
+            "lynx",
+            "mega",
+            "panther",
+            "rhinoceros",
+            "scaria",
+            "thrumbo",
+            "warg",
+            "wolf"
+        ]);
+    }
+
+    private static int HuntRiskRank(string def)
+    {
+        string normalized = def.ToLowerInvariant();
+        if (ContainsAny(normalized, ["hare", "rabbit", "squirrel", "rat", "turkey", "tortoise"]))
+            return 0;
+
+        if (ContainsAny(normalized, ["deer", "doe", "buck", "gazelle", "ibex", "elk", "caribou", "alpaca", "dromedary"]))
+            return 1;
+
+        return 2;
+    }
+
+    private static bool ContainsAny(string value, IReadOnlyList<string> tokens) =>
+        tokens.Any(token => value.Contains(token, StringComparison.OrdinalIgnoreCase));
+
+    private sealed record HuntCandidateSummary(WildHuntTarget Target, int? Distance);
 
     private sealed record FoodReferencePoint(string Name, MapPosition Position);
 }

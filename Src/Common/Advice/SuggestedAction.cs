@@ -17,6 +17,7 @@ public enum SuggestedActionKind
 {
     DesignateZone,
     MarkHarvest,
+    MarkHunt,
     PlaceBlueprint,
     ProductionBill,
     SetPriority,

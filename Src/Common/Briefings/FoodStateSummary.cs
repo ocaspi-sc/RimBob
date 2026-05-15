@@ -81,7 +81,12 @@ public static class FoodStateSummary
             parts.Add("raw food is waiting on cooking throughput");
         if (briefing.WildHarvestCandidates > 0)
             parts.Add($"{briefing.WildHarvestCandidates} wild harvest candidates");
-        if (briefing.WildAnimalCount > 0 && (briefing.EstimatedDaysOfFood ?? 0f) < 20f)
+        if (briefing.WildHuntTargets.Count > 0 && (briefing.EstimatedDaysOfFood ?? 0f) < 20f)
+        {
+            WildHuntTarget target = briefing.WildHuntTargets[0];
+            parts.Add($"{Plural(target.Count, LabelAnimal(target.Def))} hunt targets");
+        }
+        if (briefing.WildAnimalCount > 0 && briefing.WildHuntTargets.Count == 0 && (briefing.EstimatedDaysOfFood ?? 0f) < 20f)
             parts.Add($"{briefing.WildAnimalCount} wild animals may be food targets");
 
         return $"Kitchen/storage: {string.Join("; ", parts)}.";
@@ -120,6 +125,16 @@ public static class FoodStateSummary
 
         label = label.Replace('_', ' ').Trim();
         return string.IsNullOrWhiteSpace(label) ? "crop" : label.ToLowerInvariant();
+    }
+
+    private static string LabelAnimal(string def)
+    {
+        string label = def;
+        if (label.StartsWith("Animal_", StringComparison.OrdinalIgnoreCase))
+            label = label["Animal_".Length..];
+
+        label = label.Replace('_', ' ').Trim();
+        return string.IsNullOrWhiteSpace(label) ? "animal" : label.ToLowerInvariant();
     }
 
     private static string Plural(int count, string singular)

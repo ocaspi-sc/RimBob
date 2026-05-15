@@ -21,6 +21,7 @@ public sealed record FoodBriefing(
     int WildHarvestCandidates,
     IReadOnlyList<WildHarvestCluster> WildHarvestClusters,
     int WildAnimalCount,
+    IReadOnlyList<WildHuntTarget> WildHuntTargets,
     int StockpileCells,
     FoodSkillSnapshot Skills,
     FoodInfrastructureSnapshot Infrastructure,
@@ -85,6 +86,13 @@ public sealed record WildHarvestCluster(
     string Def,
     int Count,
     float AverageGrowth,
+    string? Proximity,
+    string? Reference
+);
+
+public sealed record WildHuntTarget(
+    string Def,
+    int Count,
     string? Proximity,
     string? Reference
 );

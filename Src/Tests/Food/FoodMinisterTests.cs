@@ -133,7 +133,7 @@ public sealed class FoodMinisterTests
         h.SetFoodDays(35f);
 
         await h.Minister.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
-        h.SetFoodDays(12f, wildAnimals: 2, dateTimeRaw: "5th of Decembary, 5500, 14h");
+        h.SetFoodDays(12f, wildAnimals: 2, dateTimeRaw: "5th of Decembary, 5500, 14h", animalDef: "Wolf");
         await h.Minister.RunPlayCycle(PlayCycleContext.CabinetRefresh, CancellationToken.None);
 
         h.PublishedAdvice.Should().ContainSingle().Which.Id.Should().Be("llm_food");
@@ -158,7 +158,7 @@ public sealed class FoodMinisterTests
         h.SetFoodDays(35f);
 
         await h.Minister.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
-        h.SetFoodDays(12f, wildAnimals: 2, dateTimeRaw: "5th of Decembary, 5500, 14h");
+        h.SetFoodDays(12f, wildAnimals: 2, dateTimeRaw: "5th of Decembary, 5500, 14h", animalDef: "Wolf");
         await h.Minister.RunPlayCycle(PlayCycleContext.CabinetRefresh, CancellationToken.None);
 
         replay.Records.Should().Contain(r => r.Path == "llm_failed");
@@ -203,7 +203,7 @@ public sealed class FoodMinisterTests
             Minister = new(Cache, new Rules(), new AgendaStore(), Bus, Flags, llm, retriever, NullLogger<MinisterOfFood>.Instance, replay);
         }
 
-        public void SetFoodDays(float days, int wildAnimals = 0, string dateTimeRaw = "5th of Aprimay, 5500, 14h")
+        public void SetFoodDays(float days, int wildAnimals = 0, string dateTimeRaw = "5th of Aprimay, 5500, 14h", string animalDef = "Hare")
         {
             Colony.Economy.Update(new EconomyLedger(300_000, 0f, "", "", false, dateTimeRaw));
             Colony.Colonists.Update(new ColonistRegistry([
@@ -214,7 +214,7 @@ public sealed class FoodMinisterTests
             Colony.Resources.Update(new ResourceSummary(100, 0f, 80, days * FoodNutrition.NutritionPerColonistPerDay * 3, 20, 20, 0, 0, 0f));
             Colony.Buildings.Update(new BuildingRegistry([new BuildingRecord("cooler1", "Cooler", 1f, null, null)]));
             Colony.Animals.Update(new AnimalRegistry(Enumerable.Range(0, wildAnimals)
-                .Select(i => new AnimalRecord($"a{i}", "Hare", false, 1f))
+                .Select(i => new AnimalRecord($"a{i}", animalDef, false, 1f))
                 .ToList()));
         }
     }

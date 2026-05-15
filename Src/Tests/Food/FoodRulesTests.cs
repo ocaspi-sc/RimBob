@@ -196,6 +196,33 @@ public sealed class FoodRulesTests
     }
 
     [Fact]
+    public void LowBufferWithLowRiskHuntTarget_MarksAnimalsForHunting()
+    {
+        FoodBriefing briefing = Briefing(days: 12f) with
+        {
+            MealsCount = 20,
+            RawFoodCount = 0,
+            ReadyToHarvest = 0,
+            WildHarvestCandidates = 0,
+            WildAnimalCount = 3,
+            WildHuntTargets = [new WildHuntTarget("Hare", 3, "nearby to kitchen", "kitchen")]
+        };
+
+        Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
+            .Should().BeOfType<Decision>().Subject;
+
+        decision.Trace.Should().Be("hunt_low_risk_animals");
+        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        advice.AdviceType.Should().Be("hunt_for_food");
+        advice.SuggestedActions.Should().ContainSingle()
+            .Which.Kind.Should().Be(SuggestedActionKind.MarkHunt);
+        advice.ResourceRequests.Should().Contain(r =>
+            r.Kind == ResourceRequestKind.Labor &&
+            r.WorkType == WorkType.Hunt &&
+            r.Skill == "Shooting");
+    }
+
+    [Fact]
     public void NutritionGapWithUnclassifiedFoodUnits_RequestsStockpileVisibility()
     {
         FoodBriefing briefing = Briefing(days: null) with
@@ -250,6 +277,7 @@ public sealed class FoodRulesTests
         WildHarvestCandidates: 0,
         WildHarvestClusters: [],
         WildAnimalCount: 0,
+        WildHuntTargets: [],
         StockpileCells: 20,
         Skills: new FoodSkillSnapshot(10, 1, 8, 1),
         Infrastructure: new FoodInfrastructureSnapshot(1, true, 500f, 1),

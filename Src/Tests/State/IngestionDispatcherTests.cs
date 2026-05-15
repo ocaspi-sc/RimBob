@@ -143,6 +143,8 @@ public sealed class IngestionDispatcherTests
             .Which.Id.Should().Be("123");
         FoodBriefing briefing = FoodBriefingDerivation.Compute(s);
         briefing.WildAnimalCount.Should().Be(1);
+        briefing.WildHuntTargets.Should().ContainSingle()
+            .Which.Def.Should().Be("Hare");
         briefing.DataCoverage.HasAnimalPositions.Should().BeTrue();
     }
 
@@ -178,6 +180,8 @@ public sealed class IngestionDispatcherTests
             .Which.Health.Should().Be(1.0f);
         FoodBriefing briefing = FoodBriefingDerivation.Compute(s);
         briefing.WildAnimalCount.Should().Be(1);
+        briefing.WildHuntTargets.Should().ContainSingle()
+            .Which.Def.Should().Be("Ibex");
         briefing.DataCoverage.HasAnimalPositions.Should().BeTrue();
     }
 

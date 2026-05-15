@@ -107,8 +107,9 @@ Food's briefing should answer the nutrition-chain questions:
 - Is the current food buffer safe?
 - Which part of the chain is limiting: acquisition, cooking, storage, freezer,
   labor, season, threat, or data coverage?
-- What concrete opportunity is available now: harvest, wild plants, sowing,
-  cooking, storage visibility, freezer/building request, or escalation?
+- What concrete opportunity is available now: harvest, wild plants, low-risk
+  hunt targets, sowing, cooking, storage visibility, freezer/building request,
+  or escalation?
 
 Food should classify stored food from item stacks plus definition metadata when
 that data is available. Summary rollups are still useful, but they do not win

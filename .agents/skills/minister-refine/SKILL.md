@@ -47,6 +47,7 @@ Refine one RimAI minister from evidence. Default to an evidence-backed proposal;
    - For rule or prompt proposals, replay the before and after behavior on the same historic corpus when possible.
    - Compare escalation-vs-rule path, advice type, priority, resource requests, suggested actions, flags, schema validity, and unchanged non-target cases.
    - A good proposal should improve the target cluster without making stable historic cases noisier or less concrete.
+   - When a minister logic change is applied, the final report must include a compact before/after advice diff. If historic replay records are not available or not replayable, use the focused fixture/regression input and label the diff `fixture-only`.
 
 7. Report in proposal-first format.
    - Evidence: concrete log counts, traces, pushback clusters, fixture names, and relevant files.
@@ -64,6 +65,7 @@ When applying:
 - Keep edits scoped to the target minister and directly required shared contracts.
 - Update design docs in the same turn if the design changes.
 - Add or update fixtures before or alongside rule changes.
-- Run before/after replay on the historic corpus when records are replayable; otherwise add the logging/corpus gap to the result.
+- Run before/after replay on the historic corpus when records are replayable; otherwise use the focused fixture/regression input, label it `fixture-only`, and add the logging/corpus gap to the result.
+- Always show the before/after advice diff after changing minister logic. Include the input source, path taken (rule/escalation), advice type, priority, title, resource requests, suggested actions, flags, and whether non-target cases stayed unchanged.
 - Run the target test slice, then broader tests when shared behavior changed.
 - Do not promote rules from Pushbacks without human approval in v1.

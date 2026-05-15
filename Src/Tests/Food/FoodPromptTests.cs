@@ -35,6 +35,7 @@ public sealed class FoodPromptTests
         builder.FoodSystemPrompt.Should().Contain("near-term, actionable, currently possible advice");
         builder.FoodSystemPrompt.Should().Contain("priority: low, medium, high, or critical");
         builder.FoodSystemPrompt.Should().Contain("kind and instruction fields");
+        builder.FoodSystemPrompt.Should().Contain("mark_hunt");
         builder.FoodSystemPrompt.Should().Contain("kind, request, reason");
         builder.FoodSystemPrompt.Should().NotContain("kind, what, why");
         builder.FoodSystemPrompt.Should().Contain("Do not ask for generic \"labor capacity\"");

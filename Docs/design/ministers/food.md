@@ -76,6 +76,10 @@ Spatial and operational data stays aggregated. Food should receive counts,
 proximity strings, nearest clusters, distances, and coverage flags rather than
 raw plant/tile/building lists.
 
+Hunting input should stay compact: counts and nearest low-risk target summaries
+are enough for Suggest-mode mark-hunt advice; exact risk/value scoring remains a
+future refinement.
+
 When upstream food totals cannot be classified into meals or raw food, the
 briefing should expose the unclassified count directly. It should also name
 missing or unimplemented signals so Food can temper confidence without inventing
