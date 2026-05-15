@@ -4,8 +4,8 @@ namespace RimAI.Ingestion.Dtos;
 
 // ── GET /incidents?map_id ─────────────────────────────────────────────────────
 public record IncidentDto(
-    [property: JsonPropertyName("def")]         string Def,
-    [property: JsonPropertyName("days_since")]  float DaysSince,
+    [property: JsonPropertyName("incident_def")] string Def,
+    [property: JsonPropertyName("days_since_occurred")] float DaysSince,
     [property: JsonPropertyName("label")]       string? Label
 );
 
@@ -14,7 +14,8 @@ public record IncidentDto(
 // with a hostile faction is the primary raid-detection signal for Defense.
 // TODO: confirm pawn_ids field name and whether threat_points is included.
 public record LordDto(
-    [property: JsonPropertyName("id")]           string Id,
+    [property: JsonPropertyName("id")]
+    [property: JsonConverter(typeof(FlexibleStringIdJsonConverter))] string Id,
     [property: JsonPropertyName("job_type")]     string JobType,   // Raid | Siege | Caravan | etc.
     [property: JsonPropertyName("faction_id")]   string? FactionId,
     [property: JsonPropertyName("pawn_ids")]     IReadOnlyList<string>? PawnIds,
@@ -24,7 +25,8 @@ public record LordDto(
 // ── GET /quests?map_id ────────────────────────────────────────────────────────
 // TODO: quest field list not cached — flesh out when CoS/Mayor need quest awareness.
 public record QuestDto(
-    [property: JsonPropertyName("id")]      string Id,
+    [property: JsonPropertyName("id")]
+    [property: JsonConverter(typeof(FlexibleStringIdJsonConverter))] string Id,
     [property: JsonPropertyName("label")]   string Label,
     [property: JsonPropertyName("state")]   string State    // Active | Historical | etc.
 );

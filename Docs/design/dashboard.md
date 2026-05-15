@@ -243,6 +243,12 @@ Manual triggers are RimAI evaluation controls, not game controls:
 - Do not keep legacy trigger aliases unless a current dashboard or script
   consumer requires them.
 
+Expected operational failures should be translated before they reach the
+player. If RIMAPI is not listening, manual triggers report "RimWorld is not
+running" with a short recovery instruction; the dashboard shows that problem
+detail directly instead of route names, HTTP status codes, or generic internal
+server errors. Logs remain the place for stack traces and low-level diagnostics.
+
 Manual trigger traces must be visible in the dashboard. The current trigger
 should remain suggest-only and must not call RIMAPI write endpoints.
 

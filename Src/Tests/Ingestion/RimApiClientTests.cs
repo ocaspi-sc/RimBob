@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using FluentAssertions;
 using RimAI.Ingestion;
@@ -33,6 +34,168 @@ public sealed class RimApiClientTests
         var result = await new RimApiClient(http).GetMapPawnsAsync(0);
 
         result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetAnimals_WhenApiReturnsNumericIds_ReturnsMappedList()
+    {
+        using HttpClient http = MakeClient(new PathRouter()
+            .Add("map/animals", Json("""
+                {
+                  "success": true,
+                  "data": [
+                    {
+                      "id": 123,
+                      "def": "Hare",
+                      "name": null,
+                      "tame": false,
+                      "health": 1.0,
+                      "position": { "x": 40, "y": 0, "z": 45 }
+                    }
+                  ],
+                  "errors": null,
+                  "warnings": null,
+                  "timestamp": null
+                }
+                """)));
+
+        IReadOnlyList<AnimalDto> result = await new RimApiClient(http).GetAnimalsAsync(0);
+
+        AnimalDto animal = result.Should().ContainSingle().Subject;
+        animal.Id.Should().Be("123");
+        animal.Def.Should().Be("Hare");
+    }
+
+    [Fact]
+    public async Task GetZones_WhenApiReturnsEmptyObjectData_ReturnsEmptyList()
+    {
+        using HttpClient http = MakeClient(new PathRouter()
+            .Add("map/zones", Json("""
+                {
+                  "success": true,
+                  "data": {},
+                  "errors": null,
+                  "warnings": null,
+                  "timestamp": null
+                }
+                """)));
+
+        IReadOnlyList<ZoneDto> result = await new RimApiClient(http).GetZonesAsync(0);
+
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetZones_WhenApiReturnsWrappedZonesObject_ReturnsZones()
+    {
+        using HttpClient http = MakeClient(new PathRouter()
+            .Add("map/zones", Json("""
+                {
+                  "success": true,
+                  "data": {
+                    "zones": [
+                      {
+                        "id": 0,
+                        "cells_count": 56,
+                        "label": "Stockpile zone 1",
+                        "base_label": "Stockpile zone",
+                        "type": "Zone_Stockpile"
+                      }
+                    ],
+                    "areas": []
+                  },
+                  "errors": null,
+                  "warnings": null,
+                  "timestamp": null
+                }
+                """)));
+
+        IReadOnlyList<ZoneDto> result = await new RimApiClient(http).GetZonesAsync(0);
+
+        ZoneDto zone = result.Should().ContainSingle().Subject;
+        zone.Id.Should().Be("0");
+        zone.Type.Should().Be("Zone_Stockpile");
+        zone.CellsCount.Should().Be(56);
+    }
+
+    [Fact]
+    public async Task GetIncidents_WhenApiReturnsWrappedIncidentsObject_ReturnsIncidents()
+    {
+        using HttpClient http = MakeClient(new PathRouter()
+            .Add("incidents", Json("""
+                {
+                  "success": true,
+                  "data": {
+                    "incidents": [
+                      {
+                        "incident_def": "VisitorGroup",
+                        "label": "visitor group",
+                        "category": "None",
+                        "incident_hour": 60.0,
+                        "days_since_occurred": 0.24195
+                      }
+                    ]
+                  },
+                  "errors": null,
+                  "warnings": null,
+                  "timestamp": null
+                }
+                """)));
+
+        IReadOnlyList<IncidentDto> result = await new RimApiClient(http).GetIncidentsAsync(0);
+
+        IncidentDto incident = result.Should().ContainSingle().Subject;
+        incident.Def.Should().Be("VisitorGroup");
+        incident.DaysSince.Should().BeApproximately(0.24195f, 0.00001f);
+        incident.Label.Should().Be("visitor group");
+    }
+
+    [Fact]
+    public async Task GetAnimals_WhenApiReturnsMalformedArrayItem_ThrowsSchemaDrift()
+    {
+        using HttpClient http = MakeClient(new PathRouter()
+            .Add("map/animals", Json("""
+                {
+                  "success": true,
+                  "data": [
+                    {
+                      "id": 123,
+                      "def": "Hare",
+                      "name": null,
+                      "tame": false,
+                      "health": "healthy"
+                    }
+                  ],
+                  "errors": null,
+                  "warnings": null,
+                  "timestamp": null
+                }
+                """)));
+
+        Func<Task> act = () => new RimApiClient(http).GetAnimalsAsync(0);
+
+        await act.Should().ThrowAsync<RimApiException>()
+            .WithMessage("*schema drift*AnimalDto*health*");
+    }
+
+    [Fact]
+    public async Task GetAnimals_WhenApiReturnsNonEmptyObjectData_ThrowsSchemaDrift()
+    {
+        using HttpClient http = MakeClient(new PathRouter()
+            .Add("map/animals", Json("""
+                {
+                  "success": true,
+                  "data": { "id": 1 },
+                  "errors": null,
+                  "warnings": null,
+                  "timestamp": null
+                }
+                """)));
+
+        Func<Task> act = () => new RimApiClient(http).GetAnimalsAsync(0);
+
+        await act.Should().ThrowAsync<RimApiException>()
+            .WithMessage("*expected data to be an array*AnimalDto*Object*");
     }
 
     // ── HandshakeAsync ────────────────────────────────────────────────────────
@@ -108,6 +271,9 @@ public sealed class RimApiClientTests
         JsonContent.Create(new RimApiEnvelope<T>(
             Success: true, Data: data,
             Errors: null, Warnings: null, Timestamp: null));
+
+    private static HttpContent Json(string json) =>
+        new StringContent(json, Encoding.UTF8, "application/json");
 
     /// <summary>
     /// Stub handler that routes requests by path segment.

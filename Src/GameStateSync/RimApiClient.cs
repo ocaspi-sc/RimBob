@@ -40,33 +40,89 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
     }
 
     /// <summary>
-    /// Like GetEnvelopedAsync but for collection endpoints. Returns an empty list when
-    /// RIMAPI sends {} or null for data (observed when a map has no zones/buildings/etc).
+    /// Like GetEnvelopedAsync but for collection endpoints. Returns an empty list
+    /// only when RIMAPI sends null, [], or {} for data. Non-empty schema drift
+    /// fails loudly instead of pretending the collection is empty.
     /// </summary>
-    private async Task<IReadOnlyList<T>> GetEnvelopedListAsync<T>(string path, CancellationToken ct)
+    private async Task<IReadOnlyList<T>> GetEnvelopedListAsync<T>(
+        string path,
+        CancellationToken ct,
+        string? nestedArrayProperty = null)
+    {
+        using HttpResponseMessage response = await http.GetAsync(path, ct);
+        response.EnsureSuccessStatusCode();
+
+        await using Stream stream = await response.Content.ReadAsStreamAsync(ct);
+        using JsonDocument document = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+        JsonElement root = document.RootElement;
+
+        bool success = root.TryGetProperty("success", out JsonElement successElement) &&
+                       successElement.ValueKind == JsonValueKind.True;
+        if (!success)
+        {
+            string errors = ReadStringArray(root, "errors");
+            throw new RimApiException($"RIMAPI error at {path}: {errors}");
+        }
+
+        if (!root.TryGetProperty("data", out JsonElement data) ||
+            data.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+            return [];
+
+        if (data.ValueKind == JsonValueKind.Array)
+            return DeserializeListData<T>(path, data);
+
+        if (data.ValueKind == JsonValueKind.Object)
+        {
+            if (!data.EnumerateObject().Any())
+                return [];
+
+            if (!string.IsNullOrWhiteSpace(nestedArrayProperty) &&
+                data.TryGetProperty(nestedArrayProperty, out JsonElement nested))
+            {
+                if (nested.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+                    return [];
+
+                if (nested.ValueKind == JsonValueKind.Array)
+                    return DeserializeListData<T>($"{path}.data.{nestedArrayProperty}", nested);
+
+                string nestedMessage = $"RIMAPI schema drift at {path}: expected data.{nestedArrayProperty} to be an array, null, or missing for List<{typeof(T).Name}>, got {nested.ValueKind}.";
+                log?.LogError(nestedMessage);
+                throw new RimApiException(nestedMessage);
+            }
+        }
+
+        string message = $"RIMAPI schema drift at {path}: expected data to be an array, null, or empty object for List<{typeof(T).Name}>, got {data.ValueKind}.";
+        log?.LogError(message);
+        throw new RimApiException(message);
+    }
+
+    private IReadOnlyList<T> DeserializeListData<T>(string path, JsonElement data)
     {
         try
         {
-            RimApiEnvelope<List<T>>? envelope =
-                await http.GetFromJsonAsync<RimApiEnvelope<List<T>>>(path, ct);
-
-            if (envelope?.Success == true)
-                return envelope.Data ?? [];
-
-            string errors = string.Join(", ", envelope?.Errors ?? []);
-            throw new RimApiException($"RIMAPI error at {path}: {errors}");
+            return data.Deserialize<List<T>>() ?? [];
         }
         catch (JsonException ex)
         {
-            // RIMAPI returns {} instead of [] for empty collections on some endpoints.
-            // But the same catch can mask DTO-vs-wire mismatches (e.g. wrong field type),
-            // so log a warning. If a real endpoint suddenly starts returning [] here,
-            // check the log for the schema drift.
-            log?.LogWarning(
-                "RIMAPI list at {Path} could not be deserialized as List<{Type}> — returning empty. {Message}",
-                path, typeof(T).Name, ex.Message);
-            return [];
+            string message =
+                $"RIMAPI schema drift at {path}: could not deserialize data as List<{typeof(T).Name}> at {ex.Path ?? "unknown path"}. {ex.Message}";
+            log?.LogError(ex, message);
+            throw new RimApiException(message, ex);
         }
+    }
+
+    private static string ReadStringArray(JsonElement root, string propertyName)
+    {
+        if (!root.TryGetProperty(propertyName, out JsonElement value))
+            return string.Empty;
+
+        if (value.ValueKind == JsonValueKind.String)
+            return value.GetString() ?? string.Empty;
+
+        if (value.ValueKind != JsonValueKind.Array)
+            return value.ToString();
+
+        return string.Join(", ", value.EnumerateArray().Select(item => item.ToString()));
     }
 
     // ── Handshake ─────────────────────────────────────────────────────────────
@@ -161,7 +217,7 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
     /// <summary>GET api/v1/map/zones?map_id — grow zones and stockpile zones with cell lists.</summary>
     public Task<IReadOnlyList<ZoneDto>> GetZonesAsync(
         int mapId, CancellationToken ct = default) =>
-        GetEnvelopedListAsync<ZoneDto>($"api/v1/map/zones?map_id={mapId}", ct);
+        GetEnvelopedListAsync<ZoneDto>($"api/v1/map/zones?map_id={mapId}", ct, "zones");
 
     /// <summary>GET api/v1/map/buildings?map_id — all buildings (hp, power state, working).</summary>
     public Task<IReadOnlyList<BuildingDto>> GetBuildingsAsync(
@@ -196,7 +252,7 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
     /// <summary>GET api/v1/incidents?map_id — recent incidents with days_since.</summary>
     public Task<IReadOnlyList<IncidentDto>> GetIncidentsAsync(
         int mapId, CancellationToken ct = default) =>
-        GetEnvelopedListAsync<IncidentDto>($"api/v1/incidents?map_id={mapId}", ct);
+        GetEnvelopedListAsync<IncidentDto>($"api/v1/incidents?map_id={mapId}", ct, "incidents");
 
     // ── Resources / inventory ─────────────────────────────────────────────────
 
@@ -258,5 +314,10 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
     }
 }
 
-/// <summary>Thrown when RIMAPI returns success=false with errors.</summary>
-public sealed class RimApiException(string message) : Exception(message);
+/// <summary>Thrown when RIMAPI returns success=false or an incompatible wire shape.</summary>
+public sealed class RimApiException : Exception
+{
+    public RimApiException(string message) : base(message) { }
+
+    public RimApiException(string message, Exception innerException) : base(message, innerException) { }
+}

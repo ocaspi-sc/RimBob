@@ -20,6 +20,19 @@ If you need an endpoint not listed here, fetch the live docs and append to this 
 - **SSE:** the `/stream/*` endpoints under Camera Controller stream the **camera video feed**, not game events. There are no event SSE endpoints — poll for game events. (See [state-store.md](state-store.md).)
 - **Discovery:** `GET /dev/endpoints` lists every endpoint; `GET /docs` returns docs.
 
+### Collection DTO rule
+
+RIMAPI collection endpoints are not perfectly uniform. Some return `data: []`;
+some return `data: {}` for an empty collection; some wrap the useful array in
+a named property such as `data.zones` or `data.incidents`. RimAI should parse
+known wrappers explicitly. Unknown non-empty objects and malformed array items
+are schema drift and must fail loudly; they must not be converted to empty
+lists.
+
+DTO id fields are not fully consistent across endpoints. Verified examples include numeric animal ids from `/api/v1/map/animals?map_id=...`; ingestion keeps aggregate ids as strings, so unverified string-like DTO ids use a flexible string-id converter that accepts JSON strings or numbers.
+
+Live local contract tests under `Src/Tests/Live` are marked `Category=Live`. They are GET-only, early-return when RIMAPI/Host is not reachable, and act as local tripwires when RimWorld or RimAI Host is running.
+
 ---
 
 ## Endpoint catalogue

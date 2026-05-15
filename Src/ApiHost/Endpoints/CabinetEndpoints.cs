@@ -21,7 +21,16 @@ public static class CabinetEndpoints
             CabinetCycle cabinet,
             CancellationToken ct) =>
         {
-            await cabinet.RunAsync(ct);
+            try
+            {
+                await cabinet.RunAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                if (ManualTriggerErrorResults.TryMap(ex, out IResult mapped)) return mapped;
+                throw;
+            }
+
             return Results.Ok(new
             {
                 triggered = true,
@@ -40,7 +49,17 @@ public static class CabinetEndpoints
             if (descriptor is null)
                 return Results.NotFound(new { error = $"Unknown minister scope '{minister}'." });
 
-            MinisterTriggerResult? result = await cabinet.TriggerMinisterAsync(minister, ct);
+            MinisterTriggerResult? result;
+            try
+            {
+                result = await cabinet.TriggerMinisterAsync(minister, ct);
+            }
+            catch (Exception ex)
+            {
+                if (ManualTriggerErrorResults.TryMap(ex, out IResult mapped)) return mapped;
+                throw;
+            }
+
             if (result is null)
             {
                 return Results.Problem(

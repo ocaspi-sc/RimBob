@@ -46,17 +46,22 @@ public static class MapAggregateMapper
         // /map/zones gives zone metadata but no item lists. Per-def counts come
         // from /api/v1/resources/summary, so ItemsByDef stays empty by design.
         List<StockpileZone> stockpileZones = zones
-            .Where(zone => string.Equals(zone.Type, "StockpileZone", StringComparison.OrdinalIgnoreCase))
+            .Where(IsStockpileZone)
             .Select(zone => new StockpileZone(
                 zone.Id,
                 zone.Type,
                 zone.Label,
-                zone.Cells?.Count ?? 0,
+                zone.Cells?.Count ?? zone.CellsCount ?? 0,
                 CenterOf(zone.Cells)))
             .ToList();
 
         return new StockpileLedger(stockpileZones, new Dictionary<string, int>());
     }
+
+    private static bool IsStockpileZone(ZoneDto zone) =>
+        string.Equals(zone.Type, "StockpileZone", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(zone.Type, "Zone_Stockpile", StringComparison.OrdinalIgnoreCase) ||
+        zone.Type.Contains("Stockpile", StringComparison.OrdinalIgnoreCase);
 
     public static BuildingRegistry FromBuildings(IReadOnlyList<BuildingDto> buildings) =>
         new(buildings

@@ -18,7 +18,8 @@ public record CropBreakdownDto(
 
 // ── GET /map/plants?map_id ────────────────────────────────────────────────────
 public record PlantDto(
-    [property: JsonPropertyName("id")]          string Id,
+    [property: JsonPropertyName("id")]
+    [property: JsonConverter(typeof(FlexibleStringIdJsonConverter))] string Id,
     [property: JsonPropertyName("def")]         string Def,
     [property: JsonPropertyName("growth")]      float Growth,       // 0–1
     [property: JsonPropertyName("position")]    PositionDto? Position,
@@ -29,7 +30,8 @@ public record PlantDto(
 // ── GET /map/animals?map_id ───────────────────────────────────────────────────
 // TODO: confirm exact field names against live RIMAPI for tame vs wild flag.
 public record AnimalDto(
-    [property: JsonPropertyName("id")]      string Id,
+    [property: JsonPropertyName("id")]
+    [property: JsonConverter(typeof(FlexibleStringIdJsonConverter))] string Id,
     [property: JsonPropertyName("def")]     string Def,
     [property: JsonPropertyName("name")]    string? Name,
     [property: JsonPropertyName("tame")]    bool Tame,
@@ -41,11 +43,13 @@ public record AnimalDto(
 // TODO: zone response shape not fully verified — check live RIMAPI for stockpile
 //       content fields (item list, nutrition totals) vs. needing /map/things instead.
 public record ZoneDto(
-    [property: JsonPropertyName("id")]      string Id,
+    [property: JsonPropertyName("id")]
+    [property: JsonConverter(typeof(FlexibleStringIdJsonConverter))] string Id,
     [property: JsonPropertyName("type")]    string Type,        // GrowingZone | StockpileZone | etc.
     [property: JsonPropertyName("label")]   string? Label,
     [property: JsonPropertyName("cells")]   IReadOnlyList<PositionDto>? Cells,
-    [property: JsonPropertyName("plant_def")] string? PlantDef // GrowingZone only
+    [property: JsonPropertyName("plant_def")] string? PlantDef, // GrowingZone only
+    [property: JsonPropertyName("cells_count")] int? CellsCount = null
 );
 
 // ── GET /map/buildings?map_id ─────────────────────────────────────────────────
@@ -86,7 +90,8 @@ public record CreaturesSummaryDto(
 // ── GET /map/rooms?map_id ─────────────────────────────────────────────────────
 // TODO: room fields not fully cached — needed for Welfare (bedroom impressiveness).
 public record RoomDto(
-    [property: JsonPropertyName("id")]          string Id,
+    [property: JsonPropertyName("id")]
+    [property: JsonConverter(typeof(FlexibleStringIdJsonConverter))] string Id,
     [property: JsonPropertyName("role")]        string Role,
     [property: JsonPropertyName("temperature")] float Temperature,
     [property: JsonPropertyName("beds")]        int Beds,

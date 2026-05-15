@@ -1,9 +1,13 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text;
 using FluentAssertions;
+using RimAI.Core.Aggregates;
+using RimAI.Core.Briefings;
 using RimAI.Ingestion;
 using RimAI.Ingestion.Dtos;
 using RimAI.State;
+using RimAI.State.Derivations;
 using RimAI.Tests.Infrastructure;
 
 namespace RimAI.Tests.State;
@@ -60,6 +64,78 @@ public sealed class IngestionDispatcherTests
         s.Power.Value.ProductionW.Should().Be(2000f);
         s.Threats.Value.Lords.Should().ContainSingle()
             .Which.JobType.Should().Be("Raid");
+    }
+
+    [Fact]
+    public async Task RefreshAllAsync_LiveZoneWrapperShape_FlowsIntoStockpiles()
+    {
+        PathRouter router = StandardRouter()
+            .Add("api/v1/map/zones?map_id", Json("""
+                {
+                  "success": true,
+                  "data": {
+                    "zones": [
+                      {
+                        "id": 0,
+                        "cells_count": 56,
+                        "label": "Stockpile zone 1",
+                        "base_label": "Stockpile zone",
+                        "type": "Zone_Stockpile"
+                      }
+                    ],
+                    "areas": []
+                  },
+                  "errors": [],
+                  "warnings": [],
+                  "timestamp": null
+                }
+                """));
+        using HttpClient http = MakeClient(router);
+        ColonyState s = new();
+        IngestionDispatcher dispatcher = new(
+            new RimApiClient(http), s, new TestLogger<IngestionDispatcher>());
+
+        await dispatcher.RefreshAllAsync();
+
+        StockpileZone zone = s.Stockpiles.Value.Zones.Should().ContainSingle().Subject;
+        zone.Id.Should().Be("0");
+        zone.CellCount.Should().Be(56);
+    }
+
+    [Fact]
+    public async Task RefreshAllAsync_NumericAnimalIds_FlowIntoFoodBriefing()
+    {
+        PathRouter router = StandardRouter()
+            .Add("api/v1/map/animals?map_id", Json("""
+                {
+                  "success": true,
+                  "data": [
+                    {
+                      "id": 123,
+                      "def": "Hare",
+                      "name": null,
+                      "tame": false,
+                      "health": 1.0,
+                      "position": { "x": 40, "y": 0, "z": 45 }
+                    }
+                  ],
+                  "errors": null,
+                  "warnings": null,
+                  "timestamp": null
+                }
+                """));
+        using HttpClient http = MakeClient(router);
+        ColonyState s = new();
+        IngestionDispatcher dispatcher = new(
+            new RimApiClient(http), s, new TestLogger<IngestionDispatcher>());
+
+        await dispatcher.RefreshAllAsync();
+
+        s.Animals.Value.Animals.Should().ContainSingle()
+            .Which.Id.Should().Be("123");
+        FoodBriefing briefing = FoodBriefingDerivation.Compute(s);
+        briefing.WildAnimalCount.Should().Be(1);
+        briefing.DataCoverage.HasAnimalPositions.Should().BeTrue();
     }
 
     [Fact]
@@ -146,12 +222,6 @@ public sealed class IngestionDispatcherTests
         {
             new("animal1", "Hare", null, false, 1.0f, new PositionDto(40, 0, 45))
         };
-        var zones = new List<ZoneDto>
-        {
-            new("z1", "StockpileZone", "main",
-                [new PositionDto(1, 0, 1), new PositionDto(3, 0, 3)],
-                null)
-        };
         var buildings = new List<BuildingDto>
         {
             new(1, "Bed", "wooden bed", "Building_Bed", new PositionDto(5, 0, 5))
@@ -162,11 +232,6 @@ public sealed class IngestionDispatcherTests
         {
             new("l1", "Raid", "Pirates", ["p1","p2"], 350f)
         };
-        var incidents = new List<IncidentDto>
-        {
-            new("RaidEnemy", 0.5f, "Raider attack")
-        };
-
         var resources = new ResourcesSummaryDto(
             TotalItems: 200, TotalMarketValue: 4500f,
             CriticalResources: new CriticalResourcesDto(
@@ -186,12 +251,49 @@ public sealed class IngestionDispatcherTests
             .Add("api/v1/map/farm/summary",        Envelope(farm))
             .Add("api/v1/map/plants",              Envelope(plants))
             .Add("api/v1/map/animals",             Envelope(animals))
-            .Add("api/v1/map/zones",               Envelope(zones))
+            .Add("api/v1/map/zones",               Json("""
+                {
+                  "success": true,
+                  "data": {
+                    "zones": [
+                      {
+                        "id": "z1",
+                        "type": "StockpileZone",
+                        "label": "main",
+                        "cells": [
+                          { "x": 1, "y": 0, "z": 1 },
+                          { "x": 3, "y": 0, "z": 3 }
+                        ]
+                      }
+                    ],
+                    "areas": []
+                  },
+                  "errors": null,
+                  "warnings": null,
+                  "timestamp": null
+                }
+                """))
             .Add("api/v1/map/buildings",           Envelope(buildings))
             .Add("api/v1/map/power/info",          Envelope(power))
             .Add("api/v1/map/weather",             Envelope(weather))
             .Add("api/v1/lords",                   Envelope(lords))
-            .Add("api/v1/incidents",               Envelope(incidents))
+            .Add("api/v1/incidents",               Json("""
+                {
+                  "success": true,
+                  "data": {
+                    "incidents": [
+                      {
+                        "incident_def": "RaidEnemy",
+                        "days_since_occurred": 0.5,
+                        "label": "Raider attack"
+                      }
+                    ]
+                  },
+                  "errors": null,
+                  "warnings": null,
+                  "timestamp": null
+                }
+                """))
             .Add("api/v1/resources/summary",       Envelope(resources))
             .Add("api/v1/research/progress",       Envelope(research));
     }
@@ -202,6 +304,9 @@ public sealed class IngestionDispatcherTests
     private static HttpContent Envelope<T>(T data) =>
         JsonContent.Create(new RimApiEnvelope<T>(
             Success: true, Data: data, Errors: null, Warnings: null, Timestamp: null));
+
+    private static HttpContent Json(string json) =>
+        new StringContent(json, Encoding.UTF8, "application/json");
 
     private sealed class PathRouter : HttpMessageHandler
     {
