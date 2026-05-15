@@ -1,5 +1,7 @@
 export type ScopeKey =
   | 'system'
+  | 'info'
+  | 'analytics'
   | 'mayor'
   | 'food'
   | 'construction'
@@ -11,8 +13,8 @@ export type ScopeKey =
   | 'economy'
   | 'chief_of_staff';
 
-export type ScopeKind = 'system' | 'minister';
-export type ScopeStatus = 'live' | 'planned';
+export type ScopeKind = 'system' | 'info' | 'analytics' | 'minister';
+export type ScopeStatus = 'live' | 'planned' | 'reference';
 export type MinisterViewKey = 'prompt' | 'raw_llm' | 'briefing' | 'rag' | 'rules' | 'advice';
 
 export interface ScopeConfig {
@@ -37,6 +39,8 @@ const allMinisterViews = ministerViews.map(view => view.key);
 
 export const scopeConfigs: ScopeConfig[] = [
   { key: 'system', label: 'SYSTEM', emoji: '⚙️', kind: 'system', status: 'live', enabledViews: [] },
+  { key: 'info', label: 'INFO', emoji: 'ℹ️', kind: 'info', status: 'reference', enabledViews: [] },
+  { key: 'analytics', label: 'ANALYTICS', emoji: '📈', kind: 'analytics', status: 'live', enabledViews: [] },
   { key: 'mayor', label: 'Mayor', emoji: '🏛️', kind: 'minister', status: 'live', enabledViews: allMinisterViews },
   { key: 'food', label: 'Food', emoji: '🍲', kind: 'minister', status: 'live', enabledViews: allMinisterViews },
   { key: 'construction', label: 'Construction', emoji: '🏗️', kind: 'minister', status: 'planned', enabledViews: allMinisterViews },

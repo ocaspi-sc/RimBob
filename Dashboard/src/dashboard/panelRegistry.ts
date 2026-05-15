@@ -3,7 +3,7 @@ import type { MinisterViewKey, ScopeKey } from './scopes';
 export interface PanelConfig {
   id: string;
   title: string;
-  scope: 'system' | 'minister';
+  scope: 'system' | 'info' | 'analytics' | 'minister';
   view?: MinisterViewKey;
   requiredCapability: string;
 }
@@ -13,6 +13,19 @@ export const systemPanelRegistry: PanelConfig[] = [
   { id: 'sse', title: 'Connection and Events', scope: 'system', requiredCapability: '/api/advice/stream diagnostics' },
   { id: 'coverage', title: 'Endpoint Coverage', scope: 'system', requiredCapability: '/api/system/health.endpoint_coverage' },
   { id: 'timeline', title: 'Recent Events', scope: 'system', requiredCapability: 'local dashboard event buffer' },
+];
+
+export const infoPanelRegistry: PanelConfig[] = [
+  { id: 'info-glossary', title: 'Important Buzzwords', scope: 'info', requiredCapability: 'static dashboard reference copy' },
+  { id: 'info-scope-guide', title: 'Where To Look', scope: 'info', requiredCapability: 'static dashboard reference copy' },
+];
+
+export const analyticsPanelRegistry: PanelConfig[] = [
+  { id: 'analytics-session', title: 'Session Analytics', scope: 'analytics', requiredCapability: '/api/system/health plus local SSE state' },
+  { id: 'analytics-sse', title: 'SSE Health Summary', scope: 'analytics', requiredCapability: '/api/advice/stream diagnostics plus /api/system/health.sse' },
+  { id: 'analytics-colony', title: 'Colony Analytics', scope: 'analytics', requiredCapability: '/api/colony/snapshot' },
+  { id: 'analytics-advice', title: 'Advice Analytics', scope: 'analytics', requiredCapability: 'active advice feed state' },
+  { id: 'analytics-candidates', title: 'Analytics Candidates', scope: 'analytics', requiredCapability: 'static dashboard reference copy' },
 ];
 
 export const ministerPanelRegistry: PanelConfig[] = [

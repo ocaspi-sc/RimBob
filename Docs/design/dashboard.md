@@ -55,7 +55,8 @@ Dashboard v2 has four stable regions:
 
 - Header: product title, runtime status, and global manual trigger.
 - Left rail: inspected scope selector.
-- Main workspace: SYSTEM overview or minister inspector tabs.
+- Main workspace: SYSTEM overview, INFO reference, ANALYTICS signals, or
+  minister inspector tabs.
 - Right sidebar: compact colony facts plus colonist cards.
 
 The header exposes `Run Cabinet Now`. Minister workspaces expose
@@ -65,9 +66,24 @@ button. Planned ministers show disabled/not-wired controls.
 
 ### Scopes
 
-Live scopes are SYSTEM, Mayor, and Food. Future scopes remain visible but
-disabled or marked not wired until backend data exists: Construction, Defense,
-Welfare, Medical, Research, Industry, Economy, and Chief of Staff.
+Live non-minister scopes are SYSTEM, INFO, and ANALYTICS. They must be visually
+and functionally distinct:
+
+- SYSTEM is the operations/debug console. It answers whether RimAI, Host,
+  RIMAPI, SSE, LLM, logs, traces, and endpoints are working.
+- INFO is the reference surface. It explains vocabulary and tells the operator
+  where to look; it does not carry live metrics.
+- ANALYTICS is the interpreted live-signal surface. It summarizes advice mix,
+  colony pressure, SSE health, and candidate future analytics.
+
+SYSTEM and ANALYTICS may read from the same bounded dashboard inputs, but SYSTEM
+renders raw/source diagnostics while ANALYTICS renders derived meaning. INFO
+stays static/reference-oriented so it does not become either a second SYSTEM
+page or a second ANALYTICS page.
+
+Live minister scopes are Mayor and Food. Future minister scopes remain visible
+but disabled or marked not wired until backend data exists: Construction,
+Defense, Welfare, Medical, Research, Industry, Economy, and Chief of Staff.
 
 The left rail selects the inspected scope, not the view.
 
@@ -116,6 +132,10 @@ SYSTEM is not a minister and does not show minister tabs. It starts as one
 overview page with compact panels. Split it later only if the overview becomes
 too large.
 
+SYSTEM should visually read as operations: runtime state, endpoint names,
+diagnostic labels, traces, logs, raw health, and explicit failure/degraded
+states.
+
 SYSTEM owns:
 
 - Runtime and Mayor/cabinet run state.
@@ -127,6 +147,50 @@ SYSTEM owns:
 - Endpoint and data coverage markers.
 - Recent event/advice timeline.
 - Log and replay-corpus metadata.
+
+### INFO View
+
+INFO is not a minister and does not show minister tabs or manual run controls.
+It should help the player/operator understand the dashboard language without
+leaving the console.
+
+INFO should visually read as reference: glossary cards, plain-language
+descriptions, and a compact "where to look" guide. It should not show live
+runtime metrics, colony pressure analytics, advice mix analytics, or SSE health
+tables.
+
+INFO owns:
+
+- Important buzzwords: a compact dictionary for RimAI terms such as Agenda,
+  AdviceItem, Briefing, Flag, RAG, rules path, LLM escalation, and replay
+  corpus.
+- RimWorld signals: a compact dictionary for terms that commonly affect advice,
+  such as food days, work type, skill, downed, wealth pressure, and power net.
+- Scope guide: when to use SYSTEM, ANALYTICS, and minister inspection views.
+
+### ANALYTICS View
+
+ANALYTICS is not a minister and does not show minister tabs or manual run
+controls. It is the home for derived live readouts that are useful during play
+but are not raw debug surfaces.
+
+ANALYTICS owns:
+
+- Live session analytics derived from existing dashboard state and
+  `/api/system/health`.
+- SSE live-feed health summary: client state, reconnects, event counts, last
+  event age, last event id/type, server connection count, and server-side stream
+  errors.
+- Colony pressure analytics derived from `/api/colony/snapshot`.
+- Advice analytics derived from the active advice feed: priority mix, minister
+  mix, resource-request kinds, and suggested-action kinds.
+- Analytics candidates that are worth adding when backend data exists, such as
+  run freshness, escalation ratio, telemetry coverage, feedback funnel, and
+  repeat issue heatmaps.
+
+ANALYTICS should prefer derived readouts from already-bounded dashboard inputs.
+Do not add broad backend endpoints just to fill ANALYTICS unless the same data
+is useful for SYSTEM or minister inspection surfaces too.
 
 ### Right Sidebar
 
@@ -184,8 +248,10 @@ should remain suggest-only and must not call RIMAPI write endpoints.
 ### Advice SSE
 
 The advice stream is the live source for agenda and active-advice events.
-SYSTEM should show connection state, event counts, last event metadata, and
-recent errors.
+SYSTEM should show detailed connection state, event counts, last event metadata,
+and recent errors. ANALYTICS should summarize operator-level health signals so
+the player can answer whether the live feed is healthy without reading raw
+diagnostics. INFO should only explain what SSE means and where to inspect it.
 
 Design event types:
 

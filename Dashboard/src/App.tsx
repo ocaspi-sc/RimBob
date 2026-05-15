@@ -2,8 +2,10 @@ import { fetchColonySnapshot } from './api/colony';
 import { fetchStatus, fetchSystemHealth } from './api/status';
 import { findScope, ministerViews, scopeConfigs } from './dashboard/scopes';
 import { formatLastRun } from './dashboard/selectors';
+import { AnalyticsOverview } from './components/analytics/AnalyticsOverview';
 import { DashboardHeader } from './components/layout/DashboardHeader';
 import { ColonySidebar } from './components/layout/ColonySidebar';
+import { InfoOverview } from './components/info/InfoOverview';
 import { ScopeRail } from './components/layout/ScopeRail';
 import { ViewTabs } from './components/layout/ViewTabs';
 import { WorkspaceTitle } from './components/layout/WorkspaceTitle';
@@ -28,6 +30,8 @@ export default function App() {
 
   const activeScope = findScope(selection.selectedScope);
   const isSystem = activeScope.kind === 'system';
+  const isInfo = activeScope.kind === 'info';
+  const isAnalytics = activeScope.kind === 'analytics';
 
   return (
     <main className="dashboard-v2-shell">
@@ -55,6 +59,17 @@ export default function App() {
               healthError={systemHealth.error}
               stream={feed.stream}
               events={feed.events}
+            />
+          ) : isInfo ? (
+            <InfoOverview />
+          ) : isAnalytics ? (
+            <AnalyticsOverview
+              activeAdvice={feed.feed.activeAdvice}
+              agenda={feed.agenda}
+              events={feed.events}
+              health={systemHealth.data}
+              snapshot={snapshot.data}
+              stream={feed.stream}
             />
           ) : (
             <>

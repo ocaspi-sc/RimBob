@@ -9,26 +9,66 @@ export function ScopeRail({
   scopes: ScopeConfig[];
   onSelect: (scope: ScopeKey) => void;
 }) {
+  const consoleScopes = scopes.filter(scope => scope.kind !== 'minister');
+  const ministerScopes = scopes.filter(scope => scope.kind === 'minister');
+
   return (
     <nav className="scope-rail panel-shell" aria-label="Cabinet scopes">
       <div className="rail-title">
-        <span>Cabinet</span>
+        <span>RimAI</span>
         <small>Scopes</small>
       </div>
       <div className="scope-list">
-        {scopes.map(scope => (
-          <button
-            key={scope.key}
-            type="button"
-            className={`scope-button ${activeScope === scope.key ? 'active' : ''} ${scope.status}`}
-            onClick={() => onSelect(scope.key)}
-          >
-            <span className="scope-emoji" aria-hidden>{scope.emoji}</span>
-            <span className="scope-name">{scope.label}</span>
-            <small>{scope.status === 'live' ? 'live' : 'planned'}</small>
-          </button>
-        ))}
+        <ScopeGroup
+          activeScope={activeScope}
+          label="Console"
+          onSelect={onSelect}
+          scopes={consoleScopes}
+        />
+        <ScopeGroup
+          activeScope={activeScope}
+          label="Cabinet"
+          onSelect={onSelect}
+          scopes={ministerScopes}
+        />
       </div>
     </nav>
   );
+}
+
+function ScopeGroup({
+  activeScope,
+  label,
+  onSelect,
+  scopes,
+}: {
+  activeScope: ScopeKey;
+  label: string;
+  onSelect: (scope: ScopeKey) => void;
+  scopes: ScopeConfig[];
+}) {
+  return (
+    <section className="scope-group" aria-label={label}>
+      <span className="scope-group-label">{label}</span>
+      {scopes.map(scope => (
+        <button
+          key={scope.key}
+          type="button"
+          className={`scope-button kind-${scope.kind} ${activeScope === scope.key ? 'active' : ''} ${scope.status}`}
+          onClick={() => onSelect(scope.key)}
+        >
+          <span className="scope-emoji" aria-hidden>{scope.emoji}</span>
+          <span className="scope-name">{scope.label}</span>
+          <small>{scopeStatusLabel(scope)}</small>
+        </button>
+      ))}
+    </section>
+  );
+}
+
+function scopeStatusLabel(scope: ScopeConfig): string {
+  if (scope.kind === 'system') return 'ops';
+  if (scope.kind === 'info') return 'ref';
+  if (scope.kind === 'analytics') return 'data';
+  return scope.status === 'live' ? 'live' : 'planned';
 }
