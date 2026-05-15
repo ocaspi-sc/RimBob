@@ -68,3 +68,4 @@ Close with:
 - Follow-ups added to `HumanTodo.md`.
 - Cleanup performed.
 - Remaining dirty state, separated by session-owned, user-owned, and uncertain.
+- Next options: a short list of suggestions or concrete questions for how to proceed. Prefer items that resolve blockers, choose between plausible next slices, or clarify ownership; omit filler if there is no useful next step.
