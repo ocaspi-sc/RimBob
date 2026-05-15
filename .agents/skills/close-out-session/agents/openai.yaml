@@ -1,0 +1,4 @@
+interface:
+  display_name: "Close Out Session"
+  short_description: "Recap, commit, todo, and clean up"
+  default_prompt: "Use $close-out-session to recap this session, commit only its work, update followups, and clean up."
