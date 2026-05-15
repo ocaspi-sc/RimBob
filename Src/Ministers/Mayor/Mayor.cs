@@ -63,16 +63,41 @@ public sealed class Mayor(
                 if (input is null)
                 {
                     cycleError = "LLM call failed twice";
-                    log.LogError("Mayor LLM call failed twice; agenda not updated this turn.");
-                    return;
+                    if (previous is not null)
+                    {
+                        log.LogError("Mayor LLM call failed twice; agenda not updated this turn.");
+                        return;
+                    }
+
+                    input = MayorAgendaBootstrap.Build(
+                        briefing,
+                        directiveSet.Directives,
+                        activeFlags,
+                        "Mayor LLM failed twice before any agenda was persisted.");
+                    log.LogWarning("Mayor LLM failed twice with no previous agenda; publishing bootstrap agenda.");
                 }
-                status.MarkLlmSuccess();
+                else
+                {
+                    status.MarkLlmSuccess();
+                }
             }
 
             // Re-attach the guide_citations the retriever produced — the LLM only references them by id.
             input = input with { GuideCitations = retrieved };
 
-            Core.Advice.MayorAgenda stamped = agendaStore.Update(input, FormatTick(briefing));
+            Core.Advice.MayorAgenda stamped;
+            try
+            {
+                stamped = await agendaStore.UpdateAsync(input, FormatTick(briefing), ct);
+            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex)
+            {
+                cycleError = "Agenda persistence failed";
+                log.LogError(ex, "Mayor agenda persistence failed; agenda not published this turn.");
+                throw;
+            }
+
             bus.Publish(new AgendaUpdated(stamped));
 
             log.LogInformation(

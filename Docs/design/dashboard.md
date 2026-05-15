@@ -252,6 +252,12 @@ rationale, suggested actions, resource requests, citations, issue id or
 supersession when available, and coverage gaps. No feedback buttons are shown in
 v2.
 
+The dashboard does not cache Agenda documents in browser storage. Stale agenda
+recovery comes from Host-owned durable agenda storage. On a fresh runtime with
+no stored Agenda, Host initializes a labeled bootstrap Agenda before serving the
+dashboard. The no-agenda empty state is reserved for initialization/storage
+failure or intentionally disabled agenda storage.
+
 Resource requests and suggested actions are actionable reading surfaces and
 should default open when an advice card mounts, including after browser refresh
 or a new active-advice snapshot. They may use lightweight emoji labels because

@@ -52,12 +52,13 @@ public static class AgendaEndpoints
 
         // Manual fallback: when Gemini is unreachable / rate-limited, paste a
         // MayorAgendaInput JSON produced by another LLM. Same path as a real
-        // Mayor cycle: stamp via AgendaStore.Update, broadcast over SSE.
-        app.MapPost("/api/agenda/manual", (
+        // Mayor cycle: stamp via AgendaStore.UpdateAsync, broadcast over SSE.
+        app.MapPost("/api/agenda/manual", async (
             MayorAgendaInput  input,
             BriefingCache     briefings,
             AgendaStore       store,
-            AdviceBus         bus) =>
+            AdviceBus         bus,
+            CancellationToken ct) =>
         {
             MayorAgendaInput capped = input.ShortTerm.Count > ShortTermCap
                 ? input with { ShortTerm = input.ShortTerm.Take(ShortTermCap).ToList() }
@@ -65,7 +66,7 @@ public static class AgendaEndpoints
 
             MayorBriefing briefing = briefings.GetMayorBriefing();
             string tick = $"Y{briefing.Date.Year ?? 0}{briefing.Date.Quadrum ?? "?"}D{briefing.Date.Day ?? 0}";
-            MayorAgenda stamped = store.Update(capped, tick);
+            MayorAgenda stamped = await store.UpdateAsync(capped, tick, ct);
             bus.Publish(new AgendaUpdated(stamped));
             return Results.Ok(stamped);
         });

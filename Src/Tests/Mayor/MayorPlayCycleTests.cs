@@ -66,13 +66,29 @@ public sealed class MayorPlayCycleTests
     }
 
     [Fact]
-    public async Task LlmAlwaysThrows_AgendaUntouched_NoPublish()
+    public async Task LlmAlwaysThrows_WithNoExistingAgenda_PublishesBootstrapAgenda()
     {
         Harness h = new((_, _, _, _, _, _) => throw new InvalidOperationException("boom"));
 
         await h.Mayor.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
 
-        h.Store.Current.Should().BeNull();
+        h.Store.Current.Should().NotBeNull();
+        h.Store.Current!.Version.Should().Be(1);
+        h.Store.Current.UpdateNotes.Should().Contain("LLM failed twice");
+        h.Store.Current.ShortTerm.Should().Contain(item => item.Id == "bootstrap_replace_with_mayor_run");
+        h.PublishedAgendas.Should().ContainSingle().Which.Version.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task LlmAlwaysThrows_WithExistingAgenda_KeepsCurrentAgendaAndDoesNotPublish()
+    {
+        Harness h = new((_, _, _, _, _, _) => throw new InvalidOperationException("boom"));
+        await h.Store.UpdateAsync(InputBuilder.Default with { UpdateNotes = "existing" }, "tick0");
+
+        await h.Mayor.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
+
+        h.Store.Current.Should().NotBeNull();
+        h.Store.Current!.UpdateNotes.Should().Be("existing");
         h.PublishedAgendas.Should().BeEmpty();
     }
 

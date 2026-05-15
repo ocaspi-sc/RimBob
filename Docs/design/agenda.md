@@ -81,6 +81,18 @@ active relevant flags, trends, and guide context. The Mayor outputs a complete
 new Agenda, not a patch. The server owns versioning, history storage, and
 broadcast.
 
+The current Agenda and bounded history are durable Host runtime state. Host
+loads them from ignored `var/agenda/agenda-store.json` on startup before the
+dashboard endpoints or SSE stream are exposed. If a new Mayor run fails, the
+previous persisted Agenda remains the current Agenda.
+
+If Host starts with no persisted Agenda, it initializes a conservative
+server-side bootstrap Agenda from the current briefing before the dashboard is
+served. The bootstrap must be clearly labeled in `update_notes`, should only
+contain safe suggest-only priorities, and is replaced by the next successful
+Mayor LLM run. If the Mayor LLM fails twice before any Agenda exists, the Mayor
+uses the same bootstrap path rather than leaving `/api/agenda/latest` empty.
+
 Demand-triggered refreshes run the same ingestion + Mayor path as scheduled
 updates. They are RimAI evaluation controls, not game writes.
 
@@ -142,6 +154,10 @@ The design contract is:
 - The dashboard can fetch the latest agenda and bounded agenda history.
 - The advice stream can broadcast full agenda updates.
 - New dashboard connections receive the current agenda when one exists.
+- The latest agenda endpoint returns the persisted current agenda after Host
+  restart. During normal Host startup, missing agenda state is initialized with
+  a labeled bootstrap Agenda; `204` should only appear if initialization cannot
+  complete or the Host is intentionally running without agenda storage.
 - Idle streams stay alive.
 - Manual refresh triggers the same safe suggest-only Mayor evaluation path.
 

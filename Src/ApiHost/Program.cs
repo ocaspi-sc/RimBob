@@ -19,6 +19,11 @@ builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, relo
 
 string logsDir = HostLogPaths.ResolveLogsDirectory(builder.Environment.ContentRootPath);
 Directory.CreateDirectory(logsDir);
+string agendaStorePath = Path.Combine(
+    HostLogPaths.ResolveVarDirectory(builder.Environment.ContentRootPath),
+    "agenda",
+    "agenda-store.json");
+AgendaStore agendaStore = await AgendaStore.LoadAsync(agendaStorePath);
 
 // ── Logging: Serilog reads from appsettings.json ───────────────────────────
 builder.Host.UseSerilog((ctx, services, cfg) =>
@@ -70,7 +75,7 @@ builder.Services.AddSingleton<BriefingCache>();
 builder.Services.AddSingleton<IngestionDispatcher>();
 
 builder.Services.AddSingleton<AdviceBus>();
-builder.Services.AddSingleton<AgendaStore>();
+builder.Services.AddSingleton(agendaStore);
 builder.Services.AddSingleton<FlagChannel>();
 builder.Services.AddSingleton<MinisterRegistry>();
 builder.Services.AddSingleton<EndpointCoverageCatalog>();
@@ -172,10 +177,15 @@ builder.Services.AddSingleton<MinisterOfFood>();
 builder.Services.AddSingleton<IMinister>(sp => sp.GetRequiredService<Mayor>());
 builder.Services.AddSingleton<IMinister>(sp => sp.GetRequiredService<MinisterOfFood>());
 builder.Services.AddSingleton<CabinetCycle>();
+builder.Services.AddHostedService<AgendaBootstrapHostedService>();
 builder.Services.AddHostedService<DayTickOrchestrator>();
 
 var app = builder.Build();
 app.Logger.LogInformation("Host logs directory: {LogsDirectory}", logsDir);
+app.Logger.LogInformation(
+    "Agenda store path: {AgendaStorePath} current_version={AgendaVersion}",
+    agendaStorePath,
+    agendaStore.Current?.Version);
 
 // ── Middleware ─────────────────────────────────────────────────────────────
 app.UseDefaultFiles();

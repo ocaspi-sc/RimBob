@@ -66,7 +66,7 @@
 - `DayTickOrchestrator` calls `IngestionDispatcher.RefreshAllAsync` on every poll (so `ColonyState` actually updates), and fires Mayor on the *first* successful poll instead of skipping it.
 - `IngestionDispatcher` promoted to Singleton so the BackgroundService can take it directly.
 - `state_of_the_union` schema change: free-text paragraph → `Record<string, string>` keyed by category (`food`, `defense`, `welfare`, `construction`, `treasury`, `research`).
-- `MayorAgenda.GeneratedAt` (UTC) — server-stamped by `AgendaStore.Update` so the dashboard can show "Updated Xs ago" without depending on the in-game clock.
+- `MayorAgenda.GeneratedAt` (UTC) — server-stamped by `AgendaStore.UpdateAsync` so the dashboard can show "Updated Xs ago" without depending on the in-game clock.
 - `MayorStatus` singleton tracks `IsRunning` / `StartedAt` / `CompletedAt` / `LastError`; `Mayor.RunPlayCycle` brackets each call with `Begin/End`.
 - `POST /api/agenda/refresh` — demand-trigger ingestion + Mayor cycle.
 - `GET /api/colony/snapshot` — full `MayorBriefing` for the dashboard sidebar.

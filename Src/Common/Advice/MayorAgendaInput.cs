@@ -4,7 +4,7 @@ namespace RimAI.Core.Advice;
 
 /// <summary>
 /// Mayor's proposed agenda content — what the LLM produces. Version and
-/// updated_in_game_tick are server-assigned by AgendaStore.Update.
+/// updated_in_game_tick are server-assigned by AgendaStore.UpdateAsync.
 /// </summary>
 public sealed record MayorAgendaInput(
     [property: JsonPropertyName("posture")]            MayorPosture                        Posture,

@@ -4,18 +4,28 @@ internal static class HostLogPaths
 {
     public static string ResolveLogsDirectory(string contentRootPath)
     {
+        return Path.Combine(ResolveRuntimeRoot(contentRootPath), "logs");
+    }
+
+    public static string ResolveVarDirectory(string contentRootPath)
+    {
+        return Path.Combine(ResolveRuntimeRoot(contentRootPath), "var");
+    }
+
+    private static string ResolveRuntimeRoot(string contentRootPath)
+    {
         DirectoryInfo? current = new(contentRootPath);
         while (current is not null)
         {
             if (Directory.Exists(Path.Combine(current.FullName, "Docs"))
                 && Directory.Exists(Path.Combine(current.FullName, "Src")))
             {
-                return Path.Combine(current.FullName, "logs");
+                return current.FullName;
             }
 
             current = current.Parent;
         }
 
-        return Path.Combine(contentRootPath, "logs");
+        return contentRootPath;
     }
 }
