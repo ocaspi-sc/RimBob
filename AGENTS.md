@@ -8,6 +8,7 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 
 - Read `Docs/DESIGN.md`, `HumanTodo.md`, and the relevant focus doc before changing files.
 - When the user asks conceptual, design, "should we", "why", or "what about" questions, answer/review first. Do not rush to implementation unless clearly asked.
+- Offer pushback when a request seems risky, over-scoped, inconsistent with repo/design direction, or likely to have a simpler better path. Keep pushback concrete and concise; if the user clearly asked for implementation and the work is safe, state the concern and then proceed.
 - Design sessions are for exploration and docs. Do not write code unless asked.
 - Build sessions are for implementation. Do not redesign unless a blocker is found.
 - Store agent-created plans in `/.plans`. At session end, offer to update `HumanTodo.md` with new tasks uncovered.
