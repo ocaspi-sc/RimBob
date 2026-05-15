@@ -93,6 +93,47 @@ public sealed class FoodBriefingDerivationTests
     }
 
     [Fact]
+    public void Compute_StoredFood_ExplainsForbiddenMapFoodRemainder()
+    {
+        ColonyState s = StateWithColonists(1);
+        s.Resources.Update(new ResourceSummary(100, 0f, 52, 1.64f, 0, 0, 0, 0, 0f));
+        s.StoredResources.Update(new StoredResourceRegistry([
+            new StoredResourceRecord("food_meals", "meal-1", "MealSurvivalPack", "packaged survival meal", 32, false),
+            new StoredResourceRecord("plant_food_raw", "berries-1", "RawBerries", "berries", 12, false)
+        ], new Dictionary<string, int>(), new Dictionary<string, int>()));
+        s.Things.Update(new ThingRegistry([
+            new ThingRecord("stored-meals", "MealSurvivalPack", "packaged survival meal", 32, ["FoodMeals"], false, new MapPosition(89, 0, 189)),
+            new ThingRecord("stored-berries", "RawBerries", "berries", 12, ["PlantFoodRaw"], false, new MapPosition(90, 0, 188)),
+            new ThingRecord("forbidden-meals", "MealSurvivalPack", "packaged survival meal", 7, ["FoodMeals"], true, new MapPosition(62, 0, 219)),
+            new ThingRecord("forbidden-corpse", "Corpse_Squirrel", "squirrel (dead)", 1, ["CorpsesAnimal"], true, new MapPosition(83, 0, 38))
+        ]));
+        s.ThingDefs.Update(new ThingDefRegistry(new Dictionary<string, ThingDefRecord>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["MealSurvivalPack"] = new("MealSurvivalPack", "packaged survival meal", "Item", "ThingWithComps", true, false, false, false, 0.9f, 10),
+            ["RawBerries"] = new("RawBerries", "berries", "Item", "ThingWithComps", true, false, false, false, 0.05f, 75),
+            ["Corpse_Squirrel"] = new("Corpse_Squirrel", "squirrel (dead)", "Item", "Corpse", true, false, false, false, 1.04f, 1)
+        }));
+
+        FoodBriefing b = FoodBriefingDerivation.Compute(s);
+
+        b.MealsCount.Should().Be(32);
+        b.RawFoodCount.Should().Be(12);
+        b.UnclassifiedFoodUnits.Should().Be(8);
+        b.UnclassifiedFoodItems.Should().HaveCount(2);
+        b.UnclassifiedFoodItems.Should().Contain(item =>
+            item.Def == "MealSurvivalPack" &&
+            item.Count == 7 &&
+            item.Kind == "meal" &&
+            item.IsForbidden &&
+            item.Position == "(62,0,219)");
+        b.UnclassifiedFoodItems.Should().Contain(item =>
+            item.Def == "Corpse_Squirrel" &&
+            item.Count == 1 &&
+            item.Kind == "raw_food" &&
+            item.IsForbidden);
+    }
+
+    [Fact]
     public void Compute_MapThingFallback_IgnoresForbiddenSurvivalMeals()
     {
         ColonyState s = StateWithColonists(1);
@@ -112,6 +153,11 @@ public sealed class FoodBriefingDerivationTests
         b.MealsCount.Should().Be(32);
         b.RawFoodCount.Should().Be(0);
         b.FallbackNutrition.Should().BeApproximately(28.8f, 0.001f);
+        b.UnclassifiedFoodItems.Should().ContainSingle(item =>
+            item.Def == "MealSurvivalPack" &&
+            item.Count == 7 &&
+            item.Kind == "meal" &&
+            item.IsForbidden);
     }
 
     [Fact]

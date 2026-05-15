@@ -89,6 +89,10 @@ When item stacks and item definitions are available, Food should classify stored
 meals and raw food from those sources instead of trusting summary rollups. The
 raw item list remains an ingestion/debug input; the briefing receives compact
 counts, nutrition source, unclassified remainder, and coverage flags.
+When the unclassified remainder can be explained by compact map evidence, such
+as forbidden meals or other visible food-like items excluded from the reachable
+stored-food count, the briefing should carry that explanation so advice can name
+the concrete player action instead of saying only "visibility."
 
 The implemented briefing can be narrower than the target. Use
 `FoodBriefing`, `FoodBriefingDerivation`, and Food briefing tests for current

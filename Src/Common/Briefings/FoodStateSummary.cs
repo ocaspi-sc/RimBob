@@ -23,15 +23,16 @@ public static class FoodStateSummary
         stores.Add($"{briefing.RawFoodCount} raw food");
         if (briefing.UnclassifiedFoodUnits > 0)
             stores.Add($"{briefing.UnclassifiedFoodUnits} unclassified food units");
+        string unclassifiedDetails = FormatUnclassifiedDetails(briefing);
 
         if (briefing.EstimatedDaysOfFood is null)
         {
             if (briefing.UnclassifiedFoodUnits > 0)
             {
-                return $"Food stores show {JoinList(stores)}, but days-of-food cannot be estimated because the reported food units are not classified as meals or raw food.";
+                return $"Food stores show {JoinList(stores)}{unclassifiedDetails}, but days-of-food cannot be estimated because the reported food units are not classified as meals or raw food.";
             }
 
-            return $"Food stores show {JoinList(stores)}, but days-of-food cannot be estimated because no usable nutrition signal is available.";
+            return $"Food stores show {JoinList(stores)}{unclassifiedDetails}, but days-of-food cannot be estimated because no usable nutrition signal is available.";
         }
 
         float days = briefing.EstimatedDaysOfFood.Value;
@@ -43,7 +44,7 @@ public static class FoodStateSummary
             _ => "stable"
         };
 
-        return $"Food stores show {JoinList(stores)}, about {days:F1} days for {Plural(briefing.ColonistCount, "colonist")}; the buffer is {posture}.";
+        return $"Food stores show {JoinList(stores)}{unclassifiedDetails}, about {days:F1} days for {Plural(briefing.ColonistCount, "colonist")}; the buffer is {posture}.";
     }
 
     private static string BuildGrowingSentence(FoodBriefing briefing)
@@ -104,6 +105,35 @@ public static class FoodStateSummary
         return gaps.Count == 0
             ? ""
             : $"Confidence gaps: {string.Join(", ", gaps)}.";
+    }
+
+    private static string FormatUnclassifiedDetails(FoodBriefing briefing)
+    {
+        if (briefing.UnclassifiedFoodItems.Count == 0)
+            return "";
+
+        string details = string.Join("; ", briefing.UnclassifiedFoodItems
+            .Take(3)
+            .Select(FormatUnclassifiedItem));
+        int remaining = Math.Max(0, briefing.UnclassifiedFoodItems.Count - 3);
+        string suffix = remaining > 0 ? $"; plus {Plural(remaining, "more item group")}" : "";
+        return $" ({details}{suffix})";
+    }
+
+    private static string FormatUnclassifiedItem(FoodUnclassifiedItem item)
+    {
+        string forbidden = item.IsForbidden ? "forbidden " : "";
+        string label = CountedLabel(item.Count, item.Label ?? item.Def);
+        string position = string.IsNullOrWhiteSpace(item.Position) ? "" : $" at {item.Position}";
+        return $"{item.Count} {forbidden}{label}{position}";
+    }
+
+    private static string CountedLabel(int count, string label)
+    {
+        if (count == 1 || label.EndsWith("s", StringComparison.OrdinalIgnoreCase))
+            return label;
+
+        return Pluralize(label);
     }
 
     private static string FormatCropZone(FoodCropZoneSummary crop)

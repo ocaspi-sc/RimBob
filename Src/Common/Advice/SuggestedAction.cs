@@ -25,6 +25,7 @@ public enum SuggestedActionKind
     SetStockpileZone,
     Draft,
     Forbid,
+    Unforbid,
     Research,
     Trade,
     Note

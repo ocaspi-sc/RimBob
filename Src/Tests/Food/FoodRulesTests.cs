@@ -34,6 +34,34 @@ public sealed class FoodRulesTests
     }
 
     [Fact]
+    public void UrgentShortageWithForbiddenMeals_SuggestsUnforbid()
+    {
+        FoodBriefing briefing = Briefing(days: 6.1f) with
+        {
+            FoodUnits = 52,
+            MealsCount = 32,
+            RawFoodCount = 12,
+            UnclassifiedFoodItems =
+            [
+                new FoodUnclassifiedItem("MealSurvivalPack", "packaged survival meal", 7, "meal", true, "map_things", "(62,0,219)")
+            ]
+        };
+
+        Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
+            .Should().BeOfType<Decision>().Subject;
+
+        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        advice.Body.Should().Contain("7 forbidden packaged survival meals");
+        advice.ResourceRequests.Should().Contain(r =>
+            r.Kind == ResourceRequestKind.Item &&
+            r.Quantity == 7 &&
+            r.What.Contains("forbidden packaged survival meals"));
+        advice.SuggestedActions.Should().Contain(a =>
+            a.Kind == SuggestedActionKind.Unforbid &&
+            a.What.Contains("Unforbid 7 packaged survival meals"));
+    }
+
+    [Fact]
     public void NearStarvationWithoutLocalFood_SetsUpFoodChain()
     {
         FoodBriefing briefing = Briefing(days: 0.4f) with

@@ -63,7 +63,10 @@ public static class FoodBriefingDerivation
             DataCoverage: DeriveDataCoverage(s, food),
             ActiveThreat: ThreatDeriver.HasActiveHostileThreat(s.Threats.Value),
             RecentFoodIncidents: incidents
-        );
+        )
+        {
+            UnclassifiedFoodItems = food.UnclassifiedFoodItems
+        };
     }
 
     private static FoodSkillSnapshot DeriveSkills(IReadOnlyList<ColonistRecord> pawns) =>

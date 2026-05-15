@@ -34,6 +34,8 @@ public sealed record FoodBriefing(
 {
     public int UnclassifiedFoodUnits => Math.Max(0, FoodUnits - MealsCount - RawFoodCount);
 
+    public IReadOnlyList<FoodUnclassifiedItem> UnclassifiedFoodItems { get; init; } = [];
+
     public IReadOnlyList<string> MissingBriefingSignals
     {
         get
@@ -70,6 +72,16 @@ public sealed record FoodBriefing(
         }
     }
 }
+
+public sealed record FoodUnclassifiedItem(
+    string Def,
+    string? Label,
+    int Count,
+    string Kind,
+    bool IsForbidden,
+    string Source,
+    string? Position
+);
 
 public sealed record FoodCropSummary(string Def, int Count, float AverageGrowth);
 

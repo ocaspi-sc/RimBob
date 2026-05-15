@@ -82,6 +82,8 @@ enough to stand alone in the dashboard and future Auto mapping. Prefer explicit
 names such as `mark_harvest`, `mark_hunt`, `place_blueprint`,
 `production_bill`, and `set_stockpile_zone` over generic `note` output when the
 operation is known.
+Use explicit allow/forbid vocabulary, such as `unforbid`, when the action is
+about changing an item's forbidden state.
 
 Each suggested action should carry an instruction. Avoid introducing generic
 `what` fields in new raw output; tolerant parsing may still repair older model

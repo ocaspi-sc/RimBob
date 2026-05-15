@@ -245,7 +245,8 @@ public sealed class LlmClientTests
             new SuggestedAction(SuggestedActionKind.MarkHunt, "mark animals"),
             new SuggestedAction(SuggestedActionKind.PlaceBlueprint, "place stove"),
             new SuggestedAction(SuggestedActionKind.ProductionBill, "cook meals"),
-            new SuggestedAction(SuggestedActionKind.SetStockpileZone, "set food stockpile")
+            new SuggestedAction(SuggestedActionKind.SetStockpileZone, "set food stockpile"),
+            new SuggestedAction(SuggestedActionKind.Unforbid, "unforbid meals")
         ];
 
         string serialized = JsonSerializer.Serialize(actions, json);
@@ -256,6 +257,7 @@ public sealed class LlmClientTests
         serialized.Should().Contain("\"kind\":\"place_blueprint\"");
         serialized.Should().Contain("\"kind\":\"production_bill\"");
         serialized.Should().Contain("\"kind\":\"set_stockpile_zone\"");
+        serialized.Should().Contain("\"kind\":\"unforbid\"");
         serialized.Should().NotContain("\"what\":\"mark crops\"");
     }
 

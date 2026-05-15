@@ -57,4 +57,26 @@ public sealed class FoodStateSummaryTests
         summary.Should().Contain("days-of-food cannot be estimated");
         summary.Should().NotContain("edible");
     }
+
+    [Fact]
+    public void Build_UnclassifiedFoodIncludesForbiddenItemDetails()
+    {
+        FoodBriefing briefing = FoodRulesTests.Briefing(6.1f) with
+        {
+            FoodUnits = 52,
+            MealsCount = 32,
+            RawFoodCount = 12,
+            UnclassifiedFoodItems =
+            [
+                new FoodUnclassifiedItem("MealSurvivalPack", "packaged survival meal", 7, "meal", true, "map_things", "(62,0,219)"),
+                new FoodUnclassifiedItem("Corpse_Squirrel", "squirrel (dead)", 1, "raw_food", true, "map_things", "(83,0,38)")
+            ]
+        };
+
+        string summary = FoodStateSummary.Build(briefing);
+
+        summary.Should().Contain("8 unclassified food units");
+        summary.Should().Contain("7 forbidden packaged survival meals at (62,0,219)");
+        summary.Should().Contain("1 forbidden squirrel (dead) at (83,0,38)");
+    }
 }
