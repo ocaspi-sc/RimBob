@@ -10,7 +10,7 @@
 |---|---|---|
 | M0 | Repo lit — scaffold compiles, RIMAPI handshake, dashboard skeleton serves a hello-world page | Done |
 | M1 | Mayor's Agenda spine — colony-wide briefing → Mayor LLM → versioned `MayorAgenda` rendered in the dashboard | Done |
-| M1.5 | Live operability — startup briefing, periodic ingestion, sidebar telemetry, on-demand Refresh, run-state + prompt-introspection endpoints | Done |
+| M1.5 | Live operability — startup briefing, periodic ingestion, sidebar telemetry, manual re-evaluation, run-state + prompt-introspection endpoints | Done |
 | M2 | Grounded reasoning (RAG) — Mayor cites guide passages; measurable agenda-quality improvement before adding feeders | Done |
 | M3 | First feeder advisor (Food) — sub-briefing into the Mayor; first cross-minister flag | Implemented |
 | M4 | First cabinet wave — Construction, Defense, Welfare feeding the Mayor; flag-severity-gated tactical alerts surface independently of the daily digest | Not started |
@@ -58,9 +58,9 @@
 
 ## M1.5 — Live operability
 
-**Done when:** Host start-up triggers a Mayor briefing within seconds of RIMAPI handshake (no day-rollover wait); `ColonyState` stays current via periodic ingestion; the dashboard renders the agenda alongside a sidebar of dry colony numbers; the player can demand a fresh agenda from the topbar; Mayor run state and the next prompt are introspectable over HTTP.
+**Done when:** Host start-up triggers a Mayor briefing within seconds of RIMAPI handshake (no day-rollover wait); `ColonyState` stays current via periodic ingestion; the dashboard renders the agenda alongside a sidebar of dry colony numbers; the player can manually run a fresh cabinet evaluation from the dashboard; Mayor run state and the next prompt are introspectable over HTTP.
 
-**Demo:** boot Host with RimWorld already running; the dashboard shows posture, sidebar telemetry, and a v1 agenda within ~15 seconds. Click **Refresh** in the topbar — status pill flips to "Refreshing", a new agenda v2 lands seconds later with `UPDATED`/`NEW` deltas. `curl /api/status` shows `mayor_running` and the last completion timestamp.
+**Demo:** boot Host with RimWorld already running; the dashboard shows posture, sidebar telemetry, and a v1 agenda within ~15 seconds. Click **Run Cabinet Now** in the topbar — status pill flips to a pending run state, a new cabinet evaluation lands seconds later with `UPDATED`/`NEW` agenda deltas or feeder advice. `curl /api/status` shows `mayor_running` and the last completion timestamp.
 
 **Scope:**
 - `DayTickOrchestrator` calls `IngestionDispatcher.RefreshAllAsync` on every poll (so `ColonyState` actually updates), and fires Mayor on the *first* successful poll instead of skipping it.
@@ -68,11 +68,11 @@
 - `state_of_the_union` schema change: free-text paragraph → `Record<string, string>` keyed by category (`food`, `defense`, `welfare`, `construction`, `treasury`, `research`).
 - `MayorAgenda.GeneratedAt` (UTC) — server-stamped by `AgendaStore.UpdateAsync` so the dashboard can show "Updated Xs ago" without depending on the in-game clock.
 - `MayorStatus` singleton tracks `IsRunning` / `StartedAt` / `CompletedAt` / `LastError`; `Mayor.RunPlayCycle` brackets each call with `Begin/End`.
-- `POST /api/agenda/refresh` — demand-trigger ingestion + Mayor cycle.
+- `POST /api/cabinet/trigger` — demand-trigger ingestion + cabinet cycle.
 - `GET /api/colony/snapshot` — full `MayorBriefing` for the dashboard sidebar.
 - `GET /api/status` — server / RIMAPI / LLM health + Mayor run state.
 - `GET /api/mayor/prompt` — system + user message that would be sent to Gemini next turn (introspection).
-- Dashboard restyled to a dark command-center console: topbar (status pill + Refresh + poll cadence), tab rail (with `MODULE LOCKED · Coming in M{n}` placeholders), main-console panel (Agenda tab), sidebar panel (Colony telemetry).
+- Dashboard restyled to a dark command-center console: topbar (status pill + manual cabinet run + poll cadence), tab rail (with `MODULE LOCKED · Coming in M{n}` placeholders), main-console panel (Agenda tab), sidebar panel (Colony telemetry).
 
 ---
 

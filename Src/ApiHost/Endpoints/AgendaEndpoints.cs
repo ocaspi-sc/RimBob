@@ -7,7 +7,7 @@ using RimAI.State;
 namespace RimAI.Host.Endpoints;
 
 /// <summary>
-/// GET /api/agenda/latest, /api/agenda/history, POST /api/agenda/refresh,
+/// GET /api/agenda/latest, /api/agenda/history,
 /// POST /api/agenda/manual (paste a MayorAgendaInput from another LLM).
 /// </summary>
 public static class AgendaEndpoints
@@ -22,7 +22,6 @@ public static class AgendaEndpoints
             context => context.AgendaStore.Current is null ? "missing" : "available",
             _ => "Current Mayor agenda.");
         coverage.Register("/api/agenda/history", "available", "Bounded Mayor agenda history.");
-        coverage.Register("/api/agenda/refresh", "available", "Legacy alias for manual cabinet trigger.");
         coverage.Register("/api/agenda/manual", "available", "Developer manual Mayor agenda fallback ingestion.");
 
         app.MapGet("/api/agenda/latest", (AgendaStore store) =>
@@ -39,15 +38,6 @@ public static class AgendaEndpoints
                 if (string.CompareOrdinal(a.UpdatedInGameTick, since) > 0)
                     filtered.Add(a);
             return Results.Ok(filtered);
-        });
-
-        // Legacy dashboard demand-trigger. Prefer POST /api/cabinet/trigger.
-        app.MapPost("/api/agenda/refresh", async (
-            CabinetCycle cabinet,
-            CancellationToken ct) =>
-        {
-            await cabinet.RunAsync(ct);
-            return Results.Ok(new { refreshed = true, scope = "cabinet", trigger = "ManualTrigger" });
         });
 
         // Manual fallback: when Gemini is unreachable / rate-limited, paste a

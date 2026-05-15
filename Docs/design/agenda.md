@@ -93,8 +93,8 @@ contain safe suggest-only priorities, and is replaced by the next successful
 Mayor LLM run. If the Mayor LLM fails twice before any Agenda exists, the Mayor
 uses the same bootstrap path rather than leaving `/api/agenda/latest` empty.
 
-Demand-triggered refreshes run the same ingestion + Mayor path as scheduled
-updates. They are RimAI evaluation controls, not game writes.
+Manual dashboard runs refresh live state and evaluate RimAI through the cabinet
+trigger path. They are RimAI evaluation controls, not game writes.
 
 ---
 

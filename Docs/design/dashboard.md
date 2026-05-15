@@ -240,7 +240,8 @@ Manual triggers are RimAI evaluation controls, not game controls:
   dependency order.
 - Minister trigger: refresh live state, then run only the selected wired
   minister.
-- Legacy Mayor/agenda refresh routes may remain aliases for compatibility.
+- Do not keep legacy trigger aliases unless a current dashboard or script
+  consumer requires them.
 
 Manual trigger traces must be visible in the dashboard. The current trigger
 should remain suggest-only and must not call RIMAPI write endpoints.
