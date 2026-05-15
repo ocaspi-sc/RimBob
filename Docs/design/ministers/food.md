@@ -76,6 +76,11 @@ Spatial and operational data stays aggregated. Food should receive counts,
 proximity strings, nearest clusters, distances, and coverage flags rather than
 raw plant/tile/building lists.
 
+When upstream food totals cannot be classified into meals or raw food, the
+briefing should expose the unclassified count directly. It should also name
+missing or unimplemented signals so Food can temper confidence without inventing
+player chores from data gaps.
+
 The implemented briefing can be narrower than the target. Use
 `FoodBriefing`, `FoodBriefingDerivation`, and Food briefing tests for current
 fields.

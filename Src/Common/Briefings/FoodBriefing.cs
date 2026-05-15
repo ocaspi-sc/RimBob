@@ -29,7 +29,46 @@ public sealed record FoodBriefing(
     FoodDataCoverage DataCoverage,
     bool ActiveThreat,
     IReadOnlyList<string> RecentFoodIncidents
-) : IBriefing;
+) : IBriefing
+{
+    public int UnclassifiedFoodUnits => Math.Max(0, FoodUnits - MealsCount - RawFoodCount);
+
+    public IReadOnlyList<string> MissingBriefingSignals
+    {
+        get
+        {
+            List<string> signals = [];
+            if (!DataCoverage.HasLiveState)
+                signals.Add("live_state");
+            if (UnclassifiedFoodUnits > 0)
+                signals.Add("food_unit_classification");
+            if ((ReadyToHarvest > 0 || WildHarvestCandidates > 0 || CropBreakdown.Count > 0) &&
+                !DataCoverage.HasPlantPositions)
+                signals.Add("plant_positions");
+            if (WildAnimalCount > 0 && !DataCoverage.HasAnimalPositions)
+                signals.Add("animal_positions");
+            if (StockpileCells > 0 && !DataCoverage.HasZoneCells)
+                signals.Add("zone_cells");
+            if ((Kitchen.CookingBuildings > 0 || Kitchen.ButcherTables > 0 || Infrastructure.Coolers > 0) &&
+                !DataCoverage.HasBuildingPositions)
+                signals.Add("building_positions");
+            return signals;
+        }
+    }
+
+    public IReadOnlyList<string> UnimplementedBriefingSignals
+    {
+        get
+        {
+            List<string> signals = [];
+            if (!DataCoverage.HasWorkPriorities)
+                signals.Add("work_priorities");
+            if (!DataCoverage.HasTradeAvailability)
+                signals.Add("trade_availability");
+            return signals;
+        }
+    }
+}
 
 public sealed record FoodCropSummary(string Def, int Count, float AverageGrowth);
 
@@ -85,7 +124,10 @@ public sealed record FoodDataCoverage(
     bool HasBuildingPositions,
     bool HasWorkPriorities,
     bool HasTradeAvailability
-);
+)
+{
+    public bool HasLiveState { get; init; }
+}
 
 public static class FoodNutrition
 {

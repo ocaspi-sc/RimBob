@@ -171,7 +171,10 @@ public static class FoodBriefingDerivation
             HasZoneCells: s.Stockpiles.Value.Zones.Any(z => z.Center is not null),
             HasBuildingPositions: s.Buildings.Value.Buildings.Any(b => b.Position is not null),
             HasWorkPriorities: false,
-            HasTradeAvailability: false);
+            HasTradeAvailability: false)
+        {
+            HasLiveState = s.GetVersionsForFoodBriefing().Any(version => version > 0)
+        };
 
     private static FoodReferencePoint? FindFoodReferencePoint(ColonyState s, IReadOnlyList<ColonistRecord> pawns)
     {

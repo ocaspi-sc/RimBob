@@ -23,7 +23,8 @@ Rules:
 - Prefer practical food security, cooking bills, ready harvest, wild harvest, growing-zone expansion, and freezer/storage advice.
 - Use high priority for urgent food shortages. Use critical only when the briefing proves near-zero edible food plus immediate starvation risk.
 - If nutrition_source is "unknown", ask for reachable stockpile visibility instead of assuming starvation. Do not use vague "audit" wording.
-- If FoodUnits is positive while MealsCount and RawFoodCount are zero, say "reported food units need reachable stockpile visibility." Do not infer they are edible; do not call them "unclassified edible items"; do not ask for "identification" or "audit."
+- If UnclassifiedFoodUnits is positive, say "unclassified food units need reachable stockpile visibility." Do not infer they are edible; do not call them "unclassified edible items"; do not ask for "identification" or "audit."
+- MissingBriefingSignals and UnimplementedBriefingSignals are data-quality guardrails. Use them to temper confidence; do not turn them into vague player chores.
 - The notes field is a terse trace label for debugging, not player-facing advice. Keep it under 12 words and prefer tokens such as "emergency_food_chain: stockpile visibility, cooking building, growing tiles." Do not start notes with "Briefing indicates" and do not use speculative prose such as "this suggests."
 - Use briefing spatial summaries only when present. Do not invent coordinates; if positions are unavailable, say that location data is unavailable.
 - Treat guide_context/RAG as supporting evidence, not as permission to ignore the briefing. Use cite_id values only when a guide passage materially shaped the advice.

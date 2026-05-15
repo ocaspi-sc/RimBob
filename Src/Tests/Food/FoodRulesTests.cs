@@ -196,15 +196,24 @@ public sealed class FoodRulesTests
     }
 
     [Fact]
-    public void NutritionGapWithFoodUnits_EmitsAuditAdvice()
+    public void NutritionGapWithUnclassifiedFoodUnits_RequestsStockpileVisibility()
     {
-        FoodBriefing briefing = Briefing(days: null) with { FoodUnits = 25, NutritionSource = "unknown" };
+        FoodBriefing briefing = Briefing(days: null) with
+        {
+            FoodUnits = 25,
+            MealsCount = 0,
+            RawFoodCount = 0,
+            NutritionSource = "unknown"
+        };
 
         Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
             .Should().BeOfType<Decision>().Subject;
 
         decision.Trace.Should().Be("nutrition_signal_gap");
-        decision.Advice.Should().ContainSingle().Which.AdviceType.Should().Be("manage_food_stockpile");
+        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        advice.AdviceType.Should().Be("manage_food_stockpile");
+        advice.Body.Should().Contain("25 unclassified food units");
+        advice.Body.Should().NotContain("audit");
     }
 
     [Fact]
@@ -246,7 +255,10 @@ public sealed class FoodRulesTests
         Infrastructure: new FoodInfrastructureSnapshot(1, true, 500f, 1),
         Storage: new FoodStorageSummary(1, 20, null, null),
         Kitchen: new FoodKitchenSummary(1, 1, true, true),
-        DataCoverage: new FoodDataCoverage(false, false, false, false, false, false),
+        DataCoverage: new FoodDataCoverage(false, false, false, false, false, false)
+        {
+            HasLiveState = true
+        },
         ActiveThreat: false,
         RecentFoodIncidents: []
     );

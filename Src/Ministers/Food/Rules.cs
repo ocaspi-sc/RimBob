@@ -13,14 +13,14 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
     {
         if (briefing.EstimatedDaysOfFood is null)
         {
-            if (briefing.FoodUnits > 0)
+            if (briefing.UnclassifiedFoodUnits > 0)
                 return DecisionFor(briefing, "nutrition_signal_gap",
                     FoodAdviceType.ManageFoodStockpile,
                     AdvicePriority.Medium,
                     "Food stockpile categories need verification",
-                    "RIMAPI reports food units but no nutrition. Identify whether those items are meals or raw food before treating this as a shortage.",
+                    $"RIMAPI reports {briefing.UnclassifiedFoodUnits} unclassified food units but no usable nutrition signal. Make those items visible as reachable meals or raw food before treating this as a safe buffer.",
                     "Missing nutrition would make days-of-food unreliable; use the fallback counts until upstream data is fixed.",
-                    [new(ResourceRequestKind.StockpileSpace, "reachable food stockpile visibility", "nutrition_source is unknown or fallback-derived")],
+                    [new(ResourceRequestKind.StockpileSpace, "reachable food stockpile visibility", "unclassified food units cannot be converted into days-of-food")],
                     [new(SuggestedActionKind.SetStockpileZone, "Confirm the stored food is edible and reachable; move it into a visible food stockpile if needed.")],
                     false);
 
@@ -195,11 +195,11 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
     private static IReadOnlyList<ResourceRequest> EmergencyRequests(FoodBriefing briefing, AdvicePriority priority)
     {
         List<ResourceRequest> requests = [];
-        if (briefing.FoodUnits > 0 && briefing.MealsCount == 0 && briefing.RawFoodCount == 0)
+        if (briefing.UnclassifiedFoodUnits > 0 && briefing.MealsCount == 0 && briefing.RawFoodCount == 0)
             requests.Add(new ResourceRequest(ResourceRequestKind.StockpileSpace,
-                $"reachable stockpile visibility for {briefing.FoodUnits} reported food units",
-                "food_units exists, but no meal or raw-food category is visible to Food",
-                Quantity: briefing.FoodUnits,
+                $"reachable stockpile visibility for {briefing.UnclassifiedFoodUnits} unclassified food units",
+                "unclassified_food_units exists, but no meal or raw-food category is visible to Food",
+                Quantity: briefing.UnclassifiedFoodUnits,
                 Priority: priority));
         if (briefing.ReadyToHarvest > 0 || briefing.WildHarvestCandidates > 0)
             requests.Add(new ResourceRequest(ResourceRequestKind.Labor,
@@ -258,9 +258,9 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
     private static IReadOnlyList<SuggestedAction> EmergencyActions(FoodBriefing briefing)
     {
         List<SuggestedAction> actions = [];
-        if (briefing.FoodUnits > 0 && briefing.MealsCount == 0 && briefing.RawFoodCount == 0)
+        if (briefing.UnclassifiedFoodUnits > 0 && briefing.MealsCount == 0 && briefing.RawFoodCount == 0)
             actions.Add(new SuggestedAction(SuggestedActionKind.SetStockpileZone,
-                $"Find the {briefing.FoodUnits} reported food units and make them visible in a reachable food stockpile; if they are not edible, treat the buffer as zero."));
+                $"Find the {briefing.UnclassifiedFoodUnits} unclassified food units and make them visible in a reachable food stockpile; if they are not edible, treat the buffer as zero."));
         if (briefing.ReadyToHarvest > 0)
             actions.Add(new SuggestedAction(SuggestedActionKind.MarkHarvest, HarvestActionText(briefing)));
         if (briefing.WildHarvestCandidates > 0)

@@ -32,6 +32,8 @@ public sealed class FoodBriefingDerivationTests
         b.NutritionSource.Should().Be("fallback_meal_raw_counts");
         b.FallbackNutrition.Should().BeApproximately(10f, 0.001f);
         b.EstimatedDaysOfFood.Should().BeApproximately(6.25f, 0.001f);
+        b.UnclassifiedFoodUnits.Should().Be(10);
+        b.MissingBriefingSignals.Should().Contain("food_unit_classification");
     }
 
     [Fact]
@@ -44,6 +46,28 @@ public sealed class FoodBriefingDerivationTests
 
         b.NutritionSource.Should().Be("unknown");
         b.EstimatedDaysOfFood.Should().BeNull();
+    }
+
+    [Fact]
+    public void Compute_UnclassifiedFoodUnits_MakesNutritionGapExplicit()
+    {
+        ColonyState s = StateWithColonists(1);
+        s.Resources.Update(new ResourceSummary(100, 0f, 46, 0f, 0, 0, 0, 0, 0f));
+
+        FoodBriefing b = FoodBriefingDerivation.Compute(s);
+
+        b.EstimatedDaysOfFood.Should().BeNull();
+        b.UnclassifiedFoodUnits.Should().Be(46);
+        b.MissingBriefingSignals.Should().Contain("food_unit_classification");
+    }
+
+    [Fact]
+    public void Compute_DefaultState_MarksLiveStateMissing()
+    {
+        FoodBriefing b = FoodBriefingDerivation.Compute(new ColonyState());
+
+        b.DataCoverage.HasLiveState.Should().BeFalse();
+        b.MissingBriefingSignals.Should().Contain("live_state");
     }
 
     [Fact]
@@ -118,8 +142,11 @@ public sealed class FoodBriefingDerivationTests
         b.DataCoverage.HasAnimalPositions.Should().BeTrue();
         b.DataCoverage.HasZoneCells.Should().BeTrue();
         b.DataCoverage.HasBuildingPositions.Should().BeTrue();
+        b.DataCoverage.HasLiveState.Should().BeTrue();
         b.DataCoverage.HasWorkPriorities.Should().BeFalse();
         b.DataCoverage.HasTradeAvailability.Should().BeFalse();
+        b.UnimplementedBriefingSignals.Should().Contain("work_priorities");
+        b.UnimplementedBriefingSignals.Should().Contain("trade_availability");
     }
 
     private static ColonyState StateWithColonists(int count)

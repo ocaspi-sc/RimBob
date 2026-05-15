@@ -336,7 +336,10 @@ public sealed class LlmClientTests
         Infrastructure: new FoodInfrastructureSnapshot(0, true, 0f, 0),
         Storage: new FoodStorageSummary(0, 0, null, null),
         Kitchen: new FoodKitchenSummary(0, 0, false, false),
-        DataCoverage: new FoodDataCoverage(false, false, false, false, false, false),
+        DataCoverage: new FoodDataCoverage(false, false, false, false, false, false)
+        {
+            HasLiveState = true
+        },
         ActiveThreat: false,
         RecentFoodIncidents: []
     );
