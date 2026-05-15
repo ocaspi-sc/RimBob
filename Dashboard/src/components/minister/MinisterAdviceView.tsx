@@ -31,6 +31,8 @@ export function MinisterAdviceView({
     return <EmptyState code="NO ACTIVE ADVICE">{scope.label} has not emitted active advice in this session.</EmptyState>;
   }
 
+  const currentStateLines = stateSummary ? splitStateSummary(stateSummary) : [];
+
   return (
     <div className="minister-view advice-view">
       <header className="view-heading">
@@ -41,7 +43,23 @@ export function MinisterAdviceView({
       {stateSummary && (
         <section className="advice-state-summary">
           <span className="eyebrow">Current State</span>
-          <p>{stateSummary}</p>
+          {currentStateLines.length > 0 ? (
+            <table className="state-summary-table" aria-label={`${scope.label} current state summary`}>
+              <tbody>
+                {currentStateLines.map((line, index) => (
+                  <tr key={`${scope.key}-state-${index}`}>
+                    <th scope="row">
+                      <span className="state-summary-icon" aria-hidden="true">{line.icon}</span>
+                      <span>{line.label ?? 'State'}</span>
+                    </th>
+                    <td>{line.detail}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p>{stateSummary}</p>
+          )}
         </section>
       )}
       {ministerAdvice.length === 0 && (
@@ -52,6 +70,46 @@ export function MinisterAdviceView({
       </div>
     </div>
   );
+}
+
+type StateSummaryLine = {
+  detail: string;
+  icon: string;
+  label: string | null;
+};
+
+const STATE_SUMMARY_ICONS: Record<string, string> = {
+  acquisition: '\u{1F50D}',
+  crops: '\u{1F331}',
+  'confidence gaps': '\u{26A0}\u{FE0F}',
+  'kitchen/storage': '\u{1F373}',
+  stores: '\u{1F4E6}',
+};
+
+function splitStateSummary(summary: string): StateSummaryLine[] {
+  return summary
+    .split(/\r?\n/)
+    .map(parseStateSummaryLine)
+    .filter((line): line is StateSummaryLine => line !== null);
+}
+
+function parseStateSummaryLine(line: string): StateSummaryLine | null {
+  const text = line.trim().replace(/^-\s*/, '');
+  if (!text) return null;
+
+  const separator = text.indexOf(':');
+  if (separator <= 0) {
+    return { detail: text, icon: '\u{2139}\u{FE0F}', label: null };
+  }
+
+  const label = text.slice(0, separator).trim();
+  const detail = text.slice(separator + 1).trim();
+
+  return {
+    detail,
+    icon: STATE_SUMMARY_ICONS[label.toLowerCase()] ?? '\u{2139}\u{FE0F}',
+    label,
+  };
 }
 
 function MayorAdvice({

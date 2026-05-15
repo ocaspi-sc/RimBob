@@ -11,6 +11,7 @@
 <!-- entries go here -->
 - [ ] [2026-05-16] #skill #debt Fix local skill validator Python dependency.
 - [ ] [2026-05-16] #replay #mayor Decide whether legacy `/api/agenda/manual` should emit replay records or be retired.
+- [ ] [2026-05-16] #dashboard #markdown Add restricted player-facing Markdown rendering when advice bodies or guide snippets need rich formatting; keep raw/debug views unrendered.
 - [ ] [2026-05-15] #food #advice #schema Collapse Food advice into one priority-tagged step path. [plan](.plans/collapse-food-advice-steps.md)
 - [ ] [2026-05-15] #idea #llm #rag Provide ministers with more RAG knowledge.
 - [x] [2026-05-14] #doc #debt Avoid over-specifying code-documented details in design docs.

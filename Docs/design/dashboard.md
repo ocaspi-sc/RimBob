@@ -336,12 +336,15 @@ and last error.
 
 Mayor Advice renders the Agenda as the Mayor's player-facing output. Feeder
 minister Advice renders the minister's current-state summary first, then active
-`AdviceItem`s sorted by priority. For Food, this summary is deterministic
-briefing-derived state, not LLM prose: it should name concrete food stores,
-growing areas/crop progress, kitchen/storage/freezer signals, and confidence
-gaps before the action cards. Cards show rationale, suggested actions, resource
-requests, citations, issue id or supersession when available, and coverage
-gaps. No feedback buttons are shown in v2.
+`AdviceItem`s sorted by priority. For Food, this summary is a deterministic
+briefing-derived labelled summary, not LLM prose. The Advice view may render it
+as a compact table with lightweight emoji cues because it is player-facing; raw
+and debug views preserve the original `state_summary` text. It should name
+concrete food stores, growing areas/crop progress, acquisition opportunities,
+kitchen/storage/freezer signals, and confidence gaps before the action cards.
+Cards show rationale, suggested actions, resource requests, citations, issue id
+or supersession when available, and coverage gaps. No feedback buttons are
+shown in v2.
 
 The dashboard does not cache Agenda documents in browser storage. Stale agenda
 recovery comes from Host-owned durable agenda storage. On a fresh runtime with
@@ -377,7 +380,8 @@ metrics, and endpoint coverage.
 - Left rail, main workspace, and sidebar own their overflow; avoid whole-page
   scrolling on desktop.
 - Text wraps within panels.
-- Use compact tables only for debug surfaces.
+- Use compact tables for debug surfaces and explicitly curated player-facing
+  summaries, such as the Food current-state table.
 - Debug tables use contract names by default. Friendly aliases are allowed only
   when they clarify a stable contract and do not hide the backend field.
 - Resource request tables expose execution-facing fields with enough width for

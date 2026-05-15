@@ -1239,6 +1239,49 @@ code {
   line-height: 1.45;
 }
 
+.state-summary-table {
+  margin: 7px 0 0;
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--text);
+  line-height: 1.45;
+  table-layout: fixed;
+}
+
+.state-summary-table tr + tr {
+  border-top: 1px solid rgba(98, 216, 230, 0.12);
+}
+
+.state-summary-table th,
+.state-summary-table td {
+  padding: 7px 0;
+  vertical-align: top;
+}
+
+.state-summary-table th {
+  width: 220px;
+  padding-right: 18px;
+  color: var(--text);
+  font-weight: 700;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.state-summary-table td {
+  color: var(--text);
+}
+
+.state-summary-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  min-height: 22px;
+  margin-right: 8px;
+  font-size: 15px;
+  line-height: 1;
+  filter: saturate(1.1);
+}
+
 .advice-card.v2 header {
   display: flex;
   justify-content: space-between;

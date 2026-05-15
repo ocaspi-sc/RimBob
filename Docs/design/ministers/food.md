@@ -151,12 +151,13 @@ sowable path is visible.
 Food LLM notes are trace labels, not player advice. Keep them terse and aligned
 with advice vocabulary.
 
-Food's player-facing output starts with a short current-state paragraph before
-the advice list. This paragraph is derived from the briefing rather than trusted
-to LLM prose. It should summarize concrete food situation facts such as stored
+Food's player-facing output starts with a short current-state summary before
+the advice list. This summary is derived from the briefing rather than trusted
+to LLM prose; the dashboard may render the labelled lines as a compact table. It
+should summarize concrete food situation facts such as stored
 meals/raw/unclassified food, days-of-food, growing areas and crop progress,
-kitchen/storage/freezer signals, and confidence/data gaps; individual advice
-items remain the actionable steps.
+acquisition opportunities, kitchen/storage/freezer signals, and confidence data
+gaps; individual advice items remain the actionable steps.
 
 Crop selection should be grounded in deterministic yield math exposed to both
 rules and LLM escalation. The LLM may use guides to explain or adjust a
