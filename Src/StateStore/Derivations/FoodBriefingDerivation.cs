@@ -15,18 +15,14 @@ public static class FoodBriefingDerivation
         SeasonContext season = SeasonDeriver.Derive(date);
         IReadOnlyList<ColonistRecord> pawns = PawnDeriver.LivingColonists(s.Colonists.Value.Colonists);
         ResourceSummary resources = s.Resources.Value;
+        FoodItemClassification food = FoodItemClassifier.Classify(
+            resources,
+            s.StoredResources.Value,
+            s.Things.Value,
+            s.ThingDefs.Value);
 
-        float? reported = resources.TotalNutrition > 0f ? resources.TotalNutrition : null;
-        float fallback = FoodNutrition.EstimateFallback(resources.MealsCount, resources.RawFoodCount);
-        float? fallbackNutrition = fallback > 0f ? fallback : null;
-        float? nutrition = reported ?? fallbackNutrition;
-        string nutritionSource = reported is not null
-            ? "reported"
-            : fallbackNutrition is not null
-                ? "fallback_meal_raw_counts"
-                : "unknown";
-        float? days = nutrition is not null && pawns.Count > 0
-            ? nutrition / (FoodNutrition.NutritionPerColonistPerDay * pawns.Count)
+        float? days = food.Nutrition is not null && pawns.Count > 0
+            ? food.Nutrition / (FoodNutrition.NutritionPerColonistPerDay * pawns.Count)
             : null;
 
         IReadOnlyList<string> incidents = s.Threats.Value.RecentIncidents
@@ -43,13 +39,13 @@ public static class FoodBriefingDerivation
             GameTick: s.Economy.Value.Tick,
             Season: season,
             ColonistCount: pawns.Count,
-            ReportedNutrition: reported,
-            FallbackNutrition: fallbackNutrition,
-            NutritionSource: nutritionSource,
+            ReportedNutrition: food.ReportedNutrition,
+            FallbackNutrition: food.FallbackNutrition,
+            NutritionSource: food.NutritionSource,
             EstimatedDaysOfFood: days,
-            FoodUnits: resources.FoodTotal,
-            MealsCount: resources.MealsCount,
-            RawFoodCount: resources.RawFoodCount,
+            FoodUnits: food.FoodUnits,
+            MealsCount: food.MealsCount,
+            RawFoodCount: food.RawFoodCount,
             ReadyToHarvest: s.Farm.Value.ReadyToHarvest,
             CropBreakdown: s.Farm.Value.CropBreakdown
                 .Select(c => new FoodCropSummary(c.Def, c.Count, c.AverageGrowth))
@@ -63,7 +59,7 @@ public static class FoodBriefingDerivation
             Infrastructure: DeriveInfrastructure(s),
             Storage: storage,
             Kitchen: kitchen,
-            DataCoverage: DeriveDataCoverage(s),
+            DataCoverage: DeriveDataCoverage(s, food),
             ActiveThreat: ThreatDeriver.HasActiveHostileThreat(s.Threats.Value),
             RecentFoodIncidents: incidents
         );
@@ -164,7 +160,7 @@ public static class FoodBriefingDerivation
             .ToList();
     }
 
-    private static FoodDataCoverage DeriveDataCoverage(ColonyState s) =>
+    private static FoodDataCoverage DeriveDataCoverage(ColonyState s, FoodItemClassification food) =>
         new(
             HasPlantPositions: s.Plants.Value.Plants.Any(p => p.Position is not null),
             HasAnimalPositions: s.Animals.Value.Animals.Any(a => a.Position is not null),
@@ -173,7 +169,8 @@ public static class FoodBriefingDerivation
             HasWorkPriorities: false,
             HasTradeAvailability: false)
         {
-            HasLiveState = s.GetVersionsForFoodBriefing().Any(version => version > 0)
+            HasLiveState = s.GetVersionsForFoodBriefing().Any(version => version > 0),
+            HasItemFoodClassification = food.HasItemFoodClassification
         };
 
     private static FoodReferencePoint? FindFoodReferencePoint(ColonyState s, IReadOnlyList<ColonistRecord> pawns)

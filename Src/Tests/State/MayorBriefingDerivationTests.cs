@@ -117,6 +117,33 @@ public sealed class MayorBriefingDerivationTests
     }
 
     [Fact]
+    public void Compute_StoredResources_PopulatesMaterialsAndItemBackedFoodDays()
+    {
+        var s = StateWith([Pawn("A", mood: 0.7f)]);
+        s.Resources.Update(new ResourceSummary(
+            TotalItems: 100, TotalMarketValue: 0f,
+            FoodTotal: 52, TotalNutrition: 1.64f,
+            MealsCount: 0, RawFoodCount: 0,
+            MedicineTotal: 0, WeaponCount: 0, WeaponValue: 0f));
+        s.StoredResources.Update(new StoredResourceRegistry([
+            new StoredResourceRecord("food_meals", "meal", "MealSurvivalPack", "packaged survival meal", 32, false),
+            new StoredResourceRecord("plant_food_raw", "berries", "RawBerries", "berries", 12, false),
+            new StoredResourceRecord("building_materials", "steel", "Steel", "steel", 75, false)
+        ], new Dictionary<string, int>(), new Dictionary<string, int>()));
+        s.ThingDefs.Update(new ThingDefRegistry(new Dictionary<string, ThingDefRecord>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["MealSurvivalPack"] = new("MealSurvivalPack", "packaged survival meal", "Item", "ThingWithComps", true, false, false, false, 0.9f, 10),
+            ["RawBerries"] = new("RawBerries", "berries", "Item", "ThingWithComps", true, false, false, false, 0.05f, 75)
+        }));
+
+        var b = MayorBriefingDerivation.Compute(s);
+
+        b.Food.EstimatedFoodUnitsInStockpile.Should().Be(52);
+        b.Food.EstimatedDaysOfFood.Should().BeApproximately(18.375f, 0.001f);
+        b.Resources.Materials.Should().ContainKey("Steel").WhoseValue.Should().Be(75);
+    }
+
+    [Fact]
     public void Compute_ResourceSummaryNoNutrition_LeavesDaysOfFoodNull()
     {
         var s = StateWith([Pawn("A", mood: 0.7f)]);

@@ -127,6 +127,8 @@ public sealed record FoodDataCoverage(
 )
 {
     public bool HasLiveState { get; init; }
+
+    public bool HasItemFoodClassification { get; init; }
 }
 
 public static class FoodNutrition

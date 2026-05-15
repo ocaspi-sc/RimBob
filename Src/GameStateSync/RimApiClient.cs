@@ -208,6 +208,11 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
         int mapId, CancellationToken ct = default) =>
         GetEnvelopedListAsync<AnimalDto>($"api/v1/map/animals?map_id={mapId}", ct);
 
+    /// <summary>GET api/v1/map/things?map_id — broad map thing list, including forbidden items.</summary>
+    public Task<IReadOnlyList<ThingDto>> GetThingsAsync(
+        int mapId, CancellationToken ct = default) =>
+        GetEnvelopedListAsync<ThingDto>($"api/v1/map/things?map_id={mapId}", ct);
+
     /// <summary>GET api/v1/map/weather?map_id — current weather def, temperature, rain rate.</summary>
     public Task<WeatherDto> GetWeatherAsync(int mapId, CancellationToken ct = default) =>
         GetEnvelopedAsync<WeatherDto>($"api/v1/map/weather?map_id={mapId}", ct);
@@ -265,6 +270,15 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
     public Task<ResourcesSummaryDto> GetResourcesSummaryAsync(
         int mapId, CancellationToken ct = default) =>
         GetEnvelopedAsync<ResourcesSummaryDto>($"api/v1/resources/summary?map_id={mapId}", ct);
+
+    /// <summary>GET api/v1/resources/stored?map_id — stored item stacks grouped by resource category.</summary>
+    public Task<StoredResourcesDto> GetStoredResourcesAsync(
+        int mapId, CancellationToken ct = default) =>
+        GetEnvelopedAsync<StoredResourcesDto>($"api/v1/resources/stored?map_id={mapId}", ct);
+
+    /// <summary>GET api/v1/def/all — thing defs nested at data.things_defs.</summary>
+    public Task<IReadOnlyList<ThingDefDto>> GetThingDefsAsync(CancellationToken ct = default) =>
+        GetEnvelopedListAsync<ThingDefDto>("api/v1/def/all", ct, "things_defs");
 
     // ── Research ──────────────────────────────────────────────────────────────
 

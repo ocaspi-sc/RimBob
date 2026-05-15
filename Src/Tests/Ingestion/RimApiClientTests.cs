@@ -67,6 +67,147 @@ public sealed class RimApiClientTests
     }
 
     [Fact]
+    public async Task GetAnimals_WhenLivePayloadOmitsHealth_LeavesHealthNull()
+    {
+        using HttpClient http = MakeClient(new PathRouter()
+            .Add("map/animals", Json("""
+                {
+                  "success": true,
+                  "data": [
+                    {
+                      "id": 37382,
+                      "name": "Ibex ram",
+                      "def": "Ibex",
+                      "position": { "x": 30, "y": 152, "z": 0 },
+                      "pregnant": false
+                    }
+                  ],
+                  "errors": null,
+                  "warnings": null,
+                  "timestamp": null
+                }
+                """)));
+
+        IReadOnlyList<AnimalDto> result = await new RimApiClient(http).GetAnimalsAsync(0);
+
+        AnimalDto animal = result.Should().ContainSingle().Subject;
+        animal.Id.Should().Be("37382");
+        animal.Def.Should().Be("Ibex");
+        animal.Health.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetThings_WhenApiReturnsLiveMealStacks_ReturnsMappedList()
+    {
+        using HttpClient http = MakeClient(new PathRouter()
+            .Add("map/things", Json("""
+                {
+                  "success": true,
+                  "data": [
+                    {
+                      "thing_id": "Thing_100",
+                      "def_name": "MealSurvivalPack",
+                      "label": "packaged survival meal",
+                      "categories": ["FoodMeals"],
+                      "position": { "x": 24, "y": 0, "z": 42 },
+                      "stack_count": 9,
+                      "market_value": 216.0,
+                      "is_forbidden": false
+                    }
+                  ],
+                  "errors": null,
+                  "warnings": null,
+                  "timestamp": null
+                }
+                """)));
+
+        IReadOnlyList<ThingDto> result = await new RimApiClient(http).GetThingsAsync(0);
+
+        ThingDto thing = result.Should().ContainSingle().Subject;
+        thing.StableId.Should().Be("Thing_100");
+        thing.StableDef.Should().Be("MealSurvivalPack");
+        thing.EffectiveStackCount.Should().Be(9);
+        thing.IsForbidden.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task GetStoredResources_WhenApiReturnsGroupedObject_PreservesCategories()
+    {
+        using HttpClient http = MakeClient(new PathRouter()
+            .Add("resources/stored", Json("""
+                {
+                  "success": true,
+                  "data": {
+                    "food_meals": [
+                      {
+                        "thing_id": "Thing_100",
+                        "def_name": "MealSurvivalPack",
+                        "label": "packaged survival meal",
+                        "stack_count": 9,
+                        "is_forbidden": false
+                      }
+                    ],
+                    "plant_food_raw": [
+                      {
+                        "thing_id": "Thing_101",
+                        "def_name": "RawBerries",
+                        "label": "berries",
+                        "stack_count": 12,
+                        "is_forbidden": false
+                      }
+                    ]
+                  },
+                  "errors": null,
+                  "warnings": null,
+                  "timestamp": null
+                }
+                """)));
+
+        StoredResourcesDto result = await new RimApiClient(http).GetStoredResourcesAsync(0);
+
+        result.Categories.Keys.Should().Contain(["food_meals", "plant_food_raw"]);
+        result.Categories["food_meals"].GetArrayLength().Should().Be(1);
+    }
+
+    [Fact]
+    public async Task GetThingDefs_WhenApiReturnsDefAllNestedObject_ReturnsThingDefs()
+    {
+        using HttpClient http = MakeClient(new PathRouter()
+            .Add("def/all", Json("""
+                {
+                  "success": true,
+                  "data": {
+                    "things_defs": [
+                      {
+                        "def_name": "MealSurvivalPack",
+                        "label": "packaged survival meal",
+                        "category": "Item",
+                        "thing_class": "ThingWithComps",
+                        "is_item": true,
+                        "is_plant": false,
+                        "is_medicine": false,
+                        "is_drug": false,
+                        "nutrition": 0.9,
+                        "stack_limit": 10
+                      }
+                    ],
+                    "incidents_defs": []
+                  },
+                  "errors": null,
+                  "warnings": null,
+                  "timestamp": null
+                }
+                """)));
+
+        IReadOnlyList<ThingDefDto> result = await new RimApiClient(http).GetThingDefsAsync();
+
+        ThingDefDto def = result.Should().ContainSingle().Subject;
+        def.DefName.Should().Be("MealSurvivalPack");
+        def.Nutrition.Should().Be(0.9f);
+        def.StackLimit.Should().Be(10);
+    }
+
+    [Fact]
     public async Task GetZones_WhenApiReturnsEmptyObjectData_ReturnsEmptyList()
     {
         using HttpClient http = MakeClient(new PathRouter()

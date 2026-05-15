@@ -81,6 +81,11 @@ briefing should expose the unclassified count directly. It should also name
 missing or unimplemented signals so Food can temper confidence without inventing
 player chores from data gaps.
 
+When item stacks and item definitions are available, Food should classify stored
+meals and raw food from those sources instead of trusting summary rollups. The
+raw item list remains an ingestion/debug input; the briefing receives compact
+counts, nutrition source, unclassified remainder, and coverage flags.
+
 The implemented briefing can be narrower than the target. Use
 `FoodBriefing`, `FoodBriefingDerivation`, and Food briefing tests for current
 fields.

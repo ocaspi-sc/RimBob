@@ -23,9 +23,9 @@ RIMAPI       what is              what it means
 ## Domain Aggregates
 
 The state store keeps the current colony snapshot in a single visible root. The
-root contains domain aggregates for people, stockpiles, buildings, power, map
-context, threats, research, factions, economy, and other live state as slices
-need them.
+root contains domain aggregates for people, stockpiles, stored items, item defs,
+buildings, power, map context, threats, research, factions, economy, and other
+live state as slices need them.
 
 Design rules:
 
@@ -109,6 +109,11 @@ Food's briefing should answer the nutrition-chain questions:
   labor, season, threat, or data coverage?
 - What concrete opportunity is available now: harvest, wild plants, sowing,
   cooking, storage visibility, freezer/building request, or escalation?
+
+Food should classify stored food from item stacks plus definition metadata when
+that data is available. Summary rollups are still useful, but they do not win
+over item-level meal/raw-food counts because RIMAPI can under-classify stored
+food in `resources/summary`.
 
 The implemented Food briefing is narrower than the eventual target, and that is
 fine. Use code/tests for current fields; use this doc for the design direction.

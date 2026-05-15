@@ -1,3 +1,4 @@
+using System.Text.Json;
 using RimAI.Core.Aggregates;
 using RimAI.Ingestion.Dtos;
 
@@ -31,20 +32,116 @@ public static class MapAggregateMapper
                 MapPosition(plant.Position)))
             .ToList());
 
+    public static ThingRegistry FromThings(IReadOnlyList<ThingDto> things) =>
+        new(things
+            .Where(thing => !string.IsNullOrWhiteSpace(thing.StableDef))
+            .Select(thing => new ThingRecord(
+                Id: StableThingId(thing),
+                Def: thing.StableDef,
+                Label: thing.Label,
+                StackCount: thing.EffectiveStackCount,
+                Categories: thing.Categories ?? [],
+                IsForbidden: thing.IsForbidden,
+                Position: MapPosition(thing.Position),
+                MarketValue: thing.MarketValue))
+            .ToList());
+
+    public static ThingDefRegistry FromThingDefs(IReadOnlyList<ThingDefDto> defs) =>
+        new(defs
+            .Where(def => !string.IsNullOrWhiteSpace(def.DefName))
+            .GroupBy(def => def.DefName, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group =>
+                {
+                    ThingDefDto def = group.First();
+                    return new ThingDefRecord(
+                        Def: def.DefName,
+                        Label: def.Label,
+                        Category: def.Category,
+                        ThingClass: def.ThingClass,
+                        IsItem: def.IsItem,
+                        IsPlant: def.IsPlant,
+                        IsMedicine: def.IsMedicine,
+                        IsDrug: def.IsDrug,
+                        Nutrition: def.Nutrition,
+                        StackLimit: def.StackLimit);
+                },
+                StringComparer.OrdinalIgnoreCase));
+
+    public static StoredResourceRegistry FromStoredResources(StoredResourcesDto stored)
+    {
+        List<StoredResourceRecord> items = [];
+        foreach ((string category, JsonElement value) in stored.Categories)
+        {
+            if (value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+                continue;
+
+            if (value.ValueKind == JsonValueKind.Object && !value.EnumerateObject().Any())
+                continue;
+
+            if (value.ValueKind != JsonValueKind.Array)
+                throw new InvalidOperationException($"RIMAPI schema drift at /resources/stored: category '{category}' was {value.ValueKind}, expected array.");
+
+            foreach (JsonElement item in value.EnumerateArray())
+            {
+                ThingDto dto;
+                try
+                {
+                    dto = item.Deserialize<ThingDto>()
+                        ?? throw new JsonException("Stored resource item was null.");
+                }
+                catch (JsonException ex)
+                {
+                    throw new InvalidOperationException(
+                        $"RIMAPI schema drift at /resources/stored: category '{category}' item could not deserialize as ThingDto at {ex.Path ?? "unknown path"}.",
+                        ex);
+                }
+
+                if (string.IsNullOrWhiteSpace(dto.StableDef))
+                    continue;
+
+                items.Add(new StoredResourceRecord(
+                    Category: category,
+                    Id: StableThingId(dto),
+                    Def: dto.StableDef,
+                    Label: dto.Label,
+                    StackCount: dto.EffectiveStackCount,
+                    IsForbidden: dto.IsForbidden,
+                    Position: MapPosition(dto.Position),
+                    MarketValue: dto.MarketValue));
+            }
+        }
+
+        Dictionary<string, int> countByDef = items
+            .Where(item => !item.IsForbidden)
+            .GroupBy(item => item.Def, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.Sum(item => item.StackCount), StringComparer.OrdinalIgnoreCase);
+
+        Dictionary<string, int> countByCategory = items
+            .Where(item => !item.IsForbidden)
+            .GroupBy(item => item.Category, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.Sum(item => item.StackCount), StringComparer.OrdinalIgnoreCase);
+
+        return new StoredResourceRegistry(items, countByDef, countByCategory);
+    }
+
     public static AnimalRegistry FromAnimals(IReadOnlyList<AnimalDto> animals) =>
         new(animals
             .Select(animal => new AnimalRecord(
                 animal.Id,
                 animal.Def,
                 animal.Tame,
-                animal.Health,
+                animal.Health ?? 1.0f,
                 MapPosition(animal.Position)))
             .ToList());
 
-    public static StockpileLedger FromStockpiles(IReadOnlyList<ZoneDto> zones)
+    public static StockpileLedger FromStockpiles(
+        IReadOnlyList<ZoneDto> zones,
+        StoredResourceRegistry? storedResources = null)
     {
         // /map/zones gives zone metadata but no item lists. Per-def counts come
-        // from /api/v1/resources/summary, so ItemsByDef stays empty by design.
+        // from /api/v1/resources/stored when that endpoint has category data.
         List<StockpileZone> stockpileZones = zones
             .Where(IsStockpileZone)
             .Select(zone => new StockpileZone(
@@ -55,7 +152,9 @@ public static class MapAggregateMapper
                 CenterOf(zone.Cells)))
             .ToList();
 
-        return new StockpileLedger(stockpileZones, new Dictionary<string, int>());
+        return new StockpileLedger(
+            stockpileZones,
+            storedResources?.CountByDef ?? new Dictionary<string, int>());
     }
 
     private static bool IsStockpileZone(ZoneDto zone) =>
@@ -82,6 +181,11 @@ public static class MapAggregateMapper
 
     public static MapPosition? MapPosition(PositionDto? position) =>
         position is null ? null : new MapPosition(position.X, position.Y, position.Z);
+
+    private static string StableThingId(ThingDto thing) =>
+        string.IsNullOrWhiteSpace(thing.StableId)
+            ? $"{thing.StableDef}:{thing.Position?.X}:{thing.Position?.Y}:{thing.Position?.Z}"
+            : thing.StableId;
 
     private static MapPosition? CenterOf(IReadOnlyList<PositionDto>? cells)
     {

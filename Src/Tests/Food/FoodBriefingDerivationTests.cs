@@ -62,6 +62,59 @@ public sealed class FoodBriefingDerivationTests
     }
 
     [Fact]
+    public void Compute_ItemLevelStoredFood_CatchesLiveSurvivalMealStacks()
+    {
+        ColonyState s = StateWithColonists(1);
+        s.Resources.Update(new ResourceSummary(100, 0f, 52, 1.64f, 0, 0, 0, 0, 0f));
+        s.StoredResources.Update(new StoredResourceRegistry([
+            new StoredResourceRecord("food_meals", "meal-1", "MealSurvivalPack", "packaged survival meal", 9, false),
+            new StoredResourceRecord("food_meals", "meal-2", "MealSurvivalPack", "packaged survival meal", 9, false),
+            new StoredResourceRecord("food_meals", "meal-3", "MealSurvivalPack", "packaged survival meal", 9, false),
+            new StoredResourceRecord("food_meals", "meal-4", "MealSurvivalPack", "packaged survival meal", 5, false),
+            new StoredResourceRecord("plant_food_raw", "berries-1", "RawBerries", "berries", 12, false)
+        ], new Dictionary<string, int>(), new Dictionary<string, int>()));
+        s.ThingDefs.Update(new ThingDefRegistry(new Dictionary<string, ThingDefRecord>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["MealSurvivalPack"] = new("MealSurvivalPack", "packaged survival meal", "Item", "ThingWithComps", true, false, false, false, 0.9f, 10),
+            ["RawBerries"] = new("RawBerries", "berries", "Item", "ThingWithComps", true, false, false, false, 0.05f, 75)
+        }));
+
+        FoodBriefing b = FoodBriefingDerivation.Compute(s);
+
+        b.NutritionSource.Should().Be("item_def_catalog");
+        b.ReportedNutrition.Should().Be(1.64f);
+        b.FallbackNutrition.Should().BeApproximately(29.4f, 0.001f);
+        b.EstimatedDaysOfFood.Should().BeApproximately(18.375f, 0.001f);
+        b.FoodUnits.Should().Be(52);
+        b.MealsCount.Should().Be(32);
+        b.RawFoodCount.Should().Be(12);
+        b.UnclassifiedFoodUnits.Should().Be(8);
+        b.DataCoverage.HasItemFoodClassification.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Compute_MapThingFallback_IgnoresForbiddenSurvivalMeals()
+    {
+        ColonyState s = StateWithColonists(1);
+        s.Resources.Update(new ResourceSummary(100, 0f, 39, 0f, 0, 0, 0, 0, 0f));
+        s.Things.Update(new ThingRegistry([
+            new ThingRecord("forbidden", "MealSurvivalPack", "packaged survival meal", 7, ["FoodMeals"], true),
+            new ThingRecord("stored", "MealSurvivalPack", "packaged survival meal", 32, ["FoodMeals"], false)
+        ]));
+        s.ThingDefs.Update(new ThingDefRegistry(new Dictionary<string, ThingDefRecord>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["MealSurvivalPack"] = new("MealSurvivalPack", "packaged survival meal", "Item", "ThingWithComps", true, false, false, false, 0.9f, 10)
+        }));
+
+        FoodBriefing b = FoodBriefingDerivation.Compute(s);
+
+        b.NutritionSource.Should().Be("item_def_catalog");
+        b.MealsCount.Should().Be(32);
+        b.RawFoodCount.Should().Be(0);
+        b.FallbackNutrition.Should().BeApproximately(28.8f, 0.001f);
+    }
+
+    [Fact]
     public void Compute_DefaultState_MarksLiveStateMissing()
     {
         FoodBriefing b = FoodBriefingDerivation.Compute(new ColonyState());

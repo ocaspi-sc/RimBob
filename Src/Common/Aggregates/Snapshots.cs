@@ -95,6 +95,51 @@ public sealed record PlantRecord(
     MapPosition? Position = null
 );
 
+public sealed record ThingRegistry(IReadOnlyList<ThingRecord> Things);
+
+public sealed record ThingRecord(
+    string Id,
+    string Def,
+    string? Label,
+    int StackCount,
+    IReadOnlyList<string> Categories,
+    bool IsForbidden,
+    MapPosition? Position = null,
+    float? MarketValue = null
+);
+
+public sealed record ThingDefRegistry(IReadOnlyDictionary<string, ThingDefRecord> DefsByName);
+
+public sealed record ThingDefRecord(
+    string Def,
+    string? Label,
+    string? Category,
+    string? ThingClass,
+    bool IsItem,
+    bool IsPlant,
+    bool IsMedicine,
+    bool IsDrug,
+    float Nutrition,
+    int? StackLimit
+);
+
+public sealed record StoredResourceRegistry(
+    IReadOnlyList<StoredResourceRecord> Items,
+    IReadOnlyDictionary<string, int> CountByDef,
+    IReadOnlyDictionary<string, int> CountByCategory
+);
+
+public sealed record StoredResourceRecord(
+    string Category,
+    string Id,
+    string Def,
+    string? Label,
+    int StackCount,
+    bool IsForbidden,
+    MapPosition? Position = null,
+    float? MarketValue = null
+);
+
 public sealed record AnimalRegistry(IReadOnlyList<AnimalRecord> Animals);
 
 public sealed record AnimalRecord(
@@ -145,6 +190,9 @@ public static class AggregateDefaults
     public static readonly WeatherSnapshot   Weather     = new("", 0f, 0f);
     public static readonly FarmSnapshot      Farm        = new(0, 0f, 0, []);
     public static readonly PlantRegistry     Plants      = new([]);
+    public static readonly ThingRegistry     Things      = new([]);
+    public static readonly ThingDefRegistry  ThingDefs   = new(new Dictionary<string, ThingDefRecord>());
+    public static readonly StoredResourceRegistry StoredResources = new([], new Dictionary<string, int>(), new Dictionary<string, int>());
     public static readonly AnimalRegistry    Animals     = new([]);
     public static readonly ResourceSummary   Resources   = new(0, 0f, 0, 0f, 0, 0, 0, 0, 0f);
     public static readonly ResearchInfo      Research    = new(null, null, false);

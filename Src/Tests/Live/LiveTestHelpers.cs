@@ -65,6 +65,36 @@ internal static class LiveTestHelpers
             : 0;
     }
 
+    public static int CountStoredResourceDef(string json, string defName, bool includeForbidden = false)
+    {
+        using JsonDocument document = JsonDocument.Parse(json);
+        if (!document.RootElement.TryGetProperty("data", out JsonElement data) ||
+            data.ValueKind != JsonValueKind.Object)
+            return 0;
+
+        int count = 0;
+        foreach (JsonProperty category in data.EnumerateObject())
+        {
+            if (category.Value.ValueKind != JsonValueKind.Array)
+                continue;
+
+            foreach (JsonElement item in category.Value.EnumerateArray())
+            {
+                string? itemDef = TryGetString(item, "def_name") ?? TryGetString(item, "def");
+                if (!string.Equals(itemDef, defName, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                bool isForbidden = TryGetBoolean(item, "is_forbidden") == true;
+                if (isForbidden && !includeForbidden)
+                    continue;
+
+                count += TryGetInt32(item, "stack_count") ?? TryGetInt32(item, "count") ?? 1;
+            }
+        }
+
+        return count;
+    }
+
     public static int? TryGetInt32(JsonElement element, string propertyName)
     {
         if (!element.TryGetProperty(propertyName, out JsonElement value))
@@ -89,5 +119,13 @@ internal static class LiveTestHelpers
             JsonValueKind.False => false,
             _ => null
         };
+    }
+
+    private static string? TryGetString(JsonElement element, string propertyName)
+    {
+        if (!element.TryGetProperty(propertyName, out JsonElement value))
+            return null;
+
+        return value.ValueKind == JsonValueKind.String ? value.GetString() : value.ToString();
     }
 }

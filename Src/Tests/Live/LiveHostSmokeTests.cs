@@ -10,7 +10,7 @@ public sealed class LiveHostSmokeTests(ITestOutputHelper output)
     [Trait("Category", "Live")]
     public async Task FoodBriefing_DoesNotLoseLiveAnimalsWhenHostAndRimApiAreRunning()
     {
-        Uri hostBaseUri = LiveTestHelpers.ResolveBaseUri("RIMAI_HOST_BASE_URL", "http://127.0.0.1:5000/");
+        Uri hostBaseUri = LiveTestHelpers.ResolveBaseUri("RIMAI_HOST_BASE_URL", "http://localhost:5000/");
         using HttpClient host = new() { BaseAddress = hostBaseUri, Timeout = TimeSpan.FromSeconds(3) };
 
         string? healthJson = await LiveTestHelpers.TryGetStringAsync(host, "api/health", output, "RimAI Host");
@@ -28,7 +28,7 @@ public sealed class LiveHostSmokeTests(ITestOutputHelper output)
                                LiveTestHelpers.TryGetInt32(food, "wild_animal_count");
         hostAnimalCount.Should().NotBeNull("Food briefing should expose wild animal count");
 
-        Uri rimApiBaseUri = LiveTestHelpers.ResolveBaseUri("RIMAPI_BASE_URL", "http://127.0.0.1:8765/");
+        Uri rimApiBaseUri = LiveTestHelpers.ResolveBaseUri("RIMAPI_BASE_URL", "http://localhost:8765/");
         using HttpClient rimApi = new() { BaseAddress = rimApiBaseUri, Timeout = TimeSpan.FromSeconds(3) };
 
         string? mapsJson = await LiveTestHelpers.TryGetStringAsync(rimApi, "api/v1/maps", output, "RIMAPI");

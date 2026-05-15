@@ -20,14 +20,17 @@ public static class SystemEndpoints
         new("GET", "/api/v2/colonists/detailed?map_id", "active_read", "Mayor/Food", "Colonist bio, needs, skills, traits, jobs, and medical flags."),
         new("GET", "/api/v1/map/farm/summary?map_id", "active_read", "Food", "Crop totals and average growth per crop type."),
         new("GET", "/api/v1/map/plants?map_id", "active_read", "Food", "Plant and harvest opportunity source data."),
+        new("GET", "/api/v1/def/all", "active_read", "State store", "Thing definition catalog used to classify item nutrition and stack semantics."),
         new("GET", "/api/v1/map/animals?map_id", "active_read", "Food", "Wild/tame animal source data for hunting assessment."),
         new("GET", "/api/v1/map/zones?map_id", "active_read", "Food/State store", "Growing and stockpile zones with cell lists."),
         new("GET", "/api/v1/map/buildings?map_id", "active_read", "Construction/Food", "Buildings, HP, power state, and working flags."),
         new("GET", "/api/v1/map/power/info?map_id", "active_read", "Construction/Food", "Power production, consumption, storage, and capacity."),
         new("GET", "/api/v1/map/weather?map_id", "active_read", "Food/Defense", "Weather and outdoor temperature."),
+        new("GET", "/api/v1/map/things?map_id", "active_read", "Food/State store", "Broad item and thing list; used as fallback/debug source behind stored resources."),
         new("GET", "/api/v1/lords?map_id", "active_read", "Defense", "Active AI lords such as raids, sieges, and caravans."),
         new("GET", "/api/v1/incidents?map_id", "active_read", "Defense/Food", "Recent incidents used for threat and food-event context."),
         new("GET", "/api/v1/resources/summary?map_id", "active_read", "Mayor/Food", "Food, nutrition, medicine, weapons, market-value rollups."),
+        new("GET", "/api/v1/resources/stored?map_id", "active_read", "Mayor/Food", "Stored item stacks grouped by category; primary source for meal/raw-food classification."),
         new("GET", "/api/v1/research/progress", "active_read", "Mayor/Research", "Current research project and progress.")
     ];
 
@@ -46,7 +49,6 @@ public static class SystemEndpoints
 
     private static readonly RimApiCoverageRow[] MissingRimApiPriorities =
     [
-        new("GET", "/api/v1/resources/stored?map_id", "missing", "Mayor/Construction", "Needed for per-def material counts such as steel and components."),
         new("GET", "/api/v1/resources/storages/summary?map_id", "missing", "Food/Construction", "Needed for stockpile utilization and storage pressure."),
         new("GET", "/api/v1/map/work-tables?map_id", "missing", "Food/Industry", "Needed before Food can reason about cooking/butchering bench coverage."),
         new("GET", "/api/v1/buildings/bills?building_id", "missing", "Food/Industry", "Needed for cooking, butchering, and production bill state."),

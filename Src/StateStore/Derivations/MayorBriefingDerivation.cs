@@ -48,8 +48,13 @@ public static class MayorBriefingDerivation
         var skills    = DeriveSkillCoverage(pawns);
         var traits    = DeriveTraits(pawns);
         var medical   = DeriveMedical(pawns);
-        var food      = DeriveFood(s.Farm.Value, s.Resources.Value, pawns.Count);
-        var resources = DeriveResources(s.Resources.Value);
+        FoodItemClassification foodClassification = FoodItemClassifier.Classify(
+            s.Resources.Value,
+            s.StoredResources.Value,
+            s.Things.Value,
+            s.ThingDefs.Value);
+        var food      = DeriveFood(s.Farm.Value, foodClassification, pawns.Count);
+        var resources = DeriveResources(s.Resources.Value, s.StoredResources.Value);
         var power     = DerivePower(s.Power.Value);
         var buildings = DeriveBuildings(s.Buildings.Value);
         var mood      = DeriveMood(pawns);
@@ -147,17 +152,13 @@ public static class MayorBriefingDerivation
         // TODO: SurgeryPending requires a surgery-bill endpoint not yet exposed.
     }
 
-    // Standard RimWorld nutrition: an adult colonist eats ~1.6 nutrition / day.
-    // Used as the divisor for days-of-food when /resources/summary reports nutrition.
-    private const float NutritionPerColonistPerDay = 1.6f;
-
-    private static FoodSnapshot DeriveFood(FarmSnapshot farm, ResourceSummary resources, int colonistCount)
+    private static FoodSnapshot DeriveFood(FarmSnapshot farm, FoodItemClassification food, int colonistCount)
     {
-        // EstimatedDaysOfFood is null when we have no nutrition signal yet
-        // (mid-startup, or RIMAPI hasn't seen any meals). The Mayor's prompt
-        // treats null as "food data unknown — request stockpile audit", not zero.
-        float? daysOfFood = resources.TotalNutrition > 0f && colonistCount > 0
-            ? resources.TotalNutrition / (NutritionPerColonistPerDay * colonistCount)
+        // EstimatedDaysOfFood is null when we have no nutrition signal yet.
+        // Item/def-backed classification wins over the summary rollup because
+        // RIMAPI's total_nutrition can be stale or undercounted.
+        float? daysOfFood = food.Nutrition is not null && colonistCount > 0
+            ? food.Nutrition / (FoodNutrition.NutritionPerColonistPerDay * colonistCount)
             : null;
 
         return new FoodSnapshot(
@@ -167,27 +168,60 @@ public static class MayorBriefingDerivation
             CropBreakdown:  farm.CropBreakdown
                                 .Select(c => new CropBreakdown(c.Def, c.Count, c.AverageGrowth))
                                 .ToList(),
-            EstimatedFoodUnitsInStockpile: resources.FoodTotal,
+            EstimatedFoodUnitsInStockpile: food.FoodUnits,
             EstimatedDaysOfFood:           daysOfFood
         );
     }
 
-    private static ResourceSnapshot DeriveResources(ResourceSummary r)
+    private static ResourceSnapshot DeriveResources(ResourceSummary r, StoredResourceRegistry storedResources)
     {
-        // /resources/summary gives us aggregated counts but not per-def detail.
-        // Materials stays empty until /resources/stored returns non-empty data
-        // (currently `{}` on a fresh map); medicine + weapons surface as a single
-        // bucket each so the Mayor can at least see "do we have any?".
-        Dictionary<string, int> materials = new();
-        Dictionary<string, int> medicine  = r.MedicineTotal > 0
-            ? new Dictionary<string, int> { ["Medicine"] = r.MedicineTotal }
-            : new();
-        Dictionary<string, int> weapons   = r.WeaponCount > 0
-            ? new Dictionary<string, int> { ["Weapons"]  = r.WeaponCount }
-            : new();
+        Dictionary<string, int> materials = storedResources.Items
+            .Where(IsMaterialItem)
+            .GroupBy(item => item.Def, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.Sum(item => item.StackCount), StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, int> medicine = storedResources.Items
+            .Where(IsMedicineItem)
+            .GroupBy(item => item.Def, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.Sum(item => item.StackCount), StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, int> weapons = storedResources.Items
+            .Where(IsWeaponItem)
+            .GroupBy(item => item.Def, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.Sum(item => item.StackCount), StringComparer.OrdinalIgnoreCase);
+
+        if (medicine.Count == 0 && r.MedicineTotal > 0)
+        {
+            medicine = new Dictionary<string, int> { ["Medicine"] = r.MedicineTotal };
+        }
+
+        if (weapons.Count == 0 && r.WeaponCount > 0)
+        {
+            weapons = new Dictionary<string, int> { ["Weapons"] = r.WeaponCount };
+        }
 
         return new ResourceSnapshot(materials, medicine, weapons);
     }
+
+    private static bool IsMaterialItem(StoredResourceRecord item) =>
+        !item.IsForbidden &&
+        !IsFoodItem(item) &&
+        !IsMedicineItem(item) &&
+        !IsWeaponItem(item);
+
+    private static bool IsFoodItem(StoredResourceRecord item) =>
+        item.Category.Contains("food", StringComparison.OrdinalIgnoreCase) ||
+        item.Def.StartsWith("Meal", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsMedicineItem(StoredResourceRecord item) =>
+        !item.IsForbidden &&
+        (item.Category.Contains("medicine", StringComparison.OrdinalIgnoreCase) ||
+         item.Def.Contains("Medicine", StringComparison.OrdinalIgnoreCase));
+
+    private static bool IsWeaponItem(StoredResourceRecord item) =>
+        !item.IsForbidden &&
+        (item.Category.Contains("weapon", StringComparison.OrdinalIgnoreCase) ||
+         item.Def.Contains("Gun", StringComparison.OrdinalIgnoreCase) ||
+         item.Def.Contains("Rifle", StringComparison.OrdinalIgnoreCase) ||
+         item.Def.Contains("Pistol", StringComparison.OrdinalIgnoreCase));
 
     private static PowerSnapshot DerivePower(PowerNetwork p) =>
         new(p.ProductionW, p.ConsumptionW, p.StoredWd, p.CapacityWd, p.ProductionW - p.ConsumptionW);

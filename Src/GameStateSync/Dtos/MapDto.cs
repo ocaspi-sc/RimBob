@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace RimAI.Ingestion.Dtos;
@@ -35,7 +36,7 @@ public record AnimalDto(
     [property: JsonPropertyName("def")]     string Def,
     [property: JsonPropertyName("name")]    string? Name,
     [property: JsonPropertyName("tame")]    bool Tame,
-    [property: JsonPropertyName("health")]  float Health,
+    [property: JsonPropertyName("health")]  float? Health,
     [property: JsonPropertyName("position")] PositionDto? Position
 );
 
@@ -79,6 +80,56 @@ public record WeatherDto(
     [property: JsonPropertyName("rain_rate")]   float RainRate
 );
 
+// ── GET /map/things?map_id ────────────────────────────────────────────────────
+// Broad thing inventory. Live RIMAPI includes forbidden map items here, so Food
+// should prefer /resources/stored for reachable stockpile counts.
+public sealed record ThingDto
+{
+    [JsonPropertyName("thing_id")]
+    [JsonConverter(typeof(FlexibleStringIdJsonConverter))]
+    public string? ThingId { get; init; }
+
+    [JsonPropertyName("id")]
+    [JsonConverter(typeof(FlexibleStringIdJsonConverter))]
+    public string? Id { get; init; }
+
+    [JsonPropertyName("def_name")]
+    public string? DefName { get; init; }
+
+    [JsonPropertyName("def")]
+    public string? Def { get; init; }
+
+    [JsonPropertyName("label")]
+    public string? Label { get; init; }
+
+    [JsonPropertyName("categories")]
+    public IReadOnlyList<string>? Categories { get; init; }
+
+    [JsonPropertyName("position")]
+    public PositionDto? Position { get; init; }
+
+    [JsonPropertyName("stack_count")]
+    public int? StackCount { get; init; }
+
+    [JsonPropertyName("count")]
+    public int? Count { get; init; }
+
+    [JsonPropertyName("market_value")]
+    public float? MarketValue { get; init; }
+
+    [JsonPropertyName("is_forbidden")]
+    public bool IsForbidden { get; init; }
+
+    [JsonIgnore]
+    public string StableId => ThingId ?? Id ?? "";
+
+    [JsonIgnore]
+    public string StableDef => DefName ?? Def ?? "";
+
+    [JsonIgnore]
+    public int EffectiveStackCount => Math.Max(1, StackCount ?? Count ?? 1);
+}
+
 // ── GET /map/creatures/summary?map_id ────────────────────────────────────────
 public record CreaturesSummaryDto(
     [property: JsonPropertyName("colonists")]   int Colonists,
@@ -120,6 +171,29 @@ public record FoodSummaryDto(
     [property: JsonPropertyName("total_nutrition")]  float TotalNutrition,
     [property: JsonPropertyName("meals_count")]      int   MealsCount,
     [property: JsonPropertyName("raw_food_count")]   int   RawFoodCount
+);
+
+// ── GET /api/v1/resources/stored?map_id ──────────────────────────────────────
+// Live shape is a category object, e.g. data.food_meals = [ThingDto...].
+public sealed record StoredResourcesDto
+{
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement> Categories { get; init; } = [];
+}
+
+// ── GET /api/v1/def/all ──────────────────────────────────────────────────────
+// The useful list is nested at data.things_defs.
+public sealed record ThingDefDto(
+    [property: JsonPropertyName("def_name")]    string DefName,
+    [property: JsonPropertyName("label")]       string? Label,
+    [property: JsonPropertyName("category")]    string? Category,
+    [property: JsonPropertyName("thing_class")] string? ThingClass,
+    [property: JsonPropertyName("is_item")]     bool IsItem,
+    [property: JsonPropertyName("is_plant")]    bool IsPlant,
+    [property: JsonPropertyName("is_medicine")] bool IsMedicine,
+    [property: JsonPropertyName("is_drug")]     bool IsDrug,
+    [property: JsonPropertyName("nutrition")]   float Nutrition,
+    [property: JsonPropertyName("stack_limit")] int? StackLimit
 );
 
 // ── GET /api/v1/research/progress ─────────────────────────────────────────────

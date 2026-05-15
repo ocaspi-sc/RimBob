@@ -27,7 +27,7 @@
 ### Now (live-state gaps)
 
 - [ ] **PawnMedicalInfo wiring.** `PawnMedicalInfoDto.IsDowned` and `Hediffs` flow through the DTO but `MayorBriefingDerivation.DeriveMedical` still uses a `Health < 0.30` heuristic. Plumb `is_downed` + life-threatening hediffs into `ColonistRecord` so Mayor can distinguish "anesthetised" from "dying".
-- [ ] **`/resources/stored` integration.** Currently `Materials` dictionary is empty (only Medicine/Weapons rollups). When a stockpile zone has items and `/resources/stored` returns non-empty, populate per-def material counts so the Mayor can talk about steel, components, etc.
+- [x] **`/resources/stored` integration.** Populate per-def stored item counts from `/resources/stored` so Food can classify meals/raw food and Mayor can surface material counts.
 - [ ] **`total_nutrition == 0` upstream investigation.** RIMAPI returns 0 nutrition even when `food_total > 0` and meals exist on map. Check whether this is a bug we can patch around (e.g. compute from `meals_count * 0.9 + raw_food_count * 0.05`) or a deeper RIMAPI gap.
 
 ### Current implementation order

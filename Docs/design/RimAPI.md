@@ -4,7 +4,7 @@ Cached digest of the upstream [RIMAPI](https://github.com/IlyaChichkov/RIMAPI) d
 
 If you need an endpoint not listed here, fetch the live docs and append to this file.
 
-> **Verified vs. cached.** The catalogue below was distilled from upstream docs and is **not** all field-checked against the running mod. So far the M0 handshake has verified `/api/v1/game/state`, `/api/v1/maps`, and `/api/v1/map/pawns?map_id=` only. Several DTO field names that previously diverged from the live API have been corrected against the running RIMAPI (e.g. `tick` → `game_tick`, `wealth` → `colony_wealth`, `paused` → `is_paused`, `mapId` → `map_id`); other endpoint DTOs remain speculative until a minister actually wires them.
+> **Verified vs. cached.** The catalogue below was distilled from upstream docs and is **not** all field-checked against the running mod. Verified shapes are called out inline as slices wire them into ingestion. Several DTO field names that previously diverged from the live API have been corrected against the running RIMAPI (e.g. `tick` → `game_tick`, `wealth` → `colony_wealth`, `paused` → `is_paused`, `mapId` → `map_id`); other endpoint DTOs remain speculative until a minister actually wires them.
 
 ---
 
@@ -57,6 +57,8 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 | GET | `/game/settings` + `/game/settings/run-in-background` (+ toggle) | settings |
 | POST | `/game/main-menu` / `/game/quit` | exit |
 
+> **Verified shape.** `/def/all` returns a non-empty object under `data`, with thing defs nested at `data.things_defs`. Food uses this catalog to read item nutrition; live `MealSurvivalPack` has `nutrition: 0.9`, `stack_limit: 10`, and item/category metadata.
+
 ### Game Events (incidents, quests, lords)
 | Method | Path | Purpose |
 |---|---|---|
@@ -104,6 +106,10 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 | POST | `/map/repair/positions` / `/map/repair/rect` | repair |
 | POST | `/map/droppod` | spawn drop pod |
 | POST | `/map/building/power?buildingId&powerOn` | toggle power |
+
+> **Verified shape.** `/map/things?map_id=...` returns broad map items including `thing_id`, `def_name`, `label`, `categories`, `position`, `stack_count`, `market_value`, and `is_forbidden`. It includes forbidden map items, so Food treats it as fallback/debug inventory; `/resources/stored` is preferred for reachable stored food.
+
+> **Verified shape.** `/map/animals?map_id=...` can omit health/tame fields on ordinary wild animals. Missing health means "not reported", not injured/dead; ingestion defaults it to healthy for Food's wild-animal opportunity count.
 
 ### Bill (work-table recipes)
 | Method | Path | Purpose |
@@ -175,10 +181,12 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/api/v1/resources/summary?map_id` | colony-wide rollup: total items, market value, food/medicine/weapons rollups |
-| GET | `/api/v1/resources/stored?map_id` | per-def stored counts (returns `{}` until stockpiles are populated) |
+| GET | `/api/v1/resources/stored?map_id` | stored item stacks grouped by resource category |
 | GET | `/api/v1/resources/storages/summary?map_id` | stockpile cell utilization (`total_stockpiles`, `used_cells`, `utilization_percent`) |
 
-> **Verified shape (M1.5).** `/resources/summary.critical_resources` carries `food_summary.{food_total, total_nutrition, meals_count, raw_food_count}`, `medicine_total`, `weapon_count`, `weapon_value`. `total_nutrition` can be 0 even when `food_total > 0` (raw food not yet categorised); the dispatcher leaves `EstimatedDaysOfFood` null in that case rather than reporting fake zero days.
+> **Verified shape.** `/resources/summary.critical_resources` carries `food_summary.{food_total, total_nutrition, meals_count, raw_food_count}`, `medicine_total`, `weapon_count`, `weapon_value`. `total_nutrition`, `meals_count`, and `raw_food_count` can be stale or under-classified even when stored food exists, so item/def-backed classification wins when available.
+
+> **Verified shape.** `/resources/stored?map_id=...` returns `data` as a category object, not a per-def dictionary. Examples include `food_meals: [ThingDto...]` and `plant_food_raw: [ThingDto...]`. A live stockpile with packaged survival meals surfaced four non-forbidden `MealSurvivalPack` stacks totaling 32 meals; the same map also had forbidden meal stacks visible through `/map/things`, which is why stored resources are the primary food-count source.
 
 ### Research
 | Method | Path | Purpose |

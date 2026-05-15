@@ -35,6 +35,9 @@ public sealed class IngestionDispatcherTests
         s.Weather.Version.Should().Be(1);
         s.Farm.Version.Should().Be(1);
         s.Plants.Version.Should().Be(1);
+        s.Things.Version.Should().Be(1);
+        s.ThingDefs.Version.Should().Be(1);
+        s.StoredResources.Version.Should().Be(1);
         s.Animals.Version.Should().Be(1);
         s.Resources.Version.Should().Be(1);
         s.Research.Version.Should().Be(1);
@@ -58,6 +61,11 @@ public sealed class IngestionDispatcherTests
         s.Colonists.Value.Colonists[0].IsDowned.Should().BeFalse();
         s.Colonists.Value.Colonists[0].IsDead.Should().BeFalse();
         s.Plants.Value.Plants.Single().Position.Should().BeEquivalentTo(new { X = 12, Y = 0, Z = 22 });
+        s.Things.Value.Things.Should().ContainSingle()
+            .Which.Def.Should().Be("MealSurvivalPack");
+        s.ThingDefs.Value.DefsByName.Should().ContainKey("MealSurvivalPack");
+        s.StoredResources.Value.CountByDef.Should().ContainKey("MealSurvivalPack").WhoseValue.Should().Be(9);
+        s.Stockpiles.Value.ItemsByDef.Should().ContainKey("MealSurvivalPack").WhoseValue.Should().Be(9);
         s.Animals.Value.Animals.Single().Position.Should().BeEquivalentTo(new { X = 40, Y = 0, Z = 45 });
         s.Stockpiles.Value.Zones.Single().Center.Should().BeEquivalentTo(new { X = 2, Y = 0, Z = 2 });
         s.Buildings.Value.Buildings.Single().Position.Should().BeEquivalentTo(new { X = 5, Y = 0, Z = 5 });
@@ -136,6 +144,104 @@ public sealed class IngestionDispatcherTests
         FoodBriefing briefing = FoodBriefingDerivation.Compute(s);
         briefing.WildAnimalCount.Should().Be(1);
         briefing.DataCoverage.HasAnimalPositions.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task RefreshAllAsync_LiveAnimalShapeWithoutHealth_DefaultsToHealthy()
+    {
+        PathRouter router = StandardRouter()
+            .Add("api/v1/map/animals?map_id", Json("""
+                {
+                  "success": true,
+                  "data": [
+                    {
+                      "id": 37382,
+                      "name": "Ibex ram",
+                      "def": "Ibex",
+                      "position": { "x": 30, "y": 152, "z": 0 },
+                      "pregnant": false
+                    }
+                  ],
+                  "errors": null,
+                  "warnings": null,
+                  "timestamp": null
+                }
+                """));
+        using HttpClient http = MakeClient(router);
+        ColonyState s = new();
+        IngestionDispatcher dispatcher = new(
+            new RimApiClient(http), s, new TestLogger<IngestionDispatcher>());
+
+        await dispatcher.RefreshAllAsync();
+
+        s.Animals.Value.Animals.Should().ContainSingle()
+            .Which.Health.Should().Be(1.0f);
+        FoodBriefing briefing = FoodBriefingDerivation.Compute(s);
+        briefing.WildAnimalCount.Should().Be(1);
+        briefing.DataCoverage.HasAnimalPositions.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task RefreshAllAsync_LiveStoredSurvivalMeals_FlowIntoFoodBriefing()
+    {
+        PathRouter router = StandardRouter()
+            .Add("api/v1/resources/summary?map_id", Json("""
+                {
+                  "success": true,
+                  "data": {
+                    "total_items": 100,
+                    "total_market_value": 1200.0,
+                    "critical_resources": {
+                      "food_summary": {
+                        "food_total": 52,
+                        "total_nutrition": 1.64,
+                        "meals_count": 0,
+                        "raw_food_count": 0
+                      },
+                      "medicine_total": 0,
+                      "weapon_count": 0,
+                      "weapon_value": 0.0
+                    }
+                  },
+                  "errors": null,
+                  "warnings": null,
+                  "timestamp": null
+                }
+                """))
+            .Add("api/v1/resources/stored?map_id", Json("""
+                {
+                  "success": true,
+                  "data": {
+                    "food_meals": [
+                      { "thing_id": "m1", "def_name": "MealSurvivalPack", "label": "packaged survival meal", "stack_count": 9, "is_forbidden": false },
+                      { "thing_id": "m2", "def_name": "MealSurvivalPack", "label": "packaged survival meal", "stack_count": 9, "is_forbidden": false },
+                      { "thing_id": "m3", "def_name": "MealSurvivalPack", "label": "packaged survival meal", "stack_count": 9, "is_forbidden": false },
+                      { "thing_id": "m4", "def_name": "MealSurvivalPack", "label": "packaged survival meal", "stack_count": 5, "is_forbidden": false }
+                    ],
+                    "plant_food_raw": [
+                      { "thing_id": "b1", "def_name": "RawBerries", "label": "berries", "stack_count": 12, "is_forbidden": false }
+                    ]
+                  },
+                  "errors": null,
+                  "warnings": null,
+                  "timestamp": null
+                }
+                """));
+        using HttpClient http = MakeClient(router);
+        ColonyState s = new();
+        IngestionDispatcher dispatcher = new(
+            new RimApiClient(http), s, new TestLogger<IngestionDispatcher>());
+
+        await dispatcher.RefreshAllAsync();
+
+        s.StoredResources.Value.CountByDef.Should().ContainKey("MealSurvivalPack").WhoseValue.Should().Be(32);
+        s.Stockpiles.Value.ItemsByDef.Should().ContainKey("MealSurvivalPack").WhoseValue.Should().Be(32);
+        FoodBriefing briefing = FoodBriefingDerivation.Compute(s);
+        briefing.NutritionSource.Should().Be("item_def_catalog");
+        briefing.MealsCount.Should().Be(32);
+        briefing.RawFoodCount.Should().Be(12);
+        briefing.FallbackNutrition.Should().BeApproximately(29.4f, 0.001f);
+        briefing.UnclassifiedFoodUnits.Should().Be(8);
     }
 
     [Fact]
@@ -218,6 +324,84 @@ public sealed class IngestionDispatcherTests
         {
             new("plant1", "BerryBush", 1.0f, new PositionDto(12, 0, 22), false, null)
         };
+        const string thingsJson = """
+            {
+              "success": true,
+              "data": [
+                {
+                  "thing_id": "meal-stack-1",
+                  "def_name": "MealSurvivalPack",
+                  "label": "packaged survival meal",
+                  "categories": ["FoodMeals"],
+                  "position": { "x": 14, "y": 0, "z": 22 },
+                  "stack_count": 9,
+                  "market_value": 216.0,
+                  "is_forbidden": false
+                }
+              ],
+              "errors": null,
+              "warnings": null,
+              "timestamp": null
+            }
+            """;
+        const string thingDefsJson = """
+            {
+              "success": true,
+              "data": {
+                "things_defs": [
+                  {
+                    "def_name": "MealSurvivalPack",
+                    "label": "packaged survival meal",
+                    "category": "Item",
+                    "thing_class": "ThingWithComps",
+                    "is_item": true,
+                    "is_plant": false,
+                    "is_medicine": false,
+                    "is_drug": false,
+                    "nutrition": 0.9,
+                    "stack_limit": 10
+                  },
+                  {
+                    "def_name": "RawBerries",
+                    "label": "berries",
+                    "category": "Item",
+                    "thing_class": "ThingWithComps",
+                    "is_item": true,
+                    "is_plant": false,
+                    "is_medicine": false,
+                    "is_drug": false,
+                    "nutrition": 0.05,
+                    "stack_limit": 75
+                  }
+                ],
+                "incidents_defs": []
+              },
+              "errors": null,
+              "warnings": null,
+              "timestamp": null
+            }
+            """;
+        const string storedResourcesJson = """
+            {
+              "success": true,
+              "data": {
+                "food_meals": [
+                  {
+                    "thing_id": "meal-stack-1",
+                    "def_name": "MealSurvivalPack",
+                    "label": "packaged survival meal",
+                    "position": { "x": 14, "y": 0, "z": 22 },
+                    "stack_count": 9,
+                    "market_value": 216.0,
+                    "is_forbidden": false
+                  }
+                ]
+              },
+              "errors": null,
+              "warnings": null,
+              "timestamp": null
+            }
+            """;
         var animals = new List<AnimalDto>
         {
             new("animal1", "Hare", null, false, 1.0f, new PositionDto(40, 0, 45))
@@ -250,6 +434,9 @@ public sealed class IngestionDispatcherTests
             .Add("api/v1/datetime",                Envelope(date))
             .Add("api/v1/map/farm/summary",        Envelope(farm))
             .Add("api/v1/map/plants",              Envelope(plants))
+            .Add("api/v1/map/things",              Json(thingsJson))
+            .Add("api/v1/def/all",                 Json(thingDefsJson))
+            .Add("api/v1/resources/stored",        Json(storedResourcesJson))
             .Add("api/v1/map/animals",             Envelope(animals))
             .Add("api/v1/map/zones",               Json("""
                 {

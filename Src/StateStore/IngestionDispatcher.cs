@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using RimAI.Core.Aggregates;
 using RimAI.Ingestion;
 using RimAI.Ingestion.Dtos;
 
@@ -28,6 +29,9 @@ public sealed class IngestionDispatcher(
         Task<IReadOnlyList<ColonistDetailedDto>> pawnsTask    = rimApi.GetColonistsDetailedAsync(home.Id, ct);
         Task<FarmSummaryDto>                    farmTask      = rimApi.GetFarmSummaryAsync(home.Id, ct);
         Task<IReadOnlyList<PlantDto>>           plantsTask    = rimApi.GetPlantsAsync(home.Id, ct);
+        Task<IReadOnlyList<ThingDto>>           thingsTask    = rimApi.GetThingsAsync(home.Id, ct);
+        Task<IReadOnlyList<ThingDefDto>>        thingDefsTask = rimApi.GetThingDefsAsync(ct);
+        Task<StoredResourcesDto>                storedTask    = rimApi.GetStoredResourcesAsync(home.Id, ct);
         Task<IReadOnlyList<AnimalDto>>          animalsTask   = rimApi.GetAnimalsAsync(home.Id, ct);
         Task<IReadOnlyList<ZoneDto>>            zonesTask     = rimApi.GetZonesAsync(home.Id, ct);
         Task<IReadOnlyList<BuildingDto>>        buildingsTask = rimApi.GetBuildingsAsync(home.Id, ct);
@@ -38,8 +42,8 @@ public sealed class IngestionDispatcher(
         Task<ResourcesSummaryDto>               resourcesTask = rimApi.GetResourcesSummaryAsync(home.Id, ct);
         Task<ResearchProgressDto>               researchTask  = rimApi.GetResearchProgressAsync(ct);
 
-        await Task.WhenAll(stateTask, dateTask, pawnsTask, farmTask, plantsTask, animalsTask, zonesTask,
-                           buildingsTask, powerTask, weatherTask, lordsTask, incidentsTask,
+        await Task.WhenAll(stateTask, dateTask, pawnsTask, farmTask, plantsTask, thingsTask, thingDefsTask,
+                           storedTask, animalsTask, zonesTask, buildingsTask, powerTask, weatherTask, lordsTask, incidentsTask,
                            resourcesTask, researchTask);
 
         GameStateDto gs = stateTask.Result;
@@ -49,9 +53,13 @@ public sealed class IngestionDispatcher(
 
         state.Farm.Update(MapAggregateMapper.FromFarm(farmTask.Result));
         state.Plants.Update(MapAggregateMapper.FromPlants(plantsTask.Result));
+        state.Things.Update(MapAggregateMapper.FromThings(thingsTask.Result));
+        state.ThingDefs.Update(MapAggregateMapper.FromThingDefs(thingDefsTask.Result));
+        StoredResourceRegistry storedResources = MapAggregateMapper.FromStoredResources(storedTask.Result);
+        state.StoredResources.Update(storedResources);
         state.Animals.Update(MapAggregateMapper.FromAnimals(animalsTask.Result));
 
-        state.Stockpiles.Update(MapAggregateMapper.FromStockpiles(zonesTask.Result));
+        state.Stockpiles.Update(MapAggregateMapper.FromStockpiles(zonesTask.Result, storedResources));
 
         state.Buildings.Update(MapAggregateMapper.FromBuildings(buildingsTask.Result));
 
