@@ -108,6 +108,13 @@ an append-only feed. Each minister play cycle should publish its current active
 set as a minister-scoped snapshot. A successful empty snapshot means the
 minister currently has no active advice.
 
+Feeder snapshots may carry one player-facing current-state paragraph above the
+advice items. That summary describes the whole minister read; it is not an
+`AdviceItem`, a resource request, or an executable action. For Food, this
+summary is briefing-derived so it stays factual about stores, growing areas,
+storage/kitchen state, and data gaps even when the LLM writes its own raw
+`state_summary`.
+
 If a cycle fails before producing rules output or successful LLM output, keep
 the previous active snapshot rather than clearing it.
 

@@ -9,11 +9,13 @@ export function MinisterAdviceView({
   agenda,
   previousAgenda,
   scope,
+  stateSummary,
 }: {
   advice: AdviceItem[];
   agenda: MayorAgenda | null;
   previousAgenda: MayorAgenda | null;
   scope: ScopeConfig;
+  stateSummary: string | null;
 }) {
   if (scope.key === 'mayor') {
     return <MayorAdvice agenda={agenda} previousAgenda={previousAgenda} />;
@@ -25,7 +27,7 @@ export function MinisterAdviceView({
     return <EmptyState code="ADVICE NOT WIRED">{scope.label} is planned and not emitting advice yet.</EmptyState>;
   }
 
-  if (ministerAdvice.length === 0) {
+  if (ministerAdvice.length === 0 && !stateSummary) {
     return <EmptyState code="NO ACTIVE ADVICE">{scope.label} has not emitted active advice in this session.</EmptyState>;
   }
 
@@ -36,6 +38,15 @@ export function MinisterAdviceView({
         <h2>Advice</h2>
         <p>Active feeder minister advice from the SSE feed. No write/control affordances.</p>
       </header>
+      {stateSummary && (
+        <section className="advice-state-summary">
+          <span className="eyebrow">Current State</span>
+          <p>{stateSummary}</p>
+        </section>
+      )}
+      {ministerAdvice.length === 0 && (
+        <EmptyState code="NO ACTIVE ADVICE">{scope.label} has no active advice items for this state.</EmptyState>
+      )}
       <div className="advice-stack">
         {ministerAdvice.map(item => <AdviceCard key={item.id} item={item} />)}
       </div>

@@ -73,6 +73,7 @@ public sealed class FoodMinisterTests
         await h.Minister.RunPlayCycle(PlayCycleContext.CabinetRefresh, CancellationToken.None);
 
         h.PublishedAdvice.Should().ContainSingle().Which.AdviceType.Should().Be("food_security");
+        h.Bus.ActiveSnapshot().StateSummaries.Should().ContainKey("Food");
         h.Flags.Active(FlagSeverity.Medium).Should().ContainSingle().Which.Domain.Should().Be("food");
     }
 
@@ -125,6 +126,7 @@ public sealed class FoodMinisterTests
             return Task.FromResult(calls == 1
                 ? new FoodLlmResponse([], [])
                 : new FoodLlmResponse(
+                    "Food is below target and hunting may be viable.",
                     [FoodAdvice("llm_food")],
                     [new AgentFlag("food:llm", "Food", FlagSeverity.Medium, "food", "LLM food flag")]));
         });
@@ -135,6 +137,10 @@ public sealed class FoodMinisterTests
         await h.Minister.RunPlayCycle(PlayCycleContext.CabinetRefresh, CancellationToken.None);
 
         h.PublishedAdvice.Should().ContainSingle().Which.Id.Should().Be("llm_food");
+        h.Bus.ActiveSnapshot().StateSummaries.Should().ContainKey("Food")
+            .WhoseValue.Should().Contain("Food stores show");
+        h.Bus.ActiveSnapshot().StateSummaries["Food"].Should().Contain("12.0 days");
+        h.Bus.ActiveSnapshot().StateSummaries["Food"].Should().NotBe("Food is below target and hunting may be viable.");
         h.Flags.Active(FlagSeverity.Medium).Should().ContainSingle().Which.Summary.Should().Be("LLM food flag");
     }
 

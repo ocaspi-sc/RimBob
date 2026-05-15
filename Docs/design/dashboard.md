@@ -320,10 +320,13 @@ and last error.
 ### Advice
 
 Mayor Advice renders the Agenda as the Mayor's player-facing output. Feeder
-minister Advice renders active `AdviceItem`s sorted by priority. Cards show
-rationale, suggested actions, resource requests, citations, issue id or
-supersession when available, and coverage gaps. No feedback buttons are shown in
-v2.
+minister Advice renders the minister's current-state summary first, then active
+`AdviceItem`s sorted by priority. For Food, this summary is deterministic
+briefing-derived state, not LLM prose: it should name concrete food stores,
+growing areas/crop progress, kitchen/storage/freezer signals, and confidence
+gaps before the action cards. Cards show rationale, suggested actions, resource
+requests, citations, issue id or supersession when available, and coverage
+gaps. No feedback buttons are shown in v2.
 
 The dashboard does not cache Agenda documents in browser storage. Stale agenda
 recovery comes from Host-owned durable agenda storage. On a fresh runtime with

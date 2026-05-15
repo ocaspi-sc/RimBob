@@ -57,8 +57,9 @@ public static class AgendaStreamEndpoint
         {
             if (store.Current is { } current)
                 await WriteAgendaAsync(ctx, current, diagnostics, ct);
-            IReadOnlyList<AdviceItem> activeAdvice = bus.ActiveAdvice();
-            await WriteAdviceSnapshotAsync(ctx, new AdviceSnapshot(null, activeAdvice), diagnostics, ct);
+            AdviceSnapshot activeSnapshot = bus.ActiveSnapshot();
+            IReadOnlyList<AdviceItem> activeAdvice = activeSnapshot.Advice;
+            await WriteAdviceSnapshotAsync(ctx, activeSnapshot, diagnostics, ct);
             foreach (AdviceItem advice in activeAdvice)
                 await WriteAdviceAsync(ctx, advice, diagnostics, ct);
 
@@ -134,7 +135,13 @@ public static class AgendaStreamEndpoint
         CancellationToken ct)
     {
         string id = snapshot.Minister ?? "active";
-        string payload = JsonSerializer.Serialize(new { minister = snapshot.Minister, advice = snapshot.Advice }, Json);
+        string payload = JsonSerializer.Serialize(new
+        {
+            minister = snapshot.Minister,
+            advice = snapshot.Advice,
+            state_summary = snapshot.StateSummary,
+            state_summaries = snapshot.StateSummaries
+        }, Json);
         await ctx.Response.WriteAsync($"event: advice_snapshot\nid: {id}\ndata: {payload}\n\n", ct);
         await ctx.Response.Body.FlushAsync(ct);
         diagnostics.EventSent("advice_snapshot", id);

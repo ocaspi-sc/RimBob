@@ -125,4 +125,5 @@ export interface FeedState {
   agendaEvents: number;
   adviceEvents: number;
   activeAdvice: AdviceItem[];
+  stateSummaries: Record<string, string>;
 }

@@ -10,6 +10,8 @@ public sealed class AdviceBus
 {
     private readonly object _lock = new();
     private readonly Dictionary<string, AdviceItem> _activeAdvice = new();
+    private readonly Dictionary<string, string> _ministerStateSummaries =
+        new(StringComparer.OrdinalIgnoreCase);
 
     public event Action<AgendaUpdated>? AgendaUpdated;
     public event Action<AdviceItem>?    AdvicePublished;
@@ -26,7 +28,10 @@ public sealed class AdviceBus
         AdvicePublished?.Invoke(item);
     }
 
-    public void ReplaceMinisterAdvice(string minister, IReadOnlyList<AdviceItem> advice)
+    public void ReplaceMinisterAdvice(
+        string minister,
+        IReadOnlyList<AdviceItem> advice,
+        string? stateSummary = null)
     {
         if (string.IsNullOrWhiteSpace(minister))
             throw new ArgumentException("Minister name is required.", nameof(minister));
@@ -59,12 +64,17 @@ public sealed class AdviceBus
                     _activeAdvice[item.Id] = item;
             }
 
+            if (string.IsNullOrWhiteSpace(stateSummary))
+                _ministerStateSummaries.Remove(minister);
+            else
+                _ministerStateSummaries[minister] = stateSummary.Trim();
+
             currentMinisterAdvice = SortAdvice(_activeAdvice.Values
                 .Where(item => string.Equals(item.Minister, minister, StringComparison.OrdinalIgnoreCase)))
                 .ToList();
         }
 
-        AdviceSnapshotPublished?.Invoke(new AdviceSnapshot(minister, currentMinisterAdvice));
+        AdviceSnapshotPublished?.Invoke(new AdviceSnapshot(minister, currentMinisterAdvice, NormalizeStateSummary(stateSummary)));
         foreach (AdviceItem item in currentMinisterAdvice)
             AdvicePublished?.Invoke(item);
     }
@@ -75,6 +85,20 @@ public sealed class AdviceBus
         {
             PruneExpired(DateTimeOffset.UtcNow);
             return SortAdvice(_activeAdvice.Values).ToList();
+        }
+    }
+
+    public AdviceSnapshot ActiveSnapshot()
+    {
+        lock (_lock)
+        {
+            PruneExpired(DateTimeOffset.UtcNow);
+            Dictionary<string, string> summaries = new(_ministerStateSummaries, StringComparer.OrdinalIgnoreCase);
+            return new AdviceSnapshot(
+                Minister: null,
+                Advice: SortAdvice(_activeAdvice.Values).ToList(),
+                StateSummary: null,
+                StateSummaries: summaries);
         }
     }
 
@@ -92,7 +116,14 @@ public sealed class AdviceBus
         advice
             .OrderByDescending(a => a.Priority)
             .ThenByDescending(a => a.IssuedAt);
+
+    private static string? NormalizeStateSummary(string? stateSummary) =>
+        string.IsNullOrWhiteSpace(stateSummary) ? null : stateSummary.Trim();
 }
 
 public sealed record AgendaUpdated(MayorAgenda Agenda);
-public sealed record AdviceSnapshot(string? Minister, IReadOnlyList<AdviceItem> Advice);
+public sealed record AdviceSnapshot(
+    string? Minister,
+    IReadOnlyList<AdviceItem> Advice,
+    string? StateSummary = null,
+    IReadOnlyDictionary<string, string>? StateSummaries = null);

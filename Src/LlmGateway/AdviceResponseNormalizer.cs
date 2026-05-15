@@ -17,6 +17,7 @@ internal sealed record LlmAdviceNormalizationContext(
     IReadOnlyList<GuideCitation> GuideContext);
 
 internal sealed record NormalizedAdviceResponse(
+    string? StateSummary,
     IReadOnlyList<AdviceItem> Advice,
     IReadOnlyList<AgentFlag> Flags,
     string? Notes);
@@ -37,6 +38,10 @@ internal static class AdviceResponseNormalizer
     {
         JsonArray adviceArray = root["advice"]?.AsArray() ?? [];
         JsonArray flagsArray = root["flags"]?.AsArray() ?? [];
+        string? stateSummary =
+            LlmResponseParser.ReadString(root["state_summary"]) ??
+            LlmResponseParser.ReadString(root["current_state"]) ??
+            LlmResponseParser.ReadString(root["summary"]);
         string? notes = LlmResponseParser.ReadString(root["notes"]);
 
         List<AdviceItem> advice = [];
@@ -56,7 +61,7 @@ internal static class AdviceResponseNormalizer
             if (flag is not null) flags.Add(flag);
         }
 
-        return new NormalizedAdviceResponse(advice, flags, notes);
+        return new NormalizedAdviceResponse(stateSummary, advice, flags, notes);
     }
 
     private static AdviceItem NormalizeAdvice(

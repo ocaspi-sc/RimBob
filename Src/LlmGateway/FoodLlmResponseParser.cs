@@ -28,8 +28,10 @@ public static class FoodLlmResponseParser
         if (strict is not null)
         {
             return new FoodLlmParseResult(
-                StampRuntimeMetadata(
-                    AdviceResponseNormalizer.NormalizeStrictResponse(strict),
+                EnsureStateSummary(
+                    StampRuntimeMetadata(
+                        AdviceResponseNormalizer.NormalizeStrictResponse(strict),
+                        briefing),
                     briefing),
                 "strict_json",
                 Normalized: false);
@@ -50,11 +52,12 @@ public static class FoodLlmResponseParser
         NormalizedAdviceResponse normalizedResponse =
             AdviceResponseNormalizer.Normalize(root, normalizeContext, ResponseJson);
         FoodLlmResponse parsed = new(
+            normalizedResponse.StateSummary,
             normalizedResponse.Advice,
             normalizedResponse.Flags,
             normalizedResponse.Notes);
 
-        parsed = AdviceResponseNormalizer.NormalizeStrictResponse(parsed);
+        parsed = EnsureStateSummary(AdviceResponseNormalizer.NormalizeStrictResponse(parsed), briefing);
         return new FoodLlmParseResult(
             parsed,
             "tolerant_normalization",
@@ -76,6 +79,11 @@ public static class FoodLlmResponseParser
             return null;
         }
     }
+
+    private static FoodLlmResponse EnsureStateSummary(FoodLlmResponse response, FoodBriefing briefing) =>
+        string.IsNullOrWhiteSpace(response.StateSummary)
+            ? response with { StateSummary = FoodStateSummary.Build(briefing) }
+            : response with { StateSummary = response.StateSummary.Trim() };
 
     private static FoodLlmResponse StampRuntimeMetadata(FoodLlmResponse response, FoodBriefing briefing)
     {
@@ -131,6 +139,7 @@ public static class FoodLlmResponseParser
     }
 
     private static bool IsStrictFoodResponse(FoodLlmResponse response) =>
+        !string.IsNullOrWhiteSpace(response.StateSummary) &&
         response.Advice.All(advice =>
             !string.IsNullOrWhiteSpace(advice.Id) &&
             !string.IsNullOrWhiteSpace(advice.Minister) &&

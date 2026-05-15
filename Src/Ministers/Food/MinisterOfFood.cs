@@ -47,7 +47,8 @@ public sealed class MinisterOfFood(
         switch (result)
         {
             case Decision decision:
-                PublishSnapshot(decision.Advice, decision.Flags);
+                string ruleStateSummary = FoodStateSummary.Build(briefing);
+                PublishSnapshot(decision.Advice, decision.Flags, ruleStateSummary);
                 await PersistReplayAsync(new MinisterReplayRecord(
                     SchemaVersion: 1,
                     CapturedAt: DateTimeOffset.UtcNow,
@@ -64,6 +65,7 @@ public sealed class MinisterOfFood(
                     GuideCitations: null,
                     Advice: decision.Advice,
                     Flags: decision.Flags,
+                    StateSummary: ruleStateSummary,
                     Error: null,
                     Llm: null), ct);
                 log.LogInformation(
@@ -92,7 +94,8 @@ public sealed class MinisterOfFood(
         {
             citations = await retriever.RetrieveAsync(briefing, ct);
             FoodLlmResponse response = await llm.CallFoodAsync(briefing, context, citations, ct);
-            PublishSnapshot(response.Advice, response.Flags);
+            string stateSummary = FoodStateSummary.Build(briefing);
+            PublishSnapshot(response.Advice, response.Flags, stateSummary);
             await PersistReplayAsync(new MinisterReplayRecord(
                 SchemaVersion: 1,
                 CapturedAt: DateTimeOffset.UtcNow,
@@ -109,6 +112,7 @@ public sealed class MinisterOfFood(
                 GuideCitations: citations,
                 Advice: response.Advice,
                 Flags: response.Flags,
+                StateSummary: stateSummary,
                 Error: null,
                 Llm: BuildLlmMetadata(llmAttemptStarted)), ct);
             log.LogInformation(
@@ -135,6 +139,7 @@ public sealed class MinisterOfFood(
                 GuideCitations: citations,
                 Advice: [],
                 Flags: [],
+                StateSummary: null,
                 Error: new ReplayErrorSummary(ex.GetType().Name, ex.Message),
                 Llm: BuildLlmMetadata(llmAttemptStarted)), ct);
             log.LogWarning(ex, "Food escalation failed; no advice emitted this cycle. reason={Reason}", escalate.Reason);
@@ -163,9 +168,12 @@ public sealed class MinisterOfFood(
             RawOutput: snapshot.Text);
     }
 
-    private void PublishSnapshot(IReadOnlyList<AdviceItem> advice, IReadOnlyList<AgentFlag> emittedFlags)
+    private void PublishSnapshot(
+        IReadOnlyList<AdviceItem> advice,
+        IReadOnlyList<AgentFlag> emittedFlags,
+        string? stateSummary)
     {
-        bus.ReplaceMinisterAdvice(Name, advice);
+        bus.ReplaceMinisterAdvice(Name, advice, stateSummary);
         foreach (AgentFlag flag in emittedFlags)
             flags.Publish(flag);
     }

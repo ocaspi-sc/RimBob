@@ -16,6 +16,7 @@ export interface MinisterViewContext {
   events: DashboardEvent[];
   previousAgenda: MayorAgenda | null;
   scope: ScopeConfig;
+  stateSummaries: Record<string, string>;
   systemHealth: SystemHealth | null;
 }
 
@@ -37,12 +38,13 @@ const ministerViewRenderers: Record<MinisterViewKey, MinisterViewRenderer> = {
   rules: ({ activeAdvice, events, scope }) => (
     <MinisterRulesView scope={scope} events={events} advice={activeAdvice} />
   ),
-  advice: ({ activeAdvice, agenda, previousAgenda, scope }) => (
+  advice: ({ activeAdvice, agenda, previousAgenda, scope, stateSummaries }) => (
     <MinisterAdviceView
       scope={scope}
       agenda={agenda}
       previousAgenda={previousAgenda}
       advice={activeAdvice}
+      stateSummary={stateSummaries[scope.label] ?? stateSummaries[scope.key] ?? null}
     />
   ),
 };

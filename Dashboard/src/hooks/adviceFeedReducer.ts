@@ -42,6 +42,7 @@ export const initialAdviceFeedState: AdviceFeedState = {
     agendaEvents: 0,
     adviceEvents: 0,
     activeAdvice: [],
+    stateSummaries: {},
   },
   stream: initialDiagnostics,
   events: [],
@@ -131,6 +132,12 @@ export function adviceFeedReducer(
           ...state.feed.activeAdvice.filter(item => !sameMinister(item.minister, snapshotMinister)),
         ].sort(compareAdvice)
         : [...action.snapshot.advice].sort(compareAdvice);
+      const stateSummaries = mergeStateSummaries(
+        state.feed.stateSummaries,
+        snapshotMinister,
+        action.snapshot.state_summary,
+        action.snapshot.state_summaries,
+      );
 
       return {
         ...state,
@@ -138,6 +145,7 @@ export function adviceFeedReducer(
           ...state.feed,
           adviceEvents: state.feed.adviceEvents + 1,
           activeAdvice,
+          stateSummaries,
         },
         stream: recordStreamEvent(state.stream, action.readyState, 'advice_snapshot', action.eventId),
         events: pushEvent(
@@ -209,6 +217,25 @@ function priorityRank(priority: AdviceItem['priority']): number {
 
 function sameMinister(a: string, b: string): boolean {
   return a.localeCompare(b, undefined, { sensitivity: 'accent' }) === 0;
+}
+
+function mergeStateSummaries(
+  current: Record<string, string>,
+  snapshotMinister: string | null | undefined,
+  stateSummary: string | null | undefined,
+  stateSummaries: Record<string, string> | null | undefined,
+): Record<string, string> {
+  if (!snapshotMinister) {
+    return stateSummaries ? { ...stateSummaries } : current;
+  }
+
+  const next = { ...current };
+  if (stateSummary && stateSummary.trim().length > 0) {
+    next[snapshotMinister] = stateSummary.trim();
+  } else {
+    delete next[snapshotMinister];
+  }
+  return next;
 }
 
 function recordStreamEvent(

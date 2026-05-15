@@ -35,4 +35,6 @@ export interface AdviceItem {
 export interface AdviceSnapshot {
   minister?: string | null;
   advice: AdviceItem[];
+  state_summary?: string | null;
+  state_summaries?: Record<string, string> | null;
 }

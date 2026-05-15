@@ -29,6 +29,9 @@ public sealed class FoodPromptTests
     {
         PromptBuilder builder = new();
 
+        builder.FoodSystemPrompt.Should().Contain("\"state_summary\"");
+        builder.FoodSystemPrompt.Should().Contain("Always emit state_summary before advice");
+        builder.FoodSystemPrompt.Should().Contain("high-level current-state paragraph");
         builder.FoodSystemPrompt.Should().Contain("near-term, actionable, currently possible advice");
         builder.FoodSystemPrompt.Should().Contain("priority: low, medium, high, or critical");
         builder.FoodSystemPrompt.Should().Contain("kind and instruction fields");

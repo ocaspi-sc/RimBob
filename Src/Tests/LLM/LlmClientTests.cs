@@ -64,6 +64,7 @@ public sealed class LlmClientTests
     {
         const string raw = """
         {
+          "summary": "Food is critically low and cooking/freezer paths need attention.",
           "advice": [
             {
               "advice_type": "ManageCookBills",
@@ -120,6 +121,7 @@ public sealed class LlmClientTests
             isStrictValid: _ => false);
 
         response.Advice.Should().HaveCount(2);
+        response.StateSummary.Should().Be("Food is critically low and cooking/freezer paths need attention.");
         response.Advice[0].Id.Should().StartWith("food_llm_manage_cook_bills_");
         response.Advice[0].Minister.Should().Be("Food");
         response.Advice[0].AdviceType.Should().Be("manage_cook_bills");
@@ -256,10 +258,26 @@ public sealed class LlmClientTests
     }
 
     [Fact]
+    public void FoodLlmResponseSchema_SerializesStateSummaryBeforeAdvice()
+    {
+        JsonSerializerOptions json = new() { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
+        FoodLlmResponse response = new(
+            StateSummary: "Food is stable enough for routine growth.",
+            Advice: [],
+            Flags: []);
+
+        string serialized = JsonSerializer.Serialize(response, json);
+
+        serialized.Should().StartWith("{\"state_summary\":");
+        serialized.Should().Contain("\"advice\":[]");
+    }
+
+    [Fact]
     public void FoodLlmResponseParser_StrictResponseStampsRuntimeMetadata()
     {
         const string raw = """
         {
+          "state_summary": "Food is in crisis and needs storage visibility plus setup.",
           "advice": [
             {
               "id": "manual_food",
@@ -303,6 +321,7 @@ public sealed class LlmClientTests
 
         result.ParseMode.Should().Be("strict_json");
         result.Normalized.Should().BeFalse();
+        result.Response.StateSummary.Should().Be("Food is in crisis and needs storage visibility plus setup.");
         AdviceItem advice = result.Response.Advice.Should().ContainSingle().Subject;
         advice.ResourceRequests.Should().ContainSingle().Which.What.Should().Be("Reachable food stockpile space");
         advice.IssuedAt.Should().BeAfter(before);

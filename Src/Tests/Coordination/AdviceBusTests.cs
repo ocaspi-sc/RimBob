@@ -59,11 +59,12 @@ public sealed class AdviceBusTests
         bus.AdviceSnapshotPublished += snapshots.Add;
         bus.AdvicePublished += published.Add;
 
-        bus.ReplaceMinisterAdvice("Food", [Advice("new_food", "Food")]);
+        bus.ReplaceMinisterAdvice("Food", [Advice("new_food", "Food")], "Food is low but actionable.");
 
         bus.ActiveAdvice().Select(a => a.Id).Should().BeEquivalentTo(["new_food", "old_defense"]);
         snapshots.Should().ContainSingle();
         snapshots[0].Minister.Should().Be("Food");
+        snapshots[0].StateSummary.Should().Be("Food is low but actionable.");
         snapshots[0].Advice.Should().ContainSingle().Which.Id.Should().Be("new_food");
         published.Should().ContainSingle().Which.Id.Should().Be("new_food");
     }
@@ -83,6 +84,20 @@ public sealed class AdviceBusTests
         snapshots.Should().ContainSingle();
         snapshots[0].Minister.Should().Be("Food");
         snapshots[0].Advice.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ActiveSnapshot_ReplaysMinisterStateSummaries()
+    {
+        AdviceBus bus = new();
+
+        bus.ReplaceMinisterAdvice("Food", [], "Food is stable.");
+
+        AdviceSnapshot snapshot = bus.ActiveSnapshot();
+
+        snapshot.Minister.Should().BeNull();
+        snapshot.Advice.Should().BeEmpty();
+        snapshot.StateSummaries.Should().ContainKey("Food").WhoseValue.Should().Be("Food is stable.");
     }
 
     private static AdviceItem Advice(string id, string minister) => new(

@@ -55,6 +55,7 @@ public sealed class ReplayCorpusWriterTests
                 GuideCitations: [citation],
                 Advice: [advice],
                 Flags: [],
+                StateSummary: "Food is low and needs action.",
                 Error: null,
                 Llm: new ReplayLlmMetadata(
                     Provider: "Gemini",
@@ -87,6 +88,7 @@ public sealed class ReplayCorpusWriterTests
             root.GetProperty("rule_trace").GetString().Should().Be("emergency_food_flag");
             root.GetProperty("guide_citations").GetArrayLength().Should().Be(1);
             root.GetProperty("guide_citations")[0].GetProperty("cite_id").GetString().Should().Be("food-guide-1");
+            root.GetProperty("state_summary").GetString().Should().Be("Food is low and needs action.");
             root.GetProperty("llm").GetProperty("raw_output").GetString().Should().Be("{\"advice\":[]}");
             root.GetProperty("advice").GetArrayLength().Should().Be(1);
         }

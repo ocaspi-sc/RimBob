@@ -92,6 +92,7 @@ export default function App() {
                 previousAgenda={feed.previousAgenda}
                 scope={activeScope}
                 selectedView={selection.selectedView}
+                stateSummaries={feed.feed.stateSummaries}
                 systemHealth={systemHealth.data}
               />
             </>

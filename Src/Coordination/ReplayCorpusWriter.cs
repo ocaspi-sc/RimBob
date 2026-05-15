@@ -97,6 +97,8 @@ public sealed record MinisterReplayRecord(
     IReadOnlyList<AdviceItem> Advice,
     [property: JsonPropertyName("flags")]
     IReadOnlyList<AgentFlag> Flags,
+    [property: JsonPropertyName("state_summary")]
+    string? StateSummary,
     [property: JsonPropertyName("error")]
     ReplayErrorSummary? Error,
     [property: JsonPropertyName("llm")]

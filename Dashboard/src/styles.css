@@ -1182,6 +1182,19 @@ code {
   padding: 13px;
 }
 
+.advice-state-summary {
+  padding: 12px 13px;
+  border: 1px solid rgba(98, 216, 230, 0.32);
+  border-radius: var(--radius);
+  background: rgba(98, 216, 230, 0.08);
+}
+
+.advice-state-summary p {
+  margin: 5px 0 0;
+  color: var(--text);
+  line-height: 1.45;
+}
+
 .advice-card.v2 header {
   display: flex;
   justify-content: space-between;
