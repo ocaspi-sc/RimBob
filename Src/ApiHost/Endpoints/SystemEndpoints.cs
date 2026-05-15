@@ -10,10 +10,56 @@ namespace RimAI.Host.Endpoints;
 
 public static class SystemEndpoints
 {
+    private const int UpstreamRimApiEndpointTotal = 167;
+
+    private static readonly RimApiCoverageRow[] ActiveRimApiReads =
+    [
+        new("GET", "/api/v1/maps", "active_read", "State store", "Selects the player-home map and updates map context."),
+        new("GET", "/api/v1/game/state", "active_read", "State store", "Ticks, wealth, colonist count, storyteller, pause state."),
+        new("GET", "/api/v1/datetime", "active_read", "State store", "In-game date string parsed into briefing date fields."),
+        new("GET", "/api/v2/colonists/detailed?map_id", "active_read", "Mayor/Food", "Colonist bio, needs, skills, traits, jobs, and medical flags."),
+        new("GET", "/api/v1/map/farm/summary?map_id", "active_read", "Food", "Crop totals and average growth per crop type."),
+        new("GET", "/api/v1/map/plants?map_id", "active_read", "Food", "Plant and harvest opportunity source data."),
+        new("GET", "/api/v1/map/animals?map_id", "active_read", "Food", "Wild/tame animal source data for hunting assessment."),
+        new("GET", "/api/v1/map/zones?map_id", "active_read", "Food/State store", "Growing and stockpile zones with cell lists."),
+        new("GET", "/api/v1/map/buildings?map_id", "active_read", "Construction/Food", "Buildings, HP, power state, and working flags."),
+        new("GET", "/api/v1/map/power/info?map_id", "active_read", "Construction/Food", "Power production, consumption, storage, and capacity."),
+        new("GET", "/api/v1/map/weather?map_id", "active_read", "Food/Defense", "Weather and outdoor temperature."),
+        new("GET", "/api/v1/lords?map_id", "active_read", "Defense", "Active AI lords such as raids, sieges, and caravans."),
+        new("GET", "/api/v1/incidents?map_id", "active_read", "Defense/Food", "Recent incidents used for threat and food-event context."),
+        new("GET", "/api/v1/resources/summary?map_id", "active_read", "Mayor/Food", "Food, nutrition, medicine, weapons, market-value rollups."),
+        new("GET", "/api/v1/research/progress", "active_read", "Mayor/Research", "Current research project and progress.")
+    ];
+
+    private static readonly RimApiCoverageRow[] RepresentedButNotRefreshed =
+    [
+        new("GET", "/api/v1/map/pawns?map_id", "handshake_only", "Startup", "Used by RIMAPI handshake only; detailed colonists feed the state store."),
+        new("GET", "/api/v1/map/rooms?map_id", "client_only", "Construction/Welfare", "Client method exists, but RefreshAllAsync does not ingest it yet."),
+        new("GET", "/api/v1/map/creatures/summary?map_id", "client_only", "Defense/Welfare", "Client method exists, but RefreshAllAsync does not ingest it yet.")
+    ];
+
+    private static readonly RimApiCoverageRow[] DeferredWriteStubs =
+    [
+        new("POST", "/api/v1/map/zone/growing", "deferred_write_stub", "Food Auto", "Stub exists; body shape unverified and not called in suggest-only MVP."),
+        new("POST", "/api/v1/order/designate/area", "deferred_write_stub", "Food/Construction Auto", "Stub exists; body shape unverified and not called in suggest-only MVP.")
+    ];
+
+    private static readonly RimApiCoverageRow[] MissingRimApiPriorities =
+    [
+        new("GET", "/api/v1/resources/stored?map_id", "missing", "Mayor/Construction", "Needed for per-def material counts such as steel and components."),
+        new("GET", "/api/v1/resources/storages/summary?map_id", "missing", "Food/Construction", "Needed for stockpile utilization and storage pressure."),
+        new("GET", "/api/v1/map/work-tables?map_id", "missing", "Food/Industry", "Needed before Food can reason about cooking/butchering bench coverage."),
+        new("GET", "/api/v1/buildings/bills?building_id", "missing", "Food/Industry", "Needed for cooking, butchering, and production bill state."),
+        new("GET", "/api/v1/research/finished|tree|summary", "missing", "Research", "Needed for tech-path reasoning beyond the current project."),
+        new("GET", "/api/v1/factions", "missing", "Economy/Defense", "Needed for diplomacy, trade context, and faction threat posture."),
+        new("GET", "/api/v1/world/caravans|settlements|sites", "missing", "Economy", "Needed for caravan, trade, and world-opportunity advice."),
+        new("GET/POST", "Pawn Info/Edit/Job/Spawn controllers", "not_cached_yet", "Labor/Welfare/Auto", "Controller shapes are not cached; fetch live docs before Auto pawn writes.")
+    ];
+
     public static IEndpointRouteBuilder MapSystemEndpoints(this IEndpointRouteBuilder app)
     {
         EndpointCoverageCatalog coverage = app.ServiceProvider.GetRequiredService<EndpointCoverageCatalog>();
-        coverage.Register("/api/system/health", "available", "Runtime, LLM, RAG, logs, traces, and endpoint coverage metadata.");
+        coverage.Register("/api/system/health", "available", "Runtime, LLM, RAG, logs, traces, Host endpoint coverage, and RIMAPI coverage metadata.");
         coverage.Register("/api/system/logs/recent", "not_exposed_yet", "Planned bounded log tail.");
 
         app.MapGet("/api/system/health", (
@@ -92,6 +138,7 @@ public static class SystemEndpoints
                 },
                 traces = traces.LatestAll(),
                 endpoint_coverage = endpointCoverage.Snapshot(new EndpointCoverageContext(agendaStore, registry)),
+                rimapi_coverage = RimApiCoverageMetadata(),
             });
         });
 
@@ -178,4 +225,48 @@ public static class SystemEndpoints
         latest?.Status is "request_failed" or "parse_failed"
             ? latest.Text
             : null;
+
+    private static object RimApiCoverageMetadata()
+    {
+        int clientMethodCount = ActiveRimApiReads.Length + RepresentedButNotRefreshed.Length;
+        int representedEndpointCount = clientMethodCount + DeferredWriteStubs.Length;
+
+        return new
+        {
+            coverage_basis = "declared integration snapshot",
+            source = "Current RimApiClient methods, IngestionDispatcher.RefreshAllAsync wiring, and the cached Docs/design/RIMAPI.md upstream catalogue.",
+            cached_upstream_endpoint_total = UpstreamRimApiEndpointTotal,
+            active_read_count = ActiveRimApiReads.Length,
+            client_method_count = clientMethodCount,
+            deferred_write_stub_count = DeferredWriteStubs.Length,
+            represented_endpoint_count = representedEndpointCount,
+            active_read_percent = Percentage(ActiveRimApiReads.Length, UpstreamRimApiEndpointTotal),
+            represented_endpoint_percent = Percentage(representedEndpointCount, UpstreamRimApiEndpointTotal),
+            coverage_note = "This is not live-discovered from RIMAPI. Update it when RimApiClient or RefreshAllAsync wiring changes. MVP is suggest-only, so write endpoints remain deferred until Auto/Labor work.",
+            active_reads = RimApiRows(ActiveRimApiReads),
+            represented_not_refreshed = RimApiRows(RepresentedButNotRefreshed),
+            deferred_writes = RimApiRows(DeferredWriteStubs),
+            missing_priorities = RimApiRows(MissingRimApiPriorities),
+        };
+    }
+
+    private static decimal Percentage(int count, int total) =>
+        total == 0 ? 0m : Math.Round((decimal)count / total * 100m, 1);
+
+    private static object[] RimApiRows(IEnumerable<RimApiCoverageRow> rows) =>
+        rows.Select(row => (object)new
+        {
+            method = row.Method,
+            endpoint = row.Endpoint,
+            state = row.State,
+            owner = row.Owner,
+            note = row.Note,
+        }).ToArray();
+
+    private sealed record RimApiCoverageRow(
+        string Method,
+        string Endpoint,
+        string State,
+        string Owner,
+        string Note);
 }

@@ -145,8 +145,15 @@ SYSTEM owns:
 - LLM usage placeholders.
 - RAG health and corpus/cache placeholders.
 - Endpoint and data coverage markers.
+- RIMAPI integration snapshot: cached upstream endpoint denominator, active
+  reads, represented client methods, deferred write stubs, and missing
+  high-priority endpoints.
 - Recent event/advice timeline.
 - Log and replay-corpus metadata.
+
+SYSTEM panels default collapsed. Panel headers should carry enough count/status
+metadata that the page reads as a compact operations index before the operator
+opens a specific diagnostic surface.
 
 ### INFO View
 
@@ -231,6 +238,14 @@ RimAI re-evaluation trigger. They never mutate game state.
 diagnostic artifacts. It should expose bounded metadata such as location,
 patterns, counts, byte totals, latest write time, and recent-file summaries, not
 raw log file contents or full replay payloads.
+
+The same health payload may expose a RIMAPI integration snapshot for SYSTEM.
+This is coverage of upstream RimWorld mod endpoints, separate from Host
+`/api/*` coverage. It is a declared inventory of current RimAI wiring, not a
+live-discovered upstream truth source. It should distinguish active reads,
+represented-but-not-refreshed client methods, deferred write stubs, and missing
+high-priority endpoint groups, and should be updated when `RimApiClient` or
+`RefreshAllAsync` wiring changes.
 
 ### Manual Triggers
 

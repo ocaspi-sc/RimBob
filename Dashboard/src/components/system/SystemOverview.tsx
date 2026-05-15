@@ -1,5 +1,5 @@
 import type { RimAIStatus } from '../../types/status';
-import type { DashboardEvent, StreamDiagnostics, SystemHealth } from '../../types/system';
+import type { DashboardEvent, RimApiCoverageRow, StreamDiagnostics, SystemHealth } from '../../types/system';
 import { systemPanelRegistry } from '../../dashboard/panelRegistry';
 import { CoverageTable } from '../shared/DataCoverage';
 import { DisclosureSection } from '../shared/DisclosureSection';
@@ -24,6 +24,7 @@ export function SystemOverview({
   const backendSse = health?.sse;
   const llmStatus = health?.llm.status ?? status?.llm_status ?? ((status?.llm_configured ?? health?.llm.configured) ? 'ready' : 'missing_key');
   const replay = health?.logs.replay_corpus;
+  const rimapi = health?.rimapi_coverage;
 
   return (
     <div className="system-overview">
@@ -38,7 +39,8 @@ export function SystemOverview({
         <EmptyState code="SYSTEM HEALTH DEGRADED">{healthError}</EmptyState>
       )}
 
-      <section className="system-grid">
+      <DisclosureSection title="Runtime diagnostics" meta={(status?.rimapi_reachable ?? health?.runtime.rimapi_reachable) ? 'RIMAPI reachable' : 'RIMAPI waiting'}>
+        <section className="system-grid">
         <div className="system-card runtime-card">
           <div className="section-heading">
             <span className="eyebrow">Runtime</span>
@@ -98,13 +100,47 @@ export function SystemOverview({
             <MetricCard label="🕒 Last event" value={stream.lastEventType ?? backendSse?.lastEventType ?? 'none'} />
           </div>
         </div>
-      </section>
+        </section>
+      </DisclosureSection>
 
-      <DisclosureSection title="🧭 Endpoint and data coverage" defaultOpen meta={`${health?.endpoint_coverage.length ?? 0} surfaces`}>
+      <DisclosureSection title="RIMAPI integration snapshot" meta={rimapi ? `${rimapi.active_read_count}/${rimapi.cached_upstream_endpoint_total} cached endpoints` : 'not exposed'}>
+        {!rimapi ? (
+          <EmptyState code="RIMAPI COVERAGE MISSING">/api/system/health did not expose RIMAPI coverage metadata.</EmptyState>
+        ) : (
+          <div className="rimapi-coverage-panel">
+            <div className="metric-grid compact">
+              <MetricCard
+                label="Declared active reads"
+                value={`${rimapi.active_read_count} / ${rimapi.cached_upstream_endpoint_total}`}
+                note={`${rimapi.active_read_percent}% of cached upstream`}
+                tone={rimapi.active_read_count > 0 ? 'ok' : 'warn'}
+              />
+              <MetricCard
+                label="Represented in client"
+                value={`${rimapi.represented_endpoint_count} / ${rimapi.cached_upstream_endpoint_total}`}
+                note={`${rimapi.represented_endpoint_percent}% including stubs`}
+              />
+              <MetricCard label="Client methods" value={rimapi.client_method_count} />
+              <MetricCard label="Deferred writes" value={rimapi.deferred_write_stub_count} tone="warn" />
+            </div>
+            <div className="stacked-lines rimapi-source-lines">
+              <InfoLine label="Basis" value={rimapi.coverage_basis} />
+              <InfoLine label="Source" value={rimapi.source} />
+              <InfoLine label="Caveat" value={rimapi.coverage_note} />
+            </div>
+            <RimApiCoverageTable title="Active reads" rows={rimapi.active_reads} />
+            <RimApiCoverageTable title="Represented, not refreshed" rows={rimapi.represented_not_refreshed} />
+            <RimApiCoverageTable title="Deferred write stubs" rows={rimapi.deferred_writes} />
+            <RimApiCoverageTable title="Missing priorities" rows={rimapi.missing_priorities} />
+          </div>
+        )}
+      </DisclosureSection>
+
+      <DisclosureSection title="🧭 Endpoint and data coverage" meta={`${health?.endpoint_coverage.length ?? 0} surfaces`}>
         <CoverageTable rows={health?.endpoint_coverage ?? []} />
       </DisclosureSection>
 
-      <DisclosureSection title="🕒 Recent events" defaultOpen meta={`${events.length} buffered`}>
+      <DisclosureSection title="🕒 Recent events" meta={`${events.length} buffered`}>
         <Timeline events={events} limit={16} />
       </DisclosureSection>
 
@@ -156,6 +192,35 @@ export function SystemOverview({
         )}
       </DisclosureSection>
     </div>
+  );
+}
+
+function RimApiCoverageTable({ rows, title }: { rows: RimApiCoverageRow[]; title: string }) {
+  return (
+    <section className="rimapi-coverage-section">
+      <div className="rimapi-table-heading">
+        <span>{title}</span>
+        <small>{rows.length} rows</small>
+      </div>
+      <div className="dense-table rimapi-table">
+        <div className="dense-row header">
+          <span>Method</span>
+          <span>Endpoint</span>
+          <span>State</span>
+          <span>Owner</span>
+          <span>Note</span>
+        </div>
+        {rows.map(row => (
+          <div className="dense-row" key={`${row.method}-${row.endpoint}-${row.state}`}>
+            <span>{row.method}</span>
+            <code>{row.endpoint}</code>
+            <span>{row.state}</span>
+            <span>{row.owner}</span>
+            <span>{row.note}</span>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
