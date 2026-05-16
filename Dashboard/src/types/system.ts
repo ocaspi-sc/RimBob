@@ -1,4 +1,5 @@
 import type { AdviceItem } from './advice';
+import type { IconCacheStatus } from './icons';
 
 export type CoverageState = 'available' | 'missing' | 'failed' | 'unsupported' | 'stale' | 'partial' | 'not_exposed_yet';
 
@@ -122,6 +123,7 @@ export interface SystemHealth {
     replay_corpus: ReplayCorpusMetadata;
     recent_endpoint: string;
   };
+  icons: IconCacheStatus;
   traces: MinisterTrace[];
   endpoint_coverage: EndpointCoverage[];
   rimapi_coverage: RimApiCoverageMetadata;

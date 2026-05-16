@@ -162,8 +162,22 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 ### Image
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/terrain/image?name` / `/item/image?name` | base64 texture |
+| GET | `/terrain/image?name` | base64 PNG for a TerrainDef |
+| GET | `/item/image?name` | base64 PNG for a ThingDef/item/building/plant/apparel/weapon-like def |
+| GET | `/faction/icon?id` | base64 PNG plus color metadata for a current-world faction |
+| GET | `/pawn/portrait/image?pawn_id&width&height&direction` | base64 pawn portrait PNG |
+| GET | `/colonist/body/image?id` | base64 body/head PNGs plus color metadata |
 | POST | `/item/change/image` | upload custom texture |
+
+RimAI exposes only read-only image gateways through Host. `/item/change/image`
+is intentionally not wrapped or exposed because it mutates game textures and is
+outside the localhost read-only dashboard posture.
+
+The static cache warmer uses `/def/all`, `/item/image`, `/terrain/image`,
+`/factions`, and `/faction/icon` to cache enumerable static art locally under
+ignored `var/icons/`. Pawn portraits, colonist body images, stuff-colored
+variants, growth-stage variants, styled variants, rotations, projectiles, motes,
+and other per-instance hard cases are skipped or fetched lazily.
 
 ### Overlay / UI
 | Method | Path | Purpose |

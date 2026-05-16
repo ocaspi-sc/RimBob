@@ -47,6 +47,7 @@ public sealed record ColonistsSummary(
 );
 
 public sealed record PawnLine(
+    string Id,
     string Name,
     int    Age,
     float  Mood,

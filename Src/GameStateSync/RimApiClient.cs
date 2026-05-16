@@ -39,6 +39,8 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
             ?? throw new InvalidOperationException($"RIMAPI envelope.data was null for {path}");
     }
 
+    private static string Query(string value) => Uri.EscapeDataString(value);
+
     /// <summary>
     /// Like GetEnvelopedAsync but for collection endpoints. Returns an empty list
     /// only when RIMAPI sends null, [], or {} for data. Non-empty schema drift
@@ -279,6 +281,41 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
     /// <summary>GET api/v1/def/all — thing defs nested at data.things_defs.</summary>
     public Task<IReadOnlyList<ThingDefDto>> GetThingDefsAsync(CancellationToken ct = default) =>
         GetEnvelopedListAsync<ThingDefDto>("api/v1/def/all", ct, "things_defs");
+
+    /// <summary>GET api/v1/def/all - full definition catalog used by icon warming.</summary>
+    public Task<DefCatalogDto> GetDefCatalogAsync(CancellationToken ct = default) =>
+        GetEnvelopedAsync<DefCatalogDto>("api/v1/def/all", ct);
+
+    /// <summary>GET api/v1/item/image?name - base64 PNG for a ThingDef.</summary>
+    public Task<RimApiImageDto> GetItemImageAsync(string defName, CancellationToken ct = default) =>
+        GetEnvelopedAsync<RimApiImageDto>($"api/v1/item/image?name={Query(defName)}", ct);
+
+    /// <summary>GET api/v1/terrain/image?name - base64 PNG for a TerrainDef.</summary>
+    public Task<RimApiImageDto> GetTerrainImageAsync(string defName, CancellationToken ct = default) =>
+        GetEnvelopedAsync<RimApiImageDto>($"api/v1/terrain/image?name={Query(defName)}", ct);
+
+    /// <summary>GET api/v1/factions - current-world factions with load ids.</summary>
+    public Task<IReadOnlyList<FactionDto>> GetFactionsAsync(CancellationToken ct = default) =>
+        GetEnvelopedListAsync<FactionDto>("api/v1/factions", ct);
+
+    /// <summary>GET api/v1/faction/icon?id - base64 PNG plus faction color.</summary>
+    public Task<FactionIconDto> GetFactionIconAsync(int loadId, CancellationToken ct = default) =>
+        GetEnvelopedAsync<FactionIconDto>($"api/v1/faction/icon?id={loadId}", ct);
+
+    /// <summary>GET api/v1/pawn/portrait/image - base64 PNG portrait for a pawn.</summary>
+    public Task<RimApiImageDto> GetPawnPortraitImageAsync(
+        int pawnId,
+        int width = 128,
+        int height = 128,
+        string direction = "South",
+        CancellationToken ct = default) =>
+        GetEnvelopedAsync<RimApiImageDto>(
+            $"api/v1/pawn/portrait/image?pawn_id={pawnId}&width={width}&height={height}&direction={Query(direction)}",
+            ct);
+
+    /// <summary>GET api/v1/colonist/body/image?id - base64 body/head images for a colonist.</summary>
+    public Task<ColonistBodyImageDto> GetColonistBodyImageAsync(int pawnId, CancellationToken ct = default) =>
+        GetEnvelopedAsync<ColonistBodyImageDto>($"api/v1/colonist/body/image?id={pawnId}", ct);
 
     // ── Research ──────────────────────────────────────────────────────────────
 

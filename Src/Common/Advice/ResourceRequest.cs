@@ -22,7 +22,16 @@ public sealed record ResourceRequest(
     [property: JsonPropertyName("work_type")]
     WorkType? WorkType = null,
     [property: JsonPropertyName("skill")]
-    string? Skill = null);
+    string? Skill = null,
+    [property: JsonPropertyName("icon")]
+    IconRef? Icon = null);
+
+public sealed record IconRef(
+    [property: JsonPropertyName("kind")]
+    string Kind,
+    [property: JsonPropertyName("id")]
+    string Id
+);
 
 [JsonConverter(typeof(SnakeCaseLowerEnumConverter<ResourceRequestKind>))]
 public enum ResourceRequestKind

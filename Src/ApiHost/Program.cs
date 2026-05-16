@@ -18,11 +18,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: false);
 
 string logsDir = HostLogPaths.ResolveLogsDirectory(builder.Environment.ContentRootPath);
+string varDir = HostLogPaths.ResolveVarDirectory(builder.Environment.ContentRootPath);
 Directory.CreateDirectory(logsDir);
-string agendaStorePath = Path.Combine(
-    HostLogPaths.ResolveVarDirectory(builder.Environment.ContentRootPath),
-    "agenda",
-    "agenda-store.json");
+Directory.CreateDirectory(varDir);
+string agendaStorePath = Path.Combine(varDir, "agenda", "agenda-store.json");
 AgendaStore agendaStore = await AgendaStore.LoadAsync(agendaStorePath);
 
 // ── Logging: Serilog reads from appsettings.json ───────────────────────────
@@ -59,6 +58,11 @@ builder.Services.AddHttpClient<RimApiClient>((sp, c) =>
     c.BaseAddress = new Uri(opts.RimApiBaseUrl);
     c.Timeout = TimeSpan.FromSeconds(10);
 });
+builder.Services.AddSingleton<IconCacheService>(sp =>
+    new IconCacheService(
+        Path.Combine(varDir, "icons"),
+        sp.GetRequiredService<RimApiClient>(),
+        sp.GetRequiredService<ILogger<IconCacheService>>()));
 builder.Services.AddSingleton<PromptBuilder>();
 builder.Services.AddSingleton<RawLlmOutputStore>();
 builder.Services.AddSingleton<LlmClient>(sp =>
@@ -201,6 +205,7 @@ app.MapAutonomyEndpoints();
 app.MapColonyEndpoints();
 app.MapStatusEndpoints();
 app.MapMinisterEndpoints();
+app.MapIconEndpoints();
 app.MapSystemEndpoints();
 
 // ── Startup checks ─────────────────────────────────────────────────────────

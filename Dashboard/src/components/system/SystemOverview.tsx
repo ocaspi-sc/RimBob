@@ -23,6 +23,7 @@ export function SystemOverview({
 }) {
   const backendSse = health?.sse;
   const llmStatus = health?.llm.status ?? status?.llm_status ?? ((status?.llm_configured ?? health?.llm.configured) ? 'ready' : 'missing_key');
+  const icons = health?.icons;
   const replay = health?.logs.replay_corpus;
   const rimapi = health?.rimapi_coverage;
 
@@ -132,6 +133,48 @@ export function SystemOverview({
             <RimApiCoverageTable title="Represented, not refreshed" rows={rimapi.represented_not_refreshed} />
             <RimApiCoverageTable title="Deferred write stubs" rows={rimapi.deferred_writes} />
             <RimApiCoverageTable title="Missing priorities" rows={rimapi.missing_priorities} />
+          </div>
+        )}
+      </DisclosureSection>
+
+      <DisclosureSection title="Icon cache" meta={icons ? `${icons.fileCount} cached PNGs` : 'not exposed'}>
+        {!icons ? (
+          <EmptyState code="ICON CACHE MISSING">/api/system/health did not expose icon cache metadata.</EmptyState>
+        ) : (
+          <div className="icon-cache-panel">
+            <div className="metric-grid compact">
+              <MetricCard label="Files" value={icons.fileCount} tone={icons.fileCount > 0 ? 'ok' : 'warn'} />
+              <MetricCard label="Bytes" value={formatBytes(icons.totalBytes)} />
+              <MetricCard label="Kinds" value={Object.keys(icons.filesByKind).length} />
+              <MetricCard
+                label="Warm result"
+                value={icons.lastWarm ? `${icons.lastWarm.succeeded}/${icons.lastWarm.totalCandidates}` : 'not run'}
+                tone={!icons.lastWarm ? 'warn' : icons.lastWarm.failed > 0 ? 'warn' : 'ok'}
+              />
+            </div>
+            <div className="stacked-lines">
+              <InfoLine label="Directory" value={icons.directory} />
+              <InfoLine label="Latest write" value={formatMaybeDate(icons.latestWriteAt)} />
+              <InfoLine label="Skipped" value={icons.lastWarm?.skipped ?? 'n/a'} />
+              <InfoLine label="Failures" value={icons.lastWarm?.failed ?? 'n/a'} />
+              <InfoLine label="By kind" value={formatKindCounts(icons.filesByKind)} />
+            </div>
+            {icons.lastWarm && icons.lastWarm.failures.length > 0 && (
+              <div className="dense-table icon-failure-table">
+                <div className="dense-row header">
+                  <span>Kind</span>
+                  <span>Id</span>
+                  <span>Error</span>
+                </div>
+                {icons.lastWarm.failures.slice(0, 12).map(failure => (
+                  <div className="dense-row" key={`${failure.kind}-${failure.id}-${failure.error}`}>
+                    <span>{failure.kind}</span>
+                    <code>{failure.id}</code>
+                    <span>{failure.error}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </DisclosureSection>
@@ -255,4 +298,12 @@ function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function formatKindCounts(values: Record<string, number>): string {
+  const entries = Object.entries(values);
+  if (entries.length === 0) return 'none';
+  return entries
+    .map(([kind, count]) => `${kind}: ${count}`)
+    .join(', ');
 }

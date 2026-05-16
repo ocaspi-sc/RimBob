@@ -38,7 +38,13 @@ public static class SystemEndpoints
     [
         new("GET", "/api/v1/map/pawns?map_id", "handshake_only", "Startup", "Used by RIMAPI handshake only; detailed colonists feed the state store."),
         new("GET", "/api/v1/map/rooms?map_id", "client_only", "Construction/Welfare", "Client method exists, but RefreshAllAsync does not ingest it yet."),
-        new("GET", "/api/v1/map/creatures/summary?map_id", "client_only", "Defense/Welfare", "Client method exists, but RefreshAllAsync does not ingest it yet.")
+        new("GET", "/api/v1/map/creatures/summary?map_id", "client_only", "Defense/Welfare", "Client method exists, but RefreshAllAsync does not ingest it yet."),
+        new("GET", "/api/v1/item/image?name", "icon_gateway", "Dashboard", "Read-only item icon fetch through /api/icons/item/{defName}."),
+        new("GET", "/api/v1/terrain/image?name", "icon_gateway", "Dashboard", "Read-only terrain icon fetch through /api/icons/terrain/{defName}."),
+        new("GET", "/api/v1/factions", "icon_warm", "Dashboard", "Current-world faction load ids used by the icon cache warmer."),
+        new("GET", "/api/v1/faction/icon?id", "icon_gateway", "Dashboard", "Read-only faction icon fetch through /api/icons/faction/{loadId}."),
+        new("GET", "/api/v1/pawn/portrait/image", "icon_gateway", "Dashboard", "Read-only lazy pawn portrait fetch; not prewarmed."),
+        new("GET", "/api/v1/colonist/body/image?id", "icon_gateway", "Dashboard", "Read-only colonist body/head fetch; not prewarmed.")
     ];
 
     private static readonly RimApiCoverageRow[] DeferredWriteStubs =
@@ -79,7 +85,8 @@ public static class SystemEndpoints
             SseDiagnostics sse,
             MinisterRegistry registry,
             EndpointCoverageCatalog endpointCoverage,
-            MinisterTraceStore traces) =>
+            MinisterTraceStore traces,
+            IconCacheService iconCache) =>
         {
             RimAiOptions opts = options.Value;
             MayorBriefing mayorBriefing = briefings.GetMayorBriefing();
@@ -138,6 +145,7 @@ public static class SystemEndpoints
                     replay_corpus = ReplayCorpusMetadata(logsDir),
                     recent_endpoint = "not_exposed_yet",
                 },
+                icons = iconCache.GetStatus(),
                 traces = traces.LatestAll(),
                 endpoint_coverage = endpointCoverage.Snapshot(new EndpointCoverageContext(agendaStore, registry)),
                 rimapi_coverage = RimApiCoverageMetadata(),
