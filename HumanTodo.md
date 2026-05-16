@@ -9,6 +9,7 @@
 ## Captured by /todo
 
 <!-- entries go here -->
+- [ ] [2026-05-16] #rimapi #assisted Validate companion safe `/api/v1/order/unforbid` endpoint and remove RimAI fallback caveat.
 - [ ] [2026-05-16] #skill #debt Fix local skill validator Python dependency.
 - [ ] [2026-05-16] #replay #mayor Decide whether legacy `/api/agenda/manual` should emit replay records or be retired.
 - [ ] [2026-05-16] #dashboard #markdown Add restricted player-facing Markdown rendering when advice bodies or guide snippets need rich formatting; keep raw/debug views unrendered.
@@ -50,7 +51,7 @@
 - [x] Expose computed crop candidates directly to Food LLM escalation when crop choice remains ambiguous.
 - [x] Use def-backed harvest nutrition for Food crop candidate projections when `/def/all` exposes raw crop nutrition.
 - [ ] Add polished guide-citation footnotes on feeder memo cards.
-- [ ] Add MVP Assisted Apply for allowlisted player-confirmed steps (`unforbid`, `mark_harvest` first): backend executor, validation/read-back, dashboard Apply/result state.
+- [x] Add MVP Assisted Apply for allowlisted player-confirmed steps (`unforbid`, `mark_harvest` first): backend executor, validation/read-back, dashboard Apply/result state.
 - [x] Add durable Food decision/replay corpus persistence so M6 refinement can compare before/after outputs on historic inputs, not just fixtures.
 - [ ] Extend replay corpus persistence beyond Food and attach future Pushback/outcome fields once feedback is wired.
 - [ ] Improve Food hunting target risk/value scoring from live animal data.
