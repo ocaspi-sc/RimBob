@@ -65,6 +65,24 @@ internal static class LiveTestHelpers
             : 0;
     }
 
+    public static int CountFarmCropTypes(string json)
+    {
+        using JsonDocument document = JsonDocument.Parse(json);
+        if (!document.RootElement.TryGetProperty("data", out JsonElement data) ||
+            data.ValueKind != JsonValueKind.Object)
+            return 0;
+
+        if (data.TryGetProperty("crop_types", out JsonElement liveCropTypes) &&
+            liveCropTypes.ValueKind == JsonValueKind.Array)
+            return liveCropTypes.GetArrayLength();
+
+        if (data.TryGetProperty("crop_breakdown", out JsonElement documentedCropBreakdown) &&
+            documentedCropBreakdown.ValueKind == JsonValueKind.Array)
+            return documentedCropBreakdown.GetArrayLength();
+
+        return 0;
+    }
+
     public static int CountStoredResourceDef(string json, string defName, bool includeForbidden = false)
     {
         using JsonDocument document = JsonDocument.Parse(json);
@@ -119,6 +137,15 @@ internal static class LiveTestHelpers
             JsonValueKind.False => false,
             _ => null
         };
+    }
+
+    public static int? TryGetArrayLength(JsonElement element, string propertyName)
+    {
+        if (!element.TryGetProperty(propertyName, out JsonElement value) ||
+            value.ValueKind != JsonValueKind.Array)
+            return null;
+
+        return value.GetArrayLength();
     }
 
     private static string? TryGetString(JsonElement element, string propertyName)

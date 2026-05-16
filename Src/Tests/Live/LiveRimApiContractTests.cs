@@ -82,4 +82,30 @@ public sealed class LiveRimApiContractTests(ITestOutputHelper output)
             briefing.NutritionSource.Should().Be("item_def_catalog");
         }
     }
+
+    [Fact]
+    [Trait("Category", "Live")]
+    public async Task FarmSummary_LivePayload_DeserializesCropTypesWhenRimApiIsRunning()
+    {
+        Uri baseUri = LiveTestHelpers.ResolveBaseUri("RIMAPI_BASE_URL", "http://localhost:8765/");
+        using HttpClient http = new() { BaseAddress = baseUri, Timeout = TimeSpan.FromSeconds(5) };
+
+        string? mapsJson = await LiveTestHelpers.TryGetStringAsync(http, "api/v1/maps", output, "RIMAPI");
+        if (mapsJson is null)
+            return;
+
+        int? mapId = LiveTestHelpers.SelectPlayerHomeMapId(mapsJson);
+        mapId.Should().NotBeNull("RIMAPI is reachable, so a loaded map should be discoverable");
+
+        string farmJson = await http.GetStringAsync($"api/v1/map/farm/summary?map_id={mapId!.Value}");
+        int rawCropTypeCount = LiveTestHelpers.CountFarmCropTypes(farmJson);
+
+        FarmSummaryDto farm = await new RimApiClient(http).GetFarmSummaryAsync(mapId.Value);
+
+        if (rawCropTypeCount > 0)
+        {
+            farm.CropBreakdown.Should().NotBeEmpty("the live farm endpoint returned crop type rows");
+            farm.CropBreakdown.Sum(crop => crop.Count).Should().BeGreaterThan(0);
+        }
+    }
 }

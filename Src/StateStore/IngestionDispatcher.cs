@@ -51,8 +51,9 @@ public sealed class IngestionDispatcher(
 
         state.Colonists.Update(PawnAggregateMapper.FromColonists(pawnsTask.Result));
 
-        state.Farm.Update(MapAggregateMapper.FromFarm(farmTask.Result));
-        state.Plants.Update(MapAggregateMapper.FromPlants(plantsTask.Result));
+        FarmSnapshot farm = MapAggregateMapper.FromFarm(farmTask.Result);
+        state.Farm.Update(farm);
+        state.Plants.Update(MapAggregateMapper.FromPlants(plantsTask.Result, farm));
         state.Things.Update(MapAggregateMapper.FromThings(thingsTask.Result));
         state.ThingDefs.Update(MapAggregateMapper.FromThingDefs(thingDefsTask.Result));
         StoredResourceRegistry storedResources = MapAggregateMapper.FromStoredResources(storedTask.Result);

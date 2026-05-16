@@ -4,29 +4,174 @@ using System.Text.Json.Serialization;
 namespace RimAI.Ingestion.Dtos;
 
 // ── GET /map/farm/summary?map_id ──────────────────────────────────────────────
-public record FarmSummaryDto(
-    [property: JsonPropertyName("total_crops")]   int TotalCrops,
-    [property: JsonPropertyName("avg_growth")]    float AvgGrowth,    // 0–1
-    [property: JsonPropertyName("ready_to_harvest")] int ReadyToHarvest,
-    [property: JsonPropertyName("crop_breakdown")] IReadOnlyList<CropBreakdownDto>? CropBreakdown
-);
+public sealed record FarmSummaryDto
+{
+    public FarmSummaryDto() { }
 
-public record CropBreakdownDto(
-    [property: JsonPropertyName("def")]      string Def,
-    [property: JsonPropertyName("count")]    int Count,
-    [property: JsonPropertyName("avg_growth")] float AvgGrowth
-);
+    public FarmSummaryDto(
+        int totalCrops,
+        float avgGrowth,
+        int readyToHarvest,
+        IReadOnlyList<CropBreakdownDto>? cropBreakdown)
+    {
+        DocumentedTotalCrops = totalCrops;
+        DocumentedAverageGrowth = avgGrowth;
+        DocumentedReadyToHarvest = readyToHarvest;
+        DocumentedCropBreakdown = cropBreakdown;
+    }
+
+    [JsonPropertyName("total_crops")]
+    public int? DocumentedTotalCrops { get; init; }
+
+    [JsonPropertyName("total_plants")]
+    public int? LiveTotalPlants { get; init; }
+
+    [JsonPropertyName("avg_growth")]
+    public float? DocumentedAverageGrowth { get; init; }
+
+    [JsonPropertyName("growth_progress_average")]
+    public float? LiveGrowthProgressAverage { get; init; }
+
+    [JsonPropertyName("ready_to_harvest")]
+    public int? DocumentedReadyToHarvest { get; init; }
+
+    [JsonPropertyName("crop_breakdown")]
+    public IReadOnlyList<CropBreakdownDto>? DocumentedCropBreakdown { get; init; }
+
+    [JsonPropertyName("crop_types")]
+    public IReadOnlyList<CropBreakdownDto>? LiveCropTypes { get; init; }
+
+    [JsonIgnore]
+    public IReadOnlyList<CropBreakdownDto> CropBreakdown => DocumentedCropBreakdown ?? LiveCropTypes ?? [];
+
+    [JsonIgnore]
+    public int TotalCrops => DocumentedTotalCrops ?? LiveTotalPlants ?? CropBreakdown.Sum(crop => crop.Count);
+
+    [JsonIgnore]
+    public float AvgGrowth => NormalizeGrowth(DocumentedAverageGrowth ?? LiveGrowthProgressAverage ?? 0f);
+
+    [JsonIgnore]
+    public int ReadyToHarvest => DocumentedReadyToHarvest ?? CropBreakdown.Sum(crop => crop.ReadyCount);
+
+    internal static float NormalizeGrowth(float value)
+    {
+        float normalized = value > 1f ? value / 100f : value;
+        return Math.Clamp(normalized, 0f, 1f);
+    }
+}
+
+public sealed record CropBreakdownDto
+{
+    public CropBreakdownDto() { }
+
+    public CropBreakdownDto(string def, int count, float avgGrowth)
+    {
+        DocumentedDef = def;
+        DocumentedCount = count;
+        DocumentedAverageGrowth = avgGrowth;
+    }
+
+    [JsonPropertyName("def")]
+    public string? DocumentedDef { get; init; }
+
+    [JsonPropertyName("plant_def_name")]
+    public string? LivePlantDefName { get; init; }
+
+    [JsonPropertyName("count")]
+    public int? DocumentedCount { get; init; }
+
+    [JsonPropertyName("total_plants")]
+    public int? LiveTotalPlants { get; init; }
+
+    [JsonPropertyName("avg_growth")]
+    public float? DocumentedAverageGrowth { get; init; }
+
+    [JsonPropertyName("growth_progress_average")]
+    public float? LiveGrowthProgressAverage { get; init; }
+
+    [JsonPropertyName("harvestable_plants")]
+    public int? LiveHarvestablePlants { get; init; }
+
+    [JsonPropertyName("zone_id")]
+    [JsonConverter(typeof(FlexibleStringIdJsonConverter))]
+    public string? ZoneId { get; init; }
+
+    [JsonIgnore]
+    public string Def => LivePlantDefName ?? DocumentedDef ?? "";
+
+    [JsonIgnore]
+    public int Count => LiveTotalPlants ?? DocumentedCount ?? 0;
+
+    [JsonIgnore]
+    public float AvgGrowth => FarmSummaryDto.NormalizeGrowth(DocumentedAverageGrowth ?? LiveGrowthProgressAverage ?? 0f);
+
+    [JsonIgnore]
+    public int ReadyCount => LiveHarvestablePlants ?? 0;
+}
 
 // ── GET /map/plants?map_id ────────────────────────────────────────────────────
-public record PlantDto(
-    [property: JsonPropertyName("id")]
-    [property: JsonConverter(typeof(FlexibleStringIdJsonConverter))] string Id,
-    [property: JsonPropertyName("def")]         string Def,
-    [property: JsonPropertyName("growth")]      float Growth,       // 0–1
-    [property: JsonPropertyName("position")]    PositionDto? Position,
-    [property: JsonPropertyName("is_crop")]     bool IsCrop,
-    [property: JsonPropertyName("zone_id")]     string? ZoneId
-);
+public sealed record PlantDto
+{
+    public PlantDto() { }
+
+    public PlantDto(
+        string id,
+        string def,
+        float growth,
+        PositionDto? position,
+        bool isCrop,
+        string? zoneId)
+    {
+        DocumentedId = id;
+        DocumentedDef = def;
+        DocumentedGrowth = growth;
+        Position = position;
+        DocumentedIsCrop = isCrop;
+        ZoneId = zoneId;
+    }
+
+    [JsonPropertyName("id")]
+    [JsonConverter(typeof(FlexibleStringIdJsonConverter))]
+    public string? DocumentedId { get; init; }
+
+    [JsonPropertyName("thing_id")]
+    [JsonConverter(typeof(FlexibleStringIdJsonConverter))]
+    public string? LiveThingId { get; init; }
+
+    [JsonPropertyName("def")]
+    public string? DocumentedDef { get; init; }
+
+    [JsonPropertyName("def_name")]
+    public string? LiveDefName { get; init; }
+
+    [JsonPropertyName("growth")]
+    public float? DocumentedGrowth { get; init; }
+
+    [JsonPropertyName("growth_progress")]
+    public float? LiveGrowthProgress { get; init; }
+
+    [JsonPropertyName("position")]
+    public PositionDto? Position { get; init; }
+
+    [JsonPropertyName("is_crop")]
+    public bool? DocumentedIsCrop { get; init; }
+
+    [JsonPropertyName("zone_id")]
+    [JsonConverter(typeof(FlexibleStringIdJsonConverter))]
+    public string? ZoneId { get; init; }
+
+    [JsonIgnore]
+    public string Id => DocumentedId ?? LiveThingId ?? "";
+
+    [JsonIgnore]
+    public string Def => LiveDefName ?? DocumentedDef ?? "";
+
+    [JsonIgnore]
+    public float Growth => FarmSummaryDto.NormalizeGrowth(DocumentedGrowth ?? LiveGrowthProgress ?? 0f);
+
+    [JsonIgnore]
+    public bool IsCrop => DocumentedIsCrop ?? false;
+}
 
 // ── GET /map/animals?map_id ───────────────────────────────────────────────────
 // TODO: confirm exact field names against live RIMAPI for tame vs wild flag.

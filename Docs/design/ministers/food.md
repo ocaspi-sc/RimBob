@@ -94,6 +94,10 @@ as forbidden meals or other visible food-like items excluded from the reachable
 stored-food count, the briefing should carry that explanation so advice can name
 the concrete player action instead of saying only "visibility."
 
+Crop counts and progress should prefer the farm summary crop-type rows when
+available. Plant positions are useful spatial context, but the live plant list
+can be thing-like and omit crop/growth/zone fields.
+
 The implemented briefing can be narrower than the target. Use
 `FoodBriefing`, `FoodBriefingDerivation`, and Food briefing tests for current
 fields.

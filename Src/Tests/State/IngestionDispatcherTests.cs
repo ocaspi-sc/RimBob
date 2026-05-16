@@ -186,6 +186,88 @@ public sealed class IngestionDispatcherTests
     }
 
     [Fact]
+    public async Task RefreshAllAsync_LiveFarmSummaryShape_FlowsIntoFoodBriefingCrops()
+    {
+        PathRouter router = StandardRouter()
+            .Add("api/v1/map/farm/summary?map_id", Json("""
+                {
+                  "success": true,
+                  "data": {
+                    "total_growing_zones": 1,
+                    "total_plants": 36,
+                    "total_expected_yield": 0,
+                    "total_infected_plants": 0,
+                    "growth_progress_average": 5.0219183,
+                    "crop_types": [
+                      {
+                        "plant_def_name": "Plant_Rice",
+                        "plant_label": "rice plant",
+                        "plant_category": "Crop",
+                        "total_plants": 36,
+                        "harvestable_plants": 0,
+                        "expected_yield": 0,
+                        "infected_count": 0,
+                        "growth_progress_average": 5.0219183,
+                        "days_until_harvest": 0.0,
+                        "is_fully_grown": false,
+                        "is_harvestable": false,
+                        "zone_id": 2
+                      }
+                    ]
+                  },
+                  "errors": null,
+                  "warnings": null,
+                  "timestamp": null
+                }
+                """))
+            .Add("api/v1/map/plants?map_id", Json("""
+                {
+                  "success": true,
+                  "data": [
+                    {
+                      "thing_id": 44187,
+                      "def_name": "Plant_Rice",
+                      "label": "rice plant",
+                      "categories": ["Plants"],
+                      "position": { "x": 85, "y": 0, "z": 190 },
+                      "stack_count": 1,
+                      "is_forbidden": false
+                    }
+                  ],
+                  "errors": null,
+                  "warnings": null,
+                  "timestamp": null
+                }
+                """));
+        using HttpClient http = MakeClient(router);
+        ColonyState s = new();
+        IngestionDispatcher dispatcher = new(
+            new RimApiClient(http), s, new TestLogger<IngestionDispatcher>());
+
+        await dispatcher.RefreshAllAsync();
+
+        s.Farm.Value.CropBreakdown.Should().ContainSingle()
+            .Which.Should().BeEquivalentTo(new
+            {
+                Def = "Plant_Rice",
+                Count = 36,
+                ZoneId = "2",
+                ReadyCount = 0
+            });
+        s.Plants.Value.Plants.Should().ContainSingle()
+            .Which.IsCrop.Should().BeTrue();
+
+        FoodBriefing briefing = FoodBriefingDerivation.Compute(s);
+        briefing.CropBreakdown.Should().ContainSingle()
+            .Which.Def.Should().Be("Plant_Rice");
+        FoodCropZoneSummary cropZone = briefing.CropZoneSummaries.Should().ContainSingle().Which;
+        cropZone.Def.Should().Be("Plant_Rice");
+        cropZone.ZoneId.Should().Be("2");
+        cropZone.Count.Should().Be(36);
+        cropZone.AverageGrowth.Should().BeApproximately(0.050219f, 0.00001f);
+    }
+
+    [Fact]
     public async Task RefreshAllAsync_LiveStoredSurvivalMeals_FlowIntoFoodBriefing()
     {
         PathRouter router = StandardRouter()

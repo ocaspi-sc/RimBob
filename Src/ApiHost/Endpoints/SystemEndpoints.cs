@@ -250,7 +250,7 @@ public static class SystemEndpoints
         return new
         {
             coverage_basis = "declared integration snapshot",
-            source = "Current RimApiClient methods, IngestionDispatcher.RefreshAllAsync wiring, and the cached Docs/design/RIMAPI.md upstream catalogue.",
+            source = "Current RimApiClient methods, IngestionDispatcher.RefreshAllAsync wiring, and the cached Docs/design/RimAPI.md upstream catalogue.",
             cached_upstream_endpoint_total = UpstreamRimApiEndpointTotal,
             active_read_count = ActiveRimApiReads.Length,
             client_method_count = clientMethodCount,

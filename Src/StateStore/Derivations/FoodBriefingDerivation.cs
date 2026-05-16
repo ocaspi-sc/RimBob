@@ -119,6 +119,10 @@ public static class FoodBriefingDerivation
         ColonyState s,
         FoodReferencePoint? reference)
     {
+        IReadOnlyList<FoodCropZoneSummary> farmZoneSummaries = DeriveFarmCropZoneSummaries(s, reference);
+        if (farmZoneSummaries.Count > 0)
+            return farmZoneSummaries;
+
         return s.Plants.Value.Plants
             .Where(p => p.IsCrop)
             .GroupBy(p => new { p.Def, p.ZoneId })
@@ -135,6 +139,38 @@ public static class FoodBriefingDerivation
             })
             .OrderByDescending(c => c.ReadyCount)
             .ThenByDescending(c => c.Count)
+            .Take(5)
+            .ToList();
+    }
+
+    private static IReadOnlyList<FoodCropZoneSummary> DeriveFarmCropZoneSummaries(
+        ColonyState s,
+        FoodReferencePoint? reference)
+    {
+        IReadOnlyList<CropTypeCount> cropTypes = s.Farm.Value.CropBreakdown
+            .Where(crop => !string.IsNullOrWhiteSpace(crop.ZoneId) || crop.ReadyCount > 0)
+            .ToList();
+        if (cropTypes.Count == 0)
+            return [];
+
+        return cropTypes
+            .Select(crop =>
+            {
+                int? distance = MapDistance.Nearest(
+                    s.Plants.Value.Plants
+                        .Where(plant => string.Equals(plant.Def, crop.Def, StringComparison.OrdinalIgnoreCase))
+                        .Select(plant => plant.Position),
+                    reference?.Position);
+                return new FoodCropZoneSummary(
+                    Def: crop.Def,
+                    ZoneId: crop.ZoneId,
+                    Count: crop.Count,
+                    AverageGrowth: crop.AverageGrowth,
+                    ReadyCount: crop.ReadyCount,
+                    Proximity: MapDistance.ProximityLabel(distance, reference?.Name));
+            })
+            .OrderByDescending(crop => crop.ReadyCount)
+            .ThenByDescending(crop => crop.Count)
             .Take(5)
             .ToList();
     }

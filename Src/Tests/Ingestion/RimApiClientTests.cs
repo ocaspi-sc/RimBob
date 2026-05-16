@@ -99,6 +99,85 @@ public sealed class RimApiClientTests
     }
 
     [Fact]
+    public async Task GetFarmSummary_WhenApiReturnsLiveCropTypes_ReturnsMappedBreakdown()
+    {
+        using HttpClient http = MakeClient(new PathRouter()
+            .Add("map/farm/summary", Json("""
+                {
+                  "success": true,
+                  "data": {
+                    "total_growing_zones": 1,
+                    "total_plants": 36,
+                    "total_expected_yield": 0,
+                    "total_infected_plants": 0,
+                    "growth_progress_average": 5.0219183,
+                    "crop_types": [
+                      {
+                        "plant_def_name": "Plant_Rice",
+                        "plant_label": "rice plant",
+                        "plant_category": "Crop",
+                        "total_plants": 36,
+                        "harvestable_plants": 0,
+                        "expected_yield": 0,
+                        "infected_count": 0,
+                        "growth_progress_average": 5.0219183,
+                        "days_until_harvest": 0.0,
+                        "is_fully_grown": false,
+                        "is_harvestable": false,
+                        "zone_id": 2
+                      }
+                    ]
+                  },
+                  "errors": null,
+                  "warnings": null,
+                  "timestamp": null
+                }
+                """)));
+
+        FarmSummaryDto result = await new RimApiClient(http).GetFarmSummaryAsync(0);
+
+        result.TotalCrops.Should().Be(36);
+        result.AvgGrowth.Should().BeApproximately(0.050219f, 0.00001f);
+        CropBreakdownDto crop = result.CropBreakdown.Should().ContainSingle().Which;
+        crop.Def.Should().Be("Plant_Rice");
+        crop.Count.Should().Be(36);
+        crop.AvgGrowth.Should().BeApproximately(0.050219f, 0.00001f);
+        crop.ZoneId.Should().Be("2");
+    }
+
+    [Fact]
+    public async Task GetPlants_WhenApiReturnsLiveThingShape_ReturnsStablePlantIdsAndDefs()
+    {
+        using HttpClient http = MakeClient(new PathRouter()
+            .Add("map/plants", Json("""
+                {
+                  "success": true,
+                  "data": [
+                    {
+                      "thing_id": 44187,
+                      "def_name": "Plant_Rice",
+                      "label": "rice plant",
+                      "categories": ["Plants"],
+                      "position": { "x": 85, "y": 0, "z": 190 },
+                      "stack_count": 1,
+                      "is_forbidden": false
+                    }
+                  ],
+                  "errors": null,
+                  "warnings": null,
+                  "timestamp": null
+                }
+                """)));
+
+        IReadOnlyList<PlantDto> result = await new RimApiClient(http).GetPlantsAsync(0);
+
+        PlantDto plant = result.Should().ContainSingle().Which;
+        plant.Id.Should().Be("44187");
+        plant.Def.Should().Be("Plant_Rice");
+        plant.Position.Should().BeEquivalentTo(new { X = 85, Y = 0, Z = 190 });
+    }
+
+    [Fact]
     public async Task GetThings_WhenApiReturnsLiveMealStacks_ReturnsMappedList()
     {
         using HttpClient http = MakeClient(new PathRouter()

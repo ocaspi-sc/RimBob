@@ -253,6 +253,29 @@ public sealed class FoodBriefingDerivationTests
     }
 
     [Fact]
+    public void Compute_UsesFarmCropZoneDataWhenPlantZoneDetailsAreMissing()
+    {
+        ColonyState s = StateWithColonists(1);
+        s.Farm.Update(new FarmSnapshot(
+            TotalCrops: 36,
+            AverageGrowth: 0.05f,
+            ReadyToHarvest: 0,
+            CropBreakdown: [new CropTypeCount("Plant_Rice", 36, 0.05f, "2", 0)]));
+        s.Plants.Update(new PlantRegistry([
+            new PlantRecord("44187", "Plant_Rice", 0f, true, null, new MapPosition(85, 0, 190))
+        ]));
+
+        FoodBriefing b = FoodBriefingDerivation.Compute(s);
+
+        FoodCropZoneSummary crop = b.CropZoneSummaries.Should().ContainSingle().Which;
+        crop.Def.Should().Be("Plant_Rice");
+        crop.ZoneId.Should().Be("2");
+        crop.Count.Should().Be(36);
+        crop.AverageGrowth.Should().BeApproximately(0.05f, 0.001f);
+        crop.ReadyCount.Should().Be(0);
+    }
+
+    [Fact]
     public void Compute_HuntingTargetsExcludeDangerousAnimals()
     {
         ColonyState s = StateWithColonists(1);

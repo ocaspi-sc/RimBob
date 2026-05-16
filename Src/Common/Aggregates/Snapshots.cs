@@ -82,7 +82,13 @@ public sealed record FarmSnapshot(
     IReadOnlyList<CropTypeCount> CropBreakdown
 );
 
-public sealed record CropTypeCount(string Def, int Count, float AverageGrowth);
+public sealed record CropTypeCount(
+    string Def,
+    int Count,
+    float AverageGrowth,
+    string? ZoneId = null,
+    int ReadyCount = 0
+);
 
 public sealed record PlantRegistry(IReadOnlyList<PlantRecord> Plants);
 

@@ -17,20 +17,34 @@ public static class MapAggregateMapper
             TotalCrops: farm.TotalCrops,
             AverageGrowth: farm.AvgGrowth,
             ReadyToHarvest: farm.ReadyToHarvest,
-            CropBreakdown: (farm.CropBreakdown ?? [])
-                .Select(crop => new CropTypeCount(crop.Def, crop.Count, crop.AvgGrowth))
+            CropBreakdown: farm.CropBreakdown
+                .Where(crop => !string.IsNullOrWhiteSpace(crop.Def) && crop.Count > 0)
+                .Select(crop => new CropTypeCount(
+                    crop.Def,
+                    crop.Count,
+                    crop.AvgGrowth,
+                    crop.ZoneId,
+                    crop.ReadyCount))
                 .ToList());
 
-    public static PlantRegistry FromPlants(IReadOnlyList<PlantDto> plants) =>
-        new(plants
+    public static PlantRegistry FromPlants(IReadOnlyList<PlantDto> plants, FarmSnapshot? farm = null)
+    {
+        HashSet<string> knownCropDefs = (farm?.CropBreakdown ?? [])
+            .Select(crop => crop.Def)
+            .Where(def => !string.IsNullOrWhiteSpace(def))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return new PlantRegistry(plants
+            .Where(plant => !string.IsNullOrWhiteSpace(plant.Def))
             .Select(plant => new PlantRecord(
                 plant.Id,
                 plant.Def,
                 plant.Growth,
-                plant.IsCrop,
+                plant.IsCrop || knownCropDefs.Contains(plant.Def),
                 plant.ZoneId,
                 MapPosition(plant.Position)))
             .ToList());
+    }
 
     public static ThingRegistry FromThings(IReadOnlyList<ThingDto> things) =>
         new(things
