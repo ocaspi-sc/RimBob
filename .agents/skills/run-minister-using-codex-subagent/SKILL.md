@@ -16,11 +16,11 @@ Generate a minister LLM response with a Codex subagent, ingest it through RimAI'
 ## Workflow
 
 1. Ground in repo and runtime truth.
-   - Read `Docs/DESIGN.md`, `Docs/TODO.md`, `Docs/design/dashboard.md`, `Docs/design/ministers.md`, and the target minister doc under `Docs/design/ministers/`.
+   - Read `Docs/DESIGN.md`, `HumanTodo.md`, `Docs/design/dashboard.md`, `Docs/design/ministers.md`, and the target minister doc under `Docs/design/ministers/`.
    - Check current endpoints in `Src/ApiHost/Endpoints/MinisterEndpoints.cs`.
    - Verify Host health:
      ```powershell
-     Invoke-RestMethod -Uri http://127.0.0.1:5000/api/health
+     Invoke-RestMethod -Uri http://127.0.0.1:5000/api/system/health
      ```
    - If Host is not running, prefer:
      ```powershell
@@ -36,21 +36,22 @@ Generate a minister LLM response with a Codex subagent, ingest it through RimAI'
      ```powershell
      Invoke-RestMethod -Uri http://127.0.0.1:5000/api/briefings/food/latest
      ```
-   - Check the current raw output so you know what is being replaced:
+   - Capture the current raw output before posting so you can compare before/after:
      ```powershell
      Invoke-RestMethod -Uri http://127.0.0.1:5000/api/ministers/food/llm-output/latest
      ```
+   - Keep a compact previous-output summary for reporting:
+     - provider, model, status, parseMode, capturedAt, text length.
+     - If the raw text parses as JSON, note advice ids/titles/types/priorities, flag ids/severities/summaries, and notes.
+     - If it does not parse as JSON, note only provider/model/status and a short reason.
 
 3. Ask the Codex subagent for JSON only.
-   - Pass the exact system prompt, exact user prompt/briefing JSON, allowed advice types, and any current user quality constraints.
-   - Require the current strict shape:
-     - Top level: `{ "advice": [AdviceItem], "flags": [AgentFlag], "notes": "short trace label" }`
-     - `AdviceItem`: `id`, `minister`, `advice_type`, `priority`, `title`, `body`, `rationale`, `resource_requests`, `suggested_actions`, `guide_citations`, `issued_at`, `expires_at`. Do not use old advice `severity` or `priority_score` fields in new raw output.
-     - `ResourceRequest`: `kind`, `request`, `reason`, optional `quantity`, `priority`, `requested_from`, `work_type`, `skill`. Do not use old `what` / `why` keys in new raw output.
-     - `SuggestedAction`: `kind`, `instruction`. Do not use old `what` keys in new raw output.
-     - `AgentFlag`: `id`, `source_minister`, `severity`, `domain`, `summary`, `requests`, `detail`, `expires_at`.
-   - Reject and correct loose shapes such as `type`/`summary` advice items or `flags` as an object. Run one correction pass with the actual schema before ingestion.
-   - Preserve prompt constraints exactly. For Food, avoid vague wording such as `audit`, `identification`, `unclassified edible items`, and generic `note` actions when structured action kinds fit.
+   - Pass the exact live system prompt, exact user prompt/briefing JSON, allowed advice types, and any current user quality constraints.
+   - Treat the live system prompt as the source of truth for target-minister JSON shape, field names, allowed values, and writing style. Do not restate or override those requirements from memory.
+   - Require JSON only, with no Markdown fences or explanatory prose.
+   - Reject and correct obvious stale schema before ingestion, especially old `what`/`why` action keys, old advice `severity`/`priority_score` fields, `type`/`summary` advice items, or `flags` as an object.
+   - Run one correction pass with the exact live prompt if the output conflicts with the prompt, uses loose schema, or contains stale Food wording.
+   - Treat endpoint `style_warnings` as a failed quality pass unless the wording is intentionally longer for safety.
 
 4. Ingest the raw JSON.
    - Post the subagent's raw JSON object, not a normalized rewrite, unless you had to correct schema validity.
@@ -63,7 +64,7 @@ Generate a minister LLM response with a Codex subagent, ingest it through RimAI'
        -ContentType 'application/json' `
        -Body $raw
      ```
-   - A good response is `accepted=true`, `status=manual_parsed` or `manual_normalized`, and nonzero `advice_count`.
+   - A good response is `accepted=true`, `status=manual_parsed` or `manual_normalized`, nonzero `advice_count`, and empty or intentionally accepted `style_warnings`.
 
 5. Verify from a separate read.
    - Check raw output:
@@ -76,7 +77,14 @@ Generate a minister LLM response with a Codex subagent, ingest it through RimAI'
      - `status` is `manual_parsed` or `manual_normalized`.
      - `parseMode` matches the ingestion response.
      - The raw text contains the intended corrected wording and does not contain known-bad stale wording.
-   - Check `GET /api/status` and the dashboard at `http://localhost:5000`.
+   - Compare the verified latest output to the previous-output summary captured before ingestion:
+     - provider/model/status/parseMode changes.
+     - advice count, ids, titles, advice_type, and priority changes.
+     - flag count, ids, severity, and summary changes.
+     - notes changes.
+     - wording changes that matter to the user request, especially removed stale wording or newly introduced concrete actions.
+   - Treat the comparison as part of the deliverable; do not only report that ingestion succeeded.
+   - Check `GET /api/system/health` and the dashboard at `http://localhost:5000`.
 
 ## Host Persistence Notes
 
@@ -92,7 +100,7 @@ Invoke-CimMethod `
   -Arguments @{ CommandLine = $cmd; CurrentDirectory = 'C:\dev\RimAI\Src\ApiHost' }
 ```
 
-After starting this way, always verify with a separate `GET /api/health` before posting.
+After starting this way, always verify with a separate `GET /api/system/health` before posting.
 
 ## Reporting
 
@@ -100,6 +108,8 @@ Report the result concisely:
 
 - Whether the subagent output was ingested.
 - Advice count, flag count, notes.
+- Any `style_warnings`; if present, report whether you corrected them or why they were accepted.
 - Latest raw output provider/model/status.
+- What changed compared with the previous raw output: advice items, flags, priority/type shifts, notes, and relevant wording changes.
 - Whether the Host is still reachable and which dashboard URL to refresh.
 - Any verification that stale wording is absent.

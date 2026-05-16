@@ -4,7 +4,7 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 
 ---
 
-## Start Here
+## Agent Discipline
 
 - Read `Docs/DESIGN.md`, `HumanTodo.md`, and the relevant focus doc before changing files.
 - When the user asks conceptual, design, "should we", "why", or "what about" questions, answer/review first. Do not rush to implementation unless clearly asked.
@@ -12,6 +12,12 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 - Design sessions are for exploration and docs. Do not write code unless asked.
 - Build sessions are for implementation. Do not redesign unless a blocker is found.
 - Store agent-created plans in `/.plans`. At session end, offer to update `HumanTodo.md` with new tasks uncovered.
+- For bug reports and user complaints, prefer the general correct fix over one-off workarounds.
+- If Git is locked or another session appears to be writing or committing, wait briefly and retry the narrow operation; do not force broad Git actions.
+- When a necessary question remains, include the local context and tradeoff so the user can decide quickly.
+- Use a separate worktree for large or risky parallel changes. Keep small focused edits in the current worktree when the worktree is clean enough.
+- Prefer concise bullets for operational summaries when they improve scan speed.
+- If legacy paths or compatibility shims remain, document them as legacy.
 
 ---
 
