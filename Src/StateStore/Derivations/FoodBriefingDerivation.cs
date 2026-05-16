@@ -8,6 +8,7 @@ namespace RimAI.State.Derivations;
 public static class FoodBriefingDerivation
 {
     private const int QualifiedSkillLevel = 6;
+    private const int CoolerAdjacentDistanceCells = 12;
 
     public static FoodBriefing Compute(ColonyState s, long briefingVersion = 0)
     {
@@ -107,12 +108,42 @@ public static class FoodBriefingDerivation
             .Where(p => p is not null)
             .Cast<MapPosition>()
             .ToList();
+        IReadOnlyList<MapPosition> coolerPositions = s.Buildings.Value.Buildings
+            .Where(BuildingClassifier.IsCooler)
+            .Select(b => b.Position)
+            .Where(p => p is not null)
+            .Cast<MapPosition>()
+            .ToList();
+        IReadOnlyList<StoredResourceRecord> storedFoodItems = s.StoredResources.Value.Items
+            .Where(item => !item.IsForbidden && item.StackCount > 0)
+            .Where(item => FoodItemClassifier.IsStoredFoodItem(item, s.ThingDefs.Value))
+            .ToList();
+        int positionedFoodUnits = storedFoodItems
+            .Where(item => item.Position is not null)
+            .Sum(item => item.StackCount);
+        int coolerAdjacentFoodUnits = storedFoodItems
+            .Where(item => item.Position is not null && IsCoolerAdjacent(item.Position, coolerPositions))
+            .Sum(item => item.StackCount);
+        int unpositionedFoodUnits = storedFoodItems
+            .Where(item => item.Position is null)
+            .Sum(item => item.StackCount);
         int? nearestKitchenDistance = MapDistance.Nearest(cookingPositions, stockpileCenters);
         return new FoodStorageSummary(
             StockpileZones: s.Stockpiles.Value.Zones.Count,
             StockpileCells: s.Stockpiles.Value.Zones.Sum(z => z.CellCount),
             NearestKitchenDistanceCells: nearestKitchenDistance,
-            NearestKitchenProximity: MapDistance.ProximityLabel(nearestKitchenDistance, cookingPositions.Count > 0 ? "kitchen" : null));
+            NearestKitchenProximity: MapDistance.ProximityLabel(nearestKitchenDistance, cookingPositions.Count > 0 ? "kitchen" : null))
+        {
+            PositionedFoodUnits = positionedFoodUnits,
+            CoolerAdjacentFoodUnits = coolerAdjacentFoodUnits,
+            UnpositionedFoodUnits = unpositionedFoodUnits
+        };
+    }
+
+    private static bool IsCoolerAdjacent(MapPosition? foodPosition, IReadOnlyList<MapPosition> coolerPositions)
+    {
+        int? distance = MapDistance.Nearest(coolerPositions, foodPosition);
+        return distance is not null && distance.Value <= CoolerAdjacentDistanceCells;
     }
 
     private static IReadOnlyList<FoodCropZoneSummary> DeriveCropZoneSummaries(

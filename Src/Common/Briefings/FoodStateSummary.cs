@@ -99,10 +99,34 @@ public static class FoodStateSummary
         parts.Add(Plural(briefing.Kitchen.CookingBuildings, "cooking station"));
         parts.Add(Plural(briefing.Infrastructure.Coolers, "cooler"));
         parts.Add($"{Plural(briefing.Storage.StockpileZones, "stockpile zone")} / {Plural(briefing.Storage.StockpileCells, "stockpile cell")}");
+        string storagePosture = FormatStoragePosture(briefing);
+        if (!string.IsNullOrWhiteSpace(storagePosture))
+            parts.Add(storagePosture);
 
         if (briefing.RawFoodCount > 0 && briefing.MealsCount < briefing.ColonistCount * 2)
             parts.Add("raw food is waiting on cooking throughput");
         return $"Kitchen/storage: {string.Join("; ", parts)}.";
+    }
+
+    private static string FormatStoragePosture(FoodBriefing briefing)
+    {
+        int positioned = briefing.Storage.PositionedFoodUnits;
+        int nearCoolers = briefing.Storage.CoolerAdjacentFoodUnits;
+        int elsewhere = briefing.Storage.OtherPositionedFoodUnits;
+
+        if (positioned <= 0)
+            return "";
+
+        if (briefing.Infrastructure.Coolers <= 0)
+            return $"{Plural(positioned, "positioned stored food unit")} with no cooler coverage";
+
+        if (nearCoolers > 0 && elsewhere > 0)
+            return $"{Plural(nearCoolers, "stored food unit")} near coolers, {elsewhere} elsewhere";
+
+        if (nearCoolers > 0)
+            return $"{Plural(nearCoolers, "stored food unit")} near coolers";
+
+        return $"{Plural(positioned, "positioned stored food unit")} away from known coolers";
     }
 
     private static string BuildDataGapLine(FoodBriefing briefing)

@@ -60,6 +60,8 @@ public sealed record FoodBriefing(
             if ((Kitchen.CookingBuildings > 0 || Kitchen.ButcherTables > 0 || Infrastructure.Coolers > 0) &&
                 !DataCoverage.HasBuildingPositions)
                 signals.Add("building_positions");
+            if (Infrastructure.Coolers > 0 && Storage.UnpositionedFoodUnits > 0)
+                signals.Add("stored_food_positions");
             return signals;
         }
     }
@@ -133,7 +135,18 @@ public sealed record FoodStorageSummary(
     int StockpileCells,
     int? NearestKitchenDistanceCells,
     string? NearestKitchenProximity
-);
+)
+{
+    public int PositionedFoodUnits { get; init; }
+
+    public int CoolerAdjacentFoodUnits { get; init; }
+
+    public int UnpositionedFoodUnits { get; init; }
+
+    public int OtherPositionedFoodUnits => Math.Max(0, PositionedFoodUnits - CoolerAdjacentFoodUnits);
+
+    public bool HasFoodPlacementSignal => PositionedFoodUnits > 0 || UnpositionedFoodUnits > 0;
+}
 
 public sealed record FoodKitchenSummary(
     int CookingBuildings,

@@ -19,7 +19,11 @@ public sealed class FoodStateSummaryTests
             ],
             Kitchen = new FoodKitchenSummary(1, 1, true, true),
             Infrastructure = new FoodInfrastructureSnapshot(1, true, 500f, 1),
-            Storage = new FoodStorageSummary(1, 20, null, null),
+            Storage = new FoodStorageSummary(1, 20, null, null)
+            {
+                PositionedFoodUnits = 21,
+                CoolerAdjacentFoodUnits = 7
+            },
             WildAnimalCount = 2,
             WildHuntTargets = [new WildHuntTarget("Hare", 2, "nearby to kitchen", "kitchen")]
         };
@@ -41,6 +45,24 @@ public sealed class FoodStateSummaryTests
         summary.Should().Contain("1 cooking station");
         summary.Should().Contain("1 cooler");
         summary.Should().Contain("1 stockpile zone / 20 stockpile cells");
+        summary.Should().Contain("7 stored food units near coolers, 14 elsewhere");
+    }
+
+    [Fact]
+    public void Build_CallsOutPositionedStoredFoodWithoutCoolerCoverage()
+    {
+        FoodBriefing briefing = FoodRulesTests.Briefing(12f) with
+        {
+            Infrastructure = new FoodInfrastructureSnapshot(0, true, 500f, 1),
+            Storage = new FoodStorageSummary(1, 20, null, null)
+            {
+                PositionedFoodUnits = 21
+            }
+        };
+
+        string summary = FoodStateSummary.Build(briefing);
+
+        summary.Should().Contain("21 positioned stored food units with no cooler coverage");
     }
 
     [Fact]

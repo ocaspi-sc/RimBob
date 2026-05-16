@@ -227,11 +227,24 @@ public sealed class FoodBriefingDerivationTests
         ColonyState s = StateWithColonists(1);
         s.Buildings.Update(new BuildingRegistry([
             new BuildingRecord("stove", "FueledStove", 1f, null, null, new MapPosition(10, 0, 10)),
-            new BuildingRecord("butcher", "ButcherTable", 1f, null, null, new MapPosition(12, 0, 10))
+            new BuildingRecord("butcher", "ButcherTable", 1f, null, null, new MapPosition(12, 0, 10)),
+            new BuildingRecord("cooler", "Cooler", 1f, true, true, new MapPosition(15, 0, 10))
         ]));
         s.Stockpiles.Update(new StockpileLedger([
             new StockpileZone("stock", "StockpileZone", "food", 9, new MapPosition(14, 0, 10))
         ], new Dictionary<string, int>()));
+        s.StoredResources.Update(new StoredResourceRegistry([
+            new StoredResourceRecord("food_meals", "meal", "MealSurvivalPack", "packaged survival meal", 10, false, new MapPosition(16, 0, 10)),
+            new StoredResourceRecord("plant_food_raw", "berries", "RawBerries", "berries", 5, false, new MapPosition(60, 0, 10)),
+            new StoredResourceRecord("food_meals", "unplaced-meal", "MealSurvivalPack", "packaged survival meal", 2, false),
+            new StoredResourceRecord("food_meals", "forbidden-meal", "MealSurvivalPack", "packaged survival meal", 3, true, new MapPosition(16, 0, 10)),
+            new StoredResourceRecord("building_materials", "steel", "Steel", "steel", 75, false, new MapPosition(15, 0, 10))
+        ], new Dictionary<string, int>(), new Dictionary<string, int>()));
+        s.ThingDefs.Update(new ThingDefRegistry(new Dictionary<string, ThingDefRecord>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["MealSurvivalPack"] = new("MealSurvivalPack", "packaged survival meal", "Item", "ThingWithComps", true, false, false, false, 0.9f, 10),
+            ["RawBerries"] = new("RawBerries", "berries", "Item", "ThingWithComps", true, false, false, false, 0.05f, 75)
+        }));
         s.Plants.Update(new PlantRegistry([
             new PlantRecord("berry1", "BerryBush", 0.9f, false, null, new MapPosition(18, 0, 10)),
             new PlantRecord("berry2", "BerryBush", 0.95f, false, null, new MapPosition(20, 0, 10)),
@@ -247,6 +260,12 @@ public sealed class FoodBriefingDerivationTests
         b.Kitchen.HasButcherTable.Should().BeTrue();
         b.Storage.NearestKitchenDistanceCells.Should().Be(4);
         b.Storage.NearestKitchenProximity.Should().Contain("from kitchen");
+        b.Storage.PositionedFoodUnits.Should().Be(15);
+        b.Storage.CoolerAdjacentFoodUnits.Should().Be(10);
+        b.Storage.OtherPositionedFoodUnits.Should().Be(5);
+        b.Storage.UnpositionedFoodUnits.Should().Be(2);
+        b.Storage.HasFoodPlacementSignal.Should().BeTrue();
+        b.MissingBriefingSignals.Should().Contain("stored_food_positions");
         b.WildHarvestClusters.Should().ContainSingle()
             .Which.Proximity.Should().Contain("from kitchen");
         b.WildHuntTargets.Should().ContainSingle()

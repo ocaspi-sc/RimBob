@@ -75,6 +75,20 @@ internal static class FoodItemClassifier
             UnclassifiedFoodItems: []);
     }
 
+    public static bool IsStoredFoodItem(StoredResourceRecord item, ThingDefRegistry thingDefs)
+    {
+        FoodSourceItem sourceItem = new(
+            Def: item.Def,
+            Label: item.Label,
+            StackCount: item.StackCount,
+            Category: item.Category,
+            Categories: [item.Category],
+            IsForbidden: item.IsForbidden,
+            Source: "resources_stored",
+            Position: item.Position);
+        return ClassifyKind(sourceItem, thingDefs) != FoodItemKind.NotFood;
+    }
+
     private static FoodItemClassification? ClassifyItems(
         IReadOnlyList<FoodSourceItem> sourceItems,
         ThingDefRegistry thingDefs,
