@@ -6,7 +6,7 @@ interface GlossaryEntry {
   description: string;
 }
 
-const rimaiGlossary: GlossaryEntry[] = [
+const rimbobGlossary: GlossaryEntry[] = [
   {
     term: 'Agenda',
     tag: 'Mayor',
@@ -122,9 +122,9 @@ export function InfoOverview() {
         </div>
       </header>
 
-      <DisclosureSection title="Important buzzwords" defaultOpen meta={`${rimaiGlossary.length + rimworldSignals.length} terms`}>
+      <DisclosureSection title="Important buzzwords" defaultOpen meta={`${rimbobGlossary.length + rimworldSignals.length} terms`}>
         <div className="glossary-columns">
-          <GlossaryList title="RimAI terms" entries={rimaiGlossary} />
+          <GlossaryList title="RimBob terms" entries={rimbobGlossary} />
           <GlossaryList title="RimWorld signals" entries={rimworldSignals} />
         </div>
       </DisclosureSection>

@@ -1,15 +1,15 @@
 using Microsoft.Extensions.Logging;
-using RimAI.Core.Advice;
-using RimAI.Core.Briefings;
+using RimBob.Core.Advice;
+using RimBob.Core.Briefings;
 
-namespace RimAI.Knowledge;
+namespace RimBob.Knowledge;
 
 /// <summary>
 /// Builds a retrieval query for the Mayor from the daily briefing + agenda directives,
 /// embeds it once, and pulls top-K Chunks from the KnowledgeBase. Returns GuideCitation
 /// records ready to be slotted into the LLM prompt and the agenda output.
 /// Disabled retrievers (Enabled=false) short-circuit to an empty list — used when
-/// RimAi:Rag:Enabled is false in config.
+/// RimBob:Rag:Enabled is false in config.
 /// </summary>
 public sealed class MayorRagRetriever
 {

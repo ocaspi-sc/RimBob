@@ -1,10 +1,10 @@
-using RimAI.Core.Aggregates;
-using RimAI.Core.Advice;
-using RimAI.Core.Briefings;
-using RimAI.State.Derivations.Common;
-using RimAI.State.Parsing;
+using RimBob.Core.Aggregates;
+using RimBob.Core.Advice;
+using RimBob.Core.Briefings;
+using RimBob.State.Derivations.Common;
+using RimBob.State.Parsing;
 
-namespace RimAI.State.Derivations;
+namespace RimBob.State.Derivations;
 
 public static class FoodBriefingDerivation
 {

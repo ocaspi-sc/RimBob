@@ -1,4 +1,4 @@
-# RimAI - Minister Design
+# RimBob - Minister Design
 
 > **Living document.** See `AGENTS.md` for update rules.
 > This doc records durable minister behavior and domain boundaries. Exact C#

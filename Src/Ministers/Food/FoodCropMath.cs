@@ -1,7 +1,7 @@
 using System.Globalization;
-using RimAI.Core.Briefings;
+using RimBob.Core.Briefings;
 
-namespace RimAI.Ministers.Food;
+namespace RimBob.Ministers.Food;
 
 public sealed record FoodCropRecommendation(
     IReadOnlyList<FoodCropCandidate> Candidates)

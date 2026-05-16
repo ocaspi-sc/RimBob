@@ -1,15 +1,15 @@
 using System.Net;
 using System.Text;
 using FluentAssertions;
-using RimAI.Coordination;
-using RimAI.Core.Advice;
-using RimAI.Core.Aggregates;
-using RimAI.Host;
-using RimAI.Ingestion;
-using RimAI.State;
-using RimAI.Tests.Infrastructure;
+using RimBob.Coordination;
+using RimBob.Core.Advice;
+using RimBob.Core.Aggregates;
+using RimBob.Host;
+using RimBob.Ingestion;
+using RimBob.State;
+using RimBob.Tests.Infrastructure;
 
-namespace RimAI.Tests.ApiHost;
+namespace RimBob.Tests.ApiHost;
 
 public sealed class AssistedApplyServiceTests
 {

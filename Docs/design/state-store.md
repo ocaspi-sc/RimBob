@@ -1,4 +1,4 @@
-# RimAI - State Store
+# RimBob - State Store
 
 > **Living document.** See `AGENTS.md` for update rules.
 > This doc defines state-store responsibilities and briefing principles. Exact

@@ -1,11 +1,11 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using FluentAssertions;
-using RimAI.Core.Advice;
-using RimAI.Core.Briefings;
-using RimAI.LLM;
+using RimBob.Core.Advice;
+using RimBob.Core.Briefings;
+using RimBob.LLM;
 
-namespace RimAI.Tests.LLM;
+namespace RimBob.Tests.LLM;
 
 public sealed class AdviceNormalizationTests
 {

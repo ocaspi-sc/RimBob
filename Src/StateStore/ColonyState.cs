@@ -1,7 +1,7 @@
-using RimAI.Core.Aggregates;
-using RimAI.Core.Versioning;
+using RimBob.Core.Aggregates;
+using RimBob.Core.Versioning;
 
-namespace RimAI.State;
+namespace RimBob.State;
 
 /// <summary>
 /// Single root container for all colony aggregates. Ingestion writes here;

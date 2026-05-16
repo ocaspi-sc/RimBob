@@ -1,4 +1,4 @@
-import type { RimAIStatus } from '../../types/status';
+import type { RimBobStatus } from '../../types/status';
 import type { StreamDiagnostics } from '../../types/system';
 import { StatusPill } from '../shared/StatusPill';
 
@@ -11,7 +11,7 @@ export function DashboardHeader({
   triggerPending,
 }: {
   onTriggerCabinet: () => void;
-  status: RimAIStatus | null;
+  status: RimBobStatus | null;
   stream: StreamDiagnostics;
   triggerDisabled: boolean;
   triggerError: string | null;
@@ -32,7 +32,7 @@ export function DashboardHeader({
     <header className="dashboard-header panel-shell">
       <div className="brand-block">
         <span className="eyebrow">RimWorld Advisory Cabinet</span>
-        <h1>RimAI Dashboard v2</h1>
+        <h1>RimBob Dashboard v2</h1>
       </div>
       <div className="header-controls">
         <div className="header-status">

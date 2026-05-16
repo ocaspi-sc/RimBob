@@ -1,13 +1,13 @@
 using FluentAssertions;
-using RimAI.Core.Aggregates;
-using RimAI.Core.Briefings;
-using RimAI.Ingestion;
-using RimAI.Ingestion.Dtos;
-using RimAI.State;
-using RimAI.State.Derivations;
+using RimBob.Core.Aggregates;
+using RimBob.Core.Briefings;
+using RimBob.Ingestion;
+using RimBob.Ingestion.Dtos;
+using RimBob.State;
+using RimBob.State.Derivations;
 using Xunit.Abstractions;
 
-namespace RimAI.Tests.Live;
+namespace RimBob.Tests.Live;
 
 public sealed class LiveRimApiContractTests(ITestOutputHelper output)
 {

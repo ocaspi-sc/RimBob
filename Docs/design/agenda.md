@@ -1,4 +1,4 @@
-# RimAI - The Mayor's Agenda
+# RimBob - The Mayor's Agenda
 
 > **Living document.** See `AGENTS.md` for update rules.
 > This doc records Agenda semantics and durable contracts. Exact JSON records,
@@ -93,8 +93,8 @@ contain safe `Suggest`-mode priorities, and is replaced by the next successful
 Mayor LLM run. If the Mayor LLM fails twice before any Agenda exists, the Mayor
 uses the same bootstrap path rather than leaving `/api/agenda/latest` empty.
 
-Manual dashboard runs refresh live state and evaluate RimAI through the cabinet
-trigger path. They are RimAI evaluation controls, not game writes.
+Manual dashboard runs refresh live state and evaluate RimBob through the cabinet
+trigger path. They are RimBob evaluation controls, not game writes.
 
 ---
 

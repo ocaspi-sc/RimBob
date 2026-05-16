@@ -1,4 +1,4 @@
-# RimAI - Code Architecture
+# RimBob - Code Architecture
 
 > **Living document.** See `AGENTS.md` for update rules.
 > This doc records durable architecture boundaries and runtime contracts. Exact
@@ -12,14 +12,14 @@
 
 ```text
 Browser dashboard
-  -> RimAI Host (.NET service, localhost HTTP + SSE)
+  -> RimBob Host (.NET service, localhost HTTP + SSE)
   -> Coordination + Ministers + State + LLM + Knowledge
   -> Ingestion client
   -> RIMAPI HTTP on localhost
   -> RimWorld
 ```
 
-RimAI is an external .NET 9 service, not a RimWorld mod. RimWorld mods are
+RimBob is an external .NET 9 service, not a RimWorld mod. RimWorld mods are
 pinned to older .NET runtime constraints; the external process keeps modern
 libraries available and avoids linking against RIMAPI.
 
@@ -141,11 +141,11 @@ for readability.
 
 ## Local Run
 
-`run-rimai.ps1` is the preferred local launcher. It builds the dashboard and
+`run-rimbob.ps1` is the preferred local launcher. It builds the dashboard and
 starts the Host in a minimized taskbar-visible PowerShell window named
-`RimAI Server`; that window closes automatically when RimAI exits.
+`RimBob Server`; that window closes automatically when RimBob exits.
 
-Use `run-rimai.ps1 -Foreground` when terminal output must stay attached to the
+Use `run-rimbob.ps1 -Foreground` when terminal output must stay attached to the
 current shell for debugging or verification.
 
 ---

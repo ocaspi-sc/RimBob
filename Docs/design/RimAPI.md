@@ -24,14 +24,14 @@ If you need an endpoint not listed here, fetch the live docs and append to this 
 
 RIMAPI collection endpoints are not perfectly uniform. Some return `data: []`;
 some return `data: {}` for an empty collection; some wrap the useful array in
-a named property such as `data.zones` or `data.incidents`. RimAI should parse
+a named property such as `data.zones` or `data.incidents`. RimBob should parse
 known wrappers explicitly. Unknown non-empty objects and malformed array items
 are schema drift and must fail loudly; they must not be converted to empty
 lists.
 
 DTO id fields are not fully consistent across endpoints. Verified examples include numeric animal ids from `/api/v1/map/animals?map_id=...`; ingestion keeps aggregate ids as strings, so unverified string-like DTO ids use a flexible string-id converter that accepts JSON strings or numbers.
 
-Live local contract tests under `Src/Tests/Live` are marked `Category=Live`. They are GET-only, early-return when RIMAPI/Host is not reachable, and act as local tripwires when RimWorld or RimAI Host is running.
+Live local contract tests under `Src/Tests/Live` are marked `Category=Live`. They are GET-only, early-return when RIMAPI/Host is not reachable, and act as local tripwires when RimWorld or RimBob Host is running.
 
 ---
 
@@ -175,7 +175,7 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 | GET | `/colonist/body/image?id` | base64 body/head PNGs plus color metadata |
 | POST | `/item/change/image` | upload custom texture |
 
-RimAI exposes only read-only image gateways through Host. `/item/change/image`
+RimBob exposes only read-only image gateways through Host. `/item/change/image`
 is intentionally not wrapped or exposed because it mutates game textures and is
 outside the localhost read-only dashboard posture.
 
@@ -250,7 +250,7 @@ When a minister needs an endpoint from one of these, fetch the upstream docs, ad
 
 ---
 
-## How RimAI uses RIMAPI
+## How RimBob uses RIMAPI
 
 - Only [`RimApiClient`](../Ingestion/RimApiClient.cs) calls RIMAPI. Ministers read from the [state store](state-store.md), never RIMAPI directly.
 - Add a method to `RimApiClient` only when a minister actually needs it — no speculative coverage.

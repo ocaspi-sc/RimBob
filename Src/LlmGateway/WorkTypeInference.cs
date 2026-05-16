@@ -1,6 +1,6 @@
-using RimAI.Core.Advice;
+using RimBob.Core.Advice;
 
-namespace RimAI.LLM;
+namespace RimBob.LLM;
 
 internal static class WorkTypeInference
 {

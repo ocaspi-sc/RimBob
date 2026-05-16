@@ -1,7 +1,7 @@
-using RimAI.Core.Briefings;
-using RimAI.Core.Ministers;
+using RimBob.Core.Briefings;
+using RimBob.Core.Ministers;
 
-namespace RimAI.Ministers.Mayor;
+namespace RimBob.Ministers.Mayor;
 
 /// <summary>
 /// Mayor's thin rules layer. Unlike feeder ministers (decide-or-escalate), the Mayor

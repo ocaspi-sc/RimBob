@@ -154,15 +154,15 @@ Status: implemented for this slice. Backend tests cover priority/work metadata s
 
 ## Phase 7 - Verification
 
-Status: build/test verified on 2026-05-13. `dotnet build Src\RimAI.sln --no-restore`, `dotnet test Src\Tests\RimAI.Tests.csproj --no-restore --no-build`, and `npm.cmd run build` passed. RimAI was restarted with `run-rimai.ps1` and `/api/health` returned OK.
+Status: build/test verified on 2026-05-13. `dotnet build Src\RimBob.sln --no-restore`, `dotnet test Src\Tests\RimBob.Tests.csproj --no-restore --no-build`, and `npm.cmd run build` passed. RimBob was restarted with `run-rimbob.ps1` and `/api/health` returned OK.
 
 Live follow-up verified on 2026-05-16. RIMAPI was reachable at `http://localhost:8765`; direct checks covered game state, maps, pawns, detailed colonists, resource summary, stored resources, plants, and animals. The running Host reported `rimapi_reachable: true`, served a live Food briefing, and `/api/advice/stream` replayed a current Food emergency advice card with concrete steps and a Food state summary.
 
-1. Stop any running `RimAI.Host` before build if DLLs are locked.
+1. Stop any running `RimBob.Host` before build if DLLs are locked.
 2. Run backend build.
 3. Run backend tests.
 4. Run dashboard build.
-5. Run RimAI with the repo launcher or from `Src/ApiHost`.
+5. Run RimBob with the repo launcher or from `Src/ApiHost`.
 6. Inspect `./logs/` and the dashboard Alerts tab.
 7. Confirm Food emits fewer, more actionable cards.
 8. Confirm live Food output does not invent trade, caravan, exact coordinates, or vague labor capacity.

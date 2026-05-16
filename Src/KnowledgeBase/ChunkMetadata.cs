@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace RimAI.Knowledge;
+namespace RimBob.Knowledge;
 
 public sealed record ChunkMetadata(
     [property: JsonPropertyName("source_path")]     string SourcePath,

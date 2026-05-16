@@ -1,11 +1,11 @@
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using RimAI.Core.Advice;
-using RimAI.Core.Briefings;
-using RimAI.Core.Ministers;
+using RimBob.Core.Advice;
+using RimBob.Core.Briefings;
+using RimBob.Core.Ministers;
 
-namespace RimAI.LLM;
+namespace RimBob.LLM;
 
 /// <summary>
 /// Assembles prompts for LLM calls. System prompts are read from disk once and cached;

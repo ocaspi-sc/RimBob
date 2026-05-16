@@ -2,7 +2,7 @@ using Google.GenAI;
 using Google.GenAI.Types;
 using Microsoft.Extensions.Logging;
 
-namespace RimAI.Knowledge;
+namespace RimBob.Knowledge;
 
 /// <summary>
 /// Wraps Gemini's embedding endpoint. One call per chunk, sequential: the guide

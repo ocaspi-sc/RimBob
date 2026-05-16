@@ -1,8 +1,8 @@
 using System.Text.RegularExpressions;
-using RimAI.Core.Advice;
-using RimAI.Core.Ministers;
+using RimBob.Core.Advice;
+using RimBob.Core.Ministers;
 
-namespace RimAI.LLM;
+namespace RimBob.LLM;
 
 public static class AdviceTextStyleWarnings
 {

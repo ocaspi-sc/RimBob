@@ -1,8 +1,8 @@
 using FluentAssertions;
-using RimAI.Coordination;
-using RimAI.Core.Advice;
+using RimBob.Coordination;
+using RimBob.Core.Advice;
 
-namespace RimAI.Tests.Coordination;
+namespace RimBob.Tests.Coordination;
 
 public sealed class AgendaStoreTests
 {
@@ -156,7 +156,7 @@ public sealed class AgendaStoreTests
     {
         string directory = Path.Combine(
             Path.GetTempPath(),
-            "rimai-agenda-store-tests",
+            "rimbob-agenda-store-tests",
             Guid.NewGuid().ToString("N"));
         return Path.Combine(directory, "agenda-store.json");
     }

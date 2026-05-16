@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace RimAI.Core.Advice;
+namespace RimBob.Core.Advice;
 
 /// <summary>
 /// A resource a minister needs in order to resolve its advice. Requests are

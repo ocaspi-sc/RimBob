@@ -1,9 +1,9 @@
 using FluentAssertions;
-using RimAI.Core.Aggregates;
-using RimAI.Ingestion.Dtos;
-using RimAI.State;
+using RimBob.Core.Aggregates;
+using RimBob.Ingestion.Dtos;
+using RimBob.State;
 
-namespace RimAI.Tests.State;
+namespace RimBob.Tests.State;
 
 public sealed class AggregateMapperTests
 {

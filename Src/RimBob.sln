@@ -1,29 +1,29 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RimAI.Core", "Common\RimAI.Core.csproj", "{608755CC-6985-421D-99A5-D4A7D9416F3E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RimBob.Core", "Common\RimBob.Core.csproj", "{608755CC-6985-421D-99A5-D4A7D9416F3E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RimAI.Ingestion", "GameStateSync\RimAI.Ingestion.csproj", "{3B2316D0-F311-4C65-BC79-86060D1CF240}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RimBob.Ingestion", "GameStateSync\RimBob.Ingestion.csproj", "{3B2316D0-F311-4C65-BC79-86060D1CF240}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RimAI.State", "StateStore\RimAI.State.csproj", "{6F0DD44F-D91F-48EF-80D7-CBDDFBAC2A98}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RimBob.State", "StateStore\RimBob.State.csproj", "{6F0DD44F-D91F-48EF-80D7-CBDDFBAC2A98}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RimAI.LLM", "LlmGateway\RimAI.LLM.csproj", "{5D2E6DF6-0F9A-4375-BB63-4AD895E5784B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RimBob.LLM", "LlmGateway\RimBob.LLM.csproj", "{5D2E6DF6-0F9A-4375-BB63-4AD895E5784B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RimAI.Knowledge", "KnowledgeBase\RimAI.Knowledge.csproj", "{B909FDF7-9F09-46A7-A51D-875F7611B263}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RimBob.Knowledge", "KnowledgeBase\RimBob.Knowledge.csproj", "{B909FDF7-9F09-46A7-A51D-875F7611B263}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RimAI.Host", "ApiHost\RimAI.Host.csproj", "{06DAA201-5AC3-484B-B17D-EA71F4A6BE3F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RimBob.Host", "ApiHost\RimBob.Host.csproj", "{06DAA201-5AC3-484B-B17D-EA71F4A6BE3F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RimAI.Tests", "Tests\RimAI.Tests.csproj", "{C5B61189-A4FE-48EA-9596-013733851372}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RimBob.Tests", "Tests\RimBob.Tests.csproj", "{C5B61189-A4FE-48EA-9596-013733851372}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Ministers", "Ministers", "{79280237-CB6C-3C04-C73F-74558FD3CF6D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RimAI.Ministers", "Ministers\RimAI.Ministers.csproj", "{AFD9C8EE-5DD0-4B4B-97C3-63A262DB4992}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RimBob.Ministers", "Ministers\RimBob.Ministers.csproj", "{AFD9C8EE-5DD0-4B4B-97C3-63A262DB4992}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Coordination", "Coordination", "{D85A29DB-1665-DAC0-15C1-38C3ED03944B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RimAI.Coordination", "Coordination\RimAI.Coordination.csproj", "{F1A6A294-B91E-40A3-A6D6-478A8D74A755}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RimBob.Coordination", "Coordination\RimBob.Coordination.csproj", "{F1A6A294-B91E-40A3-A6D6-478A8D74A755}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

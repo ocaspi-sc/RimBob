@@ -1,9 +1,9 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
-using RimAI.Ingestion.Dtos;
+using RimBob.Ingestion.Dtos;
 
-namespace RimAI.Ingestion;
+namespace RimBob.Ingestion;
 
 /// <summary>
 /// Typed HTTP wrapper for RIMAPI (https://github.com/IlyaChichkov/RIMAPI).

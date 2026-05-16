@@ -1,8 +1,8 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\Common\RimAI.Core.csproj" />
-    <ProjectReference Include="..\GameStateSync\RimAI.Ingestion.csproj" />
+    <ProjectReference Include="..\Common\RimBob.Core.csproj" />
+    <ProjectReference Include="..\GameStateSync\RimBob.Ingestion.csproj" />
   </ItemGroup>
 
   <ItemGroup>

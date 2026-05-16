@@ -1,8 +1,8 @@
 using FluentAssertions;
-using RimAI.Core.Briefings;
-using RimAI.Ministers.Food;
+using RimBob.Core.Briefings;
+using RimBob.Ministers.Food;
 
-namespace RimAI.Tests.Food;
+namespace RimBob.Tests.Food;
 
 public sealed class FoodCropMathTests
 {

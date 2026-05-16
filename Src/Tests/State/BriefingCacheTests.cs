@@ -1,10 +1,10 @@
 using FluentAssertions;
-using RimAI.Core.Aggregates;
-using RimAI.Core.Briefings;
-using RimAI.State;
-using RimAI.Tests.Infrastructure;
+using RimBob.Core.Aggregates;
+using RimBob.Core.Briefings;
+using RimBob.State;
+using RimBob.Tests.Infrastructure;
 
-namespace RimAI.Tests.State;
+namespace RimBob.Tests.State;
 
 public sealed class BriefingCacheTests
 {

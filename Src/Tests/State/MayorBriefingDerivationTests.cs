@@ -1,9 +1,9 @@
 using FluentAssertions;
-using RimAI.Core.Aggregates;
-using RimAI.State;
-using RimAI.State.Derivations;
+using RimBob.Core.Aggregates;
+using RimBob.State;
+using RimBob.State.Derivations;
 
-namespace RimAI.Tests.State;
+namespace RimBob.Tests.State;
 
 public sealed class MayorBriefingDerivationTests
 {

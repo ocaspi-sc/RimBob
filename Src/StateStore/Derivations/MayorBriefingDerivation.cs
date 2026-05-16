@@ -1,10 +1,10 @@
-using RimAI.Core.Aggregates;
-using RimAI.Core.Briefings;
-using RimAI.State.Derivations.Common;
-using RimAI.State.Parsing;
-using WeatherSnapshot = RimAI.Core.Briefings.WeatherSnapshot;
+using RimBob.Core.Aggregates;
+using RimBob.Core.Briefings;
+using RimBob.State.Derivations.Common;
+using RimBob.State.Parsing;
+using WeatherSnapshot = RimBob.Core.Briefings.WeatherSnapshot;
 
-namespace RimAI.State.Derivations;
+namespace RimBob.State.Derivations;
 
 /// <summary>
 /// Derives a MayorBriefing from ColonyState. Pure function — no side effects,

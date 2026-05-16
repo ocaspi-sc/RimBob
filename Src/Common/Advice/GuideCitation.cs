@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace RimAI.Core.Advice;
+namespace RimBob.Core.Advice;
 
 /// <summary>
 /// Compact reference to a retrieved guide passage. Carried on MayorAgenda.GuideCitations

@@ -1,9 +1,9 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using RimAI.Core.Advice;
+using RimBob.Core.Advice;
 
-namespace RimAI.Coordination;
+namespace RimBob.Coordination;
 
 /// <summary>
 /// Holds the current MayorAgenda plus a ring buffer of the last 30 versions.

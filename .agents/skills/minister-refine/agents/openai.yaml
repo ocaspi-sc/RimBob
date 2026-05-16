@@ -1,4 +1,4 @@
 interface:
   display_name: "Minister Refine"
-  short_description: "Refine RimAI minister quality"
+  short_description: "Refine RimBob minister quality"
   default_prompt: "Use $minister-refine to review Food quality from logs and propose rule, prompt, or briefing improvements."

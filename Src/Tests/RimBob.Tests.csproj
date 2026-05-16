@@ -20,14 +20,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Common\RimAI.Core.csproj" />
-    <ProjectReference Include="..\GameStateSync\RimAI.Ingestion.csproj" />
-    <ProjectReference Include="..\StateStore\RimAI.State.csproj" />
-    <ProjectReference Include="..\LlmGateway\RimAI.LLM.csproj" />
-    <ProjectReference Include="..\KnowledgeBase\RimAI.Knowledge.csproj" />
-    <ProjectReference Include="..\Coordination\RimAI.Coordination.csproj" />
-    <ProjectReference Include="..\Ministers\RimAI.Ministers.csproj" />
-    <ProjectReference Include="..\ApiHost\RimAI.Host.csproj" />
+    <ProjectReference Include="..\Common\RimBob.Core.csproj" />
+    <ProjectReference Include="..\GameStateSync\RimBob.Ingestion.csproj" />
+    <ProjectReference Include="..\StateStore\RimBob.State.csproj" />
+    <ProjectReference Include="..\LlmGateway\RimBob.LLM.csproj" />
+    <ProjectReference Include="..\KnowledgeBase\RimBob.Knowledge.csproj" />
+    <ProjectReference Include="..\Coordination\RimBob.Coordination.csproj" />
+    <ProjectReference Include="..\Ministers\RimBob.Ministers.csproj" />
+    <ProjectReference Include="..\ApiHost\RimBob.Host.csproj" />
   </ItemGroup>
 
 </Project>

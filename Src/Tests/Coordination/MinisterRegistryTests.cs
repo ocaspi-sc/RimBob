@@ -1,7 +1,7 @@
 using FluentAssertions;
-using RimAI.Coordination;
+using RimBob.Coordination;
 
-namespace RimAI.Tests.Coordination;
+namespace RimBob.Tests.Coordination;
 
 public sealed class MinisterRegistryTests
 {

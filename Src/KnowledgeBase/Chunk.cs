@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace RimAI.Knowledge;
+namespace RimBob.Knowledge;
 
 public sealed record Chunk(
     [property: JsonPropertyName("id")]        string        Id,

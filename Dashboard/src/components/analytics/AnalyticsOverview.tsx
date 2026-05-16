@@ -51,7 +51,7 @@ const analyticsIdeas: AnalyticsIdea[] = [
   {
     name: 'SSE event cadence',
     signal: 'Gap between agenda_update, advice_snapshot, advice, and ping events',
-    value: 'Shows whether the live feed is quiet because RimAI is idle or because the stream is stale.',
+    value: 'Shows whether the live feed is quiet because RimBob is idle or because the stream is stale.',
   },
 ];
 

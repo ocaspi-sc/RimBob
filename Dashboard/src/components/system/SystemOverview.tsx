@@ -1,4 +1,4 @@
-import type { RimAIStatus } from '../../types/status';
+import type { RimBobStatus } from '../../types/status';
 import type { DashboardEvent, RimApiCoverageRow, StreamDiagnostics, SystemHealth } from '../../types/system';
 import { iconForField, iconForSection, iconForScope } from '../../dashboard/semanticIcons';
 import { systemPanelRegistry } from '../../dashboard/panelRegistry';
@@ -20,7 +20,7 @@ export function SystemOverview({
   events: DashboardEvent[];
   health: SystemHealth | null;
   healthError: string | null;
-  status: RimAIStatus | null;
+  status: RimBobStatus | null;
   stream: StreamDiagnostics;
 }) {
   const backendSse = health?.sse;

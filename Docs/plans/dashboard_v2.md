@@ -4,7 +4,7 @@
 
 Build Dashboard v2 as a new React implementation inside the existing dashboard package. Keep the Vite/package/build/Host wiring, but treat the previous dashboard UI as reference material only. The new app source tree owns its own shell, registries, layout, CSS, and components.
 
-The dashboard remains inspect-first and `Suggest` mode. It exposes what RimAI knows, what it recommended, why a minister woke up, what data was missing, and how the runtime is behaving. It may show Assisted Apply only for backend-allowlisted advice steps, and it does not show Pushback or feedback controls in v2.
+The dashboard remains inspect-first and `Suggest` mode. It exposes what RimBob knows, what it recommended, why a minister woke up, what data was missing, and how the runtime is behaving. It may show Assisted Apply only for backend-allowlisted advice steps, and it does not show Pushback or feedback controls in v2.
 
 ## Core Information Architecture
 
@@ -190,7 +190,7 @@ Use compact rows, clear headings, status pills, restrained accent colors, and st
 
 ### Minister Trace
 
-Expose the last run trace per minister so the Rules tab can answer "why did RimAI say this now?"
+Expose the last run trace per minister so the Rules tab can answer "why did RimBob say this now?"
 
 Trace should include:
 
@@ -248,7 +248,7 @@ Do not stream arbitrary files into the UI. A later endpoint should return a boun
 ## Test Plan
 
 - `npm.cmd run build` from `Dashboard`.
-- `dotnet build Src/RimAI.sln --no-restore`.
+- `dotnet build Src/RimBob.sln --no-restore`.
 - Verify Host still serves the built dashboard.
 - Browser-check desktop and narrow viewport layout.
 - Confirm SYSTEM does not show minister tabs.

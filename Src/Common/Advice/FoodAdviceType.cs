@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace RimAI.Core.Advice;
+namespace RimBob.Core.Advice;
 
 [JsonConverter(typeof(SnakeCaseLowerEnumConverter<FoodAdviceType>))]
 public enum FoodAdviceType
@@ -24,7 +24,7 @@ public sealed record FoodLlmResponse
     public FoodLlmResponse(
         string? StateSummary,
         IReadOnlyList<AdviceItem> Advice,
-        IReadOnlyList<RimAI.Core.Ministers.AgentFlag> Flags,
+        IReadOnlyList<RimBob.Core.Ministers.AgentFlag> Flags,
         string? Notes = null)
     {
         this.StateSummary = StateSummary;
@@ -35,7 +35,7 @@ public sealed record FoodLlmResponse
 
     public FoodLlmResponse(
         IReadOnlyList<AdviceItem> Advice,
-        IReadOnlyList<RimAI.Core.Ministers.AgentFlag> Flags,
+        IReadOnlyList<RimBob.Core.Ministers.AgentFlag> Flags,
         string? Notes = null)
         : this(null, Advice, Flags, Notes)
     {
@@ -48,7 +48,7 @@ public sealed record FoodLlmResponse
     public IReadOnlyList<AdviceItem> Advice { get; init; }
 
     [JsonPropertyName("flags")]
-    public IReadOnlyList<RimAI.Core.Ministers.AgentFlag> Flags { get; init; }
+    public IReadOnlyList<RimBob.Core.Ministers.AgentFlag> Flags { get; init; }
 
     [JsonPropertyName("notes")]
     public string? Notes { get; init; }

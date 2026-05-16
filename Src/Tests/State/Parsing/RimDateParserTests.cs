@@ -1,7 +1,7 @@
 using FluentAssertions;
-using RimAI.State.Parsing;
+using RimBob.State.Parsing;
 
-namespace RimAI.Tests.State.Parsing;
+namespace RimBob.Tests.State.Parsing;
 
 public sealed class RimDateParserTests
 {

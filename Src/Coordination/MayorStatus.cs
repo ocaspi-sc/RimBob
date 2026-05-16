@@ -1,4 +1,4 @@
-namespace RimAI.Coordination;
+namespace RimBob.Coordination;
 
 /// <summary>
 /// Tracks the Mayor's current run state so the dashboard can show a live timer

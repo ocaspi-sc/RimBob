@@ -1,7 +1,7 @@
-using RimAI.Core.Aggregates;
-using RimAI.Ingestion.Dtos;
+using RimBob.Core.Aggregates;
+using RimBob.Ingestion.Dtos;
 
-namespace RimAI.State;
+namespace RimBob.State;
 
 public static class ResourceAggregateMapper
 {

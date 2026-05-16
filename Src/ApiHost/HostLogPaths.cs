@@ -1,4 +1,4 @@
-namespace RimAI.Host;
+namespace RimBob.Host;
 
 internal static class HostLogPaths
 {

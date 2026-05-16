@@ -1,9 +1,9 @@
 using FluentAssertions;
-using RimAI.Core.Aggregates;
-using RimAI.Core.Briefings;
-using RimAI.State.Derivations.Common;
+using RimBob.Core.Aggregates;
+using RimBob.Core.Briefings;
+using RimBob.State.Derivations.Common;
 
-namespace RimAI.Tests.State;
+namespace RimBob.Tests.State;
 
 public sealed class DerivationCommonTests
 {

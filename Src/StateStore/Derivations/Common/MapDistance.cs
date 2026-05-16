@@ -1,6 +1,6 @@
-using RimAI.Core.Aggregates;
+using RimBob.Core.Aggregates;
 
-namespace RimAI.State.Derivations.Common;
+namespace RimBob.State.Derivations.Common;
 
 public static class MapDistance
 {

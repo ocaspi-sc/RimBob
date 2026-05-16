@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace RimAI.Ingestion;
+namespace RimBob.Ingestion;
 
 /// <summary>
 /// Every RIMAPI response is wrapped in this envelope.

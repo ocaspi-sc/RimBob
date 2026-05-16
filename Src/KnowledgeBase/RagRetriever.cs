@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
-using RimAI.Core.Advice;
+using RimBob.Core.Advice;
 
-namespace RimAI.Knowledge;
+namespace RimBob.Knowledge;
 
 public interface IRagQueryBuilder<in TBriefing>
 {

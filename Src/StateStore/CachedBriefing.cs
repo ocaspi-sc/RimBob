@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
-namespace RimAI.State;
+namespace RimBob.State;
 
 public sealed class CachedBriefing<TBriefing> where TBriefing : notnull
 {

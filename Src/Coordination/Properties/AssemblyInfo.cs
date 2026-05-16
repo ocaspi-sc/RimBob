@@ -1,3 +1,3 @@
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("RimAI.Tests")]
+[assembly: InternalsVisibleTo("RimBob.Tests")]

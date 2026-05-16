@@ -1,11 +1,11 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
-using RimAI.Coordination;
-using RimAI.Core.Aggregates;
-using RimAI.Core.Ministers;
-using RimAI.State;
+using RimBob.Coordination;
+using RimBob.Core.Aggregates;
+using RimBob.Core.Ministers;
+using RimBob.State;
 
-namespace RimAI.Tests.Coordination;
+namespace RimBob.Tests.Coordination;
 
 public sealed class DayTickOrchestratorTests
 {

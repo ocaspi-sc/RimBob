@@ -1,10 +1,10 @@
-using RimAI.Coordination;
-using RimAI.Core.Advice;
-using RimAI.Core.Briefings;
-using RimAI.Core.Ministers;
-using RimAI.State;
+using RimBob.Coordination;
+using RimBob.Core.Advice;
+using RimBob.Core.Briefings;
+using RimBob.Core.Ministers;
+using RimBob.State;
 
-namespace RimAI.Host.Endpoints;
+namespace RimBob.Host.Endpoints;
 
 /// <summary>
 /// GET /api/agenda/latest, /api/agenda/history,

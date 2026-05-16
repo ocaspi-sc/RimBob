@@ -1,17 +1,17 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
-using RimAI.Coordination;
-using RimAI.Core.Advice;
-using RimAI.Core.Aggregates;
-using RimAI.Core.Briefings;
-using RimAI.Core.Ministers;
-using RimAI.Knowledge;
-using RimAI.LLM;
-using RimAI.Ministers.Food;
-using RimAI.State;
-using RimAI.Tests.Infrastructure;
+using RimBob.Coordination;
+using RimBob.Core.Advice;
+using RimBob.Core.Aggregates;
+using RimBob.Core.Briefings;
+using RimBob.Core.Ministers;
+using RimBob.Knowledge;
+using RimBob.LLM;
+using RimBob.Ministers.Food;
+using RimBob.State;
+using RimBob.Tests.Infrastructure;
 
-namespace RimAI.Tests.Food;
+namespace RimBob.Tests.Food;
 
 public sealed class FoodMinisterTests
 {

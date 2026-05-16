@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace RimAI.Core.Advice;
+namespace RimBob.Core.Advice;
 
 // Schema only — wired in M2.
 public sealed record FeedbackEvent(

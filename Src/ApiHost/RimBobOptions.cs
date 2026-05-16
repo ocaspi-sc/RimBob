@@ -1,12 +1,12 @@
-namespace RimAI.Host;
+namespace RimBob.Host;
 
 /// <summary>
-/// Typed configuration bound from the "RimAi" section of appsettings.json
+/// Typed configuration bound from the "RimBob" section of appsettings.json
 /// (and the gitignored appsettings.Local.json for local secrets).
 /// </summary>
-public sealed class RimAiOptions
+public sealed class RimBobOptions
 {
-    public const string SectionName = "RimAi";
+    public const string SectionName = "RimBob";
 
     public string ListenUrl { get; init; } = "http://localhost:5000";
     public string RimApiBaseUrl { get; init; } = "http://localhost:8765/";

@@ -2,15 +2,15 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using FluentAssertions;
-using RimAI.Core.Aggregates;
-using RimAI.Core.Briefings;
-using RimAI.Ingestion;
-using RimAI.Ingestion.Dtos;
-using RimAI.State;
-using RimAI.State.Derivations;
-using RimAI.Tests.Infrastructure;
+using RimBob.Core.Aggregates;
+using RimBob.Core.Briefings;
+using RimBob.Ingestion;
+using RimBob.Ingestion.Dtos;
+using RimBob.State;
+using RimBob.State.Derivations;
+using RimBob.Tests.Infrastructure;
 
-namespace RimAI.Tests.State;
+namespace RimBob.Tests.State;
 
 public sealed class IngestionDispatcherTests
 {

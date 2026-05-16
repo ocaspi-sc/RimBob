@@ -1,4 +1,4 @@
-namespace RimAI.Host;
+namespace RimBob.Host;
 
 public sealed class SseDiagnostics
 {

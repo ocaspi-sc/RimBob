@@ -1,10 +1,10 @@
 ---
-description: RimAI project rules for AI coding agents (Cursor, etc.)
+description: RimBob project rules for AI coding agents (Cursor, etc.)
 globs: ["**/*"]
 alwaysApply: true
 ---
 
-# RimAI — Agent Instructions
+# RimBob — Agent Instructions
 
 An assisted-gameplay advisor for RimWorld. The human plays the colony; a cabinet of self-improving LLM ministers (led by the Mayor) sends suggestions to a React+TS dashboard. MVP is suggest-only; per-minister `Auto` graduations come later (M7+).
 
@@ -19,7 +19,7 @@ Docs/                   design docs and planning
   TODO.md               actionable tasks
   design/               per-topic design docs
 Src/                    all source code
-  RimAI.sln
+  RimBob.sln
   ApiHost/              ASP.NET host (HTTP + SSE)
   Cabinet/              minister logic (M3+)
   Common/               pure domain types and interfaces (no external deps)
@@ -56,7 +56,7 @@ Src/                    all source code
 ## Code conventions
 
 - `.NET 9`, C# latest features. Async everywhere that touches I/O.
-- No external dependencies in `Common/` (RimAI.Core) — pure domain types only.
+- No external dependencies in `Common/` (RimBob.Core) — pure domain types only.
 - Every new minister: own directory under `Src/Cabinet/<Name>/`.
 - `Rules.cs` is first in every minister directory; must compile and have tests before LLM is wired.
 - Fixture JSON files: `Src/Tests/<MinisterName>/Fixtures/`.

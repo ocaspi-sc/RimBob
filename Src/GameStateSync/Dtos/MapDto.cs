@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace RimAI.Ingestion.Dtos;
+namespace RimBob.Ingestion.Dtos;
 
 // ── GET /map/farm/summary?map_id ──────────────────────────────────────────────
 public sealed record FarmSummaryDto

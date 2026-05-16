@@ -1,10 +1,10 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using RimAI.Ingestion;
-using RimAI.Ingestion.Dtos;
+using RimBob.Ingestion;
+using RimBob.Ingestion.Dtos;
 
-namespace RimAI.Host;
+namespace RimBob.Host;
 
 public sealed class IconCacheService
 {

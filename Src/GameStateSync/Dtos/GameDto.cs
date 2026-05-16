@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace RimAI.Ingestion.Dtos;
+namespace RimBob.Ingestion.Dtos;
 
 // ── GET /api/v1/game/state ────────────────────────────────────────────────────
 // Verified against live RIMAPI (RedEyeDev fork, Mono-HTTPAPI/1.0).

@@ -1,10 +1,10 @@
 using System.Text.Json;
 using System.Threading.Channels;
-using RimAI.Coordination;
-using RimAI.Core.Advice;
-using RimAI.Host;
+using RimBob.Coordination;
+using RimBob.Core.Advice;
+using RimBob.Host;
 
-namespace RimAI.Host.Endpoints;
+namespace RimBob.Host.Endpoints;
 
 /// <summary>
 /// GET /api/advice/stream - SSE feed. On connect replays the current MayorAgenda

@@ -1,4 +1,4 @@
-# RimAI - Inter-Minister Communication
+# RimBob - Inter-Minister Communication
 
 > **Living document.** See `AGENTS.md` for update rules.
 > This doc records coordination semantics. Exact flag records, context records,

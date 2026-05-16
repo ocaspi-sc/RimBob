@@ -1,6 +1,6 @@
-using RimAI.Core.Briefings;
+using RimBob.Core.Briefings;
 
-namespace RimAI.State.Derivations.Common;
+namespace RimBob.State.Derivations.Common;
 
 public static class SeasonDeriver
 {

@@ -1,10 +1,10 @@
 using FluentAssertions;
-using RimAI.Coordination;
-using RimAI.Core.Ministers;
-using RimAI.LLM;
-using RimAI.Tests.Food;
+using RimBob.Coordination;
+using RimBob.Core.Ministers;
+using RimBob.LLM;
+using RimBob.Tests.Food;
 
-namespace RimAI.Tests.Coordination;
+namespace RimBob.Tests.Coordination;
 
 public sealed class MinisterReplayRecorderTests
 {

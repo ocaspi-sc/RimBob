@@ -1,4 +1,4 @@
-# RimAI - Advice: Schema, Lifecycle, Feedback
+# RimBob - Advice: Schema, Lifecycle, Feedback
 
 > **Living document.** See `AGENTS.md` for update rules.
 > This doc records advice semantics and lifecycle decisions. Exact C# records,

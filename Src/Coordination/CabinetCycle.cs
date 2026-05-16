@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Logging;
-using RimAI.Core.Ministers;
-using RimAI.State;
+using RimBob.Core.Ministers;
+using RimBob.State;
 
-namespace RimAI.Coordination;
+namespace RimBob.Coordination;
 
 public sealed class CabinetCycle(
     IngestionDispatcher ingestion,

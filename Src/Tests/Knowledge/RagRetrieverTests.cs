@@ -1,13 +1,13 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
-using RimAI.Core.Advice;
-using RimAI.Core.Briefings;
-using RimAI.Knowledge;
-using RimAI.State;
-using RimAI.Tests.Food;
-using RimAI.Tests.Infrastructure;
+using RimBob.Core.Advice;
+using RimBob.Core.Briefings;
+using RimBob.Knowledge;
+using RimBob.State;
+using RimBob.Tests.Food;
+using RimBob.Tests.Infrastructure;
 
-namespace RimAI.Tests.Knowledge;
+namespace RimBob.Tests.Knowledge;
 
 public sealed class RagRetrieverTests
 {

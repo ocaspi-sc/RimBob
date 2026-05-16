@@ -1,9 +1,9 @@
 using FluentAssertions;
-using RimAI.Core.Aggregates;
-using RimAI.State;
-using RimAI.Tests.Infrastructure;
+using RimBob.Core.Aggregates;
+using RimBob.State;
+using RimBob.Tests.Infrastructure;
 
-namespace RimAI.Tests.State;
+namespace RimBob.Tests.State;
 
 /// <summary>
 /// Verifies BriefingCache emits a structured log event on every cache miss, including

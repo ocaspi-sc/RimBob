@@ -3,11 +3,11 @@ using System.Text;
 using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
-using RimAI.Host;
-using RimAI.Ingestion;
-using RimAI.Ingestion.Dtos;
+using RimBob.Host;
+using RimBob.Ingestion;
+using RimBob.Ingestion.Dtos;
 
-namespace RimAI.Tests.ApiHost;
+namespace RimBob.Tests.ApiHost;
 
 public sealed class IconCacheServiceTests
 {
@@ -355,7 +355,7 @@ public sealed class IconCacheServiceTests
     }
 
     private static string NewTempRoot() =>
-        Path.Combine(Path.GetTempPath(), "rimai-icon-cache-tests", Guid.NewGuid().ToString("N"));
+        Path.Combine(Path.GetTempPath(), "rimbob-icon-cache-tests", Guid.NewGuid().ToString("N"));
 
     private static void DeleteTempRoot(string root)
     {

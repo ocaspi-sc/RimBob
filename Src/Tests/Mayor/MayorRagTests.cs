@@ -1,18 +1,18 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Text.Json.Nodes;
-using RimAI.Coordination;
-using RimAI.Core.Advice;
-using RimAI.Core.Ministers;
-using RimAI.Knowledge;
-using RimAI.LLM;
-using MayorMinister = RimAI.Ministers.Mayor.Mayor;
-using RimAI.Ministers.Mayor;
-using RimAI.State;
-using RimAI.Tests.Coordination;
-using RimAI.Tests.Infrastructure;
+using RimBob.Coordination;
+using RimBob.Core.Advice;
+using RimBob.Core.Ministers;
+using RimBob.Knowledge;
+using RimBob.LLM;
+using MayorMinister = RimBob.Ministers.Mayor.Mayor;
+using RimBob.Ministers.Mayor;
+using RimBob.State;
+using RimBob.Tests.Coordination;
+using RimBob.Tests.Infrastructure;
 
-namespace RimAI.Tests.Mayor;
+namespace RimBob.Tests.Mayor;
 
 /// <summary>
 /// M2 RAG side-by-side: same briefing run with an empty KnowledgeBase vs. a

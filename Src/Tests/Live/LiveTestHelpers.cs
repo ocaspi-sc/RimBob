@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Xunit.Abstractions;
 
-namespace RimAI.Tests.Live;
+namespace RimBob.Tests.Live;
 
 internal static class LiveTestHelpers
 {

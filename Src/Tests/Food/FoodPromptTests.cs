@@ -1,9 +1,9 @@
 using FluentAssertions;
-using RimAI.Core.Briefings;
-using RimAI.Core.Ministers;
-using RimAI.LLM;
+using RimBob.Core.Briefings;
+using RimBob.Core.Ministers;
+using RimBob.LLM;
 
-namespace RimAI.Tests.Food;
+namespace RimBob.Tests.Food;
 
 public sealed class FoodPromptTests
 {

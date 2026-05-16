@@ -1,6 +1,6 @@
-using RimAI.Ingestion;
+using RimBob.Ingestion;
 
-namespace RimAI.Host.Endpoints;
+namespace RimBob.Host.Endpoints;
 
 public static class IconEndpoints
 {

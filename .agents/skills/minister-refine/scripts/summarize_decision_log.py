@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Summarize RimAI Serilog decision logs for one minister.
+"""Summarize RimBob Serilog decision logs for one minister.
 
 The current logs are Serilog JSONL, not the final structured decision-log
 schema. This script intentionally uses defensive heuristics and prints JSON
@@ -21,8 +21,8 @@ FRACTIONAL_SECONDS = re.compile(r"(\.\d{6})\d+([+-]\d{2}:\d{2}|$)")
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Summarize RimAI minister decision logs.")
-    parser.add_argument("--repo", required=True, help="Path to the RimAI repo root.")
+    parser = argparse.ArgumentParser(description="Summarize RimBob minister decision logs.")
+    parser.add_argument("--repo", required=True, help="Path to the RimBob repo root.")
     parser.add_argument("--minister", required=True, help="Minister name, e.g. Food or Mayor.")
     parser.add_argument("--days", type=int, default=None, help="Optional lookback window in days.")
     return parser.parse_args()

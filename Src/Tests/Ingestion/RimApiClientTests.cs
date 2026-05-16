@@ -3,10 +3,10 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using FluentAssertions;
-using RimAI.Ingestion;
-using RimAI.Ingestion.Dtos;
+using RimBob.Ingestion;
+using RimBob.Ingestion.Dtos;
 
-namespace RimAI.Tests.Ingestion;
+namespace RimBob.Tests.Ingestion;
 
 public sealed class RimApiClientTests
 {

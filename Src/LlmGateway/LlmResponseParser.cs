@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
-namespace RimAI.LLM;
+namespace RimBob.LLM;
 
 internal static class LlmResponseParser
 {

@@ -1,6 +1,6 @@
 using Xunit;
 
-namespace RimAI.Tests.LLM;
+namespace RimBob.Tests.LLM;
 
 /// <summary>
 /// Serializes LLM-related tests that mutate process environment variables.

@@ -1,11 +1,11 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Text.Json;
-using RimAI.Core.Advice;
-using RimAI.Core.Briefings;
-using RimAI.LLM;
+using RimBob.Core.Advice;
+using RimBob.Core.Briefings;
+using RimBob.LLM;
 
-namespace RimAI.Tests.LLM;
+namespace RimBob.Tests.LLM;
 
 [Collection(nameof(LlmClientTestCollection))]
 public sealed class LlmClientTests
@@ -134,7 +134,7 @@ public sealed class LlmClientTests
         response.Advice[0].Steps.Single().Skill.Should().Be("Cooking");
         response.Flags.Should().HaveCount(3);
         response.Flags[0].Id.Should().Be("food:food_shortage_critical");
-        response.Flags[0].Severity.Should().Be(RimAI.Core.Ministers.FlagSeverity.High);
+        response.Flags[0].Severity.Should().Be(RimBob.Core.Ministers.FlagSeverity.High);
         response.Flags[2].Summary.Should().Be("No Freezer");
     }
 

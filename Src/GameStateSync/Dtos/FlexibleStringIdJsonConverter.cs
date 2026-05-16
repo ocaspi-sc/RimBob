@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace RimAI.Ingestion.Dtos;
+namespace RimBob.Ingestion.Dtos;
 
 /// <summary>
 /// RIMAPI id fields are not fully consistent across endpoints: some use JSON

@@ -1,6 +1,6 @@
-using RimAI.Core.Advice;
+using RimBob.Core.Advice;
 
-namespace RimAI.Coordination;
+namespace RimBob.Coordination;
 
 /// <summary>
 /// In-process pub/sub for advice events. Host bridges this onto the SSE feed.

@@ -1,12 +1,12 @@
-using RimAI.Coordination;
-using RimAI.Core.Advice;
-using RimAI.Core.Briefings;
-using RimAI.Core.Ministers;
-using RimAI.Knowledge;
-using RimAI.LLM;
-using RimAI.State;
+using RimBob.Coordination;
+using RimBob.Core.Advice;
+using RimBob.Core.Briefings;
+using RimBob.Core.Ministers;
+using RimBob.Knowledge;
+using RimBob.LLM;
+using RimBob.State;
 
-namespace RimAI.Host.Endpoints;
+namespace RimBob.Host.Endpoints;
 
 /// <summary>
 /// GET /api/status   — server + RIMAPI + LLM health, briefing/agenda versions, Mayor run state.

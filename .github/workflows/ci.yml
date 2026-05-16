@@ -20,17 +20,17 @@ jobs:
           dotnet-version: '9.0.x'
 
       - name: Restore
-        run: dotnet restore Src/RimAI.sln
+        run: dotnet restore Src/RimBob.sln
 
       - name: Build
-        run: dotnet build Src/RimAI.sln --no-restore --configuration Release
+        run: dotnet build Src/RimBob.sln --no-restore --configuration Release
 
       - name: Test
-        run: dotnet test Src/Tests/RimAI.Tests.csproj --no-build --configuration Release --logger "console;verbosity=normal"
+        run: dotnet test Src/Tests/RimBob.Tests.csproj --no-build --configuration Release --logger "console;verbosity=normal"
 
       - name: Host smoke test (/api/health)
         run: |
-          dotnet run --project Src/ApiHost/RimAI.Host.csproj --configuration Release --no-build > host.log 2>&1 &
+          dotnet run --project Src/ApiHost/RimBob.Host.csproj --configuration Release --no-build > host.log 2>&1 &
           HOST_PID=$!
           for i in $(seq 1 30); do
             if curl -sf http://localhost:5000/api/health > /dev/null; then

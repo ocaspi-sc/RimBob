@@ -1,4 +1,4 @@
-# RimAI - Codex Instructions
+# RimBob - Codex Instructions
 
 This file is loaded by Codex at the start of every session. Keep it as an operating manual for agents. Product design truth lives in `Docs/DESIGN.md` and the linked design docs.
 
@@ -27,8 +27,8 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 
 ## GIT
 
-- C:\dev\RimAI should always stay on master branch.
-- The only unstaged changes on C:\dev\RimAI should be manual edits by the human.
+- C:\dev\RimBob should always stay on master branch.
+- The only unstaged changes on C:\dev\RimBob should be manual edits by the human.
 - When changing code, Make sure it's in a worktree + feature branch that's correct for current task. if not, create a worktree first based off current master and work there, using commits generously. When finished, The usual MO is to squash the worktree and commit the feature into master so it lands, then close the worktree.
 - When doing git operations, if there's a lock file or another session appears to be writing or committing, wait briefly and retry the narrow operation; do not force broad Git actions.
 
@@ -67,7 +67,7 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 
 ## Project Invariants
 
-- RimAI is an assisted-gameplay advisor for RimWorld. The player keeps control.
+- RimBob is an assisted-gameplay advisor for RimWorld. The player keeps control.
 - MVP is suggest-only. Per-minister `Auto` graduation is deferred until M7+ and requires explicit player consent.
 - Mayor publishes the Agenda. Feeder ministers publish `AdviceItem`s. No minister calls RIMAPI write endpoints in MVP.
 - No direct minister-to-minister communication. Coordination flows through flags; CoS arbitrates; Mayor synthesizes.
@@ -83,8 +83,8 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 
 ## Build And Verification
 
-- After build verification, run RimAI again and verify the Host is reachable, especially if a live `RimAI.Host` process was stopped.
-- Prefer `.\run-rimai.ps1` after builds. Use `.\run-rimai.ps1 -Foreground` when terminal output must stay attached.
+- After build verification, run RimBob again and verify the Host is reachable, especially if a live `RimBob.Host` process was stopped.
+- Prefer `.\run-rimbob.ps1` after builds. Use `.\run-rimbob.ps1 -Foreground` when terminal output must stay attached.
 - Use manual `npm.cmd run build` / `dotnet run` only when debugging one side of the stack.
 - When adding backend logs, replay corpus files, prompt dumps, traces, or diagnostics, update dashboard-visible metadata in the same turn. If intentionally hidden, add a concrete `HumanTodo.md` follow-up and mention it in the final response.
 

@@ -1,10 +1,10 @@
 using FluentAssertions;
-using RimAI.Core.Aggregates;
-using RimAI.Core.Briefings;
-using RimAI.State;
-using RimAI.State.Derivations;
+using RimBob.Core.Aggregates;
+using RimBob.Core.Briefings;
+using RimBob.State;
+using RimBob.State.Derivations;
 
-namespace RimAI.Tests.Food;
+namespace RimBob.Tests.Food;
 
 public sealed class FoodBriefingDerivationTests
 {

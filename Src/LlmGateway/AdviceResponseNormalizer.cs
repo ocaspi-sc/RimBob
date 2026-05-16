@@ -1,10 +1,10 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using RimAI.Core.Advice;
-using RimAI.Core.Briefings;
-using RimAI.Core.Ministers;
+using RimBob.Core.Advice;
+using RimBob.Core.Briefings;
+using RimBob.Core.Ministers;
 
-namespace RimAI.LLM;
+namespace RimBob.LLM;
 
 internal sealed record LlmAdviceNormalizationContext(
     string Minister,

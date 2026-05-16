@@ -1,11 +1,11 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using RimAI.Core.Advice;
-using RimAI.Core.Briefings;
+using RimBob.Core.Advice;
+using RimBob.Core.Briefings;
 
-using GuideCitation = RimAI.Core.Advice.GuideCitation;
+using GuideCitation = RimBob.Core.Advice.GuideCitation;
 
-namespace RimAI.LLM;
+namespace RimBob.LLM;
 
 public sealed record FoodLlmParseResult(
     FoodLlmResponse Response,
@@ -111,7 +111,7 @@ public static class FoodLlmResponseParser
             })
             .ToArray();
 
-        IReadOnlyList<RimAI.Core.Ministers.AgentFlag> flags = response.Flags
+        IReadOnlyList<RimBob.Core.Ministers.AgentFlag> flags = response.Flags
             .Select(flag => flag with
             {
                 ExpiresAt = flag.ExpiresAt is { } expiresAt && IsUsefulExpiry(expiresAt, now)

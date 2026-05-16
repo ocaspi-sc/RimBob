@@ -1,16 +1,16 @@
 using Microsoft.Extensions.Options;
 using Serilog;
 using Serilog.Formatting.Json;
-using RimAI.Coordination;
-using RimAI.Core.Ministers;
-using RimAI.Host;
-using RimAI.Host.Endpoints;
-using RimAI.Ingestion;
-using RimAI.Knowledge;
-using RimAI.LLM;
-using RimAI.Ministers.Food;
-using RimAI.Ministers.Mayor;
-using RimAI.State;
+using RimBob.Coordination;
+using RimBob.Core.Ministers;
+using RimBob.Host;
+using RimBob.Host.Endpoints;
+using RimBob.Ingestion;
+using RimBob.Knowledge;
+using RimBob.LLM;
+using RimBob.Ministers.Food;
+using RimBob.Ministers.Mayor;
+using RimBob.State;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,7 +29,7 @@ builder.Host.UseSerilog((ctx, services, cfg) =>
     cfg.ReadFrom.Configuration(ctx.Configuration)
        .ReadFrom.Services(services)
        .WriteTo.File(
-           path: Path.Combine(logsDir, "rimai-.log"),
+           path: Path.Combine(logsDir, "rimbob-.log"),
            rollingInterval: RollingInterval.Day,
            outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
        .WriteTo.File(
@@ -39,14 +39,14 @@ builder.Host.UseSerilog((ctx, services, cfg) =>
 
 // ── Typed configuration ────────────────────────────────────────────────────
 builder.Services
-    .AddOptions<RimAiOptions>()
-    .Bind(builder.Configuration.GetSection(RimAiOptions.SectionName))
+    .AddOptions<RimBobOptions>()
+    .Bind(builder.Configuration.GetSection(RimBobOptions.SectionName))
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
 var options = builder.Configuration
-    .GetSection(RimAiOptions.SectionName)
-    .Get<RimAiOptions>() ?? new RimAiOptions();
+    .GetSection(RimBobOptions.SectionName)
+    .Get<RimBobOptions>() ?? new RimBobOptions();
 
 // Localhost-only bind (design/dashboard.md). Never 0.0.0.0.
 builder.WebHost.UseUrls(options.ListenUrl);
@@ -54,7 +54,7 @@ builder.WebHost.UseUrls(options.ListenUrl);
 // ── Services ───────────────────────────────────────────────────────────────
 builder.Services.AddHttpClient<RimApiClient>((sp, c) =>
 {
-    var opts = sp.GetRequiredService<IOptions<RimAiOptions>>().Value;
+    var opts = sp.GetRequiredService<IOptions<RimBobOptions>>().Value;
     c.BaseAddress = new Uri(opts.RimApiBaseUrl);
     c.Timeout = TimeSpan.FromSeconds(10);
 });
@@ -67,7 +67,7 @@ builder.Services.AddSingleton<PromptBuilder>();
 builder.Services.AddSingleton<RawLlmOutputStore>();
 builder.Services.AddSingleton<LlmClient>(sp =>
 {
-    var opts = sp.GetRequiredService<IOptions<RimAiOptions>>().Value;
+    var opts = sp.GetRequiredService<IOptions<RimBobOptions>>().Value;
     IReadOnlyList<string> apiKeys = ResolveGeminiApiKeys(opts);
     return new LlmClient(apiKeys, sp.GetRequiredService<PromptBuilder>(),
                                   sp.GetRequiredService<ILogger<LlmClient>>(),
@@ -98,11 +98,11 @@ builder.Services.AddSingleton<SseDiagnostics>();
 // ── RAG (M2) ───────────────────────────────────────────────────────────────
 // Embedder isn't in DI — null-when-unconfigured doesn't compose well with the
 // generic AddSingleton<TService> constraints. Each consumer builds its own via
-// the same RimAiOptions resolution path.
+// the same RimBobOptions resolution path.
 builder.Services.AddSingleton<KnowledgeBase>();
 builder.Services.AddSingleton<EmbeddingCache>(sp =>
 {
-    RimAiOptions opts = sp.GetRequiredService<IOptions<RimAiOptions>>().Value;
+    RimBobOptions opts = sp.GetRequiredService<IOptions<RimBobOptions>>().Value;
     string cacheDir = Path.IsPathRooted(opts.Rag.CacheRoot)
         ? opts.Rag.CacheRoot
         : Path.Combine(builder.Environment.ContentRootPath, opts.Rag.CacheRoot);
@@ -110,7 +110,7 @@ builder.Services.AddSingleton<EmbeddingCache>(sp =>
 });
 builder.Services.AddSingleton<MayorRagRetriever>(sp =>
 {
-    RimAiOptions opts = sp.GetRequiredService<IOptions<RimAiOptions>>().Value;
+    RimBobOptions opts = sp.GetRequiredService<IOptions<RimBobOptions>>().Value;
     IEmbedder? embedder = ResolveEmbedder(opts, sp);
     return new MayorRagRetriever(
         kb:       sp.GetRequiredService<KnowledgeBase>(),
@@ -121,7 +121,7 @@ builder.Services.AddSingleton<MayorRagRetriever>(sp =>
 });
 builder.Services.AddSingleton<FoodRagRetriever>(sp =>
 {
-    RimAiOptions opts = sp.GetRequiredService<IOptions<RimAiOptions>>().Value;
+    RimBobOptions opts = sp.GetRequiredService<IOptions<RimBobOptions>>().Value;
     IEmbedder? embedder = ResolveEmbedder(opts, sp);
     return new FoodRagRetriever(
         kb:       sp.GetRequiredService<KnowledgeBase>(),
@@ -132,16 +132,16 @@ builder.Services.AddSingleton<FoodRagRetriever>(sp =>
 });
 builder.Services.AddSingleton<Ingest>(sp =>
 {
-    RimAiOptions opts = sp.GetRequiredService<IOptions<RimAiOptions>>().Value;
+    RimBobOptions opts = sp.GetRequiredService<IOptions<RimBobOptions>>().Value;
     IEmbedder? embedder = ResolveEmbedder(opts, sp)
-        ?? throw new InvalidOperationException("Ingest requires an embedder; check RimAi:Rag:Enabled and Gemini key.");
+        ?? throw new InvalidOperationException("Ingest requires an embedder; check RimBob:Rag:Enabled and Gemini key.");
     return new Ingest(
         embedder: embedder,
         cache:    sp.GetRequiredService<EmbeddingCache>(),
         log:      sp.GetRequiredService<ILogger<Ingest>>());
 });
 
-static IEmbedder? ResolveEmbedder(RimAiOptions opts, IServiceProvider sp)
+static IEmbedder? ResolveEmbedder(RimBobOptions opts, IServiceProvider sp)
 {
     if (!opts.Rag.Enabled) return null;
     IReadOnlyList<string> apiKeys = ResolveGeminiApiKeys(opts);
@@ -150,7 +150,7 @@ static IEmbedder? ResolveEmbedder(RimAiOptions opts, IServiceProvider sp)
         sp.GetRequiredService<ILogger<GeminiEmbedder>>());
 }
 
-static IReadOnlyList<string> ResolveGeminiApiKeys(RimAiOptions opts)
+static IReadOnlyList<string> ResolveGeminiApiKeys(RimBobOptions opts)
 {
     List<string> keys = [];
     AddGeminiKeys(keys, SplitGeminiKeyList(Environment.GetEnvironmentVariable("GEMINI_API_KEYS")));
@@ -199,7 +199,7 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 
 // ── API endpoints ──────────────────────────────────────────────────────────
-app.MapGet("/api/health", () => Results.Ok(new { status = "ok", service = "RimAI" }));
+app.MapGet("/api/health", () => Results.Ok(new { status = "ok", service = "RimBob" }));
 
 app.MapCabinetEndpoints();
 app.MapAgendaStream();
@@ -220,7 +220,7 @@ app.Lifetime.ApplicationStarted.Register(() =>
         try
         {
             using var scope = app.Services.CreateScope();
-            var opts = scope.ServiceProvider.GetRequiredService<IOptions<RimAiOptions>>().Value;
+            var opts = scope.ServiceProvider.GetRequiredService<IOptions<RimBobOptions>>().Value;
             var client = scope.ServiceProvider.GetRequiredService<RimApiClient>();
 
             Log.Information("Connecting to RIMAPI at {BaseUrl}", opts.RimApiBaseUrl);
@@ -242,7 +242,7 @@ app.Lifetime.ApplicationStarted.Register(() =>
             if (!llm.IsConfigured)
             {
                 Log.Warning("Gemini API key not set — LLM calls will fail at runtime");
-                Console.WriteLine("✗ Gemini API key not set (env GEMINI_API_KEYS or RimAi.GeminiApiKeys in appsettings.Local.json)");
+                Console.WriteLine("✗ Gemini API key not set (env GEMINI_API_KEYS or RimBob.GeminiApiKeys in appsettings.Local.json)");
             }
             else if (opts.PingLlmOnStartup)
             {
@@ -287,7 +287,7 @@ app.Lifetime.ApplicationStarted.Register(() =>
             }
             else
             {
-                Console.WriteLine("· RAG disabled in config (RimAi:Rag:Enabled = false)");
+                Console.WriteLine("· RAG disabled in config (RimBob:Rag:Enabled = false)");
             }
 
             Console.WriteLine($"\nDashboard: {opts.ListenUrl}\n");
@@ -300,7 +300,7 @@ app.Lifetime.ApplicationStarted.Register(() =>
     });
 });
 
-Log.Information("RimAI starting — dashboard at {Url}", options.ListenUrl);
+Log.Information("RimBob starting — dashboard at {Url}", options.ListenUrl);
 
 try
 {

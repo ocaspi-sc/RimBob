@@ -1,14 +1,14 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
-using RimAI.Coordination;
-using RimAI.Core.Advice;
-using RimAI.Core.Briefings;
-using RimAI.Core.Ministers;
-using RimAI.Knowledge;
-using RimAI.LLM;
-using RimAI.State;
+using RimBob.Coordination;
+using RimBob.Core.Advice;
+using RimBob.Core.Briefings;
+using RimBob.Core.Ministers;
+using RimBob.Knowledge;
+using RimBob.LLM;
+using RimBob.State;
 
-namespace RimAI.Ministers.Mayor;
+namespace RimBob.Ministers.Mayor;
 
 /// <summary>
 /// The Mayor synthesises the colony-wide briefing into a living MayorAgenda once per

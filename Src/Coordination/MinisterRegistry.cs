@@ -1,4 +1,4 @@
-namespace RimAI.Coordination;
+namespace RimBob.Coordination;
 
 public sealed record MinisterDescriptor(
     string Key,

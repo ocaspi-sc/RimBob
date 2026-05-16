@@ -1,6 +1,6 @@
-using RimAI.Coordination;
+using RimBob.Coordination;
 
-namespace RimAI.Host.Endpoints;
+namespace RimBob.Host.Endpoints;
 
 public sealed record EndpointCoverageRow(string Endpoint, string State, string Note);
 

@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
-using RimAI.Core.Aggregates;
+using RimBob.Core.Aggregates;
 
-namespace RimAI.Core.Briefings;
+namespace RimBob.Core.Briefings;
 
 public sealed record FoodBriefing(
     long BriefingVersion,

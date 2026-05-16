@@ -1,4 +1,4 @@
-namespace RimAI.Core.Ministers;
+namespace RimBob.Core.Ministers;
 
 /// <summary>
 /// Every minister implements this. The Orchestrator calls RunPlayCycle when the

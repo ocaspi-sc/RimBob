@@ -1,20 +1,20 @@
 using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
-using RimAI.Coordination;
-using RimAI.Core.Advice;
-using RimAI.Core.Briefings;
-using RimAI.Core.Ministers;
-using RimAI.Tests.Food;
+using RimBob.Coordination;
+using RimBob.Core.Advice;
+using RimBob.Core.Briefings;
+using RimBob.Core.Ministers;
+using RimBob.Tests.Food;
 
-namespace RimAI.Tests.Coordination;
+namespace RimBob.Tests.Coordination;
 
 public sealed class ReplayCorpusWriterTests
 {
     [Fact]
     public async Task WriteAsync_AppendsSnakeCaseJsonlUnderMinisterDatePath()
     {
-        string directory = Path.Combine(Path.GetTempPath(), "rimai-replay-tests", Guid.NewGuid().ToString("N"));
+        string directory = Path.Combine(Path.GetTempPath(), "rimbob-replay-tests", Guid.NewGuid().ToString("N"));
         try
         {
             ReplayCorpusWriter writer = new(directory, NullLogger<ReplayCorpusWriter>.Instance);

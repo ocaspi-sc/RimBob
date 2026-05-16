@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace RimAI.Core.Advice;
+namespace RimBob.Core.Advice;
 
 /// <summary>
 /// Feeder-minister advice item. The Mayor's Agenda is the MVP advice surface;

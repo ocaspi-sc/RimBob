@@ -1,9 +1,9 @@
 using FluentAssertions;
-using RimAI.Core.Advice;
-using RimAI.Core.Ministers;
-using RimAI.LLM;
+using RimBob.Core.Advice;
+using RimBob.Core.Ministers;
+using RimBob.LLM;
 
-namespace RimAI.Tests.LLM;
+namespace RimBob.Tests.LLM;
 
 public sealed class AdviceTextStyleWarningsTests
 {

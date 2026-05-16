@@ -1,4 +1,4 @@
-# RimAI C# Refactoring Plan
+# RimBob C# Refactoring Plan
 
 ## Goal
 
@@ -12,8 +12,8 @@ Verified state:
 
 - Worktree was clean before verification, except later unrelated `HumanTodo.md` edits.
 - `rg` finds no live `AdviceSeverity` / `AdvicePriorityScore` references. Remaining `PriorityScore` text is legacy compatibility parsing/test naming.
-- `dotnet test Src\Tests\RimAI.Tests.csproj --no-restore --no-build` passed: 120/120.
-- `dotnet build Src\RimAI.sln --no-restore` compiled through `RimAI.Tests`, then failed only because a live `RimAI.Host` process locked ApiHost output DLLs.
+- `dotnet test Src\Tests\RimBob.Tests.csproj --no-restore --no-build` passed: 120/120.
+- `dotnet build Src\RimBob.sln --no-restore` compiled through `RimBob.Tests`, then failed only because a live `RimBob.Host` process locked ApiHost output DLLs.
 
 Operational note:
 
@@ -23,7 +23,7 @@ Operational note:
 
 Status: complete for the advice-schema blocker.
 
-1. Record current failure with `dotnet build Src\RimAI.sln --no-restore`.
+1. Record current failure with `dotnet build Src\RimBob.sln --no-restore`.
 2. Search for old schema names:
    - `AdviceSeverity`
    - `PriorityScore`
@@ -61,8 +61,8 @@ Implementation tasks:
 
 Verification:
 
-- `dotnet test Src\Tests\RimAI.Tests.csproj --no-restore --no-build` passed on 2026-05-15.
-- `dotnet build Src\RimAI.sln --no-restore` reached the Host copy step and was blocked only by a running `RimAI.Host` process locking output DLLs.
+- `dotnet test Src\Tests\RimBob.Tests.csproj --no-restore --no-build` passed on 2026-05-15.
+- `dotnet build Src\RimBob.sln --no-restore` reached the Host copy step and was blocked only by a running `RimBob.Host` process locking output DLLs.
 - Rerun full build after stopping Host when a clean full-build signal is needed.
 
 ## Phase 2 - Extract LLM advice normalization
@@ -104,8 +104,8 @@ Implementation result:
 
 Verification:
 
-- `dotnet test Src\Tests\RimAI.Tests.csproj --no-restore` passed: 124/124.
-- `dotnet build Src\RimAI.sln --no-restore` passed after stopping the live Host that held ApiHost DLL locks.
+- `dotnet test Src\Tests\RimBob.Tests.csproj --no-restore` passed: 124/124.
+- `dotnet build Src\RimBob.sln --no-restore` passed after stopping the live Host that held ApiHost DLL locks.
 - Host was restarted from the rebuilt output and `GET http://127.0.0.1:5000/api/ministers` returned 200.
 
 ## Phase 3 - Add a minister registry
@@ -156,8 +156,8 @@ Implementation result:
 
 Verification:
 
-- `dotnet test Src\Tests\RimAI.Tests.csproj --no-restore` passed: 131/131.
-- `dotnet build Src\RimAI.sln --no-restore` passed with 0 warnings.
+- `dotnet test Src\Tests\RimBob.Tests.csproj --no-restore` passed: 131/131.
+- `dotnet build Src\RimBob.sln --no-restore` passed with 0 warnings.
 - Host was restarted from the rebuilt output and `GET http://127.0.0.1:5000/api/ministers` returned 200.
 - `GET http://127.0.0.1:5000/api/system/health` returned registry-derived minister coverage notes.
 - `GET http://127.0.0.1:5000/api/ministers/construction/prompt` returned the expected 501 planned-scope response.
@@ -195,8 +195,8 @@ Implementation result:
 
 Verification:
 
-- `dotnet test Src\Tests\RimAI.Tests.csproj --no-restore` passed: 131/131.
-- `dotnet build Src\RimAI.sln --no-restore` passed with 0 warnings.
+- `dotnet test Src\Tests\RimBob.Tests.csproj --no-restore` passed: 131/131.
+- `dotnet build Src\RimBob.sln --no-restore` passed with 0 warnings.
 - Host was restarted from the rebuilt output and `GET http://127.0.0.1:5000/api/system/health` returned catalog-backed endpoint coverage rows.
 - `GET http://127.0.0.1:5000/api/ministers` returned 200.
 
@@ -237,8 +237,8 @@ Implementation result:
 
 Verification:
 
-- `dotnet test Src\Tests\RimAI.Tests.csproj --no-restore` passed: 133/133.
-- `dotnet build Src\RimAI.sln --no-restore` passed with 0 warnings.
+- `dotnet test Src\Tests\RimBob.Tests.csproj --no-restore` passed: 133/133.
+- `dotnet build Src\RimBob.sln --no-restore` passed with 0 warnings.
 - Host was restarted from the rebuilt output and `GET http://127.0.0.1:5000/api/system/health` returned 200.
 
 ## Phase 6 - Split ingestion mapping from orchestration
@@ -279,8 +279,8 @@ Implementation result:
 
 Verification:
 
-- `dotnet test Src\Tests\RimAI.Tests.csproj --no-restore` passed: 135/135.
-- `dotnet build Src\RimAI.sln --no-restore` passed with 0 warnings.
+- `dotnet test Src\Tests\RimBob.Tests.csproj --no-restore` passed: 135/135.
+- `dotnet build Src\RimBob.sln --no-restore` passed with 0 warnings.
 - Host was restarted from the rebuilt output and `GET http://127.0.0.1:5000/api/system/health` returned 200.
 - `GET http://127.0.0.1:5000/api/ministers` returned 200.
 
@@ -320,8 +320,8 @@ Implementation result:
 
 Verification:
 
-- `dotnet test Src\Tests\RimAI.Tests.csproj --no-restore` passed: 140/140.
-- `dotnet build Src\RimAI.sln --no-restore` passed with 0 warnings.
+- `dotnet test Src\Tests\RimBob.Tests.csproj --no-restore` passed: 140/140.
+- `dotnet build Src\RimBob.sln --no-restore` passed with 0 warnings.
 - Host was restarted from the rebuilt output and `GET http://127.0.0.1:5000/api/system/health` returned 200.
 - `GET http://127.0.0.1:5000/api/ministers` returned 200.
 
@@ -357,14 +357,14 @@ Implementation result:
 
 Verification:
 
-- `dotnet test Src\Tests\RimAI.Tests.csproj --no-restore` passed: 142/142.
-- `dotnet build Src\RimAI.sln --no-restore` passed with 0 warnings.
+- `dotnet test Src\Tests\RimBob.Tests.csproj --no-restore` passed: 142/142.
+- `dotnet build Src\RimBob.sln --no-restore` passed with 0 warnings.
 - Host was restarted from the rebuilt output and `GET http://127.0.0.1:5000/api/system/health` returned 200.
 - `GET http://127.0.0.1:5000/api/ministers` returned 200.
 
 ## Guardrails
 
-- Keep `RimAI.Core` pure.
+- Keep `RimBob.Core` pure.
 - Keep MVP suggest-only; do not add RIMAPI writes during these refactors.
 - Do not introduce planner, Labor solver, or Auto execution.
 - Prefer one refactor phase per commit/slice.

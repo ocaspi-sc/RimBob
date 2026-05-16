@@ -1,4 +1,4 @@
-namespace RimAI.Core.Ministers;
+namespace RimBob.Core.Ministers;
 
 /// <summary>
 /// Mayor posture propagated downward to all ministers as shared context.

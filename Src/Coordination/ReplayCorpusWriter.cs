@@ -2,10 +2,10 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
-using RimAI.Core.Advice;
-using RimAI.Core.Ministers;
+using RimBob.Core.Advice;
+using RimBob.Core.Ministers;
 
-namespace RimAI.Coordination;
+namespace RimBob.Coordination;
 
 public interface IReplayCorpusWriter
 {

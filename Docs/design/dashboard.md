@@ -1,4 +1,4 @@
-# RimAI Advisor Dashboard
+# RimBob Advisor Dashboard
 
 > **Living document.** Dashboard design changes should be recorded here in the
 > same turn they are accepted.
@@ -13,7 +13,7 @@
 The dashboard is the player's read-and-react surface for assisted RimWorld play.
 The player reads advice, inspects evidence, and keeps control inside RimWorld.
 
-It is also the primary debugging and inspection surface for RimAI. It should
+It is also the primary debugging and inspection surface for RimBob. It should
 show what the backend, ministers, prompts, briefings, parsers, traces, and logs
 actually produced. Prefer contract names and lightly formatted source data over
 heavy UI translation. Raw/debug tabs must preserve captured backend payloads.
@@ -29,7 +29,7 @@ treat the previous UI as reference only.
 - Inspect-first in v2: no autonomy toggles and no feedback/Pushback controls.
   Game writes appear only as Assisted Apply buttons on backend-allowlisted
   advice steps, each requiring an explicit player click.
-- Manual Run buttons may trigger RimAI re-evaluation, never RimWorld writes.
+- Manual Run buttons may trigger RimBob re-evaluation, never RimWorld writes.
   Assisted Apply controls are separate from Run controls.
 - Localhost-only: Host binds loopback and serves the dashboard plus `/api/*`.
 - Dense second-monitor operations console, not a landing page.
@@ -44,7 +44,7 @@ treat the previous UI as reference only.
 
 - React + TypeScript, built with Vite in root-level `Dashboard/`.
 - Production output is bundled into the Host web root and served by
-  `RimAI.Host`.
+  `RimBob.Host`.
 - Dashboard consumes Host HTTP endpoints and the advice SSE stream.
 - Local state plus focused polling/SSE hooks is enough for v2; do not add broad
   state-management infrastructure without a concrete need.
@@ -71,7 +71,7 @@ button. Planned ministers show disabled/not-wired controls.
 Live non-minister scopes are SYSTEM, INFO, and ANALYTICS. They must be visually
 and functionally distinct:
 
-- SYSTEM is the operations/debug console. It answers whether RimAI, Host,
+- SYSTEM is the operations/debug console. It answers whether RimBob, Host,
   RIMAPI, SSE, LLM, logs, traces, and endpoints are working.
 - INFO is the reference surface. It explains vocabulary and tells the operator
   where to look; it does not carry live metrics.
@@ -180,7 +180,7 @@ tables.
 
 INFO owns:
 
-- Important buzzwords: a compact dictionary for RimAI terms such as Agenda,
+- Important buzzwords: a compact dictionary for RimBob terms such as Agenda,
   AdviceItem, Briefing, Flag, RAG, rules path, LLM escalation, and replay
   corpus.
 - RimWorld signals: a compact dictionary for terms that commonly affect advice,
@@ -246,7 +246,7 @@ Design-level endpoint families:
 - Player-confirmed Assisted Apply execution for allowlisted advice steps.
 
 All observability endpoints are read-only unless explicitly named as a manual
-RimAI re-evaluation trigger. They never mutate game state. Assisted Apply is a
+RimBob re-evaluation trigger. They never mutate game state. Assisted Apply is a
 separate action endpoint family, not an observability endpoint.
 
 `/api/system/health` owns dashboard-visible metadata for known log and
@@ -264,7 +264,7 @@ declared xUnit test methods by source category so the dashboard can answer
 
 The same health payload may expose a RIMAPI integration snapshot for SYSTEM.
 This is coverage of upstream RimWorld mod endpoints, separate from Host
-`/api/*` coverage. It is a declared inventory of current RimAI wiring, not a
+`/api/*` coverage. It is a declared inventory of current RimBob wiring, not a
 live-discovered upstream truth source. It should distinguish active reads,
 represented-but-not-refreshed client methods, deferred write stubs, and missing
 high-priority endpoint groups, and should be updated when `RimApiClient` or
@@ -272,7 +272,7 @@ high-priority endpoint groups, and should be updated when `RimApiClient` or
 
 ### Manual Triggers
 
-Manual triggers are RimAI evaluation controls, not game controls:
+Manual triggers are RimBob evaluation controls, not game controls:
 
 - Cabinet trigger: refresh live state, then run wired live ministers in the
   dependency order.
@@ -385,7 +385,7 @@ degraded or not-exposed coverage states.
 
 ### Rules
 
-The Rules view answers: "Why did RimAI say this now?"
+The Rules view answers: "Why did RimBob say this now?"
 
 Show trigger, rules-vs-LLM path, rule fired or escalation reason, relevant flag
 or wakeup payload, emitted advice/flags, briefing version/tick when available,

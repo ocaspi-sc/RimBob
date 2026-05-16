@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
-namespace RimAI.Tests.Infrastructure;
+namespace RimBob.Tests.Infrastructure;
 
 /// <summary>
 /// Shared test logger. One log file per dotnet-test process invocation, written to

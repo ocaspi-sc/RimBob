@@ -1,4 +1,4 @@
-# RimAI - Evaluation and Iteration
+# RimBob - Evaluation and Iteration
 
 > **Living document.** See `AGENTS.md` for update rules.
 > This doc defines the improvement loop and approval gates. Exact log fields,

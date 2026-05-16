@@ -1,11 +1,11 @@
 using System.Text.Json;
 using FluentAssertions;
-using RimAI.Core.Advice;
-using RimAI.Core.Briefings;
-using RimAI.Core.Ministers;
-using RimAI.Ministers.Food;
+using RimBob.Core.Advice;
+using RimBob.Core.Briefings;
+using RimBob.Core.Ministers;
+using RimBob.Ministers.Food;
 
-namespace RimAI.Tests.Food;
+namespace RimBob.Tests.Food;
 
 public sealed class FoodReplayCorpusTests
 {

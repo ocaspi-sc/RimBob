@@ -1,6 +1,6 @@
-using RimAI.Core.Ministers;
+using RimBob.Core.Ministers;
 
-namespace RimAI.Coordination;
+namespace RimBob.Coordination;
 
 public sealed class FlagChannel
 {

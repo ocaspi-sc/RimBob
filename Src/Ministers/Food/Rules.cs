@@ -1,8 +1,8 @@
-using RimAI.Core.Advice;
-using RimAI.Core.Briefings;
-using RimAI.Core.Ministers;
+using RimBob.Core.Advice;
+using RimBob.Core.Briefings;
+using RimBob.Core.Ministers;
 
-namespace RimAI.Ministers.Food;
+namespace RimBob.Ministers.Food;
 
 public sealed class Rules : IMinisterRules<FoodBriefing>
 {
@@ -33,7 +33,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 "Food state unknown",
                 "No reliable food stockpile signal is available. Treat this as a food-security check, not confirmed starvation.",
                 "The food chain cannot safely decide without stockpile visibility.",
-                [new(AdviceStepKind.SetStockpileZone, "Create or expose a reachable food stockpile, then refresh RimAI once food is visible.", Reason: "food_units and nutrition are both unavailable", Icon: SimpleMealIcon)],
+                [new(AdviceStepKind.SetStockpileZone, "Create or expose a reachable food stockpile, then refresh RimBob once food is visible.", Reason: "food_units and nutrition are both unavailable", Icon: SimpleMealIcon)],
                 [new(ResourceRequestKind.StockpileSpace, "visible reachable food stockpile", "food_units and nutrition are both unavailable", Icon: SimpleMealIcon)],
                 true);
         }

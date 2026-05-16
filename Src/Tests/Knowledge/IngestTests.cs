@@ -1,7 +1,7 @@
 using FluentAssertions;
-using RimAI.Knowledge;
+using RimBob.Knowledge;
 
-namespace RimAI.Tests.Knowledge;
+namespace RimBob.Tests.Knowledge;
 
 public sealed class IngestTests
 {
@@ -93,7 +93,7 @@ public sealed class IngestTests
     [Fact]
     public async Task RunAsync_LoadsChunksWithCachedEmbeddings()
     {
-        string tmpRoot   = Path.Combine(Path.GetTempPath(), "rimai-ingest-" + Guid.NewGuid().ToString("N"));
+        string tmpRoot   = Path.Combine(Path.GetTempPath(), "rimbob-ingest-" + Guid.NewGuid().ToString("N"));
         string guidesDir = Path.Combine(tmpRoot, "guides");
         string cacheDir  = Path.Combine(tmpRoot, "cache");
         Directory.CreateDirectory(guidesDir);

@@ -1,7 +1,7 @@
 # Mark Harvest + Unforbid
 
 **Implementation branch:** `codex/mark-harvest-unforbid-worktree`
-**Implementation worktree:** `C:\dev\RimAI-worktrees\mark-harvest-unforbid`
+**Implementation worktree:** `C:\dev\RimBob-worktrees\mark-harvest-unforbid`
 
 ## Goal
 
@@ -9,7 +9,7 @@ Add player-confirmed Assisted Apply for Food's two simplest concrete actions:
 marking safe plant targets for harvest and unforbidding known food stacks.
 
 This remains assisted gameplay, not Auto. The player clicks Apply on one
-backend-approved advice step; RimAI validates fresh game state, executes exactly
+backend-approved advice step; RimBob validates fresh game state, executes exactly
 one allowlisted non-pawn RIMAPI write, refreshes state, and reports the result.
 
 ## Decisions
@@ -28,13 +28,13 @@ one allowlisted non-pawn RIMAPI write, refreshes state, and reports the result.
 ## Phase 0 - Worktree And Plan Artifact
 
 - Implement this feature in the dedicated worktree at
-  `C:\dev\RimAI-worktrees\mark-harvest-unforbid`; do not continue the feature
+  `C:\dev\RimBob-worktrees\mark-harvest-unforbid`; do not continue the feature
   work in the dirty primary checkout.
 - Use branch `codex/mark-harvest-unforbid-worktree`, created from current
   `master`.
 - Leave the older `codex/mark-harvest-unforbid` branch untouched unless a
   human explicitly asks to clean it up; it diverged from current `master`.
-- Keep `C:\dev\RimAI` and any existing Codex worktrees intact; do not force
+- Keep `C:\dev\RimBob` and any existing Codex worktrees intact; do not force
   checkout `master` in a worktree where Git says it is already checked out
   elsewhere.
 - Save this plan as `Docs/plans/mark-harvest-unforbid.md` and commit it from
@@ -48,9 +48,9 @@ one allowlisted non-pawn RIMAPI write, refreshes state, and reports the result.
 - Verify the live `order/designate/area` request shape against RIMAPI docs/live
   smoke before wiring harvest.
 - Add a companion RIMAPI endpoint for safe unforbid in the RIMAPI mod repo, not
-  in RimAI Host. Use a separate RIMAPI worktree/branch for that change. If the
+  in RimBob Host. Use a separate RIMAPI worktree/branch for that change. If the
   RIMAPI repo is not available locally, stop `unforbid` implementation after the
-  RimAI-side contract/client/test scaffolding and leave it blocked on the
+  RimBob-side contract/client/test scaffolding and leave it blocked on the
   explicit upstream endpoint dependency.
 - Proposed RIMAPI endpoint: `POST /api/v1/order/unforbid`, scoped to map item
   ids.
@@ -60,7 +60,7 @@ one allowlisted non-pawn RIMAPI write, refreshes state, and reports the result.
 - Update cached RIMAPI docs after the endpoint exists and is visible via
   `/api/v1/dev/endpoints`.
 
-## Phase 2 - RimAI Contracts
+## Phase 2 - RimBob Contracts
 
 - Add optional `apply` metadata to `AdviceStep`.
 - Minimal apply handle fields: `kind`, `label`, `target_summary`, and opaque

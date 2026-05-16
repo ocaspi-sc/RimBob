@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
-using RimAI.Core.Aggregates;
+using RimBob.Core.Aggregates;
 
-namespace RimAI.Core.Advice;
+namespace RimBob.Core.Advice;
 
 /// <summary>
 /// One player-facing step in an AdviceItem. Most steps are rendered only; a

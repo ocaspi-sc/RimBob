@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace RimAI.Ingestion.Dtos;
+namespace RimBob.Ingestion.Dtos;
 
 // ── GET /api/v1/map/pawns?map_id ──────────────────────────────────────────────
 // Basic pawn list — verified against live RIMAPI.

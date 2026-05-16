@@ -1,7 +1,7 @@
 using FluentAssertions;
-using RimAI.Core.Briefings;
+using RimBob.Core.Briefings;
 
-namespace RimAI.Tests.Food;
+namespace RimBob.Tests.Food;
 
 public sealed class FoodStateSummaryTests
 {

@@ -2,7 +2,7 @@ using System.Text.Json;
 using FluentAssertions;
 using Xunit.Abstractions;
 
-namespace RimAI.Tests.Live;
+namespace RimBob.Tests.Live;
 
 public sealed class LiveHostSmokeTests(ITestOutputHelper output)
 {
@@ -10,10 +10,10 @@ public sealed class LiveHostSmokeTests(ITestOutputHelper output)
     [Trait("Category", "Live")]
     public async Task FoodBriefing_DoesNotLoseLiveAnimalsWhenHostAndRimApiAreRunning()
     {
-        Uri hostBaseUri = LiveTestHelpers.ResolveBaseUri("RIMAI_HOST_BASE_URL", "http://localhost:5000/");
+        Uri hostBaseUri = LiveTestHelpers.ResolveBaseUri("RIMBOB_HOST_BASE_URL", "http://localhost:5000/");
         using HttpClient host = new() { BaseAddress = hostBaseUri, Timeout = TimeSpan.FromSeconds(3) };
 
-        string? healthJson = await LiveTestHelpers.TryGetStringAsync(host, "api/health", output, "RimAI Host");
+        string? healthJson = await LiveTestHelpers.TryGetStringAsync(host, "api/health", output, "RimBob Host");
         if (healthJson is null)
             return;
 
@@ -50,10 +50,10 @@ public sealed class LiveHostSmokeTests(ITestOutputHelper output)
     [Trait("Category", "Live")]
     public async Task FoodBriefing_DoesNotLoseLiveFarmCropsWhenHostAndRimApiAreRunning()
     {
-        Uri hostBaseUri = LiveTestHelpers.ResolveBaseUri("RIMAI_HOST_BASE_URL", "http://localhost:5000/");
+        Uri hostBaseUri = LiveTestHelpers.ResolveBaseUri("RIMBOB_HOST_BASE_URL", "http://localhost:5000/");
         using HttpClient host = new() { BaseAddress = hostBaseUri, Timeout = TimeSpan.FromSeconds(3) };
 
-        string? healthJson = await LiveTestHelpers.TryGetStringAsync(host, "api/health", output, "RimAI Host");
+        string? healthJson = await LiveTestHelpers.TryGetStringAsync(host, "api/health", output, "RimBob Host");
         if (healthJson is null)
             return;
 

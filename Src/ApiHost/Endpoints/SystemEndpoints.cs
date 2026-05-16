@@ -1,14 +1,14 @@
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
-using RimAI.Coordination;
-using RimAI.Core.Briefings;
-using RimAI.Core.Ministers;
-using RimAI.Host;
-using RimAI.Knowledge;
-using RimAI.LLM;
-using RimAI.State;
+using RimBob.Coordination;
+using RimBob.Core.Briefings;
+using RimBob.Core.Ministers;
+using RimBob.Host;
+using RimBob.Knowledge;
+using RimBob.LLM;
+using RimBob.State;
 
-namespace RimAI.Host.Endpoints;
+namespace RimBob.Host.Endpoints;
 
 public static class SystemEndpoints
 {
@@ -78,7 +78,7 @@ public static class SystemEndpoints
         coverage.Register("/api/system/logs/recent", "not_exposed_yet", "Planned bounded log tail.");
 
         app.MapGet("/api/system/health", (
-            IOptions<RimAiOptions> options,
+            IOptions<RimBobOptions> options,
             IWebHostEnvironment env,
             ColonyState colony,
             AgendaStore agendaStore,
@@ -96,7 +96,7 @@ public static class SystemEndpoints
             IconCacheService iconCache,
             AssistedApplyService assistedApply) =>
         {
-            RimAiOptions opts = options.Value;
+            RimBobOptions opts = options.Value;
             MayorBriefing mayorBriefing = briefings.GetMayorBriefing();
             FoodBriefing foodBriefing = briefings.GetFoodBriefing();
             string logsDir = HostLogPaths.ResolveLogsDirectory(env.ContentRootPath);
@@ -148,7 +148,7 @@ public static class SystemEndpoints
                 logs = new
                 {
                     directory = logsDir,
-                    human_log_pattern = Path.Combine(logsDir, "rimai-*.log"),
+                    human_log_pattern = Path.Combine(logsDir, "rimbob-*.log"),
                     decision_log_pattern = Path.Combine(logsDir, "decisions-*.jsonl"),
                     replay_corpus = ReplayCorpusMetadata(logsDir),
                     recent_endpoint = "not_exposed_yet",
@@ -290,7 +290,7 @@ public static class SystemEndpoints
     {
         string runtimeRoot = HostLogPaths.ResolveRuntimeRoot(contentRoot);
         string testsDir = Path.Combine(runtimeRoot, "Src", "Tests");
-        string projectPath = Path.Combine(testsDir, "RimAI.Tests.csproj");
+        string projectPath = Path.Combine(testsDir, "RimBob.Tests.csproj");
 
         if (!Directory.Exists(testsDir))
         {

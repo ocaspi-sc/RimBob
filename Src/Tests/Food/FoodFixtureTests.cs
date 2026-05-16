@@ -1,6 +1,6 @@
 using FluentAssertions;
 
-namespace RimAI.Tests.Food;
+namespace RimBob.Tests.Food;
 
 public sealed class FoodFixtureTests
 {

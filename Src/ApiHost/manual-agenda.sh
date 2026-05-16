@@ -7,7 +7,7 @@
 #   pbpaste | ./manual-agenda.sh -          # pipe from clipboard (mac)
 #   ./manual-agenda.sh                      # paste interactively, end with Ctrl-D
 set -euo pipefail
-URL="${RIMAI_URL:-http://localhost:5000}/api/agenda/manual"
+URL="${RIMBOB_URL:-http://localhost:5000}/api/agenda/manual"
 if [[ $# -eq 1 && "$1" != "-" ]]; then
     BODY="@$1"
 else

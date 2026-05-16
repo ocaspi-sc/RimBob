@@ -1,7 +1,7 @@
 using FluentAssertions;
-using RimAI.Knowledge;
+using RimBob.Knowledge;
 
-namespace RimAI.Tests.Knowledge;
+namespace RimBob.Tests.Knowledge;
 
 public sealed class KnowledgeBaseTests
 {

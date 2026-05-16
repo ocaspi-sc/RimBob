@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace RimAI.Core.Aggregates;
+namespace RimBob.Core.Aggregates;
 
 // Aggregate snapshots — raw "what is" data. No derived facts (those live in views/briefings).
 // Pure domain records; no external dependencies, per CLAUDE.md.

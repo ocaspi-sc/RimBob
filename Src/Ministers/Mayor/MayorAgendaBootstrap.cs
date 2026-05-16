@@ -1,9 +1,9 @@
 using System.Globalization;
-using RimAI.Core.Advice;
-using RimAI.Core.Briefings;
-using RimAI.Core.Ministers;
+using RimBob.Core.Advice;
+using RimBob.Core.Briefings;
+using RimBob.Core.Ministers;
 
-namespace RimAI.Ministers.Mayor;
+namespace RimBob.Ministers.Mayor;
 
 public static class MayorAgendaBootstrap
 {

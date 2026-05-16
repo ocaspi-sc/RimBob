@@ -1,4 +1,4 @@
-namespace RimAI.Core.Briefings;
+namespace RimBob.Core.Briefings;
 
 /// <summary>
 /// Marker for minister briefings. Each minister consumes exactly one briefing type;

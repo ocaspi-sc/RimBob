@@ -1,35 +1,35 @@
 ---
-name: run-rimai
-description: Starts the RimAI backend server (RimAI.Host). Use this skill whenever the user wants to run, start, launch, or boot up RimAI. Also trigger when the user asks to check if RimAI is running, restart the server, or test the dashboard. Invoked by /run-rimai.
+name: run-rimbob
+description: Starts the RimBob backend server (RimBob.Host). Use this skill whenever the user wants to run, start, launch, or boot up RimBob. Also trigger when the user asks to check if RimBob is running, restart the server, or test the dashboard. Invoked by /run-rimbob.
 version: 1.0.0
 ---
 
-# run-rimai
+# run-rimbob
 
-Builds and runs the RimAI.Host ASP.NET Core project. This single process serves both the API and the React dashboard — there is no separate dashboard process to start.
+Builds and runs the RimBob.Host ASP.NET Core project. This single process serves both the API and the React dashboard — there is no separate dashboard process to start.
 
 ## Project layout
 
-- **Solution**: `C:\dev\RimAI\Src\RimAI.sln`
-- **Startup project**: `C:\dev\RimAI\Src\ApiHost` (`RimAI.Host`)
+- **Solution**: `C:\dev\RimBob\Src\RimBob.sln`
+- **Startup project**: `C:\dev\RimBob\Src\ApiHost` (`RimBob.Host`)
 - **Default URL**: `http://localhost:5000`
 - **Stack**: .NET 9, Serilog, Kestrel (localhost-only bind)
 
 ## Steps
 
-1. **Check if already running** — ping `http://localhost:5000/api/health`. If it returns `{"status":"ok"}`, tell the user RimAI is already running and provide the dashboard URL. Skip to step 4.
+1. **Check if already running** — ping `http://localhost:5000/api/health`. If it returns `{"status":"ok"}`, tell the user RimBob is already running and provide the dashboard URL. Skip to step 4.
 
    **Exception: if you (or anyone in this session) just rebuilt code that the Host loads,** the running Host is stale. Kill it (`taskkill //F //PID <pid>`) and continue from step 2 so the new build takes effect. The user's standing rule: **always restart the host after a rebuild.** Don't ask before killing — see the kill-host-for-rebuild memory.
 
 2. **Build** — run:
    ```
-   dotnet build C:\dev\RimAI\Src\ApiHost\RimAI.Host.csproj --configuration Debug
+   dotnet build C:\dev\RimBob\Src\ApiHost\RimBob.Host.csproj --configuration Debug
    ```
    Surface any build errors to the user immediately. Do not proceed if the build fails.
 
 3. **Run** — start the server in the background and capture stdout:
    ```
-   dotnet run --project C:\dev\RimAI\Src\ApiHost\RimAI.Host.csproj --no-build
+   dotnet run --project C:\dev\RimBob\Src\ApiHost\RimBob.Host.csproj --no-build
    ```
    Wait up to 15 seconds, reading stdout until you see either `Dashboard:` (success) or a fatal error line.
 
@@ -49,7 +49,7 @@ Builds and runs the RimAI.Host ASP.NET Core project. This single process serves 
 
 ## Node / Dashboard build
 
-The React dashboard (`Src/Dashboard/`, Vite + TypeScript) is pre-built. Its compiled output lives in `Src/ApiHost/wwwroot/` and is served by `UseStaticFiles` — **Node is not needed to run RimAI**.
+The React dashboard (`Src/Dashboard/`, Vite + TypeScript) is pre-built. Its compiled output lives in `Src/ApiHost/wwwroot/` and is served by `UseStaticFiles` — **Node is not needed to run RimBob**.
 
 Node is only needed when editing the dashboard UI:
 ```

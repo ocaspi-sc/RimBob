@@ -1,7 +1,7 @@
-using RimAI.Core.Aggregates;
-using RimAI.Core.Briefings;
+using RimBob.Core.Aggregates;
+using RimBob.Core.Briefings;
 
-namespace RimAI.State.Derivations;
+namespace RimBob.State.Derivations;
 
 internal static class FoodItemClassifier
 {

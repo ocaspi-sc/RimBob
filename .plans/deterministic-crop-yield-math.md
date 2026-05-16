@@ -173,8 +173,8 @@ Add focused unit coverage before broad integration:
 Verification commands:
 
 ```powershell
-dotnet test Src\Tests\RimAI.Tests.csproj --no-restore
-dotnet build Src\RimAI.sln --no-restore
+dotnet test Src\Tests\RimBob.Tests.csproj --no-restore
+dotnet build Src\RimBob.sln --no-restore
 ```
 
 If a live Host is running and locks DLLs, stop/restart it using the repo's

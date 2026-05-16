@@ -17,7 +17,7 @@ export function ScopeRail({
   return (
     <nav className="scope-rail panel-shell" aria-label="Cabinet scopes">
       <div className="rail-title">
-        <span>RimAI</span>
+        <span>RimBob</span>
         <small>Scopes</small>
       </div>
       <div className="scope-list">

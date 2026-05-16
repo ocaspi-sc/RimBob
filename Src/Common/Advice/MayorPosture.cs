@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace RimAI.Core.Advice;
+namespace RimBob.Core.Advice;
 
 /// <summary>
 /// Strategic stance the Mayor sets each turn. Free-text strings (LLM-produced)

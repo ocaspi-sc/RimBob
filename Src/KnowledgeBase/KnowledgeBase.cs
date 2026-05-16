@@ -1,4 +1,4 @@
-namespace RimAI.Knowledge;
+namespace RimBob.Knowledge;
 
 /// <summary>
 /// In-process cosine-similarity store for guide chunks. Small corpus (~50 chunks);

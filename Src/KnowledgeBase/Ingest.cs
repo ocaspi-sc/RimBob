@@ -1,7 +1,7 @@
 using System.Text;
 using Microsoft.Extensions.Logging;
 
-namespace RimAI.Knowledge;
+namespace RimBob.Knowledge;
 
 /// <summary>
 /// Ingests guide markdown into the KnowledgeBase. Splits by H1/H2/H3 headings;

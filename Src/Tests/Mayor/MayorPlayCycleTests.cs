@@ -1,18 +1,18 @@
 using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
-using RimAI.Coordination;
-using RimAI.Core.Advice;
-using RimAI.Core.Ministers;
-using RimAI.Knowledge;
-using RimAI.LLM;
-using MayorMinister = RimAI.Ministers.Mayor.Mayor;
-using RimAI.Ministers.Mayor;
-using RimAI.State;
-using RimAI.Tests.Coordination;
-using RimAI.Tests.Infrastructure;
+using RimBob.Coordination;
+using RimBob.Core.Advice;
+using RimBob.Core.Ministers;
+using RimBob.Knowledge;
+using RimBob.LLM;
+using MayorMinister = RimBob.Ministers.Mayor.Mayor;
+using RimBob.Ministers.Mayor;
+using RimBob.State;
+using RimBob.Tests.Coordination;
+using RimBob.Tests.Infrastructure;
 
-namespace RimAI.Tests.Mayor;
+namespace RimBob.Tests.Mayor;
 
 public sealed class MayorPlayCycleTests
 {
@@ -184,7 +184,7 @@ public sealed class MayorPlayCycleTests
         public CapturingReplayWriter Replay { get; } = new();
         public string ManualResponsePath { get; } = Path.Combine(
             Path.GetTempPath(),
-            "rimai-mayor-manual-response-tests",
+            "rimbob-mayor-manual-response-tests",
             Guid.NewGuid().ToString("N"),
             "mayor-response.json");
         public List<MayorAgenda> PublishedAgendas { get; } = [];

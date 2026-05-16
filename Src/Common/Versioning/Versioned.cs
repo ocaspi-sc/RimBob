@@ -1,4 +1,4 @@
-namespace RimAI.Core.Versioning;
+namespace RimBob.Core.Versioning;
 
 /// <summary>
 /// Wrapper around an aggregate value with a monotonic version number.

@@ -7,8 +7,8 @@ import {
   type ScopeKey,
 } from '../dashboard/scopes';
 
-const SelectedScopeStorageKey = 'rimai.dashboard.selectedScope';
-const SelectedViewStorageKey = 'rimai.dashboard.selectedView';
+const SelectedScopeStorageKey = 'rimbob.dashboard.selectedScope';
+const SelectedViewStorageKey = 'rimbob.dashboard.selectedView';
 
 export interface DashboardSelection {
   selectedScope: ScopeKey;

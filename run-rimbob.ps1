@@ -14,7 +14,7 @@ $ErrorActionPreference = "Stop"
 $repoRoot = $PSScriptRoot
 $dashboardDir = Join-Path $repoRoot "Dashboard"
 $hostDir = Join-Path $repoRoot "Src\ApiHost"
-$hostProject = Join-Path $hostDir "RimAI.Host.csproj"
+$hostProject = Join-Path $hostDir "RimBob.Host.csproj"
 $nodeModulesDir = Join-Path $dashboardDir "node_modules"
 
 function Invoke-Step {
@@ -44,7 +44,7 @@ function Require-Command {
 
 function Set-ServerWindowTitle {
     try {
-        $Host.UI.RawUI.WindowTitle = "RimAI Server"
+        $Host.UI.RawUI.WindowTitle = "RimBob Server"
     }
     catch {
         # Some terminals do not expose RawUI title changes.
@@ -54,7 +54,7 @@ function Set-ServerWindowTitle {
 function Start-HostForeground {
     Set-ServerWindowTitle
 
-    Invoke-Step "Starting RimAI host" {
+    Invoke-Step "Starting RimBob host" {
         Push-Location $hostDir
         try {
             & dotnet @dotnetArgs
@@ -67,7 +67,7 @@ function Start-HostForeground {
 
 function Start-HostTaskbarWindow {
     if ([string]::IsNullOrWhiteSpace($PSCommandPath)) {
-        throw "Cannot start RimAI in a taskbar window because the script path is unavailable."
+        throw "Cannot start RimBob in a taskbar window because the script path is unavailable."
     }
 
     Require-Command "powershell.exe"
@@ -99,8 +99,8 @@ function Start-HostTaskbarWindow {
         -ArgumentList $childArgs
 
     Write-Host ""
-    Write-Host "RimAI host started in a minimized taskbar window named 'RimAI Server'."
-    Write-Host "The window closes automatically when RimAI exits."
+    Write-Host "RimBob host started in a minimized taskbar window named 'RimBob Server'."
+    Write-Host "The window closes automatically when RimBob exits."
     Write-Host "Use -Foreground to keep the server attached to this terminal for debugging."
 }
 
@@ -150,7 +150,7 @@ if ($NoRestore) {
 
 if (-not [string]::IsNullOrWhiteSpace($ListenUrl)) {
     $dotnetArgs += "--"
-    $dotnetArgs += "RimAi:ListenUrl=$ListenUrl"
+    $dotnetArgs += "RimBob:ListenUrl=$ListenUrl"
     Write-Host ""
     Write-Host "Dashboard URL override: $ListenUrl"
 }
@@ -162,7 +162,7 @@ else {
 Write-Host "RIMAPI expected at: http://localhost:8765/"
 
 if ($HostOnly -or $Foreground) {
-    Write-Host "Press Ctrl+C to stop RimAI."
+    Write-Host "Press Ctrl+C to stop RimBob."
     Start-HostForeground
 }
 else {

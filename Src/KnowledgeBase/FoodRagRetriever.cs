@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Logging;
-using RimAI.Core.Advice;
-using RimAI.Core.Briefings;
+using RimBob.Core.Advice;
+using RimBob.Core.Briefings;
 
-namespace RimAI.Knowledge;
+namespace RimBob.Knowledge;
 
 public sealed class FoodRagRetriever
 {

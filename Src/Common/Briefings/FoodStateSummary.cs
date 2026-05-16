@@ -1,4 +1,4 @@
-namespace RimAI.Core.Briefings;
+namespace RimBob.Core.Briefings;
 
 public static class FoodStateSummary
 {

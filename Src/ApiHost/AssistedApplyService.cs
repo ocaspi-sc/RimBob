@@ -1,13 +1,13 @@
 using System.Net;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
-using RimAI.Coordination;
-using RimAI.Core.Advice;
-using RimAI.Core.Aggregates;
-using RimAI.Ingestion;
-using RimAI.State;
+using RimBob.Coordination;
+using RimBob.Core.Advice;
+using RimBob.Core.Aggregates;
+using RimBob.Ingestion;
+using RimBob.State;
 
-namespace RimAI.Host;
+namespace RimBob.Host;
 
 public sealed class AssistedApplyService(
     AdviceBus adviceBus,
@@ -254,7 +254,7 @@ public sealed class AssistedApplyService(
         catch (Exception ex)
         {
             log.LogWarning(ex, "Assisted apply readback refresh failed.");
-            return Response("readback_inconclusive", "Apply was sent, but RimAI could not refresh readback state.", kind, adviceId, stepIndex);
+            return Response("readback_inconclusive", "Apply was sent, but RimBob could not refresh readback state.", kind, adviceId, stepIndex);
         }
     }
 

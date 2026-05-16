@@ -1,9 +1,9 @@
-using RimAI.Coordination;
+using RimBob.Coordination;
 
-namespace RimAI.Host.Endpoints;
+namespace RimBob.Host.Endpoints;
 
 /// <summary>
-/// Manual dashboard triggers. These run RimAI evaluation only; they do not issue
+/// Manual dashboard triggers. These run RimBob evaluation only; they do not issue
 /// RimWorld/RIMAPI write commands.
 /// </summary>
 public static class CabinetEndpoints

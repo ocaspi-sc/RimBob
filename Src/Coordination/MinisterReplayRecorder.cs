@@ -1,8 +1,8 @@
-using RimAI.Core.Advice;
-using RimAI.Core.Ministers;
-using RimAI.LLM;
+using RimBob.Core.Advice;
+using RimBob.Core.Ministers;
+using RimBob.LLM;
 
-namespace RimAI.Coordination;
+namespace RimBob.Coordination;
 
 public sealed class MinisterReplayRecorder(
     IReplayCorpusWriter? writer,

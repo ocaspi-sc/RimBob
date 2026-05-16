@@ -1,4 +1,4 @@
-# RimAI - Planning / HTN
+# RimBob - Planning / HTN
 
 > **DEFERRED - Auto epic.** Not built in MVP.
 > In `Suggest` mode, ministers emit `AdviceItem`s and there is no planner
@@ -14,7 +14,7 @@
 ## Purpose
 
 The future planner decomposes trusted minister advice into executable steps.
-It exists only when RimAI is allowed to act autonomously through multi-step
+It exists only when RimBob is allowed to act autonomously through multi-step
 RIMAPI writes.
 
 The planner is shared infrastructure. Ministers own domain methods and advice

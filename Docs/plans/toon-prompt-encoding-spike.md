@@ -1,6 +1,6 @@
 # TOON Prompt Encoding Spike
 
-Evaluate TOON as an optional LLM prompt-input encoding, not as a replacement for RimAI's JSON contracts.
+Evaluate TOON as an optional LLM prompt-input encoding, not as a replacement for RimBob's JSON contracts.
 
 ## Scope
 

@@ -1,5 +1,5 @@
 // TypeScript mirrors of the wire-shape MayorAgenda. Snake_case keys match
-// the JSON produced by RimAI.Core.Advice.* records.
+// the JSON produced by RimBob.Core.Advice.* records.
 
 export type AgendaPriorityStatus = 'active' | 'completed' | 'deferred';
 

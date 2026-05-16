@@ -1,9 +1,9 @@
 using FluentAssertions;
-using RimAI.Core.Briefings;
-using RimAI.Core.Ministers;
-using RimAI.Ministers.Mayor;
+using RimBob.Core.Briefings;
+using RimBob.Core.Ministers;
+using RimBob.Ministers.Mayor;
 
-namespace RimAI.Tests.Mayor;
+namespace RimBob.Tests.Mayor;
 
 public sealed class MayorAgendaRulesTests
 {

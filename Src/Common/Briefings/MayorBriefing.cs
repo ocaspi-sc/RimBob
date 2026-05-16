@@ -1,4 +1,4 @@
-namespace RimAI.Core.Briefings;
+namespace RimBob.Core.Briefings;
 
 /// <summary>
 /// Colony-wide briefing the Mayor reads once per in-game day. Target ≤ ~800 tokens

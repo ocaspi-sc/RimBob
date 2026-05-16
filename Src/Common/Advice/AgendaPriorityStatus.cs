@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace RimAI.Core.Advice;
+namespace RimBob.Core.Advice;
 
 [JsonConverter(typeof(SnakeCaseLowerEnumConverter<AgendaPriorityStatus>))]
 public enum AgendaPriorityStatus

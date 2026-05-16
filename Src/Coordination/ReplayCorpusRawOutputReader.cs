@@ -1,8 +1,8 @@
 using System.Text;
 using System.Text.Json;
-using RimAI.LLM;
+using RimBob.LLM;
 
-namespace RimAI.Coordination;
+namespace RimBob.Coordination;
 
 public sealed class ReplayCorpusRawOutputReader(string replayDirectory)
 {

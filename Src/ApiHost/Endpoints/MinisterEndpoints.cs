@@ -1,14 +1,14 @@
 using System.Text.Json;
-using RimAI.Coordination;
-using RimAI.Core.Advice;
-using RimAI.Core.Briefings;
-using RimAI.Core.Ministers;
-using RimAI.Knowledge;
-using RimAI.LLM;
-using RimAI.Ministers.Food;
-using RimAI.State;
+using RimBob.Coordination;
+using RimBob.Core.Advice;
+using RimBob.Core.Briefings;
+using RimBob.Core.Ministers;
+using RimBob.Knowledge;
+using RimBob.LLM;
+using RimBob.Ministers.Food;
+using RimBob.State;
 
-namespace RimAI.Host.Endpoints;
+namespace RimBob.Host.Endpoints;
 
 public static class MinisterEndpoints
 {

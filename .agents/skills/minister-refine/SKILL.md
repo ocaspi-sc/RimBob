@@ -1,11 +1,11 @@
 ---
 name: minister-refine
-description: Refine a RimAI minister's quality by reviewing decision logs, historic replay corpus records, future minister-owned Pushbacks, rules, system prompts, briefings, and fixtures. Use when asked to refine or improve a minister, review minister quality, inspect decision logs, compare before/after outputs, promote repeated patterns into rules, improve a minister prompt, or check whether a briefing supports better advice.
+description: Refine a RimBob minister's quality by reviewing decision logs, historic replay corpus records, future minister-owned Pushbacks, rules, system prompts, briefings, and fixtures. Use when asked to refine or improve a minister, review minister quality, inspect decision logs, compare before/after outputs, promote repeated patterns into rules, improve a minister prompt, or check whether a briefing supports better advice.
 ---
 
 # Minister Refine
 
-Refine one RimAI minister from evidence. Default to an evidence-backed proposal; edit `Rules.cs`, prompts, briefing code, fixtures, or docs only when the user explicitly asks to apply the proposal.
+Refine one RimBob minister from evidence. Default to an evidence-backed proposal; edit `Rules.cs`, prompts, briefing code, fixtures, or docs only when the user explicitly asks to apply the proposal.
 
 ## Workflow
 
@@ -64,7 +64,7 @@ Refine one RimAI minister from evidence. Default to an evidence-backed proposal;
    - Proposal: exact intended behavior change and why it is justified.
    - Replay result: historic corpus size, before/after output changes, regressions, and any fields missing from the corpus.
    - Files to change if applied: name only the needed files.
-   - Verification: targeted fixture/tests first; full `dotnet test Src/RimAI.sln` if code is edited.
+   - Verification: targeted fixture/tests first; full `dotnet test Src/RimBob.sln` if code is edited.
 
 ## Apply Mode
 

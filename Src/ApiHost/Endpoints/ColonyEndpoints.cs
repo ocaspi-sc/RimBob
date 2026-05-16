@@ -1,6 +1,6 @@
-using RimAI.State;
+using RimBob.State;
 
-namespace RimAI.Host.Endpoints;
+namespace RimBob.Host.Endpoints;
 
 /// <summary>
 /// GET /api/colony/snapshot — returns the latest MayorBriefing the Mayor sees.

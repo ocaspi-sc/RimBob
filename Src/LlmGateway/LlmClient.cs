@@ -3,18 +3,18 @@ using System.Text.Json;
 using Google.GenAI;
 using Google.GenAI.Types;
 using Microsoft.Extensions.Logging;
-using RimAI.Core.Advice;
-using RimAI.Core.Briefings;
-using RimAI.Core.Ministers;
+using RimBob.Core.Advice;
+using RimBob.Core.Briefings;
+using RimBob.Core.Ministers;
 
-using GuideCitation = RimAI.Core.Advice.GuideCitation;
+using GuideCitation = RimBob.Core.Advice.GuideCitation;
 
-namespace RimAI.LLM;
+namespace RimBob.LLM;
 
 /// <summary>
 /// Google GenAI SDK wrapper (Gemini Developer API / Google AI Studio).
 /// Injected per-minister by DI; calls are made only on escalation.
-/// Package: Google.GenAI 1.6.1 — see RimAI.LLM.csproj.
+/// Package: Google.GenAI 1.6.1 — see RimBob.LLM.csproj.
 /// </summary>
 public sealed class LlmClient
 {

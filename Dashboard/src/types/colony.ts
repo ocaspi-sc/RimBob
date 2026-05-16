@@ -1,4 +1,4 @@
-// Mirror of RimAI.Core.Briefings.MayorBriefing — only the fields the sidebar uses.
+// Mirror of RimBob.Core.Briefings.MayorBriefing — only the fields the sidebar uses.
 // ASP.NET Core's default JsonSerializer emits camelCase, so keys are camelCase here.
 
 export interface DateStamp {

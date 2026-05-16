@@ -1,4 +1,4 @@
-namespace RimAI.Knowledge;
+namespace RimBob.Knowledge;
 
 /// <summary>
 /// Per-minister retrieval configuration.

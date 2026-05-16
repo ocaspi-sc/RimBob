@@ -1,9 +1,9 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
-using RimAI.Core.Briefings;
-using RimAI.State.Derivations;
+using RimBob.Core.Briefings;
+using RimBob.State.Derivations;
 
-namespace RimAI.State;
+namespace RimBob.State;
 
 /// <summary>
 /// Versioned view cache. Recomputes briefings only when their input aggregate

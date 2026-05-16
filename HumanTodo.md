@@ -1,6 +1,6 @@
-# RimAI - Human Todo
+# RimBob - Human Todo
 
-> Single task inbox and execution board for RimAI.
+> Single task inbox and execution board for RimBob.
 > Big milestone sequencing belongs in `Docs/ROADMAP.md`.
 > `/todo` entries go under "Captured by /todo"; promote serious items into the execution board when they become active work.
 
@@ -9,18 +9,19 @@
 ## Captured by /todo
 
 <!-- entries go here -->
-- [ ] [2026-05-17] #rimapi #fork Create RimAI-compatible RIMAPI fork for safe write endpoints.
+- [ ] [2026-05-17] #rimapi #fork Create RimBob-compatible RIMAPI fork for safe write endpoints.
 - [ ] [2026-05-17] #rimapi #assisted After the RIMAPI fork lands, verify Food uses safe unforbid apply end to end.
 - [ ] [2026-05-17] #rimapi #harvest Add `is_harvestable` / `growth_progress` to `/map/plants` after migrating to a RIMAPI fork.
-- [ ] [2026-05-16] #rimapi #assisted Validate companion safe `/api/v1/order/unforbid` endpoint and remove RimAI fallback caveat.
+- [ ] [2026-05-16] #rimapi #assisted Validate companion safe `/api/v1/order/unforbid` endpoint and remove RimBob fallback caveat.
 - [ ] [2026-05-16] #skill #debt Fix local skill validator Python dependency.
 - [ ] [2026-05-16] #replay #mayor Decide whether legacy `/api/agenda/manual` should emit replay records or be retired.
 - [ ] [2026-05-16] #dashboard #markdown Add restricted player-facing Markdown rendering when advice bodies or guide snippets need rich formatting; keep raw/debug views unrendered.
 - [x] [2026-05-15] #food #advice #schema Collapse Food advice into one priority-tagged step path. [plan](.plans/collapse-food-advice-steps.md)
 - [ ] [2026-05-15] #idea #llm #rag Provide ministers with more RAG knowledge.
 - [x] [2026-05-14] #doc #debt Avoid over-specifying code-documented details in design docs.
-- [x] [2026-05-14] #spike #backend #debt Review RimAI C# codebase and propose refactorings. [plan](.plans/recommended-refactorings.md)
-- [ ] [2026-05-14] #debt #doc Rename RimAI to RimBob.
+- [x] [2026-05-14] #spike #backend #debt Review RimBob C# codebase and propose refactorings. [plan](.plans/recommended-refactorings.md)
+- [x] [2026-05-14] #debt #doc Complete the RimBob product rename.
+- [ ] [2026-05-17] #git #debt Migrate dirty legacy worktrees after their active slices land.
 - [ ] [2026-05-09] #spike #llm #test Benchmark optional TOON prompt encoding. [plan](Docs/plans/toon-prompt-encoding-spike.md)
 - [ ] [2026-05-09] #dashboard #ux Add button to dashboard "what was sent" / prompt-introspection screen that copies the full system + user prompt to the clipboard. Pairs with the manual-fallback flow (`logs/mayor-prompt-latest.md`, `POST /api/agenda/manual`) for when Gemini is rate-limited.
 
@@ -84,7 +85,7 @@
 - [ ] Add scope docs for Industry, Medical, Research, and Economy once their first slices are scheduled.
 - [x] Food minister M3 prep: replace remaining code-facing Agriculture names with Food where the M3 runtime touched it (`FoodBriefing`, `MinisterOfFood`, fixtures under `Src/Tests/Food/Fixtures/`).
 - [ ] Per-minister `advice_type` enums - define in each minister's session.
-- [ ] Per-minister scope docs (`RimAI.Ministers/<name>/scope.md`) - write after first slice ships.
+- [ ] Per-minister scope docs (`RimBob.Ministers/<name>/scope.md`) - write after first slice ships.
 - [ ] Construction: placement / layout strategy (Base Layout Minister candidate).
 - [ ] Define the minimum viable CoS arbitration rule set for M4: dedupe same-issue flags, choose lead framing when multiple ministers point at the same problem, and decide when a flag becomes a tactical alert versus Mayor-digest input.
 - [ ] Decide whether Medical should stay coupled to Welfare in the rollout plan or become its own slice after Welfare.
@@ -121,16 +122,16 @@ See [`Docs/DESIGN.md`](Docs/DESIGN.md) decision log and Open Questions sections 
 - [x] Initial DESIGN.md written.
 - [x] Strategic plan Y1-Y2 guide written (`Docs/guides/strategic-plan-y1-y2.md`).
 - [x] Mayor system prompt drafted; rewritten for Agenda schema in M1 W4.
-- [x] Split `RimAI.Agents` into `RimAI.LLM` + `RimAI.Ministers`.
+- [x] Split `RimBob.Agents` into `RimBob.LLM` + `RimBob.Ministers`.
 - [x] HTN design discussed and documented (now deferred - Auto epic).
 - [x] Minister shape (rules + escalation + optimizer) decided.
 - [x] No-modules decision made.
 - [x] No-direct-minister-comms rule established.
 - [x] **Pivot to assisted-gameplay advisor** - DESIGN, ROADMAP, architecture, ministers, communication, mayor docs rewritten; planning + labor marked deferred; new `design/dashboard.md` and `design/advice.md` created; CLAUDE.md routing table updated.
 - [x] **M0 - Repo lit.** Solution + projects, RIMAPI handshake, Google.GenAI ping, Dashboard scaffold, Host with `/api/health` + SSE skeleton, localhost-only bind, CI building both .NET and Dashboard.
-- [x] **M1 W1 - Core types.** `MayorAgenda`, `AgendaPriority`, `AgendaPriorityStatus`, `MayorPosture`, `AutonomyMode`, `FeedbackAction`, `FeedbackEvent`, `MayorAgendaInput` under `RimAI.Core.Advice`. Snake-case wire format.
-- [x] **M1 W2 - Mayor minister.** `RimAI.Ministers` project with `MayorAgendaRules` (4 agenda directives) and `Mayor` skeleton implementing `IMinister`.
-- [x] **M1 W3 - Coordination.** `RimAI.Coordination` project: `AdviceBus`, `AgendaStore` (30-day ring), `DayTickOrchestrator` (`BackgroundService` polling `Tick / 60000`), `FlagChannel` stub.
+- [x] **M1 W1 - Core types.** `MayorAgenda`, `AgendaPriority`, `AgendaPriorityStatus`, `MayorPosture`, `AutonomyMode`, `FeedbackAction`, `FeedbackEvent`, `MayorAgendaInput` under `RimBob.Core.Advice`. Snake-case wire format.
+- [x] **M1 W2 - Mayor minister.** `RimBob.Ministers` project with `MayorAgendaRules` (4 agenda directives) and `Mayor` skeleton implementing `IMinister`.
+- [x] **M1 W3 - Coordination.** `RimBob.Coordination` project: `AdviceBus`, `AgendaStore` (30-day ring), `DayTickOrchestrator` (`BackgroundService` polling `Tick / 60000`), `FlagChannel` stub.
 - [x] **M1 W4 - LLM call.** `mayor.system.md` rewritten; `PromptBuilder`; `LlmClient.CallMayorAsync` with `responseMimeType=application/json`; Mayor wired end-to-end (briefing -> rules -> LLM -> store -> bus) with retry-on-cap-violation.
 - [x] **M1 W5 - Host wiring.** DI registrations; SSE handler at `/api/advice/stream` (replay-on-connect, drop-oldest channel, 15s ping); `/api/agenda/{latest,history}` REST; `/api/autonomy` placeholder.
 - [x] **M1 W6 - Dashboard.** Agenda tab renders the live SSE feed: posture badges, state-of-the-union, what-changed, ranked short-term cards with delta badges (`NEW`/`UPDATED`/`DONE`/`DEFERRED`), long-term list. Feedback buttons disabled.
@@ -138,7 +139,7 @@ See [`Docs/DESIGN.md`](Docs/DESIGN.md) decision log and Open Questions sections 
 - [x] **M1 W8 - Doc reconciliation.** ROADMAP M1 + this file rewritten to reflect Agenda pivot; agenda.md / dashboard.md SSE envelope simplified to `data: {full MayorAgenda}`.
 - [x] **M1.5 - Live operability.** Wake Mayor on Host startup, periodic `IngestionDispatcher` calls in `DayTickOrchestrator`, `state_of_the_union` per-category dict, `MayorAgenda.GeneratedAt`, `MayorStatus`, `/api/colony/snapshot`, `/api/status`, `/api/mayor/prompt`, manual cabinet run control, dark command-center dashboard with sidebar telemetry.
 - [x] **RIMAPI gap closure.** `ColonistDetailedDto` rewritten for actual nested v2 shape (`pawn` + `detailes.work_info` + `detailes.medical_info`) - names, ages, mood, skills, traits, current_job now populate. New `/resources/summary` and `/research/progress` endpoints in `RimApiClient` feed `ResourceSummary` + `ResearchInfo` aggregates. Mayor system prompt teaches the model what `food.estimated_days_of_food == null` means (request stockpile audit, do not assume starvation). `Docs/design/RimAPI.md` annotated with verified shapes for the three controllers.
-- [x] **M2 - Grounded reasoning / RAG.** `RimAI.Knowledge` now has an in-process cosine store, markdown guide ingestion from `Docs/guides`, Gemini embedding + disk cache under `var/embeddings`, Mayor retrieval via `guide_context[]`, server-stamped `MayorAgenda.guide_citations[]`, `AgendaPriority.cite_ids`, and RAG-vs-no-RAG fixture snapshots under `Src/Tests/Mayor/Fixtures/rag-vs-norag/`. Tier 1 evergreen prompt distillation and polished dashboard footnote rendering are follow-ups.
+- [x] **M2 - Grounded reasoning / RAG.** `RimBob.Knowledge` now has an in-process cosine store, markdown guide ingestion from `Docs/guides`, Gemini embedding + disk cache under `var/embeddings`, Mayor retrieval via `guide_context[]`, server-stamped `MayorAgenda.guide_citations[]`, `AgendaPriority.cite_ids`, and RAG-vs-no-RAG fixture snapshots under `Src/Tests/Mayor/Fixtures/rag-vs-norag/`. Tier 1 evergreen prompt distillation and polished dashboard footnote rendering are follow-ups.
 - [x] **Advice steps and flag resource requests.** `AdviceItem.steps[]` is the player-facing action path, while `AgentFlag.Requests` keeps the shared `ResourceRequest` schema for cross-minister needs without executing allocation in MVP.
 
 ---

@@ -1,6 +1,6 @@
-using RimAI.Core.Advice;
+using RimBob.Core.Advice;
 
-namespace RimAI.Host.Endpoints;
+namespace RimBob.Host.Endpoints;
 
 /// <summary>
 /// Per-minister autonomy dial. M1 hard-codes everyone to Suggest; PUT is a 200

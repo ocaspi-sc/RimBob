@@ -1,6 +1,6 @@
-using RimAI.Core.Briefings;
+using RimBob.Core.Briefings;
 
-namespace RimAI.Knowledge;
+namespace RimBob.Knowledge;
 
 public sealed class FoodRagQueryBuilder : IRagQueryBuilder<FoodBriefing>
 {

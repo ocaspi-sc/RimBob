@@ -1,11 +1,11 @@
 ---
 name: run-minister-using-codex-subagent
-description: Run a RimAI minister's LLM/manual fallback using a Codex subagent instead of Gemini. Use when the user explicitly asks to generate minister output with a Codex subagent, bypass Gemini quota/network failures, run the manual LLM step, or paste/ingest manually generated minister advice through `/api/ministers/{minister}/llm-output/manual`.
+description: Run a RimBob minister's LLM/manual fallback using a Codex subagent instead of Gemini. Use when the user explicitly asks to generate minister output with a Codex subagent, bypass Gemini quota/network failures, run the manual LLM step, or paste/ingest manually generated minister advice through `/api/ministers/{minister}/llm-output/manual`.
 ---
 
 # Run Minister Using Codex Subagent
 
-Generate a minister LLM response with a Codex subagent, ingest it through RimAI's manual raw-output endpoint, and verify the dashboard sees it. This is a developer fallback for provider failures; it remains suggest-only and must not call RIMAPI write endpoints.
+Generate a minister LLM response with a Codex subagent, ingest it through RimBob's manual raw-output endpoint, and verify the dashboard sees it. This is a developer fallback for provider failures; it remains suggest-only and must not call RIMAPI write endpoints.
 
 ## Preconditions
 
@@ -24,7 +24,7 @@ Generate a minister LLM response with a Codex subagent, ingest it through RimAI'
      ```
    - If Host is not running, prefer:
      ```powershell
-     powershell.exe -ExecutionPolicy Bypass -File .\run-rimai.ps1 -SkipDashboardBuild -NoRestore
+     powershell.exe -ExecutionPolicy Bypass -File .\run-rimbob.ps1 -SkipDashboardBuild -NoRestore
      ```
 
 2. Capture the exact minister inputs.
@@ -93,11 +93,11 @@ Generate a minister LLM response with a Codex subagent, ingest it through RimAI'
 If a sandboxed `Start-Process` child exits with the shell job, start the Host through a persistent Windows process after requesting approval if needed:
 
 ```powershell
-$cmd = '"C:\dev\RimAI\Src\ApiHost\bin\Debug\net9.0\RimAI.Host.exe"'
+$cmd = '"C:\dev\RimBob\Src\ApiHost\bin\Debug\net9.0\RimBob.Host.exe"'
 Invoke-CimMethod `
   -ClassName Win32_Process `
   -MethodName Create `
-  -Arguments @{ CommandLine = $cmd; CurrentDirectory = 'C:\dev\RimAI\Src\ApiHost' }
+  -Arguments @{ CommandLine = $cmd; CurrentDirectory = 'C:\dev\RimBob\Src\ApiHost' }
 ```
 
 After starting this way, always verify with a separate `GET /api/system/health` before posting.

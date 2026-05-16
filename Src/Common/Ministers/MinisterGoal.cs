@@ -1,4 +1,4 @@
-namespace RimAI.Core.Ministers;
+namespace RimBob.Core.Ministers;
 
 /// <summary>
 /// A goal emitted by a minister's rules layer or LLM. The HTN planner maps

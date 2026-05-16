@@ -1,7 +1,7 @@
 using System.Text.RegularExpressions;
-using RimAI.Core.Briefings;
+using RimBob.Core.Briefings;
 
-namespace RimAI.State.Parsing;
+namespace RimBob.State.Parsing;
 
 /// <summary>
 /// Best-effort parser for RIMAPI's datetime string ("5th of Aprimay, 5500, 14h").

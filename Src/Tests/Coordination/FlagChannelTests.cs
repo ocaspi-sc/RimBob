@@ -1,8 +1,8 @@
 using FluentAssertions;
-using RimAI.Coordination;
-using RimAI.Core.Ministers;
+using RimBob.Coordination;
+using RimBob.Core.Ministers;
 
-namespace RimAI.Tests.Coordination;
+namespace RimBob.Tests.Coordination;
 
 public sealed class FlagChannelTests
 {

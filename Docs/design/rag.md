@@ -1,4 +1,4 @@
-# RimAI - Knowledge Base and RAG
+# RimBob - Knowledge Base and RAG
 
 > **Living document.** See `AGENTS.md` for update rules.
 > This doc records retrieval policy and guide-corpus decisions. Exact classes,

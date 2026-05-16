@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
-using RimAI.Core.Advice;
+using RimBob.Core.Advice;
 
-namespace RimAI.Core.Ministers;
+namespace RimBob.Core.Ministers;
 
 /// <summary>
 /// Read-only strategic context ministers receive from the Mayor's current Agenda.

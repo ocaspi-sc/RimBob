@@ -4,21 +4,18 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <RootNamespace>RimBob.Coordination</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Common\RimAI.Core.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Google.GenAI" Version="1.6.1" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="prompts\**\*.md">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <ProjectReference Include="..\Common\RimBob.Core.csproj" />
+    <ProjectReference Include="..\StateStore\RimBob.State.csproj" />
+    <ProjectReference Include="..\LlmGateway\RimBob.LLM.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,4 +1,4 @@
-export interface RimAIStatus {
+export interface RimBobStatus {
   server: string;
   rimapi_reachable: boolean;
   llm_configured: boolean;

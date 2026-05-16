@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
-using RimAI.Core.Advice;
+using RimBob.Core.Advice;
 
-namespace RimAI.Core.Ministers;
+namespace RimBob.Core.Ministers;
 
 /// <summary>
 /// Cross-minister signal. Ministers emit flags to the FlagChannel; the Chief of

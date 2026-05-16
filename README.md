@@ -1,7 +1,7 @@
-# RimAI
+# RimBob
 
-RimAI is an assisted-gameplay advisor for RimWorld. The player keeps control of
-the colony; RimAI watches live game state from RIMAPI and surfaces strategic
+RimBob is an assisted-gameplay advisor for RimWorld. The player keeps control of
+the colony; RimBob watches live game state from RIMAPI and surfaces strategic
 suggestions through a local dashboard.
 
 The MVP is `Suggest` mode by default. Ministers emit advice and agendas; narrow
@@ -11,7 +11,7 @@ coverage are deferred until the later Auto epic.
 
 ## Current Shape
 
-- .NET 9 backend hosted by `RimAI.Host`
+- .NET 9 backend hosted by `RimBob.Host`
 - React + TypeScript dashboard served by the host
 - RIMAPI ingestion client for live RimWorld state
 - Mayor-first cabinet model that produces a living Agenda
@@ -63,7 +63,7 @@ $env:GEMINI_API_KEYS = "primary-key-here;secondary-key-here"
 
 ```json
 {
-  "RimAi": {
+  "RimBob": {
     "GeminiApiKeys": [
       "primary-key-here",
       "secondary-key-here"
@@ -76,16 +76,16 @@ $env:GEMINI_API_KEYS = "primary-key-here;secondary-key-here"
 
 Don't put keys in `appsettings.json` or `appsettings.Development.json` - both are tracked.
 
-Run RimAI and the dashboard with the helper script:
+Run RimBob and the dashboard with the helper script:
 
 ```powershell
-.\run-rimai.ps1
+.\run-rimbob.ps1
 ```
 
 The script installs dashboard dependencies with `npm.cmd ci` if
 `node_modules` is missing, builds the dashboard into `Src/ApiHost/wwwroot`,
-then starts `RimAI.Host` in a minimized taskbar window named `RimAI Server`.
-That window closes automatically when RimAI exits. Open the dashboard at:
+then starts `RimBob.Host` in a minimized taskbar window named `RimBob Server`.
+That window closes automatically when RimBob exits. Open the dashboard at:
 
 ```text
 http://localhost:5000
@@ -95,21 +95,21 @@ For a faster repeat run after dependencies and dashboard assets are already
 current:
 
 ```powershell
-.\run-rimai.ps1 -SkipDashboardBuild -NoRestore
+.\run-rimbob.ps1 -SkipDashboardBuild -NoRestore
 ```
 
 For debugging, or when an agent needs terminal output captured in the current
 shell, keep the server attached instead:
 
 ```powershell
-.\run-rimai.ps1 -Foreground
+.\run-rimbob.ps1 -Foreground
 ```
 
 If local PowerShell script execution is blocked on the machine, run it through
 an explicit process policy override:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\run-rimai.ps1
+powershell -ExecutionPolicy Bypass -File .\run-rimbob.ps1
 ```
 
 Manual equivalent:
@@ -138,7 +138,7 @@ npm.cmd run build
 Run the .NET test suite:
 
 ```powershell
-dotnet test Src/RimAI.sln
+dotnet test Src/RimBob.sln
 ```
 
 ## Design Docs

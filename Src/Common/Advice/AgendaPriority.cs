@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace RimAI.Core.Advice;
+namespace RimBob.Core.Advice;
 
 public sealed record AgendaPriority(
     [property: JsonPropertyName("id")]       string                 Id,

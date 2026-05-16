@@ -1,8 +1,8 @@
 using FluentAssertions;
-using RimAI.Coordination;
-using RimAI.LLM;
+using RimBob.Coordination;
+using RimBob.LLM;
 
-namespace RimAI.Tests.Coordination;
+namespace RimBob.Tests.Coordination;
 
 public sealed class ReplayCorpusRawOutputReaderTests
 {
@@ -73,7 +73,7 @@ public sealed class ReplayCorpusRawOutputReaderTests
     }
 
     private static string NewTempRoot() =>
-        Path.Combine(Path.GetTempPath(), "rimai-replay-raw-tests", Guid.NewGuid().ToString("N"));
+        Path.Combine(Path.GetTempPath(), "rimbob-replay-raw-tests", Guid.NewGuid().ToString("N"));
 
     private static void DeleteTempRoot(string root)
     {

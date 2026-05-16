@@ -1,9 +1,9 @@
 using Microsoft.Extensions.Logging;
-using RimAI.Core.Aggregates;
-using RimAI.Ingestion;
-using RimAI.Ingestion.Dtos;
+using RimBob.Core.Aggregates;
+using RimBob.Ingestion;
+using RimBob.Ingestion.Dtos;
 
-namespace RimAI.State;
+namespace RimBob.State;
 
 /// <summary>
 /// Pulls a full snapshot from RIMAPI and writes it into ColonyState aggregates.

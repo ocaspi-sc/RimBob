@@ -1,7 +1,7 @@
 using System.Net.Sockets;
-using RimAI.Ingestion;
+using RimBob.Ingestion;
 
-namespace RimAI.Host.Endpoints;
+namespace RimBob.Host.Endpoints;
 
 internal static class ManualTriggerErrorResults
 {
@@ -11,7 +11,7 @@ internal static class ManualTriggerErrorResults
         {
             result = Results.Problem(
                 title: "RimWorld is not running",
-                detail: "RimWorld is not running. Start RimWorld, load a colony, then run RimAI again.",
+                detail: "RimWorld is not running. Start RimWorld, load a colony, then run RimBob again.",
                 statusCode: StatusCodes.Status503ServiceUnavailable,
                 extensions: new Dictionary<string, object?>
                 {
