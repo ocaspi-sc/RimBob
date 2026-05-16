@@ -76,6 +76,10 @@ inputs and should not be inferred from prose.
 Labor requests must name a RimWorld work-tab type when possible. "Labor
 capacity" by itself is too vague for advice, logs, or future Auto wiring.
 
+Structured request fields should stay compact. `request` is a short noun
+phrase; `reason` is one short cause. Put explanatory prose in the advice body or
+rationale, not inside the structured leaf fields the dashboard scans.
+
 ### Suggested Actions
 
 `suggested_actions[]` are "do X" recommendations. They are distinct from
@@ -92,6 +96,10 @@ about changing an item's forbidden state.
 Each suggested action should carry an instruction. Avoid introducing generic
 `what` fields in new raw output; tolerant parsing may still repair older model
 payloads.
+
+Instructions should be one short imperative sentence. The player-facing body
+and rationale can explain why; action instructions should read like concise UI
+operations.
 
 Suggested actions may include an optional explicit `icon` ref. Emitters should
 use known defs only, such as a concrete item/building/crop def already present
@@ -119,12 +127,12 @@ an append-only feed. Each minister play cycle should publish its current active
 set as a minister-scoped snapshot. A successful empty snapshot means the
 minister currently has no active advice.
 
-Feeder snapshots may carry one player-facing current-state paragraph above the
+Feeder snapshots may carry one player-facing current-state summary above the
 advice items. That summary describes the whole minister read; it is not an
 `AdviceItem`, a resource request, or an executable action. For Food, this
-summary is briefing-derived so it stays factual about stores, growing areas,
-storage/kitchen state, and data gaps even when the LLM writes its own raw
-`state_summary`.
+summary is a compact briefing-derived bullet list so it stays factual about
+stores, growing areas, acquisition, storage/kitchen state, and data gaps even
+when the LLM writes its own raw `state_summary`.
 
 If a cycle fails before producing rules output or successful LLM output, keep
 the previous active snapshot rather than clearing it.

@@ -5,18 +5,24 @@ public static class FoodStateSummary
     public static string Build(FoodBriefing briefing)
     {
         if (!briefing.DataCoverage.HasLiveState)
-            return "Food has no live RimWorld state yet, so the zero counts in this briefing should be treated as unhydrated data rather than colony truth. Start RimWorld/RIMAPI and refresh before making food-chain decisions from this snapshot.";
-
-        return string.Join(" ", new[]
         {
-            BuildStoredFoodSentence(briefing),
-            BuildGrowingSentence(briefing),
-            BuildKitchenStorageSentence(briefing),
-            BuildDataGapSentence(briefing)
-        }.Where(sentence => !string.IsNullOrWhiteSpace(sentence)));
+            return FormatBullets([
+                "Live state: no live RimWorld state yet; zero counts are unhydrated data, not colony truth.",
+                "Refresh: start RimWorld/RIMAPI and refresh before making food-chain decisions."
+            ]);
+        }
+
+        return FormatBullets(new[]
+        {
+            BuildStoredFoodLine(briefing),
+            BuildGrowingLine(briefing),
+            BuildAcquisitionLine(briefing),
+            BuildKitchenStorageLine(briefing),
+            BuildDataGapLine(briefing)
+        }.Where(line => !string.IsNullOrWhiteSpace(line)));
     }
 
-    private static string BuildStoredFoodSentence(FoodBriefing briefing)
+    private static string BuildStoredFoodLine(FoodBriefing briefing)
     {
         List<string> stores = [];
         stores.Add(Plural(briefing.MealsCount, "meal"));
@@ -29,10 +35,10 @@ public static class FoodStateSummary
         {
             if (briefing.UnclassifiedFoodUnits > 0)
             {
-                return $"Food stores show {JoinList(stores)}{unclassifiedDetails}, but days-of-food cannot be estimated because the reported food units are not classified as meals or raw food.";
+                return $"Stores: {JoinList(stores)}{unclassifiedDetails}; days-of-food cannot be estimated because the reported food units are not classified as meals or raw food.";
             }
 
-            return $"Food stores show {JoinList(stores)}{unclassifiedDetails}, but days-of-food cannot be estimated because no usable nutrition signal is available.";
+            return $"Stores: {JoinList(stores)}; days-of-food cannot be estimated because no usable nutrition signal is available.";
         }
 
         float days = briefing.EstimatedDaysOfFood.Value;
@@ -44,17 +50,17 @@ public static class FoodStateSummary
             _ => "stable"
         };
 
-        return $"Food stores show {JoinList(stores)}{unclassifiedDetails}, about {days:F1} days for {Plural(briefing.ColonistCount, "colonist")}; the buffer is {posture}.";
+        return $"Stores: {JoinList(stores)}{unclassifiedDetails}; about {days:F1} days for {Plural(briefing.ColonistCount, "colonist")}; buffer {posture}.";
     }
 
-    private static string BuildGrowingSentence(FoodBriefing briefing)
+    private static string BuildGrowingLine(FoodBriefing briefing)
     {
         if (briefing.CropZoneSummaries.Count > 0)
         {
             string zones = string.Join("; ", briefing.CropZoneSummaries.Take(3).Select(FormatCropZone));
             int remaining = Math.Max(0, briefing.CropZoneSummaries.Count - 3);
             string suffix = remaining > 0 ? $"; plus {Plural(remaining, "more growing area")}" : "";
-            return $"Growing areas: {zones}{suffix}.";
+            return $"Crops: {zones}{suffix}.";
         }
 
         if (briefing.CropBreakdown.Count > 0)
@@ -62,16 +68,32 @@ public static class FoodStateSummary
             string crops = string.Join("; ", briefing.CropBreakdown.Take(3).Select(FormatCropBreakdown));
             int remaining = Math.Max(0, briefing.CropBreakdown.Count - 3);
             string suffix = remaining > 0 ? $"; plus {Plural(remaining, "more crop")}" : "";
-            return $"Growing areas: {crops}{suffix}.";
+            return $"Crops: {crops}{suffix}.";
         }
 
         if (briefing.ReadyToHarvest > 0)
-            return $"Growing areas: {Plural(briefing.ReadyToHarvest, "crop tile")} ready to harvest, but crop-zone detail is not available.";
+            return $"Crops: {Plural(briefing.ReadyToHarvest, "crop tile")} ready to harvest; crop-zone detail is not available.";
 
-        return "Growing areas: no crop signal is visible in this briefing.";
+        return "Crops: no crop signal is visible in this briefing.";
     }
 
-    private static string BuildKitchenStorageSentence(FoodBriefing briefing)
+    private static string BuildAcquisitionLine(FoodBriefing briefing)
+    {
+        List<string> parts =
+        [
+            Plural(briefing.WildHarvestCandidates, "wild harvest candidate"),
+            $"{Plural(briefing.WildAnimalCount, "wild animal")} visible"
+        ];
+        if (briefing.WildHuntTargets.Count > 0 && (briefing.EstimatedDaysOfFood ?? 0f) < 20f)
+        {
+            WildHuntTarget target = briefing.WildHuntTargets[0];
+            parts.Add($"{Plural(target.Count, LabelAnimal(target.Def))} hunt targets");
+        }
+
+        return $"Acquisition: {string.Join("; ", parts)}.";
+    }
+
+    private static string BuildKitchenStorageLine(FoodBriefing briefing)
     {
         List<string> parts = [];
         parts.Add(Plural(briefing.Kitchen.CookingBuildings, "cooking station"));
@@ -80,20 +102,10 @@ public static class FoodStateSummary
 
         if (briefing.RawFoodCount > 0 && briefing.MealsCount < briefing.ColonistCount * 2)
             parts.Add("raw food is waiting on cooking throughput");
-        if (briefing.WildHarvestCandidates > 0)
-            parts.Add($"{briefing.WildHarvestCandidates} wild harvest candidates");
-        if (briefing.WildHuntTargets.Count > 0 && (briefing.EstimatedDaysOfFood ?? 0f) < 20f)
-        {
-            WildHuntTarget target = briefing.WildHuntTargets[0];
-            parts.Add($"{Plural(target.Count, LabelAnimal(target.Def))} hunt targets");
-        }
-        if (briefing.WildAnimalCount > 0 && briefing.WildHuntTargets.Count == 0 && (briefing.EstimatedDaysOfFood ?? 0f) < 20f)
-            parts.Add($"{briefing.WildAnimalCount} wild animals may be food targets");
-
         return $"Kitchen/storage: {string.Join("; ", parts)}.";
     }
 
-    private static string BuildDataGapSentence(FoodBriefing briefing)
+    private static string BuildDataGapLine(FoodBriefing briefing)
     {
         IReadOnlyList<string> gaps = briefing.MissingBriefingSignals
             .Concat(briefing.UnimplementedBriefingSignals)
@@ -106,6 +118,9 @@ public static class FoodStateSummary
             ? ""
             : $"Confidence gaps: {string.Join(", ", gaps)}.";
     }
+
+    private static string FormatBullets(IEnumerable<string> lines) =>
+        string.Join("\n", lines.Select(line => $"- {line}"));
 
     private static string FormatUnclassifiedDetails(FoodBriefing briefing)
     {
@@ -138,7 +153,7 @@ public static class FoodStateSummary
 
     private static string FormatCropZone(FoodCropZoneSummary crop)
     {
-        string zone = string.IsNullOrWhiteSpace(crop.ZoneId) ? "unlabeled area" : crop.ZoneId;
+        string zone = FormatZoneLabel(crop.ZoneId);
         string ready = crop.ReadyCount > 0 ? $", {Plural(crop.ReadyCount, "tile")} ready" : "";
         string proximity = string.IsNullOrWhiteSpace(crop.Proximity) ? "" : $", {crop.Proximity}";
         return $"{crop.Count} {LabelCrop(crop.Def)} plants in {zone} at {crop.AverageGrowth:P0} growth{ready}{proximity}";
@@ -146,6 +161,14 @@ public static class FoodStateSummary
 
     private static string FormatCropBreakdown(FoodCropSummary crop) =>
         $"{crop.Count} {LabelCrop(crop.Def)} plants at {crop.AverageGrowth:P0} growth";
+
+    private static string FormatZoneLabel(string? zoneId)
+    {
+        if (string.IsNullOrWhiteSpace(zoneId))
+            return "unlabeled area";
+
+        return zoneId.All(char.IsDigit) ? $"zone {zoneId}" : zoneId;
+    }
 
     private static string LabelCrop(string def)
     {

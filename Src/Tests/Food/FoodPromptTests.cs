@@ -32,9 +32,14 @@ public sealed class FoodPromptTests
 
         builder.FoodSystemPrompt.Should().Contain("\"state_summary\"");
         builder.FoodSystemPrompt.Should().Contain("Always emit state_summary before advice");
-        builder.FoodSystemPrompt.Should().Contain("high-level current-state paragraph");
+        builder.FoodSystemPrompt.Should().Contain("high-level current-state bullet list");
         builder.FoodSystemPrompt.Should().Contain("near-term, actionable, currently possible advice");
         builder.FoodSystemPrompt.Should().Contain("priority: low, medium, high, or critical");
+        builder.FoodSystemPrompt.Should().Contain("Keep structured leaf strings terse");
+        builder.FoodSystemPrompt.Should().Contain("Titles are 3-7 words");
+        builder.FoodSystemPrompt.Should().Contain("request is a short noun phrase");
+        builder.FoodSystemPrompt.Should().Contain("instruction is one short imperative sentence");
+        builder.FoodSystemPrompt.Should().Contain("Put explanation in body and rationale");
         builder.FoodSystemPrompt.Should().Contain("kind and instruction fields");
         builder.FoodSystemPrompt.Should().Contain("mark_hunt");
         builder.FoodSystemPrompt.Should().Contain("unforbid");

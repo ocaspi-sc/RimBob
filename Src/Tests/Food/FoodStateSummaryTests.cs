@@ -14,7 +14,7 @@ public sealed class FoodStateSummaryTests
             RawFoodCount = 14,
             CropZoneSummaries =
             [
-                new FoodCropZoneSummary("Plant_Rice", "growing:1", 12, 0.56f, 3, "nearby to kitchen"),
+                new FoodCropZoneSummary("Plant_Rice", "2", 12, 0.56f, 3, "nearby to kitchen"),
                 new FoodCropZoneSummary("Plant_Corn", "growing:2", 8, 0.22f, 0, "far from kitchen")
             ],
             Kitchen = new FoodKitchenSummary(1, 1, true, true),
@@ -26,18 +26,21 @@ public sealed class FoodStateSummaryTests
 
         string summary = FoodStateSummary.Build(briefing);
 
+        summary.Should().StartWith("- Stores:");
         summary.Should().Contain("7 meals");
         summary.Should().Contain("14 raw food");
         summary.Should().Contain("about 12.0 days for 3 colonists");
-        summary.Should().Contain("Growing areas:");
-        summary.Should().Contain("12 rice plants in growing:1");
+        summary.Should().Contain("\n- Crops:");
+        summary.Should().Contain("12 rice plants in zone 2");
         summary.Should().Contain("3 tiles ready");
         summary.Should().Contain("8 corn plants in growing:2");
-        summary.Should().Contain("Kitchen/storage:");
+        summary.Should().Contain("\n- Acquisition:");
+        summary.Should().Contain("0 wild harvest candidates");
+        summary.Should().Contain("2 hares hunt targets");
+        summary.Should().Contain("\n- Kitchen/storage:");
         summary.Should().Contain("1 cooking station");
         summary.Should().Contain("1 cooler");
         summary.Should().Contain("1 stockpile zone / 20 stockpile cells");
-        summary.Should().Contain("2 hares hunt targets");
     }
 
     [Fact]
@@ -78,5 +81,23 @@ public sealed class FoodStateSummaryTests
         summary.Should().Contain("8 unclassified food units");
         summary.Should().Contain("7 forbidden packaged survival meals at (62,0,219)");
         summary.Should().Contain("1 forbidden squirrel (dead) at (83,0,38)");
+    }
+
+    [Fact]
+    public void Build_DefaultStateUsesBullets()
+    {
+        string summary = FoodStateSummary.Build(FoodRulesTests.Briefing(12f) with
+        {
+            DataCoverage = new FoodDataCoverage(
+                HasPlantPositions: false,
+                HasAnimalPositions: false,
+                HasZoneCells: false,
+                HasBuildingPositions: false,
+                HasWorkPriorities: false,
+                HasTradeAvailability: false)
+        });
+
+        summary.Should().StartWith("- Live state:");
+        summary.Should().Contain("\n- Refresh:");
     }
 }
