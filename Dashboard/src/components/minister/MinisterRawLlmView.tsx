@@ -1,16 +1,27 @@
 import { fetchRawLlmOutput } from '../../api/ministers';
 import type { ScopeConfig } from '../../dashboard/scopes';
+import type { MinisterTrace, SystemHealth } from '../../types/system';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { DisclosureSection } from '../shared/DisclosureSection';
 import { EmptyState } from '../shared/EmptyState';
 import { JsonTree, tryParseJson } from '../shared/JsonTree';
 
-export function MinisterRawLlmView({ scope }: { scope: ScopeConfig }) {
+export function MinisterRawLlmView({
+  scope,
+  systemHealth,
+}: {
+  scope: ScopeConfig;
+  systemHealth: SystemHealth | null;
+}) {
+  const latestTrace = findTrace(systemHealth, scope);
+  const traceKey = latestTrace
+    ? `${latestTrace.startedAt}|${latestTrace.completedAt ?? ''}|${latestTrace.status}`
+    : 'no-trace';
   const output = useAsyncResource(
     signal => scope.status === 'live'
       ? fetchRawLlmOutput(scope.key, signal)
       : Promise.resolve(null),
-    [scope.key, scope.status],
+    [scope.key, scope.status, traceKey],
   );
 
   if (scope.status !== 'live') {
@@ -29,7 +40,13 @@ export function MinisterRawLlmView({ scope }: { scope: ScopeConfig }) {
     );
   }
 
+  const stale = output.data.status !== 'not_seen_yet' && isOlderThanTrace(output.data.capturedAt, latestTrace);
+
   if (output.data.status === 'not_seen_yet') {
+    const noOutputReason = latestTrace
+      ? `${scope.label}'s latest run ${formatTraceTime(latestTrace)} did not record an LLM response. It may have stayed on the rules path or failed before provider text arrived.`
+      : `${scope.label} has not recorded an LLM response since this Host process started.`;
+
     return (
       <div className="minister-view raw-llm-view">
         <header className="view-heading">
@@ -39,7 +56,7 @@ export function MinisterRawLlmView({ scope }: { scope: ScopeConfig }) {
         </header>
 
         <EmptyState code="NO RAW OUTPUT YET">
-          {scope.label} has not recorded an LLM response since this Host process started.
+          {noOutputReason}
         </EmptyState>
       </div>
     );
@@ -60,10 +77,16 @@ export function MinisterRawLlmView({ scope }: { scope: ScopeConfig }) {
         <span>{output.data.provider}</span>
         <span>{output.data.model}</span>
         <span>{apiKeyLabel}</span>
-        <span>{output.data.status.replace(/_/g, ' ')}</span>
+        <span>{stale ? 'stale' : output.data.status.replace(/_/g, ' ')}</span>
         <span>{output.data.latencyMs.toLocaleString()} ms</span>
         <span>{new Date(output.data.capturedAt).toLocaleString()}</span>
       </div>
+
+      {stale && latestTrace && (
+        <EmptyState code="STALE RAW OUTPUT">
+          {`Latest ${scope.label} run ${formatTraceTime(latestTrace)} did not record a newer LLM response. Showing the previous raw response captured ${new Date(output.data.capturedAt).toLocaleString()}.`}
+        </EmptyState>
+      )}
 
       <DisclosureSection title="📄 Raw response" defaultOpen meta={`${output.data.text.length.toLocaleString()} chars`}>
         {parsed === undefined ? (
@@ -87,11 +110,38 @@ export function MinisterRawLlmView({ scope }: { scope: ScopeConfig }) {
             parse_mode: output.data.parseMode,
             system_prompt_chars: output.data.systemPromptChars,
             user_prompt_chars: output.data.userPromptChars,
+            latest_run_started_at: latestTrace?.startedAt ?? null,
+            latest_run_completed_at: latestTrace?.completedAt ?? null,
+            latest_run_status: latestTrace?.status ?? null,
+            stale_vs_latest_run: stale,
           }}
         />
       </DisclosureSection>
     </div>
   );
+}
+
+function findTrace(systemHealth: SystemHealth | null, scope: ScopeConfig): MinisterTrace | null {
+  return systemHealth?.traces.find(trace =>
+    trace.minister.toLowerCase() === scope.label.toLowerCase() ||
+    trace.minister.toLowerCase() === scope.key.toLowerCase()
+  ) ?? null;
+}
+
+function isOlderThanTrace(capturedAt: string, trace: MinisterTrace | null): boolean {
+  if (!trace) return false;
+
+  const capturedMs = Date.parse(capturedAt);
+  const traceStartedMs = Date.parse(trace.startedAt);
+  if (!Number.isFinite(capturedMs) || !Number.isFinite(traceStartedMs)) return false;
+
+  return capturedMs < traceStartedMs;
+}
+
+function formatTraceTime(trace: MinisterTrace): string {
+  const at = trace.completedAt ?? trace.startedAt;
+  const label = trace.completedAt ? 'completed at' : 'started at';
+  return `${label} ${new Date(at).toLocaleString()} (${trace.status})`;
 }
 
 function formatApiKey(label: string | null, index: number | null): string {

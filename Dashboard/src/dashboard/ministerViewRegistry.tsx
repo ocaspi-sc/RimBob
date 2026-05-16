@@ -31,7 +31,7 @@ export interface MinisterViewDefinition {
 const ministerViewRenderers: Record<MinisterViewKey, MinisterViewRenderer> = {
   prompt: ({ scope }) => <MinisterPromptView scope={scope} />,
   briefing: ({ scope }) => <MinisterBriefingView scope={scope} />,
-  raw_llm: ({ scope }) => <MinisterRawLlmView scope={scope} />,
+  raw_llm: ({ scope, systemHealth }) => <MinisterRawLlmView scope={scope} systemHealth={systemHealth} />,
   rag: ({ agenda, scope, systemHealth }) => (
     <MinisterRagView scope={scope} agenda={agenda} systemHealth={systemHealth} />
   ),
