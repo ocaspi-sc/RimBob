@@ -8,6 +8,7 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 
 - Read `Docs/DESIGN.md`, `HumanTodo.md`, and the relevant focus doc before changing files.
 - When the user asks conceptual, design, "should we", "why", or "what about" questions, answer/review first. Do not rush to implementation unless clearly asked.
+- If a prompt combines questions and actions, make sure to answer all questions first, then continue to actions (unless my questions undermine your confidence)
 - Prefer short concise answers, but never skip the important details!
   - e.g. just say All tests passed instead of reporting commands used
 - Prefer concise bullets for operational summaries when they improve scan speed.
@@ -26,7 +27,8 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 
 ## GIT
 
-- C:\dev\RimAI should always stay on master branch
+- C:\dev\RimAI should always stay on master branch.
+- The only unstaged changes on C:\dev\RimAI should be manual edits by the human.
 - When changing code, Make sure it's in a worktree + feature branch that's correct for current task. if not, create a worktree first based off current master and work there, using commits generously. When finished, The usual MO is to squash the worktree and commit the feature into master so it lands, then close the worktree.
 - When doing git operations, if there's a lock file or another session appears to be writing or committing, wait briefly and retry the narrow operation; do not force broad Git actions.
 
@@ -74,6 +76,8 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 - Player Accept / Dismiss / Pushback is the explicit refinement signal. Implicit state-diff feedback is out of MVP.
 - Dashboard and Host are localhost-only. Host binds `127.0.0.1`, never `0.0.0.0`.
 - Deferred Auto epic: HTN planner, bulletin board, Labor solver, RIMAPI write coverage, and "only Labor touches pawn allocation." Do not implement before M7.
+- Dashboard is for debugging. it should reflect exact state.
+- When adding new features, note how it should be reflected in the dashboard. maybe suggest a new panel.
 
 ---
 
