@@ -9,6 +9,7 @@ public static class FoodBriefingDerivation
 {
     private const int QualifiedSkillLevel = 6;
     private const int CoolerAdjacentDistanceCells = 12;
+    private static readonly IReadOnlyList<string> CropHarvestThingDefs = ["RawRice", "RawPotatoes", "RawCorn"];
 
     public static FoodBriefing Compute(ColonyState s, long briefingVersion = 0)
     {
@@ -67,6 +68,7 @@ public static class FoodBriefingDerivation
         )
         {
             GrowingTerrain = DeriveGrowingTerrain(s.Terrain.Value),
+            CropHarvestNutritionByDef = DeriveCropHarvestNutrition(s.ThingDefs.Value),
             UnclassifiedFoodItems = food.UnclassifiedFoodItems
         };
     }
@@ -301,6 +303,21 @@ public static class FoodBriefingDerivation
             BestFertility: allBands[0].Fertility,
             AverageFertility: weightedFertility,
             FertilityBands: summaryBands);
+    }
+
+    private static IReadOnlyDictionary<string, float> DeriveCropHarvestNutrition(ThingDefRegistry thingDefs)
+    {
+        Dictionary<string, float> nutritionByDef = new(StringComparer.OrdinalIgnoreCase);
+        foreach (string harvestedDef in CropHarvestThingDefs)
+        {
+            if (thingDefs.DefsByName.TryGetValue(harvestedDef, out ThingDefRecord? def) &&
+                def.Nutrition > 0f)
+            {
+                nutritionByDef[harvestedDef] = def.Nutrition;
+            }
+        }
+
+        return nutritionByDef;
     }
 
     private static FoodDataCoverage DeriveDataCoverage(ColonyState s, FoodItemClassification food) =>

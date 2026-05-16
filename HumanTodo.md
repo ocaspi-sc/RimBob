@@ -48,6 +48,7 @@
 
 - [x] Add deterministic Food crop-yield math (`FoodCropMath`/candidate table) so rules can choose rice/potato/corn from grow time, nutrition per tile, fertility sensitivity, days to winter, current food buffer, and terrain fertility; exact grow-zone placement remains deferred. [plan](.plans/deterministic-crop-yield-math.md)
 - [x] Expose computed crop candidates directly to Food LLM escalation when crop choice remains ambiguous.
+- [x] Use def-backed harvest nutrition for Food crop candidate projections when `/def/all` exposes raw crop nutrition.
 - [ ] Add polished guide-citation footnotes on feeder memo cards.
 - [ ] Add MVP Assisted Apply for allowlisted player-confirmed steps (`unforbid`, `mark_harvest` first): backend executor, validation/read-back, dashboard Apply/result state.
 - [x] Add durable Food decision/replay corpus persistence so M6 refinement can compare before/after outputs on historic inputs, not just fixtures.

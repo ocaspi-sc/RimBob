@@ -154,6 +154,7 @@ public sealed class MinisterOfFood(
                 CropDef: candidate.CropDef,
                 Label: candidate.Label,
                 Tiles: candidate.Tiles,
+                HarvestNutrition: candidate.HarvestNutrition,
                 GrowDays: candidate.GrowDays,
                 ProjectedDaysAdded: candidate.ProjectedDaysAdded,
                 FitsSeason: candidate.FitsSeason,

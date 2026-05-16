@@ -99,6 +99,24 @@ public sealed class FoodBriefingDerivationTests
     }
 
     [Fact]
+    public void Compute_CarriesKnownCropHarvestNutritionFromThingDefs()
+    {
+        ColonyState s = StateWithColonists(1);
+        s.ThingDefs.Update(new ThingDefRegistry(new Dictionary<string, ThingDefRecord>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["RawRice"] = new("RawRice", "rice", "Item", "ThingWithComps", true, false, false, false, 0.045f, 75),
+            ["RawCorn"] = new("RawCorn", "corn", "Item", "ThingWithComps", true, false, false, false, 0.08f, 75),
+            ["Steel"] = new("Steel", "steel", "Item", "ThingWithComps", true, false, false, false, 0f, 75)
+        }));
+
+        FoodBriefing b = FoodBriefingDerivation.Compute(s);
+
+        b.CropHarvestNutritionByDef.Should().Contain("RawRice", 0.045f);
+        b.CropHarvestNutritionByDef.Should().Contain("RawCorn", 0.08f);
+        b.CropHarvestNutritionByDef.Should().NotContainKey("Steel");
+    }
+
+    [Fact]
     public void Compute_StoredFood_ExplainsForbiddenMapFoodRemainder()
     {
         ColonyState s = StateWithColonists(1);

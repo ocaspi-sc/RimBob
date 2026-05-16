@@ -92,6 +92,7 @@ public sealed record FoodPromptCropCandidate(
     [property: JsonPropertyName("crop_def")] string CropDef,
     [property: JsonPropertyName("label")] string Label,
     [property: JsonPropertyName("tiles")] int Tiles,
+    [property: JsonPropertyName("harvest_nutrition")] float HarvestNutrition,
     [property: JsonPropertyName("grow_days")] float GrowDays,
     [property: JsonPropertyName("projected_days_added")] float ProjectedDaysAdded,
     [property: JsonPropertyName("fits_season")] bool FitsSeason,

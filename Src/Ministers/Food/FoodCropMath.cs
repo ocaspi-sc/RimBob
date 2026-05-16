@@ -17,6 +17,7 @@ public sealed record FoodCropCandidate(
     float GrowDays,
     float? TerrainFertility,
     int HarvestYield,
+    float HarvestNutrition,
     int Tiles,
     float ProjectedNutrition,
     float ProjectedDaysAdded,
@@ -58,7 +59,8 @@ public static class FoodCropMath
         int tiles = TileRequest(briefing);
         float? terrainFertility = SelectTerrainFertility(briefing.GrowingTerrain, tiles);
         float growDays = AdjustedGrowDays(profile, terrainFertility);
-        float projectedNutrition = tiles * profile.HarvestYield * FoodNutrition.NutritionPerRawFood;
+        float harvestNutrition = HarvestNutrition(profile, briefing.CropHarvestNutritionByDef);
+        float projectedNutrition = tiles * profile.HarvestYield * harvestNutrition;
         float projectedDaysAdded = briefing.ColonistCount > 0
             ? projectedNutrition / (FoodNutrition.NutritionPerColonistPerDay * briefing.ColonistCount)
             : 0f;
@@ -94,6 +96,7 @@ public static class FoodCropMath
             GrowDays: growDays,
             TerrainFertility: terrainFertility,
             HarvestYield: profile.HarvestYield,
+            HarvestNutrition: harvestNutrition,
             Tiles: tiles,
             ProjectedNutrition: projectedNutrition,
             ProjectedDaysAdded: projectedDaysAdded,
@@ -211,6 +214,17 @@ public static class FoodCropMath
             return 0.25f;
 
         return 0f;
+    }
+
+    private static float HarvestNutrition(
+        FoodCropProfile profile,
+        IReadOnlyDictionary<string, float> nutritionByDef)
+    {
+        if (nutritionByDef.TryGetValue(profile.HarvestedThingDef, out float nutrition) &&
+            nutrition > 0f)
+            return nutrition;
+
+        return FoodNutrition.NutritionPerRawFood;
     }
 
     private static float? SelectTerrainFertility(FoodGrowingTerrainSummary terrain, int tiles)

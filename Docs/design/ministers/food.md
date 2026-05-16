@@ -102,10 +102,11 @@ can be thing-like and omit crop/growth/zone fields.
 Crop selection should use deterministic candidate math before escalation. The
 candidate math accounts for crop grow time, yield, current food buffer,
 inventory classification confidence, freezer/storage posture, season window,
-and compact terrain-fertility context. Exact grow-zone placement and zone-yield
+compact terrain-fertility context, and def-backed harvest nutrition when the
+thing definition catalogue exposes it. Exact grow-zone placement and zone-yield
 optimization remain out of the current Suggest-mode scope. Food LLM escalation
-receives the compact computed candidate table and must treat it as the source
-of truth for crop math.
+receives the compact computed candidate table and must treat it as the source of
+truth for crop math.
 
 The implemented briefing can be narrower than the target. Use
 `FoodBriefing`, `FoodBriefingDerivation`, and Food briefing tests for current

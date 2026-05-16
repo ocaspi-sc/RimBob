@@ -34,6 +34,9 @@ public sealed record FoodBriefing(
 {
     public FoodGrowingTerrainSummary GrowingTerrain { get; init; } = FoodGrowingTerrainSummary.Unknown;
 
+    public IReadOnlyDictionary<string, float> CropHarvestNutritionByDef { get; init; } =
+        new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
+
     public int UnclassifiedFoodUnits => Math.Max(0, FoodUnits - MealsCount - RawFoodCount);
 
     public IReadOnlyList<FoodUnclassifiedItem> UnclassifiedFoodItems { get; init; } = [];

@@ -125,6 +125,33 @@ public sealed class FoodCropMathTests
         corn.Reason.Should().Contain("storage/freezer posture weak");
     }
 
+    [Fact]
+    public void Recommend_UsesDefBackedHarvestNutritionWhenAvailable()
+    {
+        FoodBriefing briefing = FoodRulesTests.Briefing(30f) with
+        {
+            NutritionSource = "item_def_catalog",
+            DataCoverage = ClassifiedCoverage(),
+            CropHarvestNutritionByDef = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["RawCorn"] = 0.08f
+            },
+            Storage = new FoodStorageSummary(1, 20, null, null)
+            {
+                PositionedFoodUnits = 40,
+                CoolerAdjacentFoodUnits = 40
+            },
+            Season = new SeasonContext("Aprimay", 12, 40)
+        };
+
+        FoodCropCandidate corn = FoodCropMath.Recommend(briefing)
+            .Candidates.Single(candidate => candidate.CropDef == "Plant_Corn");
+
+        corn.HarvestNutrition.Should().Be(0.08f);
+        corn.ProjectedNutrition.Should().BeApproximately(corn.Tiles * corn.HarvestYield * 0.08f, 0.001f);
+        corn.ProjectedDaysAdded.Should().BeGreaterThan(4f);
+    }
+
     private static FoodDataCoverage ClassifiedCoverage() => new(false, false, false, false, false, false)
     {
         HasLiveState = true,

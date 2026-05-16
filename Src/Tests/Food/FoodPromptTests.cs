@@ -40,6 +40,7 @@ public sealed class FoodPromptTests
                     CropDef: "Plant_Rice",
                     Label: "rice",
                     Tiles: 36,
+                    HarvestNutrition: 0.05f,
                     GrowDays: 3f,
                     ProjectedDaysAdded: 2.25f,
                     FitsSeason: true,
@@ -51,6 +52,7 @@ public sealed class FoodPromptTests
 
         json.Should().Contain("\"crop_candidates\"");
         json.Should().Contain("\"crop_def\":\"Plant_Rice\"");
+        json.Should().Contain("\"harvest_nutrition\":0.05");
         json.Should().Contain("\"projected_days_added\":2.25");
         json.Should().Contain("\"classification_confidence\":0.9");
         json.Should().Contain("\"storage_multiplier\":0.88");
