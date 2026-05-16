@@ -73,6 +73,10 @@ Current implementation may batch-refresh needed endpoints before all cadence
 tiers exist. The design requirement is that cadence becomes finer only when a
 consumer needs it.
 
+Food consumes terrain as compact fertility context for crop selection. The state
+store keeps this as a derived summary from RIMAPI terrain/definition inputs; it
+does not expose raw tile dumps to minister prompts.
+
 ### Event-Diff Signals
 
 Signals worth detecting include raids/quests/events, alerts, combat log entries,

@@ -346,12 +346,23 @@ public sealed record ThingDefDto(
 
 public sealed record TerrainDefDto(
     [property: JsonPropertyName("def_name")] string DefName,
-    [property: JsonPropertyName("label")]    string? Label
+    [property: JsonPropertyName("label")]    string? Label,
+    [property: JsonPropertyName("fertility")] float Fertility = 0f,
+    [property: JsonPropertyName("affordances")] IReadOnlyList<string>? Affordances = null
 );
 
 public sealed record DefCatalogDto(
     [property: JsonPropertyName("things_defs")]  IReadOnlyList<ThingDefDto>? ThingsDefs,
     [property: JsonPropertyName("terrain_defs")] IReadOnlyList<TerrainDefDto>? TerrainDefs
+);
+
+public sealed record TerrainGridDto(
+    [property: JsonPropertyName("width")] int Width,
+    [property: JsonPropertyName("height")] int Height,
+    [property: JsonPropertyName("palette")] IReadOnlyList<string>? Palette,
+    [property: JsonPropertyName("grid")] IReadOnlyList<int>? Grid,
+    [property: JsonPropertyName("floor_palette")] IReadOnlyList<string>? FloorPalette = null,
+    [property: JsonPropertyName("floor_grid")] IReadOnlyList<int>? FloorGrid = null
 );
 
 public sealed record RimApiImageDto(

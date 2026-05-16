@@ -283,6 +283,39 @@ public sealed class FoodBriefingDerivationTests
     }
 
     [Fact]
+    public void Compute_DerivesCompactGrowingTerrainSummary()
+    {
+        ColonyState s = StateWithColonists(1);
+        s.Terrain.Update(new TerrainSnapshot(
+            Width: 10,
+            Height: 10,
+            CellCountsByDef: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["SoilRich"] = 12,
+                ["Soil"] = 48,
+                ["Gravel"] = 20,
+                ["Limestone_Rough"] = 20
+            },
+            DefsByName: new Dictionary<string, TerrainDefRecord>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["SoilRich"] = new("SoilRich", "rich soil", 1.4f, ["GrowSoil", "Walkable"]),
+                ["Soil"] = new("Soil", "soil", 1.0f, ["GrowSoil", "Walkable"]),
+                ["Gravel"] = new("Gravel", "stony soil", 0.7f, ["GrowSoil", "Walkable"]),
+                ["Limestone_Rough"] = new("Limestone_Rough", "rough limestone", 0f, ["Walkable"])
+            }));
+
+        FoodBriefing b = FoodBriefingDerivation.Compute(s);
+
+        b.GrowingTerrain.HasTerrain.Should().BeTrue();
+        b.GrowingTerrain.GrowableCells.Should().Be(80);
+        b.GrowingTerrain.BestFertility.Should().Be(1.4f);
+        b.GrowingTerrain.AverageFertility.Should().BeApproximately(0.985f, 0.001f);
+        b.GrowingTerrain.FertilityBands.Select(band => band.Def)
+            .Should().Equal("SoilRich", "Soil", "Gravel");
+        b.DataCoverage.HasTerrainFertility.Should().BeTrue();
+    }
+
+    [Fact]
     public void Compute_UsesFarmCropZoneDataWhenPlantZoneDetailsAreMissing()
     {
         ColonyState s = StateWithColonists(1);

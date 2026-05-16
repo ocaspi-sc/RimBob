@@ -129,6 +129,25 @@ public sealed record ThingDefRecord(
     int? StackLimit
 );
 
+public sealed record TerrainSnapshot(
+    int Width,
+    int Height,
+    IReadOnlyDictionary<string, int> CellCountsByDef,
+    IReadOnlyDictionary<string, TerrainDefRecord> DefsByName
+);
+
+public sealed record TerrainDefRecord(
+    string Def,
+    string? Label,
+    float Fertility,
+    IReadOnlyList<string> Affordances
+)
+{
+    public bool SupportsGrowing =>
+        Fertility > 0f &&
+        Affordances.Any(affordance => affordance.Equals("GrowSoil", StringComparison.OrdinalIgnoreCase));
+}
+
 public sealed record StoredResourceRegistry(
     IReadOnlyList<StoredResourceRecord> Items,
     IReadOnlyDictionary<string, int> CountByDef,
@@ -198,6 +217,7 @@ public static class AggregateDefaults
     public static readonly PlantRegistry     Plants      = new([]);
     public static readonly ThingRegistry     Things      = new([]);
     public static readonly ThingDefRegistry  ThingDefs   = new(new Dictionary<string, ThingDefRecord>());
+    public static readonly TerrainSnapshot   Terrain     = new(0, 0, new Dictionary<string, int>(), new Dictionary<string, TerrainDefRecord>());
     public static readonly StoredResourceRegistry StoredResources = new([], new Dictionary<string, int>(), new Dictionary<string, int>());
     public static readonly AnimalRegistry    Animals     = new([]);
     public static readonly ResourceSummary   Resources   = new(0, 0f, 0, 0f, 0, 0, 0, 0, 0f);

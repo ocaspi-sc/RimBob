@@ -83,6 +83,33 @@ public static class MapAggregateMapper
                 },
                 StringComparer.OrdinalIgnoreCase));
 
+    public static TerrainSnapshot FromTerrain(
+        TerrainGridDto terrain,
+        IReadOnlyList<TerrainDefDto> defs)
+    {
+        Dictionary<string, TerrainDefRecord> defsByName = defs
+            .Where(def => !string.IsNullOrWhiteSpace(def.DefName))
+            .GroupBy(def => def.DefName, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group =>
+                {
+                    TerrainDefDto def = group.First();
+                    return new TerrainDefRecord(
+                        Def: def.DefName,
+                        Label: def.Label,
+                        Fertility: def.Fertility,
+                        Affordances: def.Affordances ?? []);
+                },
+                StringComparer.OrdinalIgnoreCase);
+
+        return new TerrainSnapshot(
+            Width: terrain.Width,
+            Height: terrain.Height,
+            CellCountsByDef: DecodeTerrainCounts(terrain),
+            DefsByName: defsByName);
+    }
+
     public static StoredResourceRegistry FromStoredResources(StoredResourcesDto stored)
     {
         List<StoredResourceRecord> items = [];
@@ -208,5 +235,39 @@ public static class MapAggregateMapper
         int y = (int)Math.Round(cells.Average(cell => cell.Y));
         int z = (int)Math.Round(cells.Average(cell => cell.Z));
         return new MapPosition(x, y, z);
+    }
+
+    private static IReadOnlyDictionary<string, int> DecodeTerrainCounts(TerrainGridDto terrain)
+    {
+        IReadOnlyList<string> palette = terrain.Palette ?? [];
+        IReadOnlyList<int> grid = terrain.Grid ?? [];
+        Dictionary<string, int> counts = new(StringComparer.OrdinalIgnoreCase);
+
+        if (palette.Count == 0 || grid.Count == 0)
+            return counts;
+
+        if (grid.Count % 2 != 0)
+            throw new InvalidOperationException("RIMAPI schema drift at /map/terrain: grid RLE length must be even.");
+
+        int totalCells = 0;
+        for (int i = 0; i < grid.Count; i += 2)
+        {
+            int runLength = grid[i];
+            int paletteIndex = grid[i + 1];
+            if (runLength < 0)
+                throw new InvalidOperationException("RIMAPI schema drift at /map/terrain: grid RLE run length was negative.");
+            if (paletteIndex < 0 || paletteIndex >= palette.Count)
+                throw new InvalidOperationException($"RIMAPI schema drift at /map/terrain: palette index {paletteIndex} was outside palette size {palette.Count}.");
+
+            string def = palette[paletteIndex];
+            counts[def] = counts.TryGetValue(def, out int current) ? current + runLength : runLength;
+            totalCells += runLength;
+        }
+
+        int expectedCells = terrain.Width * terrain.Height;
+        if (expectedCells > 0 && totalCells != expectedCells)
+            throw new InvalidOperationException($"RIMAPI schema drift at /map/terrain: decoded {totalCells} cells, expected {expectedCells}.");
+
+        return counts;
     }
 }

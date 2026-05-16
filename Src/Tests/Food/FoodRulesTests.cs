@@ -231,6 +231,48 @@ public sealed class FoodRulesTests
         step.Kind.Should().Be(AdviceStepKind.DesignateZone);
         step.Quantity.Should().Be(36);
         step.Instruction.Should().Contain("rice");
+        step.Reason.Should().Contain("winter margin");
+    }
+
+    [Fact]
+    public void LowBufferNearWinter_UsesFastCropWhenItStillFits()
+    {
+        FoodBriefing briefing = Briefing(days: 16f) with
+        {
+            Season = new SeasonContext("Decembary", 2, 5),
+            MealsCount = 20,
+            RawFoodCount = 0,
+            ReadyToHarvest = 0,
+            WildHarvestCandidates = 0,
+            WildAnimalCount = 0
+        };
+
+        Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
+            .Should().BeOfType<Decision>().Subject;
+
+        AdviceStep step = decision.Advice.Should().ContainSingle().Subject
+            .Steps.Should().ContainSingle().Subject;
+        step.Kind.Should().Be(AdviceStepKind.DesignateZone);
+        step.Instruction.Should().Contain("rice");
+        step.Reason.Should().Contain("1 day of winter margin");
+    }
+
+    [Fact]
+    public void LowBufferTooCloseToWinter_EscalatesInsteadOfSowing()
+    {
+        FoodBriefing briefing = Briefing(days: 16f) with
+        {
+            Season = new SeasonContext("Decembary", 2, 2),
+            MealsCount = 20,
+            RawFoodCount = 0,
+            ReadyToHarvest = 0,
+            WildHarvestCandidates = 0,
+            WildAnimalCount = 0
+        };
+
+        new Rules().Evaluate(briefing, ColonyContext.Default)
+            .Should().BeOfType<Escalate>()
+            .Which.Reason.Should().Contain("Winter is close");
     }
 
     [Fact]

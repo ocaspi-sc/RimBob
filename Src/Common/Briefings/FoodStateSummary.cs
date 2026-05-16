@@ -60,7 +60,7 @@ public static class FoodStateSummary
             string zones = string.Join("; ", briefing.CropZoneSummaries.Take(3).Select(FormatCropZone));
             int remaining = Math.Max(0, briefing.CropZoneSummaries.Count - 3);
             string suffix = remaining > 0 ? $"; plus {Plural(remaining, "more growing area")}" : "";
-            return $"Crops: {zones}{suffix}.";
+            return $"Crops: {zones}{suffix}{FormatGrowingTerrain(briefing)}.";
         }
 
         if (briefing.CropBreakdown.Count > 0)
@@ -68,13 +68,13 @@ public static class FoodStateSummary
             string crops = string.Join("; ", briefing.CropBreakdown.Take(3).Select(FormatCropBreakdown));
             int remaining = Math.Max(0, briefing.CropBreakdown.Count - 3);
             string suffix = remaining > 0 ? $"; plus {Plural(remaining, "more crop")}" : "";
-            return $"Crops: {crops}{suffix}.";
+            return $"Crops: {crops}{suffix}{FormatGrowingTerrain(briefing)}.";
         }
 
         if (briefing.ReadyToHarvest > 0)
-            return $"Crops: {Plural(briefing.ReadyToHarvest, "crop tile")} ready to harvest; crop-zone detail is not available.";
+            return $"Crops: {Plural(briefing.ReadyToHarvest, "crop tile")} ready to harvest; crop-zone detail is not available{FormatGrowingTerrain(briefing)}.";
 
-        return "Crops: no crop signal is visible in this briefing.";
+        return $"Crops: no crop signal is visible in this briefing{FormatGrowingTerrain(briefing)}.";
     }
 
     private static string BuildAcquisitionLine(FoodBriefing briefing)
@@ -197,6 +197,18 @@ public static class FoodStateSummary
     private static string FormatCropBreakdown(FoodCropSummary crop) =>
         $"{crop.Count} {LabelCrop(crop.Def)} plants at {crop.AverageGrowth:P0} growth";
 
+    private static string FormatGrowingTerrain(FoodBriefing briefing)
+    {
+        FoodGrowingTerrainSummary terrain = briefing.GrowingTerrain;
+        if (!terrain.HasTerrain || terrain.GrowableCells <= 0 || terrain.FertilityBands.Count == 0)
+            return "";
+
+        FoodTerrainFertilityBand best = terrain.FertilityBands[0];
+        string label = best.Label ?? LabelTerrain(best.Def);
+        string average = terrain.AverageFertility is null ? "" : $", avg fertility {terrain.AverageFertility.Value:0.##}";
+        return $"; terrain {Plural(terrain.GrowableCells, "growable cell")}, best {label} fertility {best.Fertility:0.##}{average}";
+    }
+
     private static string FormatZoneLabel(string? zoneId)
     {
         if (string.IsNullOrWhiteSpace(zoneId))
@@ -223,6 +235,12 @@ public static class FoodStateSummary
 
         label = label.Replace('_', ' ').Trim();
         return string.IsNullOrWhiteSpace(label) ? "animal" : label.ToLowerInvariant();
+    }
+
+    private static string LabelTerrain(string def)
+    {
+        string label = def.Replace('_', ' ').Trim();
+        return string.IsNullOrWhiteSpace(label) ? "terrain" : label.ToLowerInvariant();
     }
 
     private static string Plural(int count, string singular)

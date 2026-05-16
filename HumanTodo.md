@@ -46,7 +46,8 @@
 
 ### Next (post-M3 follow-ups)
 
-- [ ] Add deterministic Food crop-yield math (`FoodCropMath`/candidate table) so rules can choose rice/potato/corn from grow time, nutrition per tile, fertility sensitivity, days to winter, and current food buffer; expose computed candidates to Food LLM escalation instead of asking Gemini to invent the math.
+- [x] Add deterministic Food crop-yield math (`FoodCropMath`/candidate table) so rules can choose rice/potato/corn from grow time, nutrition per tile, fertility sensitivity, days to winter, current food buffer, and terrain fertility; exact grow-zone placement remains deferred. [plan](.plans/deterministic-crop-yield-math.md)
+- [ ] Expose computed crop candidates directly to Food LLM escalation when crop choice remains ambiguous.
 - [ ] Add polished guide-citation footnotes on feeder memo cards.
 - [x] Add durable Food decision/replay corpus persistence so M6 refinement can compare before/after outputs on historic inputs, not just fixtures.
 - [ ] Extend replay corpus persistence beyond Food and attach future Pushback/outcome fields once feedback is wired.

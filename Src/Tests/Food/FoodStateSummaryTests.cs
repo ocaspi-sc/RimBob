@@ -17,6 +17,12 @@ public sealed class FoodStateSummaryTests
                 new FoodCropZoneSummary("Plant_Rice", "2", 12, 0.56f, 3, "nearby to kitchen"),
                 new FoodCropZoneSummary("Plant_Corn", "growing:2", 8, 0.22f, 0, "far from kitchen")
             ],
+            GrowingTerrain = new FoodGrowingTerrainSummary(
+                HasTerrain: true,
+                GrowableCells: 36,
+                BestFertility: 1.4f,
+                AverageFertility: 1.1f,
+                FertilityBands: [new FoodTerrainFertilityBand("SoilRich", "rich soil", 1.4f, 12)]),
             Kitchen = new FoodKitchenSummary(1, 1, true, true),
             Infrastructure = new FoodInfrastructureSnapshot(1, true, 500f, 1),
             Storage = new FoodStorageSummary(1, 20, null, null)
@@ -38,6 +44,8 @@ public sealed class FoodStateSummaryTests
         summary.Should().Contain("12 rice plants in zone 2");
         summary.Should().Contain("3 tiles ready");
         summary.Should().Contain("8 corn plants in growing:2");
+        summary.Should().Contain("terrain 36 growable cells");
+        summary.Should().Contain("rich soil fertility 1.4");
         summary.Should().Contain("\n- Acquisition:");
         summary.Should().Contain("0 wild harvest candidates");
         summary.Should().Contain("2 hares hunt targets");

@@ -66,6 +66,7 @@ public static class FoodBriefingDerivation
             RecentFoodIncidents: incidents
         )
         {
+            GrowingTerrain = DeriveGrowingTerrain(s.Terrain.Value),
             UnclassifiedFoodItems = food.UnclassifiedFoodItems
         };
     }
@@ -261,6 +262,47 @@ public static class FoodBriefingDerivation
             .ToList();
     }
 
+    private static FoodGrowingTerrainSummary DeriveGrowingTerrain(TerrainSnapshot terrain)
+    {
+        if (terrain.CellCountsByDef.Count == 0 || terrain.DefsByName.Count == 0)
+            return FoodGrowingTerrainSummary.Unknown;
+
+        List<FoodTerrainFertilityBand> allBands = terrain.CellCountsByDef
+            .Select(entry =>
+            {
+                terrain.DefsByName.TryGetValue(entry.Key, out TerrainDefRecord? def);
+                return new
+                {
+                    Def = entry.Key,
+                    Cells = entry.Value,
+                    Record = def
+                };
+            })
+            .Where(item => item.Record is not null && item.Record.SupportsGrowing && item.Cells > 0)
+            .Select(item => new FoodTerrainFertilityBand(
+                Def: item.Def,
+                Label: item.Record!.Label,
+                Fertility: item.Record.Fertility,
+                Cells: item.Cells))
+            .OrderByDescending(band => band.Fertility)
+            .ThenByDescending(band => band.Cells)
+            .ToList();
+
+        if (allBands.Count == 0)
+            return new FoodGrowingTerrainSummary(true, 0, null, null, []);
+
+        int growableCells = allBands.Sum(band => band.Cells);
+        float weightedFertility = allBands.Sum(band => band.Fertility * band.Cells) / growableCells;
+        IReadOnlyList<FoodTerrainFertilityBand> summaryBands = allBands.Take(5).ToList();
+
+        return new FoodGrowingTerrainSummary(
+            HasTerrain: true,
+            GrowableCells: growableCells,
+            BestFertility: allBands[0].Fertility,
+            AverageFertility: weightedFertility,
+            FertilityBands: summaryBands);
+    }
+
     private static FoodDataCoverage DeriveDataCoverage(ColonyState s, FoodItemClassification food) =>
         new(
             HasPlantPositions: s.Plants.Value.Plants.Any(p => p.Position is not null),
@@ -271,7 +313,9 @@ public static class FoodBriefingDerivation
             HasTradeAvailability: false)
         {
             HasLiveState = s.GetVersionsForFoodBriefing().Any(version => version > 0),
-            HasItemFoodClassification = food.HasItemFoodClassification
+            HasItemFoodClassification = food.HasItemFoodClassification,
+            HasTerrainFertility = s.Terrain.Value.CellCountsByDef.Count > 0 &&
+                                  s.Terrain.Value.DefsByName.Values.Any(def => def.SupportsGrowing)
         };
 
     private static FoodReferencePoint? FindFoodReferencePoint(ColonyState s, IReadOnlyList<ColonistRecord> pawns)

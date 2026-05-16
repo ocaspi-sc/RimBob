@@ -32,6 +32,8 @@ public sealed record FoodBriefing(
     IReadOnlyList<string> RecentFoodIncidents
 ) : IBriefing
 {
+    public FoodGrowingTerrainSummary GrowingTerrain { get; init; } = FoodGrowingTerrainSummary.Unknown;
+
     public int UnclassifiedFoodUnits => Math.Max(0, FoodUnits - MealsCount - RawFoodCount);
 
     public IReadOnlyList<FoodUnclassifiedItem> UnclassifiedFoodItems { get; init; } = [];
@@ -101,6 +103,24 @@ public sealed record FoodCropZoneSummary(
     string? Proximity
 );
 
+public sealed record FoodGrowingTerrainSummary(
+    bool HasTerrain,
+    int GrowableCells,
+    float? BestFertility,
+    float? AverageFertility,
+    IReadOnlyList<FoodTerrainFertilityBand> FertilityBands
+)
+{
+    public static FoodGrowingTerrainSummary Unknown { get; } = new(false, 0, null, null, []);
+}
+
+public sealed record FoodTerrainFertilityBand(
+    string Def,
+    string? Label,
+    float Fertility,
+    int Cells
+);
+
 public sealed record WildHarvestCluster(
     string Def,
     int Count,
@@ -167,6 +187,8 @@ public sealed record FoodDataCoverage(
     public bool HasLiveState { get; init; }
 
     public bool HasItemFoodClassification { get; init; }
+
+    public bool HasTerrainFertility { get; init; }
 }
 
 public static class FoodNutrition

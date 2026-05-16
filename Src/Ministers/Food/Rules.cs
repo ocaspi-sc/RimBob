@@ -10,7 +10,6 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
     private const string Domain = "food";
     private static readonly IconRef CampfireIcon = ItemIcon("Campfire");
     private static readonly IconRef CoolerIcon = ItemIcon("Cooler");
-    private static readonly IconRef RicePlantIcon = ItemIcon("Plant_Rice");
     private static readonly IconRef SimpleMealIcon = ItemIcon("MealSimple");
 
     public RulesResult Evaluate(FoodBriefing briefing, ColonyContext context)
@@ -107,21 +106,22 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 days < 10f);
         }
 
-        if (days < 20f && CanSowBeforeWinter(briefing))
+        FoodCropCandidate? cropCandidate = FoodCropMath.Recommend(briefing).BestCandidate;
+        if (days < 20f && cropCandidate is not null)
             return DecisionFor(briefing, "expand_growing_capacity",
                 FoodAdviceType.ExpandGrowingCapacity,
                 days < 12f ? AdvicePriority.High : AdvicePriority.Medium,
                 "Expand food growing capacity",
-                $"Food covers about {days:F1} days and the growing window is still open. Add a compact food crop zone instead of waiting for hunting or trade.",
+                $"Food covers about {days:F1} days and {cropCandidate.Label} still fits the growing window. Add a compact food crop zone instead of waiting for hunting or trade.",
                 "A concrete growing-zone step is more actionable than a vague labor request; cross-minister flags carry tile needs separately.",
-                [GrowingZoneStep(briefing, "current food buffer is below the 20-day safety band")],
+                [GrowingZoneStep(cropCandidate, "current food buffer is below the 20-day safety band")],
                 [
                     new(ResourceRequestKind.Tile,
-                        $"{GrowingTileRequest(briefing)} food growing tiles near fertile soil and food storage",
-                        "current food buffer is below the 20-day safety band",
-                        Quantity: GrowingTileRequest(briefing),
+                        $"{cropCandidate.Tiles} {cropCandidate.Label} growing tiles near fertile soil and food storage",
+                        cropCandidate.Reason,
+                        Quantity: cropCandidate.Tiles,
                         RequestedFrom: "Construction",
-                        Icon: RicePlantIcon)
+                        Icon: ItemIcon(cropCandidate.CropDef))
                 ],
                 days < 12f);
 
@@ -250,16 +250,16 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                     Priority: priority,
                     RequestedFrom: "Construction"));
         }
-        if (CanSowBeforeWinter(briefing))
+        FoodCropCandidate? cropCandidate = FoodCropMath.Recommend(briefing).BestCandidate;
+        if (cropCandidate is not null)
         {
-            int growingTiles = GrowingTileRequest(briefing);
             requests.Add(new ResourceRequest(ResourceRequestKind.Tile,
-                $"{growingTiles} emergency food growing tiles",
+                $"{cropCandidate.Tiles} emergency food growing tiles",
                 "food buffer is below 7 days and the growing window is still open",
-                Quantity: growingTiles,
+                Quantity: cropCandidate.Tiles,
                 Priority: priority,
                 RequestedFrom: "Construction",
-                Icon: RicePlantIcon));
+                Icon: ItemIcon(cropCandidate.CropDef)));
             requests.Add(new ResourceRequest(ResourceRequestKind.Labor,
                 "Grow work for emergency food zone",
                 "new food growing tiles only help once sown",
@@ -267,7 +267,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 RequestedFrom: "Labor",
                 WorkType: WorkType.Grow,
                 Skill: "Plants",
-                Icon: RicePlantIcon));
+                Icon: ItemIcon(cropCandidate.CropDef)));
         }
         if (!briefing.Kitchen.HasCookingBuilding)
             requests.Add(new ResourceRequest(ResourceRequestKind.Building,
@@ -349,8 +349,12 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 Reason: "raw food must become meals during an urgent shortage",
                 Icon: SimpleMealIcon));
         }
-        if (CanSowBeforeWinter(briefing))
-            steps.Add(GrowingZoneStep(briefing, "food buffer is below 7 days and the growing window is still open"));
+        FoodCropCandidate? cropCandidate = FoodCropMath.Recommend(briefing).BestCandidate;
+        if (cropCandidate is not null)
+            steps.Add(GrowingZoneStep(
+                cropCandidate,
+                "food buffer is below 7 days and the growing window is still open",
+                includeCandidateReason: false));
         if (steps.Count == 0)
             steps.Add(new AdviceStep(
                 AdviceStepKind.Trade,
@@ -471,15 +475,18 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             Reason: "low-risk wild animals are the best visible local food-acquisition path",
             Icon: HuntingIcon(briefing));
 
-    private static AdviceStep GrowingZoneStep(FoodBriefing briefing, string reason) =>
+    private static AdviceStep GrowingZoneStep(
+        FoodCropCandidate candidate,
+        string reason,
+        bool includeCandidateReason = true) =>
         new(AdviceStepKind.DesignateZone,
-            $"Create about {GrowingTileRequest(briefing)} emergency rice growing tiles; use fertile soil near storage when possible.",
-            Quantity: GrowingTileRequest(briefing),
+            $"Create about {candidate.Tiles} emergency {candidate.Label} growing tiles; use fertile soil near storage when possible.",
+            Quantity: candidate.Tiles,
             Owner: "Food",
             WorkType: WorkType.Grow,
             Skill: "Plants",
-            Reason: reason,
-            Icon: RicePlantIcon);
+            Reason: includeCandidateReason ? $"{reason}; {candidate.Reason}" : reason,
+            Icon: ItemIcon(candidate.CropDef));
 
     private static IconRef HarvestIcon(FoodBriefing briefing) =>
         ItemIcon(FirstNonBlank(
@@ -621,14 +628,8 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
     private static int SimpleMealTarget(FoodBriefing briefing) =>
         Math.Clamp(briefing.ColonistCount * 4, 4, 30);
 
-    private static bool CanSowBeforeWinter(FoodBriefing briefing) =>
-        briefing.Season.DaysToWinter is null or > 10;
-
     private static bool CanSuggestHunting(FoodBriefing briefing) =>
         !briefing.ActiveThreat && briefing.WildHuntTargets.Count > 0;
-
-    private static int GrowingTileRequest(FoodBriefing briefing) =>
-        Math.Clamp(briefing.ColonistCount * 12, 12, 72);
 
     private static string LabelDef(string def)
     {

@@ -313,7 +313,9 @@ public sealed class RimApiClientTests
                     "terrain_defs": [
                       {
                         "def_name": "Soil",
-                        "label": "soil"
+                        "label": "soil",
+                        "fertility": 1.0,
+                        "affordances": ["Walkable", "GrowSoil"]
                       }
                     ]
                   },
@@ -326,7 +328,39 @@ public sealed class RimApiClientTests
         DefCatalogDto result = await new RimApiClient(http).GetDefCatalogAsync();
 
         result.ThingsDefs.Should().ContainSingle().Which.DefName.Should().Be("MealSimple");
-        result.TerrainDefs.Should().ContainSingle().Which.DefName.Should().Be("Soil");
+        TerrainDefDto terrain = result.TerrainDefs.Should().ContainSingle().Subject;
+        terrain.DefName.Should().Be("Soil");
+        terrain.Fertility.Should().Be(1.0f);
+        terrain.Affordances.Should().Contain("GrowSoil");
+    }
+
+    [Fact]
+    public async Task GetTerrain_WhenApiReturnsRleGrid_ReturnsTerrainGrid()
+    {
+        using HttpClient http = MakeClient(new PathRouter()
+            .Add("map/terrain", Json("""
+                {
+                  "success": true,
+                  "data": {
+                    "width": 3,
+                    "height": 2,
+                    "palette": ["Soil", "SoilRich"],
+                    "grid": [4, 0, 2, 1],
+                    "floor_palette": [],
+                    "floor_grid": [6, 0]
+                  },
+                  "errors": null,
+                  "warnings": null,
+                  "timestamp": null
+                }
+                """)));
+
+        TerrainGridDto result = await new RimApiClient(http).GetTerrainAsync(0);
+
+        result.Width.Should().Be(3);
+        result.Height.Should().Be(2);
+        result.Palette.Should().Equal("Soil", "SoilRich");
+        result.Grid.Should().Equal(4, 0, 2, 1);
     }
 
     [Fact]

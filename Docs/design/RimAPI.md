@@ -108,6 +108,8 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 | POST | `/map/building/power?buildingId&powerOn` | toggle power |
 
 > **Verified shape.** `/map/things?map_id=...` returns broad map items including `thing_id`, `def_name`, `label`, `categories`, `position`, `stack_count`, `market_value`, and `is_forbidden`. It includes forbidden map items, so Food treats it as fallback/debug inventory; `/resources/stored` is preferred for reachable stored food.
+>
+> **Verified shape.** `/map/terrain?map_id=...` returns map dimensions, a terrain palette, and an RLE grid. `/def/all` terrain definitions include fertility and affordances; Food uses those as compact crop-fertility context, not as an exact placement solver.
 
 > **Verified shape.** `/map/farm/summary?map_id=...` returns live growing-zone crop rows under `data.crop_types[]`, not the cached `crop_breakdown[]` shape. Useful fields include `total_plants`, `growth_progress_average` as a percent value, and per-crop `plant_def_name`, `total_plants`, `harvestable_plants`, and numeric `zone_id`. Food uses this as the primary crop count/growth/zone source.
 

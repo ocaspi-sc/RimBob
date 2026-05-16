@@ -226,6 +226,10 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
         int mapId, CancellationToken ct = default) =>
         GetEnvelopedListAsync<ZoneDto>($"api/v1/map/zones?map_id={mapId}", ct, "zones");
 
+    /// <summary>GET api/v1/map/terrain?map_id — RLE terrain grid plus palette.</summary>
+    public Task<TerrainGridDto> GetTerrainAsync(int mapId, CancellationToken ct = default) =>
+        GetEnvelopedAsync<TerrainGridDto>($"api/v1/map/terrain?map_id={mapId}", ct);
+
     /// <summary>GET api/v1/map/buildings?map_id — all buildings (hp, power state, working).</summary>
     public Task<IReadOnlyList<BuildingDto>> GetBuildingsAsync(
         int mapId, CancellationToken ct = default) =>

@@ -98,12 +98,17 @@ Crop counts and progress should prefer the farm summary crop-type rows when
 available. Plant positions are useful spatial context, but the live plant list
 can be thing-like and omit crop/growth/zone fields.
 
+Crop selection should use deterministic candidate math before escalation. The
+candidate math accounts for crop grow time, yield, current food buffer, season
+window, and compact terrain-fertility context. Exact grow-zone placement and
+zone-yield optimization remain out of the current Suggest-mode scope.
+
 The implemented briefing can be narrower than the target. Use
 `FoodBriefing`, `FoodBriefingDerivation`, and Food briefing tests for current
 fields.
 
-Deferred richer signals include exact zone yield, hunting risk scoring, bill
-state, freezer room temperature, spoilage timers, work-priority state, and
+Deferred richer signals include exact zone yield/location, hunting risk scoring,
+bill state, freezer room temperature, spoilage timers, work-priority state, and
 caravan/trade availability.
 
 ---
@@ -163,9 +168,9 @@ meals/raw/unclassified food, days-of-food, growing areas and crop progress,
 acquisition opportunities, kitchen/storage/freezer signals, and confidence data
 gaps; individual advice items expose one ordered `steps[]` path for the player.
 
-Crop selection should be grounded in deterministic yield math exposed to both
-rules and LLM escalation. The LLM may use guides to explain or adjust a
-candidate, but it should not invent crop math.
+Crop selection should be grounded in deterministic yield math exposed through
+briefing context and rule decisions. The LLM may use guides to explain or adjust
+a candidate, but it should not invent crop math.
 
 ---
 

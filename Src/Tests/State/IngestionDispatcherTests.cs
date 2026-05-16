@@ -37,6 +37,7 @@ public sealed class IngestionDispatcherTests
         s.Plants.Version.Should().Be(1);
         s.Things.Version.Should().Be(1);
         s.ThingDefs.Version.Should().Be(1);
+        s.Terrain.Version.Should().Be(1);
         s.StoredResources.Version.Should().Be(1);
         s.Animals.Version.Should().Be(1);
         s.Resources.Version.Should().Be(1);
@@ -64,6 +65,8 @@ public sealed class IngestionDispatcherTests
         s.Things.Value.Things.Should().ContainSingle()
             .Which.Def.Should().Be("MealSurvivalPack");
         s.ThingDefs.Value.DefsByName.Should().ContainKey("MealSurvivalPack");
+        s.Terrain.Value.CellCountsByDef.Should().ContainKey("Soil").WhoseValue.Should().Be(4);
+        s.Terrain.Value.DefsByName.Should().ContainKey("Soil").WhoseValue.Fertility.Should().Be(1f);
         s.StoredResources.Value.CountByDef.Should().ContainKey("MealSurvivalPack").WhoseValue.Should().Be(9);
         s.Stockpiles.Value.ItemsByDef.Should().ContainKey("MealSurvivalPack").WhoseValue.Should().Be(9);
         s.Animals.Value.Animals.Single().Position.Should().BeEquivalentTo(new { X = 40, Y = 0, Z = 45 });
@@ -460,6 +463,14 @@ public sealed class IngestionDispatcherTests
                     "stack_limit": 75
                   }
                 ],
+                "terrain_defs": [
+                  {
+                    "def_name": "Soil",
+                    "label": "soil",
+                    "fertility": 1.0,
+                    "affordances": ["Walkable", "GrowSoil"]
+                  }
+                ],
                 "incidents_defs": []
               },
               "errors": null,
@@ -540,6 +551,22 @@ public sealed class IngestionDispatcherTests
                       }
                     ],
                     "areas": []
+                  },
+                  "errors": null,
+                  "warnings": null,
+                  "timestamp": null
+                }
+                """))
+            .Add("api/v1/map/terrain",             Json("""
+                {
+                  "success": true,
+                  "data": {
+                    "width": 2,
+                    "height": 2,
+                    "palette": ["Soil"],
+                    "grid": [4, 0],
+                    "floor_palette": [],
+                    "floor_grid": [4, 0]
                   },
                   "errors": null,
                   "warnings": null,

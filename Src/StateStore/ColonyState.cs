@@ -22,6 +22,7 @@ public sealed class ColonyState
     public Versioned<PlantRegistry>    Plants     { get; } = new(AggregateDefaults.Plants);
     public Versioned<ThingRegistry>    Things     { get; } = new(AggregateDefaults.Things);
     public Versioned<ThingDefRegistry> ThingDefs  { get; } = new(AggregateDefaults.ThingDefs);
+    public Versioned<TerrainSnapshot>  Terrain    { get; } = new(AggregateDefaults.Terrain);
     public Versioned<StoredResourceRegistry> StoredResources { get; } = new(AggregateDefaults.StoredResources);
     public Versioned<AnimalRegistry>   Animals    { get; } = new(AggregateDefaults.Animals);
     public Versioned<ResourceSummary>  Resources  { get; } = new(AggregateDefaults.Resources);
@@ -35,7 +36,7 @@ public sealed class ColonyState
         ["Map", "Economy", "Colonists", "Stockpiles", "Buildings", "Power", "Threats", "Weather", "Farm", "Things", "ThingDefs", "StoredResources", "Resources", "Research"];
 
     public static readonly string[] FoodBriefingAggregateNames =
-        ["Economy", "Colonists", "Stockpiles", "Buildings", "Power", "Threats", "Weather", "Farm", "Plants", "Things", "ThingDefs", "StoredResources", "Animals", "Resources"];
+        ["Economy", "Colonists", "Stockpiles", "Buildings", "Power", "Threats", "Weather", "Farm", "Plants", "Things", "ThingDefs", "Terrain", "StoredResources", "Animals", "Resources"];
 
     /// <summary>
     /// Versions of every aggregate the MayorBriefing reads, in canonical order.
@@ -52,7 +53,7 @@ public sealed class ColonyState
     [
         Economy.Version, Colonists.Version, Stockpiles.Version, Buildings.Version,
         Power.Version, Threats.Version, Weather.Version, Farm.Version, Plants.Version,
-        Things.Version, ThingDefs.Version, StoredResources.Version, Animals.Version,
+        Things.Version, ThingDefs.Version, Terrain.Version, StoredResources.Version, Animals.Version,
         Resources.Version
     ];
 }

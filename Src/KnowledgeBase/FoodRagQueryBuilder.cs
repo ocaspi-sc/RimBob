@@ -24,6 +24,8 @@ public sealed class FoodRagQueryBuilder : IRagQueryBuilder<FoodBriefing>
         }
         if (briefing.Season.DaysToWinter is { } winter)
             parts.Add($"Days to winter: {winter}.");
+        if (briefing.GrowingTerrain.HasTerrain && briefing.GrowingTerrain.BestFertility is { } fertility)
+            parts.Add($"Best growable terrain fertility: {fertility:F1}; growable cells: {briefing.GrowingTerrain.GrowableCells}.");
         if (briefing.Infrastructure.Coolers == 0)
             parts.Add("No cooler/freezer signal.");
         if (briefing.RecentFoodIncidents.Count > 0)
