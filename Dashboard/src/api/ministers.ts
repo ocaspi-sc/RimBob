@@ -29,8 +29,67 @@ export interface ManualTriggerPayload {
   trigger: string;
 }
 
+export interface FoodCropCandidate {
+  cropDef: string;
+  label: string;
+  harvestedThingDef: string;
+  baseGrowDays: number;
+  growDays: number;
+  terrainFertility: number | null;
+  harvestYield: number;
+  harvestNutrition: number;
+  tiles: number;
+  projectedNutrition: number;
+  projectedDaysAdded: number;
+  daysToWinter: number | null;
+  daysToWinterMargin: number | null;
+  fitsSeason: boolean;
+  classificationConfidence: number;
+  storageMultiplier: number;
+  score: number;
+  reason: string;
+}
+
+export interface FoodCropMathPayload {
+  briefingVersion: number;
+  gameTick: number;
+  date: {
+    raw: string;
+    year: number;
+    quadrum: string;
+    day: number;
+    hour: number;
+  };
+  season: {
+    currentSeason: string;
+    daysToNextSeason: number | null;
+    daysToWinter: number | null;
+  };
+  colonistCount: number;
+  estimatedDaysOfFood: number | null;
+  nutritionSource: string;
+  growingTerrain: {
+    hasTerrain: boolean;
+    growableCells: number;
+    bestFertility: number | null;
+    averageFertility: number | null;
+    fertilityBands: Array<{
+      def: string;
+      label: string | null;
+      fertility: number;
+      cells: number;
+    }>;
+  };
+  bestCandidate: FoodCropCandidate | null;
+  candidates: FoodCropCandidate[];
+}
+
 export async function fetchBriefing(scope: ScopeKey, signal?: AbortSignal): Promise<unknown> {
   return await readJson<unknown>(`/api/briefings/${scope}/latest`, signal);
+}
+
+export async function fetchFoodCropMath(signal?: AbortSignal): Promise<FoodCropMathPayload> {
+  return await readJson<FoodCropMathPayload>('/api/ministers/food/crop-math/latest', signal);
 }
 
 export async function fetchPrompt(scope: ScopeKey, signal?: AbortSignal): Promise<PromptPayload> {

@@ -5,6 +5,7 @@ import { CoverageBadge } from '../shared/DataCoverage';
 import { DisclosureSection } from '../shared/DisclosureSection';
 import { EmptyState } from '../shared/EmptyState';
 import { JsonTree, summarizeValue } from '../shared/JsonTree';
+import { FoodCropMathPanel } from './FoodCropMathPanel';
 
 export function MinisterBriefingView({ scope }: { scope: ScopeConfig }) {
   const briefing = useAsyncResource(signal => fetchBriefing(scope.key, signal), [scope.key]);
@@ -42,6 +43,8 @@ export function MinisterBriefingView({ scope }: { scope: ScopeConfig }) {
           ))}
         </section>
       )}
+
+      {scope.key === 'food' && <FoodCropMathPanel />}
 
       {groups.map(group => (
         <DisclosureSection

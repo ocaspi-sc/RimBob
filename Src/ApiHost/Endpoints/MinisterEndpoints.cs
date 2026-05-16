@@ -29,6 +29,10 @@ public static class MinisterEndpoints
             context => $"Developer manual raw LLM ingestion for {context.CapabilityNames(descriptor => descriptor.HasManualLlmOutput)}.");
         coverage.Register("/api/ministers/{minister}/trace/latest", "partial", "Wake trigger visible; rule/LLM path details not exposed yet.");
         coverage.Register("/api/ministers/{minister}/rag/latest", "not_exposed_yet", "Planned RAG retrieval inspector.");
+        coverage.Register(
+            "/api/ministers/food/crop-math/latest",
+            "available",
+            "Read-only Food crop candidate diagnostics computed from the latest Food briefing.");
 
         app.MapGet("/api/ministers", (MinisterRegistry registry) =>
             Results.Ok(registry.Scopes.Select(MinisterScopeInfo.FromDescriptor)));
@@ -87,6 +91,23 @@ public static class MinisterEndpoints
                 title: "Prompt not wired",
                 detail: $"{scope.Label} prompt introspection is not wired yet.",
                 statusCode: StatusCodes.Status501NotImplemented);
+        });
+
+        app.MapGet("/api/ministers/food/crop-math/latest", (BriefingCache briefings) =>
+        {
+            FoodBriefing briefing = briefings.GetFoodBriefing();
+            FoodCropRecommendation recommendation = FoodCropMath.Recommend(briefing);
+            return Results.Ok(new FoodCropMathSnapshot(
+                BriefingVersion: briefing.BriefingVersion,
+                GameTick: briefing.GameTick,
+                Date: briefing.Date,
+                Season: briefing.Season,
+                ColonistCount: briefing.ColonistCount,
+                EstimatedDaysOfFood: briefing.EstimatedDaysOfFood,
+                NutritionSource: briefing.NutritionSource,
+                GrowingTerrain: briefing.GrowingTerrain,
+                BestCandidate: recommendation.BestCandidate,
+                Candidates: recommendation.Candidates));
         });
 
         app.MapGet("/api/ministers/{minister}/llm-output/latest", (
@@ -346,4 +367,16 @@ public static class MinisterEndpoints
                 descriptor.HasManualLlmOutput,
                 descriptor.HasRag);
     }
+
+    private sealed record FoodCropMathSnapshot(
+        long BriefingVersion,
+        long GameTick,
+        DateStamp Date,
+        SeasonContext Season,
+        int ColonistCount,
+        float? EstimatedDaysOfFood,
+        string NutritionSource,
+        FoodGrowingTerrainSummary GrowingTerrain,
+        FoodCropCandidate? BestCandidate,
+        IReadOnlyList<FoodCropCandidate> Candidates);
 }

@@ -361,6 +361,11 @@ Shows the latest minister briefing grouped into readable sections rather than
 dumping raw JSON as the only view. Include raw/source inspection where useful,
 but keep the primary view scannable.
 
+Food's Briefing view should also show deterministic crop-candidate math as a
+compact inspector panel when the backend exposes it. The panel is read-only and
+exists to make crop choice, season fit, fertility, storage modifiers, and
+classification confidence inspectable without digging through prompt JSON.
+
 ### RAG
 
 Shows retrieval status, guide context, citations, snippets, and cache/embedding

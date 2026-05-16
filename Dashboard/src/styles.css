@@ -859,6 +859,70 @@ code {
   min-width: 980px;
 }
 
+.crop-math-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.crop-math-context {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.crop-math-context span {
+  padding: 6px 8px;
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.crop-math-table {
+  overflow-x: auto;
+}
+
+.crop-math-table .dense-row {
+  grid-template-columns:
+    minmax(126px, 0.95fr)
+    54px
+    86px
+    92px
+    126px
+    86px
+    92px
+    82px
+    70px
+    minmax(360px, 2fr);
+  align-items: start;
+  min-width: 1170px;
+}
+
+.crop-math-table .dense-row > span {
+  display: grid;
+  gap: 4px;
+}
+
+.crop-math-table .status-pill {
+  width: fit-content;
+  min-height: 24px;
+  padding: 4px 7px;
+  font-size: 0.74rem;
+}
+
+.crop-math-table small {
+  color: var(--dim);
+}
+
+.crop-name strong {
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.crop-name code {
+  color: var(--muted);
+}
+
 .icon-cell {
   display: flex;
   align-items: center;
