@@ -1,8 +1,10 @@
 import type { MayorAgenda, AgendaPriority } from '../../types/agenda';
 import type { AdviceItem } from '../../types/advice';
 import type { ScopeConfig } from '../../dashboard/scopes';
+import { iconUrlFor } from '../../api/icons';
 import { DisclosureSection } from '../shared/DisclosureSection';
 import { EmptyState } from '../shared/EmptyState';
+import { GameIcon } from '../shared/GameIcon';
 
 export function MinisterAdviceView({
   advice,
@@ -232,6 +234,7 @@ function AdviceCard({ item }: { item: AdviceItem }) {
         <DisclosureSection title="📦 Resource requests" defaultOpen meta={`${item.resource_requests.length} requests`}>
           <div className="dense-table resource-table">
             <div className="dense-row header">
+              <span>Icon</span>
               <span>Kind</span>
               <span>Request</span>
               <span>Reason</span>
@@ -242,6 +245,14 @@ function AdviceCard({ item }: { item: AdviceItem }) {
             </div>
             {item.resource_requests.map((request, index) => (
               <div className="dense-row" key={`${item.id}-request-${index}`}>
+                <span className="icon-cell">
+                  <GameIcon
+                    fallback="-"
+                    label={`${formatLabel(request.kind)} icon`}
+                    size="xs"
+                    src={iconUrlFor(request.icon)}
+                  />
+                </span>
                 <span>{formatLabel(request.kind)}</span>
                 <span>{request.request}</span>
                 <span>{request.reason}</span>
@@ -259,6 +270,12 @@ function AdviceCard({ item }: { item: AdviceItem }) {
           <div className="action-list">
             {item.suggested_actions.map((action, index) => (
               <div key={`${item.id}-action-${index}`}>
+                <GameIcon
+                  fallback="-"
+                  label={`${formatLabel(action.kind)} icon`}
+                  size="xs"
+                  src={iconUrlFor(action.icon)}
+                />
                 <strong>{action.kind}</strong>
                 <span>{action.instruction}</span>
               </div>

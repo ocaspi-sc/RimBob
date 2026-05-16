@@ -188,12 +188,65 @@ public sealed record ThingDefDto(
     [property: JsonPropertyName("label")]       string? Label,
     [property: JsonPropertyName("category")]    string? Category,
     [property: JsonPropertyName("thing_class")] string? ThingClass,
+    [property: JsonPropertyName("is_weapon")]   bool IsWeapon,
+    [property: JsonPropertyName("is_apparel")]  bool IsApparel,
     [property: JsonPropertyName("is_item")]     bool IsItem,
     [property: JsonPropertyName("is_plant")]    bool IsPlant,
+    [property: JsonPropertyName("is_building")] bool IsBuilding,
     [property: JsonPropertyName("is_medicine")] bool IsMedicine,
     [property: JsonPropertyName("is_drug")]     bool IsDrug,
     [property: JsonPropertyName("nutrition")]   float Nutrition,
     [property: JsonPropertyName("stack_limit")] int? StackLimit
+);
+
+public sealed record TerrainDefDto(
+    [property: JsonPropertyName("def_name")] string DefName,
+    [property: JsonPropertyName("label")]    string? Label
+);
+
+public sealed record DefCatalogDto(
+    [property: JsonPropertyName("things_defs")]  IReadOnlyList<ThingDefDto>? ThingsDefs,
+    [property: JsonPropertyName("terrain_defs")] IReadOnlyList<TerrainDefDto>? TerrainDefs
+);
+
+public sealed record RimApiImageDto(
+    [property: JsonPropertyName("name")]         string? Name,
+    [property: JsonPropertyName("result")]       string? Result,
+    [property: JsonPropertyName("image_base64")] string? ImageBase64,
+    [property: JsonPropertyName("image_base_64")] string? ImageBase64Legacy
+)
+{
+    public string? Base64 => ImageBase64 ?? ImageBase64Legacy;
+}
+
+public sealed record FactionDto(
+    [property: JsonPropertyName("load_id")]  int LoadId,
+    [property: JsonPropertyName("def_name")] string? DefName,
+    [property: JsonPropertyName("name")]     string? Name,
+    [property: JsonPropertyName("is_player")] bool IsPlayer,
+    [property: JsonPropertyName("relation")] string? Relation,
+    [property: JsonPropertyName("goodwill")] int Goodwill
+);
+
+public sealed record FactionIconDto(
+    [property: JsonPropertyName("image")] FactionIconImageDto? Image,
+    [property: JsonPropertyName("color")] string? Color
+);
+
+public sealed record FactionIconImageDto(
+    [property: JsonPropertyName("result")]        string? Result,
+    [property: JsonPropertyName("image_base_64")] string? ImageBase64Legacy,
+    [property: JsonPropertyName("image_base64")]  string? ImageBase64
+)
+{
+    public string? Base64 => ImageBase64 ?? ImageBase64Legacy;
+}
+
+public sealed record ColonistBodyImageDto(
+    [property: JsonPropertyName("body_image")] string? BodyImage,
+    [property: JsonPropertyName("body_color")] string? BodyColor,
+    [property: JsonPropertyName("head_image")] string? HeadImage,
+    [property: JsonPropertyName("head_color")] string? HeadColor
 );
 
 // ── GET /api/v1/research/progress ─────────────────────────────────────────────

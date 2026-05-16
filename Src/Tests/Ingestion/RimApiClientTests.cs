@@ -10,6 +10,8 @@ namespace RimAI.Tests.Ingestion;
 
 public sealed class RimApiClientTests
 {
+    private const string PngBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=";
+
     // ── GetMapPawnsAsync ──────────────────────────────────────────────────────
 
     [Fact]
@@ -205,6 +207,118 @@ public sealed class RimApiClientTests
         def.DefName.Should().Be("MealSurvivalPack");
         def.Nutrition.Should().Be(0.9f);
         def.StackLimit.Should().Be(10);
+    }
+
+    [Fact]
+    public async Task GetDefCatalog_WhenApiReturnsThingAndTerrainDefs_ReturnsFullCatalog()
+    {
+        using HttpClient http = MakeClient(new PathRouter()
+            .Add("def/all", Json("""
+                {
+                  "success": true,
+                  "data": {
+                    "things_defs": [
+                      {
+                        "def_name": "MealSimple",
+                        "label": "simple meal",
+                        "category": "Item",
+                        "thing_class": "ThingWithComps",
+                        "is_item": true,
+                        "is_plant": false,
+                        "is_medicine": false,
+                        "is_drug": false,
+                        "nutrition": 0.9,
+                        "stack_limit": 10
+                      }
+                    ],
+                    "terrain_defs": [
+                      {
+                        "def_name": "Soil",
+                        "label": "soil"
+                      }
+                    ]
+                  },
+                  "errors": null,
+                  "warnings": null,
+                  "timestamp": null
+                }
+                """)));
+
+        DefCatalogDto result = await new RimApiClient(http).GetDefCatalogAsync();
+
+        result.ThingsDefs.Should().ContainSingle().Which.DefName.Should().Be("MealSimple");
+        result.TerrainDefs.Should().ContainSingle().Which.DefName.Should().Be("Soil");
+    }
+
+    [Fact]
+    public async Task IconImageEndpoints_ParseKnownImageEnvelopeShapes()
+    {
+        using HttpClient http = MakeClient(new PathRouter()
+            .Add("item/image", Json($$"""
+                {
+                  "success": true,
+                  "data": {
+                    "name": "MealSimple",
+                    "result": "ok",
+                    "image_base64": "{{PngBase64}}"
+                  },
+                  "errors": null,
+                  "warnings": null,
+                  "timestamp": null
+                }
+                """))
+            .Add("terrain/image", Json($$"""
+                {
+                  "success": true,
+                  "data": {
+                    "name": "Soil",
+                    "result": "ok",
+                    "image_base_64": "{{PngBase64}}"
+                  },
+                  "errors": null,
+                  "warnings": null,
+                  "timestamp": null
+                }
+                """))
+            .Add("faction/icon", Json($$"""
+                {
+                  "success": true,
+                  "data": {
+                    "image": {
+                      "result": "ok",
+                      "image_base_64": "{{PngBase64}}"
+                    },
+                    "color": "#ffffff"
+                  },
+                  "errors": null,
+                  "warnings": null,
+                  "timestamp": null
+                }
+                """))
+            .Add("pawn/portrait/image", Json($$"""
+                {
+                  "success": true,
+                  "data": {
+                    "name": "123",
+                    "result": "ok",
+                    "image_base64": "{{PngBase64}}"
+                  },
+                  "errors": null,
+                  "warnings": null,
+                  "timestamp": null
+                }
+                """)));
+        RimApiClient client = new(http);
+
+        RimApiImageDto item = await client.GetItemImageAsync("MealSimple");
+        RimApiImageDto terrain = await client.GetTerrainImageAsync("Soil");
+        FactionIconDto faction = await client.GetFactionIconAsync(7);
+        RimApiImageDto pawn = await client.GetPawnPortraitImageAsync(123, 64, 64, "South");
+
+        item.Base64.Should().Be(PngBase64);
+        terrain.Base64.Should().Be(PngBase64);
+        faction.Image?.Base64.Should().Be(PngBase64);
+        pawn.Base64.Should().Be(PngBase64);
     }
 
     [Fact]

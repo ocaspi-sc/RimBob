@@ -24,6 +24,7 @@ export interface ColonistsSummary {
 }
 
 export interface PawnLine {
+  id: string;
   name: string;
   age: number;
   mood: number;
@@ -32,6 +33,12 @@ export interface PawnLine {
   isDowned: boolean;
   currentJob: string | null;
   topSkill: string | null;
+}
+
+export interface CropBreakdown {
+  def: string;
+  count: number;
+  averageGrowth: number;
 }
 
 export interface MedicalState {
@@ -43,8 +50,15 @@ export interface MedicalState {
 export interface FoodSnapshot {
   totalCrops: number;
   readyToHarvest: number;
+  cropBreakdown?: CropBreakdown[];
   estimatedFoodUnitsInStockpile: number;
   estimatedDaysOfFood: number | null;
+}
+
+export interface ResourceSnapshot {
+  materials: Record<string, number>;
+  medicine: Record<string, number>;
+  weapons: Record<string, number>;
 }
 
 export interface PowerSnapshot {
@@ -94,6 +108,7 @@ export interface ColonySnapshot {
   medical: MedicalState;
   prisoners: number;
   food: FoodSnapshot;
+  resources?: ResourceSnapshot;
   power: PowerSnapshot;
   mood: MoodSnapshot;
   threat: ThreatSnapshot;

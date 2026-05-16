@@ -82,6 +82,7 @@ public static class MayorBriefingDerivation
             .ToList();
 
         var lines = ordered.Take(PawnLineCap).Select(p => new PawnLine(
+            Id:         p.Id,
             Name:       p.Name,
             Age:        p.Age,
             Mood:       p.Mood,

@@ -27,6 +27,7 @@
     <ProjectReference Include="..\KnowledgeBase\RimAI.Knowledge.csproj" />
     <ProjectReference Include="..\Coordination\RimAI.Coordination.csproj" />
     <ProjectReference Include="..\Ministers\RimAI.Ministers.csproj" />
+    <ProjectReference Include="..\ApiHost\RimAI.Host.csproj" />
   </ItemGroup>
 
 </Project>

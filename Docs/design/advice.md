@@ -69,6 +69,10 @@ request should carry the thing needed and a short reason. Optional quantity,
 priority, owner/requested-from, work type, and skill fields should be used only
 when the emitter can state them cleanly.
 
+Requests may include an optional explicit `icon` ref when the emitter knows the
+game def or id. Icon refs are rendering hints only; they are not execution
+inputs and should not be inferred from prose.
+
 Labor requests must name a RimWorld work-tab type when possible. "Labor
 capacity" by itself is too vague for advice, logs, or future Auto wiring.
 
@@ -88,6 +92,10 @@ about changing an item's forbidden state.
 Each suggested action should carry an instruction. Avoid introducing generic
 `what` fields in new raw output; tolerant parsing may still repair older model
 payloads.
+
+Suggested actions may include an optional explicit `icon` ref. Emitters should
+use known defs only, such as a concrete item/building/crop def already present
+in the rule or briefing.
 
 ### Briefing Reference
 

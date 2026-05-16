@@ -1,3 +1,5 @@
+import type { IconRef } from './icons';
+
 export type AdvicePriority = 'low' | 'medium' | 'high' | 'critical';
 
 export interface ResourceRequest {
@@ -9,11 +11,13 @@ export interface ResourceRequest {
   requested_from?: string | null;
   work_type?: string | null;
   skill?: string | null;
+  icon?: IconRef | null;
 }
 
 export interface SuggestedAction {
   kind: string;
   instruction: string;
+  icon?: IconRef | null;
 }
 
 export interface AdviceItem {

@@ -148,6 +148,8 @@ SYSTEM owns:
 - RIMAPI integration snapshot: cached upstream endpoint denominator, active
   reads, represented client methods, deferred write stubs, and missing
   high-priority endpoints.
+- Icon cache metadata: local cache counts, byte totals, warm summary, skipped
+  candidates, and bounded failure samples.
 - Recent event/advice timeline.
 - Log and replay-corpus metadata.
 
@@ -228,6 +230,7 @@ Design-level endpoint families:
 - Latest minister prompt, briefing, RAG, trace, and raw LLM output.
 - Colony snapshot/sidebar data.
 - Bounded log and replay-corpus metadata.
+- Read-only icon gateway and cache status.
 - Developer-only manual raw LLM ingestion for Food while provider quota is a
   practical blocker.
 
@@ -238,6 +241,10 @@ RimAI re-evaluation trigger. They never mutate game state.
 diagnostic artifacts. It should expose bounded metadata such as location,
 patterns, counts, byte totals, latest write time, and recent-file summaries, not
 raw log file contents or full replay payloads.
+
+Icon cache metadata follows the same rule. SYSTEM may show counts, byte totals,
+kind totals, last warm result, skipped count, and bounded failure samples from
+`var/icons/`; it should not expose or inline image bytes.
 
 The same health payload may expose a RIMAPI integration snapshot for SYSTEM.
 This is coverage of upstream RimWorld mod endpoints, separate from Host
@@ -266,6 +273,22 @@ server errors. Logs remain the place for stack traces and low-level diagnostics.
 
 Manual trigger traces must be visible in the dashboard. The current trigger
 should remain suggest-only and must not call RIMAPI write endpoints.
+
+### Icon Rendering
+
+Dashboard icons are read-only Host URLs backed by the local runtime cache. The
+cache is populated from the player's running game and is not committed.
+
+The dashboard may render an icon only when it has an explicit source:
+
+- `icon` refs carried by `resource_requests[]` or `suggested_actions[]`.
+- Pawn ids for lazy portrait URLs.
+- Known def-name fields from structured payloads, such as crop/material/resource
+  dictionaries.
+
+Do not infer icons from prose in titles, bodies, reasons, instructions, or raw
+LLM text. If the explicit icon fails or is missing, render a stable-size fallback
+without resizing the row or card.
 
 ### Advice SSE
 
@@ -357,6 +380,9 @@ should default open when an advice card mounts, including after browser refresh
 or a new active-advice snapshot. They may use lightweight emoji labels because
 they are player-facing action summaries, not raw backend payloads.
 
+These rows may render real game icons only from explicit `icon` refs. The
+dashboard does not fuzzy-match request or instruction text to asset names.
+
 ---
 
 ## Data Coverage
@@ -398,7 +424,8 @@ metrics, and endpoint coverage.
 - Feedback/Pushback UI returns only when the feedback lifecycle is actively
   wired.
 - Autonomy controls return only with M7+ autonomy work.
-- Pawn/item image caching waits until text-first v2 is stable.
+- Hard-case icon variants such as stuff colors, crop growth stages, styles,
+  rotations, motes/projectiles, and per-instance art remain deferred.
 - RIMAPI write/control surfaces remain out of scope for suggest-only MVP.
 
 ---

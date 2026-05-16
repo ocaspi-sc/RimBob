@@ -8,6 +8,10 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
 {
     private const string MinisterName = "Food";
     private const string Domain = "food";
+    private static readonly IconRef CampfireIcon = ItemIcon("Campfire");
+    private static readonly IconRef CoolerIcon = ItemIcon("Cooler");
+    private static readonly IconRef RicePlantIcon = ItemIcon("Plant_Rice");
+    private static readonly IconRef SimpleMealIcon = ItemIcon("MealSimple");
 
     public RulesResult Evaluate(FoodBriefing briefing, ColonyContext context)
     {
@@ -20,8 +24,8 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                     "Food stockpile categories need verification",
                     $"RIMAPI reports {briefing.UnclassifiedFoodUnits} unclassified food units but no usable nutrition signal. Make those items visible as reachable meals or raw food before treating this as a safe buffer.",
                     "Missing nutrition would make days-of-food unreliable; use the fallback counts until upstream data is fixed.",
-                    [new(ResourceRequestKind.StockpileSpace, "reachable food stockpile visibility", "unclassified food units cannot be converted into days-of-food")],
-                    [new(SuggestedActionKind.SetStockpileZone, "Confirm the stored food is edible and reachable; move it into a visible food stockpile if needed.")],
+                    [new(ResourceRequestKind.StockpileSpace, "reachable food stockpile visibility", "unclassified food units cannot be converted into days-of-food", Icon: SimpleMealIcon)],
+                    [new(SuggestedActionKind.SetStockpileZone, "Confirm the stored food is edible and reachable; move it into a visible food stockpile if needed.", SimpleMealIcon)],
                     false);
 
             return DecisionFor(briefing, "unknown_food_state",
@@ -30,8 +34,8 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 "Food state unknown",
                 "No reliable food stockpile signal is available. Treat this as a food-security check, not confirmed starvation.",
                 "The food chain cannot safely decide without stockpile visibility.",
-                [new(ResourceRequestKind.StockpileSpace, "visible reachable food stockpile", "food_units and nutrition are both unavailable")],
-                [new(SuggestedActionKind.SetStockpileZone, "Create or expose a reachable food stockpile, then refresh RimAI once food is visible.")],
+                [new(ResourceRequestKind.StockpileSpace, "visible reachable food stockpile", "food_units and nutrition are both unavailable", Icon: SimpleMealIcon)],
+                [new(SuggestedActionKind.SetStockpileZone, "Create or expose a reachable food stockpile, then refresh RimAI once food is visible.", SimpleMealIcon)],
                 true);
         }
 
@@ -61,7 +65,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 $"{briefing.ReadyToHarvest} crop tiles are ready to harvest. Pull them in before weather, rot, or task drift wastes the buffer.",
                 "Mature crops are a deterministic food-chain opportunity.",
                 PlantLaborIfNeeded(briefing, days, "PlantCut work for ready crops", "mature crops only help once harvested"),
-                [new(SuggestedActionKind.MarkHarvest, HarvestActionText(briefing))],
+                [new(SuggestedActionKind.MarkHarvest, HarvestActionText(briefing), HarvestIcon(briefing))],
                 days < 15f);
         }
 
@@ -88,7 +92,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 WildHarvestBody(briefing, days),
                 "Wild harvest is lower-risk than hunting when no mature crops are ready.",
                 PlantLaborIfNeeded(briefing, days, "PlantCut work for wild harvest", "wild harvest requires plant work"),
-                [new(SuggestedActionKind.MarkHarvest, WildHarvestActionText(briefing))],
+                [new(SuggestedActionKind.MarkHarvest, WildHarvestActionText(briefing), WildHarvestIcon(briefing))],
                 days < 10f);
 
         if (days < 20f && CanSuggestHunting(briefing) && briefing.ReadyToHarvest == 0)
@@ -117,9 +121,10 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                         $"{GrowingTileRequest(briefing)} food growing tiles near fertile soil and food storage",
                         "current food buffer is below the 20-day safety band",
                         Quantity: GrowingTileRequest(briefing),
-                        RequestedFrom: "Construction")
+                        RequestedFrom: "Construction",
+                        Icon: RicePlantIcon)
                 ],
-                [new(SuggestedActionKind.DesignateZone, $"Create or expand a food growing zone by about {GrowingTileRequest(briefing)} tiles; plant rice unless local soil/season makes potatoes safer.")],
+                [new(SuggestedActionKind.DesignateZone, $"Create or expand a food growing zone by about {GrowingTileRequest(briefing)} tiles; plant rice unless local soil/season makes potatoes safer.", RicePlantIcon)],
                 days < 12f);
 
         if (days < 20f && briefing.WildAnimalCount > 0 && briefing.ReadyToHarvest == 0)
@@ -139,8 +144,8 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 "Food storage needs freezer support",
                 "Food exists but no cooler is visible. Preserve surplus before warm weather or large harvests.",
                 "The Food minister owns freezer need; Construction owns the actual build work.",
-                [new(ResourceRequestKind.Building, "cooler-backed freezer or cold room", "stored food can spoil without temperature control", RequestedFrom: "Construction")],
-                [new(SuggestedActionKind.PlaceBlueprint, "Plan a freezer/cold-room upgrade near food storage.")],
+                [new(ResourceRequestKind.Building, "cooler-backed freezer or cold room", "stored food can spoil without temperature control", RequestedFrom: "Construction", Icon: CoolerIcon)],
+                [new(SuggestedActionKind.PlaceBlueprint, "Plan a freezer/cold-room upgrade near food storage.", CoolerIcon)],
                 false);
 
         if (days >= 30f)
@@ -221,7 +226,8 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 $"reachable stockpile visibility for {briefing.UnclassifiedFoodUnits} unclassified food units",
                 "unclassified_food_units exists, but no meal or raw-food category is visible to Food",
                 Quantity: briefing.UnclassifiedFoodUnits,
-                Priority: priority));
+                Priority: priority,
+                Icon: SimpleMealIcon));
         if (briefing.ReadyToHarvest > 0 || briefing.WildHarvestCandidates > 0)
             requests.Add(new ResourceRequest(ResourceRequestKind.Labor,
                 "PlantCut work today",
@@ -229,7 +235,8 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 Priority: priority,
                 RequestedFrom: "Labor",
                 WorkType: WorkType.PlantCut,
-                Skill: "Plants"));
+                Skill: "Plants",
+                Icon: briefing.ReadyToHarvest > 0 ? HarvestIcon(briefing) : WildHarvestIcon(briefing)));
         if (CanSuggestHunting(briefing))
         {
             requests.Add(new ResourceRequest(ResourceRequestKind.Labor,
@@ -254,34 +261,39 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 "food buffer is below 7 days and the growing window is still open",
                 Quantity: growingTiles,
                 Priority: priority,
-                RequestedFrom: "Construction"));
+                RequestedFrom: "Construction",
+                Icon: RicePlantIcon));
             requests.Add(new ResourceRequest(ResourceRequestKind.Labor,
                 "Grow work for emergency food zone",
                 "new food growing tiles only help once sown",
                 Priority: priority,
                 RequestedFrom: "Labor",
                 WorkType: WorkType.Grow,
-                Skill: "Plants"));
+                Skill: "Plants",
+                Icon: RicePlantIcon));
         }
         if (!briefing.Kitchen.HasCookingBuilding)
             requests.Add(new ResourceRequest(ResourceRequestKind.Building,
                 "campfire or stove for simple meals",
                 "the food chain cannot turn raw food into meals without a cooking building",
                 Priority: priority,
-                RequestedFrom: "Construction"));
+                RequestedFrom: "Construction",
+                Icon: CampfireIcon));
         if (briefing.RawFoodCount > 0)
         {
             requests.Add(new ResourceRequest(ResourceRequestKind.Bill,
                 $"cook simple meals until {SimpleMealTarget(briefing)}",
                 "raw food must become meals during an urgent shortage",
-                Priority: priority));
+                Priority: priority,
+                Icon: SimpleMealIcon));
             requests.Add(new ResourceRequest(ResourceRequestKind.Labor,
                 "Cook work today",
                 "raw food must become meals during an urgent shortage",
                 Priority: priority,
                 RequestedFrom: "Labor",
                 WorkType: WorkType.Cook,
-                Skill: "Cooking"));
+                Skill: "Cooking",
+                Icon: SimpleMealIcon));
         }
         if (requests.Count == 0)
             requests.Add(new ResourceRequest(ResourceRequestKind.TradeCapacity,
@@ -300,22 +312,23 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             actions.Add(new SuggestedAction(SuggestedActionKind.Unforbid, ForbiddenMealActionText(briefing, forbiddenMealCount)));
         if (briefing.UnclassifiedFoodUnits > 0 && briefing.MealsCount == 0 && briefing.RawFoodCount == 0)
             actions.Add(new SuggestedAction(SuggestedActionKind.SetStockpileZone,
-                $"Find the {briefing.UnclassifiedFoodUnits} unclassified food units and make them visible in a reachable food stockpile; if they are not edible, treat the buffer as zero."));
+                $"Find the {briefing.UnclassifiedFoodUnits} unclassified food units and make them visible in a reachable food stockpile; if they are not edible, treat the buffer as zero.",
+                SimpleMealIcon));
         if (briefing.ReadyToHarvest > 0)
-            actions.Add(new SuggestedAction(SuggestedActionKind.MarkHarvest, HarvestActionText(briefing)));
+            actions.Add(new SuggestedAction(SuggestedActionKind.MarkHarvest, HarvestActionText(briefing), HarvestIcon(briefing)));
         if (briefing.WildHarvestCandidates > 0)
-            actions.Add(new SuggestedAction(SuggestedActionKind.MarkHarvest, WildHarvestActionText(briefing)));
+            actions.Add(new SuggestedAction(SuggestedActionKind.MarkHarvest, WildHarvestActionText(briefing), WildHarvestIcon(briefing)));
         if (CanSuggestHunting(briefing))
             actions.Add(new SuggestedAction(SuggestedActionKind.MarkHunt, HuntingActionText(briefing)));
         if (!briefing.Kitchen.HasCookingBuilding)
-            actions.Add(new SuggestedAction(SuggestedActionKind.PlaceBlueprint, "Place a campfire or stove so raw food can become meals."));
+            actions.Add(new SuggestedAction(SuggestedActionKind.PlaceBlueprint, "Place a campfire or stove so raw food can become meals.", CampfireIcon));
         if (briefing.RawFoodCount > 0)
         {
-            actions.Add(new SuggestedAction(SuggestedActionKind.ProductionBill, CookBillActionText(briefing)));
-            actions.Add(new SuggestedAction(SuggestedActionKind.SetPriority, "Put the best cook on Cook work until simple meals are stocked."));
+            actions.Add(new SuggestedAction(SuggestedActionKind.ProductionBill, CookBillActionText(briefing), SimpleMealIcon));
+            actions.Add(new SuggestedAction(SuggestedActionKind.SetPriority, "Put the best cook on Cook work until simple meals are stocked.", SimpleMealIcon));
         }
         if (CanSowBeforeWinter(briefing))
-            actions.Add(new SuggestedAction(SuggestedActionKind.DesignateZone, $"Create about {GrowingTileRequest(briefing)} emergency rice growing tiles; use fertile soil near storage when possible."));
+            actions.Add(new SuggestedAction(SuggestedActionKind.DesignateZone, $"Create about {GrowingTileRequest(briefing)} emergency rice growing tiles; use fertile soil near storage when possible.", RicePlantIcon));
         if (actions.Count == 0)
             actions.Add(new SuggestedAction(SuggestedActionKind.Trade, "Open an emergency food acquisition path because no stored, harvestable, cookable, or sowable food path is visible."));
         int limit = forbiddenMealCount > 0 ? 4 : 3;
@@ -328,20 +341,23 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         [
             new ResourceRequest(ResourceRequestKind.Bill,
                 $"cook simple meals until {SimpleMealTarget(briefing)}",
-                "meal count is below two per colonist")
+                "meal count is below two per colonist",
+                Icon: SimpleMealIcon)
         ];
         if (!briefing.Kitchen.HasCookingBuilding)
             requests.Add(new ResourceRequest(ResourceRequestKind.Building,
                 "campfire or stove for simple meals",
                 "raw food cannot become meals without a cooking building",
-                RequestedFrom: "Construction"));
+                RequestedFrom: "Construction",
+                Icon: CampfireIcon));
         if (ShouldRequestCookingLabor(briefing, days))
             requests.Add(new ResourceRequest(ResourceRequestKind.Labor,
                 "Cook work time",
                 "raw food has to become meals and cook coverage is urgent or weak",
                 RequestedFrom: "Labor",
                 WorkType: WorkType.Cook,
-                Skill: "Cooking"));
+                Skill: "Cooking",
+                Icon: SimpleMealIcon));
         return requests;
     }
 
@@ -349,10 +365,10 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
     {
         List<SuggestedAction> actions =
         [
-            new(SuggestedActionKind.ProductionBill, CookBillActionText(briefing))
+            new(SuggestedActionKind.ProductionBill, CookBillActionText(briefing), SimpleMealIcon)
         ];
         if (!briefing.Kitchen.HasCookingBuilding)
-            actions.Add(new SuggestedAction(SuggestedActionKind.PlaceBlueprint, "Place a campfire or stove before relying on cooked-meal advice."));
+            actions.Add(new SuggestedAction(SuggestedActionKind.PlaceBlueprint, "Place a campfire or stove before relying on cooked-meal advice.", CampfireIcon));
         return actions;
     }
 
@@ -398,8 +414,35 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
 
     private static IReadOnlyList<ResourceRequest> PlantLaborIfNeeded(FoodBriefing briefing, float days, string what, string why) =>
         ShouldRequestPlantLabor(briefing, days)
-            ? [new ResourceRequest(ResourceRequestKind.Labor, what, why, RequestedFrom: "Labor", WorkType: WorkType.PlantCut, Skill: "Plants")]
+            ? [new ResourceRequest(ResourceRequestKind.Labor, what, why, RequestedFrom: "Labor", WorkType: WorkType.PlantCut, Skill: "Plants", Icon: HarvestIcon(briefing))]
             : [];
+
+    private static IconRef HarvestIcon(FoodBriefing briefing) =>
+        ItemIcon(FirstNonBlank(
+            briefing.CropZoneSummaries
+                .Where(zone => zone.ReadyCount > 0)
+                .OrderByDescending(zone => zone.ReadyCount)
+                .Select(zone => zone.Def),
+            briefing.CropBreakdown
+                .OrderByDescending(crop => crop.Count)
+                .Select(crop => crop.Def))
+            ?? "Plant_Rice");
+
+    private static IconRef WildHarvestIcon(FoodBriefing briefing) =>
+        ItemIcon(FirstNonBlank(briefing.WildHarvestClusters.Select(cluster => cluster.Def)) ?? "Plant_Berry");
+
+    private static string? FirstNonBlank(params IEnumerable<string?>[] groups)
+    {
+        foreach (IEnumerable<string?> group in groups)
+        {
+            string? value = group.FirstOrDefault(candidate => !string.IsNullOrWhiteSpace(candidate));
+            if (!string.IsNullOrWhiteSpace(value)) return value;
+        }
+
+        return null;
+    }
+
+    private static IconRef ItemIcon(string defName) => new("item", defName);
 
     private static bool ShouldRequestCookingLabor(FoodBriefing briefing, float days) =>
         days < 10f || briefing.MealsCount == 0 || briefing.Skills.QualifiedCooks == 0;

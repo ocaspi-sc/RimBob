@@ -10,7 +10,9 @@ public sealed record SuggestedAction(
     [property: JsonPropertyName("kind")]
     SuggestedActionKind Kind,
     [property: JsonPropertyName("instruction")]
-    string What);
+    string What,
+    [property: JsonPropertyName("icon")]
+    IconRef? Icon = null);
 
 [JsonConverter(typeof(SnakeCaseLowerEnumConverter<SuggestedActionKind>))]
 public enum SuggestedActionKind

@@ -847,6 +847,7 @@ code {
 
 .resource-table .dense-row {
   grid-template-columns:
+    32px
     minmax(96px, 0.8fr)
     minmax(180px, 1.25fr)
     minmax(260px, 2fr)
@@ -855,7 +856,13 @@ code {
     minmax(118px, 0.85fr)
     minmax(78px, 0.65fr);
   align-items: start;
-  min-width: 940px;
+  min-width: 980px;
+}
+
+.icon-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .dense-row.header {
@@ -1324,11 +1331,47 @@ code {
 
 .action-list > div {
   display: grid;
-  grid-template-columns: 140px 1fr;
+  grid-template-columns: 28px 140px 1fr;
   gap: 10px;
+  align-items: center;
   padding: 8px;
   border: 1px solid var(--line-soft);
   border-radius: 5px;
+}
+
+.game-icon {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.035);
+  overflow: hidden;
+}
+
+.game-icon.xs {
+  width: 24px;
+  height: 24px;
+}
+
+.game-icon.md {
+  width: 42px;
+  height: 42px;
+}
+
+.game-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.game-icon-fallback {
+  color: var(--dim);
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .colony-sidebar {
@@ -1358,6 +1401,55 @@ code {
   margin: 10px 0;
 }
 
+.resource-icon-panel {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 10px;
+}
+
+.resource-icon-title,
+.resource-icon-row {
+  display: grid;
+  align-items: center;
+  gap: 7px;
+}
+
+.resource-icon-title {
+  grid-template-columns: 1fr auto;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.resource-icon-list {
+  display: grid;
+  gap: 5px;
+}
+
+.resource-icon-row {
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  min-height: 30px;
+  padding: 5px 6px;
+  border: 1px solid var(--line-soft);
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.13);
+}
+
+.resource-icon-row span {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.76rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resource-icon-row strong {
+  color: var(--text);
+  font-size: 0.78rem;
+}
+
 .colonist-title {
   display: flex;
   justify-content: space-between;
@@ -1385,8 +1477,22 @@ code {
   border-color: rgba(240, 189, 95, 0.55);
 }
 
+.colonist-card-main {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.colonist-card-main > div {
+  min-width: 0;
+}
+
 .colonist-card h4 {
   margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .colonist-card small {
@@ -1435,6 +1541,21 @@ code {
   color: var(--warn);
   font-size: 0.75rem;
   font-weight: 700;
+}
+
+.icon-cache-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.icon-failure-table {
+  margin-top: 2px;
+  overflow-x: auto;
+}
+
+.icon-failure-table .dense-row {
+  grid-template-columns: 90px minmax(160px, 0.8fr) minmax(320px, 1.8fr);
+  min-width: 620px;
 }
 
 @media (max-width: 1180px) {
