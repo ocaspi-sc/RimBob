@@ -9,6 +9,9 @@
 ## Captured by /todo
 
 <!-- entries go here -->
+- [ ] [2026-05-17] #rimapi #fork Create RimAI-compatible RIMAPI fork for safe write endpoints.
+- [ ] [2026-05-17] #rimapi #assisted After the RIMAPI fork lands, verify Food uses safe unforbid apply end to end.
+- [ ] [2026-05-17] #rimapi #harvest Add `is_harvestable` / `growth_progress` to `/map/plants` after migrating to a RIMAPI fork.
 - [ ] [2026-05-16] #rimapi #assisted Validate companion safe `/api/v1/order/unforbid` endpoint and remove RimAI fallback caveat.
 - [ ] [2026-05-16] #skill #debt Fix local skill validator Python dependency.
 - [ ] [2026-05-16] #replay #mayor Decide whether legacy `/api/agenda/manual` should emit replay records or be retired.
