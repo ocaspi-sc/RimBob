@@ -43,10 +43,11 @@ export function MinisterRawLlmView({
   }
 
   const stale = output.data.status !== 'not_seen_yet' && isOlderThanTrace(output.data.capturedAt, latestTrace);
+  const runSummary = latestTrace ? summarizeTrace(latestTrace) : null;
 
   if (output.data.status === 'not_seen_yet') {
     const noOutputReason = latestTrace
-      ? `${scope.label}'s latest run ${formatTraceTime(latestTrace)} did not record an LLM response. It may have stayed on the rules path or failed before provider text arrived.`
+      ? noRawOutputReason(scope.label, latestTrace)
       : `${scope.label} has not recorded an LLM response since this Host process started.`;
 
     return (
@@ -60,6 +61,12 @@ export function MinisterRawLlmView({
         <EmptyState code="NO RAW OUTPUT YET">
           {noOutputReason}
         </EmptyState>
+
+        {latestTrace && runSummary && (
+          <DisclosureSection title="Latest run trace" defaultOpen meta={runSummary.meta}>
+            <JsonTree value={traceMetadata(latestTrace, stale)} />
+          </DisclosureSection>
+        )}
       </div>
     );
   }
@@ -86,7 +93,7 @@ export function MinisterRawLlmView({
 
       {stale && latestTrace && (
         <EmptyState code="STALE RAW OUTPUT">
-          {`Latest ${scope.label} run ${formatTraceTime(latestTrace)} did not record a newer LLM response. Showing the previous raw response captured ${new Date(output.data.capturedAt).toLocaleString()}.`}
+          {staleRawOutputReason(scope.label, latestTrace, output.data.capturedAt)}
         </EmptyState>
       )}
 
@@ -119,10 +126,7 @@ export function MinisterRawLlmView({
             parse_mode: output.data.parseMode,
             system_prompt_chars: output.data.systemPromptChars,
             user_prompt_chars: output.data.userPromptChars,
-            latest_run_started_at: latestTrace?.startedAt ?? null,
-            latest_run_completed_at: latestTrace?.completedAt ?? null,
-            latest_run_status: latestTrace?.status ?? null,
-            stale_vs_latest_run: stale,
+            latest_run: latestTrace ? traceMetadata(latestTrace, stale) : null,
           }}
         />
       </DisclosureSection>
@@ -145,6 +149,68 @@ function isOlderThanTrace(capturedAt: string, trace: MinisterTrace | null): bool
   if (!Number.isFinite(capturedMs) || !Number.isFinite(traceStartedMs)) return false;
 
   return capturedMs < traceStartedMs;
+}
+
+function noRawOutputReason(label: string, trace: MinisterTrace): string {
+  const time = formatTraceTime(trace);
+  if (trace.path === 'rules') {
+    const rule = trace.ruleFired ? ` (${trace.ruleFired})` : '';
+    return `${label}'s latest run ${time} used the rules path${rule}. No prior raw LLM response is available to show.`;
+  }
+
+  if (trace.path === 'llm_failed') {
+    const reason = trace.escalationReason ? ` for ${trace.escalationReason}` : '';
+    const error = trace.errorMessage ? `: ${trace.errorMessage}.` : '.';
+    return `${label}'s latest run ${time} tried the LLM path${reason} but failed before provider text was captured${error} No prior raw LLM response is available to show.`;
+  }
+
+  if (trace.path === 'llm') {
+    return `${label}'s latest run ${time} recorded an LLM path, but no raw response capture is available. Check logs and replay corpus for a capture gap.`;
+  }
+
+  return `${label}'s latest run ${time} did not record an LLM response. The backend trace path is ${trace.path}, and no prior raw LLM response is available to show.`;
+}
+
+function staleRawOutputReason(label: string, trace: MinisterTrace, capturedAt: string): string {
+  const captured = new Date(capturedAt).toLocaleString();
+  if (trace.path === 'rules') {
+    const rule = trace.ruleFired ? ` (${trace.ruleFired})` : '';
+    return `Latest ${label} run ${formatTraceTime(trace)} used the rules path${rule}. Showing the previous raw response captured ${captured}.`;
+  }
+
+  if (trace.path === 'llm_failed') {
+    const reason = trace.escalationReason ? ` (${trace.escalationReason})` : '';
+    const error = trace.errorMessage ? ` ${trace.errorMessage}.` : '';
+    return `Latest ${label} run ${formatTraceTime(trace)} failed on the LLM path${reason}.${error} Showing the previous raw response captured ${captured}.`;
+  }
+
+  return `Latest ${label} run ${formatTraceTime(trace)} did not record a newer LLM response. Showing the previous raw response captured ${captured}.`;
+}
+
+function summarizeTrace(trace: MinisterTrace): { meta: string } {
+  if (trace.path === 'rules' && trace.ruleFired) return { meta: `rules / ${trace.ruleFired}` };
+  if (trace.path === 'llm_failed' && trace.errorType) return { meta: `llm failed / ${trace.errorType}` };
+  if (trace.path === 'llm' && trace.escalationReason) return { meta: `llm / ${trace.escalationReason}` };
+  return { meta: trace.path.replace(/_/g, ' ') };
+}
+
+function traceMetadata(trace: MinisterTrace, stale: boolean) {
+  return {
+    minister: trace.minister,
+    trigger: trace.trigger,
+    status: trace.status,
+    path: trace.path,
+    rule_fired: trace.ruleFired,
+    escalation_reason: trace.escalationReason,
+    error_type: trace.errorType,
+    error_message: trace.errorMessage,
+    advice_count: trace.adviceCount,
+    flag_count: trace.flagCount,
+    started_at: trace.startedAt,
+    completed_at: trace.completedAt,
+    stale_vs_latest_run: stale,
+    note: trace.note,
+  };
 }
 
 function formatTraceTime(trace: MinisterTrace): string {

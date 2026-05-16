@@ -93,6 +93,10 @@ export interface MinisterTrace {
   path: string;
   ruleFired: string | null;
   escalationReason: string | null;
+  errorType: string | null;
+  errorMessage: string | null;
+  adviceCount: number | null;
+  flagCount: number | null;
   wakeupPayload: string | null;
   flag: unknown | null;
   note: string;

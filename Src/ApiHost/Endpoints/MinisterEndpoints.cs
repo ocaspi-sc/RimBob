@@ -27,7 +27,7 @@ public static class MinisterEndpoints
             "/api/ministers/{minister}/llm-output/manual",
             _ => "partial",
             context => $"Developer manual raw LLM ingestion for {context.CapabilityNames(descriptor => descriptor.HasManualLlmOutput)}.");
-        coverage.Register("/api/ministers/{minister}/trace/latest", "partial", "Wake trigger visible; rule/LLM path details not exposed yet.");
+        coverage.Register("/api/ministers/{minister}/trace/latest", "available", "Latest minister trigger, status, rules/LLM path, rule trace, escalation reason, counts, and error detail.");
         coverage.Register("/api/ministers/{minister}/rag/latest", "not_exposed_yet", "Planned RAG retrieval inspector.");
         coverage.Register(
             "/api/ministers/food/crop-math/latest",
@@ -113,7 +113,8 @@ public static class MinisterEndpoints
         app.MapGet("/api/ministers/{minister}/llm-output/latest", (
             string minister,
             MinisterRegistry registry,
-            RawLlmOutputStore outputs) =>
+            RawLlmOutputStore outputs,
+            ReplayCorpusRawOutputReader replayOutputs) =>
         {
             MinisterDescriptor? scope = registry.FindMinister(minister);
             if (scope is null)
@@ -127,7 +128,9 @@ public static class MinisterEndpoints
                     statusCode: StatusCodes.Status501NotImplemented);
             }
 
-            RawLlmOutputSnapshot? snapshot = outputs.Latest(scope.Label);
+            RawLlmOutputSnapshot? snapshot = LatestRawOutput(
+                outputs.Latest(scope.Label),
+                replayOutputs.Latest(scope.Label));
             if (snapshot is null)
             {
                 return Results.Ok(new RawLlmOutputSnapshot(
@@ -294,6 +297,10 @@ public static class MinisterEndpoints
                     Path: "not_exposed_yet",
                     RuleFired: null,
                     EscalationReason: null,
+                    ErrorType: null,
+                    ErrorMessage: null,
+                    AdviceCount: null,
+                    FlagCount: null,
                     WakeupPayload: null,
                     Flag: null,
                     Note: scope.Ready
@@ -318,6 +325,18 @@ public static class MinisterEndpoints
             return $"(prompt file not found: {ex.FileName})";
         }
     }
+
+    private static RawLlmOutputSnapshot? LatestRawOutput(
+        RawLlmOutputSnapshot? inMemory,
+        RawLlmOutputSnapshot? replay) =>
+        (inMemory, replay) switch
+        {
+            (null, null) => null,
+            (RawLlmOutputSnapshot current, null) => current,
+            (null, RawLlmOutputSnapshot persisted) => persisted,
+            (RawLlmOutputSnapshot current, RawLlmOutputSnapshot persisted) =>
+                current.CapturedAt >= persisted.CapturedAt ? current : persisted,
+        };
 
     private static string ReadManualLlmOutputText(JsonElement body)
     {

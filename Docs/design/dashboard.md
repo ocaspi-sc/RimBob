@@ -158,6 +158,8 @@ SYSTEM owns:
   result.
 - Icon cache metadata: local cache counts, byte totals, warm summary, skipped
   candidates, and bounded failure samples.
+- Latest minister traces: trigger, status, rules/LLM path, rule trace,
+  escalation reason, emitted counts, and failure detail when available.
 - Recent event/advice timeline.
 - Log and replay-corpus metadata.
 
@@ -349,7 +351,13 @@ Raw LLM Output is a latest-capture inspector, not proof that the latest
 minister run used the LLM. Compare the capture timestamp with the latest
 minister trace. If a newer run completed without a newer raw response, mark the
 raw output as stale and explain that the latest run did not record an LLM
-response, commonly because it stayed on the rules path.
+response, commonly because it stayed on the rules path. When trace path details
+are available, name the concrete path (`rules`, `llm`, `llm_failed`), rule
+trace, escalation reason, or failure text instead of falling back to a generic
+possibility statement. If the latest run did not use the LLM but an earlier raw
+LLM capture exists, keep showing that previous capture with the stale warning.
+Only render the "no raw output yet" empty state when no prior raw response is
+available from the current Host process or replay corpus.
 
 Developer fallback ingestion is an observability and quota workaround only. The
 existing `run-minister-using-codex-subagent` skill owns the operator workflow:

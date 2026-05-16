@@ -6,10 +6,21 @@ namespace RimAI.Coordination;
 
 public sealed class MinisterReplayRecorder(
     IReplayCorpusWriter? writer,
-    RawLlmOutputStore? rawOutputs = null)
+    RawLlmOutputStore? rawOutputs = null,
+    MinisterTraceStore? traces = null)
 {
     public Task RecordAsync(MinisterReplayEntry entry, CancellationToken ct)
     {
+        traces?.RecordPath(
+            entry.Minister,
+            entry.Cycle,
+            entry.Path,
+            entry.RuleTrace,
+            entry.EscalationReason,
+            entry.Error,
+            entry.Advice?.Count,
+            entry.Flags?.Count);
+
         if (writer is null) return Task.CompletedTask;
 
         ReplayLlmMetadata? llm = entry.Llm

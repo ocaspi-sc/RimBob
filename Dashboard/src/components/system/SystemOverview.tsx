@@ -305,13 +305,15 @@ export function SystemOverview({
               <FieldLabel iconKey="trigger">Trigger</FieldLabel>
               <FieldLabel iconKey="status">Status</FieldLabel>
               <FieldLabel iconKey="path">Path</FieldLabel>
+              <FieldLabel iconKey="note">Detail</FieldLabel>
             </div>
             {health.traces.map(trace => (
               <div className="dense-row" key={trace.minister}>
                 <span>{trace.minister}</span>
                 <span>{trace.trigger}</span>
                 <span>{trace.status}</span>
-                <span>{trace.path}</span>
+                <span>{formatKind(trace.path)}</span>
+                <span>{formatTraceDetail(trace)}</span>
               </div>
             ))}
           </div>
@@ -387,6 +389,19 @@ function shorten(value: string): string {
 
 function formatKind(value: string | null | undefined): string {
   return value ? value.replace(/_/g, ' ') : '-';
+}
+
+function formatTraceDetail(trace: SystemHealth['traces'][number]): string {
+  if (trace.errorMessage) return `${trace.errorType ?? 'error'}: ${trace.errorMessage}`;
+  if (trace.ruleFired) return `rule: ${trace.ruleFired}`;
+  if (trace.escalationReason) return `reason: ${trace.escalationReason}`;
+
+  const counts = [
+    trace.adviceCount !== null ? `${trace.adviceCount} advice` : null,
+    trace.flagCount !== null ? `${trace.flagCount} flags` : null,
+  ].filter(Boolean).join(' / ');
+
+  return counts || trace.note;
 }
 
 function formatBytes(bytes: number): string {

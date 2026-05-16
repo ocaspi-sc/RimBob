@@ -79,6 +79,62 @@ public sealed class MinisterReplayRecorderTests
         writer.Records.Should().ContainSingle().Which.Llm.Should().BeNull();
     }
 
+    [Fact]
+    public async Task RecordAsync_UpdatesTraceStoreWithRulePath()
+    {
+        CapturingReplayWriter writer = new();
+        MinisterTraceStore traces = new();
+        MinisterReplayRecorder recorder = new(writer, traces: traces);
+
+        await recorder.RecordAsync(new MinisterReplayEntry(
+            Minister: "Food",
+            Cycle: PlayCycleContext.ManualTrigger,
+            Path: "rules",
+            Briefing: FoodRulesTests.Briefing(4f),
+            RuleTrace: "emergency_food_flag"), CancellationToken.None);
+
+        traces.Latest("Food").Should().NotBeNull();
+        MinisterTraceSnapshot snapshot = traces.Latest("Food")!;
+        snapshot.Status.Should().Be("completed");
+        snapshot.Trigger.Should().Be(nameof(PlayCycleTrigger.ManualTrigger));
+        snapshot.Path.Should().Be("rules");
+        snapshot.RuleFired.Should().Be("emergency_food_flag");
+        snapshot.Note.Should().Contain("emergency_food_flag");
+    }
+
+    [Fact]
+    public async Task RecordAsync_UpdatesRunningTraceWithLlmFailure()
+    {
+        CapturingReplayWriter writer = new();
+        MinisterTraceStore traces = new();
+        traces.Begin("Food", PlayCycleContext.CabinetRefresh);
+        MinisterReplayRecorder recorder = new(writer, traces: traces);
+
+        await recorder.RecordAsync(new MinisterReplayEntry(
+            Minister: "Food",
+            Cycle: PlayCycleContext.CabinetRefresh,
+            Path: "llm_failed",
+            Briefing: FoodRulesTests.Briefing(12f),
+            EscalationReason: "bootstrap_first_live_cycle",
+            Error: new ReplayErrorSummary(nameof(InvalidOperationException), "No Gemini API keys configured.")),
+            CancellationToken.None);
+
+        traces.Latest("Food").Should().NotBeNull();
+        MinisterTraceSnapshot running = traces.Latest("Food")!;
+        running.Status.Should().Be("running");
+        running.Path.Should().Be("llm_failed");
+        running.EscalationReason.Should().Be("bootstrap_first_live_cycle");
+        running.ErrorType.Should().Be(nameof(InvalidOperationException));
+        running.ErrorMessage.Should().Be("No Gemini API keys configured.");
+
+        traces.Complete("Food");
+        traces.Latest("Food").Should().NotBeNull();
+        MinisterTraceSnapshot completed = traces.Latest("Food")!;
+        completed.Status.Should().Be("completed");
+        completed.Path.Should().Be("llm_failed");
+        completed.ErrorMessage.Should().Be("No Gemini API keys configured.");
+    }
+
     private sealed class CapturingReplayWriter : IReplayCorpusWriter
     {
         public List<MinisterReplayRecord> Records { get; } = [];
