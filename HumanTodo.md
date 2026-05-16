@@ -15,7 +15,7 @@
 - [x] [2026-05-15] #food #advice #schema Collapse Food advice into one priority-tagged step path. [plan](.plans/collapse-food-advice-steps.md)
 - [ ] [2026-05-15] #idea #llm #rag Provide ministers with more RAG knowledge.
 - [x] [2026-05-14] #doc #debt Avoid over-specifying code-documented details in design docs.
-- [ ] [2026-05-14] #spike #backend #debt Review RimAI C# codebase and propose refactorings. [plan](.plans/recommended-refactorings.md)
+- [x] [2026-05-14] #spike #backend #debt Review RimAI C# codebase and propose refactorings. [plan](.plans/recommended-refactorings.md)
 - [ ] [2026-05-14] #debt #doc Rename RimAI to RimBob.
 - [ ] [2026-05-09] #spike #llm #test Benchmark optional TOON prompt encoding. [plan](Docs/plans/toon-prompt-encoding-spike.md)
 - [ ] [2026-05-09] #dashboard #ux Add button to dashboard "what was sent" / prompt-introspection screen that copies the full system + user prompt to the clipboard. Pairs with the manual-fallback flow (`logs/mayor-prompt-latest.md`, `POST /api/agenda/manual`) for when Gemini is rate-limited.
@@ -29,7 +29,8 @@
 
 ### Now (live-state gaps)
 
-- [ ] **PawnMedicalInfo wiring.** `PawnMedicalInfoDto.IsDowned` and `Hediffs` flow through the DTO but `MayorBriefingDerivation.DeriveMedical` still uses a `Health < 0.30` heuristic. Plumb `is_downed` + life-threatening hediffs into `ColonistRecord` so Mayor can distinguish "anesthetised" from "dying".
+- [x] **PawnMedicalInfo downed/dead wiring.** `is_downed` and `is_dead` now flow into `ColonistRecord`; Mayor pawn lines expose `IsDowned`, dead pawns are filtered, and `DeriveMedical` counts authoritative downed state instead of a low-health heuristic.
+- [ ] **Medical hediff severity wiring.** If Mayor or a future Medical minister needs life-threatening condition awareness, preserve the relevant `Hediffs` signal into state/briefing instead of inferring severity from generic `Health`.
 - [x] **`/resources/stored` integration.** Populate per-def stored item counts from `/resources/stored` so Food can classify meals/raw food and Mayor can surface material counts.
 - [ ] **`total_nutrition == 0` upstream investigation.** RIMAPI returns 0 nutrition even when `food_total > 0` and meals exist on map. Check whether this is a bug we can patch around (e.g. compute from `meals_count * 0.9 + raw_food_count * 0.05`) or a deeper RIMAPI gap.
 

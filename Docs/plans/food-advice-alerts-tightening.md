@@ -154,7 +154,9 @@ Status: implemented for this slice. Backend tests cover priority/work metadata s
 
 ## Phase 7 - Verification
 
-Status: verified on 2026-05-13. `dotnet build Src\RimAI.sln --no-restore`, `dotnet test Src\Tests\RimAI.Tests.csproj --no-restore --no-build`, and `npm.cmd run build` passed. RimAI was restarted with `run-rimai.ps1` and `/api/health` returned OK. Live Food output against a real save could not be confirmed in this pass because RIMAPI at `localhost:8765` was not reachable; `/api/briefings/food/latest` returned the empty fallback briefing.
+Status: build/test verified on 2026-05-13. `dotnet build Src\RimAI.sln --no-restore`, `dotnet test Src\Tests\RimAI.Tests.csproj --no-restore --no-build`, and `npm.cmd run build` passed. RimAI was restarted with `run-rimai.ps1` and `/api/health` returned OK.
+
+Live follow-up verified on 2026-05-16. RIMAPI was reachable at `http://localhost:8765`; direct checks covered game state, maps, pawns, detailed colonists, resource summary, stored resources, plants, and animals. The running Host reported `rimapi_reachable: true`, served a live Food briefing, and `/api/advice/stream` replayed a current Food emergency advice card with concrete steps and a Food state summary.
 
 1. Stop any running `RimAI.Host` before build if DLLs are locked.
 2. Run backend build.
