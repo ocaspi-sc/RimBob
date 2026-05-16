@@ -15,7 +15,7 @@ const rimaiGlossary: GlossaryEntry[] = [
   {
     term: 'AdviceItem',
     tag: 'Cabinet',
-    description: 'A feeder minister memo with priority, rationale, suggested actions, resource requests, and citations.',
+    description: 'A feeder minister memo with priority, rationale, ordered steps, and citations.',
   },
   {
     term: 'Briefing',

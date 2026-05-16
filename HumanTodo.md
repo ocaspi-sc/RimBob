@@ -12,7 +12,7 @@
 - [ ] [2026-05-16] #skill #debt Fix local skill validator Python dependency.
 - [ ] [2026-05-16] #replay #mayor Decide whether legacy `/api/agenda/manual` should emit replay records or be retired.
 - [ ] [2026-05-16] #dashboard #markdown Add restricted player-facing Markdown rendering when advice bodies or guide snippets need rich formatting; keep raw/debug views unrendered.
-- [ ] [2026-05-15] #food #advice #schema Collapse Food advice into one priority-tagged step path. [plan](.plans/collapse-food-advice-steps.md)
+- [x] [2026-05-15] #food #advice #schema Collapse Food advice into one priority-tagged step path. [plan](.plans/collapse-food-advice-steps.md)
 - [ ] [2026-05-15] #idea #llm #rag Provide ministers with more RAG knowledge.
 - [x] [2026-05-14] #doc #debt Avoid over-specifying code-documented details in design docs.
 - [ ] [2026-05-14] #spike #backend #debt Review RimAI C# codebase and propose refactorings. [plan](.plans/recommended-refactorings.md)
@@ -36,7 +36,7 @@
 ### Current implementation order
 
 1. [ ] **Stabilize Mayor inputs.** Finish the remaining live-state data gaps above; M3 now includes fallback food nutrition so Food is not blocked by `total_nutrition == 0`.
-2. [x] **Ship Food M3 end to end.** Briefing fields, initial rules, first flag contract, Mayor digest ingestion, dashboard rendering for `resource_requests`, then fixtures.
+2. [x] **Ship Food M3 end to end.** Briefing fields, initial rules, first flag contract, Mayor digest ingestion, dashboard rendering for ordered advice steps, then fixtures.
 3. [ ] **Add minimal CoS handling.** Implement the Mayor-side helper for dedupe, lead framing, and tactical-alert vs digest routing before multiple feeders exist.
 4. [ ] **Add Construction.** Food's first live dependencies are cooler / power / room / storage recommendations, not Defense coupling.
 5. [ ] **Add Defense.**
@@ -131,7 +131,7 @@ See [`Docs/DESIGN.md`](Docs/DESIGN.md) decision log and Open Questions sections 
 - [x] **M1.5 - Live operability.** Wake Mayor on Host startup, periodic `IngestionDispatcher` calls in `DayTickOrchestrator`, `state_of_the_union` per-category dict, `MayorAgenda.GeneratedAt`, `MayorStatus`, `/api/colony/snapshot`, `/api/status`, `/api/mayor/prompt`, manual cabinet run control, dark command-center dashboard with sidebar telemetry.
 - [x] **RIMAPI gap closure.** `ColonistDetailedDto` rewritten for actual nested v2 shape (`pawn` + `detailes.work_info` + `detailes.medical_info`) - names, ages, mood, skills, traits, current_job now populate. New `/resources/summary` and `/research/progress` endpoints in `RimApiClient` feed `ResourceSummary` + `ResearchInfo` aggregates. Mayor system prompt teaches the model what `food.estimated_days_of_food == null` means (request stockpile audit, do not assume starvation). `Docs/design/RimAPI.md` annotated with verified shapes for the three controllers.
 - [x] **M2 - Grounded reasoning / RAG.** `RimAI.Knowledge` now has an in-process cosine store, markdown guide ingestion from `Docs/guides`, Gemini embedding + disk cache under `var/embeddings`, Mayor retrieval via `guide_context[]`, server-stamped `MayorAgenda.guide_citations[]`, `AgendaPriority.cite_ids`, and RAG-vs-no-RAG fixture snapshots under `Src/Tests/Mayor/Fixtures/rag-vs-norag/`. Tier 1 evergreen prompt distillation and polished dashboard footnote rendering are follow-ups.
-- [x] **Advice resource requests.** `AdviceItem.resource_requests[]` and `AgentFlag.Requests` now share a `ResourceRequest` schema so ministers can request labor, tiles, items, buildings, bills, stockpile space, attention, or trade capacity without executing allocation in MVP.
+- [x] **Advice steps and flag resource requests.** `AdviceItem.steps[]` is the player-facing action path, while `AgentFlag.Requests` keeps the shared `ResourceRequest` schema for cross-minister needs without executing allocation in MVP.
 
 ---
 

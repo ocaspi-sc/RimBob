@@ -21,10 +21,8 @@ public sealed record AdviceItem(
     string Body,
     [property: JsonPropertyName("rationale")]
     string Rationale,
-    [property: JsonPropertyName("resource_requests")]
-    IReadOnlyList<ResourceRequest> ResourceRequests,
-    [property: JsonPropertyName("suggested_actions")]
-    IReadOnlyList<SuggestedAction> SuggestedActions,
+    [property: JsonPropertyName("steps")]
+    IReadOnlyList<AdviceStep> Steps,
     [property: JsonPropertyName("guide_citations")]
     IReadOnlyList<string> GuideCitationIds,
     [property: JsonPropertyName("issued_at")]

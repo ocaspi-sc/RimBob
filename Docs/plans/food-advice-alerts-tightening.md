@@ -90,13 +90,13 @@ Status: implemented. Food rules now compute advice priority dynamically, use sta
 
 ## Phase 4 - Food Prompt and RAG Contract
 
-Status: implemented. The Food system prompt now requires sparse near-term output, `priority`, concrete actions, work-type-qualified labor requests, live-state-first RAG usage, and trade/procurement as flag-only unless live trade context exists.
+Status: implemented. The Food system prompt now requires sparse near-term output, `priority`, concrete steps, work-type-qualified labor metadata, live-state-first RAG usage, and trade/procurement as flag-only unless live trade context exists.
 
 1. Update `food.system.md`.
    - Require near-term actionable output.
    - Require `priority`.
-   - Require concrete `suggested_actions`.
-   - Require work type on labor requests.
+   - Require concrete `steps`.
+   - Require work type on labor-like steps and flag requests.
    - Ban vague labels such as "attention" and "labor capacity" unless a specific subsystem need is named.
    - Treat trade as flag-only in M3 unless live context proves an actual trade opportunity.
 

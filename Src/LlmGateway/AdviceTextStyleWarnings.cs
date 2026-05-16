@@ -7,7 +7,6 @@ namespace RimAI.LLM;
 public static class AdviceTextStyleWarnings
 {
     private const int MaxTitleWords = 7;
-    private const int MaxRequestWords = 9;
     private const int MaxReasonWords = 12;
     private const int MaxInstructionWords = 14;
     private const int MaxFlagSummaryWords = 14;
@@ -21,21 +20,17 @@ public static class AdviceTextStyleWarnings
             string adviceId = string.IsNullOrWhiteSpace(advice.Id) ? "advice" : advice.Id;
             AddWordWarning(warnings, $"{adviceId}.title", advice.Title, MaxTitleWords, "keep titles to 3-7 words");
 
-            for (int i = 0; i < advice.ResourceRequests.Count; i++)
+            for (int i = 0; i < advice.Steps.Count; i++)
             {
-                ResourceRequest request = advice.ResourceRequests[i];
-                AddWordWarning(warnings, $"{adviceId}.resource_requests[{i}].request", request.What, MaxRequestWords, "use a short noun phrase");
-                AddWordWarning(warnings, $"{adviceId}.resource_requests[{i}].reason", request.Why, MaxReasonWords, "use one short cause");
-            }
+                AdviceStep step = advice.Steps[i];
+                string instructionField = $"{adviceId}.steps[{i}].instruction";
+                AddWordWarning(warnings, instructionField, step.Instruction, MaxInstructionWords, "use one short imperative sentence");
 
-            for (int i = 0; i < advice.SuggestedActions.Count; i++)
-            {
-                SuggestedAction action = advice.SuggestedActions[i];
-                string field = $"{adviceId}.suggested_actions[{i}].instruction";
-                AddWordWarning(warnings, field, action.What, MaxInstructionWords, "use one short imperative sentence");
+                if (!string.IsNullOrWhiteSpace(step.Reason))
+                    AddWordWarning(warnings, $"{adviceId}.steps[{i}].reason", step.Reason, MaxReasonWords, "use one short cause");
 
-                if (SentenceCount(action.What) > 1)
-                    warnings.Add($"{field} has multiple sentences; use one short imperative sentence.");
+                if (SentenceCount(step.Instruction) > 1)
+                    warnings.Add($"{instructionField} has multiple sentences; use one short imperative sentence.");
             }
         }
 

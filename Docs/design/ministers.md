@@ -131,8 +131,8 @@ nearest clusters, tile counts, and bottleneck signals are preferred over lists
 of every coordinate.
 
 When an LLM is called, it must produce the same execution-facing fields the
-runtime accepts: advice type, priority, title/body/rationale, resource requests,
-suggested actions, optional flags, optional scheduled wakeup, and trace notes.
+runtime accepts: advice type, priority, title/body/rationale, ordered steps,
+optional flags, optional scheduled wakeup, and trace notes.
 See [`advice.md`](advice.md) for the advice schema and feedback lifecycle.
 
 LLM rules:
@@ -140,9 +140,9 @@ LLM rules:
 - Advice types are closed per minister.
 - `priority` is required on every advice item.
 - Feeder ministers emit concrete operational advice, not grand strategy menus.
-- `resource_requests` describe needs; they do not allocate pawns or reserve
-  another minister's resource in MVP.
-- `suggested_actions` are advisory text in MVP.
+- `steps` are the single player-facing action path on advice.
+- `AgentFlag.Requests` describe cross-minister needs; they do not allocate pawns
+  or reserve another minister's resource in MVP.
 - Trace notes are for logging/refinement, not player-facing advice.
 
 ---
@@ -186,9 +186,9 @@ Each minister owns either a production chain or a well-defined subsystem:
 
 Ministers may request resources needed to satisfy their domain: tiles,
 work-type-qualified labor, items, buildings, bills, stockpile space, or
-attention from another subsystem. In MVP those requests are advisory only: they
-appear in `AdviceItem.resource_requests[]` and/or flags. A request does not
-grant ownership of the target resource and does not execute anything.
+attention from another subsystem. In MVP those requests are advisory only and
+travel on flags. A request does not grant ownership of the target resource and
+does not execute anything.
 
 Labor requests must be specific enough for a player or future Labor minister to
 act on. They should name the relevant RimWorld work-tab type when possible, and

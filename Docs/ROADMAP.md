@@ -135,7 +135,7 @@
 **Why this is M5 (not M2):** feedback is only valuable once there are multiple ministers producing enough advice to find patterns in (M3, M4 first), and it's only consumed by M6. Landing it just before M6 keeps it fresh and avoids building UI on top of an output we hadn't yet lived with.
 
 **Scope:**
-- **Pushback** is the renamed Modify action. Semantics: the player explains in natural language why the minister is wrong, rather than editing `suggested_actions` text.
+- **Pushback** is the renamed Modify action. Semantics: the player explains in natural language why the minister is wrong, rather than editing advice step text.
 - `FeedbackEvent` schema (memo id, action, player note, timestamp, in-game tick).
 - Each minister owns and persists its own pushback list. Exact storage paths and payload shapes live in source and tests. Pushbacks are scoped — the Mayor doesn't see Food's pushbacks and vice versa.
 - Dashboard buttons + Pushback modal (free-text textarea, prompt: *"Tell the minister why he's wrong."*).

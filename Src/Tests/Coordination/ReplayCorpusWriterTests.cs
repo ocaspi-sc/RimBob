@@ -33,8 +33,7 @@ public sealed class ReplayCorpusWriterTests
                 Title: "Food test",
                 Body: "Body",
                 Rationale: "Rationale",
-                ResourceRequests: [],
-                SuggestedActions: [],
+                Steps: [],
                 GuideCitationIds: [],
                 IssuedAt: capturedAt,
                 ExpiresAt: capturedAt.AddHours(4));

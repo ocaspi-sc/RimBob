@@ -23,18 +23,12 @@ public sealed class AdviceTextStyleWarningsTests
                     Title: "Confirm the reachable indoor stockpile visibility before making meal decisions",
                     Body: "Body can carry context.",
                     Rationale: "Rationale can carry explanation.",
-                    ResourceRequests:
+                    Steps:
                     [
-                        new ResourceRequest(
-                            ResourceRequestKind.Attention,
-                            "Check both food stockpile zones for reachable meal and raw food visibility",
-                            "Food classification is missing and the buffer is below one day for the whole colony")
-                    ],
-                    SuggestedActions:
-                    [
-                        new SuggestedAction(
-                            SuggestedActionKind.SetStockpileZone,
-                            "Set one reachable indoor stockpile to accept meals. Verify the stored food category.")
+                        new AdviceStep(
+                            AdviceStepKind.SetStockpileZone,
+                            "Set one reachable indoor stockpile to accept meals. Verify the stored food category.",
+                            Reason: "Food classification is missing and the buffer is below one day for the whole colony")
                     ],
                     GuideCitationIds: [],
                     IssuedAt: now,
@@ -53,9 +47,8 @@ public sealed class AdviceTextStyleWarningsTests
         IReadOnlyList<string> warnings = AdviceTextStyleWarnings.ForFood(response);
 
         warnings.Should().Contain(warning => warning.Contains("wordy_food.title"));
-        warnings.Should().Contain(warning => warning.Contains("resource_requests[0].request"));
-        warnings.Should().Contain(warning => warning.Contains("resource_requests[0].reason"));
-        warnings.Should().Contain(warning => warning.Contains("suggested_actions[0].instruction"));
+        warnings.Should().Contain(warning => warning.Contains("steps[0].instruction"));
+        warnings.Should().Contain(warning => warning.Contains("steps[0].reason"));
         warnings.Should().Contain(warning => warning.Contains("multiple sentences"));
         warnings.Should().Contain(warning => warning.Contains("wordy_flag.summary"));
     }
@@ -76,18 +69,12 @@ public sealed class AdviceTextStyleWarningsTests
                     Title: "Expose food stockpile",
                     Body: "Body can carry context.",
                     Rationale: "Rationale can carry explanation.",
-                    ResourceRequests:
+                    Steps:
                     [
-                        new ResourceRequest(
-                            ResourceRequestKind.StockpileSpace,
-                            "reachable food-stockpile visibility",
-                            "Food classification is missing.")
-                    ],
-                    SuggestedActions:
-                    [
-                        new SuggestedAction(
-                            SuggestedActionKind.SetStockpileZone,
-                            "Set one stockpile to accept food.")
+                        new AdviceStep(
+                            AdviceStepKind.SetStockpileZone,
+                            "Set one stockpile to accept food.",
+                            Reason: "Food classification is missing.")
                     ],
                     GuideCitationIds: [],
                     IssuedAt: now,

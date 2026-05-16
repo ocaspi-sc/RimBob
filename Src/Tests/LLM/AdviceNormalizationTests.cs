@@ -63,7 +63,7 @@ public sealed class AdviceNormalizationTests
     }
 
     [Fact]
-    public void SuggestedActionNormalizer_RepairsLegacyActionsAndTextFallback()
+    public void AdviceStepNormalizer_ConvertsLegacyActionsAndTextFallback()
     {
         JsonNode? root = JsonNode.Parse("""
         [
@@ -75,13 +75,19 @@ public sealed class AdviceNormalizationTests
         ]
         """);
 
-        IReadOnlyList<SuggestedAction> actions = SuggestedActionNormalizer.Normalize(root, Json);
+        IReadOnlyList<AdviceStep> steps = AdviceStepNormalizer.NormalizeOrConvertLegacy(
+            stepsNode: null,
+            resourceRequestsNode: null,
+            suggestedActionsNode: root,
+            priority: AdvicePriority.Medium,
+            context: Context(),
+            json: Json);
 
-        actions.Should().HaveCount(2);
-        actions[0].Kind.Should().Be(SuggestedActionKind.ProductionBill);
-        actions[0].What.Should().Be("cook simple meals");
-        actions[1].Kind.Should().Be(SuggestedActionKind.Note);
-        actions[1].What.Should().Be("check whether berries are reachable");
+        steps.Should().HaveCount(2);
+        steps[0].Kind.Should().Be(AdviceStepKind.ProductionBill);
+        steps[0].Instruction.Should().Be("cook simple meals");
+        steps[1].Kind.Should().Be(AdviceStepKind.Note);
+        steps[1].Instruction.Should().Be("check whether berries are reachable");
     }
 
     private static LlmAdviceNormalizationContext Context() => new(

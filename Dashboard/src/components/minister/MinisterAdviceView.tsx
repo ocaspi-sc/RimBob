@@ -230,8 +230,34 @@ function AdviceCard({ item }: { item: AdviceItem }) {
       </header>
       <p>{item.body}</p>
       <blockquote>{item.rationale}</blockquote>
-      {item.resource_requests.length > 0 && (
-        <DisclosureSection title="📦 Resource requests" defaultOpen meta={`${item.resource_requests.length} requests`}>
+      {item.steps.length > 0 && (
+        <DisclosureSection title="Steps" defaultOpen meta={`${item.steps.length} steps`}>
+          <div className="action-list">
+            {item.steps.map((step, index) => (
+              <div key={`${item.id}-step-${index}`}>
+                <GameIcon
+                  fallback="-"
+                  label={`${formatLabel(step.kind)} icon`}
+                  size="xs"
+                  src={iconUrlFor(step.icon)}
+                />
+                <strong>{formatLabel(step.kind)}</strong>
+                <span>{step.instruction}</span>
+                <small>
+                  {[
+                    formatQuantityDetail(step.quantity),
+                    step.owner ? `Owner: ${step.owner}` : null,
+                    formatWorkSkillDetail(step.work_type, step.skill),
+                    step.reason,
+                  ].filter(Boolean).join(' | ')}
+                </small>
+              </div>
+            ))}
+          </div>
+        </DisclosureSection>
+      )}
+      {(item.resource_requests?.length ?? 0) > 0 && (
+        <DisclosureSection title="📦 Resource requests" defaultOpen meta={`${item.resource_requests?.length ?? 0} requests`}>
           <div className="dense-table resource-table">
             <div className="dense-row header">
               <span>Icon</span>
@@ -243,7 +269,7 @@ function AdviceCard({ item }: { item: AdviceItem }) {
               <span>Work / Skill</span>
               <span>Priority</span>
             </div>
-            {item.resource_requests.map((request, index) => (
+            {item.resource_requests?.map((request, index) => (
               <div className="dense-row" key={`${item.id}-request-${index}`}>
                 <span className="icon-cell">
                   <GameIcon
@@ -265,10 +291,10 @@ function AdviceCard({ item }: { item: AdviceItem }) {
           </div>
         </DisclosureSection>
       )}
-      {item.suggested_actions.length > 0 && (
-        <DisclosureSection title="✅ Suggested actions" defaultOpen meta={`${item.suggested_actions.length} actions`}>
+      {(item.suggested_actions?.length ?? 0) > 0 && (
+        <DisclosureSection title="✅ Suggested actions" defaultOpen meta={`${item.suggested_actions?.length ?? 0} actions`}>
           <div className="action-list">
-            {item.suggested_actions.map((action, index) => (
+            {item.suggested_actions?.map((action, index) => (
               <div key={`${item.id}-action-${index}`}>
                 <GameIcon
                   fallback="-"
@@ -332,9 +358,18 @@ function formatQuantity(value: number | null | undefined): string {
   return value === null || value === undefined ? '-' : value.toLocaleString();
 }
 
+function formatQuantityDetail(value: number | null | undefined): string | null {
+  return value === null || value === undefined ? null : `Qty: ${value.toLocaleString()}`;
+}
+
 function formatWorkSkill(workType: string | null | undefined, skill: string | null | undefined): string {
   const parts = [workType, skill]
     .filter((value): value is string => Boolean(value))
     .map(formatLabel);
   return parts.length > 0 ? parts.join(' / ') : '-';
+}
+
+function formatWorkSkillDetail(workType: string | null | undefined, skill: string | null | undefined): string | null {
+  const text = formatWorkSkill(workType, skill);
+  return text === '-' ? null : `Work: ${text}`;
 }

@@ -288,7 +288,7 @@ cache is populated from the player's running game and is not committed.
 
 The dashboard may render an icon only when it has an explicit source:
 
-- `icon` refs carried by `resource_requests[]` or `suggested_actions[]`.
+- `icon` refs carried by `steps[]` or flag `requests[]`.
 - Pawn ids for lazy portrait URLs.
 - Known def-name fields from structured payloads, such as crop/material/resource
   dictionaries.
@@ -380,9 +380,8 @@ as a compact table with lightweight emoji cues because it is player-facing; raw
 and debug views preserve the original `state_summary` text. It should name
 concrete food stores, growing areas/crop progress, acquisition opportunities,
 kitchen/storage/freezer signals, and confidence gaps before the action cards.
-Cards show rationale, suggested actions, resource requests, citations, issue id
-or supersession when available, and coverage gaps. No feedback buttons are
-shown in v2.
+Cards show rationale, ordered advice steps, citations, issue id or supersession
+when available, and coverage gaps. No feedback buttons are shown in v2.
 
 The dashboard does not cache Agenda documents in browser storage. Stale agenda
 recovery comes from Host-owned durable agenda storage. On a fresh runtime with
@@ -390,13 +389,14 @@ no stored Agenda, Host initializes a labeled bootstrap Agenda before serving the
 dashboard. The no-agenda empty state is reserved for initialization/storage
 failure or intentionally disabled agenda storage.
 
-Resource requests and suggested actions are actionable reading surfaces and
-should default open when an advice card mounts, including after browser refresh
-or a new active-advice snapshot. They may use lightweight emoji labels because
-they are player-facing action summaries, not raw backend payloads.
+Advice steps are the actionable reading surface and should default open when an
+advice card mounts, including after browser refresh or a new active-advice
+snapshot. Raw/debug views should still expose legacy normalization metadata when
+old `resource_requests[]` or `suggested_actions[]` payloads were repaired into
+steps.
 
 These rows may render real game icons only from explicit `icon` refs. The
-dashboard does not fuzzy-match request or instruction text to asset names.
+dashboard does not fuzzy-match reason or instruction text to asset names.
 
 ---
 
@@ -425,10 +425,9 @@ metrics, and endpoint coverage.
   summaries, such as the Food current-state table.
 - Debug tables use contract names by default. Friendly aliases are allowed only
   when they clarify a stable contract and do not hide the backend field.
-- Resource request tables expose execution-facing fields with enough width for
-  `Reason`; avoid catch-all labels such as `Meta`.
-- Suggested action cards render `kind` plus `instruction`; do not introduce
-  generic `what` labels in the dashboard or new raw minister output.
+- Advice step cards render `kind` plus `instruction`, with quantity, owner,
+  work/skill, and reason as secondary detail; do not introduce generic `what`
+  labels in the dashboard or new raw minister output.
 - Avoid decorative hero sections, oversized empty cards, and one-note color
   themes.
 

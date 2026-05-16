@@ -161,7 +161,7 @@ to LLM prose; the dashboard may render the labelled lines as a compact table. It
 should summarize concrete food situation facts such as stored
 meals/raw/unclassified food, days-of-food, growing areas and crop progress,
 acquisition opportunities, kitchen/storage/freezer signals, and confidence data
-gaps; individual advice items remain the actionable steps.
+gaps; individual advice items expose one ordered `steps[]` path for the player.
 
 Crop selection should be grounded in deterministic yield math exposed to both
 rules and LLM escalation. The LLM may use guides to explain or adjust a
@@ -169,9 +169,13 @@ candidate, but it should not invent crop math.
 
 ---
 
-## Resource Requests
+## Advice Steps And Flag Requests
 
-Food may request:
+Food advice steps should read as one ordered food-chain path: stockpile
+visibility, harvest, cooking, growing, then trade/procurement only if local paths
+are missing. Crop choice appears directly in the relevant step instruction.
+
+Food may use step or flag metadata for:
 
 - Tiles: growing area, wild harvest area, freezer expansion, stockpile space.
 - Labor: specific RimWorld work types such as cooking, growing, plant cutting,
@@ -181,8 +185,9 @@ Food may request:
 - Bills/settings: cook bill targets, butcher bill state, stockpile filters,
   forbid/unforbid food.
 
-In MVP these are rendered as advice and flags. They are not writes. In Auto,
-they become inputs to the deferred planner/Labor/RIMAPI path.
+In MVP advice steps and flag requests are rendered only. They are not writes. In
+Auto, steps become inputs to the deferred planner/Labor/RIMAPI path, while flag
+requests remain the cross-minister coordination signal.
 
 Trade is not a normal Food action in M3. Food may flag procurement need when
 local paths are insufficient, but Economy/Trade or Mayor owns trade framing.

@@ -140,7 +140,7 @@ public sealed class FoodMinisterTests
         h.PublishedAdvice.Should().ContainSingle().Which.Id.Should().Be("llm_food");
         IReadOnlyDictionary<string, string> stateSummaries = h.Bus.ActiveSnapshot().StateSummaries!;
         stateSummaries.Should().ContainKey("Food")
-            .WhoseValue.Should().Contain("Food stores show");
+            .WhoseValue.Should().Contain("Stores:");
         stateSummaries["Food"].Should().Contain("12.0 days");
         stateSummaries["Food"].Should().NotBe("Food is below target and hunting may be viable.");
         h.Flags.Active(FlagSeverity.Medium).Should().ContainSingle().Which.Summary.Should().Be("LLM food flag");
@@ -182,8 +182,7 @@ public sealed class FoodMinisterTests
         Title: "Hunt carefully",
         Body: "Use safe targets.",
         Rationale: "LLM selected hunting path.",
-        ResourceRequests: [],
-        SuggestedActions: [],
+        Steps: [],
         GuideCitationIds: [],
         IssuedAt: DateTimeOffset.UtcNow,
         ExpiresAt: DateTimeOffset.UtcNow.AddHours(4));

@@ -21,7 +21,7 @@ This doc defines:
 
 Feedback was moved to M5, just before M6 consumes it. `Modify` was replaced by
 `Pushback`: the player tells the minister why it is wrong in natural language
-instead of editing suggested-action text. Implicit state-diff feedback is not
+instead of editing step text. Implicit state-diff feedback is not
 part of MVP.
 
 ---
@@ -34,8 +34,7 @@ serialization; the design-level contract is:
 - Identity and source: id, issuing minister, advice type.
 - Urgency: one `priority` enum.
 - Player content: title, body, rationale.
-- Execution-facing needs: `resource_requests[]`.
-- Player/future-execution operations: `suggested_actions[]`.
+- Player/future-execution operations: ordered `steps[]`.
 - Evidence: guide citations and briefing reference when available.
 - Lifecycle metadata: issue time, expiry, supersession, autonomy mode at issue.
 
@@ -57,53 +56,43 @@ player-facing advice.
 graduates one at a time. Adding an advice type is a design decision for that
 minister.
 
-### Resource Requests
+### Steps
 
-`resource_requests[]` state what the minister needs in order to resolve the
-problem it is describing. They are advisory in MVP and do not allocate pawns,
-reserve tiles, create bills, or write to RIMAPI.
+`steps[]` are the single player-facing action path on an advice item. They are
+ordered, concrete "do X" operations. Resource prerequisites that matter to the
+player should appear as steps only when they are part of that action path.
 
-Allowed request categories are shared across ministers and include labor, tile,
-item, building, bill, stockpile space, attention, and trade capacity. Each
-request should carry the thing needed and a short reason. Optional quantity,
-priority, owner/requested-from, work type, and skill fields should be used only
-when the emitter can state them cleanly.
+Step kinds are shared across ministers and should describe the operation well
+enough to stand alone in the dashboard and future Auto mapping. Prefer explicit
+names such as `mark_harvest`, `mark_hunt`, `place_blueprint`,
+`production_bill`, `set_priority`, `designate_zone`, `set_stockpile_zone`, and
+`unforbid` over generic `note` output when the operation is known.
 
-Requests may include an optional explicit `icon` ref when the emitter knows the
+Each step carries one short imperative instruction. Optional quantity, owner,
+work type, skill, reason, and icon metadata should be used only when the emitter
+can state them cleanly. Explanation belongs in body/rationale/current-state
+summary; step instructions should scan like compact UI/action primitives.
+
+Steps may include an optional explicit `icon` ref when the emitter knows the
 game def or id. Icon refs are rendering hints only; they are not execution
 inputs and should not be inferred from prose.
 
-Labor requests must name a RimWorld work-tab type when possible. "Labor
+Labor-like steps must name a RimWorld work-tab type when possible. "Labor
 capacity" by itself is too vague for advice, logs, or future Auto wiring.
 
-Structured request fields should stay compact. `request` is a short noun
-phrase; `reason` is one short cause. Put explanatory prose in the advice body or
-rationale, not inside the structured leaf fields the dashboard scans.
+### Resource Requests
 
-### Suggested Actions
+`ResourceRequest` remains the cross-minister request shape on flags. It is no
+longer a separate player-facing `AdviceItem` path.
 
-`suggested_actions[]` are "do X" recommendations. They are distinct from
-resource requests, which describe prerequisites or needs.
+Flag requests state what a minister needs from another subsystem to resolve an
+issue: tiles, work-type-qualified labor, items, buildings, bills, stockpile
+space, attention, or trade capacity. They are advisory in MVP and do not
+allocate pawns, reserve tiles, create bills, or write to RIMAPI.
 
-Action kinds are shared across ministers and should describe the operation well
-enough to stand alone in the dashboard and future Auto mapping. Prefer explicit
-names such as `mark_harvest`, `mark_hunt`, `place_blueprint`,
-`production_bill`, and `set_stockpile_zone` over generic `note` output when the
-operation is known.
-Use explicit allow/forbid vocabulary, such as `unforbid`, when the action is
-about changing an item's forbidden state.
-
-Each suggested action should carry an instruction. Avoid introducing generic
-`what` fields in new raw output; tolerant parsing may still repair older model
-payloads.
-
-Instructions should be one short imperative sentence. The player-facing body
-and rationale can explain why; action instructions should read like concise UI
-operations.
-
-Suggested actions may include an optional explicit `icon` ref. Emitters should
-use known defs only, such as a concrete item/building/crop def already present
-in the rule or briefing.
+Tolerant parsing may still accept legacy advice payloads with
+`resource_requests[]` and `suggested_actions[]`, but new prompts/specs should
+emit `steps[]` directly.
 
 ### Briefing Reference
 
@@ -262,5 +251,5 @@ coverage, and per-minister trust gates exist.
       exists?
 - [ ] Define exact per-minister advice type catalogues in the relevant minister
       docs.
-- [ ] Calibrate action-kind granularity as feeders and future Auto mapping
+- [ ] Calibrate step-kind granularity as feeders and future Auto mapping
       mature.

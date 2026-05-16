@@ -1339,6 +1339,12 @@ code {
   border-radius: 5px;
 }
 
+.action-list small {
+  grid-column: 3;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
 .game-icon {
   flex: 0 0 auto;
   width: 28px;

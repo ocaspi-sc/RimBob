@@ -69,7 +69,7 @@ public static class FoodLlmResponseParser
         try
         {
             JsonNode? root = JsonNode.Parse(text);
-            if (root is null || !HasStrictAdvicePriority(root)) return null;
+            if (root is null || !HasStrictAdviceShape(root)) return null;
 
             FoodLlmResponse? parsed = root.Deserialize<FoodLlmResponse>(ResponseJson);
             return parsed is not null && IsStrictFoodResponse(parsed) ? parsed : null;
@@ -132,10 +132,10 @@ public static class FoodLlmResponseParser
     private static string FormatTick(DateStamp date) =>
         $"Y{date.Year ?? 0}{date.Quadrum ?? "?"}D{date.Day ?? 0}";
 
-    private static bool HasStrictAdvicePriority(JsonNode root)
+    private static bool HasStrictAdviceShape(JsonNode root)
     {
         JsonArray? advice = root["advice"]?.AsArray();
-        return advice is not null && advice.All(item => item?["priority"] is not null);
+        return advice is not null && advice.All(item => item?["priority"] is not null && item?["steps"] is not null);
     }
 
     private static bool IsStrictFoodResponse(FoodLlmResponse response) =>
@@ -147,11 +147,8 @@ public static class FoodLlmResponseParser
             !string.IsNullOrWhiteSpace(advice.Title) &&
             !string.IsNullOrWhiteSpace(advice.Body) &&
             !string.IsNullOrWhiteSpace(advice.Rationale) &&
-            advice.ResourceRequests.All(request =>
-                !string.IsNullOrWhiteSpace(request.What) &&
-                !string.IsNullOrWhiteSpace(request.Why)) &&
-            advice.SuggestedActions.All(action =>
-                !string.IsNullOrWhiteSpace(action.What)) &&
+            advice.Steps.All(step =>
+                !string.IsNullOrWhiteSpace(step.Instruction)) &&
             response.Flags.All(flag =>
                 flag.Requests is null || flag.Requests.All(request =>
                     !string.IsNullOrWhiteSpace(request.What) &&

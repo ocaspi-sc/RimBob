@@ -108,8 +108,7 @@ public sealed class AdviceBusTests
         Title: "Food low",
         Body: "Body",
         Rationale: "Rationale",
-        ResourceRequests: [],
-        SuggestedActions: [],
+        Steps: [],
         GuideCitationIds: [],
         IssuedAt: DateTimeOffset.UtcNow,
         ExpiresAt: DateTimeOffset.UtcNow.AddHours(1));

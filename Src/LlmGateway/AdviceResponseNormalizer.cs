@@ -86,8 +86,13 @@ internal static class AdviceResponseNormalizer
         string title = LlmResponseParser.ReadString(node["title"]) ?? LlmResponseParser.HumanizeIdentifier(rawType);
         string body = LlmResponseParser.ReadString(node["body"]) ?? LlmResponseParser.ReadString(node["message"]) ?? title;
         string rationale = LlmResponseParser.ReadString(node["rationale"]) ?? notes ?? context.DefaultRationale;
-        IReadOnlyList<ResourceRequest> requests = ResourceRequestNormalizer.Normalize(node["resource_requests"], priority, context, json);
-        IReadOnlyList<SuggestedAction> actions = SuggestedActionNormalizer.Normalize(node["suggested_actions"], json);
+        IReadOnlyList<AdviceStep> steps = AdviceStepNormalizer.NormalizeOrConvertLegacy(
+            node["steps"],
+            node["resource_requests"],
+            node["suggested_actions"],
+            priority,
+            context,
+            json);
         IReadOnlyList<string> citationIds = NormalizeCitationIds(node, context.GuideContext);
         DateTimeOffset now = DateTimeOffset.UtcNow;
 
@@ -99,8 +104,7 @@ internal static class AdviceResponseNormalizer
             Title: title,
             Body: body,
             Rationale: rationale,
-            ResourceRequests: requests,
-            SuggestedActions: actions,
+            Steps: steps,
             GuideCitationIds: citationIds,
             IssuedAt: now,
             ExpiresAt: now.AddHours(priority >= AdvicePriority.High ? 4 : 24),
@@ -157,7 +161,7 @@ internal static class AdviceResponseNormalizer
     private static AdviceItem NormalizeStrictAdvice(AdviceItem advice) =>
         advice with
         {
-            ResourceRequests = advice.ResourceRequests.Select(ResourceRequestNormalizer.Normalize).ToArray()
+            Steps = advice.Steps.Select(AdviceStepNormalizer.Normalize).ToArray()
         };
 
     private static IReadOnlyList<AgentFlag> NormalizeStrictFlags(IReadOnlyList<AgentFlag> flags) =>
@@ -168,11 +172,8 @@ internal static class AdviceResponseNormalizer
 
     private static bool IsCompleteStrictAdvice(AdviceItem advice) =>
         !string.IsNullOrWhiteSpace(advice.Id) &&
-        advice.ResourceRequests.All(request =>
-            !string.IsNullOrWhiteSpace(request.What) &&
-            !string.IsNullOrWhiteSpace(request.Why)) &&
-        advice.SuggestedActions.All(action =>
-            !string.IsNullOrWhiteSpace(action.What));
+        advice.Steps.All(step =>
+            !string.IsNullOrWhiteSpace(step.Instruction));
 
     private static IReadOnlyList<string> NormalizeCitationIds(JsonNode node, IReadOnlyList<GuideCitation> guideContext)
     {

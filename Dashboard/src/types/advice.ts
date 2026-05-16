@@ -2,6 +2,17 @@ import type { IconRef } from './icons';
 
 export type AdvicePriority = 'low' | 'medium' | 'high' | 'critical';
 
+export interface AdviceStep {
+  kind: string;
+  instruction: string;
+  quantity?: number | null;
+  owner?: string | null;
+  work_type?: string | null;
+  skill?: string | null;
+  reason?: string | null;
+  icon?: IconRef | null;
+}
+
 export interface ResourceRequest {
   kind: string;
   request: string;
@@ -28,8 +39,9 @@ export interface AdviceItem {
   title: string;
   body: string;
   rationale: string;
-  resource_requests: ResourceRequest[];
-  suggested_actions: SuggestedAction[];
+  steps: AdviceStep[];
+  resource_requests?: ResourceRequest[];
+  suggested_actions?: SuggestedAction[];
   guide_citations: string[];
   issued_at: string;
   expires_at: string;

@@ -128,10 +128,10 @@ public sealed class LlmClientTests
         response.Advice[0].Priority.Should().Be(AdvicePriority.High);
         response.Advice[0].Title.Should().Be("Manage Cook Bills");
         response.Advice[0].Body.Should().Contain("Cook simple meals");
-        response.Advice[0].ResourceRequests.Should().ContainSingle()
-            .Which.Kind.Should().Be(ResourceRequestKind.Labor);
-        response.Advice[0].ResourceRequests.Single().WorkType.Should().Be(WorkType.Cook);
-        response.Advice[0].ResourceRequests.Single().Skill.Should().Be("Cooking");
+        response.Advice[0].Steps.Should().ContainSingle()
+            .Which.Kind.Should().Be(AdviceStepKind.RequestResource);
+        response.Advice[0].Steps.Single().WorkType.Should().Be(WorkType.Cook);
+        response.Advice[0].Steps.Single().Skill.Should().Be("Cooking");
         response.Flags.Should().HaveCount(3);
         response.Flags[0].Id.Should().Be("food:food_shortage_critical");
         response.Flags[0].Severity.Should().Be(RimAI.Core.Ministers.FlagSeverity.High);
@@ -181,14 +181,14 @@ public sealed class LlmClientTests
 
         AdviceItem advice = response.Advice.Should().ContainSingle().Subject;
         advice.Priority.Should().Be(AdvicePriority.Critical);
-        ResourceRequest request = advice.ResourceRequests.Should().ContainSingle().Subject;
-        request.Kind.Should().Be(ResourceRequestKind.Attention);
-        request.WorkType.Should().BeNull();
-        request.Why.Should().Contain("did not name a RimWorld work type");
+        AdviceStep step = advice.Steps.Should().ContainSingle().Subject;
+        step.Kind.Should().Be(AdviceStepKind.RequestResource);
+        step.WorkType.Should().BeNull();
+        step.Reason.Should().Contain("did not name a RimWorld work type");
     }
 
     [Fact]
-    public void AdviceSchema_RoundTripsPriorityAndResourceWorkMetadata()
+    public void AdviceSchema_RoundTripsPriorityAndStepMetadata()
     {
         JsonSerializerOptions json = new() { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
         AdviceItem item = new(
@@ -199,19 +199,17 @@ public sealed class LlmClientTests
             Title: "Cook meals",
             Body: "Body",
             Rationale: "Rationale",
-            ResourceRequests:
+            Steps:
             [
-                new ResourceRequest(
-                    ResourceRequestKind.Labor,
-                    "Cook work today",
-                    "meals are understocked",
+                new AdviceStep(
+                    AdviceStepKind.SetPriority,
+                    "Put the best cook on Cook work today",
                     Quantity: 1,
-                    Priority: AdvicePriority.High,
-                    RequestedFrom: "Labor",
+                    Owner: "Labor",
                     WorkType: WorkType.Cook,
-                    Skill: "Cooking")
+                    Skill: "Cooking",
+                    Reason: "meals are understocked")
             ],
-            SuggestedActions: [],
             GuideCitationIds: [],
             IssuedAt: DateTimeOffset.UnixEpoch,
             ExpiresAt: DateTimeOffset.UnixEpoch.AddHours(4));
@@ -222,34 +220,38 @@ public sealed class LlmClientTests
         serialized.Should().Contain("\"priority\":\"high\"");
         serialized.Should().NotContain("\"priority_score\"");
         serialized.Should().NotContain("\"severity\"");
-        serialized.Should().Contain("\"request\":\"Cook work today\"");
+        serialized.Should().Contain("\"steps\":[");
+        serialized.Should().Contain("\"instruction\":\"Put the best cook on Cook work today\"");
         serialized.Should().Contain("\"reason\":\"meals are understocked\"");
-        serialized.Should().NotContain("\"what\":\"Cook work today\"");
+        serialized.Should().Contain("\"owner\":\"Labor\"");
+        serialized.Should().NotContain("\"resource_requests\"");
+        serialized.Should().NotContain("\"suggested_actions\"");
+        serialized.Should().NotContain("\"what\":\"Put the best cook on Cook work today\"");
         serialized.Should().NotContain("\"why\":\"meals are understocked\"");
         serialized.Should().Contain("\"work_type\":\"cook\"");
         roundTripped.Should().NotBeNull();
         roundTripped!.Priority.Should().Be(AdvicePriority.High);
-        roundTripped.ResourceRequests.Single().What.Should().Be("Cook work today");
-        roundTripped.ResourceRequests.Single().Why.Should().Be("meals are understocked");
-        roundTripped.ResourceRequests.Single().WorkType.Should().Be(WorkType.Cook);
-        roundTripped.ResourceRequests.Single().Skill.Should().Be("Cooking");
+        roundTripped.Steps.Single().Instruction.Should().Be("Put the best cook on Cook work today");
+        roundTripped.Steps.Single().Reason.Should().Be("meals are understocked");
+        roundTripped.Steps.Single().WorkType.Should().Be(WorkType.Cook);
+        roundTripped.Steps.Single().Skill.Should().Be("Cooking");
     }
 
     [Fact]
-    public void SuggestedActionKinds_SerializeWithSelfDocumentingNames()
+    public void AdviceStepKinds_SerializeWithSelfDocumentingNames()
     {
         JsonSerializerOptions json = new() { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
-        IReadOnlyList<SuggestedAction> actions =
+        IReadOnlyList<AdviceStep> steps =
         [
-            new SuggestedAction(SuggestedActionKind.MarkHarvest, "mark crops"),
-            new SuggestedAction(SuggestedActionKind.MarkHunt, "mark animals"),
-            new SuggestedAction(SuggestedActionKind.PlaceBlueprint, "place stove"),
-            new SuggestedAction(SuggestedActionKind.ProductionBill, "cook meals"),
-            new SuggestedAction(SuggestedActionKind.SetStockpileZone, "set food stockpile"),
-            new SuggestedAction(SuggestedActionKind.Unforbid, "unforbid meals")
+            new AdviceStep(AdviceStepKind.MarkHarvest, "mark crops"),
+            new AdviceStep(AdviceStepKind.MarkHunt, "mark animals"),
+            new AdviceStep(AdviceStepKind.PlaceBlueprint, "place stove"),
+            new AdviceStep(AdviceStepKind.ProductionBill, "cook meals"),
+            new AdviceStep(AdviceStepKind.SetStockpileZone, "set food stockpile"),
+            new AdviceStep(AdviceStepKind.Unforbid, "unforbid meals")
         ];
 
-        string serialized = JsonSerializer.Serialize(actions, json);
+        string serialized = JsonSerializer.Serialize(steps, json);
 
         serialized.Should().Contain("\"kind\":\"mark_harvest\"");
         serialized.Should().Contain("\"kind\":\"mark_hunt\"");
@@ -291,14 +293,13 @@ public sealed class LlmClientTests
               "title": "Set up the food chain",
               "body": "Make storage visible, place cooking, and start growing.",
               "rationale": "reported food units need reachable stockpile visibility.",
-              "resource_requests": [
+              "steps": [
                 {
-                  "kind": "stockpile_space",
-                  "request": "Reachable food stockpile space",
+                  "kind": "set_stockpile_zone",
+                  "instruction": "Make the reported food units visible in a reachable stockpile.",
                   "reason": "reported food units need reachable stockpile visibility"
                 }
               ],
-              "suggested_actions": [],
               "guide_citations": [],
               "issued_at": "5500-04-08T16:00:00Z",
               "expires_at": "5500-04-09T16:00:00Z"
@@ -327,7 +328,7 @@ public sealed class LlmClientTests
         result.Normalized.Should().BeFalse();
         result.Response.StateSummary.Should().Be("Food is in crisis and needs storage visibility plus setup.");
         AdviceItem advice = result.Response.Advice.Should().ContainSingle().Subject;
-        advice.ResourceRequests.Should().ContainSingle().Which.What.Should().Be("Reachable food stockpile space");
+        advice.Steps.Should().ContainSingle().Which.Instruction.Should().Be("Make the reported food units visible in a reachable stockpile.");
         advice.IssuedAt.Should().BeAfter(before);
         advice.ExpiresAt.Should().BeAfter(DateTimeOffset.UtcNow);
         advice.IssuedInGameTick.Should().Be("Y5500AprimayD5");
