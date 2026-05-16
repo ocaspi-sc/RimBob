@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
 using RimAI.Coordination;
 using RimAI.Core.Briefings;
@@ -10,6 +11,10 @@ namespace RimAI.Host.Endpoints;
 
 public static class SystemEndpoints
 {
+    private static readonly Regex TestMethodAttribute = new(
+        @"^\s*\[(?:Fact|Theory)(?:\(|\])",
+        RegexOptions.Compiled | RegexOptions.Multiline);
+
     private const int UpstreamRimApiEndpointTotal = 167;
 
     private static readonly RimApiCoverageRow[] ActiveRimApiReads =
@@ -67,7 +72,7 @@ public static class SystemEndpoints
     public static IEndpointRouteBuilder MapSystemEndpoints(this IEndpointRouteBuilder app)
     {
         EndpointCoverageCatalog coverage = app.ServiceProvider.GetRequiredService<EndpointCoverageCatalog>();
-        coverage.Register("/api/system/health", "available", "Runtime, LLM, RAG, logs, traces, Host endpoint coverage, and RIMAPI coverage metadata.");
+        coverage.Register("/api/system/health", "available", "Runtime, LLM, RAG, logs, traces, tests, Host endpoint coverage, and RIMAPI coverage metadata.");
         coverage.Register("/api/system/logs/recent", "not_exposed_yet", "Planned bounded log tail.");
 
         app.MapGet("/api/system/health", (
@@ -145,6 +150,7 @@ public static class SystemEndpoints
                     replay_corpus = ReplayCorpusMetadata(logsDir),
                     recent_endpoint = "not_exposed_yet",
                 },
+                tests = TestInventoryMetadata(env.ContentRootPath),
                 icons = iconCache.GetStatus(),
                 traces = traces.LatestAll(),
                 endpoint_coverage = endpointCoverage.Snapshot(new EndpointCoverageContext(agendaStore, registry)),
@@ -272,6 +278,105 @@ public static class SystemEndpoints
             owner = row.Owner,
             note = row.Note,
         }).ToArray();
+
+    private static object TestInventoryMetadata(string contentRoot)
+    {
+        string runtimeRoot = HostLogPaths.ResolveRuntimeRoot(contentRoot);
+        string testsDir = Path.Combine(runtimeRoot, "Src", "Tests");
+        string projectPath = Path.Combine(testsDir, "RimAI.Tests.csproj");
+
+        if (!Directory.Exists(testsDir))
+        {
+            return new
+            {
+                directory = testsDir,
+                project = projectPath,
+                exists = false,
+                total_count = 0,
+                file_count = 0,
+                source = "declared xUnit [Fact]/[Theory] methods grouped by Src/Tests folder",
+                scan_error = (string?)null,
+                categories = Array.Empty<object>(),
+            };
+        }
+
+        try
+        {
+            DirectoryInfo directory = new(testsDir);
+            TestSourceFile[] sources = directory
+                .EnumerateFiles("*.cs", SearchOption.AllDirectories)
+                .Where(file => !IsIgnoredTestPath(file.FullName))
+                .Select(file => new TestSourceFile(
+                    TestCategoryFromPath(testsDir, file.FullName),
+                    CountDeclaredTests(file.FullName)))
+                .Where(source => source.Count > 0)
+                .ToArray();
+
+            TestCategorySummary[] categories = sources
+                .GroupBy(source => source.Category)
+                .Select(group => new TestCategorySummary(
+                    group.Key,
+                    group.Sum(source => source.Count),
+                    group.Count()))
+                .OrderBy(category => category.Category)
+                .ToArray();
+
+            return new
+            {
+                directory = testsDir,
+                project = projectPath,
+                exists = true,
+                total_count = categories.Sum(category => category.Count),
+                file_count = sources.Length,
+                source = "declared xUnit [Fact]/[Theory] methods grouped by Src/Tests folder",
+                scan_error = (string?)null,
+                categories = categories.Select(category => new
+                {
+                    category = category.Category,
+                    count = category.Count,
+                    file_count = category.FileCount,
+                }).ToArray(),
+            };
+        }
+        catch (Exception ex)
+        {
+            return new
+            {
+                directory = testsDir,
+                project = projectPath,
+                exists = true,
+                total_count = 0,
+                file_count = 0,
+                source = "declared xUnit [Fact]/[Theory] methods grouped by Src/Tests folder",
+                scan_error = ex.Message,
+                categories = Array.Empty<object>(),
+            };
+        }
+    }
+
+    private static bool IsIgnoredTestPath(string fullPath)
+    {
+        string normalized = fullPath.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
+        return normalized.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string TestCategoryFromPath(string testsDir, string fullPath)
+    {
+        string relative = Path.GetRelativePath(testsDir, fullPath);
+        string[] parts = relative.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        return parts.Length > 1 ? parts[0] : "Root";
+    }
+
+    private static int CountDeclaredTests(string fullPath)
+    {
+        string source = File.ReadAllText(fullPath);
+        return TestMethodAttribute.Matches(source).Count;
+    }
+
+    private sealed record TestSourceFile(string Category, int Count);
+
+    private sealed record TestCategorySummary(string Category, int Count, int FileCount);
 
     private sealed record RimApiCoverageRow(
         string Method,

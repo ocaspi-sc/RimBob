@@ -1543,7 +1543,8 @@ code {
   font-weight: 700;
 }
 
-.icon-cache-panel {
+.icon-cache-panel,
+.test-inventory-panel {
   display: grid;
   gap: 12px;
 }

@@ -41,6 +41,23 @@ export interface ReplayCorpusMetadata {
   files: ReplayCorpusFile[];
 }
 
+export interface TestCategorySummary {
+  category: string;
+  count: number;
+  file_count: number;
+}
+
+export interface TestInventoryMetadata {
+  directory: string;
+  project: string;
+  exists: boolean;
+  total_count: number;
+  file_count: number;
+  source: string;
+  scan_error: string | null;
+  categories: TestCategorySummary[];
+}
+
 export interface RimApiCoverageRow {
   method: string;
   endpoint: string;
@@ -123,6 +140,7 @@ export interface SystemHealth {
     replay_corpus: ReplayCorpusMetadata;
     recent_endpoint: string;
   };
+  tests: TestInventoryMetadata;
   icons: IconCacheStatus;
   traces: MinisterTrace[];
   endpoint_coverage: EndpointCoverage[];

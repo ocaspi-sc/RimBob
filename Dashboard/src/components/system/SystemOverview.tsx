@@ -25,10 +25,26 @@ export function SystemOverview({
   const llmStatus = health?.llm.status ?? status?.llm_status ?? ((status?.llm_configured ?? health?.llm.configured) ? 'ready' : 'missing_key');
   const icons = health?.icons;
   const replay = health?.logs.replay_corpus;
+  const tests = health?.tests;
+  const liveTestCount = tests?.categories.find(category => category.category.toLowerCase() === 'live')?.count ?? 0;
   const rimapi = health?.rimapi_coverage;
 
   return (
     <div className="system-overview">
+      <header className="system-hero system-card">
+        <div>
+          <span className="eyebrow">Operations</span>
+          <h2>SYSTEM</h2>
+          <p>Runtime diagnostics for Host, RIMAPI, SSE transport, LLM provider state, logs, traces, icons, tests, and endpoint coverage.</p>
+        </div>
+        <div className="scope-boundary-strip">
+          <span>Debug</span>
+          <span>Raw health</span>
+          <span>Endpoints</span>
+          <span>Logs</span>
+        </div>
+      </header>
+
       <div className="panel-registry-note">
         <span>Panel registry</span>
         {systemPanelRegistry.map(panel => (
@@ -39,6 +55,42 @@ export function SystemOverview({
       {healthError && (
         <EmptyState code="SYSTEM HEALTH DEGRADED">{healthError}</EmptyState>
       )}
+
+      <DisclosureSection title="Test inventory" meta={tests ? `${tests.total_count} declared tests` : 'not exposed'}>
+        {!tests ? (
+          <EmptyState code="TEST INVENTORY MISSING">/api/system/health did not expose test metadata.</EmptyState>
+        ) : (
+          <div className="test-inventory-panel">
+            <div className="metric-grid compact">
+              <MetricCard label="Declared tests" value={tests.total_count} />
+              <MetricCard label="Categories" value={tests.categories.length} />
+              <MetricCard label="Test files" value={tests.file_count} />
+              <MetricCard label="Live-gated" value={liveTestCount} tone={liveTestCount > 0 ? 'warn' : 'neutral'} />
+            </div>
+            {tests.scan_error && (
+              <EmptyState code="TEST SCAN DEGRADED">{tests.scan_error}</EmptyState>
+            )}
+            <div className="dense-table test-table">
+              <div className="dense-row header">
+                <span>Category</span>
+                <span>Tests</span>
+                <span>Files</span>
+              </div>
+              {tests.categories.map(category => (
+                <div className="dense-row" key={category.category}>
+                  <span>{category.category}</span>
+                  <span>{category.count}</span>
+                  <span>{category.file_count}</span>
+                </div>
+              ))}
+            </div>
+            <div className="stacked-lines test-source-lines">
+              <InfoLine label="Source" value={tests.source} />
+              <InfoLine label="Project" value={tests.project} />
+            </div>
+          </div>
+        )}
+      </DisclosureSection>
 
       <DisclosureSection title="Runtime diagnostics" meta={(status?.rimapi_reachable ?? health?.runtime.rimapi_reachable) ? 'RIMAPI reachable' : 'RIMAPI waiting'}>
         <section className="system-grid">

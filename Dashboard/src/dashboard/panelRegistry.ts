@@ -11,6 +11,7 @@ export interface PanelConfig {
 export const systemPanelRegistry: PanelConfig[] = [
   { id: 'runtime', title: 'Runtime', scope: 'system', requiredCapability: '/api/system/health' },
   { id: 'sse', title: 'Connection and Events', scope: 'system', requiredCapability: '/api/advice/stream diagnostics' },
+  { id: 'tests', title: 'Test Inventory', scope: 'system', requiredCapability: '/api/system/health.tests' },
   { id: 'coverage', title: 'Endpoint Coverage', scope: 'system', requiredCapability: '/api/system/health.endpoint_coverage' },
   { id: 'rimapi-coverage', title: 'RIMAPI Coverage', scope: 'system', requiredCapability: '/api/system/health.rimapi_coverage' },
   { id: 'timeline', title: 'Recent Events', scope: 'system', requiredCapability: 'local dashboard event buffer' },

@@ -12,7 +12,7 @@ internal static class HostLogPaths
         return Path.Combine(ResolveRuntimeRoot(contentRootPath), "var");
     }
 
-    private static string ResolveRuntimeRoot(string contentRootPath)
+    public static string ResolveRuntimeRoot(string contentRootPath)
     {
         DirectoryInfo? current = new(contentRootPath);
         while (current is not null)

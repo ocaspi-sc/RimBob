@@ -148,6 +148,9 @@ SYSTEM owns:
 - RIMAPI integration snapshot: cached upstream endpoint denominator, active
   reads, represented client methods, deferred write stubs, and missing
   high-priority endpoints.
+- Test inventory metadata: declared xUnit `[Fact]` / `[Theory]` counts grouped
+  by `Src/Tests` category. This is source inventory, not a pass/fail test run
+  result.
 - Icon cache metadata: local cache counts, byte totals, warm summary, skipped
   candidates, and bounded failure samples.
 - Recent event/advice timeline.
@@ -245,6 +248,10 @@ raw log file contents or full replay payloads.
 Icon cache metadata follows the same rule. SYSTEM may show counts, byte totals,
 kind totals, last warm result, skipped count, and bounded failure samples from
 `var/icons/`; it should not expose or inline image bytes.
+
+The same health payload may expose test inventory metadata for SYSTEM. Count
+declared xUnit test methods by source category so the dashboard can answer
+"what coverage areas exist?" without claiming the suite just executed.
 
 The same health payload may expose a RIMAPI integration snapshot for SYSTEM.
 This is coverage of upstream RimWorld mod endpoints, separate from Host
