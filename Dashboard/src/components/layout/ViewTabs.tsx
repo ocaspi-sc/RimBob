@@ -1,4 +1,6 @@
 import type { MinisterViewKey } from '../../dashboard/scopes';
+import { iconForView } from '../../dashboard/semanticIcons';
+import { SemanticIconCue } from '../shared/SemanticIcon';
 
 export function ViewTabs({
   activeView,
@@ -6,7 +8,7 @@ export function ViewTabs({
   onSelect,
 }: {
   activeView: MinisterViewKey;
-  views: Array<{ key: MinisterViewKey; label: string; emoji?: string }>;
+  views: Array<{ key: MinisterViewKey; label: string }>;
   onSelect: (view: MinisterViewKey) => void;
 }) {
   return (
@@ -20,7 +22,7 @@ export function ViewTabs({
           className={activeView === view.key ? 'active' : ''}
           onClick={() => onSelect(view.key)}
         >
-          {view.emoji && <span className="view-tab-emoji" aria-hidden>{view.emoji}</span>}
+          <SemanticIconCue className="view-tab-icon" icon={iconForView(view.key)} size="xs" />
           {view.label}
         </button>
       ))}

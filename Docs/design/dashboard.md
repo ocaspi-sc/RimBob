@@ -100,9 +100,10 @@ Minister scopes use a fixed top tab bar:
 - Raw LLM Output
 - Advice
 
-Use small emoji cues in scope labels, view labels, player-facing section titles,
-and compact metric labels when they improve scan speed. Keep backend/debug
-payloads, table headers, and contract field names undecorated.
+Use explicit game icons from the Host icon gateway in scope labels, view labels,
+section titles, field labels, compact metric labels, and obvious entity rows
+when they improve scan speed. Generic emoji are fallback-only. Icons annotate
+contract names; they must not replace, rename, or mutate backend field names.
 
 Large objects use the standard disclosure pattern: a real button header with
 `aria-expanded` / `aria-controls`, plus a conditionally rendered panel in normal
@@ -120,7 +121,9 @@ or the full registered view list inside the normal minister workspace.
 Rules, RAG, Raw LLM Output, endpoint coverage, traces, logs, and unknown future
 minister data should render through shared inspector primitives where practical.
 The inspector layer may infer useful display from payload shape: summary fields,
-tables for uniform arrays, object sections, and JSON/tree fallback.
+tables for uniform arrays, object sections, and YAML-like source trees backed by
+the original JSON payload. Field labels may include semantic icon cues before or
+after the contract name, but raw/debug data keeps the original field names.
 
 Player-facing views stay curated. Advice, Mayor Agenda, and the colony sidebar
 may keep hand-shaped layouts because they are read during play.
@@ -386,8 +389,9 @@ Mayor Advice renders the Agenda as the Mayor's player-facing output. Feeder
 minister Advice renders the minister's current-state summary first, then active
 `AdviceItem`s sorted by priority. For Food, this summary is a deterministic
 briefing-derived labelled summary, not LLM prose. The Advice view may render it
-as a compact table with lightweight emoji cues because it is player-facing; raw
-and debug views preserve the original `state_summary` text. It should name
+as a compact table with lightweight icon-database cues because it is
+player-facing; raw and debug views preserve the original `state_summary` text.
+It should name
 concrete food stores, growing areas/crop progress, acquisition opportunities,
 kitchen/storage/freezer signals, and confidence gaps before the action cards.
 Cards show rationale, ordered advice steps, citations, issue id or supersession

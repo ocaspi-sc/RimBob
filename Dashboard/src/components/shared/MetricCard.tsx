@@ -6,14 +6,14 @@ export function MetricCard({
   note,
   tone = 'neutral',
 }: {
-  label: string;
+  label: ReactNode;
   value: ReactNode;
   note?: string;
   tone?: 'neutral' | 'ok' | 'warn' | 'error';
 }) {
   return (
     <div className={`metric-card ${tone}`}>
-      <span>{label}</span>
+      <div className="metric-label">{label}</div>
       <strong>{value}</strong>
       {note && <small>{note}</small>}
     </div>

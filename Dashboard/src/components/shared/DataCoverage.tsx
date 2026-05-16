@@ -1,4 +1,6 @@
 import type { CoverageState, EndpointCoverage } from '../../types/system';
+import { iconForField } from '../../dashboard/semanticIcons';
+import { SemanticLabel } from './SemanticIcon';
 
 const labelByState: Record<string, string> = {
   available: 'Available',
@@ -23,8 +25,8 @@ export function CoverageTable({ rows }: { rows: EndpointCoverage[] }) {
   return (
     <div className="dense-table coverage-table">
       <div className="dense-row header">
-        <span>Surface</span>
-        <span>Status</span>
+        <SemanticLabel icon={iconForField('source')}><span>Surface</span></SemanticLabel>
+        <SemanticLabel icon={iconForField('status')}><span>Status</span></SemanticLabel>
         <span>Notes</span>
       </div>
       {rows.map(row => (

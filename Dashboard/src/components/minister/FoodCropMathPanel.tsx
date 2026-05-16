@@ -1,8 +1,12 @@
 import { fetchFoodCropMath, type FoodCropCandidate } from '../../api/ministers';
+import { itemIconUrl } from '../../api/icons';
+import { iconForField, iconForSection } from '../../dashboard/semanticIcons';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { DisclosureSection } from '../shared/DisclosureSection';
 import { EmptyState } from '../shared/EmptyState';
+import { GameIcon } from '../shared/GameIcon';
 import { MetricCard } from '../shared/MetricCard';
+import { SemanticLabel } from '../shared/SemanticIcon';
 import { StatusPill, type PillTone } from '../shared/StatusPill';
 
 export function FoodCropMathPanel() {
@@ -10,7 +14,7 @@ export function FoodCropMathPanel() {
 
   if (cropMath.loading) {
     return (
-      <DisclosureSection title="Crop math" defaultOpen meta="loading">
+      <DisclosureSection title={<SemanticLabel icon={iconForSection('crop_math')}><span>Crop math</span></SemanticLabel>} defaultOpen meta="loading">
         <EmptyState code="CROP MATH">Loading crop candidates.</EmptyState>
       </DisclosureSection>
     );
@@ -18,7 +22,7 @@ export function FoodCropMathPanel() {
 
   if (cropMath.error || cropMath.data === null) {
     return (
-      <DisclosureSection title="Crop math" defaultOpen meta="failed">
+      <DisclosureSection title={<SemanticLabel icon={iconForSection('crop_math')}><span>Crop math</span></SemanticLabel>} defaultOpen meta="failed">
         <EmptyState code="CROP MATH FAILED">{cropMath.error ?? 'No crop math payload returned.'}</EmptyState>
       </DisclosureSection>
     );
@@ -29,29 +33,29 @@ export function FoodCropMathPanel() {
   const fitCount = data.candidates.filter(candidate => candidate.fitsSeason).length;
 
   return (
-    <DisclosureSection title="Crop math" defaultOpen meta={`${data.candidates.length} candidates`}>
+    <DisclosureSection title={<SemanticLabel icon={iconForSection('crop_math')}><span>Crop math</span></SemanticLabel>} defaultOpen meta={`${data.candidates.length} candidates`}>
       <div className="crop-math-panel">
         <div className="metric-grid compact crop-math-summary">
           <MetricCard
-            label="Best candidate"
+            label={<SemanticLabel icon={best ? { fallback: best.cropDef.slice(0, 2).toUpperCase(), label: `${best.cropDef} icon`, ref: { kind: 'item', id: best.cropDef } } : iconForField('crop_def')}><span>Best candidate</span></SemanticLabel>}
             value={best?.label ?? 'none'}
             note={best ? best.cropDef : undefined}
             tone={best?.fitsSeason ? 'ok' : 'warn'}
           />
           <MetricCard
-            label="Food buffer"
+            label={<SemanticLabel icon={iconForField('estimated_days_of_food')}><span>Food buffer</span></SemanticLabel>}
             value={formatDays(data.estimatedDaysOfFood)}
             note={`${data.colonistCount} colonists`}
             tone={data.estimatedDaysOfFood === null ? 'warn' : data.estimatedDaysOfFood < 7 ? 'error' : 'ok'}
           />
           <MetricCard
-            label="Winter window"
+            label={<SemanticLabel icon={iconForField('winter_window')}><span>Winter window</span></SemanticLabel>}
             value={data.season.daysToWinter === null ? 'unknown' : `${formatNumber(data.season.daysToWinter)} days`}
             note={data.season.currentSeason}
             tone={data.season.daysToWinter === null ? 'warn' : 'neutral'}
           />
           <MetricCard
-            label="Terrain fertility"
+            label={<SemanticLabel icon={iconForField('terrain_fertility')}><span>Terrain fertility</span></SemanticLabel>}
             value={formatMaybeNumber(data.growingTerrain.bestFertility)}
             note={data.growingTerrain.hasTerrain ? `${data.growingTerrain.growableCells.toLocaleString()} growable cells` : 'not exposed'}
             tone={data.growingTerrain.hasTerrain ? 'ok' : 'warn'}
@@ -71,22 +75,30 @@ export function FoodCropMathPanel() {
         ) : (
           <div className="dense-table crop-math-table">
             <div className="dense-row header">
-              <span>Crop</span>
+              <SemanticLabel icon={iconForField('crop_def')}><span>Crop</span></SemanticLabel>
               <span>Tiles</span>
               <span>Grow days</span>
-              <span>Days added</span>
-              <span>Season</span>
-              <span>Fertility</span>
-              <span>Confidence</span>
-              <span>Storage</span>
+              <SemanticLabel icon={iconForField('estimated_days_of_food')}><span>Days added</span></SemanticLabel>
+              <SemanticLabel icon={iconForField('season')}><span>Season</span></SemanticLabel>
+              <SemanticLabel icon={iconForField('terrain_fertility')}><span>Fertility</span></SemanticLabel>
+              <SemanticLabel icon={iconForField('classification_confidence')}><span>Confidence</span></SemanticLabel>
+              <SemanticLabel icon={iconForField('storage')}><span>Storage</span></SemanticLabel>
               <span>Score</span>
               <span>Reason</span>
             </div>
             {data.candidates.map(candidate => (
               <div className="dense-row" key={candidate.cropDef}>
                 <span className="crop-name">
-                  <strong>{candidate.label}</strong>
-                  <code>{candidate.cropDef}</code>
+                  <GameIcon
+                    fallback={candidate.cropDef.slice(0, 2).toUpperCase()}
+                    label={`${candidate.cropDef} icon`}
+                    size="xs"
+                    src={itemIconUrl(candidate.cropDef)}
+                  />
+                  <span>
+                    <strong>{candidate.label}</strong>
+                    <code>{candidate.cropDef}</code>
+                  </span>
                 </span>
                 <span>{candidate.tiles}</span>
                 <span>{formatNumber(candidate.growDays)}</span>

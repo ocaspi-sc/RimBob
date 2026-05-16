@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useRef } from 'react';
-import { JsonView } from 'react-json-view-lite';
-import 'react-json-view-lite/dist/index.css';
+import { useMemo, useRef, useState } from 'react';
+import { iconForField, iconForFieldValue, iconForRecord } from '../../dashboard/semanticIcons';
+import { SemanticIconCue, SemanticLabel } from './SemanticIcon';
 
 export type JsonValue =
   | null
@@ -20,26 +20,209 @@ export function JsonTree({
   value: unknown;
 }) {
   const json = useStableJsonValue(value);
-  const shouldExpandNode = useCallback((level: number) => {
-    const visibleLevel = compactTopLevel ? level : level + 1;
-    return visibleLevel <= expandDepth;
-  }, [compactTopLevel, expandDepth]);
 
-  if (Array.isArray(json) || isJsonRecord(json)) {
-    return (
-      <div className="json-tree">
-        <JsonView
-          data={json}
+  return (
+    <div className="json-tree json-source-tree">
+      <JsonNode
+        compactTopLevel={compactTopLevel}
+        expandDepth={expandDepth}
+        level={0}
+        path=""
+        root
+        value={json}
+      />
+    </div>
+  );
+}
+
+function JsonNode({
+  compactTopLevel,
+  expandDepth,
+  level,
+  name,
+  path,
+  root = false,
+  value,
+}: {
+  compactTopLevel: boolean;
+  expandDepth: number;
+  level: number;
+  name?: string;
+  path: string;
+  root?: boolean;
+  value: JsonValue;
+}) {
+  const visibleLevel = compactTopLevel ? level : level + 1;
+  const [open, setOpen] = useState(visibleLevel <= expandDepth);
+
+  if (isJsonScalar(value)) {
+    return <ScalarRow name={name} path={path} value={value} />;
+  }
+
+  if (root && compactTopLevel) {
+    return <NodeChildren compactTopLevel={compactTopLevel} expandDepth={expandDepth} level={level} path={path} value={value} />;
+  }
+
+  const icon = name ? iconForField(path || name) : undefined;
+  const title = name ?? (Array.isArray(value) ? 'items' : 'payload');
+
+  return (
+    <div className={`json-source-node ${Array.isArray(value) ? 'array' : 'object'}`}>
+      <button
+        type="button"
+        className="json-source-toggle"
+        aria-expanded={open}
+        onClick={() => setOpen(current => !current)}
+      >
+        <span className={`json-source-caret ${open ? 'open' : ''}`} aria-hidden>{open ? 'v' : '>'}</span>
+        <SemanticLabel icon={icon}><code>{title}</code></SemanticLabel>
+        <span className="json-punctuation">:</span>
+        <small>{summarizeValue(value)}</small>
+      </button>
+      {open && (
+        <NodeChildren
           compactTopLevel={compactTopLevel}
-          clickToExpandNode
-          shouldExpandNode={shouldExpandNode}
-          style={jsonTreeStyles}
+          expandDepth={expandDepth}
+          level={level + 1}
+          path={path}
+          value={value}
         />
+      )}
+    </div>
+  );
+}
+
+function NodeChildren({
+  compactTopLevel,
+  expandDepth,
+  level,
+  path,
+  value,
+}: {
+  compactTopLevel: boolean;
+  expandDepth: number;
+  level: number;
+  path: string;
+  value: JsonValue[] | { [key: string]: JsonValue };
+}) {
+  if (Array.isArray(value)) {
+    return (
+      <div className="json-source-children">
+        {value.map((item, index) => (
+          <ArrayItem
+            compactTopLevel={compactTopLevel}
+            expandDepth={expandDepth}
+            index={index}
+            item={item}
+            key={index}
+            level={level}
+            path={`${path}[${index}]`}
+          />
+        ))}
       </div>
     );
   }
 
-  return <div className="json-tree">{renderScalar(json)}</div>;
+  return (
+    <div className="json-source-children">
+      {Object.entries(value).map(([key, item]) => (
+        <JsonNode
+          compactTopLevel={compactTopLevel}
+          expandDepth={expandDepth}
+          key={key}
+          level={level}
+          name={key}
+          path={path ? `${path}.${key}` : key}
+          value={item}
+        />
+      ))}
+    </div>
+  );
+}
+
+function ArrayItem({
+  compactTopLevel,
+  expandDepth,
+  index,
+  item,
+  level,
+  path,
+}: {
+  compactTopLevel: boolean;
+  expandDepth: number;
+  index: number;
+  item: JsonValue;
+  level: number;
+  path: string;
+}) {
+  const visibleLevel = compactTopLevel ? level : level + 1;
+  const [open, setOpen] = useState(visibleLevel <= expandDepth);
+
+  if (isJsonScalar(item)) {
+    return (
+      <div className="json-source-row array-scalar">
+        <span className="json-source-marker">-</span>
+        {renderScalar(item)}
+      </div>
+    );
+  }
+
+  const icon = isJsonRecord(item) ? iconForRecord(item) : undefined;
+
+  return (
+    <div className="json-source-array-item">
+      <button
+        type="button"
+        className="json-source-toggle array-item"
+        aria-expanded={open}
+        onClick={() => setOpen(current => !current)}
+      >
+        <span className={`json-source-caret ${open ? 'open' : ''}`} aria-hidden>{open ? 'v' : '>'}</span>
+        <span className="json-source-marker">-</span>
+        <SemanticIconCue icon={icon} size="xs" />
+        <code>item {index + 1}</code>
+        <small>{summarizeValue(item)}</small>
+      </button>
+      {open && (
+        <NodeChildren
+          compactTopLevel={compactTopLevel}
+          expandDepth={expandDepth}
+          level={level + 1}
+          path={path}
+          value={item}
+        />
+      )}
+    </div>
+  );
+}
+
+function ScalarRow({
+  name,
+  path,
+  value,
+}: {
+  name?: string;
+  path: string;
+  value: null | string | number | boolean;
+}) {
+  const icon = name ? iconForField(path || name) : undefined;
+  const valueIcon = iconForFieldValue(name, value);
+
+  return (
+    <div className="json-source-row scalar">
+      {name && (
+        <>
+          <SemanticLabel icon={icon}><code>{name}</code></SemanticLabel>
+          <span className="json-punctuation">:</span>
+        </>
+      )}
+      {valueIcon ? (
+        <SemanticLabel className="semantic-value" icon={valueIcon}>{renderScalar(value)}</SemanticLabel>
+      ) : (
+        renderScalar(value)
+      )}
+    </div>
+  );
 }
 
 function useStableJsonValue(value: unknown): JsonValue {
@@ -102,29 +285,9 @@ export function toJsonValue(value: unknown): JsonValue {
   return String(value);
 }
 
-function renderScalar(value: JsonValue): JSX.Element {
+function renderScalar(value: null | string | number | boolean): JSX.Element {
   if (value === null) return <span className="json-empty">null</span>;
-  if (typeof value === 'boolean') return <span className="json-primitive">{value ? 'true' : 'false'}</span>;
-  return <span className="json-primitive">{String(value)}</span>;
+  if (typeof value === 'boolean') return <span className="json-boolean">{value ? 'true' : 'false'}</span>;
+  if (typeof value === 'number') return <span className="json-number">{value.toLocaleString()}</span>;
+  return <span className="json-string">{value}</span>;
 }
-
-const jsonTreeStyles = {
-  container: 'json-view-container',
-  childFieldsContainer: 'json-child-fields-container',
-  basicChildStyle: 'json-basic-child',
-  collapseIcon: 'json-collapse-icon',
-  expandIcon: 'json-expand-icon',
-  collapsedContent: 'json-collapsed-content',
-  label: 'json-key',
-  clickableLabel: 'json-clickable-label',
-  nullValue: 'json-empty',
-  undefinedValue: 'json-empty',
-  numberValue: 'json-number',
-  stringValue: 'json-string',
-  booleanValue: 'json-boolean',
-  otherValue: 'json-primitive',
-  punctuation: 'json-punctuation',
-  noQuotesForStringValues: false,
-  quotesForFieldNames: false,
-  stringifyStringValues: true,
-};

@@ -4,9 +4,11 @@ import type { AdviceApplyResponse, AdviceItem } from '../../types/advice';
 import type { ScopeConfig } from '../../dashboard/scopes';
 import { applyAdviceStep } from '../../api/advice';
 import { iconUrlFor } from '../../api/icons';
+import { iconForField, iconForSection, iconForView } from '../../dashboard/semanticIcons';
 import { DisclosureSection } from '../shared/DisclosureSection';
 import { EmptyState } from '../shared/EmptyState';
 import { GameIcon } from '../shared/GameIcon';
+import { SemanticLabel } from '../shared/SemanticIcon';
 
 export function MinisterAdviceView({
   advice,
@@ -41,7 +43,7 @@ export function MinisterAdviceView({
     <div className="minister-view advice-view">
       <header className="view-heading">
         <span className="eyebrow">{scope.label}</span>
-        <h2>Advice</h2>
+        <h2><SemanticLabel icon={iconForView('advice')}><span>Advice</span></SemanticLabel></h2>
         <p>Active feeder minister advice from the SSE feed.</p>
       </header>
       {stateSummary && (
@@ -53,8 +55,7 @@ export function MinisterAdviceView({
                 {currentStateLines.map((line, index) => (
                   <tr key={`${scope.key}-state-${index}`}>
                     <th scope="row">
-                      <span className="state-summary-icon" aria-hidden="true">{line.icon}</span>
-                      <span>{line.label ?? 'State'}</span>
+                      <SemanticLabel icon={iconForField(line.iconKey)}><span>{line.label ?? 'State'}</span></SemanticLabel>
                     </th>
                     <td>{line.detail}</td>
                   </tr>
@@ -78,16 +79,16 @@ export function MinisterAdviceView({
 
 type StateSummaryLine = {
   detail: string;
-  icon: string;
+  iconKey: string;
   label: string | null;
 };
 
-const STATE_SUMMARY_ICONS: Record<string, string> = {
-  acquisition: '\u{1F50D}',
-  crops: '\u{1F331}',
-  'confidence gaps': '\u{26A0}\u{FE0F}',
-  'kitchen/storage': '\u{1F373}',
-  stores: '\u{1F4E6}',
+const STATE_SUMMARY_ICON_KEYS: Record<string, string> = {
+  acquisition: 'wild_harvest',
+  crops: 'crops',
+  'confidence gaps': 'data_coverage',
+  'kitchen/storage': 'kitchen',
+  stores: 'food',
 };
 
 function splitStateSummary(summary: string): StateSummaryLine[] {
@@ -103,7 +104,7 @@ function parseStateSummaryLine(line: string): StateSummaryLine | null {
 
   const separator = text.indexOf(':');
   if (separator <= 0) {
-    return { detail: text, icon: '\u{2139}\u{FE0F}', label: null };
+    return { detail: text, iconKey: 'info', label: null };
   }
 
   const label = text.slice(0, separator).trim();
@@ -111,7 +112,7 @@ function parseStateSummaryLine(line: string): StateSummaryLine | null {
 
   return {
     detail,
-    icon: STATE_SUMMARY_ICONS[label.toLowerCase()] ?? '\u{2139}\u{FE0F}',
+    iconKey: STATE_SUMMARY_ICON_KEYS[label.toLowerCase()] ?? label,
     label,
   };
 }
@@ -150,18 +151,22 @@ function MayorAdvice({
         <span>{agenda.posture.military}</span>
       </section>
 
-      <DisclosureSection title="🏛️ State of the Union" defaultOpen meta={`${Object.keys(agenda.state_of_the_union).length} categories`}>
+      <DisclosureSection
+        title={<SemanticLabel icon={iconForSection('state_of_the_union')}><span>State of the Union</span></SemanticLabel>}
+        defaultOpen
+        meta={`${Object.keys(agenda.state_of_the_union).length} categories`}
+      >
         <div className="union-grid">
           {Object.entries(agenda.state_of_the_union).map(([key, value]) => (
             <article key={key}>
-              <strong>{key}</strong>
+              <SemanticLabel icon={iconForField(key)}><strong>{key}</strong></SemanticLabel>
               <p>{value}</p>
             </article>
           ))}
         </div>
       </DisclosureSection>
 
-      <DisclosureSection title="📝 What changed" defaultOpen>
+      <DisclosureSection title={<SemanticLabel icon={iconForSection('what_changed')}><span>What changed</span></SemanticLabel>} defaultOpen>
         <p className="notes-copy">{agenda.update_notes}</p>
       </DisclosureSection>
 
@@ -179,7 +184,7 @@ function MayorAdvice({
           />
         ))}
         {closedShort.length > 0 && (
-          <DisclosureSection title="✅ Closed this turn" meta={`${closedShort.length} items`}>
+          <DisclosureSection title={<SemanticLabel icon={iconForSection('closed_items')}><span>Closed this turn</span></SemanticLabel>} meta={`${closedShort.length} items`}>
             {closedShort.map(item => (
               <PriorityCard
                 key={item.id}
@@ -191,7 +196,11 @@ function MayorAdvice({
         )}
       </section>
 
-      <DisclosureSection title="🎯 Long-term goals" defaultOpen meta={`${agenda.long_term.length} items`}>
+      <DisclosureSection
+        title={<SemanticLabel icon={iconForSection('long_term_goals')}><span>Long-term goals</span></SemanticLabel>}
+        defaultOpen
+        meta={`${agenda.long_term.length} items`}
+      >
         <div className="long-list">
           {agenda.long_term.map(item => (
             <div className={`long-row ${item.status}`} key={item.id}>
@@ -203,11 +212,14 @@ function MayorAdvice({
       </DisclosureSection>
 
       {Object.keys(agenda.cabinet_direction).length > 0 && (
-        <DisclosureSection title="🧭 Cabinet direction" meta={`${Object.keys(agenda.cabinet_direction).length} ministers`}>
+        <DisclosureSection
+          title={<SemanticLabel icon={iconForSection('cabinet_direction')}><span>Cabinet direction</span></SemanticLabel>}
+          meta={`${Object.keys(agenda.cabinet_direction).length} ministers`}
+        >
           <div className="direction-grid">
             {Object.entries(agenda.cabinet_direction).map(([minister, direction]) => (
               <article key={minister}>
-                <strong>{minister}</strong>
+                <SemanticLabel icon={iconForField(minister)}><strong>{minister}</strong></SemanticLabel>
                 <p>{direction}</p>
               </article>
             ))}
@@ -246,7 +258,9 @@ function AdviceCard({ item }: { item: AdviceItem }) {
     <article className={`advice-card v2 ${item.priority}`}>
       <header>
         <div>
-          <span className="eyebrow">💡 {item.advice_type}</span>
+          <span className="eyebrow">
+            <SemanticLabel icon={iconForField(item.advice_type)}><span>{item.advice_type}</span></SemanticLabel>
+          </span>
           <h3>{item.title}</h3>
         </div>
         <div className="advice-badges">
@@ -256,7 +270,7 @@ function AdviceCard({ item }: { item: AdviceItem }) {
       <p>{item.body}</p>
       <blockquote>{item.rationale}</blockquote>
       {item.steps.length > 0 && (
-        <DisclosureSection title="Steps" defaultOpen meta={`${item.steps.length} steps`}>
+        <DisclosureSection title={<SemanticLabel icon={iconForField('steps')}><span>Steps</span></SemanticLabel>} defaultOpen meta={`${item.steps.length} steps`}>
           <div className="action-list">
             {item.steps.map((step, index) => {
               const key = stepKey(item, index);
@@ -303,17 +317,21 @@ function AdviceCard({ item }: { item: AdviceItem }) {
         </DisclosureSection>
       )}
       {(item.resource_requests?.length ?? 0) > 0 && (
-        <DisclosureSection title="📦 Resource requests" defaultOpen meta={`${item.resource_requests?.length ?? 0} requests`}>
+        <DisclosureSection
+          title={<SemanticLabel icon={iconForField('resource_requests')}><span>Resource requests</span></SemanticLabel>}
+          defaultOpen
+          meta={`${item.resource_requests?.length ?? 0} requests`}
+        >
           <div className="dense-table resource-table">
             <div className="dense-row header">
               <span>Icon</span>
-              <span>Kind</span>
-              <span>Request</span>
-              <span>Reason</span>
-              <span>Qty</span>
-              <span>Owner</span>
-              <span>Work / Skill</span>
-              <span>Priority</span>
+              <SemanticLabel icon={iconForField('kind')}><span>Kind</span></SemanticLabel>
+              <SemanticLabel icon={iconForField('request')}><span>Request</span></SemanticLabel>
+              <SemanticLabel icon={iconForField('reason')}><span>Reason</span></SemanticLabel>
+              <SemanticLabel icon={iconForField('quantity')}><span>Qty</span></SemanticLabel>
+              <SemanticLabel icon={iconForField('owner')}><span>Owner</span></SemanticLabel>
+              <SemanticLabel icon={iconForField('work_type')}><span>Work / Skill</span></SemanticLabel>
+              <SemanticLabel icon={iconForField('priority')}><span>Priority</span></SemanticLabel>
             </div>
             {item.resource_requests?.map((request, index) => (
               <div className="dense-row" key={`${item.id}-request-${index}`}>
@@ -338,7 +356,11 @@ function AdviceCard({ item }: { item: AdviceItem }) {
         </DisclosureSection>
       )}
       {(item.suggested_actions?.length ?? 0) > 0 && (
-        <DisclosureSection title="✅ Suggested actions" defaultOpen meta={`${item.suggested_actions?.length ?? 0} actions`}>
+        <DisclosureSection
+          title={<SemanticLabel icon={iconForField('suggested_actions')}><span>Suggested actions</span></SemanticLabel>}
+          defaultOpen
+          meta={`${item.suggested_actions?.length ?? 0} actions`}
+        >
           <div className="action-list">
             {item.suggested_actions?.map((action, index) => (
               <div key={`${item.id}-action-${index}`}>

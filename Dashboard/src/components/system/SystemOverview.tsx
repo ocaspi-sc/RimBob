@@ -1,10 +1,12 @@
 import type { RimAIStatus } from '../../types/status';
 import type { DashboardEvent, RimApiCoverageRow, StreamDiagnostics, SystemHealth } from '../../types/system';
+import { iconForField, iconForSection, iconForScope } from '../../dashboard/semanticIcons';
 import { systemPanelRegistry } from '../../dashboard/panelRegistry';
 import { CoverageTable } from '../shared/DataCoverage';
 import { DisclosureSection } from '../shared/DisclosureSection';
 import { EmptyState } from '../shared/EmptyState';
 import { MetricCard } from '../shared/MetricCard';
+import { SemanticLabel } from '../shared/SemanticIcon';
 import { StatusPill } from '../shared/StatusPill';
 import { Timeline } from '../shared/Timeline';
 
@@ -35,7 +37,7 @@ export function SystemOverview({
       <header className="system-hero system-card">
         <div>
           <span className="eyebrow">Operations</span>
-          <h2>SYSTEM</h2>
+          <h2><SemanticLabel icon={iconForScope('system')} size="sm"><span>SYSTEM</span></SemanticLabel></h2>
           <p>Runtime diagnostics for Host, RIMAPI, SSE transport, LLM provider state, logs, traces, icons, tests, and endpoint coverage.</p>
         </div>
         <div className="scope-boundary-strip">
@@ -57,25 +59,25 @@ export function SystemOverview({
         <EmptyState code="SYSTEM HEALTH DEGRADED">{healthError}</EmptyState>
       )}
 
-      <DisclosureSection title="Test inventory" meta={tests ? `${tests.total_count} declared tests` : 'not exposed'}>
+      <DisclosureSection title={<SectionTitle iconKey="tests">Test inventory</SectionTitle>} meta={tests ? `${tests.total_count} declared tests` : 'not exposed'}>
         {!tests ? (
           <EmptyState code="TEST INVENTORY MISSING">/api/system/health did not expose test metadata.</EmptyState>
         ) : (
           <div className="test-inventory-panel">
             <div className="metric-grid compact">
-              <MetricCard label="Declared tests" value={tests.total_count} />
-              <MetricCard label="Categories" value={tests.categories.length} />
-              <MetricCard label="Test files" value={tests.file_count} />
-              <MetricCard label="Live-gated" value={liveTestCount} tone={liveTestCount > 0 ? 'warn' : 'neutral'} />
+              <MetricCard label={<FieldLabel iconKey="tests">Declared tests</FieldLabel>} value={tests.total_count} />
+              <MetricCard label={<FieldLabel iconKey="categories">Categories</FieldLabel>} value={tests.categories.length} />
+              <MetricCard label={<FieldLabel iconKey="files">Test files</FieldLabel>} value={tests.file_count} />
+              <MetricCard label={<FieldLabel iconKey="live">Live-gated</FieldLabel>} value={liveTestCount} tone={liveTestCount > 0 ? 'warn' : 'neutral'} />
             </div>
             {tests.scan_error && (
               <EmptyState code="TEST SCAN DEGRADED">{tests.scan_error}</EmptyState>
             )}
             <div className="dense-table test-table">
               <div className="dense-row header">
-                <span>Category</span>
-                <span>Tests</span>
-                <span>Files</span>
+                <FieldLabel iconKey="category">Category</FieldLabel>
+                <FieldLabel iconKey="tests">Tests</FieldLabel>
+                <FieldLabel iconKey="files">Files</FieldLabel>
               </div>
               {tests.categories.map(category => (
                 <div className="dense-row" key={category.category}>
@@ -93,81 +95,84 @@ export function SystemOverview({
         )}
       </DisclosureSection>
 
-      <DisclosureSection title="Runtime diagnostics" meta={(status?.rimapi_reachable ?? health?.runtime.rimapi_reachable) ? 'RIMAPI reachable' : 'RIMAPI waiting'}>
+      <DisclosureSection
+        title={<SectionTitle iconKey="runtime">Runtime diagnostics</SectionTitle>}
+        meta={(status?.rimapi_reachable ?? health?.runtime.rimapi_reachable) ? 'RIMAPI reachable' : 'RIMAPI waiting'}
+      >
         <section className="system-grid">
-        <div className="system-card runtime-card">
-          <div className="section-heading">
-            <span className="eyebrow">Runtime</span>
-            <h2>🖥️ Host Loop</h2>
+          <div className="system-card runtime-card">
+            <div className="section-heading">
+              <span className="eyebrow">Runtime</span>
+              <h2><SectionTitle iconKey="host">Host Loop</SectionTitle></h2>
+            </div>
+            <div className="metric-grid">
+              <MetricCard label={<FieldLabel iconKey="host">Host</FieldLabel>} value={status?.server ?? health?.runtime.server ?? 'checking'} tone={status ? 'ok' : 'neutral'} />
+              <MetricCard label={<FieldLabel iconKey="rimapi">RIMAPI</FieldLabel>} value={(status?.rimapi_reachable ?? health?.runtime.rimapi_reachable) ? 'reachable' : 'waiting'} tone={(status?.rimapi_reachable ?? health?.runtime.rimapi_reachable) ? 'ok' : 'warn'} />
+              <MetricCard label={<FieldLabel iconKey="agenda">Agenda</FieldLabel>} value={health?.runtime.agenda_version ?? status?.agenda_version ?? 'none'} />
+              <MetricCard label={<FieldLabel iconKey="advice">Advice</FieldLabel>} value={health?.runtime.active_advice_count ?? 'n/a'} />
+              <MetricCard label={<FieldLabel iconKey="flags">Flags</FieldLabel>} value={health?.runtime.active_flag_count ?? 'n/a'} />
+              <MetricCard label={<FieldLabel iconKey="mayor">Mayor</FieldLabel>} value={status?.mayor_running ? 'running' : 'idle'} tone={status?.mayor_last_error ? 'error' : status?.mayor_running ? 'ok' : 'neutral'} />
+            </div>
           </div>
-          <div className="metric-grid">
-            <MetricCard label="🖥️ Host" value={status?.server ?? health?.runtime.server ?? 'checking'} tone={status ? 'ok' : 'neutral'} />
-            <MetricCard label="🔗 RIMAPI" value={(status?.rimapi_reachable ?? health?.runtime.rimapi_reachable) ? 'reachable' : 'waiting'} tone={(status?.rimapi_reachable ?? health?.runtime.rimapi_reachable) ? 'ok' : 'warn'} />
-            <MetricCard label="📜 Agenda" value={health?.runtime.agenda_version ?? status?.agenda_version ?? 'none'} />
-            <MetricCard label="💡 Advice" value={health?.runtime.active_advice_count ?? 'n/a'} />
-            <MetricCard label="🚩 Flags" value={health?.runtime.active_flag_count ?? 'n/a'} />
-            <MetricCard label="🏛️ Mayor" value={status?.mayor_running ? 'running' : 'idle'} tone={status?.mayor_last_error ? 'error' : status?.mayor_running ? 'ok' : 'neutral'} />
-          </div>
-        </div>
 
-        <div className="system-card llm-card">
-          <div className="section-heading">
-            <span className="eyebrow">LLM</span>
-            <h2>🤖 Gemini</h2>
+          <div className="system-card llm-card">
+            <div className="section-heading">
+              <span className="eyebrow">LLM</span>
+              <h2><SectionTitle iconKey="llm">Gemini</SectionTitle></h2>
+            </div>
+            <div className="stacked-lines">
+              <StatusPill tone={llmToneFor(llmStatus)}>
+                {llmStatus.replace(/_/g, ' ')}
+              </StatusPill>
+              <InfoLine label="Configured" value={(status?.llm_configured ?? health?.llm.configured) ? 'yes' : 'no'} />
+              <InfoLine label="Last event" value={formatMaybeDate(health?.llm.last_event_at ?? status?.llm_last_event_at ?? null)} />
+              <InfoLine label="Last success" value={formatMaybeDate(health?.llm.last_success_at ?? status?.mayor_last_llm_success_at ?? null)} />
+              <InfoLine label="Last error" value={shorten(health?.llm.last_error ?? status?.llm_last_error ?? status?.mayor_last_error ?? 'none')} />
+              <InfoLine label="Token usage" value={health?.llm.token_usage ?? 'not exposed yet'} />
+            </div>
           </div>
-          <div className="stacked-lines">
-            <StatusPill tone={llmToneFor(llmStatus)}>
-              {llmStatus.replace(/_/g, ' ')}
-            </StatusPill>
-            <InfoLine label="Configured" value={(status?.llm_configured ?? health?.llm.configured) ? 'yes' : 'no'} />
-            <InfoLine label="Last event" value={formatMaybeDate(health?.llm.last_event_at ?? status?.llm_last_event_at ?? null)} />
-            <InfoLine label="Last success" value={formatMaybeDate(health?.llm.last_success_at ?? status?.mayor_last_llm_success_at ?? null)} />
-            <InfoLine label="Last error" value={shorten(health?.llm.last_error ?? status?.llm_last_error ?? status?.mayor_last_error ?? 'none')} />
-            <InfoLine label="Token usage" value={health?.llm.token_usage ?? 'not exposed yet'} />
-          </div>
-        </div>
 
-        <div className="system-card rag-card">
-          <div className="section-heading">
-            <span className="eyebrow">RAG</span>
-            <h2>📚 Knowledge</h2>
+          <div className="system-card rag-card">
+            <div className="section-heading">
+              <span className="eyebrow">RAG</span>
+              <h2><SectionTitle iconKey="rag">Knowledge</SectionTitle></h2>
+            </div>
+            <div className="stacked-lines">
+              <InfoLine label="Enabled" value={health?.rag.enabled ? 'yes' : 'unknown'} />
+              <InfoLine label="Chunks" value={health?.rag.chunk_count ?? 'n/a'} />
+              <InfoLine label="Model" value={health?.rag.embedding_model ?? 'not exposed'} />
+              <InfoLine label="Guides" value={health?.rag.guides_root ?? 'not exposed'} />
+            </div>
           </div>
-          <div className="stacked-lines">
-            <InfoLine label="Enabled" value={health?.rag.enabled ? 'yes' : 'unknown'} />
-            <InfoLine label="Chunks" value={health?.rag.chunk_count ?? 'n/a'} />
-            <InfoLine label="Model" value={health?.rag.embedding_model ?? 'not exposed'} />
-            <InfoLine label="Guides" value={health?.rag.guides_root ?? 'not exposed'} />
-          </div>
-        </div>
 
-        <div className="system-card sse-card">
-          <div className="section-heading">
-            <span className="eyebrow">Connection</span>
-            <h2>🔌 SSE Diagnostics</h2>
+          <div className="system-card sse-card">
+            <div className="section-heading">
+              <span className="eyebrow">Connection</span>
+              <h2><SectionTitle iconKey="sse">SSE Diagnostics</SectionTitle></h2>
+            </div>
+            <div className="metric-grid compact">
+              <MetricCard label={<FieldLabel iconKey="client">Client</FieldLabel>} value={stream.state} tone={stream.state === 'open' ? 'ok' : stream.state === 'error' ? 'warn' : 'neutral'} />
+              <MetricCard label={<FieldLabel iconKey="events">Client events</FieldLabel>} value={stream.eventCount} />
+              <MetricCard label={<FieldLabel iconKey="reconnects">Reconnects</FieldLabel>} value={stream.reconnectCount} tone={stream.reconnectCount > 0 ? 'warn' : 'neutral'} />
+              <MetricCard label={<FieldLabel iconKey="server_events">Server events</FieldLabel>} value={backendSse?.eventCount ?? 'n/a'} />
+              <MetricCard label={<FieldLabel iconKey="connections">Connections</FieldLabel>} value={backendSse?.activeConnections ?? 'n/a'} />
+              <MetricCard label={<FieldLabel iconKey="last_event">Last event</FieldLabel>} value={stream.lastEventType ?? backendSse?.lastEventType ?? 'none'} />
+            </div>
           </div>
-          <div className="metric-grid compact">
-            <MetricCard label="🧭 Client" value={stream.state} tone={stream.state === 'open' ? 'ok' : stream.state === 'error' ? 'warn' : 'neutral'} />
-            <MetricCard label="📨 Client events" value={stream.eventCount} />
-            <MetricCard label="🔁 Reconnects" value={stream.reconnectCount} tone={stream.reconnectCount > 0 ? 'warn' : 'neutral'} />
-            <MetricCard label="📡 Server events" value={backendSse?.eventCount ?? 'n/a'} />
-            <MetricCard label="🔌 Connections" value={backendSse?.activeConnections ?? 'n/a'} />
-            <MetricCard label="🕒 Last event" value={stream.lastEventType ?? backendSse?.lastEventType ?? 'none'} />
-          </div>
-        </div>
         </section>
       </DisclosureSection>
 
-      <DisclosureSection title="Assisted Apply" meta={`${applyAttempts.length} recent attempts`}>
+      <DisclosureSection title={<SectionTitle iconKey="assisted_apply">Assisted Apply</SectionTitle>} meta={`${applyAttempts.length} recent attempts`}>
         {applyAttempts.length === 0 ? (
           <EmptyState code="NO APPLY ATTEMPTS">No Assisted Apply attempts have been recorded this session.</EmptyState>
         ) : (
           <div className="dense-table assisted-apply-table">
             <div className="dense-row header">
-              <span>Time</span>
-              <span>Kind</span>
-              <span>Status</span>
-              <span>Advice</span>
-              <span>Message</span>
+              <FieldLabel iconKey="updated">Time</FieldLabel>
+              <FieldLabel iconKey="kind">Kind</FieldLabel>
+              <FieldLabel iconKey="status">Status</FieldLabel>
+              <FieldLabel iconKey="advice">Advice</FieldLabel>
+              <FieldLabel iconKey="message">Message</FieldLabel>
             </div>
             {applyAttempts.map(attempt => (
               <div className="dense-row" key={`${attempt.at}-${attempt.advice_id}-${attempt.step_index}`}>
@@ -182,25 +187,25 @@ export function SystemOverview({
         )}
       </DisclosureSection>
 
-      <DisclosureSection title="RIMAPI integration snapshot" meta={rimapi ? `${rimapi.active_read_count}/${rimapi.cached_upstream_endpoint_total} cached endpoints` : 'not exposed'}>
+      <DisclosureSection title={<SectionTitle iconKey="rimapi">RIMAPI integration snapshot</SectionTitle>} meta={rimapi ? `${rimapi.active_read_count}/${rimapi.cached_upstream_endpoint_total} cached endpoints` : 'not exposed'}>
         {!rimapi ? (
           <EmptyState code="RIMAPI COVERAGE MISSING">/api/system/health did not expose RIMAPI coverage metadata.</EmptyState>
         ) : (
           <div className="rimapi-coverage-panel">
             <div className="metric-grid compact">
               <MetricCard
-                label="Declared active reads"
+                label={<FieldLabel iconKey="active_reads">Declared active reads</FieldLabel>}
                 value={`${rimapi.active_read_count} / ${rimapi.cached_upstream_endpoint_total}`}
                 note={`${rimapi.active_read_percent}% of cached upstream`}
                 tone={rimapi.active_read_count > 0 ? 'ok' : 'warn'}
               />
               <MetricCard
-                label="Represented in client"
+                label={<FieldLabel iconKey="client">Represented in client</FieldLabel>}
                 value={`${rimapi.represented_endpoint_count} / ${rimapi.cached_upstream_endpoint_total}`}
                 note={`${rimapi.represented_endpoint_percent}% including stubs`}
               />
-              <MetricCard label="Client methods" value={rimapi.client_method_count} />
-              <MetricCard label="Deferred writes" value={rimapi.deferred_write_stub_count} tone="warn" />
+              <MetricCard label={<FieldLabel iconKey="client_methods">Client methods</FieldLabel>} value={rimapi.client_method_count} />
+              <MetricCard label={<FieldLabel iconKey="deferred_writes">Deferred writes</FieldLabel>} value={rimapi.deferred_write_stub_count} tone="warn" />
             </div>
             <div className="stacked-lines rimapi-source-lines">
               <InfoLine label="Basis" value={rimapi.coverage_basis} />
@@ -215,17 +220,17 @@ export function SystemOverview({
         )}
       </DisclosureSection>
 
-      <DisclosureSection title="Icon cache" meta={icons ? `${icons.fileCount} cached PNGs` : 'not exposed'}>
+      <DisclosureSection title={<SectionTitle iconKey="icon_cache">Icon cache</SectionTitle>} meta={icons ? `${icons.fileCount} cached PNGs` : 'not exposed'}>
         {!icons ? (
           <EmptyState code="ICON CACHE MISSING">/api/system/health did not expose icon cache metadata.</EmptyState>
         ) : (
           <div className="icon-cache-panel">
             <div className="metric-grid compact">
-              <MetricCard label="Files" value={icons.fileCount} tone={icons.fileCount > 0 ? 'ok' : 'warn'} />
-              <MetricCard label="Bytes" value={formatBytes(icons.totalBytes)} />
-              <MetricCard label="Kinds" value={Object.keys(icons.filesByKind).length} />
+              <MetricCard label={<FieldLabel iconKey="files">Files</FieldLabel>} value={icons.fileCount} tone={icons.fileCount > 0 ? 'ok' : 'warn'} />
+              <MetricCard label={<FieldLabel iconKey="bytes">Bytes</FieldLabel>} value={formatBytes(icons.totalBytes)} />
+              <MetricCard label={<FieldLabel iconKey="kinds">Kinds</FieldLabel>} value={Object.keys(icons.filesByKind).length} />
               <MetricCard
-                label="Warm result"
+                label={<FieldLabel iconKey="warm_result">Warm result</FieldLabel>}
                 value={icons.lastWarm ? `${icons.lastWarm.succeeded}/${icons.lastWarm.totalCandidates}` : 'not run'}
                 tone={!icons.lastWarm ? 'warn' : icons.lastWarm.failed > 0 ? 'warn' : 'ok'}
               />
@@ -240,9 +245,9 @@ export function SystemOverview({
             {icons.lastWarm && icons.lastWarm.failures.length > 0 && (
               <div className="dense-table icon-failure-table">
                 <div className="dense-row header">
-                  <span>Kind</span>
-                  <span>Id</span>
-                  <span>Error</span>
+                  <FieldLabel iconKey="kind">Kind</FieldLabel>
+                  <FieldLabel iconKey="id">Id</FieldLabel>
+                  <FieldLabel iconKey="error">Error</FieldLabel>
                 </div>
                 {icons.lastWarm.failures.slice(0, 12).map(failure => (
                   <div className="dense-row" key={`${failure.kind}-${failure.id}-${failure.error}`}>
@@ -257,15 +262,15 @@ export function SystemOverview({
         )}
       </DisclosureSection>
 
-      <DisclosureSection title="🧭 Endpoint and data coverage" meta={`${health?.endpoint_coverage.length ?? 0} surfaces`}>
+      <DisclosureSection title={<SectionTitle iconKey="endpoint_coverage">Endpoint and data coverage</SectionTitle>} meta={`${health?.endpoint_coverage.length ?? 0} surfaces`}>
         <CoverageTable rows={health?.endpoint_coverage ?? []} />
       </DisclosureSection>
 
-      <DisclosureSection title="🕒 Recent events" meta={`${events.length} buffered`}>
+      <DisclosureSection title={<SectionTitle iconKey="recent_events">Recent events</SectionTitle>} meta={`${events.length} buffered`}>
         <Timeline events={events} limit={16} />
       </DisclosureSection>
 
-      <DisclosureSection title="🪵 Logs and traces" meta={health?.logs.directory ?? 'not exposed'}>
+      <DisclosureSection title={<SectionTitle iconKey="logs">Logs and traces</SectionTitle>} meta={health?.logs.directory ?? 'not exposed'}>
         <div className="stacked-lines">
           <InfoLine label="Log directory" value={health?.logs.directory ?? 'not exposed'} />
           <InfoLine label="Human log" value={health?.logs.human_log_pattern ?? 'not exposed'} />
@@ -278,10 +283,10 @@ export function SystemOverview({
         {replay && replay.files.length > 0 && (
           <div className="dense-table replay-table">
             <div className="dense-row header">
-              <span>Minister</span>
-              <span>File</span>
-              <span>Size</span>
-              <span>Updated</span>
+              <FieldLabel iconKey="minister">Minister</FieldLabel>
+              <FieldLabel iconKey="file">File</FieldLabel>
+              <FieldLabel iconKey="size">Size</FieldLabel>
+              <FieldLabel iconKey="updated">Updated</FieldLabel>
             </div>
             {replay.files.map(file => (
               <div className="dense-row" key={file.path}>
@@ -296,10 +301,10 @@ export function SystemOverview({
         {health && health.traces.length > 0 && (
           <div className="dense-table trace-table">
             <div className="dense-row header">
-              <span>Minister</span>
-              <span>Trigger</span>
-              <span>Status</span>
-              <span>Path</span>
+              <FieldLabel iconKey="minister">Minister</FieldLabel>
+              <FieldLabel iconKey="trigger">Trigger</FieldLabel>
+              <FieldLabel iconKey="status">Status</FieldLabel>
+              <FieldLabel iconKey="path">Path</FieldLabel>
             </div>
             {health.traces.map(trace => (
               <div className="dense-row" key={trace.minister}>
@@ -320,16 +325,16 @@ function RimApiCoverageTable({ rows, title }: { rows: RimApiCoverageRow[]; title
   return (
     <section className="rimapi-coverage-section">
       <div className="rimapi-table-heading">
-        <span>{title}</span>
+        <SectionTitle iconKey="rimapi">{title}</SectionTitle>
         <small>{rows.length} rows</small>
       </div>
       <div className="dense-table rimapi-table">
         <div className="dense-row header">
-          <span>Method</span>
-          <span>Endpoint</span>
-          <span>State</span>
-          <span>Owner</span>
-          <span>Note</span>
+          <FieldLabel iconKey="method">Method</FieldLabel>
+          <FieldLabel iconKey="endpoint">Endpoint</FieldLabel>
+          <FieldLabel iconKey="state">State</FieldLabel>
+          <FieldLabel iconKey="owner">Owner</FieldLabel>
+          <FieldLabel iconKey="note">Note</FieldLabel>
         </div>
         {rows.map(row => (
           <div className="dense-row" key={`${row.method}-${row.endpoint}-${row.state}`}>
@@ -343,6 +348,14 @@ function RimApiCoverageTable({ rows, title }: { rows: RimApiCoverageRow[]; title
       </div>
     </section>
   );
+}
+
+function SectionTitle({ children, iconKey }: { children: string; iconKey: string }) {
+  return <SemanticLabel icon={iconForSection(iconKey)}><span>{children}</span></SemanticLabel>;
+}
+
+function FieldLabel({ children, iconKey }: { children: string; iconKey: string }) {
+  return <SemanticLabel icon={iconForField(iconKey)}><span>{children}</span></SemanticLabel>;
 }
 
 function InfoLine({ label, value }: { label: string; value: string | number }) {

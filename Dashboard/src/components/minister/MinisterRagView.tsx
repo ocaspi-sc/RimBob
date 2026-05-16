@@ -1,9 +1,11 @@
 import type { MayorAgenda } from '../../types/agenda';
 import type { SystemHealth } from '../../types/system';
 import type { ScopeConfig } from '../../dashboard/scopes';
+import { iconForField, iconForView } from '../../dashboard/semanticIcons';
 import { DisclosureSection } from '../shared/DisclosureSection';
 import { EmptyState } from '../shared/EmptyState';
 import { MetricCard } from '../shared/MetricCard';
+import { SemanticLabel } from '../shared/SemanticIcon';
 
 export function MinisterRagView({
   agenda,
@@ -20,15 +22,15 @@ export function MinisterRagView({
     <div className="minister-view rag-view">
       <header className="view-heading">
         <span className="eyebrow">{scope.label}</span>
-        <h2>📚 RAG</h2>
+        <h2><SemanticLabel icon={iconForView('rag')}><span>RAG</span></SemanticLabel></h2>
         <p>Guide retrieval and citations. Full per-minister retrieval traces are planned.</p>
       </header>
 
       <div className="metric-grid">
-        <MetricCard label="📚 RAG" value={systemHealth?.rag.enabled ? 'enabled' : 'unknown'} />
-        <MetricCard label="🧩 Chunks" value={systemHealth?.rag.chunk_count ?? 'n/a'} />
-        <MetricCard label="🎯 Top K" value={systemHealth?.rag.top_k ?? 'n/a'} />
-        <MetricCard label="🚧 Endpoint" value="/rag/latest" note="not exposed yet" tone="warn" />
+        <MetricCard label={<SemanticLabel icon={iconForField('rag')}><span>RAG</span></SemanticLabel>} value={systemHealth?.rag.enabled ? 'enabled' : 'unknown'} />
+        <MetricCard label={<SemanticLabel icon={iconForField('chunks')}><span>Chunks</span></SemanticLabel>} value={systemHealth?.rag.chunk_count ?? 'n/a'} />
+        <MetricCard label={<SemanticLabel icon={iconForField('top_k')}><span>Top K</span></SemanticLabel>} value={systemHealth?.rag.top_k ?? 'n/a'} />
+        <MetricCard label={<SemanticLabel icon={iconForField('endpoint')}><span>Endpoint</span></SemanticLabel>} value="/rag/latest" note="not exposed yet" tone="warn" />
       </div>
 
       {scope.key !== 'mayor' && (
@@ -46,7 +48,7 @@ export function MinisterRagView({
       {citations.map(citation => (
         <DisclosureSection
           key={citation.cite_id}
-          title={`${citation.cite_id} - ${citation.heading}`}
+          title={<SemanticLabel icon={iconForField('guide_citations')}><span>{`${citation.cite_id} - ${citation.heading}`}</span></SemanticLabel>}
           meta={citation.source_path}
           defaultOpen
         >

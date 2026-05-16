@@ -1,4 +1,6 @@
 import type { ScopeConfig } from '../../dashboard/scopes';
+import { iconForScope } from '../../dashboard/semanticIcons';
+import { SemanticIconCue } from '../shared/SemanticIcon';
 
 export function WorkspaceTitle({
   lastRunLabel,
@@ -17,7 +19,7 @@ export function WorkspaceTitle({
   return (
     <header className="workspace-title">
       <div>
-        <span className="scope-emoji" aria-hidden>{scope.emoji}</span>
+        <SemanticIconCue className="scope-title-icon" icon={iconForScope(scope.key)} size="sm" />
         <span className="eyebrow">{scope.status === 'live' ? 'Live scope' : 'Planned scope'}</span>
         <h2>{scope.label}</h2>
       </div>

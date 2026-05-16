@@ -1,6 +1,6 @@
 import type { ScopeConfig, ScopeKey } from '../../dashboard/scopes';
-import { iconUrlFor } from '../../api/icons';
-import { GameIcon } from '../shared/GameIcon';
+import { iconForScope } from '../../dashboard/semanticIcons';
+import { SemanticIconCue } from '../shared/SemanticIcon';
 
 export function ScopeRail({
   activeScope,
@@ -59,13 +59,10 @@ function ScopeGroup({
           className={`scope-button kind-${scope.kind} ${activeScope === scope.key ? 'active' : ''} ${scope.status}`}
           onClick={() => onSelect(scope.key)}
         >
-          <GameIcon
+          <SemanticIconCue
             className="scope-icon"
-            decorative
-            fallback={scope.emoji}
-            label={`${scope.label} icon`}
+            icon={iconForScope(scope.key)}
             size="xs"
-            src={iconUrlFor(scope.icon)}
           />
           <span className="scope-name">{scope.label}</span>
           <small>{scopeStatusLabel(scope)}</small>

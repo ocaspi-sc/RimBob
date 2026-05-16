@@ -1,10 +1,12 @@
 import { fetchRawLlmOutput } from '../../api/ministers';
 import type { ScopeConfig } from '../../dashboard/scopes';
+import { iconForField, iconForView } from '../../dashboard/semanticIcons';
 import type { MinisterTrace, SystemHealth } from '../../types/system';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { DisclosureSection } from '../shared/DisclosureSection';
 import { EmptyState } from '../shared/EmptyState';
 import { JsonTree, tryParseJson } from '../shared/JsonTree';
+import { SemanticLabel } from '../shared/SemanticIcon';
 
 export function MinisterRawLlmView({
   scope,
@@ -51,7 +53,7 @@ export function MinisterRawLlmView({
       <div className="minister-view raw-llm-view">
         <header className="view-heading">
           <span className="eyebrow">{scope.label}</span>
-          <h2>🧾 Raw LLM Output</h2>
+          <h2><SemanticLabel icon={iconForView('raw_llm')}><span>Raw LLM Output</span></SemanticLabel></h2>
           <p>Unnormalized model responses before schema parsing, tolerant repair, or advice rendering.</p>
         </header>
 
@@ -69,7 +71,7 @@ export function MinisterRawLlmView({
     <div className="minister-view raw-llm-view">
       <header className="view-heading">
         <span className="eyebrow">{scope.label}</span>
-        <h2>🧾 Raw LLM Output</h2>
+        <h2><SemanticLabel icon={iconForView('raw_llm')}><span>Raw LLM Output</span></SemanticLabel></h2>
         <p>Unnormalized model responses before schema parsing, tolerant repair, or advice rendering.</p>
       </header>
 
@@ -88,7 +90,11 @@ export function MinisterRawLlmView({
         </EmptyState>
       )}
 
-      <DisclosureSection title="📄 Raw response" defaultOpen meta={`${output.data.text.length.toLocaleString()} chars`}>
+      <DisclosureSection
+        title={<SemanticLabel icon={iconForField('raw_response')}><span>Raw response</span></SemanticLabel>}
+        defaultOpen
+        meta={`${output.data.text.length.toLocaleString()} chars`}
+      >
         {parsed === undefined ? (
           <pre className="text-dump">{output.data.text}</pre>
         ) : (
@@ -96,7 +102,10 @@ export function MinisterRawLlmView({
         )}
       </DisclosureSection>
 
-      <DisclosureSection title="🧷 Capture metadata" meta={output.data.parseMode.replace(/_/g, ' ')}>
+      <DisclosureSection
+        title={<SemanticLabel icon={iconForField('capture_metadata')}><span>Capture metadata</span></SemanticLabel>}
+        meta={output.data.parseMode.replace(/_/g, ' ')}
+      >
         <JsonTree
           value={{
             minister: output.data.minister,

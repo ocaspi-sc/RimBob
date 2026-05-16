@@ -1,10 +1,12 @@
 import { fetchBriefing } from '../../api/ministers';
 import type { ScopeConfig } from '../../dashboard/scopes';
+import { iconForField, iconForSection, iconForView } from '../../dashboard/semanticIcons';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { CoverageBadge } from '../shared/DataCoverage';
 import { DisclosureSection } from '../shared/DisclosureSection';
 import { EmptyState } from '../shared/EmptyState';
 import { JsonTree, summarizeValue } from '../shared/JsonTree';
+import { SemanticLabel } from '../shared/SemanticIcon';
 import { FoodCropMathPanel } from './FoodCropMathPanel';
 
 export function MinisterBriefingView({ scope }: { scope: ScopeConfig }) {
@@ -29,15 +31,15 @@ export function MinisterBriefingView({ scope }: { scope: ScopeConfig }) {
     <div className="minister-view briefing-view">
       <header className="view-heading">
         <span className="eyebrow">{scope.label}</span>
-        <h2>Briefing</h2>
+        <h2><SemanticLabel icon={iconForView('briefing')} size="sm"><span>Briefing</span></SemanticLabel></h2>
         <p>Readable source data behind this minister's reasoning.</p>
       </header>
 
       {coverageRows.length > 0 && (
         <section className="coverage-strip">
           {coverageRows.map(row => (
-            <span key={row.label}>
-              {row.label}
+            <span key={row.key}>
+              <SemanticLabel icon={iconForField(row.key)}><span>{row.label}</span></SemanticLabel>
               <CoverageBadge state={row.ok ? 'available' : 'missing'} />
             </span>
           ))}
@@ -48,8 +50,8 @@ export function MinisterBriefingView({ scope }: { scope: ScopeConfig }) {
 
       {groups.map(group => (
         <DisclosureSection
-          key={group.title}
-          title={group.title}
+          key={group.key}
+          title={<SemanticLabel icon={iconForSection(group.key)}><span>{group.title}</span></SemanticLabel>}
           defaultOpen={group.defaultOpen}
           meta={summarizeValue(group.value)}
         >
@@ -61,6 +63,7 @@ export function MinisterBriefingView({ scope }: { scope: ScopeConfig }) {
 }
 
 interface BriefingGroup {
+  key: string;
   title: string;
   value: unknown;
   defaultOpen?: boolean;
@@ -68,20 +71,20 @@ interface BriefingGroup {
 
 function groupBriefing(scope: string, briefing: unknown): BriefingGroup[] {
   if (!isRecord(briefing)) {
-    return [{ title: 'Briefing payload', value: briefing, defaultOpen: true }];
+    return [{ key: 'raw_payload', title: 'Briefing payload', value: briefing, defaultOpen: true }];
   }
 
   if (scope === 'food') {
     return [
-      pickGroup('🍲 Food status', briefing, ['estimatedDaysOfFood', 'nutritionSource', 'reportedNutrition', 'fallbackNutrition', 'foodUnits', 'mealsCount', 'rawFoodCount', 'colonistCount'], true),
-      pickGroup('🌾 Crops', briefing, ['readyToHarvest', 'cropBreakdown', 'cropZoneSummaries']),
-      pickGroup('🌿 Wild harvest', briefing, ['wildHarvestCandidates', 'wildHarvestClusters', 'wildAnimalCount']),
-      pickGroup('🧑‍🍳 Skills and labor signals', briefing, ['skills']),
-      pickGroup('🏗️ Infrastructure and storage', briefing, ['infrastructure', 'storage', 'stockpileCells']),
-      pickGroup('🔥 Kitchen and butchery', briefing, ['kitchen']),
-      pickGroup('🧭 Data coverage', briefing, ['dataCoverage']),
-      pickGroup('⚠️ Recent incidents', briefing, ['recentFoodIncidents', 'activeThreat']),
-      { title: '🧾 Raw remaining fields', value: omitKeys(briefing, [
+      pickGroup('food_status', 'Food status', briefing, ['estimatedDaysOfFood', 'nutritionSource', 'reportedNutrition', 'fallbackNutrition', 'foodUnits', 'mealsCount', 'rawFoodCount', 'colonistCount'], true),
+      pickGroup('crops', 'Crops', briefing, ['readyToHarvest', 'cropBreakdown', 'cropZoneSummaries']),
+      pickGroup('wild_harvest', 'Wild harvest', briefing, ['wildHarvestCandidates', 'wildHarvestClusters', 'wildAnimalCount']),
+      pickGroup('skills_and_labor', 'Skills and labor signals', briefing, ['skills']),
+      pickGroup('infrastructure_and_storage', 'Infrastructure and storage', briefing, ['infrastructure', 'storage', 'stockpileCells']),
+      pickGroup('kitchen_and_butchery', 'Kitchen and butchery', briefing, ['kitchen']),
+      pickGroup('data_coverage', 'Data coverage', briefing, ['dataCoverage']),
+      pickGroup('recent_incidents', 'Recent incidents', briefing, ['recentFoodIncidents', 'activeThreat']),
+      { key: 'raw_remaining_fields', title: 'Raw remaining fields', value: omitKeys(briefing, [
         'estimatedDaysOfFood', 'nutritionSource', 'reportedNutrition', 'fallbackNutrition', 'foodUnits', 'mealsCount',
         'rawFoodCount', 'colonistCount', 'readyToHarvest', 'cropBreakdown', 'cropZoneSummaries',
         'wildHarvestCandidates', 'wildHarvestClusters', 'wildAnimalCount', 'skills', 'infrastructure',
@@ -91,14 +94,14 @@ function groupBriefing(scope: string, briefing: unknown): BriefingGroup[] {
   }
 
   return [
-    pickGroup('🧭 Overview', briefing, ['briefingVersion', 'date', 'gameTick', 'season'], true),
-    pickGroup('👥 People', briefing, ['colonists', 'skills', 'traits', 'medical', 'prisoners']),
-    pickGroup('🍲 Food and resources', briefing, ['food', 'resources']),
-    pickGroup('🏗️ Infrastructure', briefing, ['power', 'buildings']),
-    pickGroup('🙂 Welfare and threat', briefing, ['mood', 'threat', 'wealth']),
-    pickGroup('🌦️ Environment', briefing, ['weather']),
-    pickGroup('🔬 Research', briefing, ['research']),
-    { title: '🧾 Raw remaining fields', value: omitKeys(briefing, [
+    pickGroup('overview', 'Overview', briefing, ['briefingVersion', 'date', 'gameTick', 'season'], true),
+    pickGroup('people', 'People', briefing, ['colonists', 'skills', 'traits', 'medical', 'prisoners']),
+    pickGroup('food_and_resources', 'Food and resources', briefing, ['food', 'resources']),
+    pickGroup('infrastructure', 'Infrastructure', briefing, ['power', 'buildings']),
+    pickGroup('welfare_and_threat', 'Welfare and threat', briefing, ['mood', 'threat', 'wealth']),
+    pickGroup('environment', 'Environment', briefing, ['weather']),
+    pickGroup('research', 'Research', briefing, ['research']),
+    { key: 'raw_remaining_fields', title: 'Raw remaining fields', value: omitKeys(briefing, [
       'briefingVersion', 'date', 'gameTick', 'season', 'colonists', 'skills', 'traits', 'medical',
       'prisoners', 'food', 'resources', 'power', 'buildings', 'mood', 'threat', 'wealth',
       'weather', 'research',
@@ -106,20 +109,21 @@ function groupBriefing(scope: string, briefing: unknown): BriefingGroup[] {
   ].filter(group => hasContent(group.value));
 }
 
-function extractCoverage(briefing: unknown): Array<{ label: string; ok: boolean }> {
+function extractCoverage(briefing: unknown): Array<{ key: string; label: string; ok: boolean }> {
   if (!isRecord(briefing) || !isRecord(briefing.dataCoverage)) return [];
   return Object.entries(briefing.dataCoverage).map(([key, value]) => ({
+    key,
     label: humanize(key),
     ok: value === true,
   }));
 }
 
-function pickGroup(title: string, source: Record<string, unknown>, keys: string[], defaultOpen = false): BriefingGroup {
-  const picked = keys.reduce<Record<string, unknown>>((acc, key) => {
-    if (key in source) acc[key] = source[key];
+function pickGroup(key: string, title: string, source: Record<string, unknown>, keys: string[], defaultOpen = false): BriefingGroup {
+  const picked = keys.reduce<Record<string, unknown>>((acc, sourceKey) => {
+    if (sourceKey in source) acc[sourceKey] = source[sourceKey];
     return acc;
   }, {});
-  return { title, value: picked, defaultOpen };
+  return { key, title, value: picked, defaultOpen };
 }
 
 function omitKeys(source: Record<string, unknown>, keys: string[]): Record<string, unknown> {

@@ -1,8 +1,10 @@
 import type { ColonySnapshot, PawnLine } from '../../types/colony';
 import { itemIconUrl, pawnPortraitUrl } from '../../api/icons';
+import { iconForField, iconForSection } from '../../dashboard/semanticIcons';
 import { EmptyState } from '../shared/EmptyState';
 import { GameIcon } from '../shared/GameIcon';
 import { MetricCard } from '../shared/MetricCard';
+import { SemanticLabel } from '../shared/SemanticIcon';
 
 export function ColonySidebar({
   error,
@@ -43,22 +45,22 @@ export function ColonySidebar({
 
       <div className="sidebar-metrics">
         <MetricCard
-          label="🍲 Food"
+          label={<SemanticLabel icon={iconForField('food')}><span>Food</span></SemanticLabel>}
           value={snapshot.food.estimatedDaysOfFood != null ? `${snapshot.food.estimatedDaysOfFood.toFixed(1)}d` : 'unknown'}
           tone={snapshot.food.estimatedDaysOfFood != null && snapshot.food.estimatedDaysOfFood < 7 ? 'warn' : 'neutral'}
         />
         <MetricCard
-          label="🙂 Mood"
+          label={<SemanticLabel icon={iconForField('mood')}><span>Mood</span></SemanticLabel>}
           value={`${Math.round(snapshot.mood.averageMood * 100)}%`}
           tone={snapshot.mood.breakRiskCount > 0 ? 'warn' : 'neutral'}
         />
         <MetricCard
-          label="⚡ Power"
+          label={<SemanticLabel icon={iconForField('power')}><span>Power</span></SemanticLabel>}
           value={`${snapshot.power.netW >= 0 ? '+' : ''}${Math.round(snapshot.power.netW)} W`}
           tone={snapshot.power.netW < 0 ? 'warn' : 'neutral'}
         />
         <MetricCard
-          label="🛡️ Threat"
+          label={<SemanticLabel icon={iconForField('threat')}><span>Threat</span></SemanticLabel>}
           value={snapshot.threat.activeRaid ? 'raid' : 'clear'}
           tone={snapshot.threat.activeRaid ? 'error' : 'neutral'}
         />
@@ -74,7 +76,7 @@ export function ColonySidebar({
 
       <section className="colonist-panel">
         <div className="colonist-title">
-          <h3>👥 Colonists</h3>
+          <h3><SemanticLabel icon={iconForSection('colonists')}><span>Colonists</span></SemanticLabel></h3>
           <span>{snapshot.colonists.count}</span>
         </div>
         {pawns.length === 0 ? (
@@ -140,7 +142,7 @@ function ResourceIconRows({ snapshot }: { snapshot: ColonySnapshot }) {
   return (
     <section className="resource-icon-panel">
       <div className="resource-icon-title">
-        <span>Resources</span>
+        <SemanticLabel icon={iconForSection('resources')}><span>Resources</span></SemanticLabel>
         <small>{rows.length}</small>
       </div>
       <div className="resource-icon-list">

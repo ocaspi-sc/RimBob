@@ -9,7 +9,7 @@ export function DisclosureSection({
   children: ReactNode;
   defaultOpen?: boolean;
   meta?: string;
-  title: string;
+  title: ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const buttonId = useId();

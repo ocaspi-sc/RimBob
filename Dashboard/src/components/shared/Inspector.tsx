@@ -1,4 +1,5 @@
 import { useMemo, type ReactNode } from 'react';
+import { iconForField, iconForFieldValue } from '../../dashboard/semanticIcons';
 import { DisclosureSection } from './DisclosureSection';
 import { EmptyState } from './EmptyState';
 import {
@@ -10,6 +11,7 @@ import {
   type JsonValue,
 } from './JsonTree';
 import { MetricCard } from './MetricCard';
+import { SemanticLabel } from './SemanticIcon';
 
 type JsonRecord = { [key: string]: JsonValue };
 type JsonScalar = null | string | number | boolean;
@@ -57,8 +59,8 @@ export function InspectorSurface({
           {summary.map(item => (
             <MetricCard
               key={item.key}
-              label={item.key}
-              value={<UnknownValue value={item.value} compact />}
+              label={<SemanticLabel icon={iconForField(item.key)}><code>{item.key}</code></SemanticLabel>}
+              value={<UnknownValue value={item.value} fieldKey={item.key} compact />}
               tone={toneForKeyValue(item.key, item.value)}
             />
           ))}
@@ -79,7 +81,10 @@ export function InspectorSurface({
         />
       ))}
 
-      <DisclosureSection title="Raw payload" meta={summarizeValue(json)}>
+      <DisclosureSection
+        title={<SemanticLabel icon={iconForField('raw_payload')}><span>Raw payload</span></SemanticLabel>}
+        meta={summarizeValue(json)}
+      >
         <JsonTree value={json} />
       </DisclosureSection>
     </div>
@@ -99,8 +104,8 @@ export function FieldGrid({
     <div className="inspector-field-grid">
       {entries.map(([key, value]) => (
         <div className="inspector-field" key={key}>
-          <code>{key}</code>
-          <UnknownValue value={value} />
+          <SemanticLabel className="inspector-field-name" icon={iconForField(key)}><code>{key}</code></SemanticLabel>
+          <UnknownValue value={value} fieldKey={key} />
         </div>
       ))}
     </div>
@@ -132,13 +137,15 @@ export function DynamicTable({
     <div className="dynamic-table-wrap">
       <div className="dynamic-table" style={{ ['--inspector-columns' as string]: columns.length }}>
         <div className="dynamic-row header">
-          {columns.map(column => <span key={column}>{column}</span>)}
+          {columns.map(column => (
+            <SemanticLabel key={column} icon={iconForField(column)}><span>{column}</span></SemanticLabel>
+          ))}
         </div>
         {records.map((record, rowIndex) => (
           <div className="dynamic-row" key={stableRowKey(record, rowIndex)}>
             {columns.map(column => (
               <span key={column}>
-                <UnknownValue value={record[column] ?? null} compact />
+                <UnknownValue value={record[column] ?? null} fieldKey={column} compact />
               </span>
             ))}
           </div>
@@ -150,15 +157,20 @@ export function DynamicTable({
 
 export function UnknownValue({
   compact = false,
+  fieldKey,
   value,
 }: {
   compact?: boolean;
+  fieldKey?: string;
   value: unknown;
 }) {
   const json = toJsonValue(value);
 
   if (isJsonScalar(json)) {
-    return <InspectorScalar value={json} />;
+    const icon = iconForFieldValue(fieldKey, json);
+    return icon
+      ? <SemanticLabel className="semantic-value" icon={icon}><InspectorScalar value={json} /></SemanticLabel>
+      : <InspectorScalar value={json} />;
   }
 
   if (Array.isArray(json) && json.every(isJsonRecord)) {
@@ -186,10 +198,15 @@ function InspectorSection({
   value: JsonValue;
 }) {
   const title = tableConfig?.title ?? itemKey;
+  const titleIcon = iconForField(itemKey);
 
   if (Array.isArray(value) && value.every(isJsonRecord)) {
     return (
-      <DisclosureSection title={title} defaultOpen={defaultOpen} meta={summarizeValue(value)}>
+      <DisclosureSection
+        title={<SemanticLabel icon={titleIcon}><span>{title}</span></SemanticLabel>}
+        defaultOpen={defaultOpen}
+        meta={summarizeValue(value)}
+      >
         <DynamicTable rows={value} preferredColumns={tableConfig?.preferredColumns ?? []} />
       </DisclosureSection>
     );
@@ -199,7 +216,11 @@ function InspectorSection({
     const scalarEntries = Object.entries(value).filter(([, item]) => isJsonScalar(item));
     const nestedEntries = Object.entries(value).filter(([, item]) => !isJsonScalar(item));
     return (
-      <DisclosureSection title={title} defaultOpen={defaultOpen} meta={summarizeValue(value)}>
+      <DisclosureSection
+        title={<SemanticLabel icon={titleIcon}><span>{title}</span></SemanticLabel>}
+        defaultOpen={defaultOpen}
+        meta={summarizeValue(value)}
+      >
         <FieldGrid entries={scalarEntries} />
         {nestedEntries.length > 0 && <JsonTree value={Object.fromEntries(nestedEntries)} />}
       </DisclosureSection>
@@ -207,8 +228,12 @@ function InspectorSection({
   }
 
   return (
-    <DisclosureSection title={title} defaultOpen={defaultOpen} meta={summarizeValue(value)}>
-      <UnknownValue value={value} />
+    <DisclosureSection
+      title={<SemanticLabel icon={titleIcon}><span>{title}</span></SemanticLabel>}
+      defaultOpen={defaultOpen}
+      meta={summarizeValue(value)}
+    >
+      <UnknownValue value={value} fieldKey={itemKey} />
     </DisclosureSection>
   );
 }
