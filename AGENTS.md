@@ -27,7 +27,7 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 ## GIT
 
 - C:\dev\RimAI should always stay on master branch
-- When changing code, Make sure it's in a worktree that's correct for current task. if not, create a worktree first based off current master and work there, using commits generously. When finished, The usual MO is to squash the worktree and commit the feature into master, then close the worktree.
+- When changing code, Make sure it's in a worktree + feature branch that's correct for current task. if not, create a worktree first based off current master and work there, using commits generously. When finished, The usual MO is to squash the worktree and commit the feature into master so it lands, then close the worktree.
 - When doing git operations, if there's a lock file or another session appears to be writing or committing, wait briefly and retry the narrow operation; do not force broad Git actions.
 
 ---
