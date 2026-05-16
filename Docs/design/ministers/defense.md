@@ -25,7 +25,7 @@ for threat readiness.
 
 ## First Slice Shape
 
-Defense should begin as rules-first, suggest-only advice with tactical-alert
+Defense should begin as rules-first `Suggest`-mode advice with tactical-alert
 authority for truly urgent states.
 
 Likely first advice areas:
@@ -92,7 +92,7 @@ Defense may request:
 - Medical: treatment capacity after combat.
 - Labor/player attention: urgent draft or positioning decisions in Suggest mode.
 
-Requests remain advice in MVP and do not issue RIMAPI writes.
+Requests remain advice in MVP; they do not issue RIMAPI writes by themselves.
 
 ---
 

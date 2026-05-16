@@ -89,7 +89,7 @@ previous persisted Agenda remains the current Agenda.
 If Host starts with no persisted Agenda, it initializes a conservative
 server-side bootstrap Agenda from the current briefing before the dashboard is
 served. The bootstrap must be clearly labeled in `update_notes`, should only
-contain safe suggest-only priorities, and is replaced by the next successful
+contain safe `Suggest`-mode priorities, and is replaced by the next successful
 Mayor LLM run. If the Mayor LLM fails twice before any Agenda exists, the Mayor
 uses the same bootstrap path rather than leaving `/api/agenda/latest` empty.
 
@@ -159,7 +159,7 @@ The design contract is:
   a labeled bootstrap Agenda; `204` should only appear if initialization cannot
   complete or the Host is intentionally running without agenda storage.
 - Idle streams stay alive.
-- Manual refresh triggers the same safe suggest-only Mayor evaluation path.
+- Manual refresh triggers the same safe `Suggest`-mode Mayor evaluation path.
 
 Exact endpoint names, event framing, and payload fields live in Host endpoint
 code and Dashboard API clients.

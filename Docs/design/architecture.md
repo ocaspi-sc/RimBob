@@ -23,9 +23,10 @@ RimAI is an external .NET 9 service, not a RimWorld mod. RimWorld mods are
 pinned to older .NET runtime constraints; the external process keeps modern
 libraries available and avoids linking against RIMAPI.
 
-MVP remains suggest-only. The service reads RIMAPI data, derives briefings, and
-publishes advice. It does not issue RIMAPI write commands until a future
-per-minister `Auto` graduation explicitly re-engages the Auto epic.
+MVP remains `Suggest` mode by default. The service reads RIMAPI data, derives
+briefings, and publishes advice. A narrow Assisted Apply path may issue an
+allowlisted non-pawn RIMAPI write only after a player clicks a concrete advice
+step. Autonomous execution waits for a future per-minister `Auto` graduation.
 
 ---
 
@@ -34,7 +35,10 @@ per-minister `Auto` graduation explicitly re-engages the Auto epic.
 - Host binds loopback only and serves both the dashboard and bounded `/api/*`
   surfaces.
 - Ministers never call RIMAPI directly. They read briefings from the state
-  store.
+  store and emit structured advice.
+- Assisted Apply writes, when present, are owned by Host/infrastructure code that
+  validates the advice step, current state, allowlist, RIMAPI result, and
+  read-back evidence.
 - Shared domain contracts stay dependency-light. Code that is meant to be pure
   domain model must not take external infrastructure dependencies.
 - Rules are pure and deterministic. I/O belongs in ingestion, state refresh,
@@ -89,6 +93,8 @@ published as minister snapshots so stale prior-cycle cards can be replaced
 without losing audit history.
 
 The bulletin-board/Labor execution side remains deferred until the Auto epic.
+Assisted Apply is intentionally smaller: one player-confirmed, allowlisted
+operation, not planning or pawn allocation.
 
 ### Ministers
 
@@ -192,9 +198,10 @@ before promoting rule, prompt, briefing, or RAG changes.
 
 ## Deferred Auto Epic
 
-The HTN planner, bulletin board, Labor solver, RIMAPI write coverage, and
-per-advice-type `Auto` execution are deferred until M7+. Their docs remain as
-design sketches, not implementation promises.
+The HTN planner, bulletin board, Labor solver, broad RIMAPI write coverage, and
+per-advice-type `Auto` execution are deferred until M7+. Assisted Apply may map a
+small allowlist earlier, but it does not implement the Auto stack. These docs
+remain design sketches, not implementation promises.
 
 ---
 

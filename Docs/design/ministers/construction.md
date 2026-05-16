@@ -28,7 +28,7 @@ Construction's layout reasoning becomes noisy enough to justify it.
 
 ## First Slice Shape
 
-Construction should begin as rules-first, suggest-only advice.
+Construction should begin as rules-first `Suggest`-mode advice.
 
 Likely first advice areas:
 
@@ -80,7 +80,7 @@ Construction may request:
 - Tiles/space: room footprints, stockpile expansion, safe build corridors.
 - Bills/settings: stonecutting or fabrication needs that support construction.
 
-In MVP these remain advice and flags, never writes.
+In MVP these requests remain advice and flags; they never execute writes by themselves.
 
 ---
 

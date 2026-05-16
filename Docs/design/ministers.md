@@ -24,9 +24,9 @@ What differs by minister is the domain, escalation rate, and advice vocabulary.
 
 ## Play Mode
 
-Play mode is live and suggest-only. A typed play-cycle context wakes a minister;
-the minister reads its briefing, evaluates deterministic rules first, and either
-emits advice/flags or escalates to the LLM.
+Play mode is live and `Suggest` mode by default. A typed play-cycle context
+wakes a minister; the minister reads its briefing, evaluates deterministic rules
+first, and either emits advice/flags or escalates to the LLM.
 
 The durable trigger vocabulary is:
 
@@ -106,7 +106,9 @@ All ministers implement the same behavioral contract:
 - Rules evaluate briefing-derived domain facts.
 - Rules may return advice/flags, schedule a future wakeup, or escalate.
 - Escalation returns normalized advice/flags through the same public surfaces.
-- Output remains `AdviceItem`s and flags in MVP, never RIMAPI writes.
+- Output remains `AdviceItem`s and flags in MVP. Ministers never call RIMAPI;
+  player-confirmed Assisted Apply, if exposed, is handled by a separate
+  allowlisted Host execution path.
 
 The exact interfaces and result types are code contracts. Check
 `Src/Common/Ministers/`, `Src/Common/Advice/`, and the relevant test fixtures
@@ -204,8 +206,10 @@ defs/modded work types when ingestion supports that.
 ## Action Ownership Map
 
 Every game action eventually gets one primary owner. Other ministers may be
-requesters when the action serves their chain. In MVP this is advisory only;
-requester/owner language does not execute writes or allocate pawns.
+requesters when the action serves their chain. In MVP, requester/owner language
+is advisory by itself; it does not execute writes or allocate pawns. Assisted
+Apply may use the same ownership map to decide which minister is allowed to
+surface an apply handle for a narrow step.
 
 ### Food And Survival
 
@@ -329,8 +333,9 @@ Minister of Zoning because zones are means to other ministers' ends.
 | Allowed zone | Mayor / CoS | Colony-wide; no minister claims it |
 
 In Suggest mode, conflicting zone advice from two ministers surfaces as two
-cards and the player resolves it. At Auto graduation, CoS must arbitrate
-contested writes before RIMAPI commands are issued.
+cards and the player resolves it. Assisted Apply should not apply contested zone
+writes. At Auto graduation, CoS must arbitrate contested writes before RIMAPI
+commands are issued.
 
 Layout efficiency belongs to Construction as an extension of its room/base
 program, not a new minister.

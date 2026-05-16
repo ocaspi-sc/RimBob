@@ -14,6 +14,7 @@
 | M2 | Grounded reasoning (RAG) — Mayor cites guide passages; measurable agenda-quality improvement before adding feeders | Done |
 | M3 | First feeder advisor (Food) — sub-briefing into the Mayor; first cross-minister flag | Implemented |
 | M4 | First cabinet wave — Construction, Defense, Welfare feeding the Mayor; flag-severity-gated tactical alerts surface independently of the daily digest | Not started |
+| M4.5 | Assisted Apply — player-confirmed execution for the safest allowlisted advice steps | Not started |
 | M5 | Feedback loop — Accept / Dismiss / Pushback wired; each minister owns and persists its own pushback list | Not started |
 | M6 | Refinement loop closes — pushbacks drive the first promoted rule per minister | Not started |
 | M7 (post-MVP) | First Auto graduation — one minister's narrowest advice type (e.g. stockpile-zone suggestions) gains an `Auto` mode behind the dial. Re-engages deferred HTN / Labor pieces | Not started |
@@ -126,6 +127,25 @@
 
 ---
 
+## M4.5 — Assisted Apply
+
+**Done when:** an advice step that the backend has proven safe and current can
+show **Apply** in the dashboard; clicking it executes exactly one allowlisted
+non-pawn RIMAPI operation, reads back/logs the result, and leaves the advice in
+`Suggest` mode.
+
+**Initial candidates:** `unforbid` known item stacks and `mark_harvest` validated
+safe plant clusters. `mark_hunt` waits for risk filters. Work priorities, bills,
+zones, pawn assignment, equipment, medical/prisoner actions, and combat controls
+stay out of the first slice.
+
+**Scope:** executable step handle, Host-owned allowlist and validator, RIMAPI
+write wrapper for the first operation, dashboard Apply/result state, and SYSTEM
+trace/read-back visibility. Ministers and LLMs never emit raw endpoints or
+payloads.
+
+---
+
 ## M5 — Feedback loop
 
 **Done when:** each memo / agenda item in the dashboard has working **Accept / Dismiss / Pushback** controls; each minister maintains its own persisted **pushback list** containing the player's natural-language explanations of why that minister was wrong; pushbacks for a given minister flow into that minister's next prompt as "recent player corrections."
@@ -162,7 +182,7 @@
 
 ## M7 — First Auto graduation (post-MVP)
 
-**Done when:** the player can flip one narrow advice type (e.g. Food's stockpile-zone suggestions) from `Suggest` to `Auto`. When in `Auto`, the relevant `AdviceItem` is automatically applied via RIMAPI writes instead of being shown for approval. Player can revert to `Suggest` at any time.
+**Done when:** the player can flip one narrow advice type from `Suggest` to `Auto`. When in `Auto`, the relevant `AdviceItem` is automatically applied without a per-step player click. Player can revert to `Suggest` at any time. Assisted Apply does not satisfy this milestone because it is manual, single-step, and allowlisted.
 
 **This re-engages the deferred design** — see [`design/planning.md`](design/planning.md) (HTN) and [`design/ministers/labor.md`](design/ministers/labor.md). Scope decided then, not now.
 

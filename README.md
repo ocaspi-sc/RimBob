@@ -4,9 +4,10 @@ RimAI is an assisted-gameplay advisor for RimWorld. The player keeps control of
 the colony; RimAI watches live game state from RIMAPI and surfaces strategic
 suggestions through a local dashboard.
 
-The MVP is suggest-only. Ministers emit advice and agendas, not game actions.
-Autonomous play, pawn allocation, HTN planning, and RIMAPI write coverage are
-deferred until the later Auto epic.
+The MVP is `Suggest` mode by default. Ministers emit advice and agendas; narrow
+Assisted Apply actions may execute only after a player clicks an allowlisted
+step. Autonomous play, pawn allocation, HTN planning, and broad RIMAPI write
+coverage are deferred until the later Auto epic.
 
 ## Current Shape
 

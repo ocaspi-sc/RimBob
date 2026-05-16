@@ -49,6 +49,7 @@
 - [x] Add deterministic Food crop-yield math (`FoodCropMath`/candidate table) so rules can choose rice/potato/corn from grow time, nutrition per tile, fertility sensitivity, days to winter, current food buffer, and terrain fertility; exact grow-zone placement remains deferred. [plan](.plans/deterministic-crop-yield-math.md)
 - [ ] Expose computed crop candidates directly to Food LLM escalation when crop choice remains ambiguous.
 - [ ] Add polished guide-citation footnotes on feeder memo cards.
+- [ ] Add MVP Assisted Apply for allowlisted player-confirmed steps (`unforbid`, `mark_harvest` first): backend executor, validation/read-back, dashboard Apply/result state.
 - [x] Add durable Food decision/replay corpus persistence so M6 refinement can compare before/after outputs on historic inputs, not just fixtures.
 - [ ] Extend replay corpus persistence beyond Food and attach future Pushback/outcome fields once feedback is wired.
 - [ ] Improve Food hunting target risk/value scoring from live animal data.
@@ -147,12 +148,9 @@ Download and create guides.
 
 ### Get dashboard inspiration from existing mods
 
-### Simple actions that may be straightforward enough for MVP execution
+### Simple actions that may be straightforward enough for MVP Assisted Apply
 
-- Mark nearby fully grown trees to cut down if we need wood.
-- Mark berries / animal to hunt.
-- Modify priorities.
-- Basically any simple action.
+Moved into the Assisted Apply roadmap slice. Keep the first implementation narrow: `unforbid` known item stacks and `mark_harvest` validated safe plant clusters first; `mark_hunt` only after risk filters; work priorities, bills, zones, pawn assignment, medical/prisoner actions, and combat controls stay out of the first slice.
 
 ### Scan GitHub repos for reference ideas
 

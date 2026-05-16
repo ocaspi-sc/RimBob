@@ -1,9 +1,10 @@
 # RimAI - Planning / HTN
 
 > **DEFERRED - Auto epic.** Not built in MVP.
-> In suggest-only mode, ministers emit `AdviceItem`s and there is no planner
-> consumer. Re-engage this doc at M7+ when a minister is ready to graduate from
-> `Suggest` to `Auto`.
+> In `Suggest` mode, ministers emit `AdviceItem`s and there is no planner
+> consumer. Assisted Apply is a separate player-click path for a single
+> allowlisted step, not this planner. Re-engage this doc at M7+ when a minister
+> is ready to graduate from `Suggest` to `Auto`.
 
 > **Living document.** See `AGENTS.md` for update rules.
 > This doc records planning intent and boundaries, not committed interfaces.
@@ -13,7 +14,8 @@
 ## Purpose
 
 The future planner decomposes trusted minister advice into executable steps.
-It exists only when RimAI is allowed to act through RIMAPI writes.
+It exists only when RimAI is allowed to act autonomously through multi-step
+RIMAPI writes.
 
 The planner is shared infrastructure. Ministers own domain methods and advice
 semantics; Labor owns pawn assignment; the planner coordinates execution shape.
@@ -36,7 +38,10 @@ that time as source of truth.
 ## Design Boundaries
 
 - No planner work in MVP.
-- No RIMAPI writes before per-minister Auto graduation.
+- No planner-owned or autonomous RIMAPI writes before per-minister Auto
+  graduation.
+- MVP Assisted Apply is outside the planner: one player-confirmed,
+  allowlisted, non-pawn operation at a time.
 - No minister except Labor touches pawn allocation.
 - Planning should operate on state-store facts and replan when facts change.
 - Plans should stay small and inspectable; avoid speculative multi-day forward

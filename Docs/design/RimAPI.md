@@ -255,5 +255,5 @@ When a minister needs an endpoint from one of these, fetch the upstream docs, ad
 - Only [`RimApiClient`](../Ingestion/RimApiClient.cs) calls RIMAPI. Ministers read from the [state store](state-store.md), never RIMAPI directly.
 - Add a method to `RimApiClient` only when a minister actually needs it — no speculative coverage.
 - Polling cadences are defined in [state-store.md](state-store.md) (slow / fast / event-diff). No SSE consumption.
-- Write ownership per minister is defined in `design/ministers/<name>.md`. Only Labor issues pawn-allocation writes ([labor.md](ministers/labor.md)).
+- Write ownership per minister is defined in `design/ministers/<name>.md`. Only Labor issues pawn-allocation writes ([labor.md](ministers/labor.md)). MVP Assisted Apply may use a tiny non-pawn write allowlist after player confirmation; fetch and document upstream endpoint shapes before adding each write.
 - Upstream is GPL-3.0; we link only via HTTP, never in-process.

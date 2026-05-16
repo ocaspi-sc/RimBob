@@ -49,7 +49,16 @@ Refine one RimAI minister from evidence. Default to an evidence-backed proposal;
    - A good proposal should improve the target cluster without making stable historic cases noisier or less concrete.
    - When a minister logic change is applied, the final report must include a compact before/after advice diff. If historic replay records are not available or not replayable, use the focused fixture/regression input and label the diff `fixture-only`.
 
-7. Report in proposal-first format.
+7. Run a Codex-vs-Gemini calibration pass when requested.
+   - Use this path when the user explicitly asks for Codex/subagent comparison, manual Codex generation, or a provider-quality calibration pass.
+   - Sample replayable historic LLM records from `logs/replay/<minister>-*.jsonl`; preserve the exact system prompt if captured, user prompt or briefing JSON, play-cycle context, flags, agenda/RAG context, recorded Gemini raw output, and recorded normalized output.
+   - Trigger the `run-minister-using-codex-subagent` workflow against the historic inputs: pass the exact captured prompt/context to the Codex subagent, require JSON only, and keep the live minister prompt as the schema/style source of truth when the replay record lacks a prompt snapshot.
+   - Do not overwrite live Raw LLM output or POST to `/api/ministers/{minister}/llm-output/manual` during historic calibration unless the user explicitly asks for live manual ingestion. Historic calibration should produce comparison artifacts first.
+   - Compare Codex output to the recorded Gemini output on schema validity, suggest-only scope, use of briefing facts, step/action concreteness, priority, flags, compact structured strings, style warnings, and whether non-target concerns stayed quiet.
+   - If Codex is clearly better, treat that as evidence about the minister harness, not as a provider-swap conclusion. Try to bring Gemini/the normal harness up to par by tightening the system prompt, improving briefing derived facts, adding deterministic rules, strengthening parser/style validation, or adding focused fixtures/tests.
+   - Report the calibration as a small matrix: replay id/input source, Gemini issue, Codex behavior, likely harness gap, proposed harness change.
+
+8. Report in proposal-first format.
    - Evidence: concrete log counts, traces, pushback clusters, fixture names, and relevant files.
    - Diagnosis: classify by `Rules`, `System prompt`, `Briefing`, `Fixtures/tests`, or `Logging gap`.
    - Proposal: exact intended behavior change and why it is justified.

@@ -1,7 +1,7 @@
 # Minister of Labor - Minister Design
 
 > **DEFERRED - Auto epic.** Not built in MVP.
-> The assisted-gameplay pivot cuts pawn allocation from suggest-only scope. No
+> The assisted-gameplay pivot cuts pawn allocation from `Suggest` mode and Assisted Apply. No
 > minister touches RIMAPI pawn writes until M7+ re-engages Auto.
 
 > **Living document.** See `AGENTS.md` for update rules.

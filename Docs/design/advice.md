@@ -17,7 +17,8 @@ This doc defines:
 2. The Accept / Dismiss / Pushback lifecycle.
 3. Minister-owned pushback lists.
 4. How pushbacks feed refinement.
-5. The future autonomy dial.
+5. Player-confirmed Assisted Apply.
+6. The future autonomy dial.
 
 Feedback was moved to M5, just before M6 consumes it. `Modify` was replaced by
 `Pushback`: the player tells the minister why it is wrong in natural language
@@ -77,6 +78,11 @@ Steps may include an optional explicit `icon` ref when the emitter knows the
 game def or id. Icon refs are rendering hints only; they are not execution
 inputs and should not be inferred from prose.
 
+Steps may also carry an explicit executable handle when the backend can map that
+step to an Assisted Apply operation. The handle is produced by deterministic code
+or accepted from model output only after strict validation; prose instructions
+alone are never executable.
+
 Labor-like steps must name a RimWorld work-tab type when possible. "Labor
 capacity" by itself is too vague for advice, logs, or future Auto wiring.
 
@@ -130,7 +136,8 @@ the previous active snapshot rather than clearing it.
 
 Advice records the autonomy mode in effect when it was emitted. MVP advice is
 always `Suggest`; the field exists so future Auto-mode advice can be separated
-in logs and UI.
+in logs and UI. Assisted Apply is still `Suggest` advice because the player click
+is the consent boundary.
 
 ---
 
@@ -146,6 +153,10 @@ Advice starts active, then transitions to one archived state:
 
 State transitions emit feedback events. Pushback additionally appends to the
 issuing minister's pushback list.
+
+Assisted Apply may add an `Applied` or apply-result record for the specific step
+that was executed. That record is operational evidence, not implicit praise of
+the advice unless the player also Accepts it.
 
 ---
 
@@ -229,6 +240,34 @@ Approval gates and replay requirements live in [`evaluation.md`](evaluation.md).
 
 ---
 
+## Assisted Apply
+
+Assisted Apply is the MVP path for manually executing the safest concrete advice
+steps. It is not an autonomy mode and does not let a minister act on its own.
+
+A step is eligible only when all of these are true:
+
+- The step kind maps to an allowlisted, single-operation RIMAPI write.
+- The target is explicit and can be revalidated against fresh state.
+- The operation does not allocate pawns, force jobs, change schedules, edit bills,
+  create broad zones, or make combat/medical/prisoner decisions.
+- The Host can read back or otherwise observe the expected result.
+- The dashboard requires an explicit player click for that one step.
+
+The LLM never chooses raw endpoints, payloads, or arbitrary target ids. It may
+emit a structured step; deterministic code decides whether that step can expose
+Apply. Initial candidates should be conservative: `unforbid` for known item
+stacks and `mark_harvest` for validated safe plant clusters. `mark_hunt` needs
+risk filters before it is eligible. Work priorities, bills, zones, pawn
+assignment, equipment, medical, prisoner, and combat controls stay outside the
+first Assisted Apply slice.
+
+Apply attempts must be logged with enough context to inspect the advice, target,
+validation decision, RIMAPI result, and read-back state in dashboard/system
+surfaces.
+
+---
+
 ## Autonomy Dial
 
 The future autonomy dial is per minister and advice type:
@@ -237,7 +276,8 @@ The future autonomy dial is per minister and advice type:
 - **Suggest:** emit advice; the player decides.
 - **Auto:** emit advice and execute through the re-engaged Auto stack.
 
-MVP honors only `Suggest`. `Auto` returns in M7+ after planner, Labor, write
+MVP honors only `Suggest`. Assisted Apply is a manual click path attached to
+`Suggest` advice. `Auto` returns in M7+ after planner, Labor, broad write
 coverage, and per-minister trust gates exist.
 
 ---

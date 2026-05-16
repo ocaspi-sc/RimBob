@@ -26,7 +26,7 @@ owns trade and wealth once scheduled.
 
 ## First Slice Shape
 
-Welfare should begin as rules-first, suggest-only advice.
+Welfare should begin as rules-first `Suggest`-mode advice.
 
 Likely first advice areas:
 
@@ -78,7 +78,7 @@ Welfare may request:
 - Medical: pain, wounds, disease, or care issues affecting mood.
 - Labor/player attention: schedule or policy changes in Suggest mode.
 
-Requests remain advice in MVP and do not issue RIMAPI writes.
+Requests remain advice in MVP; they do not issue RIMAPI writes by themselves.
 
 ---
 

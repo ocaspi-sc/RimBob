@@ -43,7 +43,8 @@ Food follows the universal minister shape:
 - Food publishes a complete active-advice snapshot on successful cycles.
 - Medium+ Food pressure can feed Mayor synthesis through flags.
 
-Everything remains suggest-only in MVP.
+Food remains in `Suggest` mode in MVP. Any game-state mutation is limited to
+future Assisted Apply controls on allowlisted Food steps after a player click.
 
 ---
 
@@ -190,9 +191,13 @@ Food may use step or flag metadata for:
 - Bills/settings: cook bill targets, butcher bill state, stockpile filters,
   forbid/unforbid food.
 
-In MVP advice steps and flag requests are rendered only. They are not writes. In
-Auto, steps become inputs to the deferred planner/Labor/RIMAPI path, while flag
-requests remain the cross-minister coordination signal.
+In MVP advice steps and flag requests are rendered by default. Assisted Apply
+may later execute a narrow allowlist of Food steps after player confirmation,
+such as `unforbid` known food stacks or `mark_harvest` on validated safe plant
+clusters. `mark_hunt` requires risk filters before eligibility. Bills, zones,
+pawn work priorities, and pawn assignment remain outside the first Food apply
+slice. In Auto, steps become inputs to the deferred planner/Labor/RIMAPI path,
+while flag requests remain the cross-minister coordination signal.
 
 Trade is not a normal Food action in M3. Food may flag procurement need when
 local paths are insufficient, but Economy/Trade or Mayor owns trade framing.
@@ -258,4 +263,4 @@ locations, work capacity, or yield calculations absent from briefing/code.
       live.
 - [ ] Decide whether animal economy deserves its own minister or stays a Food
       hard case.
-- [ ] Map Food-chain RIMAPI writes before any Auto graduation.
+- [ ] Map Food-chain Assisted Apply candidates separately from full Auto writes.

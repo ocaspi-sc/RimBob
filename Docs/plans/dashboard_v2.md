@@ -4,7 +4,7 @@
 
 Build Dashboard v2 as a new React implementation inside the existing dashboard package. Keep the Vite/package/build/Host wiring, but treat the previous dashboard UI as reference material only. The new app source tree owns its own shell, registries, layout, CSS, and components.
 
-The dashboard remains read-only and suggest-only. It exposes what RimAI knows, what it recommended, why a minister woke up, what data was missing, and how the runtime is behaving. It does not execute RIMAPI writes and does not show Pushback or feedback controls in v2.
+The dashboard remains inspect-first and `Suggest` mode. It exposes what RimAI knows, what it recommended, why a minister woke up, what data was missing, and how the runtime is behaving. It may show Assisted Apply only for backend-allowlisted advice steps, and it does not show Pushback or feedback controls in v2.
 
 ## Core Information Architecture
 
@@ -87,9 +87,9 @@ External RIMAPI endpoint coverage should become a telemetry-gap checklist, not a
 
 Pawn/item image caching can improve recognition later, but it is not part of core v2. First ship the inspection architecture, data coverage, and reliable text surfaces.
 
-### No Write Or Control Affordances
+### Control Affordances
 
-V2 is a read-and-react dashboard. Do not add RIMAPI write buttons, direct controls, autonomy toggles, or feedback controls until their lifecycle is actively wired and documented.
+V2 is a read-and-react dashboard by default. Do not add broad RIMAPI write buttons, direct controls, autonomy toggles, or feedback controls. The exception is Assisted Apply: a backend-approved Apply button may appear on one allowlisted advice step when validation, result tracing, and read-back are wired.
 
 ## Interfaces
 
@@ -118,7 +118,7 @@ Planned next:
 - `GET /api/ministers/{minister}/rag/latest`
 - `GET /api/system/logs/recent`
 
-All endpoints are read-only.
+Initial v2 endpoints are read-only. Assisted Apply endpoints are added only with the documented action lifecycle.
 
 ## Frontend Strategy
 
@@ -241,7 +241,7 @@ Do not stream arbitrary files into the UI. A later endpoint should return a boun
 - Endpoint and data coverage states are explicit.
 - SSE diagnostics are visible under SYSTEM.
 - Recent event/advice timeline is visible under SYSTEM and/or Advice.
-- Pushback/feedback/write controls are absent.
+- Pushback/feedback controls are absent; broad write controls are absent except documented Assisted Apply.
 - Right sidebar shows compact colony facts plus colonist cards.
 - The layout stays dense, readable, and stable on desktop and narrow viewports.
 
@@ -254,11 +254,11 @@ Do not stream arbitrary files into the UI. A later endpoint should return a boun
 - Confirm SYSTEM does not show minister tabs.
 - Confirm Mayor/Food render useful views from current endpoints.
 - Confirm missing backend capabilities render explicit "not exposed yet" or degraded coverage states.
-- Confirm no write/control UI exists.
+- Confirm no broad write/control UI exists; Assisted Apply appears only on backend-approved steps when that lifecycle is wired.
 
 ## Assumptions
 
 - "From scratch" means new React/CSS/source architecture while keeping Vite/package/build wiring.
 - Existing dashboard components are reference only; useful behavior may be reimplemented, not carried forward as architecture.
-- Dashboard v2 remains read-only and suggest-only.
+- Dashboard v2 remains inspect-first and `Suggest` mode; Assisted Apply is manual and allowlisted, not Auto.
 - External `rimapi-dashboard` remains inspiration/reference only, not a dependency.

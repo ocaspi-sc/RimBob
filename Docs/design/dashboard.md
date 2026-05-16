@@ -26,9 +26,11 @@ treat the previous UI as reference only.
 
 ## Product Posture
 
-- Game-read-only in v2: no RIMAPI write controls, no autonomy toggles, and no
-  feedback/Pushback controls.
+- Inspect-first in v2: no autonomy toggles and no feedback/Pushback controls.
+  Game writes appear only as Assisted Apply buttons on backend-allowlisted
+  advice steps, each requiring an explicit player click.
 - Manual Run buttons may trigger RimAI re-evaluation, never RimWorld writes.
+  Assisted Apply controls are separate from Run controls.
 - Localhost-only: Host binds loopback and serves the dashboard plus `/api/*`.
 - Dense second-monitor operations console, not a landing page.
 - Explanation-first: every recommendation needs an inspection path for prompt,
@@ -236,9 +238,11 @@ Design-level endpoint families:
 - Read-only icon gateway and cache status.
 - Developer-only manual raw LLM ingestion for ministers that expose the
   capability while provider quota is a practical blocker.
+- Player-confirmed Assisted Apply execution for allowlisted advice steps.
 
 All observability endpoints are read-only unless explicitly named as a manual
-RimAI re-evaluation trigger. They never mutate game state.
+RimAI re-evaluation trigger. They never mutate game state. Assisted Apply is a
+separate action endpoint family, not an observability endpoint.
 
 `/api/system/health` owns dashboard-visible metadata for known log and
 diagnostic artifacts. It should expose bounded metadata such as location,
@@ -279,7 +283,8 @@ detail directly instead of route names, HTTP status codes, or generic internal
 server errors. Logs remain the place for stack traces and low-level diagnostics.
 
 Manual trigger traces must be visible in the dashboard. The current trigger
-should remain suggest-only and must not call RIMAPI write endpoints.
+should remain a `Suggest`-mode evaluation control and must not call RIMAPI write
+endpoints.
 
 ### Icon Rendering
 
@@ -383,6 +388,12 @@ kitchen/storage/freezer signals, and confidence gaps before the action cards.
 Cards show rationale, ordered advice steps, citations, issue id or supersession
 when available, and coverage gaps. No feedback buttons are shown in v2.
 
+If a step carries a backend-approved executable handle, the Advice view may show
+an Apply control on that step. Apply controls must be visually distinct from
+feedback, disabled when state is stale or validation fails, and followed by a
+compact result state that links to the SYSTEM/trace evidence for the attempted
+write and read-back.
+
 The dashboard does not cache Agenda documents in browser storage. Stale agenda
 recovery comes from Host-owned durable agenda storage. On a fresh runtime with
 no stored Agenda, Host initializes a labeled bootstrap Agenda before serving the
@@ -438,9 +449,12 @@ metrics, and endpoint coverage.
 - Feedback/Pushback UI returns only when the feedback lifecycle is actively
   wired.
 - Autonomy controls return only with M7+ autonomy work.
+- Broad RIMAPI write/control surfaces remain deferred; Assisted Apply is the
+  only MVP exception and is limited to backend-allowlisted advice steps.
 - Hard-case icon variants such as stuff colors, crop growth stages, styles,
   rotations, motes/projectiles, and per-instance art remain deferred.
-- RIMAPI write/control surfaces remain out of scope for suggest-only MVP.
+- Hard-case action controls such as bills, schedules, pawn assignment, zones,
+  medical/prisoner operations, and combat commands remain out of scope for MVP.
 
 ---
 

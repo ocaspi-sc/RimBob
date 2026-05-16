@@ -127,7 +127,7 @@ See [`agenda.md`](agenda.md).
 - A ministry chat room.
 
 These create hidden coupling. Flags, briefings, and Agenda broadcast are enough
-for the current suggest-only design.
+for the current `Suggest`-mode design.
 
 ---
 

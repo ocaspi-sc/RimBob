@@ -8,16 +8,27 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 
 - Read `Docs/DESIGN.md`, `HumanTodo.md`, and the relevant focus doc before changing files.
 - When the user asks conceptual, design, "should we", "why", or "what about" questions, answer/review first. Do not rush to implementation unless clearly asked.
+- Prefer short concise answers, but never skip the important details!
+  - e.g. just say All tests passed instead of reporting commands used
+- Prefer concise bullets for operational summaries when they improve scan speed.
 - Offer pushback when a request seems risky, over-scoped, inconsistent with repo/design direction, or likely to have a simpler better path. Keep pushback concrete and concise; if the user clearly asked for implementation and the work is safe, state the concern and then proceed.
 - Design sessions are for exploration and docs. Do not write code unless asked.
 - Build sessions are for implementation. Do not redesign unless a blocker is found.
 - Store agent-created plans in `/.plans`. At session end, offer to update `HumanTodo.md` with new tasks uncovered.
 - For bug reports and user complaints, prefer the general correct fix over one-off workarounds.
-- If Git is locked or another session appears to be writing or committing, wait briefly and retry the narrow operation; do not force broad Git actions.
-- When a necessary question remains, include the local context and tradeoff so the user can decide quickly.
-- Use a separate worktree for large or risky parallel changes. Keep small focused edits in the current worktree when the worktree is clean enough.
-- Prefer concise bullets for operational summaries when they improve scan speed.
+- Ask lots of questions. include the local context and tradeoff so the user can make an informed decision.
+
+## Coding
+
 - If legacy paths or compatibility shims remain, document them as legacy.
+
+---
+
+## GIT
+
+- C:\dev\RimAI should always stay on master branch
+- When changing code, Make sure it's in a worktree that's correct for current task. if not, create a worktree first based off current master and work there, using commits generously. When finished, The usual MO is to squash the worktree and commit the feature into master, then close the worktree.
+- When doing git operations, if there's a lock file or another session appears to be writing or committing, wait briefly and retry the narrow operation; do not force broad Git actions.
 
 ---
 
