@@ -14,6 +14,7 @@ internal static class FoodItemClassifier
         float? reportedNutrition = resources.TotalNutrition > 0f ? resources.TotalNutrition : null;
 
         IReadOnlyList<FoodSourceItem> storedItems = storedResources.Items.Select(item => new FoodSourceItem(
+                Id: item.Id,
                 Def: item.Def,
                 Label: item.Label,
                 StackCount: item.StackCount,
@@ -24,6 +25,7 @@ internal static class FoodItemClassifier
                 Position: item.Position))
             .ToList();
         IReadOnlyList<FoodSourceItem> broadMapItems = things.Things.Select(item => new FoodSourceItem(
+                Id: item.Id,
                 Def: item.Def,
                 Label: item.Label,
                 StackCount: item.StackCount,
@@ -77,17 +79,25 @@ internal static class FoodItemClassifier
 
     public static bool IsStoredFoodItem(StoredResourceRecord item, ThingDefRegistry thingDefs)
     {
-        FoodSourceItem sourceItem = new(
-            Def: item.Def,
-            Label: item.Label,
-            StackCount: item.StackCount,
-            Category: item.Category,
-            Categories: [item.Category],
-            IsForbidden: item.IsForbidden,
-            Source: "resources_stored",
-            Position: item.Position);
-        return ClassifyKind(sourceItem, thingDefs) != FoodItemKind.NotFood;
+        return ClassifyKind(SourceFromStored(item), thingDefs) != FoodItemKind.NotFood;
     }
+
+    public static bool IsThingFoodItem(ThingRecord item, ThingDefRegistry thingDefs) =>
+        ClassifyKind(SourceFromThing(item), thingDefs) != FoodItemKind.NotFood;
+
+    public static string? FoodKindLabel(StoredResourceRecord item, ThingDefRegistry thingDefs) =>
+        FoodKindLabel(SourceFromStored(item), thingDefs);
+
+    public static string? FoodKindLabel(ThingRecord item, ThingDefRegistry thingDefs) =>
+        FoodKindLabel(SourceFromThing(item), thingDefs);
+
+    private static string? FoodKindLabel(FoodSourceItem item, ThingDefRegistry thingDefs) =>
+        ClassifyKind(item, thingDefs) switch
+        {
+            FoodItemKind.Meal => "meal",
+            FoodItemKind.RawFood => "raw_food",
+            _ => null
+        };
 
     private static FoodItemClassification? ClassifyItems(
         IReadOnlyList<FoodSourceItem> sourceItems,
@@ -228,6 +238,30 @@ internal static class FoodItemClassifier
     private static string? FormatPosition(MapPosition? position) =>
         position is null ? null : $"({position.X},{position.Y},{position.Z})";
 
+    private static FoodSourceItem SourceFromStored(StoredResourceRecord item) =>
+        new(
+            Id: item.Id,
+            Def: item.Def,
+            Label: item.Label,
+            StackCount: item.StackCount,
+            Category: item.Category,
+            Categories: [item.Category],
+            IsForbidden: item.IsForbidden,
+            Source: "resources_stored",
+            Position: item.Position);
+
+    private static FoodSourceItem SourceFromThing(ThingRecord item) =>
+        new(
+            Id: item.Id,
+            Def: item.Def,
+            Label: item.Label,
+            StackCount: item.StackCount,
+            Category: "",
+            Categories: item.Categories,
+            IsForbidden: item.IsForbidden,
+            Source: "map_things",
+            Position: item.Position);
+
     private enum FoodItemKind
     {
         NotFood,
@@ -236,6 +270,7 @@ internal static class FoodItemClassifier
     }
 
     private sealed record FoodSourceItem(
+        string Id,
         string Def,
         string? Label,
         int StackCount,

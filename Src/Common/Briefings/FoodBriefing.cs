@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using RimAI.Core.Aggregates;
 
 namespace RimAI.Core.Briefings;
 
@@ -32,6 +33,8 @@ public sealed record FoodBriefing(
     IReadOnlyList<string> RecentFoodIncidents
 ) : IBriefing
 {
+    public int MapId { get; init; }
+
     public FoodGrowingTerrainSummary GrowingTerrain { get; init; } = FoodGrowingTerrainSummary.Unknown;
 
     public IReadOnlyDictionary<string, float> CropHarvestNutritionByDef { get; init; } =
@@ -40,6 +43,10 @@ public sealed record FoodBriefing(
     public int UnclassifiedFoodUnits => Math.Max(0, FoodUnits - MealsCount - RawFoodCount);
 
     public IReadOnlyList<FoodUnclassifiedItem> UnclassifiedFoodItems { get; init; } = [];
+
+    public IReadOnlyList<FoodUnforbidTarget> UnforbidTargets { get; init; } = [];
+
+    public IReadOnlyList<FoodHarvestTarget> HarvestTargets { get; init; } = [];
 
     public int ExcludedFoodUnits =>
         Math.Min(UnclassifiedFoodUnits, UnclassifiedFoodItems.Sum(item => Math.Max(0, item.Count)));
@@ -93,6 +100,27 @@ public sealed record FoodUnclassifiedItem(
     bool IsForbidden,
     string Source,
     string? Position
+);
+
+public sealed record FoodUnforbidTarget(
+    string Id,
+    string Def,
+    string? Label,
+    int Count,
+    string Kind,
+    string Source,
+    MapPosition Position
+);
+
+public sealed record FoodHarvestTarget(
+    string Source,
+    string Def,
+    int Count,
+    MapRect Rect,
+    IReadOnlyList<string> PlantIds,
+    string? ZoneId,
+    string? Proximity,
+    string? Reference
 );
 
 public sealed record FoodCropSummary(string Def, int Count, float AverageGrowth);

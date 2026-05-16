@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import type { MayorAgenda, AgendaPriority } from '../../types/agenda';
-import type { AdviceItem } from '../../types/advice';
+import type { AdviceApplyResponse, AdviceItem } from '../../types/advice';
 import type { ScopeConfig } from '../../dashboard/scopes';
+import { applyAdviceStep } from '../../api/advice';
 import { iconUrlFor } from '../../api/icons';
 import { DisclosureSection } from '../shared/DisclosureSection';
 import { EmptyState } from '../shared/EmptyState';
@@ -40,7 +42,7 @@ export function MinisterAdviceView({
       <header className="view-heading">
         <span className="eyebrow">{scope.label}</span>
         <h2>Advice</h2>
-        <p>Active feeder minister advice from the SSE feed. No write/control affordances.</p>
+        <p>Active feeder minister advice from the SSE feed.</p>
       </header>
       {stateSummary && (
         <section className="advice-state-summary">
@@ -217,6 +219,29 @@ function MayorAdvice({
 }
 
 function AdviceCard({ item }: { item: AdviceItem }) {
+  const [applyState, setApplyState] = useState<Record<string, StepApplyState>>({});
+
+  const onApply = async (stepIndex: number) => {
+    const key = stepKey(item, stepIndex);
+    setApplyState(current => ({
+      ...current,
+      [key]: { status: 'pending', response: null, error: null },
+    }));
+
+    try {
+      const response = await applyAdviceStep(item.id, stepIndex);
+      setApplyState(current => ({
+        ...current,
+        [key]: { status: 'done', response, error: null },
+      }));
+    } catch (error) {
+      setApplyState(current => ({
+        ...current,
+        [key]: { status: 'error', response: null, error: String(error) },
+      }));
+    }
+  };
+
   return (
     <article className={`advice-card v2 ${item.priority}`}>
       <header>
@@ -233,26 +258,47 @@ function AdviceCard({ item }: { item: AdviceItem }) {
       {item.steps.length > 0 && (
         <DisclosureSection title="Steps" defaultOpen meta={`${item.steps.length} steps`}>
           <div className="action-list">
-            {item.steps.map((step, index) => (
-              <div key={`${item.id}-step-${index}`}>
-                <GameIcon
-                  fallback="-"
-                  label={`${formatLabel(step.kind)} icon`}
-                  size="xs"
-                  src={iconUrlFor(step.icon)}
-                />
-                <strong>{formatLabel(step.kind)}</strong>
-                <span>{step.instruction}</span>
-                <small>
-                  {[
-                    formatQuantityDetail(step.quantity),
-                    step.owner ? `Owner: ${step.owner}` : null,
-                    formatWorkSkillDetail(step.work_type, step.skill),
-                    step.reason,
-                  ].filter(Boolean).join(' | ')}
-                </small>
-              </div>
-            ))}
+            {item.steps.map((step, index) => {
+              const key = stepKey(item, index);
+              const state = applyState[key] ?? { status: 'idle' as const, response: null, error: null };
+              const success = state.response?.status === 'applied' || state.response?.status === 'already_satisfied';
+              const disabled = state.status === 'pending' || success;
+              return (
+                <div key={`${item.id}-step-${index}`}>
+                  <GameIcon
+                    fallback="-"
+                    label={`${formatLabel(step.kind)} icon`}
+                    size="xs"
+                    src={iconUrlFor(step.icon)}
+                  />
+                  <strong>{formatLabel(step.kind)}</strong>
+                  <span>{step.instruction}</span>
+                  <small>
+                    {[
+                      formatQuantityDetail(step.quantity),
+                      step.owner ? `Owner: ${step.owner}` : null,
+                      formatWorkSkillDetail(step.work_type, step.skill),
+                      step.reason,
+                    ].filter(Boolean).join(' | ')}
+                  </small>
+                  {step.apply && (
+                    <div className="step-apply">
+                      <button
+                        type="button"
+                        disabled={disabled}
+                        onClick={() => void onApply(index)}
+                        title={step.apply.target_summary}
+                      >
+                        {state.status === 'pending' ? 'Applying' : success ? 'Applied' : step.apply.label}
+                      </button>
+                      <small className={`step-apply-result ${state.response?.status ?? state.status}`}>
+                        {state.response?.message ?? state.error ?? step.apply.target_summary}
+                      </small>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </DisclosureSection>
       )}
@@ -311,6 +357,20 @@ function AdviceCard({ item }: { item: AdviceItem }) {
       )}
     </article>
   );
+}
+
+type StepApplyState = {
+  status: 'idle' | 'pending' | 'done' | 'error';
+  response: AdviceApplyResponse | null;
+  error: string | null;
+};
+
+function stepKey(item: AdviceItem, stepIndex: number): string {
+  const step = item.steps[stepIndex];
+  const applyContext = step?.apply
+    ? `${step.apply.kind}:${step.apply.target_summary}:${step.apply.target_ids?.join(',') ?? ''}:${step.apply.thing_ids?.join(',') ?? ''}`
+    : 'text';
+  return `${item.id}:${item.issued_at}:${stepIndex}:${applyContext}`;
 }
 
 function PriorityCard({

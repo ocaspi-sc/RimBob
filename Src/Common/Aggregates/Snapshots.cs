@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace RimAI.Core.Aggregates;
 
 // Aggregate snapshots — raw "what is" data. No derived facts (those live in views/briefings).
@@ -17,6 +19,20 @@ public sealed record EconomyLedger(
 public sealed record ColonistRegistry(IReadOnlyList<ColonistRecord> Colonists);
 
 public sealed record MapPosition(int X, int Y, int Z);
+
+public sealed record MapRect(
+    [property: JsonPropertyName("x1")]
+    int X1,
+    [property: JsonPropertyName("z1")]
+    int Z1,
+    [property: JsonPropertyName("x2")]
+    int X2,
+    [property: JsonPropertyName("z2")]
+    int Z2)
+{
+    [JsonIgnore]
+    public int Area => Math.Max(0, X2 - X1 + 1) * Math.Max(0, Z2 - Z1 + 1);
+}
 
 public sealed record ColonistRecord(
     string Id,

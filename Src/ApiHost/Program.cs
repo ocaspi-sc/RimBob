@@ -84,6 +84,7 @@ builder.Services.AddSingleton<FlagChannel>();
 builder.Services.AddSingleton<MinisterRegistry>();
 builder.Services.AddSingleton<EndpointCoverageCatalog>();
 builder.Services.AddSingleton<MinisterTraceStore>();
+builder.Services.AddSingleton<AssistedApplyService>();
 builder.Services.AddSingleton<IReplayCorpusWriter>(sp =>
     new ReplayCorpusWriter(
         Path.Combine(logsDir, "replay"),
@@ -207,6 +208,7 @@ app.MapColonyEndpoints();
 app.MapStatusEndpoints();
 app.MapMinisterEndpoints();
 app.MapIconEndpoints();
+app.MapAdviceApplyEndpoints();
 app.MapSystemEndpoints();
 
 // ── Startup checks ─────────────────────────────────────────────────────────

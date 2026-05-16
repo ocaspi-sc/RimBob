@@ -28,6 +28,7 @@ export function SystemOverview({
   const tests = health?.tests;
   const liveTestCount = tests?.categories.find(category => category.category.toLowerCase() === 'live')?.count ?? 0;
   const rimapi = health?.rimapi_coverage;
+  const applyAttempts = health?.assisted_apply?.recent_attempts ?? [];
 
   return (
     <div className="system-overview">
@@ -154,6 +155,31 @@ export function SystemOverview({
           </div>
         </div>
         </section>
+      </DisclosureSection>
+
+      <DisclosureSection title="Assisted Apply" meta={`${applyAttempts.length} recent attempts`}>
+        {applyAttempts.length === 0 ? (
+          <EmptyState code="NO APPLY ATTEMPTS">No Assisted Apply attempts have been recorded this session.</EmptyState>
+        ) : (
+          <div className="dense-table assisted-apply-table">
+            <div className="dense-row header">
+              <span>Time</span>
+              <span>Kind</span>
+              <span>Status</span>
+              <span>Advice</span>
+              <span>Message</span>
+            </div>
+            {applyAttempts.map(attempt => (
+              <div className="dense-row" key={`${attempt.at}-${attempt.advice_id}-${attempt.step_index}`}>
+                <span>{formatMaybeDate(attempt.at)}</span>
+                <span>{formatKind(attempt.kind)}</span>
+                <span>{attempt.status.replace(/_/g, ' ')}</span>
+                <code>{attempt.advice_id}#{attempt.step_index}</code>
+                <span>{attempt.message}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </DisclosureSection>
 
       <DisclosureSection title="RIMAPI integration snapshot" meta={rimapi ? `${rimapi.active_read_count}/${rimapi.cached_upstream_endpoint_total} cached endpoints` : 'not exposed'}>
@@ -344,6 +370,10 @@ function llmToneFor(status: string): 'ok' | 'warn' | 'error' | 'idle' {
 
 function shorten(value: string): string {
   return value.length > 180 ? `${value.slice(0, 180)}...` : value;
+}
+
+function formatKind(value: string | null | undefined): string {
+  return value ? value.replace(/_/g, ' ') : '-';
 }
 
 function formatBytes(bytes: number): string {

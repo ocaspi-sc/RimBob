@@ -88,6 +88,15 @@ public sealed class AdviceBus
         }
     }
 
+    public bool TryGetActiveAdvice(string id, out AdviceItem? advice)
+    {
+        lock (_lock)
+        {
+            PruneExpired(DateTimeOffset.UtcNow);
+            return _activeAdvice.TryGetValue(id, out advice);
+        }
+    }
+
     public AdviceSnapshot ActiveSnapshot()
     {
         lock (_lock)

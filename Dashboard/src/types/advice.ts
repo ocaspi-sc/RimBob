@@ -2,6 +2,39 @@ import type { IconRef } from './icons';
 
 export type AdvicePriority = 'low' | 'medium' | 'high' | 'critical';
 
+export type AdviceApplyKind = 'mark_harvest_area' | 'unforbid_things';
+
+export interface AdviceApplyRect {
+  x1: number;
+  z1: number;
+  x2: number;
+  z2: number;
+}
+
+export interface AdviceThingApplyTarget {
+  id: string;
+  def: string;
+  kind: string;
+  source: string;
+  position: {
+    x: number;
+    y: number;
+    z: number;
+  };
+}
+
+export interface AdviceStepApply {
+  kind: AdviceApplyKind;
+  label: string;
+  target_summary: string;
+  map_id: number;
+  target_count: number;
+  rect?: AdviceApplyRect | null;
+  target_ids?: string[] | null;
+  thing_ids?: string[] | null;
+  thing_targets?: AdviceThingApplyTarget[] | null;
+}
+
 export interface AdviceStep {
   kind: string;
   instruction: string;
@@ -11,6 +44,16 @@ export interface AdviceStep {
   skill?: string | null;
   reason?: string | null;
   icon?: IconRef | null;
+  apply?: AdviceStepApply | null;
+}
+
+export interface AdviceApplyResponse {
+  status: string;
+  message: string;
+  kind?: AdviceApplyKind | null;
+  advice_id: string;
+  step_index: number;
+  readback?: unknown | null;
 }
 
 export interface ResourceRequest {

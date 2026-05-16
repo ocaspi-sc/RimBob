@@ -51,7 +51,8 @@ internal static class AdviceStepNormalizer
             Owner = string.IsNullOrWhiteSpace(step.Owner) ? null : step.Owner.Trim(),
             WorkType = workType,
             Skill = skill,
-            Reason = string.IsNullOrWhiteSpace(step.Reason) ? null : step.Reason.Trim()
+            Reason = string.IsNullOrWhiteSpace(step.Reason) ? null : step.Reason.Trim(),
+            Apply = null
         };
     }
 

@@ -629,10 +629,45 @@ public sealed class RimApiClientTests
             .WithMessage("*Map not loaded*");
     }
 
+    [Fact]
+    public async Task DesignateArea_PostsHarvestAreaPayload()
+    {
+        var handler = new CaptureHandler(Envelope(new { changed = 4 }));
+        using HttpClient http = MakeClient(handler);
+
+        await new RimApiClient(http).DesignateAreaAsync(7, "Harvest", 10, 20, 12, 22);
+
+        handler.Path.Should().Be("/api/v1/order/designate/area");
+        JsonDocument body = JsonDocument.Parse(handler.Body);
+        body.RootElement.GetProperty("map_id").GetInt32().Should().Be(7);
+        body.RootElement.GetProperty("designation").GetString().Should().Be("Harvest");
+        body.RootElement.GetProperty("rect").GetProperty("x1").GetInt32().Should().Be(10);
+        body.RootElement.GetProperty("rect").GetProperty("z2").GetInt32().Should().Be(22);
+    }
+
+    [Fact]
+    public async Task UnforbidThings_PostsSafeEndpointPayload()
+    {
+        var handler = new CaptureHandler(Envelope(new { changed = 2 }));
+        using HttpClient http = MakeClient(handler);
+
+        await new RimApiClient(http).UnforbidThingsAsync(7, ["thing-1", "thing-2"]);
+
+        handler.Path.Should().Be("/api/v1/order/unforbid");
+        JsonDocument body = JsonDocument.Parse(handler.Body);
+        body.RootElement.GetProperty("map_id").GetInt32().Should().Be(7);
+        body.RootElement.GetProperty("thing_ids").EnumerateArray()
+            .Select(item => item.GetString())
+            .Should().Equal("thing-1", "thing-2");
+    }
+
     // ── helpers ───────────────────────────────────────────────────────────────
 
     private static HttpClient MakeClient(PathRouter router) =>
         new(router) { BaseAddress = new Uri("http://localhost:8765/") };
+
+    private static HttpClient MakeClient(HttpMessageHandler handler) =>
+        new(handler) { BaseAddress = new Uri("http://localhost:8765/") };
 
     /// <summary>Wraps a value in a success envelope, serialised to HttpContent.</summary>
     private static HttpContent Envelope<T>(T data) =>
@@ -672,6 +707,21 @@ public sealed class RimApiClientTests
             }
 
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        }
+    }
+
+    private sealed class CaptureHandler(HttpContent responseContent) : HttpMessageHandler
+    {
+        public string Path { get; private set; } = "";
+        public string Body { get; private set; } = "";
+
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken ct)
+        {
+            Path = request.RequestUri?.AbsolutePath ?? "";
+            Body = request.Content is null ? "" : await request.Content.ReadAsStringAsync(ct);
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = responseContent };
         }
     }
 }

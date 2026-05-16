@@ -1,4 +1,5 @@
 import type { AdviceItem } from './advice';
+import type { AdviceApplyKind } from './advice';
 import type { IconCacheStatus } from './icons';
 
 export type CoverageState = 'available' | 'missing' | 'failed' | 'unsupported' | 'stale' | 'partial' | 'not_exposed_yet';
@@ -97,6 +98,15 @@ export interface MinisterTrace {
   note: string;
 }
 
+export interface AssistedApplyAttempt {
+  at: string;
+  status: string;
+  message: string;
+  kind?: AdviceApplyKind | null;
+  advice_id: string;
+  step_index: number;
+}
+
 export interface SystemHealth {
   generated_at: string;
   runtime: {
@@ -143,6 +153,9 @@ export interface SystemHealth {
   tests: TestInventoryMetadata;
   icons: IconCacheStatus;
   traces: MinisterTrace[];
+  assisted_apply?: {
+    recent_attempts: AssistedApplyAttempt[];
+  };
   endpoint_coverage: EndpointCoverage[];
   rimapi_coverage: RimApiCoverageMetadata;
 }

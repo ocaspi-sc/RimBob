@@ -1,6 +1,6 @@
 # Mark Harvest + Unforbid
 
-**Implementation branch:** `codex/mark-harvest-unforbid`
+**Implementation branch:** `codex/mark-harvest-unforbid-worktree`
 **Implementation worktree:** `C:\dev\RimAI-worktrees\mark-harvest-unforbid`
 
 ## Goal
@@ -27,16 +27,18 @@ one allowlisted non-pawn RIMAPI write, refreshes state, and reports the result.
 
 ## Phase 0 - Worktree And Plan Artifact
 
-- Implement this feature in a dedicated worktree at
+- Implement this feature in the dedicated worktree at
   `C:\dev\RimAI-worktrees\mark-harvest-unforbid`; do not continue the feature
   work in the dirty primary checkout.
-- Create the worktree from current `master` with branch
-  `codex/mark-harvest-unforbid`.
+- Use branch `codex/mark-harvest-unforbid-worktree`, created from current
+  `master`.
+- Leave the older `codex/mark-harvest-unforbid` branch untouched unless a
+  human explicitly asks to clean it up; it diverged from current `master`.
 - Keep `C:\dev\RimAI` and any existing Codex worktrees intact; do not force
   checkout `master` in a worktree where Git says it is already checked out
   elsewhere.
-- Save this plan as `Docs/plans/mark-harvest-unforbid.md` and copy/commit it
-  from the feature worktree as the first feature artifact.
+- Save this plan as `Docs/plans/mark-harvest-unforbid.md` and commit it from
+  the feature worktree as the first feature artifact.
 - Stage only files belonging to this feature from the feature worktree.
 - Rename the roadmap/docs slice to "Mark Harvest + Unforbid" rather than an
   M-number label.
@@ -45,8 +47,13 @@ one allowlisted non-pawn RIMAPI write, refreshes state, and reports the result.
 
 - Verify the live `order/designate/area` request shape against RIMAPI docs/live
   smoke before wiring harvest.
-- Add a companion RIMAPI endpoint for safe unforbid, e.g.
-  `POST /api/v1/order/unforbid`, scoped to map item ids.
+- Add a companion RIMAPI endpoint for safe unforbid in the RIMAPI mod repo, not
+  in RimAI Host. Use a separate RIMAPI worktree/branch for that change. If the
+  RIMAPI repo is not available locally, stop `unforbid` implementation after the
+  RimAI-side contract/client/test scaffolding and leave it blocked on the
+  explicit upstream endpoint dependency.
+- Proposed RIMAPI endpoint: `POST /api/v1/order/unforbid`, scoped to map item
+  ids.
 - The unforbid endpoint rejects empty batches, missing targets, non-map things,
   and oversized batches; it returns requested/matched/changed/already-allowed
   and missing counts.
@@ -56,12 +63,18 @@ one allowlisted non-pawn RIMAPI write, refreshes state, and reports the result.
 ## Phase 2 - RimAI Contracts
 
 - Add optional `apply` metadata to `AdviceStep`.
-- Minimal apply handle fields: action kind, button label, target summary, and
-  opaque target data needed by Host validation.
+- Minimal apply handle fields: `kind`, `label`, `target_summary`, and opaque
+  target data needed by Host validation.
 - Supported kinds for this slice:
   - `mark_harvest_area`
   - `unforbid_things`
 - Do not expose raw RIMAPI path/body in the dashboard contract.
+- Treat `apply` as server-owned. `AdviceStepNormalizer`, manual LLM ingestion,
+  and any raw model parsing path must ignore or strip model-supplied `apply`
+  fields.
+- Define the apply response contract before frontend/backend parallel work:
+  `status`, `message`, `kind`, `advice_id`, `step_index`, and optional
+  `readback`.
 - Add frontend type mirrors for the new optional `apply` object.
 
 ## Phase 3 - Food Target Derivation
@@ -71,6 +84,15 @@ one allowlisted non-pawn RIMAPI write, refreshes state, and reports the result.
   - harvest rects for crop or wild plant clusters only when positions and
     readiness are precise enough
 - Preserve compact briefing style: do not dump every plant or item into prompts.
+- `unforbid` targets come from current forbidden food-like `ThingRecord` /
+  `StoredResourceRecord` rows with stable ids, defs, counts, and map positions.
+  Do not attach an apply handle for category-only or position-only summary text.
+- Crop harvest targets use growing-zone cells when available; otherwise use
+  exact ready plant positions only when they form a small bounded rectangle.
+- Wild harvest targets use exact ready wild plant positions only when they form
+  a small bounded rectangle near the selected Food reference point.
+- Define and enforce caps in code/tests before wiring the button: maximum target
+  count, maximum rect area, and maximum missing-target tolerance after refresh.
 - If harvest readiness cannot be tied to exact plant positions or zone/cell
   geometry, do not attach an apply handle.
 - Add Food rule logic that attaches apply metadata to `Unforbid` and
@@ -92,6 +114,8 @@ one allowlisted non-pawn RIMAPI write, refreshes state, and reports the result.
 - Return a structured result: `applied`, `already_satisfied`, `stale_advice`,
   `validation_failed`, `rimapi_unavailable`, `rimapi_rejected`, or
   `readback_inconclusive`.
+- Response body shape is stable for all statuses: `status`, `message`, `kind`,
+  `advice_id`, `step_index`, and optional `readback`.
 - Record latest apply attempts in bounded Host memory and expose them through
   `/api/system/health`.
 
@@ -102,6 +126,8 @@ one allowlisted non-pawn RIMAPI write, refreshes state, and reports the result.
 - Render a compact Apply button beside eligible steps in the Advice view.
 - Disable while pending and after successful apply in that browser session.
 - Show the returned result message inline with the step.
+- Extend SYSTEM health types/rendering so latest Assisted Apply attempts are
+  visible in the dashboard, not just present in the backend JSON.
 - Keep non-eligible steps rendered exactly as advice, without broad write
   controls.
 
@@ -114,15 +140,21 @@ one allowlisted non-pawn RIMAPI write, refreshes state, and reports the result.
   available.
 - Food rules: eligible `Unforbid` and `MarkHarvest` steps carry apply metadata;
   ineligible steps do not.
+- LLM/manual ingestion: model-supplied `apply` fields are ignored or stripped,
+  and normalized LLM steps are never executable by themselves.
 - Host endpoint: stale advice, missing target, oversized rect/batch, RIMAPI
   unavailable, RIMAPI rejection, success, and already-satisfied paths.
-- Dashboard: build passes and Apply states render without layout shift.
+- Dashboard: build passes, Apply states render without layout shift, and SYSTEM
+  displays latest Assisted Apply attempt metadata.
 
 ## Acceptance Criteria
 
 - A Food advice card can apply harvest for a safe target and report the result.
 - A Food advice card can unforbid known food stacks once the RIMAPI endpoint is
   present.
+- If the RIMAPI unforbid endpoint is unavailable, harvest still ships and
+  `unforbid` remains visibly blocked on that endpoint dependency rather than
+  using an unsafe workaround.
 - No LLM-supplied action becomes executable by itself.
 - No pawn allocation, bills, schedules, medical/prisoner actions, combat
   controls, broad zone editing, or autonomous execution is introduced.

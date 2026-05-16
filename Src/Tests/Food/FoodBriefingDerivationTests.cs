@@ -161,6 +161,40 @@ public sealed class FoodBriefingDerivationTests
     }
 
     [Fact]
+    public void Compute_DerivesExecutableUnforbidAndHarvestTargetsOnlyFromExactMapData()
+    {
+        ColonyState s = StateWithColonists(1);
+        s.Map.Update(new MapInfoSnapshot(7, "250x250"));
+        s.Resources.Update(new ResourceSummary(100, 0f, 39, 0f, 0, 0, 0, 0, 0f));
+        s.Things.Update(new ThingRegistry([
+            new ThingRecord("forbidden-meal", "MealSurvivalPack", "packaged survival meal", 7, ["FoodMeals"], true, new MapPosition(62, 0, 219)),
+            new ThingRecord("forbidden-unpositioned", "MealSurvivalPack", "packaged survival meal", 3, ["FoodMeals"], true),
+            new ThingRecord("steel", "Steel", "steel", 75, ["RawResources"], true, new MapPosition(10, 0, 10))
+        ]));
+        s.ThingDefs.Update(new ThingDefRegistry(new Dictionary<string, ThingDefRecord>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["MealSurvivalPack"] = new("MealSurvivalPack", "packaged survival meal", "Item", "ThingWithComps", true, false, false, false, 0.9f, 10),
+            ["Plant_Berry"] = new("Plant_Berry", "berry bush", "Plant", "Plant", false, true, false, false, 0f, null)
+        }));
+        s.Farm.Update(new FarmSnapshot(2, 1f, 2, [new CropTypeCount("Plant_Berry", 2, 1f, "zone-1", 2)]));
+        s.Plants.Update(new PlantRegistry([
+            new PlantRecord("berry-1", "Plant_Berry", 0.91f, true, "zone-1", new MapPosition(20, 0, 20)),
+            new PlantRecord("berry-2", "Plant_Berry", 0.95f, true, "zone-1", new MapPosition(21, 0, 20)),
+            new PlantRecord("berry-unready", "Plant_Berry", 0.40f, true, "zone-1", new MapPosition(22, 0, 20))
+        ]));
+
+        FoodBriefing b = FoodBriefingDerivation.Compute(s);
+
+        b.MapId.Should().Be(7);
+        FoodUnforbidTarget unforbid = b.UnforbidTargets.Should().ContainSingle().Subject;
+        unforbid.Id.Should().Be("forbidden-meal");
+        unforbid.Kind.Should().Be("meal");
+        FoodHarvestTarget harvest = b.HarvestTargets.Should().ContainSingle(target => target.Source == "crop").Subject;
+        harvest.PlantIds.Should().Equal("berry-1", "berry-2");
+        harvest.Rect.Should().Be(new MapRect(20, 20, 21, 20));
+    }
+
+    [Fact]
     public void Compute_MapThingFallback_IgnoresForbiddenSurvivalMeals()
     {
         ColonyState s = StateWithColonists(1);

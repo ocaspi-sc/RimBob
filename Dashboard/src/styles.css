@@ -836,6 +836,20 @@ code {
   min-width: 980px;
 }
 
+.assisted-apply-table {
+  overflow-x: auto;
+}
+
+.assisted-apply-table .dense-row {
+  grid-template-columns:
+    minmax(150px, 0.85fr)
+    minmax(130px, 0.7fr)
+    minmax(130px, 0.7fr)
+    minmax(190px, 0.9fr)
+    minmax(300px, 1.8fr);
+  min-width: 900px;
+}
+
 .dense-row > * {
   min-width: 0;
   overflow-wrap: anywhere;
@@ -1409,6 +1423,59 @@ code {
   line-height: 1.35;
 }
 
+.step-apply {
+  grid-column: 3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.step-apply button {
+  border: 1px solid rgba(98, 216, 230, 0.45);
+  border-radius: 5px;
+  background: rgba(98, 216, 230, 0.12);
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 700;
+  min-height: 30px;
+  padding: 6px 10px;
+  white-space: nowrap;
+}
+
+.step-apply button:hover:not(:disabled) {
+  background: rgba(98, 216, 230, 0.2);
+}
+
+.step-apply button:disabled {
+  cursor: default;
+  opacity: 0.62;
+}
+
+.step-apply-result {
+  grid-column: auto;
+  overflow-wrap: anywhere;
+}
+
+.step-apply-result.applied,
+.step-apply-result.already_satisfied,
+.step-apply-result.done {
+  color: var(--ok);
+}
+
+.step-apply-result.rimapi_unavailable,
+.step-apply-result.readback_inconclusive,
+.step-apply-result.pending {
+  color: var(--warn);
+}
+
+.step-apply-result.validation_failed,
+.step-apply-result.rimapi_rejected,
+.step-apply-result.stale_advice,
+.step-apply-result.error {
+  color: var(--danger);
+}
+
 .game-icon {
   flex: 0 0 auto;
   width: 28px;
@@ -1722,6 +1789,11 @@ code {
   .long-row,
   .action-list > div {
     grid-template-columns: 1fr;
+  }
+
+  .action-list small,
+  .step-apply {
+    grid-column: 1;
   }
 }
 

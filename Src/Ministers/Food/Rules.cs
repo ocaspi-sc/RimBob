@@ -311,7 +311,8 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 ForbiddenMealActionText(briefing, forbiddenMealCount),
                 Quantity: forbiddenMealCount,
                 Reason: "visible meals are forbidden and excluded from the reachable food buffer",
-                Icon: SimpleMealIcon));
+                Icon: SimpleMealIcon,
+                Apply: UnforbidApply(briefing)));
         if (briefing.UnknownFoodUnits > 0 && briefing.MealsCount == 0 && briefing.RawFoodCount == 0)
             steps.Add(new AdviceStep(
                 AdviceStepKind.SetStockpileZone,
@@ -455,7 +456,8 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             WorkType: WorkType.PlantCut,
             Skill: "Plants",
             Reason: "mature crops only help once harvested",
-            Icon: HarvestIcon(briefing));
+            Icon: HarvestIcon(briefing),
+            Apply: HarvestApply(briefing, "crop"));
 
     private static AdviceStep WildHarvestStep(FoodBriefing briefing, float days) =>
         new(AdviceStepKind.MarkHarvest,
@@ -464,7 +466,8 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             WorkType: WorkType.PlantCut,
             Skill: "Plants",
             Reason: "wild harvest requires plant work",
-            Icon: WildHarvestIcon(briefing));
+            Icon: WildHarvestIcon(briefing),
+            Apply: HarvestApply(briefing, "wild"));
 
     private static AdviceStep HuntingStep(FoodBriefing briefing) =>
         new(AdviceStepKind.MarkHunt,
@@ -487,6 +490,92 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             Skill: "Plants",
             Reason: includeCandidateReason ? $"{reason}; {candidate.Reason}" : reason,
             Icon: ItemIcon(candidate.CropDef));
+
+    private static AdviceStepApply? HarvestApply(FoodBriefing briefing, string source)
+    {
+        FoodHarvestTarget? target = source == "wild"
+            ? SelectedWildHarvestTarget(briefing)
+            : SelectedCropHarvestTarget(briefing);
+        if (target is null)
+            return null;
+
+        string label = source == "wild" ? "Mark wild harvest" : "Mark harvest";
+        string zone = string.IsNullOrWhiteSpace(target.ZoneId) ? "" : $" in {target.ZoneId}";
+        string location = string.IsNullOrWhiteSpace(target.Proximity) ? "" : $" ({target.Proximity})";
+        string summary = $"{target.Count} {target.Def} plants{zone}{location}";
+
+        return new AdviceStepApply(
+            Kind: AdviceApplyKind.MarkHarvestArea,
+            Label: label,
+            TargetSummary: summary,
+            MapId: briefing.MapId,
+            TargetCount: target.Count,
+            Rect: target.Rect,
+            TargetIds: target.PlantIds);
+    }
+
+    private static FoodHarvestTarget? SelectedCropHarvestTarget(FoodBriefing briefing)
+    {
+        FoodCropZoneSummary? zone = briefing.CropZoneSummaries
+            .Where(z => z.ReadyCount > 0)
+            .OrderByDescending(z => z.ReadyCount)
+            .FirstOrDefault();
+        if (zone is null)
+            return briefing.HarvestTargets
+                .Where(target => string.Equals(target.Source, "crop", StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(target => target.Count)
+                .FirstOrDefault();
+
+        return briefing.HarvestTargets
+            .Where(target => string.Equals(target.Source, "crop", StringComparison.OrdinalIgnoreCase))
+            .Where(target => string.Equals(target.Def, zone.Def, StringComparison.OrdinalIgnoreCase))
+            .Where(target => string.Equals(target.ZoneId ?? "", zone.ZoneId ?? "", StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(target => target.Count)
+            .FirstOrDefault();
+    }
+
+    private static FoodHarvestTarget? SelectedWildHarvestTarget(FoodBriefing briefing)
+    {
+        WildHarvestCluster? cluster = briefing.WildHarvestClusters.FirstOrDefault();
+        if (cluster is null)
+            return briefing.HarvestTargets
+                .Where(target => string.Equals(target.Source, "wild", StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(target => target.Count)
+                .FirstOrDefault();
+
+        return briefing.HarvestTargets
+            .Where(target => string.Equals(target.Source, "wild", StringComparison.OrdinalIgnoreCase))
+            .Where(target => string.Equals(target.Def, cluster.Def, StringComparison.OrdinalIgnoreCase))
+            .FirstOrDefault();
+    }
+
+    private static AdviceStepApply? UnforbidApply(FoodBriefing briefing)
+    {
+        IReadOnlyList<FoodUnforbidTarget> targets = briefing.UnforbidTargets
+            .Where(target => string.Equals(target.Kind, "meal", StringComparison.OrdinalIgnoreCase))
+            .Take(AssistedApplyLimits.MaxUnforbidTargets)
+            .ToList();
+        if (targets.Count == 0)
+            return null;
+
+        int count = targets.Sum(target => target.Count);
+        string label = count == 1 ? "Unforbid meal" : "Unforbid meals";
+        string summary = $"{count} {ForbiddenMealLabel(briefing, count)} across {targets.Count} stack{(targets.Count == 1 ? "" : "s")}";
+
+        return new AdviceStepApply(
+            Kind: AdviceApplyKind.UnforbidThings,
+            Label: label,
+            TargetSummary: summary,
+            MapId: briefing.MapId,
+            TargetCount: targets.Count,
+            ThingIds: targets.Select(target => target.Id).ToList(),
+            ThingTargets: targets.Select(target => new AdviceThingApplyTarget(
+                Id: target.Id,
+                Def: target.Def,
+                Kind: target.Kind,
+                Source: target.Source,
+                Position: target.Position)).ToList());
+    }
 
     private static IconRef HarvestIcon(FoodBriefing briefing) =>
         ItemIcon(FirstNonBlank(

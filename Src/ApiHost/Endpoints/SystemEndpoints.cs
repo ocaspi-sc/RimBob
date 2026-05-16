@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using RimAI.Coordination;
 using RimAI.Core.Briefings;
 using RimAI.Core.Ministers;
+using RimAI.Host;
 using RimAI.Knowledge;
 using RimAI.LLM;
 using RimAI.State;
@@ -55,7 +56,8 @@ public static class SystemEndpoints
     private static readonly RimApiCoverageRow[] DeferredWriteStubs =
     [
         new("POST", "/api/v1/map/zone/growing", "deferred_write_stub", "Food Auto", "Stub exists; body shape unverified and not called in suggest-only MVP."),
-        new("POST", "/api/v1/order/designate/area", "deferred_write_stub", "Food/Construction Auto", "Stub exists; body shape unverified and not called in suggest-only MVP.")
+        new("POST", "/api/v1/order/designate/area", "assisted_write", "Food Assisted Apply", "Used for player-confirmed harvest designation over bounded rects."),
+        new("POST", "/api/v1/order/unforbid", "upstream_dependency", "Food Assisted Apply", "Safe item-id unforbid endpoint expected from the companion RIMAPI change; destructive forbidden endpoints are not used.")
     ];
 
     private static readonly RimApiCoverageRow[] MissingRimApiPriorities =
@@ -91,7 +93,8 @@ public static class SystemEndpoints
             MinisterRegistry registry,
             EndpointCoverageCatalog endpointCoverage,
             MinisterTraceStore traces,
-            IconCacheService iconCache) =>
+            IconCacheService iconCache,
+            AssistedApplyService assistedApply) =>
         {
             RimAiOptions opts = options.Value;
             MayorBriefing mayorBriefing = briefings.GetMayorBriefing();
@@ -153,6 +156,10 @@ public static class SystemEndpoints
                 tests = TestInventoryMetadata(env.ContentRootPath),
                 icons = iconCache.GetStatus(),
                 traces = traces.LatestAll(),
+                assisted_apply = new
+                {
+                    recent_attempts = assistedApply.LatestAttempts(),
+                },
                 endpoint_coverage = endpointCoverage.Snapshot(new EndpointCoverageContext(agendaStore, registry)),
                 rimapi_coverage = RimApiCoverageMetadata(),
             });

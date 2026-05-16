@@ -90,6 +90,34 @@ public sealed class AdviceNormalizationTests
         steps[1].Instruction.Should().Be("check whether berries are reachable");
     }
 
+    [Fact]
+    public void AdviceStepNormalizer_StripsModelSuppliedApplyMetadata()
+    {
+        JsonNode? root = JsonNode.Parse("""
+        [
+          {
+            "kind": "mark_harvest",
+            "instruction": "mark these berries",
+            "apply": {
+              "kind": "mark_harvest_area",
+              "label": "unsafe model apply",
+              "target_summary": "model supplied target",
+              "map_id": 1,
+              "target_count": 1,
+              "rect": { "x1": 1, "z1": 1, "x2": 2, "z2": 2 },
+              "target_ids": ["plant-1"]
+            }
+          }
+        ]
+        """);
+
+        IReadOnlyList<AdviceStep> steps = AdviceStepNormalizer.Normalize(root, Json);
+
+        AdviceStep step = steps.Should().ContainSingle().Subject;
+        step.Kind.Should().Be(AdviceStepKind.MarkHarvest);
+        step.Apply.Should().BeNull();
+    }
+
     private static LlmAdviceNormalizationContext Context() => new(
         Minister: "Food",
         Domain: "food",

@@ -1,10 +1,11 @@
 using System.Text.Json.Serialization;
+using RimAI.Core.Aggregates;
 
 namespace RimAI.Core.Advice;
 
 /// <summary>
-/// One player-facing step in an AdviceItem. In MVP this is rendered only; Auto
-/// wiring is deferred until a minister graduates a specific advice type.
+/// One player-facing step in an AdviceItem. Most steps are rendered only; a
+/// narrow Assisted Apply allowlist can attach server-owned apply metadata.
 /// </summary>
 public sealed record AdviceStep(
     [property: JsonPropertyName("kind")]
@@ -22,7 +23,56 @@ public sealed record AdviceStep(
     [property: JsonPropertyName("reason")]
     string? Reason = null,
     [property: JsonPropertyName("icon")]
-    IconRef? Icon = null);
+    IconRef? Icon = null,
+    [property: JsonPropertyName("apply")]
+    AdviceStepApply? Apply = null);
+
+public sealed record AdviceStepApply(
+    [property: JsonPropertyName("kind")]
+    AdviceApplyKind Kind,
+    [property: JsonPropertyName("label")]
+    string Label,
+    [property: JsonPropertyName("target_summary")]
+    string TargetSummary,
+    [property: JsonPropertyName("map_id")]
+    int MapId,
+    [property: JsonPropertyName("target_count")]
+    int TargetCount,
+    [property: JsonPropertyName("rect")]
+    MapRect? Rect = null,
+    [property: JsonPropertyName("target_ids")]
+    IReadOnlyList<string>? TargetIds = null,
+    [property: JsonPropertyName("thing_ids")]
+    IReadOnlyList<string>? ThingIds = null,
+    [property: JsonPropertyName("thing_targets")]
+    IReadOnlyList<AdviceThingApplyTarget>? ThingTargets = null);
+
+public sealed record AdviceThingApplyTarget(
+    [property: JsonPropertyName("id")]
+    string Id,
+    [property: JsonPropertyName("def")]
+    string Def,
+    [property: JsonPropertyName("kind")]
+    string Kind,
+    [property: JsonPropertyName("source")]
+    string Source,
+    [property: JsonPropertyName("position")]
+    MapPosition Position);
+
+[JsonConverter(typeof(SnakeCaseLowerEnumConverter<AdviceApplyKind>))]
+public enum AdviceApplyKind
+{
+    MarkHarvestArea,
+    UnforbidThings
+}
+
+public static class AssistedApplyLimits
+{
+    public const int MaxHarvestTargets = 80;
+    public const int MaxHarvestRectArea = 120;
+    public const int MaxUnforbidTargets = 50;
+    public const double MaxMissingTargetFraction = 0.25d;
+}
 
 [JsonConverter(typeof(SnakeCaseLowerEnumConverter<AdviceStepKind>))]
 public enum AdviceStepKind

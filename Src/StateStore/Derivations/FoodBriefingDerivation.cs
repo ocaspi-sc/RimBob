@@ -1,4 +1,5 @@
 using RimAI.Core.Aggregates;
+using RimAI.Core.Advice;
 using RimAI.Core.Briefings;
 using RimAI.State.Derivations.Common;
 using RimAI.State.Parsing;
@@ -67,9 +68,12 @@ public static class FoodBriefingDerivation
             RecentFoodIncidents: incidents
         )
         {
+            MapId = s.Map.Value.Id,
             GrowingTerrain = DeriveGrowingTerrain(s.Terrain.Value),
             CropHarvestNutritionByDef = DeriveCropHarvestNutrition(s.ThingDefs.Value),
-            UnclassifiedFoodItems = food.UnclassifiedFoodItems
+            UnclassifiedFoodItems = food.UnclassifiedFoodItems,
+            UnforbidTargets = DeriveUnforbidTargets(s),
+            HarvestTargets = DeriveHarvestTargets(s, reference)
         };
     }
 
@@ -147,6 +151,129 @@ public static class FoodBriefingDerivation
     {
         int? distance = MapDistance.Nearest(coolerPositions, foodPosition);
         return distance is not null && distance.Value <= CoolerAdjacentDistanceCells;
+    }
+
+    private static IReadOnlyList<FoodUnforbidTarget> DeriveUnforbidTargets(ColonyState s)
+    {
+        Dictionary<string, FoodUnforbidTarget> targets = new(StringComparer.OrdinalIgnoreCase);
+
+        foreach (StoredResourceRecord item in s.StoredResources.Value.Items
+                     .Where(item => item.IsForbidden && item.StackCount > 0 && item.Position is not null))
+        {
+            string? kind = FoodItemClassifier.FoodKindLabel(item, s.ThingDefs.Value);
+            if (kind is null) continue;
+
+            targets.TryAdd(item.Id, new FoodUnforbidTarget(
+                Id: item.Id,
+                Def: item.Def,
+                Label: item.Label,
+                Count: item.StackCount,
+                Kind: kind,
+                Source: "resources_stored",
+                Position: item.Position!));
+        }
+
+        foreach (ThingRecord thing in s.Things.Value.Things
+                     .Where(thing => thing.IsForbidden && thing.StackCount > 0 && thing.Position is not null))
+        {
+            string? kind = FoodItemClassifier.FoodKindLabel(thing, s.ThingDefs.Value);
+            if (kind is null) continue;
+
+            targets.TryAdd(thing.Id, new FoodUnforbidTarget(
+                Id: thing.Id,
+                Def: thing.Def,
+                Label: thing.Label,
+                Count: thing.StackCount,
+                Kind: kind,
+                Source: "map_things",
+                Position: thing.Position!));
+        }
+
+        return targets.Values
+            .OrderBy(target => target.Kind == "meal" ? 0 : 1)
+            .ThenByDescending(target => target.Count)
+            .Take(AssistedApplyLimits.MaxUnforbidTargets)
+            .ToList();
+    }
+
+    private static IReadOnlyList<FoodHarvestTarget> DeriveHarvestTargets(
+        ColonyState s,
+        FoodReferencePoint? reference)
+    {
+        List<FoodHarvestTarget> targets = [];
+
+        targets.AddRange(s.Plants.Value.Plants
+            .Where(plant => plant.IsCrop && plant.Growth >= 0.85f && plant.Position is not null)
+            .GroupBy(plant => new { plant.Def, plant.ZoneId })
+            .Select(group => BuildHarvestTarget("crop", group.Key.Def, group.Key.ZoneId, group, reference))
+            .Where(target => target is not null)
+            .Cast<FoodHarvestTarget>());
+
+        targets.AddRange(s.Plants.Value.Plants
+            .Where(plant => !plant.IsCrop && plant.Growth >= 0.85f && plant.Position is not null)
+            .GroupBy(plant => plant.Def)
+            .Select(group => BuildHarvestTarget("wild", group.Key, null, group, reference))
+            .Where(target => target is not null)
+            .Cast<FoodHarvestTarget>());
+
+        return targets
+            .OrderBy(target => target.Source == "crop" ? 0 : 1)
+            .ThenBy(target => MapDistance.Nearest(TargetPositions(s.Plants.Value.Plants, target.PlantIds), reference?.Position) ?? int.MaxValue)
+            .ThenByDescending(target => target.Count)
+            .Take(5)
+            .ToList();
+    }
+
+    private static FoodHarvestTarget? BuildHarvestTarget(
+        string source,
+        string def,
+        string? zoneId,
+        IEnumerable<PlantRecord> plants,
+        FoodReferencePoint? reference)
+    {
+        List<PlantRecord> targetPlants = plants
+            .Where(plant => plant.Position is not null)
+            .Take(AssistedApplyLimits.MaxHarvestTargets + 1)
+            .ToList();
+
+        if (targetPlants.Count == 0 || targetPlants.Count > AssistedApplyLimits.MaxHarvestTargets)
+            return null;
+
+        MapRect rect = RectFor(targetPlants.Select(plant => plant.Position!));
+        if (rect.Area <= 0 || rect.Area > AssistedApplyLimits.MaxHarvestRectArea)
+            return null;
+
+        int? distance = MapDistance.Nearest(targetPlants.Select(plant => plant.Position), reference?.Position);
+        return new FoodHarvestTarget(
+            Source: source,
+            Def: def,
+            Count: targetPlants.Count,
+            Rect: rect,
+            PlantIds: targetPlants.Select(plant => plant.Id).ToList(),
+            ZoneId: zoneId,
+            Proximity: MapDistance.ProximityLabel(distance, reference?.Name),
+            Reference: reference?.Name);
+    }
+
+    private static IReadOnlyList<MapPosition> TargetPositions(
+        IReadOnlyList<PlantRecord> plants,
+        IReadOnlyList<string> ids)
+    {
+        HashSet<string> idSet = ids.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return plants
+            .Where(plant => idSet.Contains(plant.Id) && plant.Position is not null)
+            .Select(plant => plant.Position!)
+            .ToList();
+    }
+
+    private static MapRect RectFor(IEnumerable<MapPosition> positions)
+    {
+        List<MapPosition> list = positions.ToList();
+        return new MapRect(
+            X1: list.Min(position => position.X),
+            Z1: list.Min(position => position.Z),
+            X2: list.Max(position => position.X),
+            Z2: list.Max(position => position.Z));
     }
 
     private static IReadOnlyList<FoodCropZoneSummary> DeriveCropZoneSummaries(

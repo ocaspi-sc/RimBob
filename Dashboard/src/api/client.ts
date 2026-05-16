@@ -1,3 +1,4 @@
+export * from './advice';
 export * from './adviceStream';
 export * from './agenda';
 export * from './cabinet';

@@ -49,6 +49,10 @@ public sealed class FoodRulesTests
             UnclassifiedFoodItems =
             [
                 new FoodUnclassifiedItem("MealSurvivalPack", "packaged survival meal", 7, "meal", true, "map_things", "(62,0,219)")
+            ],
+            UnforbidTargets =
+            [
+                new FoodUnforbidTarget("meal-forbidden", "MealSurvivalPack", "packaged survival meal", 7, "meal", "map_things", new(62, 0, 219))
             ]
         };
 
@@ -61,9 +65,13 @@ public sealed class FoodRulesTests
             r.Kind == ResourceRequestKind.Item &&
             r.Quantity == 7 &&
             r.What.Contains("forbidden packaged survival meals"));
-        advice.Steps.Should().Contain(step =>
+        AdviceStep unforbidStep = advice.Steps.Should().Contain(step =>
             step.Kind == AdviceStepKind.Unforbid &&
-            step.Instruction.Contains("Unforbid 7 packaged survival meals"));
+            step.Instruction.Contains("Unforbid 7 packaged survival meals")).Subject;
+        unforbidStep.Apply.Should().NotBeNull();
+        unforbidStep.Apply!.Kind.Should().Be(AdviceApplyKind.UnforbidThings);
+        unforbidStep.Apply.ThingTargets.Should().ContainSingle()
+            .Which.Def.Should().Be("MealSurvivalPack");
     }
 
     [Fact]
@@ -140,7 +148,11 @@ public sealed class FoodRulesTests
         FoodBriefing briefing = Briefing(days: 18f) with
         {
             ReadyToHarvest = 9,
-            CropZoneSummaries = [new FoodCropZoneSummary("Plant_Rice", "growing:1", 12, 1f, 9, "nearby to kitchen")]
+            CropZoneSummaries = [new FoodCropZoneSummary("Plant_Rice", "growing:1", 12, 1f, 9, "nearby to kitchen")],
+            HarvestTargets =
+            [
+                new FoodHarvestTarget("crop", "Plant_Rice", 9, new(10, 20, 12, 22), ["rice-1"], "growing:1", "nearby to kitchen", "kitchen")
+            ]
         };
 
         Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
@@ -149,7 +161,10 @@ public sealed class FoodRulesTests
         decision.Trace.Should().Be("harvest_mature_crops");
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
         advice.AdviceType.Should().Be("harvest_now");
-        advice.Steps.Single().Instruction.Should().Contain("nearby to kitchen");
+        AdviceStep step = advice.Steps.Single();
+        step.Instruction.Should().Contain("nearby to kitchen");
+        step.Apply.Should().NotBeNull();
+        step.Apply!.Kind.Should().Be(AdviceApplyKind.MarkHarvestArea);
         decision.Flags.Should().BeEmpty();
     }
 
@@ -198,7 +213,11 @@ public sealed class FoodRulesTests
             RawFoodCount = 0,
             ReadyToHarvest = 0,
             WildHarvestCandidates = 6,
-            WildHarvestClusters = [new WildHarvestCluster("Plant_Berry", 6, 1f, "nearby to kitchen", "kitchen")]
+            WildHarvestClusters = [new WildHarvestCluster("Plant_Berry", 6, 1f, "nearby to kitchen", "kitchen")],
+            HarvestTargets =
+            [
+                new FoodHarvestTarget("wild", "Plant_Berry", 6, new(30, 40, 32, 41), ["berry-1"], null, "nearby to kitchen", "kitchen")
+            ]
         };
 
         Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
@@ -207,7 +226,40 @@ public sealed class FoodRulesTests
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
         advice.AdviceType.Should().Be("wild_harvest");
         advice.Steps.Single().Instruction.Should().Contain("nearest 6 Plant_Berry");
+        advice.Steps.Single().Apply.Should().NotBeNull();
         decision.Flags.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void WildHarvest_ApplyTargetMatchesDisplayedCluster()
+    {
+        FoodBriefing briefing = Briefing(days: 14f) with
+        {
+            MealsCount = 20,
+            RawFoodCount = 0,
+            ReadyToHarvest = 0,
+            WildHarvestCandidates = 10,
+            WildHarvestClusters =
+            [
+                new WildHarvestCluster("Plant_Berry", 2, 1f, "nearby to kitchen", "kitchen"),
+                new WildHarvestCluster("Plant_Agave", 8, 1f, "far from kitchen", "kitchen")
+            ],
+            HarvestTargets =
+            [
+                new FoodHarvestTarget("wild", "Plant_Agave", 8, new(80, 80, 82, 82), ["agave-1"], null, "far from kitchen", "kitchen"),
+                new FoodHarvestTarget("wild", "Plant_Berry", 2, new(30, 40, 31, 40), ["berry-1", "berry-2"], null, "nearby to kitchen", "kitchen")
+            ]
+        };
+
+        Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
+            .Should().BeOfType<Decision>().Subject;
+
+        AdviceStep step = decision.Advice.Should().ContainSingle().Subject
+            .Steps.Should().ContainSingle().Subject;
+        step.Instruction.Should().Contain("nearest 2 Plant_Berry");
+        step.Apply.Should().NotBeNull();
+        step.Apply!.TargetSummary.Should().Contain("Plant_Berry");
+        step.Apply.TargetIds.Should().Equal("berry-1", "berry-2");
     }
 
     [Fact]

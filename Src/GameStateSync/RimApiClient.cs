@@ -41,6 +41,42 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
 
     private static string Query(string value) => Uri.EscapeDataString(value);
 
+    private static async Task EnsureWriteAcceptedAsync(HttpResponseMessage response, string path, CancellationToken ct)
+    {
+        try
+        {
+            response.EnsureSuccessStatusCode();
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new RimApiHttpException($"RIMAPI HTTP error at {path}: {(int?)response.StatusCode} {response.ReasonPhrase}", response.StatusCode, ex);
+        }
+
+        if (response.Content.Headers.ContentLength == 0)
+            return;
+
+        string text = await response.Content.ReadAsStringAsync(ct);
+        if (string.IsNullOrWhiteSpace(text))
+            return;
+
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(text);
+            JsonElement root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object ||
+                !root.TryGetProperty("success", out JsonElement success) ||
+                success.ValueKind != JsonValueKind.False)
+                return;
+
+            string errors = ReadStringArray(root, "errors");
+            throw new RimApiException($"RIMAPI rejected write at {path}: {errors}");
+        }
+        catch (JsonException)
+        {
+            return;
+        }
+    }
+
     /// <summary>
     /// Like GetEnvelopedAsync but for collection endpoints. Returns an empty list
     /// only when RIMAPI sends null, [], or {} for data. Non-empty schema drift
@@ -350,7 +386,7 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
         var body = new { map_id = mapId, plant_def = plantDef,
                          rect = new { x1, z1, x2, z2 } };
         var response = await http.PostAsJsonAsync("api/v1/map/zone/growing", body, ct);
-        response.EnsureSuccessStatusCode();
+        await EnsureWriteAcceptedAsync(response, "api/v1/map/zone/growing", ct);
     }
 
     /// <summary>
@@ -365,14 +401,40 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
         var body = new { map_id = mapId, designation,
                          rect = new { x1, z1, x2, z2 } };
         var response = await http.PostAsJsonAsync("api/v1/order/designate/area", body, ct);
-        response.EnsureSuccessStatusCode();
+        await EnsureWriteAcceptedAsync(response, "api/v1/order/designate/area", ct);
+    }
+
+    /// <summary>
+    /// POST api/v1/order/unforbid — safe item allow-list endpoint expected from
+    /// the RIMAPI companion change. This must not call destructive forbidden
+    /// endpoints.
+    /// </summary>
+    public async Task UnforbidThingsAsync(
+        int mapId,
+        IReadOnlyList<string> thingIds,
+        CancellationToken ct = default)
+    {
+        var body = new { map_id = mapId, thing_ids = thingIds };
+        var response = await http.PostAsJsonAsync("api/v1/order/unforbid", body, ct);
+        await EnsureWriteAcceptedAsync(response, "api/v1/order/unforbid", ct);
     }
 }
 
 /// <summary>Thrown when RIMAPI returns success=false or an incompatible wire shape.</summary>
-public sealed class RimApiException : Exception
+public class RimApiException : Exception
 {
     public RimApiException(string message) : base(message) { }
 
     public RimApiException(string message, Exception innerException) : base(message, innerException) { }
+}
+
+public sealed class RimApiHttpException : RimApiException
+{
+    public System.Net.HttpStatusCode? StatusCode { get; }
+
+    public RimApiHttpException(string message, System.Net.HttpStatusCode? statusCode, Exception innerException)
+        : base(message, innerException)
+    {
+        StatusCode = statusCode;
+    }
 }
