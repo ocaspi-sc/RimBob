@@ -234,8 +234,8 @@ Design-level endpoint families:
 - Colony snapshot/sidebar data.
 - Bounded log and replay-corpus metadata.
 - Read-only icon gateway and cache status.
-- Developer-only manual raw LLM ingestion for Food while provider quota is a
-  practical blocker.
+- Developer-only manual raw LLM ingestion for ministers that expose the
+  capability while provider quota is a practical blocker.
 
 All observability endpoints are read-only unless explicitly named as a manual
 RimAI re-evaluation trigger. They never mutate game state.
@@ -337,10 +337,18 @@ If no LLM call has happened in the current Host process, render "no raw output
 yet" rather than an error. If a request fails before provider text arrives,
 surface the failure state so the view explains why no raw response exists.
 
-Developer fallback ingestion for Food is an observability and quota workaround
-only. It records and parses pasted raw output through the same backend parser;
-it does not call RIMAPI write endpoints and does not imply support for unwired
-ministers.
+Raw LLM Output is a latest-capture inspector, not proof that the latest
+minister run used the LLM. Compare the capture timestamp with the latest
+minister trace. If a newer run completed without a newer raw response, mark the
+raw output as stale and explain that the latest run did not record an LLM
+response, commonly because it stayed on the rules path.
+
+Developer fallback ingestion is an observability and quota workaround only. The
+existing `run-minister-using-codex-subagent` skill owns the operator workflow:
+copy exact prompt inputs, generate JSON outside Gemini, and post the raw output
+to the selected minister's manual ingestion endpoint. Support is
+capability-scoped by minister; it does not call RIMAPI write endpoints and does
+not imply support for unwired ministers.
 
 ### Briefing
 

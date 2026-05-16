@@ -166,6 +166,7 @@ public static class MinisterEndpoints
             try
             {
                 FoodLlmParseResult parseResult = FoodLlmResponseParser.Parse(text, briefing, retrieved);
+                IReadOnlyList<string> styleWarnings = AdviceTextStyleWarnings.ForFood(parseResult.Response);
                 string stateSummary = FoodStateSummary.Build(briefing);
                 outputs.Record(new RawLlmOutputSnapshot(
                     Minister: scope.Label,
@@ -210,6 +211,7 @@ public static class MinisterEndpoints
                     llm_state_summary = parseResult.Response.StateSummary,
                     advice_count = parseResult.Response.Advice.Count,
                     flag_count = parseResult.Response.Flags.Count,
+                    style_warnings = styleWarnings,
                     notes = parseResult.Response.Notes
                 });
             }
@@ -322,7 +324,12 @@ public static class MinisterEndpoints
         string Label,
         string Kind,
         bool Ready,
-        IReadOnlyList<string> EnabledViews)
+        IReadOnlyList<string> EnabledViews,
+        bool CanManualTrigger,
+        bool HasPrompt,
+        bool HasRawLlmOutput,
+        bool HasManualLlmOutput,
+        bool HasRag)
     {
         public static MinisterScopeInfo FromDescriptor(MinisterDescriptor descriptor) =>
             new(
@@ -330,6 +337,11 @@ public static class MinisterEndpoints
                 descriptor.Label,
                 descriptor.Kind,
                 descriptor.Ready,
-                descriptor.EnabledViews);
+                descriptor.EnabledViews,
+                descriptor.CanManualTrigger,
+                descriptor.HasPrompt,
+                descriptor.HasRawLlmOutput,
+                descriptor.HasManualLlmOutput,
+                descriptor.HasRag);
     }
 }
