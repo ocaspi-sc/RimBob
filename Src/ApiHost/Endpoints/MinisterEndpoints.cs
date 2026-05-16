@@ -78,7 +78,8 @@ public static class MinisterEndpoints
                 FoodBriefing briefing = briefings.GetFoodBriefing();
                 MinisterBriefingContext context = MinisterOfFood.BuildContext(agendaStore.Current);
                 IReadOnlyList<GuideCitation> retrieved = await foodRetriever.RetrieveAsync(briefing, ct);
-                string user = prompts.BuildFoodUserMessage(briefing, context, retrieved);
+                IReadOnlyList<FoodPromptCropCandidate> cropCandidates = MinisterOfFood.BuildCropCandidates(briefing);
+                string user = prompts.BuildFoodUserMessage(briefing, context, retrieved, cropCandidates);
                 return Results.Ok(new { system = ReadPromptOrPlaceholder(() => prompts.FoodSystemPrompt), user });
             }
 
@@ -159,7 +160,8 @@ public static class MinisterEndpoints
             FoodBriefing briefing = briefings.GetFoodBriefing();
             MinisterBriefingContext context = MinisterOfFood.BuildContext(agendaStore.Current);
             IReadOnlyList<GuideCitation> retrieved = await foodRetriever.RetrieveAsync(briefing, ct);
-            string user = prompts.BuildFoodUserMessage(briefing, context, retrieved);
+            IReadOnlyList<FoodPromptCropCandidate> cropCandidates = MinisterOfFood.BuildCropCandidates(briefing);
+            string user = prompts.BuildFoodUserMessage(briefing, context, retrieved, cropCandidates);
             string system = ReadPromptOrPlaceholder(() => prompts.FoodSystemPrompt);
             DateTimeOffset capturedAt = DateTimeOffset.UtcNow;
 

@@ -35,6 +35,7 @@ public sealed class LlmClient
         FoodBriefing briefing,
         MinisterBriefingContext context,
         IReadOnlyList<GuideCitation> guideContext,
+        IReadOnlyList<FoodPromptCropCandidate> cropCandidates,
         CancellationToken ct);
 
     private readonly IReadOnlyList<Client>                         _clients;
@@ -270,13 +271,23 @@ public sealed class LlmClient
         IReadOnlyList<GuideCitation> guideContext,
         CancellationToken ct)
     {
+        return await CallFoodAsync(briefing, context, guideContext, [], ct);
+    }
+
+    public async Task<FoodLlmResponse> CallFoodAsync(
+        FoodBriefing briefing,
+        MinisterBriefingContext context,
+        IReadOnlyList<GuideCitation> guideContext,
+        IReadOnlyList<FoodPromptCropCandidate> cropCandidates,
+        CancellationToken ct)
+    {
         if (_foodExecutor is not null)
-            return await _foodExecutor(briefing, context, guideContext, ct);
+            return await _foodExecutor(briefing, context, guideContext, cropCandidates, ct);
 
         if (_clients.Count == 0)
             throw new InvalidOperationException("No Gemini API keys configured - cannot call Food LLM.");
 
-        string userMessage = _prompts.BuildFoodUserMessage(briefing, context, guideContext);
+        string userMessage = _prompts.BuildFoodUserMessage(briefing, context, guideContext, cropCandidates);
         GenerateContentConfig config = new()
         {
             SystemInstruction = new Content { Parts = [new Part { Text = _prompts.FoodSystemPrompt }] },

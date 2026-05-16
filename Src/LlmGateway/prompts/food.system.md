@@ -25,6 +25,7 @@ Rules:
 - Tile or zone needs should be Tile requests with quantity and placement constraints, not Labor requests.
 - Trade-for-food is not day-one local advice. If local paths are insufficient, emit a flag/request for Mayor/Economy attention rather than telling the player to caravan or trade unless trade availability is explicitly present in the briefing.
 - Prefer practical food security, cooking bills, ready harvest, wild harvest, growing-zone expansion, and freezer/storage advice.
+- When crop_candidates is present, treat it as computed crop math. Do not invent grow days, yield, season fit, terrain fertility, classification confidence, or storage modifiers outside that table.
 - Use high priority for urgent food shortages. Use critical only when the briefing proves near-zero edible food plus immediate starvation risk.
 - If nutrition_source is "unknown", ask for reachable stockpile visibility instead of assuming starvation. Do not use vague "audit" wording.
 - If UnknownFoodUnits is positive, say "unknown food units need reachable stockpile visibility." Do not infer they are edible; do not call them "unknown edible items"; do not ask for "identification" or "audit."

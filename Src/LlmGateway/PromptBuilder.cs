@@ -43,16 +43,21 @@ public sealed class PromptBuilder
     public string BuildFoodUserMessage(
         FoodBriefing briefing,
         MinisterBriefingContext context,
-        IReadOnlyList<GuideCitation> guideContext)
+        IReadOnlyList<GuideCitation> guideContext,
+        IReadOnlyList<FoodPromptCropCandidate>? cropCandidates = null)
     {
         IReadOnlyList<GuideContextEntry>? guides = guideContext.Count == 0
             ? null
             : [.. guideContext.Select(c => new GuideContextEntry(c.CiteId, c.Heading, c.SourcePath, c.Snippet))];
+        IReadOnlyList<FoodPromptCropCandidate>? candidates = cropCandidates is null || cropCandidates.Count == 0
+            ? null
+            : cropCandidates;
         FoodPromptPayload payload = new(
             briefing,
             context,
             Enum.GetNames<FoodAdviceType>(),
-            guides);
+            guides,
+            candidates);
         return JsonSerializer.Serialize(payload, UserMessageJson);
     }
 
@@ -79,8 +84,21 @@ internal sealed record FoodPromptPayload(
     [property: JsonPropertyName("briefing")] FoodBriefing Briefing,
     [property: JsonPropertyName("minister_context")] MinisterBriefingContext Context,
     [property: JsonPropertyName("allowed_advice_types")] IReadOnlyList<string> AllowedAdviceTypes,
-    [property: JsonPropertyName("guide_context")] IReadOnlyList<GuideContextEntry>? GuideContext
+    [property: JsonPropertyName("guide_context")] IReadOnlyList<GuideContextEntry>? GuideContext,
+    [property: JsonPropertyName("crop_candidates")] IReadOnlyList<FoodPromptCropCandidate>? CropCandidates
 );
+
+public sealed record FoodPromptCropCandidate(
+    [property: JsonPropertyName("crop_def")] string CropDef,
+    [property: JsonPropertyName("label")] string Label,
+    [property: JsonPropertyName("tiles")] int Tiles,
+    [property: JsonPropertyName("grow_days")] float GrowDays,
+    [property: JsonPropertyName("projected_days_added")] float ProjectedDaysAdded,
+    [property: JsonPropertyName("fits_season")] bool FitsSeason,
+    [property: JsonPropertyName("days_to_winter_margin")] float? DaysToWinterMargin,
+    [property: JsonPropertyName("classification_confidence")] float ClassificationConfidence,
+    [property: JsonPropertyName("storage_multiplier")] float StorageMultiplier,
+    [property: JsonPropertyName("reason")] string Reason);
 
 internal sealed record GuideContextEntry(
     [property: JsonPropertyName("cite_id")] string CiteId,

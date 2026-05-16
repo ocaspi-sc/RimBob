@@ -23,6 +23,8 @@ public sealed record FoodCropCandidate(
     int? DaysToWinter,
     float? DaysToWinterMargin,
     bool FitsSeason,
+    float ClassificationConfidence,
+    float StorageMultiplier,
     float Score,
     string Reason);
 
@@ -32,9 +34,9 @@ public static class FoodCropMath
 
     private static readonly IReadOnlyList<FoodCropProfile> Profiles =
     [
-        new("Plant_Rice", "rice", "RawRice", 3.0f, 1.0f, 6),
-        new("Plant_Potato", "potatoes", "RawPotatoes", 5.8f, 0.4f, 11),
-        new("Plant_Corn", "corn", "RawCorn", 11.3f, 1.0f, 22)
+        new("Plant_Rice", "rice", "RawRice", 3.0f, 1.0f, 6, 0.15f),
+        new("Plant_Potato", "potatoes", "RawPotatoes", 5.8f, 0.4f, 11, 0.35f),
+        new("Plant_Corn", "corn", "RawCorn", 11.3f, 1.0f, 22, 0.75f)
     ];
 
     public static FoodCropRecommendation Recommend(FoodBriefing briefing)
@@ -65,8 +67,24 @@ public static class FoodCropMath
             ? daysToWinter - growDays - SeasonSafetyMarginDays
             : null;
         bool fitsSeason = margin is null or >= 0f;
-        float score = Score(profile, briefing, projectedDaysAdded, fitsSeason, growDays);
-        string reason = Reason(profile, briefing, fitsSeason, margin, growDays, terrainFertility);
+        float classificationConfidence = ClassificationConfidence(briefing);
+        float storageMultiplier = StorageMultiplier(profile, briefing);
+        float score = Score(
+            briefing,
+            projectedDaysAdded,
+            fitsSeason,
+            growDays,
+            classificationConfidence,
+            storageMultiplier);
+        string reason = Reason(
+            profile,
+            briefing,
+            fitsSeason,
+            margin,
+            growDays,
+            terrainFertility,
+            classificationConfidence,
+            storageMultiplier);
 
         return new FoodCropCandidate(
             CropDef: profile.CropDef,
@@ -82,16 +100,19 @@ public static class FoodCropMath
             DaysToWinter: briefing.Season.DaysToWinter,
             DaysToWinterMargin: margin,
             FitsSeason: fitsSeason,
+            ClassificationConfidence: classificationConfidence,
+            StorageMultiplier: storageMultiplier,
             Score: score,
             Reason: reason);
     }
 
     private static float Score(
-        FoodCropProfile profile,
         FoodBriefing briefing,
         float projectedDaysAdded,
         bool fitsSeason,
-        float growDays)
+        float growDays,
+        float classificationConfidence,
+        float storageMultiplier)
     {
         if (!fitsSeason) return -1000f;
 
@@ -104,7 +125,8 @@ public static class FoodCropMath
             _ => 0.5f
         };
 
-        return urgencyWeight / growDays + projectedDaysAdded * 0.05f;
+        float baseScore = urgencyWeight / growDays + projectedDaysAdded * 0.05f;
+        return baseScore * classificationConfidence * storageMultiplier;
     }
 
     private static string Reason(
@@ -113,28 +135,82 @@ public static class FoodCropMath
         bool fitsSeason,
         float? margin,
         float growDays,
-        float? terrainFertility)
+        float? terrainFertility,
+        float classificationConfidence,
+        float storageMultiplier)
     {
+        string context = ContextPhrase(profile, terrainFertility, classificationConfidence, storageMultiplier);
         if (!fitsSeason)
         {
             return briefing.Season.DaysToWinter is { } daysToWinter
-                ? $"{profile.Label} needs {FormatGrowingDays(growDays)} plus margin{TerrainPhrase(terrainFertility)}; only {FormatDayCount(daysToWinter)} to winter."
+                ? $"{profile.Label} needs {FormatGrowingDays(growDays)} plus margin{ContextSuffix(context)}; only {FormatDayCount(daysToWinter)} to winter."
                 : $"{profile.Label} does not fit the current growing window.";
         }
 
         if (profile.CropDef == "Plant_Rice" && briefing.EstimatedDaysOfFood is null or < 20f)
             return margin is null
-                ? $"fastest food crop{TerrainPhrase(terrainFertility)}."
-                : $"fastest food crop with {FormatDayCount(margin.Value)} of winter margin{TerrainPhrase(terrainFertility)}.";
+                ? $"fastest food crop{ContextSuffix(context)}."
+                : $"fastest food crop with {FormatDayCount(margin.Value)} of winter margin{ContextSuffix(context)}.";
 
         if (profile.CropDef == "Plant_Corn")
             return margin is null
-                ? $"long-season crop adds the most raw nutrition{TerrainPhrase(terrainFertility)}."
-                : $"long-season crop fits with {FormatDayCount(margin.Value)} of winter margin{TerrainPhrase(terrainFertility)}.";
+                ? $"long-season crop adds the most raw nutrition{ContextSuffix(context)}."
+                : $"long-season crop fits with {FormatDayCount(margin.Value)} of winter margin{ContextSuffix(context)}.";
 
         return margin is null
-            ? $"middle-speed food crop{TerrainPhrase(terrainFertility)}."
-            : $"middle-speed food crop fits with {FormatDayCount(margin.Value)} of winter margin{TerrainPhrase(terrainFertility)}.";
+            ? $"middle-speed food crop{ContextSuffix(context)}."
+            : $"middle-speed food crop fits with {FormatDayCount(margin.Value)} of winter margin{ContextSuffix(context)}.";
+    }
+
+    private static float ClassificationConfidence(FoodBriefing briefing)
+    {
+        float confidence = briefing.NutritionSource switch
+        {
+            "item_def_catalog" => 1f,
+            "reported" => 0.9f,
+            "item_category_counts" => 0.8f,
+            "fallback_meal_raw_counts" => 0.75f,
+            _ => 0.55f
+        };
+
+        if (!briefing.DataCoverage.HasItemFoodClassification)
+            confidence = Math.Min(confidence, 0.8f);
+
+        int foodUnits = Math.Max(briefing.FoodUnits, 1);
+        float unknownShare = briefing.UnknownFoodUnits / (float)foodUnits;
+        float excludedShare = briefing.ExcludedFoodUnits / (float)foodUnits;
+        confidence -= Math.Min(0.25f, unknownShare * 0.4f);
+        confidence -= Math.Min(0.2f, excludedShare * 0.3f);
+
+        return Math.Clamp(confidence, 0.35f, 1f);
+    }
+
+    private static float StorageMultiplier(FoodCropProfile profile, FoodBriefing briefing)
+    {
+        float storageRisk = StorageRisk(briefing);
+        float multiplier = 1f - (storageRisk * profile.SurplusStorageSensitivity);
+        return Math.Clamp(multiplier, 0.5f, 1f);
+    }
+
+    private static float StorageRisk(FoodBriefing briefing)
+    {
+        if (briefing.Infrastructure.Coolers <= 0)
+            return 0.8f;
+
+        if (!briefing.Storage.HasFoodPlacementSignal)
+            return 0.65f;
+
+        if (briefing.Storage.PositionedFoodUnits <= 0)
+            return 0.55f;
+
+        float coolerShare = briefing.Storage.CoolerAdjacentFoodUnits / (float)briefing.Storage.PositionedFoodUnits;
+        if (coolerShare <= 0f)
+            return 0.55f;
+
+        if (coolerShare < 0.5f)
+            return 0.25f;
+
+        return 0f;
     }
 
     private static float? SelectTerrainFertility(FoodGrowingTerrainSummary terrain, int tiles)
@@ -170,11 +246,38 @@ public static class FoodCropMath
         return profile.GrowDays / Math.Max(0.1f, fertilityFactor);
     }
 
-    private static string TerrainPhrase(float? terrainFertility)
+    private static string ContextPhrase(
+        FoodCropProfile profile,
+        float? terrainFertility,
+        float classificationConfidence,
+        float storageMultiplier)
     {
-        return terrainFertility is null
-            ? "; soil fertility is not known"
-            : $" at fertility {FormatDays(terrainFertility.Value)}; exact zone placement is not computed";
+        List<string> parts =
+        [
+            terrainFertility is null
+                ? "soil fertility is not known"
+                : $"fertility {FormatDays(terrainFertility.Value)}, zone placement not computed"
+        ];
+
+        if (classificationConfidence < 0.8f)
+            parts.Add("buffer classification uncertain");
+
+        if (storageMultiplier < 0.85f)
+        {
+            string storageNote = profile.CropDef == "Plant_Corn"
+                ? "storage/freezer posture weak for surplus crops"
+                : "storage/freezer posture weak";
+            parts.Add(storageNote);
+        }
+
+        return string.Join("; ", parts);
+    }
+
+    private static string ContextSuffix(string context)
+    {
+        return string.IsNullOrWhiteSpace(context)
+            ? ""
+            : $"; {context}";
     }
 
     private static string FormatDays(float days) =>
@@ -192,5 +295,6 @@ public static class FoodCropMath
         string HarvestedThingDef,
         float GrowDays,
         float FertilitySensitivity,
-        int HarvestYield);
+        int HarvestYield,
+        float SurplusStorageSensitivity);
 }

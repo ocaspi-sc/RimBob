@@ -83,10 +83,12 @@ public sealed class MinisterOfFood(
     {
         DateTimeOffset llmAttemptStarted = DateTimeOffset.UtcNow;
         IReadOnlyList<GuideCitation> citations = [];
+        IReadOnlyList<FoodPromptCropCandidate> cropCandidates = BuildCropCandidates(briefing);
+        object? escalationContext = BuildEscalationContext(escalate.Context, cropCandidates);
         try
         {
             citations = await retriever.RetrieveAsync(briefing, ct);
-            FoodLlmResponse response = await llm.CallFoodAsync(briefing, context, citations, ct);
+            FoodLlmResponse response = await llm.CallFoodAsync(briefing, context, citations, cropCandidates, ct);
             string stateSummary = FoodStateSummary.Build(briefing);
             PublishSnapshot(response.Advice, response.Flags, stateSummary);
             await PersistReplayAsync(new MinisterReplayEntry(
@@ -97,7 +99,7 @@ public sealed class MinisterOfFood(
                 Context: context,
                 RuleTrace: null,
                 EscalationReason: escalate.Reason,
-                EscalationContext: escalate.Context,
+                EscalationContext: escalationContext,
                 GuideCitations: citations,
                 Advice: response.Advice,
                 Flags: response.Flags,
@@ -121,7 +123,7 @@ public sealed class MinisterOfFood(
                 Context: context,
                 RuleTrace: null,
                 EscalationReason: escalate.Reason,
-                EscalationContext: escalate.Context,
+                EscalationContext: escalationContext,
                 GuideCitations: citations,
                 Error: new ReplayErrorSummary(ex.GetType().Name, ex.Message),
                 LlmAttemptStarted: llmAttemptStarted), ct);
@@ -144,6 +146,29 @@ public sealed class MinisterOfFood(
     }
 
     private MinisterBriefingContext BuildContext() => BuildContext(agendaStore.Current);
+
+    public static IReadOnlyList<FoodPromptCropCandidate> BuildCropCandidates(FoodBriefing briefing) =>
+        FoodCropMath.Recommend(briefing).Candidates
+            .Take(3)
+            .Select(candidate => new FoodPromptCropCandidate(
+                CropDef: candidate.CropDef,
+                Label: candidate.Label,
+                Tiles: candidate.Tiles,
+                GrowDays: candidate.GrowDays,
+                ProjectedDaysAdded: candidate.ProjectedDaysAdded,
+                FitsSeason: candidate.FitsSeason,
+                DaysToWinterMargin: candidate.DaysToWinterMargin,
+                ClassificationConfidence: candidate.ClassificationConfidence,
+                StorageMultiplier: candidate.StorageMultiplier,
+                Reason: candidate.Reason))
+            .ToList();
+
+    private static object? BuildEscalationContext(
+        object? ruleContext,
+        IReadOnlyList<FoodPromptCropCandidate> cropCandidates) =>
+        cropCandidates.Count == 0
+            ? ruleContext
+            : new FoodEscalationContext(ruleContext, cropCandidates);
 
     public static MinisterBriefingContext BuildContext(MayorAgenda? agenda)
     {
@@ -181,4 +206,8 @@ public sealed class MinisterOfFood(
             return "research";
         return null;
     }
+
+    private sealed record FoodEscalationContext(
+        object? RuleContext,
+        IReadOnlyList<FoodPromptCropCandidate> CropCandidates);
 }

@@ -100,9 +100,12 @@ available. Plant positions are useful spatial context, but the live plant list
 can be thing-like and omit crop/growth/zone fields.
 
 Crop selection should use deterministic candidate math before escalation. The
-candidate math accounts for crop grow time, yield, current food buffer, season
-window, and compact terrain-fertility context. Exact grow-zone placement and
-zone-yield optimization remain out of the current Suggest-mode scope.
+candidate math accounts for crop grow time, yield, current food buffer,
+inventory classification confidence, freezer/storage posture, season window,
+and compact terrain-fertility context. Exact grow-zone placement and zone-yield
+optimization remain out of the current Suggest-mode scope. Food LLM escalation
+receives the compact computed candidate table and must treat it as the source
+of truth for crop math.
 
 The implemented briefing can be narrower than the target. Use
 `FoodBriefing`, `FoodBriefingDerivation`, and Food briefing tests for current
@@ -256,7 +259,7 @@ locations, work capacity, or yield calculations absent from briefing/code.
 ## Open Questions / TODO
 
 - [ ] Define exact food-buffer thresholds from play data.
-- [ ] Add deterministic crop-yield math and computed crop candidates.
+- [x] Add deterministic crop-yield math and computed crop candidates.
 - [ ] Improve hunting value/risk scoring.
 - [ ] Account for caravan provisioning and food removed from the home map.
 - [ ] Decide ownership for drug/textile crops once Economy/Industry/Welfare are

@@ -52,6 +52,13 @@ public sealed class FoodCropMathTests
     {
         FoodBriefing briefing = FoodRulesTests.Briefing(30f) with
         {
+            NutritionSource = "item_def_catalog",
+            DataCoverage = ClassifiedCoverage(),
+            Storage = new FoodStorageSummary(1, 20, null, null)
+            {
+                PositionedFoodUnits = 40,
+                CoolerAdjacentFoodUnits = 40
+            },
             Season = new SeasonContext("Aprimay", 12, 40),
             GrowingTerrain = new FoodGrowingTerrainSummary(
                 HasTerrain: true,
@@ -69,4 +76,63 @@ public sealed class FoodCropMathTests
         recommendation.BestCandidate.GrowDays.Should().BeLessThan(recommendation.BestCandidate.BaseGrowDays);
         recommendation.BestCandidate.Reason.Should().Contain("fertility 1.4");
     }
+
+    [Fact]
+    public void Recommend_UncertainClassification_ReducesCropScore()
+    {
+        FoodBriefing trusted = FoodRulesTests.Briefing(16f) with
+        {
+            FoodUnits = 40,
+            MealsCount = 20,
+            RawFoodCount = 20,
+            NutritionSource = "item_def_catalog",
+            DataCoverage = ClassifiedCoverage()
+        };
+        FoodBriefing uncertain = trusted with
+        {
+            FoodUnits = 100,
+            NutritionSource = "item_category_counts",
+            DataCoverage = UnclassifiedCoverage()
+        };
+
+        FoodCropCandidate trustedRice = FoodCropMath.Recommend(trusted)
+            .Candidates.Single(candidate => candidate.CropDef == "Plant_Rice");
+        FoodCropCandidate uncertainRice = FoodCropMath.Recommend(uncertain)
+            .Candidates.Single(candidate => candidate.CropDef == "Plant_Rice");
+
+        uncertainRice.ClassificationConfidence.Should().BeLessThan(trustedRice.ClassificationConfidence);
+        uncertainRice.Score.Should().BeLessThan(trustedRice.Score);
+        uncertainRice.Reason.Should().Contain("buffer classification uncertain");
+    }
+
+    [Fact]
+    public void Recommend_WeakStorageOnStableBuffer_DownranksCornSurplus()
+    {
+        FoodBriefing briefing = FoodRulesTests.Briefing(30f) with
+        {
+            NutritionSource = "item_def_catalog",
+            DataCoverage = ClassifiedCoverage(),
+            Infrastructure = new FoodInfrastructureSnapshot(0, true, 500f, 1),
+            Storage = new FoodStorageSummary(1, 20, null, null)
+        };
+
+        FoodCropRecommendation recommendation = FoodCropMath.Recommend(briefing);
+        FoodCropCandidate corn = recommendation.Candidates.Single(candidate => candidate.CropDef == "Plant_Corn");
+
+        recommendation.BestCandidate.Should().NotBeNull();
+        recommendation.BestCandidate!.CropDef.Should().NotBe("Plant_Corn");
+        corn.StorageMultiplier.Should().BeLessThan(1f);
+        corn.Reason.Should().Contain("storage/freezer posture weak");
+    }
+
+    private static FoodDataCoverage ClassifiedCoverage() => new(false, false, false, false, false, false)
+    {
+        HasLiveState = true,
+        HasItemFoodClassification = true
+    };
+
+    private static FoodDataCoverage UnclassifiedCoverage() => new(false, false, false, false, false, false)
+    {
+        HasLiveState = true
+    };
 }

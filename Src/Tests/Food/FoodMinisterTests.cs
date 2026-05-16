@@ -19,7 +19,7 @@ public sealed class FoodMinisterTests
     public async Task FirstCycle_StableState_BootstrapsThroughLlm()
     {
         int calls = 0;
-        Harness h = new((_, _, _, _) =>
+        Harness h = new((_, _, _, _, _) =>
         {
             calls++;
             return Task.FromResult(new FoodLlmResponse([], []));
@@ -36,7 +36,7 @@ public sealed class FoodMinisterTests
     public async Task SecondCycle_StableState_UsesRulesWithoutLlm()
     {
         int calls = 0;
-        Harness h = new((_, _, _, _) =>
+        Harness h = new((_, _, _, _, _) =>
         {
             calls++;
             return Task.FromResult(new FoodLlmResponse([], []));
@@ -53,7 +53,7 @@ public sealed class FoodMinisterTests
     [Fact]
     public async Task BootstrapFailure_FallsBackToRules()
     {
-        Harness h = new((_, _, _, _) => throw new InvalidOperationException("boom"));
+        Harness h = new((_, _, _, _, _) => throw new InvalidOperationException("boom"));
         h.SetFoodDays(4f);
 
         await h.Minister.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
@@ -65,7 +65,7 @@ public sealed class FoodMinisterTests
     [Fact]
     public async Task RuleDecision_PublishesAdviceAndFlag_AfterBootstrap()
     {
-        Harness h = new((_, _, _, _) => Task.FromResult(new FoodLlmResponse([], [])));
+        Harness h = new((_, _, _, _, _) => Task.FromResult(new FoodLlmResponse([], [])));
         h.SetFoodDays(35f);
 
         await h.Minister.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
@@ -81,7 +81,7 @@ public sealed class FoodMinisterTests
     public async Task RuleDecision_PersistsReplayRecord_AfterBootstrap()
     {
         CapturingReplayWriter replay = new();
-        Harness h = new((_, _, _, _) => Task.FromResult(new FoodLlmResponse([], [])), replay);
+        Harness h = new((_, _, _, _, _) => Task.FromResult(new FoodLlmResponse([], [])), replay);
         h.SetFoodDays(35f);
 
         await h.Minister.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
@@ -103,7 +103,7 @@ public sealed class FoodMinisterTests
     [Fact]
     public async Task RuleDecision_ReplacesBootstrapAdviceSnapshot()
     {
-        Harness h = new((_, _, _, _) => Task.FromResult(new FoodLlmResponse(
+        Harness h = new((_, _, _, _, _) => Task.FromResult(new FoodLlmResponse(
             [FoodAdvice("bootstrap_1"), FoodAdvice("bootstrap_2")],
             [])));
         h.SetFoodDays(35f);
@@ -121,8 +121,10 @@ public sealed class FoodMinisterTests
     public async Task Escalation_UsesFoodLlmResponse_AfterBootstrap()
     {
         int calls = 0;
-        Harness h = new((_, _, _, _) =>
+        List<IReadOnlyList<FoodPromptCropCandidate>> candidateCalls = [];
+        Harness h = new((_, _, _, cropCandidates, _) =>
         {
+            candidateCalls.Add(cropCandidates);
             calls++;
             return Task.FromResult(calls == 1
                 ? new FoodLlmResponse([], [])
@@ -134,14 +136,17 @@ public sealed class FoodMinisterTests
         h.SetFoodDays(35f);
 
         await h.Minister.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
-        h.SetFoodDays(12f, wildAnimals: 2, dateTimeRaw: "5th of Decembary, 5500, 14h", animalDef: "Wolf");
+        h.SetFoodDays(25f, wildAnimals: 2, dateTimeRaw: "5th of Decembary, 5500, 14h", animalDef: "Wolf");
         await h.Minister.RunPlayCycle(PlayCycleContext.CabinetRefresh, CancellationToken.None);
 
         h.PublishedAdvice.Should().ContainSingle().Which.Id.Should().Be("llm_food");
+        candidateCalls.Should().HaveCount(2);
+        candidateCalls[1].Should().Contain(candidate => candidate.CropDef == "Plant_Rice");
+        candidateCalls[1].Should().Contain(candidate => candidate.CropDef == "Plant_Corn");
         IReadOnlyDictionary<string, string> stateSummaries = h.Bus.ActiveSnapshot().StateSummaries!;
         stateSummaries.Should().ContainKey("Food")
             .WhoseValue.Should().Contain("Stores:");
-        stateSummaries["Food"].Should().Contain("12.0 days");
+        stateSummaries["Food"].Should().Contain("25.0 days");
         stateSummaries["Food"].Should().NotBe("Food is below target and hunting may be viable.");
         h.Flags.Active(FlagSeverity.Medium).Should().ContainSingle().Which.Summary.Should().Be("LLM food flag");
     }
@@ -151,7 +156,7 @@ public sealed class FoodMinisterTests
     {
         CapturingReplayWriter replay = new();
         int calls = 0;
-        Harness h = new((_, _, _, _) =>
+        Harness h = new((_, _, _, _, _) =>
         {
             calls++;
             if (calls == 1) return Task.FromResult(new FoodLlmResponse([], []));

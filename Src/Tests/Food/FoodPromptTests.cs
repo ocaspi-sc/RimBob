@@ -28,6 +28,36 @@ public sealed class FoodPromptTests
     }
 
     [Fact]
+    public void BuildFoodUserMessage_IncludesComputedCropCandidatesWhenProvided()
+    {
+        PromptBuilder builder = new();
+        string json = builder.BuildFoodUserMessage(
+            FoodRulesTests.Briefing(16f),
+            MinisterBriefingContext.Empty,
+            [],
+            [
+                new FoodPromptCropCandidate(
+                    CropDef: "Plant_Rice",
+                    Label: "rice",
+                    Tiles: 36,
+                    GrowDays: 3f,
+                    ProjectedDaysAdded: 2.25f,
+                    FitsSeason: true,
+                    DaysToWinterMargin: 46f,
+                    ClassificationConfidence: 0.9f,
+                    StorageMultiplier: 0.88f,
+                    Reason: "fastest food crop with 46 days of winter margin")
+            ]);
+
+        json.Should().Contain("\"crop_candidates\"");
+        json.Should().Contain("\"crop_def\":\"Plant_Rice\"");
+        json.Should().Contain("\"projected_days_added\":2.25");
+        json.Should().Contain("\"classification_confidence\":0.9");
+        json.Should().Contain("\"storage_multiplier\":0.88");
+        json.Should().Contain("fastest food crop");
+    }
+
+    [Fact]
     public void FoodSystemPrompt_RequiresConcreteNearTermAdvice()
     {
         PromptBuilder builder = new();
@@ -50,6 +80,8 @@ public sealed class FoodPromptTests
         builder.FoodSystemPrompt.Should().NotContain("kind, what, why");
         builder.FoodSystemPrompt.Should().Contain("Do not ask for generic \"labor capacity\"");
         builder.FoodSystemPrompt.Should().Contain("Trade-for-food is not day-one local advice");
+        builder.FoodSystemPrompt.Should().Contain("When crop_candidates is present");
+        builder.FoodSystemPrompt.Should().Contain("computed crop math");
         builder.FoodSystemPrompt.Should().Contain("unknown food units need reachable stockpile visibility");
         builder.FoodSystemPrompt.Should().Contain("forbidden food units excluded from the reachable buffer");
         builder.FoodSystemPrompt.Should().Contain("Do not infer they are edible");
