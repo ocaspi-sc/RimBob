@@ -28,7 +28,7 @@ public static class FoodStateSummary
         stores.Add(Plural(briefing.MealsCount, "meal"));
         stores.Add($"{briefing.RawFoodCount} raw food");
         if (briefing.UnclassifiedFoodUnits > 0)
-            stores.Add($"{briefing.UnclassifiedFoodUnits} unclassified food units");
+            stores.Add(FormatUncountedFoodUnits(briefing));
         string unclassifiedDetails = FormatUnclassifiedDetails(briefing);
 
         if (briefing.EstimatedDaysOfFood is null)
@@ -117,6 +117,17 @@ public static class FoodStateSummary
         return gaps.Count == 0
             ? ""
             : $"Confidence gaps: {string.Join(", ", gaps)}.";
+    }
+
+    private static string FormatUncountedFoodUnits(FoodBriefing briefing)
+    {
+        List<string> parts = [];
+        if (briefing.ExcludedFoodUnits > 0)
+            parts.Add($"{briefing.ExcludedFoodUnits} food units excluded from reachable buffer");
+        if (briefing.UnknownFoodUnits > 0)
+            parts.Add($"{briefing.UnknownFoodUnits} unknown food units");
+
+        return JoinList(parts);
     }
 
     private static string FormatBullets(IEnumerable<string> lines) =>

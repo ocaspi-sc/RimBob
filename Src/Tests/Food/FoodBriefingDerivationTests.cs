@@ -33,6 +33,8 @@ public sealed class FoodBriefingDerivationTests
         b.FallbackNutrition.Should().BeApproximately(10f, 0.001f);
         b.EstimatedDaysOfFood.Should().BeApproximately(6.25f, 0.001f);
         b.UnclassifiedFoodUnits.Should().Be(10);
+        b.ExcludedFoodUnits.Should().Be(0);
+        b.UnknownFoodUnits.Should().Be(10);
         b.MissingBriefingSignals.Should().Contain("food_unit_classification");
     }
 
@@ -58,6 +60,8 @@ public sealed class FoodBriefingDerivationTests
 
         b.EstimatedDaysOfFood.Should().BeNull();
         b.UnclassifiedFoodUnits.Should().Be(46);
+        b.ExcludedFoodUnits.Should().Be(0);
+        b.UnknownFoodUnits.Should().Be(46);
         b.MissingBriefingSignals.Should().Contain("food_unit_classification");
     }
 
@@ -89,6 +93,8 @@ public sealed class FoodBriefingDerivationTests
         b.MealsCount.Should().Be(32);
         b.RawFoodCount.Should().Be(12);
         b.UnclassifiedFoodUnits.Should().Be(8);
+        b.ExcludedFoodUnits.Should().Be(0);
+        b.UnknownFoodUnits.Should().Be(8);
         b.DataCoverage.HasItemFoodClassification.Should().BeTrue();
     }
 
@@ -119,6 +125,8 @@ public sealed class FoodBriefingDerivationTests
         b.MealsCount.Should().Be(32);
         b.RawFoodCount.Should().Be(12);
         b.UnclassifiedFoodUnits.Should().Be(8);
+        b.ExcludedFoodUnits.Should().Be(8);
+        b.UnknownFoodUnits.Should().Be(0);
         b.UnclassifiedFoodItems.Should().HaveCount(2);
         b.UnclassifiedFoodItems.Should().Contain(item =>
             item.Def == "MealSurvivalPack" &&
@@ -131,6 +139,7 @@ public sealed class FoodBriefingDerivationTests
             item.Count == 1 &&
             item.Kind == "raw_food" &&
             item.IsForbidden);
+        b.MissingBriefingSignals.Should().NotContain("food_unit_classification");
     }
 
     [Fact]
@@ -153,6 +162,8 @@ public sealed class FoodBriefingDerivationTests
         b.MealsCount.Should().Be(32);
         b.RawFoodCount.Should().Be(0);
         b.FallbackNutrition.Should().BeApproximately(28.8f, 0.001f);
+        b.ExcludedFoodUnits.Should().Be(7);
+        b.UnknownFoodUnits.Should().Be(0);
         b.UnclassifiedFoodItems.Should().ContainSingle(item =>
             item.Def == "MealSurvivalPack" &&
             item.Count == 7 &&

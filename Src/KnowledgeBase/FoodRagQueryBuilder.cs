@@ -16,7 +16,12 @@ public sealed class FoodRagQueryBuilder : IRagQueryBuilder<FoodBriefing>
             $"Meals {briefing.MealsCount}; raw food {briefing.RawFoodCount}; ready harvest {briefing.ReadyToHarvest}; wild harvest {briefing.WildHarvestCandidates}; animals {briefing.WildAnimalCount}."
         };
         if (briefing.UnclassifiedFoodUnits > 0)
-            parts.Add($"Unclassified food units: {briefing.UnclassifiedFoodUnits}.");
+        {
+            if (briefing.ExcludedFoodUnits > 0)
+                parts.Add($"Food units excluded from reachable buffer: {briefing.ExcludedFoodUnits}.");
+            if (briefing.UnknownFoodUnits > 0)
+                parts.Add($"Unknown food units: {briefing.UnknownFoodUnits}.");
+        }
         if (briefing.Season.DaysToWinter is { } winter)
             parts.Add($"Days to winter: {winter}.");
         if (briefing.Infrastructure.Coolers == 0)

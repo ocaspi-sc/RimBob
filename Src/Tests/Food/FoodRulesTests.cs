@@ -259,7 +259,7 @@ public sealed class FoodRulesTests
     }
 
     [Fact]
-    public void NutritionGapWithUnclassifiedFoodUnits_RequestsStockpileVisibility()
+    public void NutritionGapWithUnknownFoodUnits_RequestsStockpileVisibility()
     {
         FoodBriefing briefing = Briefing(days: null) with
         {
@@ -275,7 +275,7 @@ public sealed class FoodRulesTests
         decision.Trace.Should().Be("nutrition_signal_gap");
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
         advice.AdviceType.Should().Be("manage_food_stockpile");
-        advice.Body.Should().Contain("25 unclassified food units");
+        advice.Body.Should().Contain("25 unknown food units");
         advice.Body.Should().NotContain("audit");
     }
 

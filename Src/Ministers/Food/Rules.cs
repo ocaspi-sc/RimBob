@@ -22,10 +22,10 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                     FoodAdviceType.ManageFoodStockpile,
                     AdvicePriority.Medium,
                     "Food stockpile categories need verification",
-                    $"RIMAPI reports {briefing.UnclassifiedFoodUnits} unclassified food units but no usable nutrition signal. Make those items visible as reachable meals or raw food before treating this as a safe buffer.",
+                    FoodRemainderBody(briefing),
                     "Missing nutrition would make days-of-food unreliable; use the fallback counts until upstream data is fixed.",
-                    [new(AdviceStepKind.SetStockpileZone, "Confirm the stored food is edible and reachable; move it into a visible food stockpile if needed.", Reason: "unclassified food units cannot be converted into days-of-food", Icon: SimpleMealIcon)],
-                    [new(ResourceRequestKind.StockpileSpace, "reachable food stockpile visibility", "unclassified food units cannot be converted into days-of-food", Icon: SimpleMealIcon)],
+                    [new(AdviceStepKind.SetStockpileZone, "Confirm unknown or excluded food is edible and reachable before counting it as buffer.", Reason: "food units outside meals/raw-food counts cannot be converted into days-of-food", Icon: SimpleMealIcon)],
+                    [new(ResourceRequestKind.StockpileSpace, "reachable food stockpile visibility", "food units outside meals/raw-food counts cannot be converted into days-of-food", Icon: SimpleMealIcon)],
                     false);
 
             return DecisionFor(briefing, "unknown_food_state",
@@ -218,11 +218,11 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 "visible meals are forbidden and excluded from the reachable food buffer",
                 Quantity: forbiddenMealCount,
                 Priority: priority));
-        if (briefing.UnclassifiedFoodUnits > 0 && briefing.MealsCount == 0 && briefing.RawFoodCount == 0)
+        if (briefing.UnknownFoodUnits > 0 && briefing.MealsCount == 0 && briefing.RawFoodCount == 0)
             requests.Add(new ResourceRequest(ResourceRequestKind.StockpileSpace,
-                $"reachable stockpile visibility for {briefing.UnclassifiedFoodUnits} unclassified food units",
-                "unclassified_food_units exists, but no meal or raw-food category is visible to Food",
-                Quantity: briefing.UnclassifiedFoodUnits,
+                $"reachable stockpile visibility for {briefing.UnknownFoodUnits} unknown food units",
+                "unknown_food_units exists, but no meal or raw-food category is visible to Food",
+                Quantity: briefing.UnknownFoodUnits,
                 Priority: priority,
                 Icon: SimpleMealIcon));
         if (briefing.ReadyToHarvest > 0 || briefing.WildHarvestCandidates > 0)
@@ -312,12 +312,12 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 Quantity: forbiddenMealCount,
                 Reason: "visible meals are forbidden and excluded from the reachable food buffer",
                 Icon: SimpleMealIcon));
-        if (briefing.UnclassifiedFoodUnits > 0 && briefing.MealsCount == 0 && briefing.RawFoodCount == 0)
+        if (briefing.UnknownFoodUnits > 0 && briefing.MealsCount == 0 && briefing.RawFoodCount == 0)
             steps.Add(new AdviceStep(
                 AdviceStepKind.SetStockpileZone,
-                $"Make {briefing.UnclassifiedFoodUnits} unclassified food units visible in a reachable food stockpile; treat the buffer as zero if they are not edible.",
-                Quantity: briefing.UnclassifiedFoodUnits,
-                Reason: "unclassified_food_units exists, but no meal or raw-food category is visible to Food",
+                $"Make {briefing.UnknownFoodUnits} unknown food units visible in a reachable food stockpile; treat the buffer as zero if they are not edible.",
+                Quantity: briefing.UnknownFoodUnits,
+                Reason: "unknown_food_units exists, but no meal or raw-food category is visible to Food",
                 Icon: SimpleMealIcon));
         if (briefing.ReadyToHarvest > 0)
             steps.Add(HarvestStep(briefing, briefing.EstimatedDaysOfFood ?? 0f));
@@ -572,6 +572,21 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         return forbiddenMealCount > 0
             ? $"{sentence} {forbiddenMealCount} forbidden {ForbiddenMealLabel(briefing, forbiddenMealCount)} are visible but not counted as reachable food."
             : sentence;
+    }
+
+    private static string FoodRemainderBody(FoodBriefing briefing)
+    {
+        if (briefing.UnknownFoodUnits > 0 && briefing.ExcludedFoodUnits > 0)
+        {
+            return $"RIMAPI reports {briefing.UnknownFoodUnits} unknown food units plus {briefing.ExcludedFoodUnits} food units excluded from the reachable buffer. Make the unknown items visible as reachable meals or raw food before treating them as a safe buffer.";
+        }
+
+        if (briefing.UnknownFoodUnits > 0)
+        {
+            return $"RIMAPI reports {briefing.UnknownFoodUnits} unknown food units but no usable nutrition signal. Make those items visible as reachable meals or raw food before treating this as a safe buffer.";
+        }
+
+        return $"RIMAPI reports {briefing.ExcludedFoodUnits} food units excluded from the reachable buffer and no usable nutrition signal. Make them reachable before treating this as a safe buffer.";
     }
 
     private static int ForbiddenMealCount(FoodBriefing briefing) =>

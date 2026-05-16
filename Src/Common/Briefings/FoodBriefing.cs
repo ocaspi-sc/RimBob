@@ -36,6 +36,11 @@ public sealed record FoodBriefing(
 
     public IReadOnlyList<FoodUnclassifiedItem> UnclassifiedFoodItems { get; init; } = [];
 
+    public int ExcludedFoodUnits =>
+        Math.Min(UnclassifiedFoodUnits, UnclassifiedFoodItems.Sum(item => Math.Max(0, item.Count)));
+
+    public int UnknownFoodUnits => Math.Max(0, UnclassifiedFoodUnits - ExcludedFoodUnits);
+
     public IReadOnlyList<string> MissingBriefingSignals
     {
         get
@@ -43,7 +48,7 @@ public sealed record FoodBriefing(
             List<string> signals = [];
             if (!DataCoverage.HasLiveState)
                 signals.Add("live_state");
-            if (UnclassifiedFoodUnits > 0)
+            if (UnknownFoodUnits > 0)
                 signals.Add("food_unit_classification");
             if ((ReadyToHarvest > 0 || WildHarvestCandidates > 0 || CropBreakdown.Count > 0) &&
                 !DataCoverage.HasPlantPositions)

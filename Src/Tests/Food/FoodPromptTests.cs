@@ -22,6 +22,8 @@ public sealed class FoodPromptTests
         json.Should().Contain("stabilize food");
         json.Should().Contain("UnclassifiedFoodUnits");
         json.Should().Contain("UnclassifiedFoodItems");
+        json.Should().Contain("UnknownFoodUnits");
+        json.Should().Contain("ExcludedFoodUnits");
         json.Should().Contain("MissingBriefingSignals");
     }
 
@@ -48,8 +50,8 @@ public sealed class FoodPromptTests
         builder.FoodSystemPrompt.Should().NotContain("kind, what, why");
         builder.FoodSystemPrompt.Should().Contain("Do not ask for generic \"labor capacity\"");
         builder.FoodSystemPrompt.Should().Contain("Trade-for-food is not day-one local advice");
-        builder.FoodSystemPrompt.Should().Contain("unclassified food units need reachable stockpile visibility");
-        builder.FoodSystemPrompt.Should().Contain("UnclassifiedFoodItems names forbidden meals");
+        builder.FoodSystemPrompt.Should().Contain("unknown food units need reachable stockpile visibility");
+        builder.FoodSystemPrompt.Should().Contain("forbidden food units excluded from the reachable buffer");
         builder.FoodSystemPrompt.Should().Contain("Do not infer they are edible");
         builder.FoodSystemPrompt.Should().Contain("MissingBriefingSignals and UnimplementedBriefingSignals");
         builder.FoodSystemPrompt.Should().Contain("notes field is a terse trace label");

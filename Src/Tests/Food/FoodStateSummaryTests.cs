@@ -56,7 +56,9 @@ public sealed class FoodStateSummaryTests
 
         string summary = FoodStateSummary.Build(briefing);
 
-        summary.Should().Contain("25 unclassified food units");
+        briefing.ExcludedFoodUnits.Should().Be(0);
+        briefing.UnknownFoodUnits.Should().Be(25);
+        summary.Should().Contain("25 unknown food units");
         summary.Should().Contain("days-of-food cannot be estimated");
         summary.Should().NotContain("edible");
     }
@@ -78,9 +80,13 @@ public sealed class FoodStateSummaryTests
 
         string summary = FoodStateSummary.Build(briefing);
 
-        summary.Should().Contain("8 unclassified food units");
+        briefing.ExcludedFoodUnits.Should().Be(8);
+        briefing.UnknownFoodUnits.Should().Be(0);
+        summary.Should().Contain("8 food units excluded from reachable buffer");
+        summary.Should().NotContain("unknown food units");
         summary.Should().Contain("7 forbidden packaged survival meals at (62,0,219)");
         summary.Should().Contain("1 forbidden squirrel (dead) at (83,0,38)");
+        summary.Should().NotContain("food_unit_classification");
     }
 
     [Fact]
