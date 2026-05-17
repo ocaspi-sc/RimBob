@@ -42,13 +42,15 @@
 
 ### Current implementation order
 
-1. [ ] **Stabilize Mayor inputs.** Finish the remaining live-state data gaps above; M3 now includes fallback food nutrition so Food is not blocked by `total_nutrition == 0`.
-2. [x] **Ship Food M3 end to end.** Briefing fields, initial rules, first flag contract, Mayor digest ingestion, dashboard rendering for ordered advice steps, then fixtures.
-3. [ ] **Add minimal CoS handling.** Implement the Mayor-side helper for dedupe, lead framing, and tactical-alert vs digest routing before multiple feeders exist.
-4. [ ] **Add Construction.** Food's first live dependencies are cooler / power / room / storage recommendations, not Defense coupling.
-5. [ ] **Add Defense.**
-6. [ ] **Resolve Welfare / Medical sequencing.** Decide whether they land together or whether Medical becomes its own follow-on slice (`M4.5` / second wave), then implement Welfare.
-7. [ ] **Wire Pushback feedback.** Land M5 only after multiple ministers are emitting advice.
+1. [ ] **Verify Food safe `unforbid` Assisted Apply end to end.** Confirm the RIMAPI fork endpoint, RimBob backend executor, dashboard Apply UI, validation/read-back, and live game behavior work together.
+2. [ ] **Add harvestability/growth plant signals.** Add `is_harvestable` / `growth_progress` to RIMAPI `/map/plants`, then wire Food harvest logic and `mark_harvest` validation to those fields.
+3. [ ] **Investigate and fix/patch `total_nutrition == 0`.** Decide whether to patch RIMAPI upstream or compute a documented RimBob fallback from stored meal/raw-food counts.
+4. [x] **Ship Food M3 end to end.** Briefing fields, initial rules, first flag contract, Mayor digest ingestion, dashboard rendering for ordered advice steps, then fixtures.
+5. [ ] **Add minimal CoS handling.** Implement the Mayor-side helper for dedupe, lead framing, and tactical-alert vs digest routing before multiple feeders exist.
+6. [ ] **Add Construction.** Food's first live dependencies are cooler / power / room / storage recommendations, not Defense coupling.
+7. [ ] **Add Defense.**
+8. [ ] **Resolve Welfare / Medical sequencing.** Decide whether they land together or whether Medical becomes its own follow-on slice (`M4.5` / second wave), then implement Welfare.
+9. [ ] **Wire Pushback feedback.** Land M5 only after multiple ministers are emitting advice.
 
 ### Next (post-M3 follow-ups)
 
