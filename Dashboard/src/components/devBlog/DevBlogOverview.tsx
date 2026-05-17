@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { fetchDevBlogHistory } from '../../api/devBlog';
 import type {
-  DevBlogCommitSummary,
   DevBlogHistory,
   DevBlogHistogramBin,
   DevBlogLocPoint,
@@ -148,7 +147,7 @@ function DevBlogContent({ history }: { history: DevBlogHistory }) {
         </div>
       </section>
 
-      <DisclosureSection title={<SemanticLabel icon={iconForField('category')}><span>Pie charts</span></SemanticLabel>} defaultOpen meta="area, author, topic">
+      <DisclosureSection title={<SemanticLabel icon={iconForField('category')}><span>Pie charts</span></SemanticLabel>} defaultOpen meta="area, topic">
         <div className="dev-blog-pie-grid">
           <DonutChart
             title="Churn by area"
@@ -156,14 +155,6 @@ function DevBlogContent({ history }: { history: DevBlogHistory }) {
               label: area.area,
               value: area.churn,
               note: `${formatNumber(area.commitCount)} commits`,
-            }))}
-          />
-          <DonutChart
-            title="Commits by author"
-            slices={history.authorSlices.slice(0, 7).map(author => ({
-              label: author.label,
-              value: author.count,
-              note: `${formatNumber(author.churn)} lines`,
             }))}
           />
           <DonutChart
@@ -175,10 +166,6 @@ function DevBlogContent({ history }: { history: DevBlogHistory }) {
             }))}
           />
         </div>
-      </DisclosureSection>
-
-      <DisclosureSection title={<SemanticLabel icon={iconForField('commit')}><span>Largest commits</span></SemanticLabel>} meta={`${history.largestCommits.length} commits`}>
-        <LargestCommitTable commits={history.largestCommits} />
       </DisclosureSection>
     </div>
   );
@@ -377,34 +364,6 @@ function DonutChart({ slices, title }: { slices: PieSlice[]; title: string }) {
         </div>
       )}
     </section>
-  );
-}
-
-function LargestCommitTable({ commits }: { commits: DevBlogCommitSummary[] }) {
-  if (commits.length === 0) {
-    return <EmptyState code="NO COMMITS">No commits were returned from master.</EmptyState>;
-  }
-
-  return (
-    <div className="dev-commit-table">
-      {commits.map(commit => (
-        <article key={commit.hash} className="dev-commit-row">
-          <div>
-            <code>{commit.shortHash}</code>
-            <span>{formatDate(commit.at)}</span>
-          </div>
-          <div>
-            <strong>{commit.subject}</strong>
-            <small>{commit.author} - {commit.tags.slice(0, 4).join(', ')}</small>
-          </div>
-          <div>
-            <span>+{formatNumber(commit.additions)}</span>
-            <span>-{formatNumber(commit.deletions)}</span>
-            <span>{formatNumber(commit.filesChanged)} files</span>
-          </div>
-        </article>
-      ))}
-    </div>
   );
 }
 

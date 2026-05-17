@@ -80,8 +80,8 @@ visually and functionally distinct:
 - ANALYTICS is the interpreted live-signal surface. It summarizes advice mix,
   colony pressure, SSE health, and candidate future analytics.
 - DEV BLOG is the repository-history surface. It reads the local Git `master`
-  history, turns commits into topic timelines, churn/LOC charts, pie summaries,
-  largest-commit callouts, and editorial suggestions.
+  history, turns commits into topic timelines, churn/LOC charts, area/topic pie
+  summaries, and editorial suggestions.
 
 SYSTEM, ANALYTICS, and DEV BLOG may read from bounded dashboard inputs, but each
 keeps a separate role: SYSTEM renders raw/source diagnostics, ANALYTICS renders
@@ -242,8 +242,8 @@ DEV BLOG owns:
 
 - Read-only analytics over every commit reachable from local Git `master`.
 - Topic-tag timelines derived from commit subjects and touched paths.
-- Commit-size histogram, cumulative net LOC growth, largest-commit callouts,
-  and pie/donut summaries by area, author, and topic.
+- Commit-size histogram, cumulative net LOC growth, and pie/donut summaries by
+  area and topic.
 - Creative suggestions for release-note lanes, follow-up checks, and future
   archaeology views.
 
