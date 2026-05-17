@@ -128,20 +128,24 @@ function RuleDiagnosticsPanel({ details }: { details: RuleTraceDetails }) {
           <span>{details.selectedRule ?? 'none'}</span>
         </div>
       </div>
-      <DynamicTable
-        rows={details.matchedSignals}
-        preferredColumns={['rule', 'outcome', 'reason']}
-        emptyMessage="No rules matched."
-      />
+      <div className="rule-diagnostics-table">
+        <DynamicTable
+          rows={details.matchedSignals}
+          preferredColumns={['rule', 'outcome', 'reason']}
+          emptyMessage="No rules matched."
+        />
+      </div>
       {details.suppressedCandidates.length > 0 && (
         <DisclosureSection
           title={<SemanticLabel icon={iconForView('rules')}><span>Suppressed candidates</span></SemanticLabel>}
           meta={`${details.suppressedCandidates.length} lower-priority matches`}
         >
-          <DynamicTable
-            rows={details.suppressedCandidates}
-            preferredColumns={['rule', 'outcome', 'reason']}
-          />
+          <div className="rule-diagnostics-table">
+            <DynamicTable
+              rows={details.suppressedCandidates}
+              preferredColumns={['rule', 'outcome', 'reason']}
+            />
+          </div>
         </DisclosureSection>
       )}
     </DisclosureSection>

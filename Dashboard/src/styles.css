@@ -1418,6 +1418,17 @@ code {
   overflow-wrap: anywhere;
 }
 
+.rule-diagnostics-table .dynamic-table {
+  min-width: 760px;
+}
+
+.rule-diagnostics-table .dynamic-row {
+  grid-template-columns:
+    minmax(190px, 0.9fr)
+    minmax(92px, 0.45fr)
+    minmax(360px, 2fr);
+}
+
 .json-tree {
   font-family: "Cascadia Mono", "Consolas", monospace;
   font-size: 0.82rem;
