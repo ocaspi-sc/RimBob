@@ -2,6 +2,12 @@
 
 Cached digest of the upstream [RIMAPI](https://github.com/IlyaChichkov/RIMAPI) docs at [api.html](https://ilyachichkov.github.io/RIMAPI/api.html). The full reference is large (167 endpoints, v1.9.0); this file exists so future agents can answer "is there an endpoint for X?" without re-fetching the live docs.
 
+RimBob's active runtime mod is the local fork at `C:\dev\RIMAPI-for-RimBob`
+(repo `ocaspi-sc/RIMAPI-for-RimBob`), installed into RimWorld as
+`RIMAPI-for-RimBob` with package id `ocaspi.rimapi.rimbob`. Endpoint changes
+needed by RimBob should land in that sibling fork, not in this repo and not in
+the upstream `IlyaChichkov/RIMAPI` checkout.
+
 If you need an endpoint not listed here, fetch the live docs and append to this file.
 
 > **Verified vs. cached.** The catalogue below was distilled from upstream docs and is **not** all field-checked against the running mod. Verified shapes are called out inline as slices wire them into ingestion. Several DTO field names that previously diverged from the live API have been corrected against the running RIMAPI (e.g. `tick` → `game_tick`, `wealth` → `colony_wealth`, `paused` → `is_paused`, `mapId` → `map_id`); other endpoint DTOs remain speculative until a minister actually wires them.
@@ -18,7 +24,9 @@ If you need an endpoint not listed here, fetch the live docs and append to this 
 - **Coords:** `{ "x", "y", "z" }`
 - **Status codes:** 200 / 400 / 404 / 500
 - **SSE:** the `/stream/*` endpoints under Camera Controller stream the **camera video feed**, not game events. There are no event SSE endpoints — poll for game events. (See [state-store.md](state-store.md).)
-- **Discovery:** `GET /dev/endpoints` lists every endpoint; `GET /docs` returns docs.
+- **Discovery:** `GET /api/v1/dev/endpoints` lists every endpoint. The
+  unprefixed `/dev/endpoints` and `/docs` routes returned 404 in the live
+  RimBob fork smoke check.
 
 ### Collection DTO rule
 
@@ -224,7 +232,7 @@ and other per-instance hard cases are skipped or fetched lazily.
 ### DevTools
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/dev/endpoints` | discoverable list of every endpoint |
+| GET | `/dev/endpoints` (full path `/api/v1/dev/endpoints`) | discoverable list of every endpoint |
 | GET | `/dev/materials-atlas` / POST `/dev/materials-atlas/clear` | atlas |
 | POST | `/dev/console` | run dev console action |
 | POST | `/dev/stuff/color` | recolor stuff def |

@@ -47,11 +47,12 @@ one allowlisted non-pawn RIMAPI write, refreshes state, and reports the result.
 
 - Verify the live `order/designate/area` request shape against RIMAPI docs/live
   smoke before wiring harvest.
-- Add a companion RIMAPI endpoint for safe unforbid in the RIMAPI mod repo, not
-  in RimBob Host. Use a separate RIMAPI worktree/branch for that change. If the
-  RIMAPI repo is not available locally, stop `unforbid` implementation after the
-  RimBob-side contract/client/test scaffolding and leave it blocked on the
-  explicit upstream endpoint dependency.
+- Add a companion RIMAPI endpoint for safe unforbid in the sibling fork repo at
+  `C:\dev\RIMAPI-for-RimBob` (`ocaspi-sc/RIMAPI-for-RimBob`), not in RimBob
+  Host. Use a separate RIMAPI branch for that change. If the fork repo is not
+  available locally, stop `unforbid` implementation after the RimBob-side
+  contract/client/test scaffolding and leave it blocked on the explicit fork
+  endpoint dependency.
 - Proposed RIMAPI endpoint: `POST /api/v1/order/unforbid`, scoped to map item
   ids.
 - The unforbid endpoint rejects empty batches, missing targets, non-map things,
@@ -159,5 +160,7 @@ one allowlisted non-pawn RIMAPI write, refreshes state, and reports the result.
 - No pawn allocation, bills, schedules, medical/prisoner actions, combat
   controls, broad zone editing, or autonomous execution is introduced.
 - `/api/system/health` shows recent Assisted Apply attempts.
-- Sources to verify during implementation: [RIMAPI repo](https://github.com/IlyaChichkov/RIMAPI)
-  and [RIMAPI API docs](https://ilyachichkov.github.io/RIMAPI/api.html).
+- Sources to verify during implementation: local fork
+  `C:\dev\RIMAPI-for-RimBob`, [fork repo](https://github.com/ocaspi-sc/RIMAPI-for-RimBob),
+  upstream [RIMAPI repo](https://github.com/IlyaChichkov/RIMAPI), and
+  [RIMAPI API docs](https://ilyachichkov.github.io/RIMAPI/api.html).

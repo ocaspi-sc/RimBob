@@ -127,7 +127,7 @@ Every in-game action should eventually map to one primary owning minister. The f
 
 ## External Dependencies
 
-**RIMAPI** — https://github.com/IlyaChichkov/RIMAPI. RimWorld mod embedding a REST + SSE server. 167 endpoints. GPL-3.0; we call over HTTP only (no linking).
+**RIMAPI** — active runtime mod is the local fork at `C:\dev\RIMAPI-for-RimBob` (repo `ocaspi-sc/RIMAPI-for-RimBob`), derived from https://github.com/IlyaChichkov/RIMAPI. RimWorld mod embedding a REST + SSE server. 167 endpoints. GPL-3.0; we call over HTTP only (no linking).
 
 **Google GenAI SDK (`Google.GenAI`)** — LLM calls via Gemini Developer API (Google AI Studio) in MVP. Same client can later target Vertex AI. Streaming for UI; non-streaming for background minister thinking.
 
