@@ -124,6 +124,11 @@ Windows launcher can jump directly to a console scope or minister inspection
 view. Query values are validated against the same registries as stored
 selection and fall back safely when stale.
 
+When adding, removing, or renaming top-level dashboard scopes or minister views,
+update the local launcher tray menu in the same change. Individual panels do not
+need tray commands unless they are promoted into a first-class scope or minister
+view.
+
 Panel registries are frontend implementation details. Do not render registry ids
 or the full registered view list inside the normal minister workspace.
 

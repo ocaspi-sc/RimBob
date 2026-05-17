@@ -148,6 +148,10 @@ scope/view combinations in Chrome, or stop the Host; the icon exits when the
 Host exits. If Chrome is unavailable, dashboard commands fall back to the
 default browser.
 
+The tray menu mirrors first-class dashboard scopes and minister views. Keep it
+in sync when those registries change; individual dashboard panels are not tray
+commands unless they become first-class scopes or views.
+
 Use `run-rimbob.ps1 -Foreground` when terminal output must stay attached to the
 current shell for debugging or verification.
 
