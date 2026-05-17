@@ -1818,7 +1818,7 @@ code {
 
 .icon-cache-group {
   display: grid;
-  gap: 5px;
+  gap: 3px;
 }
 
 .icon-cache-group-header {
@@ -1842,31 +1842,23 @@ code {
 .icon-cache-strip {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
-  padding: 4px 0 2px;
+  gap: 2px;
+  padding: 2px 0 0;
 }
 
 .icon-cache-tile {
   align-items: center;
-  background: rgba(0, 0, 0, 0.18);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 5px;
   display: grid;
-  flex: 0 0 48px;
-  gap: 3px;
+  flex: 0 0 28px;
   justify-items: center;
-  min-height: 49px;
-  padding: 4px 3px;
+  min-height: 28px;
+  padding: 0;
 }
 
-.icon-cache-tile code {
-  color: var(--muted);
-  font-size: 0.55rem;
-  max-width: 42px;
-  overflow: hidden;
-  text-align: center;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.icon-cache-tile .game-icon {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
 }
 
 @media (max-width: 1180px) {

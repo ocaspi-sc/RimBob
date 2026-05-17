@@ -269,7 +269,6 @@ export function SystemOverview({
                             size="sm"
                             src={file.publicPath}
                           />
-                          <code>{file.id}</code>
                         </div>
                       ))}
                     </div>
