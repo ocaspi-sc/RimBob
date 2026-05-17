@@ -10,7 +10,9 @@ public sealed class IconCacheService
 {
     private const string ContentTypePng = "image/png";
     private const int WarmConcurrency = 2;
+    private const int DefaultWarmAttempts = 3;
     private const int MaxStatusFailures = 100;
+    private static readonly TimeSpan DefaultWarmRetryDelay = TimeSpan.FromMilliseconds(400);
     private static readonly byte[] PngSignature = [137, 80, 78, 71, 13, 10, 26, 10];
     private static readonly Regex PawnPortraitKeyPattern = new(
         "^(?<pawnId>[0-9]+)-(?<width>[0-9]+)x(?<height>[0-9]+)-(?<direction>[A-Za-z]+)$",
@@ -25,13 +27,22 @@ public sealed class IconCacheService
     private readonly string manifestPath;
     private readonly RimApiClient rimApi;
     private readonly ILogger<IconCacheService> log;
+    private readonly int warmAttempts;
+    private readonly TimeSpan warmRetryDelay;
 
-    public IconCacheService(string rootDirectory, RimApiClient rimApi, ILogger<IconCacheService> log)
+    public IconCacheService(
+        string rootDirectory,
+        RimApiClient rimApi,
+        ILogger<IconCacheService> log,
+        int warmAttempts = DefaultWarmAttempts,
+        TimeSpan? warmRetryDelay = null)
     {
         this.rootDirectory = Path.GetFullPath(rootDirectory);
         manifestPath = Path.Combine(this.rootDirectory, "icon-cache-manifest.json");
         this.rimApi = rimApi;
         this.log = log;
+        this.warmAttempts = Math.Max(1, warmAttempts);
+        this.warmRetryDelay = warmRetryDelay ?? DefaultWarmRetryDelay;
     }
 
     public async Task<IconFile> GetItemIconAsync(string defName, CancellationToken ct = default) =>
@@ -216,35 +227,62 @@ public sealed class IconCacheService
         await gate.WaitAsync(ct);
         try
         {
-            if (candidate.Kind == "item")
-            {
-                await GetItemIconAsync(candidate.Id, ct);
-            }
-            else if (candidate.Kind == "terrain")
-            {
-                await GetTerrainIconAsync(candidate.Id, ct);
-            }
-            else if (candidate.Kind == "faction")
-            {
-                await GetFactionIconAsync(int.Parse(candidate.Id, CultureInfo.InvariantCulture), ct);
-            }
-            else
+            if (candidate.Kind is not ("item" or "terrain" or "faction"))
             {
                 return new IconWarmResult(candidate.Kind, candidate.Id, false, "unknown icon kind");
             }
 
-            return new IconWarmResult(candidate.Kind, candidate.Id, true, null);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            log.LogDebug(ex, "Icon warm failed for {IconKind} {IconId}", candidate.Kind, candidate.Id);
-            return new IconWarmResult(candidate.Kind, candidate.Id, false, ex.Message);
+            Exception? lastError = null;
+            for (int attempt = 1; attempt <= warmAttempts; attempt++)
+            {
+                try
+                {
+                    await FetchCandidateAsync(candidate, ct);
+                    return new IconWarmResult(candidate.Kind, candidate.Id, true, null);
+                }
+                catch (Exception ex) when (ex is ArgumentException)
+                {
+                    // Bad/unsafe key — deterministic, retrying cannot help.
+                    log.LogDebug(ex, "Icon warm rejected {IconKind} {IconId}", candidate.Kind, candidate.Id);
+                    return new IconWarmResult(candidate.Kind, candidate.Id, false, ex.Message);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    lastError = ex;
+                    log.LogDebug(
+                        ex,
+                        "Icon warm attempt {Attempt}/{Attempts} failed for {IconKind} {IconId}",
+                        attempt,
+                        warmAttempts,
+                        candidate.Kind,
+                        candidate.Id);
+                    if (attempt < warmAttempts && warmRetryDelay > TimeSpan.Zero)
+                    {
+                        await Task.Delay(warmRetryDelay * attempt, ct);
+                    }
+                }
+            }
+
+            return new IconWarmResult(
+                candidate.Kind,
+                candidate.Id,
+                false,
+                lastError?.Message ?? "unknown error");
         }
         finally
         {
             gate.Release();
         }
     }
+
+    private Task<IconFile> FetchCandidateAsync(IconWarmCandidate candidate, CancellationToken ct) =>
+        candidate.Kind switch
+        {
+            "item" => GetItemIconAsync(candidate.Id, ct),
+            "terrain" => GetTerrainIconAsync(candidate.Id, ct),
+            "faction" => GetFactionIconAsync(int.Parse(candidate.Id, CultureInfo.InvariantCulture), ct),
+            _ => throw new ArgumentException($"unknown icon kind: {candidate.Kind}")
+        };
 
     private async Task<IconFile> GetCachedPngAsync(
         string kind,

@@ -360,16 +360,102 @@ public sealed class IconCacheServiceTests
         }
     }
 
+    [Fact]
+    public async Task WarmStaticAsync_RetriesTransientImageFailureThenSucceeds()
+    {
+        string root = NewTempRoot();
+        try
+        {
+            int imageCalls = 0;
+            IconCacheService sut = NewService(root, request =>
+            {
+                string path = request.RequestUri?.PathAndQuery ?? string.Empty;
+                if (path.Contains("def/all", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Json("""
+                        {
+                          "success": true,
+                          "data": {
+                            "things_defs": [
+                              {
+                                "def_name": "FlakyThing",
+                                "label": "flaky thing",
+                                "category": "Item",
+                                "thing_class": "ThingWithComps",
+                                "is_item": true,
+                                "is_plant": false,
+                                "is_medicine": false,
+                                "is_drug": false,
+                                "nutrition": 0.0,
+                                "stack_limit": 1
+                              }
+                            ],
+                            "terrain_defs": []
+                          },
+                          "errors": null,
+                          "warnings": null,
+                          "timestamp": null
+                        }
+                        """);
+                }
+
+                if (path.Equals("/api/v1/factions", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Json("""
+                        { "success": true, "data": [], "errors": null, "warnings": null, "timestamp": null }
+                        """);
+                }
+
+                if (path.Contains("item/image", StringComparison.OrdinalIgnoreCase))
+                {
+                    int call = Interlocked.Increment(ref imageCalls);
+                    if (call == 1)
+                    {
+                        return Json("""
+                            {
+                              "success": true,
+                              "data": { "result": "missing", "image_base64": null },
+                              "errors": null, "warnings": null, "timestamp": null
+                            }
+                            """);
+                    }
+
+                    return ImageEnvelope("FlakyThing");
+                }
+
+                return new HttpResponseMessage(HttpStatusCode.NotFound);
+            });
+
+            IconWarmSummary summary = await sut.WarmStaticAsync();
+
+            imageCalls.Should().Be(2);
+            summary.Succeeded.Should().Be(1);
+            summary.Failed.Should().Be(0);
+            summary.Failures.Should().BeEmpty();
+            sut.GetStatus().FileCount.Should().Be(1);
+        }
+        finally
+        {
+            DeleteTempRoot(root);
+        }
+    }
+
     private static IconCacheService NewService(
         string root,
-        Func<HttpRequestMessage, HttpResponseMessage> handler)
+        Func<HttpRequestMessage, HttpResponseMessage> handler,
+        int warmAttempts = 3)
     {
         HttpClient http = new(new DelegateHandler(handler))
         {
             BaseAddress = new Uri("http://localhost:8765/")
         };
         RimApiClient rimApi = new(http);
-        return new IconCacheService(root, rimApi, NullLogger<IconCacheService>.Instance);
+        return new IconCacheService(
+            root,
+            rimApi,
+            NullLogger<IconCacheService>.Instance,
+            warmAttempts,
+            TimeSpan.Zero);
     }
 
     private static string NewTempRoot() =>
