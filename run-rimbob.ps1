@@ -24,6 +24,34 @@ if (-not [string]::IsNullOrWhiteSpace($ListenUrl)) {
     $dashboardUrl = $ListenUrl
 }
 
+$dashboardConsoleScopes = @(
+    [pscustomobject]@{ Label = "SYSTEM"; Scope = "system" },
+    [pscustomobject]@{ Label = "INFO"; Scope = "info" },
+    [pscustomobject]@{ Label = "ANALYTICS"; Scope = "analytics" }
+)
+
+$dashboardMinisterScopes = @(
+    [pscustomobject]@{ Label = "Mayor"; Scope = "mayor"; Planned = $false },
+    [pscustomobject]@{ Label = "Food"; Scope = "food"; Planned = $false },
+    [pscustomobject]@{ Label = "Construction"; Scope = "construction"; Planned = $true },
+    [pscustomobject]@{ Label = "Defense"; Scope = "defense"; Planned = $true },
+    [pscustomobject]@{ Label = "Welfare"; Scope = "welfare"; Planned = $true },
+    [pscustomobject]@{ Label = "Medical"; Scope = "medical"; Planned = $true },
+    [pscustomobject]@{ Label = "Research"; Scope = "research"; Planned = $true },
+    [pscustomobject]@{ Label = "Industry"; Scope = "industry"; Planned = $true },
+    [pscustomobject]@{ Label = "Economy"; Scope = "economy"; Planned = $true },
+    [pscustomobject]@{ Label = "Chief of Staff"; Scope = "chief_of_staff"; Planned = $true }
+)
+
+$dashboardMinisterViews = @(
+    [pscustomobject]@{ Label = "System Prompt"; View = "prompt" },
+    [pscustomobject]@{ Label = "Briefing"; View = "briefing" },
+    [pscustomobject]@{ Label = "RAG"; View = "rag" },
+    [pscustomobject]@{ Label = "Rules"; View = "rules" },
+    [pscustomobject]@{ Label = "Raw LLM Output"; View = "raw_llm" },
+    [pscustomobject]@{ Label = "Advice"; View = "advice" }
+)
+
 function Invoke-Step {
     param(
         [Parameter(Mandatory = $true)]
@@ -154,6 +182,81 @@ function Stop-TrayHost {
     }
 }
 
+function Get-DashboardViewUrl {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Scope,
+
+        [string]$View = ""
+    )
+
+    $baseUrl = $script:trayDashboardUrl.TrimEnd("/")
+    $query = "scope=$([System.Uri]::EscapeDataString($Scope))"
+    if (-not [string]::IsNullOrWhiteSpace($View)) {
+        $query = "$query&view=$([System.Uri]::EscapeDataString($View))"
+    }
+
+    return "$baseUrl/?$query"
+}
+
+function Add-DashboardMenuCommand {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$Items,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Label,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Scope,
+
+        [string]$View = ""
+    )
+
+    $item = $Items.Add($Label)
+    $item.Tag = Get-DashboardViewUrl -Scope $Scope -View $View
+    $item.Add_Click({
+        param($Sender, $EventArgs)
+        Start-Process ([string]$Sender.Tag)
+    })
+
+    return $item
+}
+
+function Add-DashboardViewMenu {
+    param(
+        [Parameter(Mandatory = $true)]
+        [System.Windows.Forms.ContextMenuStrip]$Menu
+    )
+
+    foreach ($consoleScope in $dashboardConsoleScopes) {
+        [void](Add-DashboardMenuCommand `
+            -Items $Menu.Items `
+            -Label $consoleScope.Label `
+            -Scope $consoleScope.Scope)
+    }
+
+    [void]$Menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
+
+    foreach ($ministerScope in $dashboardMinisterScopes) {
+        $label = $ministerScope.Label
+        if ($ministerScope.Planned) {
+            $label = "$label (planned)"
+        }
+
+        $scopeItem = New-Object System.Windows.Forms.ToolStripMenuItem -ArgumentList $label
+        foreach ($view in $dashboardMinisterViews) {
+            [void](Add-DashboardMenuCommand `
+                -Items $scopeItem.DropDownItems `
+                -Label $view.Label `
+                -Scope $ministerScope.Scope `
+                -View $view.View)
+        }
+
+        [void]$Menu.Items.Add($scopeItem)
+    }
+}
+
 function Start-HostNotificationIcon {
     if (-not (Test-Path $hostExe)) {
         throw "RimBob host executable not found at '$hostExe'. Run .\run-rimbob.ps1 without -HostOnly first."
@@ -194,6 +297,9 @@ function Start-HostNotificationIcon {
     [void]$menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
     $openItem = $menu.Items.Add("Open Dashboard")
     $openItem.Add_Click({ Start-Process $script:trayDashboardUrl })
+    [void]$menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
+    Add-DashboardViewMenu -Menu $menu
+    [void]$menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
     $stopItem = $menu.Items.Add("Stop RimBob")
     $stopItem.Add_Click({
         Stop-TrayHost

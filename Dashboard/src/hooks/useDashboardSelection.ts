@@ -9,6 +9,8 @@ import {
 
 const SelectedScopeStorageKey = 'rimbob.dashboard.selectedScope';
 const SelectedViewStorageKey = 'rimbob.dashboard.selectedView';
+const ScopeQueryKey = 'scope';
+const ViewQueryKey = 'view';
 
 export interface DashboardSelection {
   selectedScope: ScopeKey;
@@ -18,8 +20,8 @@ export interface DashboardSelection {
 }
 
 export function useDashboardSelection(): DashboardSelection {
-  const [selectedScope, setSelectedScope] = useState<ScopeKey>(() => readStoredScope());
-  const [selectedView, setSelectedView] = useState<MinisterViewKey>(() => readStoredView());
+  const [selectedScope, setSelectedScope] = useState<ScopeKey>(() => readInitialSelection().scope);
+  const [selectedView, setSelectedView] = useState<MinisterViewKey>(() => readInitialSelection().view);
 
   useEffect(() => {
     writeStoredValue(SelectedScopeStorageKey, selectedScope);
@@ -44,6 +46,13 @@ export function useDashboardSelection(): DashboardSelection {
   };
 }
 
+function readInitialSelection(): { scope: ScopeKey; view: MinisterViewKey } {
+  return {
+    scope: readQueryScope() ?? readStoredScope(),
+    view: readQueryView() ?? readStoredView(),
+  };
+}
+
 function readStoredScope(): ScopeKey {
   const stored = readStoredValue(SelectedScopeStorageKey);
   return isScopeKey(stored) ? stored : 'system';
@@ -64,6 +73,28 @@ function readStoredValue(key: string): string | null {
   } catch {
     return null;
   }
+}
+
+function readQueryValue(key: string): string | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    return new URLSearchParams(window.location.search).get(key);
+  } catch {
+    return null;
+  }
+}
+
+function readQueryScope(): ScopeKey | null {
+  const queryValue = readQueryValue(ScopeQueryKey);
+  return isScopeKey(queryValue) ? queryValue : null;
+}
+
+function readQueryView(): MinisterViewKey | null {
+  const queryValue = readQueryValue(ViewQueryKey);
+  return isMinisterViewKey(queryValue) ? queryValue : null;
 }
 
 function writeStoredValue(key: string, value: string) {

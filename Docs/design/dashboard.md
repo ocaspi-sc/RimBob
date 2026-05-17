@@ -119,6 +119,11 @@ The dashboard persists the last selected scope and view in browser storage.
 Stored values are validated against known registries and fall back safely when
 stale.
 
+Dashboard links may include `scope` and `view` query parameters so the local
+Windows launcher can jump directly to a console scope or minister inspection
+view. Query values are validated against the same registries as stored
+selection and fall back safely when stale.
+
 Panel registries are frontend implementation details. Do not render registry ids
 or the full registered view list inside the normal minister workspace.
 
