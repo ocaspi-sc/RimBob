@@ -45,7 +45,13 @@ public sealed record AdviceActionApply(
     [property: JsonPropertyName("thing_ids")]
     IReadOnlyList<string>? ThingIds = null,
     [property: JsonPropertyName("thing_targets")]
-    IReadOnlyList<AdviceThingApplyTarget>? ThingTargets = null);
+    IReadOnlyList<AdviceThingApplyTarget>? ThingTargets = null,
+    [property: JsonPropertyName("workbench_building_id")]
+    string? WorkbenchBuildingId = null,
+    [property: JsonPropertyName("recipe_selector_key")]
+    string? RecipeSelectorKey = null,
+    [property: JsonPropertyName("repeat_mode")]
+    string? RepeatMode = null);
 
 public sealed record AdviceThingApplyTarget(
     [property: JsonPropertyName("id")]
@@ -63,7 +69,8 @@ public sealed record AdviceThingApplyTarget(
 public enum AdviceApplyKind
 {
     MarkHarvestArea,
-    UnforbidThings
+    UnforbidThings,
+    UpsertProductionBill
 }
 
 public static class AssistedApplyLimits
@@ -71,6 +78,7 @@ public static class AssistedApplyLimits
     public const int MaxHarvestTargets = 80;
     public const int MaxHarvestRectArea = 120;
     public const int MaxUnforbidTargets = 50;
+    public const int MaxProductionBillTarget = 50;
     public const double MaxMissingTargetFraction = 0.25d;
 }
 

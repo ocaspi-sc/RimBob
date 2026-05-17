@@ -59,6 +59,7 @@
 - [x] Use def-backed harvest nutrition for Food crop candidate projections when `/def/all` exposes raw crop nutrition.
 - [ ] Add polished guide-citation footnotes on feeder memo cards.
 - [x] Add MVP Assisted Apply for allowlisted player-confirmed actions (`unforbid`, `mark_harvest` first): backend executor, validation/read-back, dashboard Apply/result state.
+- [x] Add player-clicked simple-meal cook-bill upsert with single-workbench guard and RIMAPI read-back.
 - [x] Add durable Food decision/replay corpus persistence so M6 refinement can compare before/after outputs on historic inputs, not just fixtures.
 - [ ] Extend replay corpus persistence beyond Food and attach future Pushback/outcome fields once feedback is wired.
 - [ ] Improve Food hunting target risk/value scoring from live animal data.
@@ -159,7 +160,7 @@ Download and create guides.
 
 ### Simple actions that may be straightforward enough for MVP Assisted Apply
 
-Moved into the Assisted Apply roadmap slice. Keep the first implementation narrow: `unforbid` known item stacks and `mark_harvest` validated safe plant clusters first; `mark_hunt` only after risk filters; work priorities, bills, zones, pawn assignment, medical/prisoner actions, and combat controls stay out of the first slice.
+Moved into the Assisted Apply roadmap slice. Keep the first implementation narrow: `unforbid` known item stacks, `mark_harvest` validated safe plant clusters, and one single-workbench simple-meal bill upsert; `mark_hunt` only after risk filters; work priorities, broad bill editing, zones, pawn assignment, medical/prisoner actions, and combat controls stay out of the first slice.
 
 ### Scan GitHub repos for reference ideas
 

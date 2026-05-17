@@ -8,6 +8,8 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
 {
     private const string MinisterName = "Food";
     private const string Domain = "food";
+    private const string SimpleMealRecipeSelector = "simple_meal";
+    private const string BillRepeatModeTargetCount = "TargetCount";
     private static readonly IconRef CampfireIcon = ItemIcon("Campfire");
     private static readonly IconRef CoolerIcon = ItemIcon("Cooler");
     private static readonly IconRef SimpleMealIcon = ItemIcon("MealSimple");
@@ -340,7 +342,8 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 CookBillActionText(briefing),
                 Quantity: SimpleMealTarget(briefing),
                 Reason: "raw food must become meals during an urgent shortage",
-                Icon: SimpleMealIcon));
+                Icon: SimpleMealIcon,
+                Apply: CookBillApply(briefing)));
             actions.Add(new AdviceAction(
                 AdviceActionKind.SetPriority,
                 "Put the best cook on Cook work until simple meals are stocked.",
@@ -374,7 +377,8 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 CookBillActionText(briefing),
                 Quantity: SimpleMealTarget(briefing),
                 Reason: "meal count is below two per colonist",
-                Icon: SimpleMealIcon)
+                Icon: SimpleMealIcon,
+                Apply: CookBillApply(briefing))
         ];
         if (!briefing.Kitchen.HasCookingBuilding)
             actions.Add(new AdviceAction(
@@ -575,6 +579,27 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 Kind: target.Kind,
                 Source: target.Source,
                 Position: target.Position)).ToList());
+    }
+
+    private static AdviceActionApply? CookBillApply(FoodBriefing briefing)
+    {
+        if (briefing.RawFoodCount <= 0 || !briefing.Kitchen.HasCookingBuilding)
+            return null;
+
+        string? workbenchId = briefing.Kitchen.SingleCookingBuildingId;
+        if (string.IsNullOrWhiteSpace(workbenchId))
+            return null;
+
+        int target = Math.Min(SimpleMealTarget(briefing), AssistedApplyLimits.MaxProductionBillTarget);
+        return new AdviceActionApply(
+            Kind: AdviceApplyKind.UpsertProductionBill,
+            Label: "Set simple meal bill",
+            TargetSummary: $"simple meal bill on one cooking station until {target} meals",
+            MapId: briefing.MapId,
+            TargetCount: target,
+            WorkbenchBuildingId: workbenchId,
+            RecipeSelectorKey: SimpleMealRecipeSelector,
+            RepeatMode: BillRepeatModeTargetCount);
     }
 
     private static IconRef HarvestIcon(FoodBriefing briefing) =>

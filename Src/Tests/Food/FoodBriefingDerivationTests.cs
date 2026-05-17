@@ -335,6 +335,23 @@ public sealed class FoodBriefingDerivationTests
     }
 
     [Fact]
+    public void Compute_DerivesCookingWorkbenchIdsForAssistedApplyGuard()
+    {
+        ColonyState s = StateWithColonists(1);
+        s.Buildings.Update(new BuildingRegistry([
+            new BuildingRecord("stove-1", "FueledStove", 1f, null, null, new MapPosition(10, 0, 10)),
+            new BuildingRecord("campfire-1", "Campfire", 1f, null, null, new MapPosition(11, 0, 10)),
+            new BuildingRecord("butcher", "ButcherTable", 1f, null, null, new MapPosition(12, 0, 10))
+        ]));
+
+        FoodBriefing b = FoodBriefingDerivation.Compute(s);
+
+        b.Kitchen.CookingBuildings.Should().Be(2);
+        b.Kitchen.CookingBuildingIds.Should().Equal("stove-1", "campfire-1");
+        b.Kitchen.SingleCookingBuildingId.Should().BeNull();
+    }
+
+    [Fact]
     public void Compute_DerivesCompactGrowingTerrainSummary()
     {
         ColonyState s = StateWithColonists(1);

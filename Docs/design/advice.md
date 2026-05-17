@@ -251,16 +251,20 @@ An action is eligible only when all of these are true:
 
 - The action kind maps to an allowlisted, single-operation RIMAPI write.
 - The target is explicit and can be revalidated against fresh state.
-- The operation does not allocate pawns, force jobs, change schedules, edit bills,
-  create broad zones, or make combat/medical/prisoner decisions.
+- The operation does not allocate pawns, force jobs, change schedules, edit
+  arbitrary bills, create broad zones, or make combat/medical/prisoner decisions.
 - The Host can read back or otherwise observe the expected result.
 - The dashboard requires an explicit player click for that one action.
 
 The LLM never chooses raw endpoints, payloads, or arbitrary target ids. It may
 emit a structured action; deterministic code decides whether that action can expose
 Apply. Initial candidates should be conservative: `unforbid` for known item
-stacks and `mark_harvest` for validated safe plant clusters. `mark_hunt` needs
-risk filters before it is eligible. Work priorities, bills, zones, pawn
+stacks, `mark_harvest` for validated safe plant clusters, and one Food-owned
+simple-meal cook-bill upsert. The bill operation is intentionally narrow:
+exactly one current cooking workbench, backend-resolved simple-meal recipe,
+bounded do-until target, idempotent add-or-update, no delete/reorder/suspend
+changes, fresh-state revalidation, and RIMAPI read-back. `mark_hunt` needs risk
+filters before it is eligible. Work priorities, broad bill editing, zones, pawn
 assignment, equipment, medical, prisoner, and combat controls stay outside the
 first Assisted Apply slice.
 

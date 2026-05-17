@@ -184,6 +184,75 @@ public sealed class FoodRulesTests
     }
 
     [Fact]
+    public void MealsUnderstocked_WithOneCookingWorkbench_AttachesCookBillApply()
+    {
+        FoodBriefing briefing = Briefing(days: 12f) with
+        {
+            MealsCount = 1,
+            RawFoodCount = 40,
+            ReadyToHarvest = 0,
+            Kitchen = new FoodKitchenSummary(1, 1, true, true)
+            {
+                CookingBuildingIds = ["stove-1"]
+            }
+        };
+
+        Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
+            .Should().BeOfType<Decision>().Subject;
+
+        AdviceAction billAction = decision.Advice.Should().ContainSingle().Subject
+            .Actions.Should().Contain(action => action.Kind == AdviceActionKind.ProductionBill).Subject;
+        billAction.Apply.Should().NotBeNull();
+        billAction.Apply!.Kind.Should().Be(AdviceApplyKind.UpsertProductionBill);
+        billAction.Apply.WorkbenchBuildingId.Should().Be("stove-1");
+        billAction.Apply.RecipeSelectorKey.Should().Be("simple_meal");
+        billAction.Apply.RepeatMode.Should().Be("TargetCount");
+        billAction.Apply.TargetCount.Should().Be(12);
+    }
+
+    [Fact]
+    public void MealsUnderstocked_WithAmbiguousCookingWorkbenches_StaysTextOnly()
+    {
+        FoodBriefing briefing = Briefing(days: 12f) with
+        {
+            MealsCount = 1,
+            RawFoodCount = 40,
+            ReadyToHarvest = 0,
+            Kitchen = new FoodKitchenSummary(2, 1, true, true)
+            {
+                CookingBuildingIds = ["stove-1", "campfire-1"]
+            }
+        };
+
+        Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
+            .Should().BeOfType<Decision>().Subject;
+
+        AdviceAction billAction = decision.Advice.Should().ContainSingle().Subject
+            .Actions.Should().Contain(action => action.Kind == AdviceActionKind.ProductionBill).Subject;
+        billAction.Apply.Should().BeNull();
+    }
+
+    [Fact]
+    public void UrgentShortage_WithOneCookingWorkbench_AttachesCookBillApply()
+    {
+        FoodBriefing briefing = Briefing(days: 4f) with
+        {
+            Kitchen = new FoodKitchenSummary(1, 1, true, true)
+            {
+                CookingBuildingIds = ["stove-1"]
+            }
+        };
+
+        Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
+            .Should().BeOfType<Decision>().Subject;
+
+        AdviceAction billAction = decision.Advice.Should().ContainSingle().Subject
+            .Actions.Should().Contain(action => action.Kind == AdviceActionKind.ProductionBill).Subject;
+        billAction.Apply.Should().NotBeNull();
+        billAction.Apply!.Kind.Should().Be(AdviceApplyKind.UpsertProductionBill);
+    }
+
+    [Fact]
     public void MealsUnderstocked_WithNoCookCoverage_RequestsCookWorkType()
     {
         FoodBriefing briefing = Briefing(days: 12f) with

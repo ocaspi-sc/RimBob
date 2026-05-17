@@ -661,6 +661,100 @@ public sealed class RimApiClientTests
             .Should().Equal("thing-1", "thing-2");
     }
 
+    [Fact]
+    public async Task GetWorkTableRecipes_ReturnsAvailableRecipes()
+    {
+        using HttpClient http = MakeClient(new PathRouter()
+            .Add("buildings/recipes", Json("""
+                {
+                  "success": true,
+                  "data": [
+                    {
+                      "def_name": "CookMealSimple",
+                      "label": "cook simple meal",
+                      "description": "Cook a simple meal.",
+                      "work_amount": 300,
+                      "work_skill": "Cooking",
+                      "products": [{ "thing_def": "MealSimple", "count": 1 }],
+                      "ingredients": [{ "filter_label": "raw food", "count": 10 }]
+                    }
+                  ],
+                  "errors": null
+                }
+                """)));
+
+        IReadOnlyList<WorkTableRecipeDto> result = await new RimApiClient(http).GetWorkTableRecipesAsync(10);
+
+        WorkTableRecipeDto recipe = result.Should().ContainSingle().Subject;
+        recipe.DefName.Should().Be("CookMealSimple");
+        recipe.Products.Should().ContainSingle().Which.ThingDef.Should().Be("MealSimple");
+    }
+
+    [Fact]
+    public async Task GetWorkTableBills_ReturnsCurrentBills()
+    {
+        using HttpClient http = MakeClient(new PathRouter()
+            .Add("buildings/bills", Json("""
+                {
+                  "success": true,
+                  "data": [
+                    {
+                      "load_id": 402,
+                      "recipe_def_name": "CookMealSimple",
+                      "recipe_label": "cook simple meal",
+                      "repeat_mode": "TargetCount",
+                      "target_count": 12,
+                      "suspended": false,
+                      "paused": false
+                    }
+                  ],
+                  "errors": null
+                }
+                """)));
+
+        IReadOnlyList<WorkTableBillDto> result = await new RimApiClient(http).GetWorkTableBillsAsync(10);
+
+        WorkTableBillDto bill = result.Should().ContainSingle().Subject;
+        bill.LoadId.Should().Be(402);
+        bill.RecipeDefName.Should().Be("CookMealSimple");
+        bill.TargetCount.Should().Be(12);
+    }
+
+    [Fact]
+    public async Task AddBill_PostsCreateBillPayload()
+    {
+        CaptureHandler handler = new(Envelope(new { load_id = 403 }));
+        using HttpClient http = MakeClient(handler);
+
+        await new RimApiClient(http).AddBillAsync(10, "CookMealSimple", "TargetCount", 12);
+
+        handler.Method.Should().Be(HttpMethod.Post);
+        handler.Path.Should().Be("/api/v1/buildings/bills/add");
+        handler.Query.Should().Be("?building_id=10");
+        JsonDocument body = JsonDocument.Parse(handler.Body);
+        body.RootElement.GetProperty("recipe_def_name").GetString().Should().Be("CookMealSimple");
+        body.RootElement.GetProperty("repeat_mode").GetString().Should().Be("TargetCount");
+        body.RootElement.GetProperty("target_count").GetInt32().Should().Be(12);
+        body.RootElement.GetProperty("suspended").GetBoolean().Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task UpdateBill_PostsUpdateBillPayload()
+    {
+        CaptureHandler handler = new(Envelope(new { load_id = 402 }));
+        using HttpClient http = MakeClient(handler);
+
+        await new RimApiClient(http).UpdateBillAsync(10, 402, "TargetCount", 12);
+
+        handler.Method.Should().Be(HttpMethod.Put);
+        handler.Path.Should().Be("/api/v1/buildings/bill/update");
+        handler.Query.Should().Be("?building_id=10&bill_id=402");
+        JsonDocument body = JsonDocument.Parse(handler.Body);
+        body.RootElement.GetProperty("repeat_mode").GetString().Should().Be("TargetCount");
+        body.RootElement.GetProperty("target_count").GetInt32().Should().Be(12);
+        body.RootElement.TryGetProperty("recipe_def_name", out _).Should().BeFalse();
+    }
+
     // ── helpers ───────────────────────────────────────────────────────────────
 
     private static HttpClient MakeClient(PathRouter router) =>
@@ -712,14 +806,18 @@ public sealed class RimApiClientTests
 
     private sealed class CaptureHandler(HttpContent responseContent) : HttpMessageHandler
     {
+        public HttpMethod? Method { get; private set; }
         public string Path { get; private set; } = "";
+        public string Query { get; private set; } = "";
         public string Body { get; private set; } = "";
 
         protected override async Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken ct)
         {
+            Method = request.Method;
             Path = request.RequestUri?.AbsolutePath ?? "";
+            Query = request.RequestUri?.Query ?? "";
             Body = request.Content is null ? "" : await request.Content.ReadAsStringAsync(ct);
             return new HttpResponseMessage(HttpStatusCode.OK) { Content = responseContent };
         }

@@ -145,6 +145,35 @@ public sealed class AdviceNormalizationTests
         action.Apply.Should().BeNull();
     }
 
+    [Fact]
+    public void AdviceActionNormalizer_StripsModelSuppliedProductionBillApplyMetadata()
+    {
+        JsonNode? root = JsonNode.Parse("""
+        [
+          {
+            "kind": "production_bill",
+            "instruction": "set simple meal bill",
+            "apply": {
+              "kind": "upsert_production_bill",
+              "label": "unsafe model apply",
+              "target_summary": "model supplied bill",
+              "map_id": 1,
+              "target_count": 999,
+              "workbench_building_id": "123",
+              "recipe_selector_key": "simple_meal",
+              "repeat_mode": "TargetCount"
+            }
+          }
+        ]
+        """);
+
+        IReadOnlyList<AdviceAction> actions = AdviceActionNormalizer.Normalize(root, Json);
+
+        AdviceAction action = actions.Should().ContainSingle().Subject;
+        action.Kind.Should().Be(AdviceActionKind.ProductionBill);
+        action.Apply.Should().BeNull();
+    }
+
     private static LlmAdviceNormalizationContext Context() => new(
         Minister: "Food",
         Domain: "food",

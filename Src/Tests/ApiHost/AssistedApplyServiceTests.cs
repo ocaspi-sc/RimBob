@@ -75,6 +75,108 @@ public sealed class AssistedApplyServiceTests
         handler.DesignatePosted.Should().BeFalse();
     }
 
+    [Fact]
+    public async Task ApplyAsync_WhenProductionBillMissing_AddsBillAndReadsBack()
+    {
+        AdviceBus bus = new();
+        bus.Publish(Advice("food_meals_understocked", ProductionBillAction()));
+        MinimalRefreshHandler handler = HandlerWithSingleStove();
+        handler.EnqueueBillResponse(BillsJson());
+        handler.EnqueueBillResponse(BillsJson(SimpleMealBillJson(403, 12)));
+        AssistedApplyService service = Service(bus, new ColonyState(), handler);
+
+        AssistedApplyResponse response = await service.ApplyAsync("food_meals_understocked", 0);
+
+        response.Status.Should().Be("applied");
+        response.Kind.Should().Be(AdviceApplyKind.UpsertProductionBill);
+        response.Message.Should().Contain("created");
+        handler.AddBillPosted.Should().BeTrue();
+        handler.UpdateBillPosted.Should().BeFalse();
+        handler.LastBillWriteBody.Should().Contain("\"recipe_def_name\":\"CookMealSimple\"");
+        handler.LastBillWriteBody.Should().Contain("\"target_count\":12");
+    }
+
+    [Fact]
+    public async Task ApplyAsync_WhenProductionBillExistsWithDifferentTarget_UpdatesInsteadOfAdding()
+    {
+        AdviceBus bus = new();
+        bus.Publish(Advice("food_meals_understocked", ProductionBillAction()));
+        MinimalRefreshHandler handler = HandlerWithSingleStove();
+        handler.EnqueueBillResponse(BillsJson(SimpleMealBillJson(402, 6)));
+        handler.EnqueueBillResponse(BillsJson(SimpleMealBillJson(402, 12)));
+        AssistedApplyService service = Service(bus, new ColonyState(), handler);
+
+        AssistedApplyResponse response = await service.ApplyAsync("food_meals_understocked", 0);
+
+        response.Status.Should().Be("applied");
+        response.Message.Should().Contain("updated");
+        handler.AddBillPosted.Should().BeFalse();
+        handler.UpdateBillPosted.Should().BeTrue();
+        handler.LastBillWritePath.Should().Contain("bill_id=402");
+        handler.LastBillWriteBody.Should().Contain("\"target_count\":12");
+    }
+
+    [Fact]
+    public async Task ApplyAsync_WhenProductionBillAlreadySatisfied_DoesNotWrite()
+    {
+        AdviceBus bus = new();
+        bus.Publish(Advice("food_meals_understocked", ProductionBillAction()));
+        MinimalRefreshHandler handler = HandlerWithSingleStove();
+        handler.EnqueueBillResponse(BillsJson(SimpleMealBillJson(402, 12)));
+        AssistedApplyService service = Service(bus, new ColonyState(), handler);
+
+        AssistedApplyResponse response = await service.ApplyAsync("food_meals_understocked", 0);
+
+        response.Status.Should().Be("already_satisfied");
+        handler.AddBillPosted.Should().BeFalse();
+        handler.UpdateBillPosted.Should().BeFalse();
+        handler.BillListCalls.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ApplyAsync_WhenProductionBillTargetOverCap_ReturnsValidationFailedWithoutRimApi()
+    {
+        AdviceBus bus = new();
+        bus.Publish(Advice("food_meals_understocked", ProductionBillAction(AssistedApplyLimits.MaxProductionBillTarget + 1)));
+        AssistedApplyService service = Service(bus, new ColonyState());
+
+        AssistedApplyResponse response = await service.ApplyAsync("food_meals_understocked", 0);
+
+        response.Status.Should().Be("validation_failed");
+        response.Message.Should().Contain("too high");
+    }
+
+    [Fact]
+    public async Task ApplyAsync_WhenProductionBillWorkbenchIsStale_ReturnsStaleWithoutBillCalls()
+    {
+        AdviceBus bus = new();
+        bus.Publish(Advice("food_meals_understocked", ProductionBillAction()));
+        MinimalRefreshHandler handler = new();
+        AssistedApplyService service = Service(bus, new ColonyState(), handler);
+
+        AssistedApplyResponse response = await service.ApplyAsync("food_meals_understocked", 0);
+
+        response.Status.Should().Be("stale_advice");
+        handler.BillListCalls.Should().Be(0);
+        handler.AddBillPosted.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ApplyAsync_WhenProductionBillReadbackDoesNotConfirm_ReturnsInconclusive()
+    {
+        AdviceBus bus = new();
+        bus.Publish(Advice("food_meals_understocked", ProductionBillAction()));
+        MinimalRefreshHandler handler = HandlerWithSingleStove();
+        handler.EnqueueBillResponse(BillsJson());
+        handler.EnqueueBillResponse(BillsJson());
+        AssistedApplyService service = Service(bus, new ColonyState(), handler);
+
+        AssistedApplyResponse response = await service.ApplyAsync("food_meals_understocked", 0);
+
+        response.Status.Should().Be("readback_inconclusive");
+        handler.AddBillPosted.Should().BeTrue();
+    }
+
     private static AssistedApplyService Service(AdviceBus bus, ColonyState state)
     {
         return Service(bus, state, new ThrowingHandler());
@@ -107,6 +209,40 @@ public sealed class AssistedApplyServiceTests
             ExpiresAt: now.AddHours(1));
     }
 
+    private static AdviceAction ProductionBillAction(int targetCount = 12, string workbenchId = "10") =>
+        new(
+            AdviceActionKind.ProductionBill,
+            "Set/check simple meal bill.",
+            Apply: new AdviceActionApply(
+                AdviceApplyKind.UpsertProductionBill,
+                "Set simple meal bill",
+                "simple meal bill on one cooking station",
+                MapId: 1,
+                TargetCount: targetCount,
+                WorkbenchBuildingId: workbenchId,
+                RecipeSelectorKey: "simple_meal",
+                RepeatMode: "TargetCount"));
+
+    private static MinimalRefreshHandler HandlerWithSingleStove() =>
+        new()
+        {
+            MapBuildingsJson = """
+                {"success":true,"data":[
+                  {"id":10,"def":"FueledStove","label":"fueled stove","type":"Building_WorkTable","position":{"x":10,"y":0,"z":10}}
+                ],"errors":null}
+                """
+        };
+
+    private static string BillsJson(params string[] billJson) =>
+        $$"""
+          {"success":true,"data":[{{string.Join(",", billJson)}}],"errors":null}
+          """;
+
+    private static string SimpleMealBillJson(int billId, int targetCount) =>
+        $$"""
+          {"load_id":{{billId}},"recipe_def_name":"CookMealSimple","recipe_label":"cook simple meal","repeat_mode":"TargetCount","target_count":{{targetCount}},"suspended":false,"paused":false}
+          """;
+
     private sealed class ThrowingHandler : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
@@ -117,7 +253,25 @@ public sealed class AssistedApplyServiceTests
 
     private sealed class MinimalRefreshHandler : HttpMessageHandler
     {
+        private readonly Queue<string> _billResponses = [];
+
         public bool DesignatePosted { get; private set; }
+        public bool AddBillPosted { get; private set; }
+        public bool UpdateBillPosted { get; private set; }
+        public int BillListCalls { get; private set; }
+        public string LastBillWritePath { get; private set; } = "";
+        public string LastBillWriteBody { get; private set; } = "";
+        public string MapBuildingsJson { get; init; } = """{"success":true,"data":[],"errors":null}""";
+        public string RecipesJson { get; init; } = """
+            {"success":true,"data":[
+              {"def_name":"CookMealSimple","label":"cook simple meal","description":"Cook a simple meal.","work_amount":300,"work_skill":"Cooking","products":[{"thing_def":"MealSimple","count":1}],"ingredients":[]}
+            ],"errors":null}
+            """;
+
+        public void EnqueueBillResponse(string json)
+        {
+            _billResponses.Enqueue(json);
+        }
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
@@ -126,6 +280,21 @@ public sealed class AssistedApplyServiceTests
             {
                 DesignatePosted = true;
                 return JsonResponse("""{"success":true,"data":{},"errors":null}""");
+            }
+
+            if (path.Contains("buildings/bills/add", StringComparison.OrdinalIgnoreCase))
+                return CaptureBillWriteAsync(request, isAdd: true, ct);
+            if (path.Contains("buildings/bill/update", StringComparison.OrdinalIgnoreCase))
+                return CaptureBillWriteAsync(request, isAdd: false, ct);
+            if (path.Contains("buildings/recipes", StringComparison.OrdinalIgnoreCase))
+                return JsonResponse(RecipesJson);
+            if (path.Contains("buildings/bills", StringComparison.OrdinalIgnoreCase))
+            {
+                BillListCalls++;
+                string json = _billResponses.Count == 0
+                    ? """{"success":true,"data":[],"errors":null}"""
+                    : _billResponses.Dequeue();
+                return JsonResponse(json);
             }
 
             if (path.Contains("maps", StringComparison.OrdinalIgnoreCase))
@@ -160,7 +329,7 @@ public sealed class AssistedApplyServiceTests
             if (path.Contains("map/terrain", StringComparison.OrdinalIgnoreCase))
                 return JsonResponse("""{"success":true,"data":{"width":0,"height":0,"palette":[],"grid":[]},"errors":null}""");
             if (path.Contains("map/buildings", StringComparison.OrdinalIgnoreCase))
-                return JsonResponse("""{"success":true,"data":[],"errors":null}""");
+                return JsonResponse(MapBuildingsJson);
             if (path.Contains("map/power/info", StringComparison.OrdinalIgnoreCase))
                 return JsonResponse("""{"success":true,"data":{"production":0,"consumption":0,"stored":0,"capacity":0},"errors":null}""");
             if (path.Contains("map/weather", StringComparison.OrdinalIgnoreCase))
@@ -175,6 +344,24 @@ public sealed class AssistedApplyServiceTests
                 return JsonResponse("""{"success":true,"data":{"name":"none","label":"None","progress":0,"research_points":0,"is_finished":false,"can_start_now":false,"progress_percent":0},"errors":null}""");
 
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        }
+
+        private async Task<HttpResponseMessage> CaptureBillWriteAsync(
+            HttpRequestMessage request,
+            bool isAdd,
+            CancellationToken ct)
+        {
+            if (isAdd)
+                AddBillPosted = true;
+            else
+                UpdateBillPosted = true;
+
+            LastBillWritePath = request.RequestUri?.PathAndQuery ?? "";
+            LastBillWriteBody = request.Content is null ? "" : await request.Content.ReadAsStringAsync(ct);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"success":true,"data":{},"errors":null}""", Encoding.UTF8, "application/json")
+            };
         }
 
         private static Task<HttpResponseMessage> JsonResponse(string json) =>

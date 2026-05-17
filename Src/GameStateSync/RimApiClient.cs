@@ -367,6 +367,20 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
     public Task<ResearchProgressDto> GetResearchProgressAsync(CancellationToken ct = default) =>
         GetEnvelopedAsync<ResearchProgressDto>("api/v1/research/progress", ct);
 
+    // ── Bill reads ───────────────────────────────────────────────────────────────
+
+    /// <summary>GET api/v1/buildings/recipes?building_id — available recipes for a work table.</summary>
+    public Task<IReadOnlyList<WorkTableRecipeDto>> GetWorkTableRecipesAsync(
+        int buildingId,
+        CancellationToken ct = default) =>
+        GetEnvelopedListAsync<WorkTableRecipeDto>($"api/v1/buildings/recipes?building_id={buildingId}", ct);
+
+    /// <summary>GET api/v1/buildings/bills?building_id — current bills for a work table.</summary>
+    public Task<IReadOnlyList<WorkTableBillDto>> GetWorkTableBillsAsync(
+        int buildingId,
+        CancellationToken ct = default) =>
+        GetEnvelopedListAsync<WorkTableBillDto>($"api/v1/buildings/bills?building_id={buildingId}", ct);
+
     // ── Write endpoints (Labor-owned) ─────────────────────────────────────────
     // TODO: Pawn Edit Controller and Pawn Job Controller field shapes are not cached
     //       in rimapi.md. Fetch live docs when M3 (Labor/assignment solver) begins
@@ -417,6 +431,44 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
         var body = new { map_id = mapId, thing_ids = thingIds };
         var response = await http.PostAsJsonAsync("api/v1/order/unforbid", body, ct);
         await EnsureWriteAcceptedAsync(response, "api/v1/order/unforbid", ct);
+    }
+
+    /// <summary>POST api/v1/buildings/bills/add — add a work-table bill.</summary>
+    public async Task AddBillAsync(
+        int buildingId,
+        string recipeDefName,
+        string repeatMode,
+        int targetCount,
+        CancellationToken ct = default)
+    {
+        string path = $"api/v1/buildings/bills/add?building_id={buildingId}";
+        var body = new
+        {
+            recipe_def_name = recipeDefName,
+            repeat_mode = repeatMode,
+            target_count = targetCount,
+            suspended = false
+        };
+        var response = await http.PostAsJsonAsync(path, body, ct);
+        await EnsureWriteAcceptedAsync(response, path, ct);
+    }
+
+    /// <summary>PUT api/v1/buildings/bill/update — update a work-table bill.</summary>
+    public async Task UpdateBillAsync(
+        int buildingId,
+        int billId,
+        string repeatMode,
+        int targetCount,
+        CancellationToken ct = default)
+    {
+        string path = $"api/v1/buildings/bill/update?building_id={buildingId}&bill_id={billId}";
+        var body = new
+        {
+            repeat_mode = repeatMode,
+            target_count = targetCount
+        };
+        var response = await http.PutAsJsonAsync(path, body, ct);
+        await EnsureWriteAcceptedAsync(response, path, ct);
     }
 }
 

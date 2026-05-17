@@ -204,7 +204,13 @@ public sealed record FoodKitchenSummary(
     int ButcherTables,
     bool HasCookingBuilding,
     bool HasButcherTable
-);
+)
+{
+    public IReadOnlyList<string> CookingBuildingIds { get; init; } = [];
+
+    public string? SingleCookingBuildingId =>
+        CookingBuildingIds.Count == 1 ? CookingBuildingIds[0] : null;
+}
 
 public sealed record FoodDataCoverage(
     bool HasPlantPositions,

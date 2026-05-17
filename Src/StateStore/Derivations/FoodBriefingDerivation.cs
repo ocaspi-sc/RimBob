@@ -93,13 +93,19 @@ public static class FoodBriefingDerivation
 
     private static FoodKitchenSummary DeriveKitchen(ColonyState s)
     {
-        int cookingBuildings = s.Buildings.Value.Buildings.Count(BuildingClassifier.IsCookingBuilding);
+        IReadOnlyList<BuildingRecord> cookingBuildingRecords = s.Buildings.Value.Buildings
+            .Where(BuildingClassifier.IsCookingBuilding)
+            .ToList();
+        int cookingBuildings = cookingBuildingRecords.Count;
         int butcherTables = s.Buildings.Value.Buildings.Count(BuildingClassifier.IsButcherTable);
         return new FoodKitchenSummary(
             CookingBuildings: cookingBuildings,
             ButcherTables: butcherTables,
             HasCookingBuilding: cookingBuildings > 0,
-            HasButcherTable: butcherTables > 0);
+            HasButcherTable: butcherTables > 0)
+        {
+            CookingBuildingIds = cookingBuildingRecords.Select(building => building.Id).ToList()
+        };
     }
 
     private static FoodStorageSummary DeriveStorage(ColonyState s, FoodKitchenSummary kitchen)

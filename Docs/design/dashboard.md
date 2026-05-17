@@ -28,7 +28,9 @@ treat the previous UI as reference only.
 
 - Inspect-first in v2: no autonomy toggles and no feedback/Pushback controls.
   Game writes appear only as Assisted Apply buttons on backend-allowlisted
-  advice actions, each requiring an explicit player click.
+  advice actions, each requiring an explicit player click. Current allowlisted
+  controls are safe food-stack unforbid, validated harvest designation, and the
+  single-workbench simple-meal bill upsert.
 - Manual Run buttons may trigger RimBob re-evaluation, never RimWorld writes.
   Assisted Apply controls are separate from Run controls.
 - Localhost-only: Host binds loopback and serves the dashboard plus `/api/*`.
@@ -474,8 +476,9 @@ metrics, and endpoint coverage.
   only MVP exception and is limited to backend-allowlisted advice actions.
 - Hard-case icon variants such as stuff colors, crop growth stages, styles,
   rotations, motes/projectiles, and per-instance art remain deferred.
-- Hard-case action controls such as bills, schedules, pawn assignment, zones,
-  medical/prisoner operations, and combat commands remain out of scope for MVP.
+- Hard-case action controls such as broad bill editing, schedules, pawn
+  assignment, zones, medical/prisoner operations, and combat commands remain out
+  of scope for MVP.
 
 ---
 

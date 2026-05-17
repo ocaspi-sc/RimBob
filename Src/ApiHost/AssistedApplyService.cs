@@ -5,7 +5,9 @@ using RimBob.Coordination;
 using RimBob.Core.Advice;
 using RimBob.Core.Aggregates;
 using RimBob.Ingestion;
+using RimBob.Ingestion.Dtos;
 using RimBob.State;
+using RimBob.State.Derivations.Common;
 
 namespace RimBob.Host;
 
@@ -17,6 +19,9 @@ public sealed class AssistedApplyService(
     ILogger<AssistedApplyService> log)
 {
     private const int RecentAttemptLimit = 20;
+    private const string SimpleMealRecipeSelector = "simple_meal";
+    private const string BillRepeatModeTargetCount = "TargetCount";
+    private static readonly IReadOnlyList<string> SimpleMealRecipeDefs = ["CookMealSimple", "CookMealSimpleBulk"];
     private readonly object _lock = new();
     private readonly List<AssistedApplyAttempt> _recentAttempts = [];
 
@@ -62,10 +67,159 @@ public sealed class AssistedApplyService(
         {
             AdviceApplyKind.MarkHarvestArea => await ApplyHarvestAsync(adviceId, actionIndex, apply, ct),
             AdviceApplyKind.UnforbidThings => await ApplyUnforbidAsync(adviceId, actionIndex, apply, ct),
+            AdviceApplyKind.UpsertProductionBill => await ApplyProductionBillAsync(adviceId, actionIndex, apply, ct),
             _ => Response("validation_failed", "That apply kind is not allowlisted.", apply.Kind, adviceId, actionIndex)
         };
         Record(result);
         return result;
+    }
+
+    private async Task<AssistedApplyResponse> ApplyProductionBillAsync(
+        string adviceId,
+        int actionIndex,
+        AdviceActionApply apply,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(apply.WorkbenchBuildingId))
+            return Response("validation_failed", "Bill apply is missing the target cooking workbench.", apply.Kind, adviceId, actionIndex);
+
+        if (!int.TryParse(apply.WorkbenchBuildingId, out int buildingId))
+            return Response("validation_failed", "Bill apply has an invalid target cooking workbench id.", apply.Kind, adviceId, actionIndex);
+
+        if (!string.Equals(apply.RecipeSelectorKey, SimpleMealRecipeSelector, StringComparison.OrdinalIgnoreCase))
+            return Response("validation_failed", "Bill apply is not for the allowlisted simple-meal recipe selector.", apply.Kind, adviceId, actionIndex);
+
+        if (!string.Equals(apply.RepeatMode, BillRepeatModeTargetCount, StringComparison.OrdinalIgnoreCase))
+            return Response("validation_failed", "Bill apply is not for the allowlisted do-until target mode.", apply.Kind, adviceId, actionIndex);
+
+        if (apply.TargetCount < 1)
+            return Response("validation_failed", "Bill target must be at least one meal.", apply.Kind, adviceId, actionIndex);
+
+        if (apply.TargetCount > AssistedApplyLimits.MaxProductionBillTarget)
+            return Response("validation_failed", "Bill target is too high for assisted apply.", apply.Kind, adviceId, actionIndex);
+
+        AssistedApplyResponse? refreshFailure = await RefreshForValidationAsync(apply.Kind, adviceId, actionIndex, ct);
+        if (refreshFailure is not null)
+            return refreshFailure;
+
+        if (apply.MapId != state.Map.Value.Id)
+            return Response("stale_advice", "Advice targets a different map than the current colony map.", apply.Kind, adviceId, actionIndex);
+
+        IReadOnlyList<BuildingRecord> cookingBuildings = state.Buildings.Value.Buildings
+            .Where(BuildingClassifier.IsCookingBuilding)
+            .ToList();
+        if (cookingBuildings.Count != 1 ||
+            !string.Equals(cookingBuildings[0].Id, apply.WorkbenchBuildingId, StringComparison.OrdinalIgnoreCase))
+        {
+            return Response("stale_advice", "Cooking workbench target is no longer unambiguous.", apply.Kind, adviceId, actionIndex);
+        }
+
+        IReadOnlyList<WorkTableRecipeDto> recipes;
+        IReadOnlyList<WorkTableBillDto> bills;
+        try
+        {
+            recipes = await rimApi.GetWorkTableRecipesAsync(buildingId, ct);
+            bills = await rimApi.GetWorkTableBillsAsync(buildingId, ct);
+        }
+        catch (Exception ex) when (IsRimApiUnavailable(ex))
+        {
+            log.LogWarning(ex, "RIMAPI bill surface unavailable for advice {AdviceId} action {ActionIndex}", adviceId, actionIndex);
+            return Response("rimapi_unavailable", "RIMAPI is unavailable for bill apply.", apply.Kind, adviceId, actionIndex);
+        }
+        catch (RimApiException ex)
+        {
+            log.LogWarning(ex, "RIMAPI rejected bill preflight for advice {AdviceId} action {ActionIndex}", adviceId, actionIndex);
+            return Response("rimapi_rejected", ex.Message, apply.Kind, adviceId, actionIndex);
+        }
+
+        WorkTableRecipeDto? recipe = ResolveSimpleMealRecipe(recipes);
+        if (recipe?.DefName is null)
+            return Response("validation_failed", "The targeted workbench does not expose an allowlisted simple-meal recipe.", apply.Kind, adviceId, actionIndex);
+
+        IReadOnlyList<WorkTableBillDto> existingSimpleBills = bills
+            .Where(IsSimpleMealBill)
+            .ToList();
+        if (existingSimpleBills.Count > 1)
+            return Response("validation_failed", "Multiple simple-meal bills already exist; RimBob will not edit the player's bill stack.", apply.Kind, adviceId, actionIndex);
+
+        WorkTableBillDto? existing = existingSimpleBills.SingleOrDefault();
+        if (existing is not null &&
+            string.Equals(existing.RepeatMode, BillRepeatModeTargetCount, StringComparison.OrdinalIgnoreCase) &&
+            existing.TargetCount == apply.TargetCount)
+        {
+            return Response(
+                "already_satisfied",
+                $"Simple meal bill is already set to cook until {apply.TargetCount} meals.",
+                apply.Kind,
+                adviceId,
+                actionIndex,
+                new { bill_id = existing.LoadId, target_count = existing.TargetCount });
+        }
+
+        try
+        {
+            if (existing is null)
+            {
+                await rimApi.AddBillAsync(buildingId, recipe.DefName, BillRepeatModeTargetCount, apply.TargetCount, ct);
+            }
+            else
+            {
+                await rimApi.UpdateBillAsync(buildingId, existing.LoadId, BillRepeatModeTargetCount, apply.TargetCount, ct);
+            }
+        }
+        catch (Exception ex) when (IsRimApiUnavailable(ex))
+        {
+            log.LogWarning(ex, "RIMAPI bill write unavailable for advice {AdviceId} action {ActionIndex}", adviceId, actionIndex);
+            return Response("rimapi_unavailable", "RIMAPI is unavailable for bill apply.", apply.Kind, adviceId, actionIndex);
+        }
+        catch (RimApiException ex)
+        {
+            log.LogWarning(ex, "RIMAPI rejected bill write for advice {AdviceId} action {ActionIndex}", adviceId, actionIndex);
+            return Response("rimapi_rejected", ex.Message, apply.Kind, adviceId, actionIndex);
+        }
+
+        AssistedApplyResponse? readbackFailure = await RefreshForReadbackAsync(apply.Kind, adviceId, actionIndex, ct);
+        if (readbackFailure is not null)
+            return readbackFailure;
+
+        IReadOnlyList<WorkTableBillDto> afterBills;
+        try
+        {
+            afterBills = await rimApi.GetWorkTableBillsAsync(buildingId, ct);
+        }
+        catch (Exception ex)
+        {
+            log.LogWarning(ex, "RIMAPI bill readback failed for advice {AdviceId} action {ActionIndex}", adviceId, actionIndex);
+            return Response("readback_inconclusive", "Bill apply was sent, but RimBob could not read back the workbench bills.", apply.Kind, adviceId, actionIndex);
+        }
+
+        IReadOnlyList<WorkTableBillDto> afterSimpleBills = afterBills
+            .Where(IsSimpleMealBill)
+            .ToList();
+        if (afterSimpleBills.Count != 1)
+            return Response("readback_inconclusive", "Bill apply was sent, but readback did not show exactly one simple-meal bill.", apply.Kind, adviceId, actionIndex);
+
+        WorkTableBillDto confirmed = afterSimpleBills[0];
+        if (!string.Equals(confirmed.RepeatMode, BillRepeatModeTargetCount, StringComparison.OrdinalIgnoreCase) ||
+            confirmed.TargetCount != apply.TargetCount)
+        {
+            return Response("readback_inconclusive", "Bill apply was sent, but readback did not show the expected target.", apply.Kind, adviceId, actionIndex);
+        }
+
+        string verb = existing is null ? "created" : "updated";
+        return Response(
+            "applied",
+            $"Simple meal bill {verb} to cook until {apply.TargetCount} meals.",
+            apply.Kind,
+            adviceId,
+            actionIndex,
+            new
+            {
+                bill_id = confirmed.LoadId,
+                recipe_def_name = confirmed.RecipeDefName,
+                target_count = confirmed.TargetCount,
+                repeat_mode = confirmed.RepeatMode
+            });
     }
 
     private async Task<AssistedApplyResponse> ApplyHarvestAsync(
@@ -279,6 +433,24 @@ public sealed class AssistedApplyService(
     private static bool MatchesExpectedThing(AdviceThingApplyTarget expected, CurrentThingTarget current) =>
         string.Equals(expected.Def, current.Def, StringComparison.OrdinalIgnoreCase) &&
         expected.Position == current.Position;
+
+    private static WorkTableRecipeDto? ResolveSimpleMealRecipe(IReadOnlyList<WorkTableRecipeDto> recipes)
+    {
+        foreach (string recipeDef in SimpleMealRecipeDefs)
+        {
+            WorkTableRecipeDto? recipe = recipes.FirstOrDefault(candidate =>
+                string.Equals(candidate.DefName, recipeDef, StringComparison.OrdinalIgnoreCase));
+            if (recipe is not null)
+                return recipe;
+        }
+
+        return null;
+    }
+
+    private static bool IsSimpleMealBill(WorkTableBillDto bill) =>
+        !string.IsNullOrWhiteSpace(bill.RecipeDefName) &&
+        SimpleMealRecipeDefs.Any(recipeDef =>
+            string.Equals(recipeDef, bill.RecipeDefName, StringComparison.OrdinalIgnoreCase));
 
     private static bool IsInside(MapRect rect, MapPosition? position) =>
         position is not null &&
