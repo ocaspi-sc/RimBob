@@ -33,8 +33,8 @@ const common = {
   food: item('MealSimple', 'Food icon', 'FO'),
   harvest: item('Plant_Rice', 'Forage harvest icon', 'HA'),
   info: item('TextBook', 'Info icon', 'IN'),
-  industry: item('Steel', 'Industry icon', 'ID'),
-  kitchen: item('MealSimple', 'Kitchen icon', 'KI'),
+  industry: item('ElectricSmithy', 'Industry icon', 'ID'),
+  kitchen: item('ElectricStove', 'Kitchen icon', 'KI'),
   labor: item('Steel', 'Labor icon', 'LA'),
   logs: item('CommsConsole', 'Raw output icon', 'LO'),
   mayor: item('CommsConsole', 'Mayor icon', 'MY'),
@@ -60,7 +60,7 @@ const scopeIcons: Record<string, SemanticIconSpec> = {
   mayor: common.mayor,
   food: common.food,
   construction: common.construction,
-  defense: common.defense,
+  defense: item('Barricade', 'Defense icon', 'DE'),
   welfare: common.welfare,
   medical: common.medical,
   research: common.research,
@@ -121,9 +121,14 @@ const sectionIcons: Record<string, SemanticIconSpec> = {
 const fieldIcons: Record<string, SemanticIconSpec> = {
   active_raid: common.threat,
   active_threat: common.threat,
+  active_advice: common.advice,
+  active_advice_emitted: common.advice,
   advice: common.advice,
+  advice_item: common.advice,
   advice_type: common.advice,
   agenda: common.mayor,
+  agenda_priorities: common.mayor,
+  animal_positions: item('Meat_Squirrel', 'Animal positions icon', 'AP'),
   average_mood: common.welfare,
   bytes: common.storage,
   briefing_version: common.briefing,
@@ -141,6 +146,7 @@ const fieldIcons: Record<string, SemanticIconSpec> = {
   completed_at: common.rules,
   connections: common.data,
   confidence: common.data,
+  construction: common.construction,
   crop_breakdown: item('Plant_Rice', 'Crop breakdown icon', 'CB'),
   crop_candidates: item('Plant_Rice', 'Crop candidates icon', 'CC'),
   crop_def: item('Plant_Rice', 'Crop definition icon', 'CD'),
@@ -159,10 +165,20 @@ const fieldIcons: Record<string, SemanticIconSpec> = {
   files: common.logs,
   flags: common.threat,
   food: common.food,
+  food_buffer: common.food,
   food_units: common.food,
   game_tick: common.briefing,
   guide_citations: common.rag,
   growing_terrain: item('Plant_Rice', 'Growing terrain icon', 'GT'),
+  has_animal_positions: item('Meat_Squirrel', 'Animal positions icon', 'AP'),
+  has_building_positions: common.construction,
+  has_item_food_classification: common.food,
+  has_live_state: common.component,
+  has_plant_positions: item('Plant_Rice', 'Plant positions icon', 'PP'),
+  has_terrain_fertility: item('Plant_Rice', 'Terrain fertility icon', 'TF'),
+  has_trade_availability: item('OrbitalTradeBeacon', 'Trade availability icon', 'TA'),
+  has_work_priorities: common.labor,
+  has_zone_cells: item('Plant_Rice', 'Zone cells icon', 'ZC'),
   harvest_nutrition: common.harvest,
   health: common.medical,
   host: common.component,
@@ -174,15 +190,21 @@ const fieldIcons: Record<string, SemanticIconSpec> = {
   kind: common.data,
   kinds: common.data,
   kitchen: common.kitchen,
+  kitchen_storage: common.kitchen,
+  latest_event: common.logs,
   last_event: common.logs,
   live: common.data,
   llm: common.prompt,
+  llm_escalation: common.prompt,
   logs: common.logs,
+  mark_harvest: common.harvest,
+  mark_hunt: item('Gun_Revolver', 'Hunt icon', 'HU'),
   materials: common.storage,
   mayor: common.mayor,
   meals_count: common.food,
   medical: common.medical,
   message: common.logs,
+  minister: common.mayor,
   method: common.data,
   mood: common.welfare,
   note: common.logs,
@@ -190,14 +212,19 @@ const fieldIcons: Record<string, SemanticIconSpec> = {
   owner: common.mayor,
   path: common.rules,
   power: common.power,
+  power_net: common.power,
   priority: common.advice,
+  production_bill: common.kitchen,
+  quantity: common.storage,
   raw_food_count: common.harvest,
   raw_response: common.raw,
   ready_to_harvest: common.harvest,
   recent_food_incidents: common.threat,
   reconnects: common.data,
   replay: common.logs,
+  replay_corpus: common.logs,
   request: common.advice,
+  reason: common.rules,
   resource_requests: common.storage,
   reported_nutrition: common.food,
   research: common.research,
@@ -210,9 +237,12 @@ const fieldIcons: Record<string, SemanticIconSpec> = {
   severity: common.threat,
   size: common.storage,
   skills: common.labor,
+  sse: common.logs,
+  sse_state: common.logs,
   source: common.data,
   status: common.component,
   actions: common.advice,
+  set_stockpile_zone: common.food,
   stockpile_cells: common.storage,
   storage: common.storage,
   summary: common.advice,
@@ -222,17 +252,53 @@ const fieldIcons: Record<string, SemanticIconSpec> = {
   tests: common.data,
   threat: common.threat,
   top_k: common.rag,
+  trace_count: common.logs,
   trigger: common.rules,
   updated: common.logs,
   user_prompt: common.prompt,
   warm_result: common.storage,
   weather: common.weather,
   wealth: common.economy,
-  wild_animal_count: item('Hare', 'Wild animal icon', 'WA'),
+  wealth_colonist: common.economy,
+  wild_animal_count: item('Meat_Squirrel', 'Wild animal icon', 'WA'),
   wild_harvest_candidates: common.harvest,
   wild_harvest_clusters: common.harvest,
   winter_window: common.season,
   work_type: common.labor,
+};
+
+const agendaCategoryIcons: Record<string, SemanticIconSpec> = {
+  construction: common.construction,
+  defense: scopeIcons.defense,
+  food: common.food,
+  research: common.research,
+  treasury: common.economy,
+  welfare: common.welfare,
+};
+
+const infoTagIcons: Record<string, SemanticIconSpec> = {
+  architecture: common.component,
+  cabinet: common.advice,
+  code: common.component,
+  construction: common.construction,
+  coordination: common.threat,
+  cost: common.economy,
+  food: common.food,
+  knowledge: common.rag,
+  labor: common.labor,
+  live_feed: common.logs,
+  mayor: common.mayor,
+  medical: common.medical,
+  operations: common.component,
+  pawn: common.people,
+  prompts: common.prompt,
+  project: common.component,
+  refine: common.logs,
+  runtime: common.rules,
+  safety: common.threat,
+  signals: common.analytics,
+  state: common.briefing,
+  threat: common.threat,
 };
 
 export function iconForScope(key: string): SemanticIconSpec | undefined {
@@ -258,6 +324,49 @@ export function iconForField(pathOrKey: string): SemanticIconSpec | undefined {
 
   const last = segments[segments.length - 1] ?? normalized;
   return fieldIcons[last] ?? fallbackIconForKey(last);
+}
+
+export function iconForAgendaCategory(key: string): SemanticIconSpec | undefined {
+  return agendaCategoryIcons[normalizeKey(key)] ?? iconForField(key);
+}
+
+export function iconForAgendaPriority(text: string): SemanticIconSpec | undefined {
+  return iconForDomainText(text);
+}
+
+export function iconForStateSummaryLine(label: string | null, detail: string): SemanticIconSpec | undefined {
+  const labelKey = normalizeKey(label ?? '');
+  const text = `${labelKey} ${normalizeKey(detail)}`;
+
+  if (labelKey === 'stores') return common.food;
+  if (labelKey === 'crops') return text.includes('corn')
+    ? item('Plant_Corn', 'Corn crop icon', 'CO')
+    : text.includes('potato')
+      ? item('Plant_Potato', 'Potato crop icon', 'PO')
+      : item('Plant_Rice', 'Rice crop icon', 'RI');
+  if (labelKey === 'acquisition') {
+    if (text.includes('hare') || text.includes('hunt')) return item('Gun_Revolver', 'Hunt target icon', 'HU');
+    if (text.includes('berry')) return item('Plant_Berry', 'Berry plant icon', 'BE');
+    return common.harvest;
+  }
+  if (labelKey === 'kitchen_storage') {
+    if (text.includes('cooking') || text.includes('meal')) return common.kitchen;
+    if (text.includes('cooler') || text.includes('freezer')) return item('Frame_Cooler', 'Cooler icon', 'CO');
+    return common.storage;
+  }
+  if (labelKey === 'confidence_gaps') return common.data;
+
+  return iconForField(labelKey || detail);
+}
+
+export function iconForActionKind(kind: string): SemanticIconSpec | undefined {
+  return fieldIcons[normalizeKey(kind)] ?? iconForField(kind);
+}
+
+export function iconForInfoTerm(term: string, tag: string): SemanticIconSpec | undefined {
+  const termIcon = iconForField(term);
+  if (termIcon) return termIcon;
+  return infoTagIcons[normalizeKey(tag)];
 }
 
 export function iconForFieldValue(fieldKey: string | undefined, value: JsonValue): SemanticIconSpec | undefined {
@@ -309,6 +418,8 @@ function fallbackIconForKey(key: string): SemanticIconSpec | undefined {
   if (key.includes('food') || key.includes('meal') || key.includes('nutrition')) return common.food;
   if (key.includes('crop') || key.includes('plant')) return item('Plant_Rice', 'Crop icon', 'CR');
   if (key.includes('harvest') || key.includes('wild')) return common.harvest;
+  if (key.includes('hunt')) return item('Gun_Revolver', 'Hunt icon', 'HU');
+  if (key.includes('animal')) return item('Meat_Squirrel', 'Animal icon', 'AN');
   if (key.includes('skill') || key.includes('labor') || key.includes('work')) return common.labor;
   if (key.includes('kitchen') || key.includes('cook') || key.includes('butcher')) return common.kitchen;
   if (key.includes('storage') || key.includes('stockpile') || key.includes('resource')) return common.storage;
@@ -323,6 +434,23 @@ function fallbackIconForKey(key: string): SemanticIconSpec | undefined {
   if (key.includes('log') || key.includes('trace') || key.includes('raw')) return common.logs;
   if (key.includes('status') || key.includes('coverage') || key.includes('version')) return common.data;
   return undefined;
+}
+
+function iconForDomainText(value: string): SemanticIconSpec | undefined {
+  const key = normalizeKey(stripLeadingSymbol(value));
+  if (key.includes('food') || key.includes('rice') || key.includes('meal') || key.includes('crop') || key.includes('freezer')) return common.food;
+  if (key.includes('hunt') || key.includes('hare')) return item('Gun_Revolver', 'Hunt icon', 'HU');
+  if (key.includes('power') || key.includes('grid')) return common.power;
+  if (key.includes('wood')) return common.storage;
+  if (key.includes('research') || key.includes('stonecutting')) return common.research;
+  if (key.includes('defense') || key.includes('weapon') || key.includes('perimeter')) return scopeIcons.defense;
+  if (key.includes('shelter') || key.includes('structure') || key.includes('building') || key.includes('construction')) return common.construction;
+  if (key.includes('wealth') || key.includes('trade')) return common.economy;
+  return undefined;
+}
+
+function stripLeadingSymbol(value: string): string {
+  return value.trimStart().replace(/^[^\p{L}\p{N}]+/u, '').trimStart();
 }
 
 function normalizeKey(value: string): string {

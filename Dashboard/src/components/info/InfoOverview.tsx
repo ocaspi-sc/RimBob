@@ -1,4 +1,6 @@
 import { DisclosureSection } from '../shared/DisclosureSection';
+import { iconForField, iconForInfoTerm, iconForScope } from '../../dashboard/semanticIcons';
+import { SemanticLabel } from '../shared/SemanticIcon';
 
 // ── Highlights data ──────────────────────────────────────────────────────────
 
@@ -230,7 +232,7 @@ export function InfoOverview() {
       <header className="info-hero system-card reference-card">
         <div>
           <span className="eyebrow">Reference</span>
-          <h2>INFO</h2>
+          <h2><SemanticLabel icon={iconForScope('info')} size="sm"><span>INFO</span></SemanticLabel></h2>
           <p>Plain-language vocabulary and scope guide. Live metrics belong in ANALYTICS; raw debugging belongs in SYSTEM.</p>
         </div>
         <div className="scope-boundary-strip info-boundary-strip">
@@ -242,12 +244,12 @@ export function InfoOverview() {
       </header>
 
       {/* ── Highlights ─────────────────────────────────────────────────── */}
-      <DisclosureSection title="What RimBob does" defaultOpen meta={`${features.length} features`}>
+      <DisclosureSection title={<SemanticLabel icon={iconForScope('info')}><span>What RimBob does</span></SemanticLabel>} defaultOpen meta={`${features.length} features`}>
         <div className="analytics-ideas">
           {features.map(f => (
             <article key={f.name} className="analytics-idea">
               <div>
-                <strong>{f.name}</strong>
+                <SemanticLabel icon={iconForInfoTerm(f.name, f.tag)}><strong>{f.name}</strong></SemanticLabel>
                 <span>{f.tag}</span>
               </div>
               <p>{f.description}</p>
@@ -256,19 +258,19 @@ export function InfoOverview() {
         </div>
       </DisclosureSection>
 
-      <DisclosureSection title="By the numbers" meta="codebase stats">
+      <DisclosureSection title={<SemanticLabel icon={iconForField('data_coverage')}><span>By the numbers</span></SemanticLabel>} meta="codebase stats">
         <div className="glossary-columns">
           <StatList title="Code" entries={codebaseStats} />
           <StatList title="Project" entries={projectStats} />
         </div>
       </DisclosureSection>
 
-      <DisclosureSection title="Design decisions" meta={`${designDecisions.length} choices`}>
+      <DisclosureSection title={<SemanticLabel icon={iconForField('rules')}><span>Design decisions</span></SemanticLabel>} meta={`${designDecisions.length} choices`}>
         <div className="analytics-ideas">
           {designDecisions.map(d => (
             <article key={d.decision} className="analytics-idea">
               <div>
-                <strong>{d.decision}</strong>
+                <SemanticLabel icon={iconForInfoTerm(d.decision, d.tag)}><strong>{d.decision}</strong></SemanticLabel>
                 <span>{d.tag}</span>
               </div>
               <p>{d.rationale}</p>
@@ -278,19 +280,19 @@ export function InfoOverview() {
       </DisclosureSection>
 
       {/* ── Glossary ────────────────────────────────────────────────────── */}
-      <DisclosureSection title="Important buzzwords" defaultOpen meta={`${rimbobGlossary.length + rimworldSignals.length} terms`}>
+      <DisclosureSection title={<SemanticLabel icon={iconForField('info')}><span>Important buzzwords</span></SemanticLabel>} defaultOpen meta={`${rimbobGlossary.length + rimworldSignals.length} terms`}>
         <div className="glossary-columns">
           <GlossaryList title="RimBob terms" entries={rimbobGlossary} />
           <GlossaryList title="RimWorld signals" entries={rimworldSignals} />
         </div>
       </DisclosureSection>
 
-      <DisclosureSection title="Where to look" defaultOpen meta="scope guide">
+      <DisclosureSection title={<SemanticLabel icon={iconForScope('system')}><span>Where to look</span></SemanticLabel>} defaultOpen meta="scope guide">
         <div className="analytics-ideas">
           {scopeGuide.map(scope => (
             <article key={scope.name} className="analytics-idea">
               <div>
-                <strong>{scope.name}</strong>
+                <SemanticLabel icon={iconForInfoTerm(scope.name, scope.tag)}><strong>{scope.name}</strong></SemanticLabel>
                 <span>{scope.tag}</span>
               </div>
               <p>{scope.description}</p>
@@ -309,7 +311,9 @@ function StatList({ entries, title }: { entries: StatEntry[]; title: string }) {
       <div className="count-rows">
         {entries.map(entry => (
           <div className="count-row" key={entry.label}>
-            <span>{entry.label}</span>
+            <SemanticLabel icon={iconForInfoTerm(entry.label, title)}>
+              <span>{entry.label}</span>
+            </SemanticLabel>
             <strong>{entry.value}</strong>
           </div>
         ))}
@@ -326,7 +330,7 @@ function GlossaryList({ entries, title }: { entries: GlossaryEntry[]; title: str
         {entries.map(entry => (
           <article className="glossary-row" key={entry.term}>
             <div>
-              <strong>{entry.term}</strong>
+              <SemanticLabel icon={iconForInfoTerm(entry.term, entry.tag)}><strong>{entry.term}</strong></SemanticLabel>
               <span>{entry.tag}</span>
             </div>
             <p>{entry.description}</p>

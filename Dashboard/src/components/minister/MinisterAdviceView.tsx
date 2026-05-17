@@ -4,11 +4,19 @@ import type { AdviceApplyResponse, AdviceItem } from '../../types/advice';
 import type { ScopeConfig } from '../../dashboard/scopes';
 import { applyAdviceAction } from '../../api/advice';
 import { iconUrlFor } from '../../api/icons';
-import { iconForField, iconForSection, iconForView } from '../../dashboard/semanticIcons';
+import {
+  iconForActionKind,
+  iconForAgendaCategory,
+  iconForAgendaPriority,
+  iconForField,
+  iconForSection,
+  iconForStateSummaryLine,
+  iconForView,
+} from '../../dashboard/semanticIcons';
 import { DisclosureSection } from '../shared/DisclosureSection';
 import { EmptyState } from '../shared/EmptyState';
 import { GameIcon } from '../shared/GameIcon';
-import { SemanticLabel } from '../shared/SemanticIcon';
+import { SemanticIconCue, SemanticLabel } from '../shared/SemanticIcon';
 
 export function MinisterAdviceView({
   advice,
@@ -55,7 +63,9 @@ export function MinisterAdviceView({
                 {currentStateLines.map((line, index) => (
                   <tr key={`${scope.key}-state-${index}`}>
                     <th scope="row">
-                      <SemanticLabel icon={iconForField(line.iconKey)}><span>{line.label ?? 'State'}</span></SemanticLabel>
+                      <SemanticLabel icon={iconForStateSummaryLine(line.label, line.detail) ?? iconForField(line.iconKey)}>
+                        <span>{line.label ?? 'State'}</span>
+                      </SemanticLabel>
                     </th>
                     <td>{line.detail}</td>
                   </tr>
@@ -159,8 +169,8 @@ function MayorAdvice({
         <div className="union-grid">
           {Object.entries(agenda.state_of_the_union).map(([key, value]) => (
             <article key={key}>
-              <SemanticLabel icon={iconForField(key)}><strong>{key}</strong></SemanticLabel>
-              <p>{value}</p>
+              <SemanticLabel icon={iconForAgendaCategory(key)}><strong>{key}</strong></SemanticLabel>
+              <p>{stripLeadingSymbol(value)}</p>
             </article>
           ))}
         </div>
@@ -179,7 +189,9 @@ function MayorAdvice({
           <PriorityCard
             key={item.id}
             item={item}
+            icon={iconForAgendaPriority(item.text)}
             rank={index + 1}
+            text={stripLeadingSymbol(item.text)}
             delta={deltaFor(item, previousShort.get(item.id))}
           />
         ))}
@@ -189,6 +201,8 @@ function MayorAdvice({
               <PriorityCard
                 key={item.id}
                 item={item}
+                icon={iconForAgendaPriority(item.text)}
+                text={stripLeadingSymbol(item.text)}
                 delta={deltaFor(item, previousShort.get(item.id))}
               />
             ))}
@@ -205,7 +219,8 @@ function MayorAdvice({
           {agenda.long_term.map(item => (
             <div className={`long-row ${item.status}`} key={item.id}>
               <span>{item.status}</span>
-              <p>{item.text}</p>
+              <SemanticIconCue icon={iconForAgendaPriority(item.text)} size="xs" />
+              <p>{stripLeadingSymbol(item.text)}</p>
             </div>
           ))}
         </div>
@@ -219,7 +234,7 @@ function MayorAdvice({
           <div className="direction-grid">
             {Object.entries(agenda.cabinet_direction).map(([minister, direction]) => (
               <article key={minister}>
-                <SemanticLabel icon={iconForField(minister)}><strong>{minister}</strong></SemanticLabel>
+                <SemanticLabel icon={iconForAgendaCategory(minister) ?? iconForField(minister)}><strong>{minister}</strong></SemanticLabel>
                 <p>{direction}</p>
               </article>
             ))}
@@ -277,13 +292,14 @@ function AdviceCard({ item }: { item: AdviceItem }) {
               const state = applyState[key] ?? { status: 'idle' as const, response: null, error: null };
               const success = state.response?.status === 'applied' || state.response?.status === 'already_satisfied';
               const disabled = state.status === 'pending' || success;
+              const actionIcon = iconForActionKind(action.kind);
               return (
                 <div key={`${item.id}-action-${index}`}>
                   <GameIcon
-                    fallback="-"
-                    label={`${formatLabel(action.kind)} icon`}
+                    fallback={actionIcon?.fallback ?? '-'}
+                    label={actionIcon?.label ?? `${formatLabel(action.kind)} icon`}
                     size="xs"
-                    src={iconUrlFor(action.icon)}
+                    src={iconUrlFor(action.icon ?? actionIcon?.ref)}
                   />
                   <strong>{formatLabel(action.kind)}</strong>
                   <span>{action.instruction}</span>
@@ -333,25 +349,28 @@ function AdviceCard({ item }: { item: AdviceItem }) {
               <SemanticLabel icon={iconForField('work_type')}><span>Work / Skill</span></SemanticLabel>
               <SemanticLabel icon={iconForField('priority')}><span>Priority</span></SemanticLabel>
             </div>
-            {item.resource_requests?.map((request, index) => (
-              <div className="dense-row" key={`${item.id}-request-${index}`}>
-                <span className="icon-cell">
-                  <GameIcon
-                    fallback="-"
-                    label={`${formatLabel(request.kind)} icon`}
-                    size="xs"
-                    src={iconUrlFor(request.icon)}
-                  />
-                </span>
-                <span>{formatLabel(request.kind)}</span>
-                <span>{request.request}</span>
-                <span>{request.reason}</span>
-                <span>{formatQuantity(request.quantity)}</span>
-                <span>{request.requested_from ?? '-'}</span>
-                <span>{formatWorkSkill(request.work_type, request.skill)}</span>
-                <span>{formatLabel(request.priority)}</span>
-              </div>
-            ))}
+            {item.resource_requests?.map((request, index) => {
+              const requestIcon = iconForActionKind(request.kind);
+              return (
+                <div className="dense-row" key={`${item.id}-request-${index}`}>
+                  <span className="icon-cell">
+                    <GameIcon
+                      fallback={requestIcon?.fallback ?? '-'}
+                      label={requestIcon?.label ?? `${formatLabel(request.kind)} icon`}
+                      size="xs"
+                      src={iconUrlFor(request.icon ?? requestIcon?.ref)}
+                    />
+                  </span>
+                  <span>{formatLabel(request.kind)}</span>
+                  <span>{request.request}</span>
+                  <span>{request.reason}</span>
+                  <span>{formatQuantity(request.quantity)}</span>
+                  <span>{request.requested_from ?? '-'}</span>
+                  <span>{formatWorkSkill(request.work_type, request.skill)}</span>
+                  <span>{formatLabel(request.priority)}</span>
+                </div>
+              );
+            })}
           </div>
         </DisclosureSection>
       )}
@@ -362,18 +381,21 @@ function AdviceCard({ item }: { item: AdviceItem }) {
           meta={`${item.suggested_actions?.length ?? 0} actions`}
         >
           <div className="action-list">
-            {item.suggested_actions?.map((action, index) => (
-              <div key={`${item.id}-action-${index}`}>
-                <GameIcon
-                  fallback="-"
-                  label={`${formatLabel(action.kind)} icon`}
-                  size="xs"
-                  src={iconUrlFor(action.icon)}
-                />
-                <strong>{action.kind}</strong>
-                <span>{action.instruction}</span>
-              </div>
-            ))}
+            {item.suggested_actions?.map((action, index) => {
+              const actionIcon = iconForActionKind(action.kind);
+              return (
+                <div key={`${item.id}-action-${index}`}>
+                  <GameIcon
+                    fallback={actionIcon?.fallback ?? '-'}
+                    label={actionIcon?.label ?? `${formatLabel(action.kind)} icon`}
+                    size="xs"
+                    src={iconUrlFor(action.icon ?? actionIcon?.ref)}
+                  />
+                  <strong>{action.kind}</strong>
+                  <span>{action.instruction}</span>
+                </div>
+              );
+            })}
           </div>
         </DisclosureSection>
       )}
@@ -397,17 +419,24 @@ function actionKey(item: AdviceItem, actionIndex: number): string {
 
 function PriorityCard({
   delta,
+  icon,
   item,
   rank,
+  text,
 }: {
   delta: string | null;
+  icon: ReturnType<typeof iconForAgendaPriority>;
   item: AgendaPriority;
   rank?: number;
+  text: string;
 }) {
   return (
     <article className={`priority-card ${item.status}`}>
-      {rank && <span className="rank">{rank}</span>}
-      <p>{item.text}</p>
+      <div className="priority-card-cues">
+        {rank && <span className="rank">{rank}</span>}
+        <SemanticIconCue className="priority-domain-icon" icon={icon} size="xs" />
+      </div>
+      <p>{text}</p>
       <footer>
         <span>{item.status}</span>
         {delta && <strong>{delta}</strong>}
@@ -421,6 +450,10 @@ function deltaFor(current: AgendaPriority, previous: AgendaPriority | undefined)
   if (current.status !== previous.status) return current.status;
   if (current.text !== previous.text) return 'updated';
   return null;
+}
+
+function stripLeadingSymbol(value: string): string {
+  return value.trimStart().replace(/^[^\p{L}\p{N}]+/u, '').trimStart();
 }
 
 function formatTime(iso: string): string {

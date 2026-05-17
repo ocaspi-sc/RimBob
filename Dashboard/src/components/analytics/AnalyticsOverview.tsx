@@ -2,8 +2,11 @@ import type { AdviceItem } from '../../types/advice';
 import type { MayorAgenda } from '../../types/agenda';
 import type { ColonySnapshot } from '../../types/colony';
 import type { DashboardEvent, StreamDiagnostics, SystemHealth } from '../../types/system';
+import type { SemanticIconSpec } from '../../dashboard/semanticIcons';
+import { iconForActionKind, iconForField, iconForInfoTerm, iconForScope } from '../../dashboard/semanticIcons';
 import { DisclosureSection } from '../shared/DisclosureSection';
 import { MetricCard } from '../shared/MetricCard';
+import { SemanticLabel } from '../shared/SemanticIcon';
 import { Timeline } from '../shared/Timeline';
 
 interface AnalyticsIdea {
@@ -84,7 +87,7 @@ export function AnalyticsOverview({
       <header className="analytics-hero system-card">
         <div>
           <span className="eyebrow">Derived signals</span>
-          <h2>ANALYTICS</h2>
+          <h2><SemanticLabel icon={iconForScope('analytics')} size="sm"><span>ANALYTICS</span></SemanticLabel></h2>
           <p>Interpreted live metrics from bounded dashboard inputs. Raw diagnostics stay in SYSTEM; definitions stay in INFO.</p>
         </div>
         <div className="scope-boundary-strip analytics-boundary-strip">
@@ -94,9 +97,9 @@ export function AnalyticsOverview({
           <span>SSE summary</span>
         </div>
         <div className="info-hero-metrics">
-          <MetricCard label="Active advice" value={activeAdvice.length} tone={analytics.highPressureAdvice > 0 ? 'warn' : 'neutral'} />
-          <MetricCard label="Agenda priorities" value={analytics.activeAgendaPriorities} />
-          <MetricCard label="Events" value={events.length} tone={stream.state === 'error' ? 'warn' : 'neutral'} />
+          <MetricCard label={metricLabel('active_advice', 'Active advice')} value={activeAdvice.length} tone={analytics.highPressureAdvice > 0 ? 'warn' : 'neutral'} />
+          <MetricCard label={metricLabel('agenda_priorities', 'Agenda priorities')} value={analytics.activeAgendaPriorities} />
+          <MetricCard label={metricLabel('events', 'Events')} value={events.length} tone={stream.state === 'error' ? 'warn' : 'neutral'} />
         </div>
       </header>
 
@@ -107,12 +110,12 @@ export function AnalyticsOverview({
             <h2>Current signal load</h2>
           </div>
           <div className="metric-grid">
-            <MetricCard label="Critical/high" value={analytics.highPressureAdvice} tone={analytics.highPressureAdvice > 0 ? 'warn' : 'ok'} />
-            <MetricCard label="Coverage" value={analytics.coverageLabel} tone={analytics.coverageTone} />
-            <MetricCard label="RAG chunks" value={health?.rag.chunk_count ?? 'n/a'} />
-            <MetricCard label="SSE state" value={stream.state} tone={sseAnalytics.clientTone} />
-            <MetricCard label="Latest event" value={sseAnalytics.lastEventType} />
-            <MetricCard label="Trace count" value={health?.traces.length ?? 'n/a'} />
+            <MetricCard label={metricLabel('priority', 'Critical/high')} value={analytics.highPressureAdvice} tone={analytics.highPressureAdvice > 0 ? 'warn' : 'ok'} />
+            <MetricCard label={metricLabel('data_coverage', 'Coverage')} value={analytics.coverageLabel} tone={analytics.coverageTone} />
+            <MetricCard label={metricLabel('rag', 'RAG chunks')} value={health?.rag.chunk_count ?? 'n/a'} />
+            <MetricCard label={metricLabel('sse_state', 'SSE state')} value={stream.state} tone={sseAnalytics.clientTone} />
+            <MetricCard label={metricLabel('latest_event', 'Latest event')} value={sseAnalytics.lastEventType} />
+            <MetricCard label={metricLabel('trace_count', 'Trace count')} value={health?.traces.length ?? 'n/a'} />
           </div>
         </div>
 
@@ -122,17 +125,17 @@ export function AnalyticsOverview({
             <h2>Current pressure</h2>
           </div>
           <div className="metric-grid">
-            <MetricCard label="Food buffer" value={analytics.foodDaysLabel} tone={analytics.foodTone} />
-            <MetricCard label="Mood" value={analytics.moodLabel} tone={analytics.moodTone} />
-            <MetricCard label="Power net" value={analytics.powerNetLabel} tone={analytics.powerTone} />
-            <MetricCard label="Downed" value={snapshot?.medical.downed ?? 'n/a'} tone={(snapshot?.medical.downed ?? 0) > 0 ? 'warn' : 'ok'} />
-            <MetricCard label="Threat" value={snapshot?.threat.activeRaid ? 'raid' : snapshot ? 'clear' : 'n/a'} tone={snapshot?.threat.activeRaid ? 'error' : 'neutral'} />
-            <MetricCard label="Wealth / colonist" value={snapshot ? Math.round(snapshot.wealth.wealthPerColonist).toLocaleString() : 'n/a'} />
+            <MetricCard label={metricLabel('food_buffer', 'Food buffer')} value={analytics.foodDaysLabel} tone={analytics.foodTone} />
+            <MetricCard label={metricLabel('mood', 'Mood')} value={analytics.moodLabel} tone={analytics.moodTone} />
+            <MetricCard label={metricLabel('power_net', 'Power net')} value={analytics.powerNetLabel} tone={analytics.powerTone} />
+            <MetricCard label={metricLabel('downed', 'Downed')} value={snapshot?.medical.downed ?? 'n/a'} tone={(snapshot?.medical.downed ?? 0) > 0 ? 'warn' : 'ok'} />
+            <MetricCard label={metricLabel('threat', 'Threat')} value={snapshot?.threat.activeRaid ? 'raid' : snapshot ? 'clear' : 'n/a'} tone={snapshot?.threat.activeRaid ? 'error' : 'neutral'} />
+            <MetricCard label={metricLabel('wealth_colonist', 'Wealth / colonist')} value={snapshot ? Math.round(snapshot.wealth.wealthPerColonist).toLocaleString() : 'n/a'} />
           </div>
         </div>
       </section>
 
-      <DisclosureSection title="SSE health summary" defaultOpen meta={sseAnalytics.summary}>
+      <DisclosureSection title={<SemanticLabel icon={iconForField('sse')}><span>SSE health summary</span></SemanticLabel>} defaultOpen meta={sseAnalytics.summary}>
         <div className="sse-info-grid">
           <div className="system-card compact-info-card">
             <div className="section-heading">
@@ -140,10 +143,10 @@ export function AnalyticsOverview({
               <h2>Dashboard stream</h2>
             </div>
             <div className="metric-grid compact">
-              <MetricCard label="State" value={stream.state} tone={sseAnalytics.clientTone} />
-              <MetricCard label="Events" value={stream.eventCount} />
-              <MetricCard label="Reconnects" value={stream.reconnectCount} tone={stream.reconnectCount > 0 ? 'warn' : 'ok'} />
-              <MetricCard label="Last event age" value={sseAnalytics.lastEventAge} tone={sseAnalytics.lastEventTone} />
+              <MetricCard label={metricLabel('sse_state', 'State')} value={stream.state} tone={sseAnalytics.clientTone} />
+              <MetricCard label={metricLabel('events', 'Events')} value={stream.eventCount} />
+              <MetricCard label={metricLabel('reconnects', 'Reconnects')} value={stream.reconnectCount} tone={stream.reconnectCount > 0 ? 'warn' : 'ok'} />
+              <MetricCard label={metricLabel('last_event', 'Last event age')} value={sseAnalytics.lastEventAge} tone={sseAnalytics.lastEventTone} />
             </div>
             <div className="stacked-lines sse-detail-lines">
               <InfoLine label="Last event" value={sseAnalytics.lastEventType} />
@@ -158,10 +161,10 @@ export function AnalyticsOverview({
               <h2>/api/advice/stream</h2>
             </div>
             <div className="metric-grid compact">
-              <MetricCard label="Connections" value={health?.sse.activeConnections ?? 'n/a'} tone={(health?.sse.activeConnections ?? 0) > 0 ? 'ok' : 'neutral'} />
-              <MetricCard label="Server events" value={health?.sse.eventCount ?? 'n/a'} />
-              <MetricCard label="Server errors" value={health?.sse.errorCount ?? 'n/a'} tone={(health?.sse.errorCount ?? 0) > 0 ? 'warn' : 'ok'} />
-              <MetricCard label="Last server event" value={formatMaybeDate(health?.sse.lastEventAt ?? null)} />
+              <MetricCard label={metricLabel('connections', 'Connections')} value={health?.sse.activeConnections ?? 'n/a'} tone={(health?.sse.activeConnections ?? 0) > 0 ? 'ok' : 'neutral'} />
+              <MetricCard label={metricLabel('server_events', 'Server events')} value={health?.sse.eventCount ?? 'n/a'} />
+              <MetricCard label={metricLabel('error', 'Server errors')} value={health?.sse.errorCount ?? 'n/a'} tone={(health?.sse.errorCount ?? 0) > 0 ? 'warn' : 'ok'} />
+              <MetricCard label={metricLabel('last_event', 'Last server event')} value={formatMaybeDate(health?.sse.lastEventAt ?? null)} />
             </div>
             <div className="stacked-lines sse-detail-lines">
               <InfoLine label="Event type" value={health?.sse.lastEventType ?? 'none'} />
@@ -172,20 +175,20 @@ export function AnalyticsOverview({
         </div>
       </DisclosureSection>
 
-      <DisclosureSection title="Advice analytics" defaultOpen meta={`${activeAdvice.length} active cards`}>
+      <DisclosureSection title={<SemanticLabel icon={iconForField('advice')}><span>Advice analytics</span></SemanticLabel>} defaultOpen meta={`${activeAdvice.length} active cards`}>
         <div className="analytics-columns">
-          <CountPanel title="Priority mix" rows={priorityCounts} empty="No active advice priorities." />
-          <CountPanel title="Minister mix" rows={ministerCounts} empty="No active minister advice." />
-          <CountPanel title="Action mix" rows={actionKindCounts} empty="No active advice actions." />
+          <CountPanel title="Priority mix" titleIcon={iconForField('priority')} rows={priorityCounts} empty="No active advice priorities." />
+          <CountPanel title="Minister mix" titleIcon={iconForField('minister')} rows={ministerCounts} empty="No active minister advice." />
+          <CountPanel title="Action mix" titleIcon={iconForField('actions')} rows={actionKindCounts} empty="No active advice actions." iconForRow={iconForActionKind} />
         </div>
       </DisclosureSection>
 
-      <DisclosureSection title="Analytics worth adding next" defaultOpen meta={`${analyticsIdeas.length} candidates`}>
+      <DisclosureSection title={<SemanticLabel icon={iconForScope('analytics')}><span>Analytics worth adding next</span></SemanticLabel>} defaultOpen meta={`${analyticsIdeas.length} candidates`}>
         <div className="analytics-ideas">
           {analyticsIdeas.map(idea => (
             <article key={idea.name} className="analytics-idea">
               <div>
-                <strong>{idea.name}</strong>
+                <SemanticLabel icon={iconForInfoTerm(idea.name, idea.signal)}><strong>{idea.name}</strong></SemanticLabel>
                 <span>{idea.signal}</span>
               </div>
               <p>{idea.value}</p>
@@ -194,24 +197,38 @@ export function AnalyticsOverview({
         </div>
       </DisclosureSection>
 
-      <DisclosureSection title="Recent dashboard events" meta={`${events.length} buffered`}>
+      <DisclosureSection title={<SemanticLabel icon={iconForField('events')}><span>Recent dashboard events</span></SemanticLabel>} meta={`${events.length} buffered`}>
         <Timeline events={events} limit={10} />
       </DisclosureSection>
     </div>
   );
 }
 
-function CountPanel({ empty, rows, title }: { empty: string; rows: CountRow[]; title: string }) {
+function CountPanel({
+  empty,
+  iconForRow,
+  rows,
+  title,
+  titleIcon,
+}: {
+  empty: string;
+  iconForRow?: (label: string) => SemanticIconSpec | undefined;
+  rows: CountRow[];
+  title: string;
+  titleIcon?: SemanticIconSpec;
+}) {
   return (
     <section className="count-panel">
-      <h3>{title}</h3>
+      <h3><SemanticLabel icon={titleIcon}><span>{title}</span></SemanticLabel></h3>
       {rows.length === 0 ? (
         <div className="muted-row">{empty}</div>
       ) : (
         <div className="count-rows">
           {rows.map(row => (
             <div className="count-row" key={row.label}>
-              <span>{formatLabel(row.label)}</span>
+              <SemanticLabel icon={iconForRow?.(row.label) ?? iconForField(row.label)}>
+                <span>{formatLabel(row.label)}</span>
+              </SemanticLabel>
               <strong>{row.count}</strong>
             </div>
           ))}
@@ -219,6 +236,10 @@ function CountPanel({ empty, rows, title }: { empty: string; rows: CountRow[]; t
       )}
     </section>
   );
+}
+
+function metricLabel(key: string, label: string) {
+  return <SemanticLabel icon={iconForField(key)}><span>{label}</span></SemanticLabel>;
 }
 
 function InfoLine({ label, value }: { label: string; value: string | number }) {

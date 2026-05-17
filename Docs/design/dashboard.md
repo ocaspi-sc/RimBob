@@ -308,10 +308,16 @@ The dashboard may render an icon only when it has an explicit source:
 - Pawn ids for lazy portrait URLs.
 - Known def-name fields from structured payloads, such as crop/material/resource
   dictionaries.
+- Bounded semantic cue maps for curated dashboard surfaces, keyed by contract
+  fields such as scope, view, section, advice action kind, agenda category, and
+  INFO glossary tag.
 
-Do not infer icons from prose in titles, bodies, reasons, instructions, or raw
-LLM text. If the explicit icon fails or is missing, render a stable-size fallback
-without resizing the row or card.
+Do not infer icons from prose in raw/debug views, titles, bodies, reasons, or
+instructions. Mayor's player-facing Agenda cards may use a small deterministic
+domain cue for priority text and may strip leading LLM-emitted emoji/symbols in
+the rendered card; Raw LLM Output and JSON inspectors keep the source text
+unchanged. If the explicit icon fails or is missing, render a stable-size
+fallback without resizing the row or card.
 
 ### Advice SSE
 
