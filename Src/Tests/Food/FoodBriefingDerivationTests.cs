@@ -309,7 +309,7 @@ public sealed class FoodBriefingDerivationTests
         FoodHarvestTarget target = b.HarvestTargets.Should()
             .ContainSingle(candidate => candidate.Source == "wild")
             .Subject;
-        target.Count.Should().BeGreaterThan(0);
+        target.Count.Should().BeGreaterThan(1);
         target.Count.Should().BeLessThanOrEqualTo(AssistedApplyLimits.MaxHarvestTargets);
         target.PlantIds.Should().HaveCount(target.Count);
         target.Rect.Area.Should().BeLessThanOrEqualTo(AssistedApplyLimits.MaxHarvestRectArea);

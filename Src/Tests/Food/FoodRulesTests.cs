@@ -366,7 +366,7 @@ public sealed class FoodRulesTests
 
         AdviceAction action = decision.Advice.Should().ContainSingle().Subject
             .Actions.Should().ContainSingle().Subject;
-        action.Instruction.Should().Contain("nearest 40 of 111 Plant_Berry");
+        action.Instruction.Should().Contain("Mark 40 of 111 Plant_Berry");
         action.Apply.Should().NotBeNull();
         action.Apply!.TargetCount.Should().Be(40);
     }

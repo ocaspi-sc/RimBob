@@ -671,7 +671,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
 
         FoodHarvestTarget? target = SelectedWildHarvestTarget(briefing);
         if (target is not null && target.Count < cluster.Count)
-            return $"Mark the nearest {target.Count} of {cluster.Count} {cluster.Def} for harvest ({target.Proximity ?? cluster.Proximity ?? "location unknown"}).";
+            return $"Mark {target.Count} of {cluster.Count} {cluster.Def} for harvest ({target.Proximity ?? cluster.Proximity ?? "location unknown"}).";
 
         return $"Mark the nearest {cluster.Count} {cluster.Def} for harvest ({cluster.Proximity ?? "location unknown"}).";
     }

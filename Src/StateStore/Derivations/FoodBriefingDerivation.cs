@@ -10,6 +10,7 @@ public static class FoodBriefingDerivation
 {
     private const int QualifiedSkillLevel = 6;
     private const int CoolerAdjacentDistanceCells = 12;
+    private const int HarvestTargetSearchLimit = 240;
     private static readonly IReadOnlyList<string> CropHarvestThingDefs = ["RawRice", "RawPotatoes", "RawCorn"];
     private static readonly HashSet<string> EdibleForagePlantDefs = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -245,8 +246,10 @@ public static class FoodBriefingDerivation
         IEnumerable<PlantRecord> plants,
         FoodReferencePoint? reference)
     {
-        List<PlantRecord> candidatePlants = plants
-            .Where(plant => plant.Position is not null)
+        List<PlantRecord> candidatePlants = OrderPlantsForHarvestTarget(
+                plants.Where(plant => plant.Position is not null),
+                reference?.Position)
+            .Take(HarvestTargetSearchLimit)
             .ToList();
         IReadOnlyList<PlantRecord> targetPlants = SelectBoundedHarvestPlants(candidatePlants, reference);
 
@@ -273,27 +276,34 @@ public static class FoodBriefingDerivation
         if (FitsHarvestApplyLimits(plants))
             return plants.ToList();
 
-        List<PlantRecord> selected = [];
-        foreach (PlantRecord plant in OrderPlantsForHarvestTarget(plants, reference?.Position))
+        HarvestTargetCandidate? best = null;
+        IReadOnlyList<PlantRecord> orderedPlants = OrderPlantsForHarvestTarget(plants, reference?.Position).ToList();
+        for (int i = 0; i < orderedPlants.Count; i++)
         {
-            if (selected.Any(existing => string.Equals(existing.Id, plant.Id, StringComparison.OrdinalIgnoreCase)))
-                continue;
+            for (int j = i; j < orderedPlants.Count; j++)
+            {
+                MapRect candidateRect = RectFor(orderedPlants[i].Position!, orderedPlants[j].Position!);
+                if (candidateRect.Area <= 0 || candidateRect.Area > AssistedApplyLimits.MaxHarvestRectArea)
+                    continue;
 
-            List<PlantRecord> candidateSeeds = selected.Append(plant).ToList();
-            MapRect candidateRect = RectFor(candidateSeeds.Select(candidate => candidate.Position!));
-            if (candidateRect.Area <= 0 || candidateRect.Area > AssistedApplyLimits.MaxHarvestRectArea)
-                continue;
+                List<PlantRecord> candidatePlants = plants
+                    .Where(candidate => IsInside(candidateRect, candidate.Position))
+                    .ToList();
+                if (!FitsHarvestApplyLimits(candidatePlants))
+                    continue;
 
-            List<PlantRecord> closedCandidate = plants
-                .Where(candidate => IsInside(candidateRect, candidate.Position))
-                .ToList();
-            if (!FitsHarvestApplyLimits(closedCandidate))
-                continue;
-
-            selected = OrderPlantsForHarvestTarget(closedCandidate, reference?.Position).ToList();
+                int distance = MapDistance.Nearest(candidatePlants.Select(plant => plant.Position), reference?.Position)
+                    ?? int.MaxValue;
+                HarvestTargetCandidate candidateTarget = new(
+                    OrderPlantsForHarvestTarget(candidatePlants, reference?.Position).ToList(),
+                    candidateRect.Area,
+                    distance);
+                if (best is null || IsBetterHarvestTarget(candidateTarget, best))
+                    best = candidateTarget;
+            }
         }
 
-        return selected;
+        return best?.Plants ?? [];
     }
 
     private static bool FitsHarvestApplyLimits(IReadOnlyList<PlantRecord> plants)
@@ -323,6 +333,22 @@ public static class FoodBriefingDerivation
         position.X <= rect.X2 &&
         position.Z >= rect.Z1 &&
         position.Z <= rect.Z2;
+
+    private static MapRect RectFor(MapPosition first, MapPosition second) =>
+        new(
+            X1: Math.Min(first.X, second.X),
+            Z1: Math.Min(first.Z, second.Z),
+            X2: Math.Max(first.X, second.X),
+            Z2: Math.Max(first.Z, second.Z));
+
+    private static bool IsBetterHarvestTarget(HarvestTargetCandidate candidate, HarvestTargetCandidate current)
+    {
+        if (candidate.Plants.Count != current.Plants.Count)
+            return candidate.Plants.Count > current.Plants.Count;
+        if (candidate.Distance != current.Distance)
+            return candidate.Distance < current.Distance;
+        return candidate.Area < current.Area;
+    }
 
     private static IReadOnlyList<MapPosition> TargetPositions(
         IReadOnlyList<PlantRecord> plants,
@@ -602,6 +628,8 @@ public static class FoodBriefingDerivation
         tokens.Any(token => value.Contains(token, StringComparison.OrdinalIgnoreCase));
 
     private sealed record HuntCandidateSummary(WildHuntTarget Target, int? Distance);
+
+    private sealed record HarvestTargetCandidate(IReadOnlyList<PlantRecord> Plants, int Area, int Distance);
 
     private sealed record FoodReferencePoint(string Name, MapPosition Position);
 }
