@@ -35,6 +35,7 @@ export function SystemOverview({
   const rimapi = health?.rimapi_coverage;
   const applyAttempts = health?.assisted_apply?.recent_attempts ?? [];
   const iconGroups = icons ? groupIconCacheFiles(icons.files) : [];
+  const iconFailureState = icons ? summarizeIconWarmFailures(icons) : null;
 
   return (
     <div className="system-overview">
@@ -244,6 +245,12 @@ export function SystemOverview({
               <InfoLine label="Latest write" value={formatMaybeDate(icons.latestWriteAt)} />
               <InfoLine label="Skipped" value={icons.lastWarm?.skipped ?? 'n/a'} />
               <InfoLine label="Failures" value={icons.lastWarm?.failed ?? 'n/a'} />
+              {iconFailureState && iconFailureState.resolvedSampleCount > 0 && (
+                <InfoLine
+                  label="Cached after failure sample"
+                  value={`${iconFailureState.resolvedSampleCount}/${iconFailureState.sampleCount}`}
+                />
+              )}
               <InfoLine label="By kind" value={formatKindCounts(icons.filesByKind)} />
             </div>
             {icons.files.length === 0 ? (
@@ -276,14 +283,14 @@ export function SystemOverview({
                 ))}
               </div>
             )}
-            {icons.lastWarm && icons.lastWarm.failures.length > 0 && (
+            {iconFailureState && iconFailureState.unresolvedFailures.length > 0 && (
               <div className="dense-table icon-failure-table">
                 <div className="dense-row header">
                   <FieldLabel iconKey="kind">Kind</FieldLabel>
                   <FieldLabel iconKey="id">Id</FieldLabel>
                   <FieldLabel iconKey="error">Error</FieldLabel>
                 </div>
-                {icons.lastWarm.failures.slice(0, 12).map(failure => (
+                {iconFailureState.unresolvedFailures.slice(0, 12).map(failure => (
                   <div className="dense-row" key={`${failure.kind}-${failure.id}-${failure.error}`}>
                     <span>{failure.kind}</span>
                     <code>{failure.id}</code>
@@ -401,6 +408,25 @@ function InfoLine({ label, value }: { label: string; value: string | number }) {
       <strong>{value}</strong>
     </div>
   );
+}
+
+function summarizeIconWarmFailures(icons: SystemHealth['icons']) {
+  if (!icons.lastWarm || icons.lastWarm.failures.length === 0) {
+    return null;
+  }
+
+  const cached = new Set(icons.files.map(file => iconFailureKey(file.kind, file.id)));
+  const unresolvedFailures = icons.lastWarm.failures.filter(failure => !cached.has(iconFailureKey(failure.kind, failure.id)));
+
+  return {
+    resolvedSampleCount: icons.lastWarm.failures.length - unresolvedFailures.length,
+    sampleCount: icons.lastWarm.failures.length,
+    unresolvedFailures,
+  };
+}
+
+function iconFailureKey(kind: string, id: string): string {
+  return `${kind}:${id}`.toLowerCase();
 }
 
 function groupIconCacheFiles(files: IconCacheFile[]) {
