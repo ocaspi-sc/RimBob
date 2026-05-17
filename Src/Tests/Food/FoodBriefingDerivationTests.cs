@@ -1,5 +1,6 @@
 using FluentAssertions;
 using RimBob.Core.Aggregates;
+using RimBob.Core.Advice;
 using RimBob.Core.Briefings;
 using RimBob.State;
 using RimBob.State.Derivations;
@@ -281,6 +282,38 @@ public sealed class FoodBriefingDerivationTests
         clusterDefs.Should().NotContain("Plant_TallGrass");
         b.HarvestTargets.Where(target => target.Source == "wild").Select(target => target.Def)
             .Should().BeEquivalentTo(["Plant_Berry", "Plant_Agave"]);
+    }
+
+    [Fact]
+    public void Compute_ForageHarvest_DerivesBoundedApplyTargetFromLargeCluster()
+    {
+        ColonyState s = StateWithColonists(1);
+        s.Buildings.Update(new BuildingRegistry([
+            new BuildingRecord("stove", "FueledStove", 1f, null, null, new MapPosition(10, 0, 10))
+        ]));
+        List<PlantRecord> plants = Enumerable.Range(0, 111)
+            .Select(i => new PlantRecord(
+                $"berry-{i}",
+                "Plant_Berry",
+                1f,
+                false,
+                null,
+                new MapPosition(10 + i % 10, 0, 10 + i / 10),
+                IsHarvestable: true))
+            .ToList();
+        s.Plants.Update(new PlantRegistry(plants));
+
+        FoodBriefing b = FoodBriefingDerivation.Compute(s);
+
+        b.WildHarvestCandidates.Should().Be(111);
+        FoodHarvestTarget target = b.HarvestTargets.Should()
+            .ContainSingle(candidate => candidate.Source == "wild")
+            .Subject;
+        target.Count.Should().BeGreaterThan(0);
+        target.Count.Should().BeLessThanOrEqualTo(AssistedApplyLimits.MaxHarvestTargets);
+        target.PlantIds.Should().HaveCount(target.Count);
+        target.Rect.Area.Should().BeLessThanOrEqualTo(AssistedApplyLimits.MaxHarvestRectArea);
+        target.Proximity.Should().Contain("from kitchen");
     }
 
     [Fact]

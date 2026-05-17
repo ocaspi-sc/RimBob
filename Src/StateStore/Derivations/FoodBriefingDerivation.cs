@@ -245,18 +245,15 @@ public static class FoodBriefingDerivation
         IEnumerable<PlantRecord> plants,
         FoodReferencePoint? reference)
     {
-        List<PlantRecord> targetPlants = plants
+        List<PlantRecord> candidatePlants = plants
             .Where(plant => plant.Position is not null)
-            .Take(AssistedApplyLimits.MaxHarvestTargets + 1)
             .ToList();
+        IReadOnlyList<PlantRecord> targetPlants = SelectBoundedHarvestPlants(candidatePlants, reference);
 
-        if (targetPlants.Count == 0 || targetPlants.Count > AssistedApplyLimits.MaxHarvestTargets)
+        if (targetPlants.Count == 0)
             return null;
 
         MapRect rect = RectFor(targetPlants.Select(plant => plant.Position!));
-        if (rect.Area <= 0 || rect.Area > AssistedApplyLimits.MaxHarvestRectArea)
-            return null;
-
         int? distance = MapDistance.Nearest(targetPlants.Select(plant => plant.Position), reference?.Position);
         return new FoodHarvestTarget(
             Source: source,
@@ -268,6 +265,64 @@ public static class FoodBriefingDerivation
             Proximity: MapDistance.ProximityLabel(distance, reference?.Name),
             Reference: reference?.Name);
     }
+
+    private static IReadOnlyList<PlantRecord> SelectBoundedHarvestPlants(
+        IReadOnlyList<PlantRecord> plants,
+        FoodReferencePoint? reference)
+    {
+        if (FitsHarvestApplyLimits(plants))
+            return plants.ToList();
+
+        List<PlantRecord> selected = [];
+        foreach (PlantRecord plant in OrderPlantsForHarvestTarget(plants, reference?.Position))
+        {
+            if (selected.Any(existing => string.Equals(existing.Id, plant.Id, StringComparison.OrdinalIgnoreCase)))
+                continue;
+
+            List<PlantRecord> candidateSeeds = selected.Append(plant).ToList();
+            MapRect candidateRect = RectFor(candidateSeeds.Select(candidate => candidate.Position!));
+            if (candidateRect.Area <= 0 || candidateRect.Area > AssistedApplyLimits.MaxHarvestRectArea)
+                continue;
+
+            List<PlantRecord> closedCandidate = plants
+                .Where(candidate => IsInside(candidateRect, candidate.Position))
+                .ToList();
+            if (!FitsHarvestApplyLimits(closedCandidate))
+                continue;
+
+            selected = OrderPlantsForHarvestTarget(closedCandidate, reference?.Position).ToList();
+        }
+
+        return selected;
+    }
+
+    private static bool FitsHarvestApplyLimits(IReadOnlyList<PlantRecord> plants)
+    {
+        if (plants.Count == 0 || plants.Count > AssistedApplyLimits.MaxHarvestTargets)
+            return false;
+
+        MapRect rect = RectFor(plants.Select(plant => plant.Position!));
+        return rect.Area > 0 && rect.Area <= AssistedApplyLimits.MaxHarvestRectArea;
+    }
+
+    private static IOrderedEnumerable<PlantRecord> OrderPlantsForHarvestTarget(
+        IEnumerable<PlantRecord> plants,
+        MapPosition? reference)
+    {
+        return plants
+            .Where(plant => plant.Position is not null)
+            .OrderBy(plant => reference is null ? 0 : MapDistance.Manhattan(plant.Position!, reference))
+            .ThenBy(plant => plant.Position!.X)
+            .ThenBy(plant => plant.Position!.Z)
+            .ThenBy(plant => plant.Id, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static bool IsInside(MapRect rect, MapPosition? position) =>
+        position is not null &&
+        position.X >= rect.X1 &&
+        position.X <= rect.X2 &&
+        position.Z >= rect.Z1 &&
+        position.Z <= rect.Z2;
 
     private static IReadOnlyList<MapPosition> TargetPositions(
         IReadOnlyList<PlantRecord> plants,

@@ -338,6 +338,40 @@ public sealed class FoodRulesTests
     }
 
     [Fact]
+    public void WildHarvest_WithBoundedApplySubset_LabelsDisplayedSubset()
+    {
+        FoodBriefing briefing = Briefing(days: 14f) with
+        {
+            MealsCount = 20,
+            RawFoodCount = 0,
+            ReadyToHarvest = 0,
+            WildHarvestCandidates = 111,
+            WildHarvestClusters = [new WildHarvestCluster("Plant_Berry", 111, 1f, "nearby to kitchen", "kitchen")],
+            HarvestTargets =
+            [
+                new FoodHarvestTarget(
+                    "wild",
+                    "Plant_Berry",
+                    40,
+                    new(10, 10, 19, 13),
+                    Enumerable.Range(0, 40).Select(i => $"berry-{i}").ToList(),
+                    null,
+                    "nearby to kitchen",
+                    "kitchen")
+            ]
+        };
+
+        Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
+            .Should().BeOfType<Decision>().Subject;
+
+        AdviceAction action = decision.Advice.Should().ContainSingle().Subject
+            .Actions.Should().ContainSingle().Subject;
+        action.Instruction.Should().Contain("nearest 40 of 111 Plant_Berry");
+        action.Apply.Should().NotBeNull();
+        action.Apply!.TargetCount.Should().Be(40);
+    }
+
+    [Fact]
     public void LowBufferDuringGrowingSeason_RequestsFoodGrowingTiles()
     {
         FoodBriefing briefing = Briefing(days: 16f) with

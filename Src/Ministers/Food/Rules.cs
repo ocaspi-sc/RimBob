@@ -646,7 +646,12 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             .FirstOrDefault();
         if (zone is null)
             return $"Mark/prioritize harvest for {briefing.ReadyToHarvest} ready food crop tiles.";
+
+        FoodHarvestTarget? target = SelectedCropHarvestTarget(briefing);
         string location = string.IsNullOrWhiteSpace(zone.Proximity) ? "" : $" ({zone.Proximity})";
+        if (target is not null && target.Count < zone.ReadyCount)
+            return $"Mark/prioritize harvest for {target.Count} of {zone.ReadyCount} ready {zone.Def} crop tiles{location}.";
+
         return $"Mark/prioritize harvest for {zone.ReadyCount} ready {zone.Def} crop tiles{location}.";
     }
 
@@ -663,6 +668,11 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         WildHarvestCluster? cluster = briefing.WildHarvestClusters.FirstOrDefault();
         if (cluster is null)
             return $"Mark edible forage for harvest; {briefing.WildHarvestCandidates} candidates are visible but no location summary is available.";
+
+        FoodHarvestTarget? target = SelectedWildHarvestTarget(briefing);
+        if (target is not null && target.Count < cluster.Count)
+            return $"Mark the nearest {target.Count} of {cluster.Count} {cluster.Def} for harvest ({target.Proximity ?? cluster.Proximity ?? "location unknown"}).";
+
         return $"Mark the nearest {cluster.Count} {cluster.Def} for harvest ({cluster.Proximity ?? "location unknown"}).";
     }
 
