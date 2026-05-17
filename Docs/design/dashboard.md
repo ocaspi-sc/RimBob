@@ -379,7 +379,7 @@ Only render the "no raw output yet" empty state when no prior raw response is
 available from the current Host process or replay corpus.
 
 Developer fallback ingestion is an observability and quota workaround only. The
-existing `run-minister-using-codex-subagent` skill owns the operator workflow:
+existing `run-minister-using-subagent` skill owns the operator workflow:
 copy exact prompt inputs, generate JSON outside Gemini, and post the raw output
 to the selected minister's manual ingestion endpoint. Support is
 capability-scoped by minister; it does not call RIMAPI write endpoints and does

@@ -1,15 +1,17 @@
 ---
-name: run-minister-using-codex-subagent
-description: Run a RimBob minister's LLM/manual fallback using a Codex subagent instead of Gemini. Use when the user explicitly asks to generate minister output with a Codex subagent, bypass Gemini quota/network failures, run the manual LLM step, or paste/ingest manually generated minister advice through `/api/ministers/{minister}/llm-output/manual`.
+name: run-minister-using-subagent
+description: Run a RimBob minister's LLM/manual fallback using a subagent instead of Gemini. Use when the user explicitly asks to generate minister output with a subagent (Codex subagent or Claude Code's Agent/Task tool), bypass Gemini quota/network failures, run the manual LLM step, or paste/ingest manually generated minister advice through `/api/ministers/{minister}/llm-output/manual`.
 ---
 
-# Run Minister Using Codex Subagent
+# Run Minister Using Subagent
 
-Generate a minister LLM response with a Codex subagent, ingest it through RimBob's manual raw-output endpoint, and verify the dashboard sees it. This is a developer fallback for provider failures; it remains suggest-only and must not call RIMAPI write endpoints.
+Generate a minister LLM response with a subagent, ingest it through RimBob's manual raw-output endpoint, and verify the dashboard sees it. This is a developer fallback for provider failures; it remains suggest-only and must not call RIMAPI write endpoints.
+
+**Subagent mechanism is environment-specific:** in Codex use a Codex subagent; in Claude Code use the Agent/Task tool with a JSON-only sub-prompt. The minister inputs, ingestion endpoint, and verification below are identical regardless of which agent runtime drives the subagent.
 
 ## Preconditions
 
-- Only spawn a subagent when the current user request explicitly asks for a Codex subagent, delegated agent, or manual subagent generation.
+- Only spawn a subagent when the current user request explicitly asks for a subagent, delegated agent, or manual subagent generation.
 - Default target is `Food`. For other ministers, first inspect whether `/api/ministers/{minister}/llm-output/manual` exists. If not wired, report that rather than pretending the manual path exists.
 - Read the target minister prompt and briefing from the running Host; do not reconstruct them from memory.
 
@@ -45,7 +47,7 @@ Generate a minister LLM response with a Codex subagent, ingest it through RimBob
      - If the raw text parses as JSON, note advice ids/titles/types/priorities, flag ids/severities/summaries, and notes.
      - If it does not parse as JSON, note only provider/model/status and a short reason.
 
-3. Ask the Codex subagent for JSON only.
+3. Ask the subagent for JSON only.
    - Pass the exact live system prompt, exact user prompt/briefing JSON, allowed advice types, and any current user quality constraints.
    - Treat the live system prompt as the source of truth for target-minister JSON shape, field names, allowed values, and writing style. Do not restate or override those requirements from memory.
    - Require JSON only, with no Markdown fences or explanatory prose.
@@ -77,6 +79,8 @@ Generate a minister LLM response with a Codex subagent, ingest it through RimBob
      - `status` is `manual_parsed` or `manual_normalized`.
      - `parseMode` matches the ingestion response.
      - The raw text contains the intended corrected wording and does not contain known-bad stale wording.
+
+     `Codex` / `codex-subagent` are the fixed provenance labels the manual endpoint records for any subagent-generated output; they do not change based on which agent runtime produced the JSON.
    - Compare the verified latest output to the previous-output summary captured before ingestion:
      - provider/model/status/parseMode changes.
      - advice count, ids, titles, advice_type, and priority changes.

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Run Minister Using Subagent"
+  short_description: "Subagent fallback for minister LLM output"
+  default_prompt: "Use $run-minister-using-subagent to generate Food minister output with a subagent and ingest it through the manual raw-output endpoint."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Run RimBob"
+  short_description: "Build and start the RimBob.Host server"
+  default_prompt: "Use $run-rimbob to build and start the RimBob.Host server, then report the dashboard URL and startup checks."
