@@ -22,7 +22,7 @@ public sealed class AssistedApplyServiceTests
 
         response.Status.Should().Be("stale_advice");
         response.AdviceId.Should().Be("missing");
-        response.StepIndex.Should().Be(0);
+        response.ActionIndex.Should().Be(0);
         response.Kind.Should().BeNull();
         service.LatestAttempts().Should().ContainSingle().Which.Status.Should().Be("stale_advice");
     }
@@ -31,10 +31,10 @@ public sealed class AssistedApplyServiceTests
     public async Task ApplyAsync_WhenHarvestRectTooBroad_ReturnsValidationFailedWithoutRimApi()
     {
         AdviceBus bus = new();
-        bus.Publish(Advice("food_harvest_mature_crops", new AdviceStep(
-            AdviceStepKind.MarkHarvest,
+        bus.Publish(Advice("food_harvest_mature_crops", new AdviceAction(
+            AdviceActionKind.MarkHarvest,
             "Mark broad harvest.",
-            Apply: new AdviceStepApply(
+            Apply: new AdviceActionApply(
                 AdviceApplyKind.MarkHarvestArea,
                 "Mark harvest",
                 "too broad",
@@ -55,10 +55,10 @@ public sealed class AssistedApplyServiceTests
     public async Task ApplyAsync_WhenMostHarvestTargetsAreNoLongerReady_ReturnsStaleWithoutPosting()
     {
         AdviceBus bus = new();
-        bus.Publish(Advice("food_harvest_mature_crops", new AdviceStep(
-            AdviceStepKind.MarkHarvest,
+        bus.Publish(Advice("food_harvest_mature_crops", new AdviceAction(
+            AdviceActionKind.MarkHarvest,
             "Mark harvest.",
-            Apply: new AdviceStepApply(
+            Apply: new AdviceActionApply(
                 AdviceApplyKind.MarkHarvestArea,
                 "Mark harvest",
                 "4 rice plants",
@@ -90,7 +90,7 @@ public sealed class AssistedApplyServiceTests
         return new AssistedApplyService(bus, state, ingestion, rimApi, new TestLogger<AssistedApplyService>());
     }
 
-    private static AdviceItem Advice(string id, AdviceStep step)
+    private static AdviceItem Advice(string id, AdviceAction action)
     {
         DateTimeOffset now = DateTimeOffset.UtcNow;
         return new AdviceItem(
@@ -101,7 +101,7 @@ public sealed class AssistedApplyServiceTests
             Title: "Mature crops are ready",
             Body: "Body",
             Rationale: "Rationale",
-            Steps: [step],
+            Actions: [action],
             GuideCitationIds: [],
             IssuedAt: now,
             ExpiresAt: now.AddHours(1));

@@ -23,7 +23,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                     "Food stockpile categories need verification",
                     FoodRemainderBody(briefing),
                     "Missing nutrition would make days-of-food unreliable; use the fallback counts until upstream data is fixed.",
-                    [new(AdviceStepKind.SetStockpileZone, "Confirm unknown or excluded food is edible and reachable before counting it as buffer.", Reason: "food units outside meals/raw-food counts cannot be converted into days-of-food", Icon: SimpleMealIcon)],
+                    [new(AdviceActionKind.SetStockpileZone, "Confirm unknown or excluded food is edible and reachable before counting it as buffer.", Reason: "food units outside meals/raw-food counts cannot be converted into days-of-food", Icon: SimpleMealIcon)],
                     [new(ResourceRequestKind.StockpileSpace, "reachable food stockpile visibility", "food units outside meals/raw-food counts cannot be converted into days-of-food", Icon: SimpleMealIcon)],
                     false);
 
@@ -33,7 +33,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 "Food state unknown",
                 "No reliable food stockpile signal is available. Treat this as a food-security check, not confirmed starvation.",
                 "The food chain cannot safely decide without stockpile visibility.",
-                [new(AdviceStepKind.SetStockpileZone, "Create or expose a reachable food stockpile, then refresh RimBob once food is visible.", Reason: "food_units and nutrition are both unavailable", Icon: SimpleMealIcon)],
+                [new(AdviceActionKind.SetStockpileZone, "Create or expose a reachable food stockpile, then refresh RimBob once food is visible.", Reason: "food_units and nutrition are both unavailable", Icon: SimpleMealIcon)],
                 [new(ResourceRequestKind.StockpileSpace, "visible reachable food stockpile", "food_units and nutrition are both unavailable", Icon: SimpleMealIcon)],
                 true);
         }
@@ -48,7 +48,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 priority,
                 "Food crisis within a week",
                 EmergencyBody(briefing, days),
-                "Food below 7 days is an urgent survival risk. Food owns the next food-chain steps; cross-minister requests carry only the build, tile, and labor needs.",
+                "Food below 7 days is an urgent survival risk. Food owns the next food-chain actions; cross-minister requests carry only the build, tile, and labor needs.",
                 EmergencyActions(briefing),
                 EmergencyRequests(briefing, priority),
                 true);
@@ -63,7 +63,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 "Mature crops are ready",
                 $"{briefing.ReadyToHarvest} crop tiles are ready to harvest. Pull them in before weather, rot, or task drift wastes the buffer.",
                 "Mature crops are a deterministic food-chain opportunity.",
-                [HarvestStep(briefing, days)],
+                [HarvestAction(briefing, days)],
                 PlantLaborIfNeeded(briefing, days, "PlantCut work for ready crops", "mature crops only help once harvested"),
                 days < 15f);
         }
@@ -76,7 +76,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 "Cooked meals are understocked",
                 $"Only {briefing.MealsCount} meals are reported for {briefing.ColonistCount} colonists while raw food exists.",
                 "A raw-food buffer still needs cooking throughput to become safe daily nutrition.",
-                CookBillSteps(briefing, days),
+                CookBillActions(briefing, days),
                 [],
                 false);
         }
@@ -88,7 +88,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 "Wild food can extend the buffer",
                 WildHarvestBody(briefing, days),
                 "Wild harvest is lower-risk than hunting when no mature crops are ready.",
-                [WildHarvestStep(briefing, days)],
+                [WildHarvestAction(briefing, days)],
                 PlantLaborIfNeeded(briefing, days, "PlantCut work for wild harvest", "wild harvest requires plant work"),
                 days < 10f);
 
@@ -100,7 +100,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 priority,
                 "Mark low-risk animals for hunting",
                 HuntingBody(briefing, days),
-                "The briefing has healthy wild animals and no lower-risk harvest path; hunting is a concrete local food-acquisition step.",
+                "The briefing has healthy wild animals and no lower-risk harvest path; hunting is a concrete local food-acquisition action.",
                 HuntingActions(briefing),
                 HuntingRequests(briefing, priority),
                 days < 10f);
@@ -113,8 +113,8 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 days < 12f ? AdvicePriority.High : AdvicePriority.Medium,
                 "Expand food growing capacity",
                 $"Food covers about {days:F1} days and {cropCandidate.Label} still fits the growing window. Add a compact food crop zone instead of waiting for hunting or trade.",
-                "A concrete growing-zone step is more actionable than a vague labor request; cross-minister flags carry tile needs separately.",
-                [GrowingZoneStep(cropCandidate, "current food buffer is below the 20-day safety band")],
+                "A concrete growing-zone action is more actionable than a vague labor request; cross-minister flags carry tile needs separately.",
+                [GrowingZoneAction(cropCandidate, "current food buffer is below the 20-day safety band")],
                 [
                     new(ResourceRequestKind.Tile,
                         $"{cropCandidate.Tiles} {cropCandidate.Label} growing tiles near fertile soil and food storage",
@@ -142,7 +142,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 "Food storage needs freezer support",
                 "Food exists but no cooler is visible. Preserve surplus before warm weather or large harvests.",
                 "The Food minister owns freezer need; Construction owns the actual build work.",
-                [new(AdviceStepKind.PlaceBlueprint, "Plan a freezer/cold-room upgrade near food storage.", Owner: "Construction", Reason: "stored food can spoil without temperature control", Icon: CoolerIcon)],
+                [new(AdviceActionKind.PlaceBlueprint, "Plan a freezer/cold-room upgrade near food storage.", Owner: "Construction", Reason: "stored food can spoil without temperature control", Icon: CoolerIcon)],
                 [new(ResourceRequestKind.Building, "cooler-backed freezer or cold room", "stored food can spoil without temperature control", RequestedFrom: "Construction", Icon: CoolerIcon)],
                 false);
 
@@ -162,7 +162,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         string title,
         string body,
         string rationale,
-        IReadOnlyList<AdviceStep> steps,
+        IReadOnlyList<AdviceAction> actions,
         IReadOnlyList<ResourceRequest> requests,
         bool emitFlag)
     {
@@ -176,7 +176,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             Title: title,
             Body: body,
             Rationale: rationale,
-            Steps: steps,
+            Actions: actions,
             GuideCitationIds: [],
             IssuedAt: now,
             ExpiresAt: now.AddHours(priority >= AdvicePriority.High ? 4 : 24),
@@ -301,48 +301,48 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         return requests;
     }
 
-    private static IReadOnlyList<AdviceStep> EmergencyActions(FoodBriefing briefing)
+    private static IReadOnlyList<AdviceAction> EmergencyActions(FoodBriefing briefing)
     {
-        List<AdviceStep> steps = [];
+        List<AdviceAction> actions = [];
         int forbiddenMealCount = ForbiddenMealCount(briefing);
         if (forbiddenMealCount > 0)
-            steps.Add(new AdviceStep(
-                AdviceStepKind.Unforbid,
+            actions.Add(new AdviceAction(
+                AdviceActionKind.Unforbid,
                 ForbiddenMealActionText(briefing, forbiddenMealCount),
                 Quantity: forbiddenMealCount,
                 Reason: "visible meals are forbidden and excluded from the reachable food buffer",
                 Icon: SimpleMealIcon,
                 Apply: UnforbidApply(briefing)));
         if (briefing.UnknownFoodUnits > 0 && briefing.MealsCount == 0 && briefing.RawFoodCount == 0)
-            steps.Add(new AdviceStep(
-                AdviceStepKind.SetStockpileZone,
+            actions.Add(new AdviceAction(
+                AdviceActionKind.SetStockpileZone,
                 $"Make {briefing.UnknownFoodUnits} unknown food units visible in a reachable food stockpile; treat the buffer as zero if they are not edible.",
                 Quantity: briefing.UnknownFoodUnits,
                 Reason: "unknown_food_units exists, but no meal or raw-food category is visible to Food",
                 Icon: SimpleMealIcon));
         if (briefing.ReadyToHarvest > 0)
-            steps.Add(HarvestStep(briefing, briefing.EstimatedDaysOfFood ?? 0f));
+            actions.Add(HarvestAction(briefing, briefing.EstimatedDaysOfFood ?? 0f));
         if (briefing.WildHarvestCandidates > 0)
-            steps.Add(WildHarvestStep(briefing, briefing.EstimatedDaysOfFood ?? 0f));
+            actions.Add(WildHarvestAction(briefing, briefing.EstimatedDaysOfFood ?? 0f));
         if (CanSuggestHunting(briefing))
-            steps.Add(HuntingStep(briefing));
+            actions.Add(HuntingAction(briefing));
         if (!briefing.Kitchen.HasCookingBuilding)
-            steps.Add(new AdviceStep(
-                AdviceStepKind.PlaceBlueprint,
+            actions.Add(new AdviceAction(
+                AdviceActionKind.PlaceBlueprint,
                 "Place a campfire or stove so raw food can become meals.",
                 Owner: "Construction",
                 Reason: "the food chain cannot turn raw food into meals without a cooking building",
                 Icon: CampfireIcon));
         if (briefing.RawFoodCount > 0)
         {
-            steps.Add(new AdviceStep(
-                AdviceStepKind.ProductionBill,
+            actions.Add(new AdviceAction(
+                AdviceActionKind.ProductionBill,
                 CookBillActionText(briefing),
                 Quantity: SimpleMealTarget(briefing),
                 Reason: "raw food must become meals during an urgent shortage",
                 Icon: SimpleMealIcon));
-            steps.Add(new AdviceStep(
-                AdviceStepKind.SetPriority,
+            actions.Add(new AdviceAction(
+                AdviceActionKind.SetPriority,
                 "Put the best cook on Cook work until simple meals are stocked.",
                 Owner: "Labor",
                 WorkType: WorkType.Cook,
@@ -352,47 +352,47 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         }
         FoodCropCandidate? cropCandidate = FoodCropMath.Recommend(briefing).BestCandidate;
         if (cropCandidate is not null)
-            steps.Add(GrowingZoneStep(
+            actions.Add(GrowingZoneAction(
                 cropCandidate,
                 "food buffer is below 7 days and the growing window is still open",
                 includeCandidateReason: false));
-        if (steps.Count == 0)
-            steps.Add(new AdviceStep(
-                AdviceStepKind.Trade,
+        if (actions.Count == 0)
+            actions.Add(new AdviceAction(
+                AdviceActionKind.Trade,
                 "Open an emergency food acquisition path because no stored, harvestable, cookable, or sowable food path is visible.",
                 Owner: "Mayor",
                 Reason: "no local food path is visible in the briefing"));
         int limit = forbiddenMealCount > 0 ? 4 : 3;
-        return steps.Take(limit).ToList();
+        return actions.Take(limit).ToList();
     }
 
-    private static IReadOnlyList<AdviceStep> CookBillSteps(FoodBriefing briefing, float days)
+    private static IReadOnlyList<AdviceAction> CookBillActions(FoodBriefing briefing, float days)
     {
-        List<AdviceStep> steps =
+        List<AdviceAction> actions =
         [
-            new AdviceStep(AdviceStepKind.ProductionBill,
+            new AdviceAction(AdviceActionKind.ProductionBill,
                 CookBillActionText(briefing),
                 Quantity: SimpleMealTarget(briefing),
                 Reason: "meal count is below two per colonist",
                 Icon: SimpleMealIcon)
         ];
         if (!briefing.Kitchen.HasCookingBuilding)
-            steps.Add(new AdviceStep(
-                AdviceStepKind.PlaceBlueprint,
+            actions.Add(new AdviceAction(
+                AdviceActionKind.PlaceBlueprint,
                 "Place a campfire or stove before relying on cooked-meal advice.",
                 Owner: "Construction",
                 Reason: "raw food cannot become meals without a cooking building",
                 Icon: CampfireIcon));
         if (ShouldRequestCookingLabor(briefing, days))
-            steps.Add(new AdviceStep(
-                AdviceStepKind.SetPriority,
+            actions.Add(new AdviceAction(
+                AdviceActionKind.SetPriority,
                 "Put the best cook on Cook work until simple meals are stocked.",
                 Owner: "Labor",
                 WorkType: WorkType.Cook,
                 Skill: "Cooking",
                 Reason: "raw food has to become meals and cook coverage is urgent or weak",
                 Icon: SimpleMealIcon));
-        return steps;
+        return actions;
     }
 
     private static IReadOnlyList<ResourceRequest> HuntingRequests(FoodBriefing briefing, AdvicePriority priority)
@@ -422,26 +422,26 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         return requests;
     }
 
-    private static IReadOnlyList<AdviceStep> HuntingActions(FoodBriefing briefing)
+    private static IReadOnlyList<AdviceAction> HuntingActions(FoodBriefing briefing)
     {
-        List<AdviceStep> steps =
+        List<AdviceAction> actions =
         [
-            HuntingStep(briefing)
+            HuntingAction(briefing)
         ];
         if (!briefing.Kitchen.HasButcherTable)
-            steps.Add(new AdviceStep(
-                AdviceStepKind.PlaceBlueprint,
+            actions.Add(new AdviceAction(
+                AdviceActionKind.PlaceBlueprint,
                 "Place a butcher table so hunted animals can become meat.",
                 Owner: "Construction",
                 Reason: "hunted animals must be butchered before they become usable meals"));
         if (!briefing.Kitchen.HasCookingBuilding)
-            steps.Add(new AdviceStep(
-                AdviceStepKind.PlaceBlueprint,
+            actions.Add(new AdviceAction(
+                AdviceActionKind.PlaceBlueprint,
                 "Place a campfire or stove so butchered meat can become meals.",
                 Owner: "Construction",
                 Reason: "meat must be cooked into safe meals once butchered",
                 Icon: CampfireIcon));
-        return steps.Take(3).ToList();
+        return actions.Take(3).ToList();
     }
 
     private static IReadOnlyList<ResourceRequest> PlantLaborIfNeeded(FoodBriefing briefing, float days, string what, string why) =>
@@ -449,8 +449,8 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             ? [new ResourceRequest(ResourceRequestKind.Labor, what, why, RequestedFrom: "Labor", WorkType: WorkType.PlantCut, Skill: "Plants", Icon: HarvestIcon(briefing))]
             : [];
 
-    private static AdviceStep HarvestStep(FoodBriefing briefing, float days) =>
-        new(AdviceStepKind.MarkHarvest,
+    private static AdviceAction HarvestAction(FoodBriefing briefing, float days) =>
+        new(AdviceActionKind.MarkHarvest,
             HarvestActionText(briefing),
             Owner: ShouldRequestPlantLabor(briefing, days) ? "Labor" : null,
             WorkType: WorkType.PlantCut,
@@ -459,8 +459,8 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             Icon: HarvestIcon(briefing),
             Apply: HarvestApply(briefing, "crop"));
 
-    private static AdviceStep WildHarvestStep(FoodBriefing briefing, float days) =>
-        new(AdviceStepKind.MarkHarvest,
+    private static AdviceAction WildHarvestAction(FoodBriefing briefing, float days) =>
+        new(AdviceActionKind.MarkHarvest,
             WildHarvestActionText(briefing),
             Owner: ShouldRequestPlantLabor(briefing, days) ? "Labor" : null,
             WorkType: WorkType.PlantCut,
@@ -469,8 +469,8 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             Icon: WildHarvestIcon(briefing),
             Apply: HarvestApply(briefing, "wild"));
 
-    private static AdviceStep HuntingStep(FoodBriefing briefing) =>
-        new(AdviceStepKind.MarkHunt,
+    private static AdviceAction HuntingAction(FoodBriefing briefing) =>
+        new(AdviceActionKind.MarkHunt,
             HuntingActionText(briefing),
             Owner: "Labor",
             WorkType: WorkType.Hunt,
@@ -478,11 +478,11 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             Reason: "low-risk wild animals are the best visible local food-acquisition path",
             Icon: HuntingIcon(briefing));
 
-    private static AdviceStep GrowingZoneStep(
+    private static AdviceAction GrowingZoneAction(
         FoodCropCandidate candidate,
         string reason,
         bool includeCandidateReason = true) =>
-        new(AdviceStepKind.DesignateZone,
+        new(AdviceActionKind.DesignateZone,
             $"Create about {candidate.Tiles} emergency {candidate.Label} growing tiles; use fertile soil near storage when possible.",
             Quantity: candidate.Tiles,
             Owner: "Food",
@@ -491,7 +491,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             Reason: includeCandidateReason ? $"{reason}; {candidate.Reason}" : reason,
             Icon: ItemIcon(candidate.CropDef));
 
-    private static AdviceStepApply? HarvestApply(FoodBriefing briefing, string source)
+    private static AdviceActionApply? HarvestApply(FoodBriefing briefing, string source)
     {
         FoodHarvestTarget? target = source == "wild"
             ? SelectedWildHarvestTarget(briefing)
@@ -504,7 +504,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         string location = string.IsNullOrWhiteSpace(target.Proximity) ? "" : $" ({target.Proximity})";
         string summary = $"{target.Count} {target.Def} plants{zone}{location}";
 
-        return new AdviceStepApply(
+        return new AdviceActionApply(
             Kind: AdviceApplyKind.MarkHarvestArea,
             Label: label,
             TargetSummary: summary,
@@ -549,7 +549,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             .FirstOrDefault();
     }
 
-    private static AdviceStepApply? UnforbidApply(FoodBriefing briefing)
+    private static AdviceActionApply? UnforbidApply(FoodBriefing briefing)
     {
         IReadOnlyList<FoodUnforbidTarget> targets = briefing.UnforbidTargets
             .Where(target => string.Equals(target.Kind, "meal", StringComparison.OrdinalIgnoreCase))
@@ -562,7 +562,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         string label = count == 1 ? "Unforbid meal" : "Unforbid meals";
         string summary = $"{count} {ForbiddenMealLabel(briefing, count)} across {targets.Count} stack{(targets.Count == 1 ? "" : "s")}";
 
-        return new AdviceStepApply(
+        return new AdviceActionApply(
             Kind: AdviceApplyKind.UnforbidThings,
             Label: label,
             TargetSummary: summary,

@@ -90,13 +90,13 @@ Status: implemented. Food rules now compute advice priority dynamically, use sta
 
 ## Phase 4 - Food Prompt and RAG Contract
 
-Status: implemented. The Food system prompt now requires sparse near-term output, `priority`, concrete steps, work-type-qualified labor metadata, live-state-first RAG usage, and trade/procurement as flag-only unless live trade context exists.
+Status: implemented. The Food system prompt now requires sparse near-term output, `priority`, concrete actions, work-type-qualified labor metadata, live-state-first RAG usage, and trade/procurement as flag-only unless live trade context exists.
 
 1. Update `food.system.md`.
    - Require near-term actionable output.
    - Require `priority`.
-   - Require concrete `steps`.
-   - Require work type on labor-like steps and flag requests.
+   - Require concrete `actions`.
+   - Require work type on labor-like actions and flag requests.
    - Ban vague labels such as "attention" and "labor capacity" unless a specific subsystem need is named.
    - Treat trade as flag-only in M3 unless live context proves an actual trade opportunity.
 
@@ -156,7 +156,7 @@ Status: implemented for this slice. Backend tests cover priority/work metadata s
 
 Status: build/test verified on 2026-05-13. `dotnet build Src\RimBob.sln --no-restore`, `dotnet test Src\Tests\RimBob.Tests.csproj --no-restore --no-build`, and `npm.cmd run build` passed. RimBob was restarted with `run-rimbob.ps1` and `/api/health` returned OK.
 
-Live follow-up verified on 2026-05-16. RIMAPI was reachable at `http://localhost:8765`; direct checks covered game state, maps, pawns, detailed colonists, resource summary, stored resources, plants, and animals. The running Host reported `rimapi_reachable: true`, served a live Food briefing, and `/api/advice/stream` replayed a current Food emergency advice card with concrete steps and a Food state summary.
+Live follow-up verified on 2026-05-16. RIMAPI was reachable at `http://localhost:8765`; direct checks covered game state, maps, pawns, detailed colonists, resource summary, stored resources, plants, and animals. The running Host reported `rimapi_reachable: true`, served a live Food briefing, and `/api/advice/stream` replayed a current Food emergency advice card with concrete actions and a Food state summary.
 
 1. Stop any running `RimBob.Host` before build if DLLs are locked.
 2. Run backend build.

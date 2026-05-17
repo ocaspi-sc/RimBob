@@ -28,9 +28,9 @@ public sealed class FoodRulesTests
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
         advice.AdviceType.Should().Be("food_security");
         advice.Priority.Should().Be(AdvicePriority.High);
-        advice.Steps.Should().Contain(s => s.Kind == AdviceStepKind.ProductionBill);
-        advice.Steps.Should().Contain(s => s.Kind == AdviceStepKind.SetPriority && s.WorkType == WorkType.Cook);
-        advice.Steps.Should().NotContain(s => s.Kind == AdviceStepKind.Trade);
+        advice.Actions.Should().Contain(s => s.Kind == AdviceActionKind.ProductionBill);
+        advice.Actions.Should().Contain(s => s.Kind == AdviceActionKind.SetPriority && s.WorkType == WorkType.Cook);
+        advice.Actions.Should().NotContain(s => s.Kind == AdviceActionKind.Trade);
         AgentFlag flag = decision.Flags.Should().ContainSingle().Subject;
         flag.Severity.Should().Be(FlagSeverity.High);
         flag.Requests.Should().NotBeNull();
@@ -65,9 +65,9 @@ public sealed class FoodRulesTests
             r.Kind == ResourceRequestKind.Item &&
             r.Quantity == 7 &&
             r.What.Contains("forbidden packaged survival meals"));
-        AdviceStep unforbidStep = advice.Steps.Should().Contain(step =>
-            step.Kind == AdviceStepKind.Unforbid &&
-            step.Instruction.Contains("Unforbid 7 packaged survival meals")).Subject;
+        AdviceAction unforbidStep = advice.Actions.Should().Contain(Action =>
+            Action.Kind == AdviceActionKind.Unforbid &&
+            Action.Instruction.Contains("Unforbid 7 packaged survival meals")).Subject;
         unforbidStep.Apply.Should().NotBeNull();
         unforbidStep.Apply!.Kind.Should().Be(AdviceApplyKind.UnforbidThings);
         unforbidStep.Apply.ThingTargets.Should().ContainSingle()
@@ -95,9 +95,9 @@ public sealed class FoodRulesTests
 
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
         advice.Priority.Should().Be(AdvicePriority.Critical);
-        advice.Steps.Should().Contain(s => s.Kind == AdviceStepKind.DesignateZone);
-        advice.Steps.Should().Contain(s => s.Kind == AdviceStepKind.PlaceBlueprint);
-        advice.Steps.Should().NotContain(s => s.Kind == AdviceStepKind.Note);
+        advice.Actions.Should().Contain(s => s.Kind == AdviceActionKind.DesignateZone);
+        advice.Actions.Should().Contain(s => s.Kind == AdviceActionKind.PlaceBlueprint);
+        advice.Actions.Should().NotContain(s => s.Kind == AdviceActionKind.Note);
         AgentFlag flag = decision.Flags.Should().ContainSingle().Subject;
         flag.Severity.Should().Be(FlagSeverity.Critical);
         flag.Requests.Should().NotBeNull();
@@ -127,11 +127,11 @@ public sealed class FoodRulesTests
             .Should().BeOfType<Decision>().Subject;
 
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
-        advice.Steps.Should().Contain(s =>
-            s.Kind == AdviceStepKind.SetStockpileZone &&
+        advice.Actions.Should().Contain(s =>
+            s.Kind == AdviceActionKind.SetStockpileZone &&
             s.Quantity == 46);
-        advice.Steps.Should().Contain(s => s.Kind == AdviceStepKind.DesignateZone);
-        advice.Steps.Should().Contain(s => s.Kind == AdviceStepKind.PlaceBlueprint);
+        advice.Actions.Should().Contain(s => s.Kind == AdviceActionKind.DesignateZone);
+        advice.Actions.Should().Contain(s => s.Kind == AdviceActionKind.PlaceBlueprint);
         AgentFlag flag = decision.Flags.Should().ContainSingle().Subject;
         flag.Requests.Should().NotBeNull();
         flag.Requests!.Should().Contain(r =>
@@ -161,10 +161,10 @@ public sealed class FoodRulesTests
         decision.Trace.Should().Be("harvest_mature_crops");
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
         advice.AdviceType.Should().Be("harvest_now");
-        AdviceStep step = advice.Steps.Single();
-        step.Instruction.Should().Contain("nearby to kitchen");
-        step.Apply.Should().NotBeNull();
-        step.Apply!.Kind.Should().Be(AdviceApplyKind.MarkHarvestArea);
+        AdviceAction Action = advice.Actions.Single();
+        Action.Instruction.Should().Contain("nearby to kitchen");
+        Action.Apply.Should().NotBeNull();
+        Action.Apply!.Kind.Should().Be(AdviceApplyKind.MarkHarvestArea);
         decision.Flags.Should().BeEmpty();
     }
 
@@ -178,8 +178,8 @@ public sealed class FoodRulesTests
 
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
         advice.AdviceType.Should().Be("manage_cook_bills");
-        advice.Steps.Should().Contain(s => s.Kind == AdviceStepKind.ProductionBill);
-        advice.Steps.Should().NotContain(s => s.Kind == AdviceStepKind.RequestResource);
+        advice.Actions.Should().Contain(s => s.Kind == AdviceActionKind.ProductionBill);
+        advice.Actions.Should().NotContain(s => s.Kind == AdviceActionKind.RequestResource);
         decision.Flags.Should().BeEmpty();
     }
 
@@ -198,8 +198,8 @@ public sealed class FoodRulesTests
             .Should().BeOfType<Decision>().Subject;
 
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
-        advice.Steps.Should().Contain(s =>
-            s.Kind == AdviceStepKind.SetPriority &&
+        advice.Actions.Should().Contain(s =>
+            s.Kind == AdviceActionKind.SetPriority &&
             s.WorkType == WorkType.Cook &&
             s.Skill == "Cooking");
     }
@@ -225,8 +225,8 @@ public sealed class FoodRulesTests
 
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
         advice.AdviceType.Should().Be("wild_harvest");
-        advice.Steps.Single().Instruction.Should().Contain("nearest 6 Plant_Berry");
-        advice.Steps.Single().Apply.Should().NotBeNull();
+        advice.Actions.Single().Instruction.Should().Contain("nearest 6 Plant_Berry");
+        advice.Actions.Single().Apply.Should().NotBeNull();
         decision.Flags.Should().BeEmpty();
     }
 
@@ -254,12 +254,12 @@ public sealed class FoodRulesTests
         Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
             .Should().BeOfType<Decision>().Subject;
 
-        AdviceStep step = decision.Advice.Should().ContainSingle().Subject
-            .Steps.Should().ContainSingle().Subject;
-        step.Instruction.Should().Contain("nearest 2 Plant_Berry");
-        step.Apply.Should().NotBeNull();
-        step.Apply!.TargetSummary.Should().Contain("Plant_Berry");
-        step.Apply.TargetIds.Should().Equal("berry-1", "berry-2");
+        AdviceAction Action = decision.Advice.Should().ContainSingle().Subject
+            .Actions.Should().ContainSingle().Subject;
+        Action.Instruction.Should().Contain("nearest 2 Plant_Berry");
+        Action.Apply.Should().NotBeNull();
+        Action.Apply!.TargetSummary.Should().Contain("Plant_Berry");
+        Action.Apply.TargetIds.Should().Equal("berry-1", "berry-2");
     }
 
     [Fact]
@@ -279,11 +279,11 @@ public sealed class FoodRulesTests
 
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
         advice.AdviceType.Should().Be("expand_growing_capacity");
-        AdviceStep step = advice.Steps.Should().ContainSingle().Subject;
-        step.Kind.Should().Be(AdviceStepKind.DesignateZone);
-        step.Quantity.Should().Be(36);
-        step.Instruction.Should().Contain("rice");
-        step.Reason.Should().Contain("winter margin");
+        AdviceAction Action = advice.Actions.Should().ContainSingle().Subject;
+        Action.Kind.Should().Be(AdviceActionKind.DesignateZone);
+        Action.Quantity.Should().Be(36);
+        Action.Instruction.Should().Contain("rice");
+        Action.Reason.Should().Contain("winter margin");
     }
 
     [Fact]
@@ -302,11 +302,11 @@ public sealed class FoodRulesTests
         Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
             .Should().BeOfType<Decision>().Subject;
 
-        AdviceStep step = decision.Advice.Should().ContainSingle().Subject
-            .Steps.Should().ContainSingle().Subject;
-        step.Kind.Should().Be(AdviceStepKind.DesignateZone);
-        step.Instruction.Should().Contain("rice");
-        step.Reason.Should().Contain("1 day of winter margin");
+        AdviceAction Action = decision.Advice.Should().ContainSingle().Subject
+            .Actions.Should().ContainSingle().Subject;
+        Action.Kind.Should().Be(AdviceActionKind.DesignateZone);
+        Action.Instruction.Should().Contain("rice");
+        Action.Reason.Should().Contain("1 day of winter margin");
     }
 
     [Fact]
@@ -346,10 +346,10 @@ public sealed class FoodRulesTests
         decision.Trace.Should().Be("hunt_low_risk_animals");
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
         advice.AdviceType.Should().Be("hunt_for_food");
-        AdviceStep step = advice.Steps.Should().ContainSingle().Subject;
-        step.Kind.Should().Be(AdviceStepKind.MarkHunt);
-        step.WorkType.Should().Be(WorkType.Hunt);
-        step.Skill.Should().Be("Shooting");
+        AdviceAction Action = advice.Actions.Should().ContainSingle().Subject;
+        Action.Kind.Should().Be(AdviceActionKind.MarkHunt);
+        Action.WorkType.Should().Be(WorkType.Hunt);
+        Action.Skill.Should().Be("Shooting");
     }
 
     [Fact]

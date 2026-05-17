@@ -240,7 +240,7 @@ Prompt should tell **The Architect**:
 - You own build feasibility, room/base layout, power, materials, and non-defense infrastructure.
 - Other ministers own why they need a thing; you own how feasible the build is.
 - Emit sparse, concrete `AdviceItem`s.
-- Use `steps[]` only; no old suggested action schema.
+- Use `actions[]` only; no old suggested action schema.
 - Do not allocate pawns.
 - Do not invent exact coordinates.
 - If placement is unknown, describe constraints: "near kitchen," "adjacent to food stockpile," "outside traffic choke," etc.

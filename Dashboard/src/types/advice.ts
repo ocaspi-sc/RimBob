@@ -23,7 +23,7 @@ export interface AdviceThingApplyTarget {
   };
 }
 
-export interface AdviceStepApply {
+export interface AdviceActionApply {
   kind: AdviceApplyKind;
   label: string;
   target_summary: string;
@@ -35,7 +35,7 @@ export interface AdviceStepApply {
   thing_targets?: AdviceThingApplyTarget[] | null;
 }
 
-export interface AdviceStep {
+export interface AdviceAction {
   kind: string;
   instruction: string;
   quantity?: number | null;
@@ -44,7 +44,7 @@ export interface AdviceStep {
   skill?: string | null;
   reason?: string | null;
   icon?: IconRef | null;
-  apply?: AdviceStepApply | null;
+  apply?: AdviceActionApply | null;
 }
 
 export interface AdviceApplyResponse {
@@ -52,7 +52,7 @@ export interface AdviceApplyResponse {
   message: string;
   kind?: AdviceApplyKind | null;
   advice_id: string;
-  step_index: number;
+  action_index: number;
   readback?: unknown | null;
 }
 
@@ -82,7 +82,7 @@ export interface AdviceItem {
   title: string;
   body: string;
   rationale: string;
-  steps: AdviceStep[];
+  actions: AdviceAction[];
   resource_requests?: ResourceRequest[];
   suggested_actions?: SuggestedAction[];
   guide_citations: string[];

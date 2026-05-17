@@ -128,10 +128,10 @@ public sealed class LlmClientTests
         response.Advice[0].Priority.Should().Be(AdvicePriority.High);
         response.Advice[0].Title.Should().Be("Manage Cook Bills");
         response.Advice[0].Body.Should().Contain("Cook simple meals");
-        response.Advice[0].Steps.Should().ContainSingle()
-            .Which.Kind.Should().Be(AdviceStepKind.RequestResource);
-        response.Advice[0].Steps.Single().WorkType.Should().Be(WorkType.Cook);
-        response.Advice[0].Steps.Single().Skill.Should().Be("Cooking");
+        response.Advice[0].Actions.Should().ContainSingle()
+            .Which.Kind.Should().Be(AdviceActionKind.RequestResource);
+        response.Advice[0].Actions.Single().WorkType.Should().Be(WorkType.Cook);
+        response.Advice[0].Actions.Single().Skill.Should().Be("Cooking");
         response.Flags.Should().HaveCount(3);
         response.Flags[0].Id.Should().Be("food:food_shortage_critical");
         response.Flags[0].Severity.Should().Be(RimBob.Core.Ministers.FlagSeverity.High);
@@ -181,14 +181,14 @@ public sealed class LlmClientTests
 
         AdviceItem advice = response.Advice.Should().ContainSingle().Subject;
         advice.Priority.Should().Be(AdvicePriority.Critical);
-        AdviceStep step = advice.Steps.Should().ContainSingle().Subject;
-        step.Kind.Should().Be(AdviceStepKind.RequestResource);
-        step.WorkType.Should().BeNull();
-        step.Reason.Should().Contain("did not name a RimWorld work type");
+        AdviceAction action = advice.Actions.Should().ContainSingle().Subject;
+        action.Kind.Should().Be(AdviceActionKind.RequestResource);
+        action.WorkType.Should().BeNull();
+        action.Reason.Should().Contain("did not name a RimWorld work type");
     }
 
     [Fact]
-    public void AdviceSchema_RoundTripsPriorityAndStepMetadata()
+    public void AdviceSchema_RoundTripsPriorityAndActionMetadata()
     {
         JsonSerializerOptions json = new() { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
         AdviceItem item = new(
@@ -199,10 +199,10 @@ public sealed class LlmClientTests
             Title: "Cook meals",
             Body: "Body",
             Rationale: "Rationale",
-            Steps:
+            Actions:
             [
-                new AdviceStep(
-                    AdviceStepKind.SetPriority,
+                new AdviceAction(
+                    AdviceActionKind.SetPriority,
                     "Put the best cook on Cook work today",
                     Quantity: 1,
                     Owner: "Labor",
@@ -220,7 +220,7 @@ public sealed class LlmClientTests
         serialized.Should().Contain("\"priority\":\"high\"");
         serialized.Should().NotContain("\"priority_score\"");
         serialized.Should().NotContain("\"severity\"");
-        serialized.Should().Contain("\"steps\":[");
+        serialized.Should().Contain("\"actions\":[");
         serialized.Should().Contain("\"instruction\":\"Put the best cook on Cook work today\"");
         serialized.Should().Contain("\"reason\":\"meals are understocked\"");
         serialized.Should().Contain("\"owner\":\"Labor\"");
@@ -231,27 +231,27 @@ public sealed class LlmClientTests
         serialized.Should().Contain("\"work_type\":\"cook\"");
         roundTripped.Should().NotBeNull();
         roundTripped!.Priority.Should().Be(AdvicePriority.High);
-        roundTripped.Steps.Single().Instruction.Should().Be("Put the best cook on Cook work today");
-        roundTripped.Steps.Single().Reason.Should().Be("meals are understocked");
-        roundTripped.Steps.Single().WorkType.Should().Be(WorkType.Cook);
-        roundTripped.Steps.Single().Skill.Should().Be("Cooking");
+        roundTripped.Actions.Single().Instruction.Should().Be("Put the best cook on Cook work today");
+        roundTripped.Actions.Single().Reason.Should().Be("meals are understocked");
+        roundTripped.Actions.Single().WorkType.Should().Be(WorkType.Cook);
+        roundTripped.Actions.Single().Skill.Should().Be("Cooking");
     }
 
     [Fact]
-    public void AdviceStepKinds_SerializeWithSelfDocumentingNames()
+    public void AdviceActionKinds_SerializeWithSelfDocumentingNames()
     {
         JsonSerializerOptions json = new() { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
-        IReadOnlyList<AdviceStep> steps =
+        IReadOnlyList<AdviceAction> actions =
         [
-            new AdviceStep(AdviceStepKind.MarkHarvest, "mark crops"),
-            new AdviceStep(AdviceStepKind.MarkHunt, "mark animals"),
-            new AdviceStep(AdviceStepKind.PlaceBlueprint, "place stove"),
-            new AdviceStep(AdviceStepKind.ProductionBill, "cook meals"),
-            new AdviceStep(AdviceStepKind.SetStockpileZone, "set food stockpile"),
-            new AdviceStep(AdviceStepKind.Unforbid, "unforbid meals")
+            new AdviceAction(AdviceActionKind.MarkHarvest, "mark crops"),
+            new AdviceAction(AdviceActionKind.MarkHunt, "mark animals"),
+            new AdviceAction(AdviceActionKind.PlaceBlueprint, "place stove"),
+            new AdviceAction(AdviceActionKind.ProductionBill, "cook meals"),
+            new AdviceAction(AdviceActionKind.SetStockpileZone, "set food stockpile"),
+            new AdviceAction(AdviceActionKind.Unforbid, "unforbid meals")
         ];
 
-        string serialized = JsonSerializer.Serialize(steps, json);
+        string serialized = JsonSerializer.Serialize(actions, json);
 
         serialized.Should().Contain("\"kind\":\"mark_harvest\"");
         serialized.Should().Contain("\"kind\":\"mark_hunt\"");
@@ -293,7 +293,7 @@ public sealed class LlmClientTests
               "title": "Set up the food chain",
               "body": "Make storage visible, place cooking, and start growing.",
               "rationale": "reported food units need reachable stockpile visibility.",
-              "steps": [
+              "actions": [
                 {
                   "kind": "set_stockpile_zone",
                   "instruction": "Make the reported food units visible in a reachable stockpile.",
@@ -328,7 +328,7 @@ public sealed class LlmClientTests
         result.Normalized.Should().BeFalse();
         result.Response.StateSummary.Should().Be("Food is in crisis and needs storage visibility plus setup.");
         AdviceItem advice = result.Response.Advice.Should().ContainSingle().Subject;
-        advice.Steps.Should().ContainSingle().Which.Instruction.Should().Be("Make the reported food units visible in a reachable stockpile.");
+        advice.Actions.Should().ContainSingle().Which.Instruction.Should().Be("Make the reported food units visible in a reachable stockpile.");
         advice.IssuedAt.Should().BeAfter(before);
         advice.ExpiresAt.Should().BeAfter(DateTimeOffset.UtcNow);
         advice.IssuedInGameTick.Should().Be("Y5500AprimayD5");

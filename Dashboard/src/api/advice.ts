@@ -1,13 +1,13 @@
 import { postJson } from './http';
 import type { AdviceApplyResponse } from '../types/advice';
 
-export function applyAdviceStep(
+export function applyAdviceAction(
   adviceId: string,
-  stepIndex: number,
+  actionIndex: number,
   signal?: AbortSignal,
 ): Promise<AdviceApplyResponse> {
   return postJson<AdviceApplyResponse>(
-    `/api/advice/${encodeURIComponent(adviceId)}/steps/${stepIndex}/apply`,
+    `/api/advice/${encodeURIComponent(adviceId)}/actions/${actionIndex}/apply`,
     signal,
   );
 }

@@ -44,7 +44,7 @@ Food follows the universal minister shape:
 - Medium+ Food pressure can feed Mayor synthesis through flags.
 
 Food remains in `Suggest` mode in MVP. Any game-state mutation is limited to
-future Assisted Apply controls on allowlisted Food steps after a player click.
+future Assisted Apply controls on allowlisted Food actions after a player click.
 
 ---
 
@@ -171,7 +171,7 @@ to LLM prose; the dashboard may render the labelled lines as a compact table. It
 should summarize concrete food situation facts such as stored
 meals/raw/unclassified food, days-of-food, growing areas and crop progress,
 acquisition opportunities, kitchen/storage/freezer signals, and confidence data
-gaps; individual advice items expose one ordered `steps[]` path for the player.
+gaps; individual advice items expose one concrete `actions[]` list for the player.
 
 Crop selection should be grounded in deterministic yield math exposed through
 briefing context and rule decisions. The LLM may use guides to explain or adjust
@@ -179,13 +179,14 @@ a candidate, but it should not invent crop math.
 
 ---
 
-## Advice Steps And Flag Requests
+## Advice Actions And Flag Requests
 
-Food advice steps should read as one ordered food-chain path: stockpile
-visibility, harvest, cooking, growing, then trade/procurement only if local paths
-are missing. Crop choice appears directly in the relevant step instruction.
+Food advice actions should read as separate interventions that can each improve
+food security: stockpile visibility, harvest, cooking, growing, then
+trade/procurement only if local paths are missing. Crop choice appears directly
+in the relevant action instruction.
 
-Food may use step or flag metadata for:
+Food may use action or flag metadata for:
 
 - Tiles: growing area, wild harvest area, freezer expansion, stockpile space.
 - Labor: specific RimWorld work types such as cooking, growing, plant cutting,
@@ -195,12 +196,12 @@ Food may use step or flag metadata for:
 - Bills/settings: cook bill targets, butcher bill state, stockpile filters,
   forbid/unforbid food.
 
-In MVP advice steps and flag requests are rendered by default. Assisted Apply
-may later execute a narrow allowlist of Food steps after player confirmation,
+In MVP advice actions and flag requests are rendered by default. Assisted Apply
+may later execute a narrow allowlist of Food actions after player confirmation,
 such as `unforbid` known food stacks or `mark_harvest` on validated safe plant
 clusters. `mark_hunt` requires risk filters before eligibility. Bills, zones,
 pawn work priorities, and pawn assignment remain outside the first Food apply
-slice. In Auto, steps become inputs to the deferred planner/Labor/RIMAPI path,
+slice. In Auto, actions become inputs to the deferred planner/Labor/RIMAPI path,
 while flag requests remain the cross-minister coordination signal.
 
 Trade is not a normal Food action in M3. Food may flag procurement need when

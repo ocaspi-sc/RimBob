@@ -134,7 +134,7 @@ const rimbobGlossary: GlossaryEntry[] = [
   {
     term: 'AdviceItem',
     tag: 'Cabinet',
-    description: 'A feeder minister memo with priority, rationale, ordered steps, and citations.',
+    description: 'A feeder minister memo with priority, rationale, concrete actions, and citations.',
   },
   {
     term: 'Briefing',

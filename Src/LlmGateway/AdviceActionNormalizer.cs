@@ -4,79 +4,83 @@ using RimBob.Core.Advice;
 
 namespace RimBob.LLM;
 
-internal static class AdviceStepNormalizer
+internal static class AdviceActionNormalizer
 {
-    public static IReadOnlyList<AdviceStep> NormalizeOrConvertLegacy(
-        JsonNode? stepsNode,
+    public static IReadOnlyList<AdviceAction> NormalizeOrConvertLegacy(
+        JsonNode? actionsNode,
+        JsonNode? legacyStepsNode,
         JsonNode? resourceRequestsNode,
         JsonNode? suggestedActionsNode,
         AdvicePriority priority,
         LlmAdviceNormalizationContext context,
         JsonSerializerOptions json)
     {
-        IReadOnlyList<AdviceStep> steps = Normalize(stepsNode, json);
-        if (steps.Count > 0) return steps;
+        IReadOnlyList<AdviceAction> actions = Normalize(actionsNode, json);
+        if (actions.Count > 0) return actions;
+
+        IReadOnlyList<AdviceAction> legacySteps = Normalize(legacyStepsNode, json);
+        if (legacySteps.Count > 0) return legacySteps;
 
         return ConvertLegacy(resourceRequestsNode, suggestedActionsNode, priority, context, json);
     }
 
-    public static IReadOnlyList<AdviceStep> Normalize(JsonNode? node, JsonSerializerOptions json)
+    public static IReadOnlyList<AdviceAction> Normalize(JsonNode? node, JsonSerializerOptions json)
     {
         JsonArray? array = node?.AsArray();
         if (array is null) return [];
 
-        List<AdviceStep> steps = [];
+        List<AdviceAction> actions = [];
         foreach (JsonNode? item in array)
         {
-            AdviceStep? step = NormalizeItem(item, json);
-            if (step is not null) steps.Add(step);
+            AdviceAction? action = NormalizeItem(item, json);
+            if (action is not null) actions.Add(action);
         }
 
-        return steps;
+        return actions;
     }
 
-    public static AdviceStep Normalize(AdviceStep step)
+    public static AdviceAction Normalize(AdviceAction action)
     {
-        WorkType? workType = step.WorkType ??
-                             (ShouldInferWorkType(step.Kind)
-                                 ? WorkTypeInference.Infer(step.Kind.ToString(), step.Instruction, step.Reason)
+        WorkType? workType = action.WorkType ??
+                             (ShouldInferWorkType(action.Kind)
+                                 ? WorkTypeInference.Infer(action.Kind.ToString(), action.Instruction, action.Reason)
                                  : null);
-        string? skill = string.IsNullOrWhiteSpace(step.Skill)
+        string? skill = string.IsNullOrWhiteSpace(action.Skill)
             ? WorkTypeInference.DefaultSkill(workType)
-            : step.Skill;
+            : action.Skill;
 
-        return step with
+        return action with
         {
-            Instruction = step.Instruction.Trim(),
-            Owner = string.IsNullOrWhiteSpace(step.Owner) ? null : step.Owner.Trim(),
+            Instruction = action.Instruction.Trim(),
+            Owner = string.IsNullOrWhiteSpace(action.Owner) ? null : action.Owner.Trim(),
             WorkType = workType,
             Skill = skill,
-            Reason = string.IsNullOrWhiteSpace(step.Reason) ? null : step.Reason.Trim(),
+            Reason = string.IsNullOrWhiteSpace(action.Reason) ? null : action.Reason.Trim(),
             Apply = null
         };
     }
 
-    private static bool ShouldInferWorkType(AdviceStepKind kind) => kind is
-        AdviceStepKind.DesignateZone or
-        AdviceStepKind.MarkHarvest or
-        AdviceStepKind.MarkHunt or
-        AdviceStepKind.ProductionBill or
-        AdviceStepKind.SetPriority or
-        AdviceStepKind.RequestResource;
+    private static bool ShouldInferWorkType(AdviceActionKind kind) => kind is
+        AdviceActionKind.DesignateZone or
+        AdviceActionKind.MarkHarvest or
+        AdviceActionKind.MarkHunt or
+        AdviceActionKind.ProductionBill or
+        AdviceActionKind.SetPriority or
+        AdviceActionKind.RequestResource;
 
-    private static IReadOnlyList<AdviceStep> ConvertLegacy(
+    private static IReadOnlyList<AdviceAction> ConvertLegacy(
         JsonNode? resourceRequestsNode,
         JsonNode? suggestedActionsNode,
         AdvicePriority priority,
         LlmAdviceNormalizationContext context,
         JsonSerializerOptions json)
     {
-        List<AdviceStep> steps = [];
+        List<AdviceAction> actions = [];
 
         foreach (ResourceRequest request in ResourceRequestNormalizer.Normalize(resourceRequestsNode, priority, context, json))
         {
-            steps.Add(Normalize(new AdviceStep(
-                Kind: AdviceStepKind.RequestResource,
+            actions.Add(Normalize(new AdviceAction(
+                Kind: AdviceActionKind.RequestResource,
                 Instruction: request.What,
                 Quantity: request.Quantity,
                 Owner: request.RequestedFrom,
@@ -86,20 +90,20 @@ internal static class AdviceStepNormalizer
                 Icon: request.Icon)));
         }
 
-        foreach (AdviceStep step in NormalizeLegacyActions(suggestedActionsNode, json))
+        foreach (AdviceAction action in NormalizeLegacyActions(suggestedActionsNode, json))
         {
-            steps.Add(step);
+            actions.Add(action);
         }
 
-        return steps;
+        return actions;
     }
 
-    private static IReadOnlyList<AdviceStep> NormalizeLegacyActions(JsonNode? node, JsonSerializerOptions json)
+    private static IReadOnlyList<AdviceAction> NormalizeLegacyActions(JsonNode? node, JsonSerializerOptions json)
     {
         JsonArray? array = node?.AsArray();
         if (array is null) return [];
 
-        List<AdviceStep> steps = [];
+        List<AdviceAction> actions = [];
         foreach (JsonNode? item in array)
         {
             if (item is null) continue;
@@ -107,15 +111,15 @@ internal static class AdviceStepNormalizer
             {
                 string? rawText = LlmResponseParser.ReadString(item);
                 if (!string.IsNullOrWhiteSpace(rawText))
-                    steps.Add(new AdviceStep(AdviceStepKind.Note, rawText.Trim()));
+                    actions.Add(new AdviceAction(AdviceActionKind.Note, rawText.Trim()));
 
                 continue;
             }
 
-            AdviceStep? strict = LlmResponseParser.TryDeserialize<AdviceStep>(item, json);
+            AdviceAction? strict = LlmResponseParser.TryDeserialize<AdviceAction>(item, json);
             if (strict is not null && !string.IsNullOrWhiteSpace(strict.Instruction))
             {
-                steps.Add(Normalize(strict));
+                actions.Add(Normalize(strict));
                 continue;
             }
 
@@ -123,7 +127,7 @@ internal static class AdviceStepNormalizer
                                   LlmResponseParser.ReadString(item["what"]);
             if (!string.IsNullOrWhiteSpace(instruction))
             {
-                steps.Add(Normalize(new AdviceStep(
+                actions.Add(Normalize(new AdviceAction(
                     ParseKind(LlmResponseParser.ReadString(item["kind"])),
                     instruction,
                     Icon: ParseIcon(item["icon"], json))));
@@ -132,13 +136,13 @@ internal static class AdviceStepNormalizer
 
             string? text = LlmResponseParser.ReadString(item);
             if (!string.IsNullOrWhiteSpace(text))
-                steps.Add(new AdviceStep(AdviceStepKind.Note, text.Trim()));
+                actions.Add(new AdviceAction(AdviceActionKind.Note, text.Trim()));
         }
 
-        return steps;
+        return actions;
     }
 
-    private static AdviceStep? NormalizeItem(JsonNode? item, JsonSerializerOptions json)
+    private static AdviceAction? NormalizeItem(JsonNode? item, JsonSerializerOptions json)
     {
         if (item is null) return null;
         if (item is not JsonObject)
@@ -146,10 +150,10 @@ internal static class AdviceStepNormalizer
             string? rawText = LlmResponseParser.ReadString(item);
             return string.IsNullOrWhiteSpace(rawText)
                 ? null
-                : new AdviceStep(AdviceStepKind.Note, rawText.Trim());
+                : new AdviceAction(AdviceActionKind.Note, rawText.Trim());
         }
 
-        AdviceStep? strict = LlmResponseParser.TryDeserialize<AdviceStep>(item, json);
+        AdviceAction? strict = LlmResponseParser.TryDeserialize<AdviceAction>(item, json);
         if (strict is not null && !string.IsNullOrWhiteSpace(strict.Instruction))
             return Normalize(strict);
 
@@ -159,7 +163,7 @@ internal static class AdviceStepNormalizer
         if (string.IsNullOrWhiteSpace(instruction)) return null;
 
         WorkType? workType = WorkTypeInference.Parse(LlmResponseParser.ReadString(item["work_type"]));
-        return Normalize(new AdviceStep(
+        return Normalize(new AdviceAction(
             Kind: ParseKind(LlmResponseParser.ReadString(item["kind"])),
             Instruction: instruction,
             Quantity: LlmResponseParser.TryReadIntegerQuantity(item["quantity"] ?? item["amount"]),
@@ -176,16 +180,16 @@ internal static class AdviceStepNormalizer
         return LlmResponseParser.TryDeserialize<IconRef>(node, json);
     }
 
-    private static AdviceStepKind ParseKind(string? raw)
+    private static AdviceActionKind ParseKind(string? raw)
     {
-        if (string.IsNullOrWhiteSpace(raw)) return AdviceStepKind.Note;
+        if (string.IsNullOrWhiteSpace(raw)) return AdviceActionKind.Note;
         string normalized = LlmResponseParser.NormalizeIdentifier(raw);
-        foreach (AdviceStepKind kind in Enum.GetValues<AdviceStepKind>())
+        foreach (AdviceActionKind kind in Enum.GetValues<AdviceActionKind>())
         {
             if (LlmResponseParser.NormalizeIdentifier(kind.ToString()) == normalized)
                 return kind;
         }
 
-        return AdviceStepKind.Note;
+        return AdviceActionKind.Note;
     }
 }

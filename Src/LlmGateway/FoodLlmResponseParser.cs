@@ -135,7 +135,7 @@ public static class FoodLlmResponseParser
     private static bool HasStrictAdviceShape(JsonNode root)
     {
         JsonArray? advice = root["advice"]?.AsArray();
-        return advice is not null && advice.All(item => item?["priority"] is not null && item?["steps"] is not null);
+        return advice is not null && advice.All(item => item?["priority"] is not null && item?["actions"] is not null);
     }
 
     private static bool IsStrictFoodResponse(FoodLlmResponse response) =>
@@ -147,8 +147,8 @@ public static class FoodLlmResponseParser
             !string.IsNullOrWhiteSpace(advice.Title) &&
             !string.IsNullOrWhiteSpace(advice.Body) &&
             !string.IsNullOrWhiteSpace(advice.Rationale) &&
-            advice.Steps.All(step =>
-                !string.IsNullOrWhiteSpace(step.Instruction)) &&
+            advice.Actions.All(action =>
+                !string.IsNullOrWhiteSpace(action.Instruction)) &&
             response.Flags.All(flag =>
                 flag.Requests is null || flag.Requests.All(request =>
                     !string.IsNullOrWhiteSpace(request.What) &&

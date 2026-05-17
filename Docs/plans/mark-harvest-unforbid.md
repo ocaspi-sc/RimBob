@@ -18,9 +18,9 @@ one allowlisted non-pawn RIMAPI write, refreshes state, and reports the result.
 - `unforbid` requires a safe RIMAPI endpoint; do not use
   `/api/v1/map/destroy/forbidden`.
 - Apply metadata is created only by deterministic backend/rules code.
-  LLM-normalized steps never become directly executable.
-- The dashboard sends `POST /api/advice/{adviceId}/steps/{stepIndex}/apply`
-  with no target payload. Host looks up the active `AdviceItem` and step from
+  LLM-normalized actions never become directly executable.
+- The dashboard sends `POST /api/advice/{adviceId}/actions/{actionIndex}/apply`
+  with no target payload. Host looks up the active `AdviceItem` and action from
   `AdviceBus`.
 - Apply buttons appear only when the step has an exact, bounded, revalidatable
   target. Otherwise the advice remains text-only.
@@ -63,18 +63,18 @@ one allowlisted non-pawn RIMAPI write, refreshes state, and reports the result.
 
 ## Phase 2 - RimBob Contracts
 
-- Add optional `apply` metadata to `AdviceStep`.
+- Add optional `apply` metadata to `AdviceAction`.
 - Minimal apply handle fields: `kind`, `label`, `target_summary`, and opaque
   target data needed by Host validation.
 - Supported kinds for this slice:
   - `mark_harvest_area`
   - `unforbid_things`
 - Do not expose raw RIMAPI path/body in the dashboard contract.
-- Treat `apply` as server-owned. `AdviceStepNormalizer`, manual LLM ingestion,
+- Treat `apply` as server-owned. `AdviceActionNormalizer`, manual LLM ingestion,
   and any raw model parsing path must ignore or strip model-supplied `apply`
   fields.
 - Define the apply response contract before frontend/backend parallel work:
-  `status`, `message`, `kind`, `advice_id`, `step_index`, and optional
+  `status`, `message`, `kind`, `advice_id`, `action_index`, and optional
   `readback`.
 - Add frontend type mirrors for the new optional `apply` object.
 
@@ -97,7 +97,7 @@ one allowlisted non-pawn RIMAPI write, refreshes state, and reports the result.
 - If harvest readiness cannot be tied to exact plant positions or zone/cell
   geometry, do not attach an apply handle.
 - Add Food rule logic that attaches apply metadata to `Unforbid` and
-  `MarkHarvest` steps only for eligible targets.
+  `MarkHarvest` actions only for eligible targets.
 
 ## Phase 4 - Host Apply Pipeline
 
@@ -116,7 +116,7 @@ one allowlisted non-pawn RIMAPI write, refreshes state, and reports the result.
   `validation_failed`, `rimapi_unavailable`, `rimapi_rejected`, or
   `readback_inconclusive`.
 - Response body shape is stable for all statuses: `status`, `message`, `kind`,
-  `advice_id`, `step_index`, and optional `readback`.
+  `advice_id`, `action_index`, and optional `readback`.
 - Record latest apply attempts in bounded Host memory and expose them through
   `/api/system/health`.
 
@@ -124,12 +124,12 @@ one allowlisted non-pawn RIMAPI write, refreshes state, and reports the result.
 
 - Add an apply API helper and hook with per-advice-step pending/result/error
   state.
-- Render a compact Apply button beside eligible steps in the Advice view.
+- Render a compact Apply button beside eligible actions in the Advice view.
 - Disable while pending and after successful apply in that browser session.
 - Show the returned result message inline with the step.
 - Extend SYSTEM health types/rendering so latest Assisted Apply attempts are
   visible in the dashboard, not just present in the backend JSON.
-- Keep non-eligible steps rendered exactly as advice, without broad write
+- Keep non-eligible actions rendered exactly as advice, without broad write
   controls.
 
 ## Phase 6 - Tests
@@ -139,10 +139,10 @@ one allowlisted non-pawn RIMAPI write, refreshes state, and reports the result.
 - `RimApiClient`: payload tests for harvest designation and unforbid.
 - Food derivation: executable targets are present only when exact ids/rects are
   available.
-- Food rules: eligible `Unforbid` and `MarkHarvest` steps carry apply metadata;
-  ineligible steps do not.
+- Food rules: eligible `Unforbid` and `MarkHarvest` actions carry apply metadata;
+  ineligible actions do not.
 - LLM/manual ingestion: model-supplied `apply` fields are ignored or stripped,
-  and normalized LLM steps are never executable by themselves.
+  and normalized LLM actions are never executable by themselves.
 - Host endpoint: stale advice, missing target, oversized rect/batch, RIMAPI
   unavailable, RIMAPI rejection, success, and already-satisfied paths.
 - Dashboard: build passes, Apply states render without layout shift, and SYSTEM

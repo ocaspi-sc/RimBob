@@ -71,8 +71,8 @@ public sealed class FoodPromptTests
         builder.FoodSystemPrompt.Should().Contain("priority: low, medium, high, or critical");
         builder.FoodSystemPrompt.Should().Contain("Keep structured leaf strings terse");
         builder.FoodSystemPrompt.Should().Contain("Titles are 3-7 words");
-        builder.FoodSystemPrompt.Should().Contain("steps[].instruction is one short imperative sentence");
-        builder.FoodSystemPrompt.Should().Contain("steps[].reason is one short cause");
+        builder.FoodSystemPrompt.Should().Contain("actions[].instruction is one short imperative sentence");
+        builder.FoodSystemPrompt.Should().Contain("actions[].reason is one short cause");
         builder.FoodSystemPrompt.Should().Contain("instruction is one short imperative sentence");
         builder.FoodSystemPrompt.Should().Contain("Put explanation in body and rationale");
         builder.FoodSystemPrompt.Should().Contain("kind and instruction fields");

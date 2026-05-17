@@ -187,7 +187,7 @@ public sealed class FoodMinisterTests
         Title: "Hunt carefully",
         Body: "Use safe targets.",
         Rationale: "LLM selected hunting path.",
-        Steps: [],
+        Actions: [],
         GuideCitationIds: [],
         IssuedAt: DateTimeOffset.UtcNow,
         ExpiresAt: DateTimeOffset.UtcNow.AddHours(4));

@@ -108,7 +108,7 @@ export interface AssistedApplyAttempt {
   message: string;
   kind?: AdviceApplyKind | null;
   advice_id: string;
-  step_index: number;
+  action_index: number;
 }
 
 export interface SystemHealth {

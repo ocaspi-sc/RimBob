@@ -133,7 +133,7 @@ nearest clusters, tile counts, and bottleneck signals are preferred over lists
 of every coordinate.
 
 When an LLM is called, it must produce the same execution-facing fields the
-runtime accepts: advice type, priority, title/body/rationale, ordered steps,
+runtime accepts: advice type, priority, title/body/rationale, concrete actions,
 optional flags, optional scheduled wakeup, and trace notes.
 See [`advice.md`](advice.md) for the advice schema and feedback lifecycle.
 
@@ -142,7 +142,7 @@ LLM rules:
 - Advice types are closed per minister.
 - `priority` is required on every advice item.
 - Feeder ministers emit concrete operational advice, not grand strategy menus.
-- `steps` are the single player-facing action path on advice.
+- `actions` are the single player-facing action list on advice.
 - `AgentFlag.Requests` describe cross-minister needs; they do not allocate pawns
   or reserve another minister's resource in MVP.
 - Trace notes are for logging/refinement, not player-facing advice.
@@ -209,7 +209,7 @@ Every game action eventually gets one primary owner. Other ministers may be
 requesters when the action serves their chain. In MVP, requester/owner language
 is advisory by itself; it does not execute writes or allocate pawns. Assisted
 Apply may use the same ownership map to decide which minister is allowed to
-surface an apply handle for a narrow step.
+surface an apply handle for a narrow action.
 
 ### Food And Survival
 

@@ -212,7 +212,7 @@ const fieldIcons: Record<string, SemanticIconSpec> = {
   skills: common.labor,
   source: common.data,
   status: common.component,
-  steps: common.advice,
+  actions: common.advice,
   stockpile_cells: common.storage,
   storage: common.storage,
   summary: common.advice,

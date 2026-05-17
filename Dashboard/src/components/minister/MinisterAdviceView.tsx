@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { MayorAgenda, AgendaPriority } from '../../types/agenda';
 import type { AdviceApplyResponse, AdviceItem } from '../../types/advice';
 import type { ScopeConfig } from '../../dashboard/scopes';
-import { applyAdviceStep } from '../../api/advice';
+import { applyAdviceAction } from '../../api/advice';
 import { iconUrlFor } from '../../api/icons';
 import { iconForField, iconForSection, iconForView } from '../../dashboard/semanticIcons';
 import { DisclosureSection } from '../shared/DisclosureSection';
@@ -231,17 +231,17 @@ function MayorAdvice({
 }
 
 function AdviceCard({ item }: { item: AdviceItem }) {
-  const [applyState, setApplyState] = useState<Record<string, StepApplyState>>({});
+  const [applyState, setApplyState] = useState<Record<string, ActionApplyState>>({});
 
-  const onApply = async (stepIndex: number) => {
-    const key = stepKey(item, stepIndex);
+  const onApply = async (actionIndex: number) => {
+    const key = actionKey(item, actionIndex);
     setApplyState(current => ({
       ...current,
       [key]: { status: 'pending', response: null, error: null },
     }));
 
     try {
-      const response = await applyAdviceStep(item.id, stepIndex);
+      const response = await applyAdviceAction(item.id, actionIndex);
       setApplyState(current => ({
         ...current,
         [key]: { status: 'done', response, error: null },
@@ -269,44 +269,44 @@ function AdviceCard({ item }: { item: AdviceItem }) {
       </header>
       <p>{item.body}</p>
       <blockquote>{item.rationale}</blockquote>
-      {item.steps.length > 0 && (
-        <DisclosureSection title={<SemanticLabel icon={iconForField('steps')}><span>Steps</span></SemanticLabel>} defaultOpen meta={`${item.steps.length} steps`}>
+      {item.actions.length > 0 && (
+        <DisclosureSection title={<SemanticLabel icon={iconForField('actions')}><span>Actions</span></SemanticLabel>} defaultOpen meta={`${item.actions.length} actions`}>
           <div className="action-list">
-            {item.steps.map((step, index) => {
-              const key = stepKey(item, index);
+            {item.actions.map((action, index) => {
+              const key = actionKey(item, index);
               const state = applyState[key] ?? { status: 'idle' as const, response: null, error: null };
               const success = state.response?.status === 'applied' || state.response?.status === 'already_satisfied';
               const disabled = state.status === 'pending' || success;
               return (
-                <div key={`${item.id}-step-${index}`}>
+                <div key={`${item.id}-action-${index}`}>
                   <GameIcon
                     fallback="-"
-                    label={`${formatLabel(step.kind)} icon`}
+                    label={`${formatLabel(action.kind)} icon`}
                     size="xs"
-                    src={iconUrlFor(step.icon)}
+                    src={iconUrlFor(action.icon)}
                   />
-                  <strong>{formatLabel(step.kind)}</strong>
-                  <span>{step.instruction}</span>
+                  <strong>{formatLabel(action.kind)}</strong>
+                  <span>{action.instruction}</span>
                   <small>
                     {[
-                      formatQuantityDetail(step.quantity),
-                      step.owner ? `Owner: ${step.owner}` : null,
-                      formatWorkSkillDetail(step.work_type, step.skill),
-                      step.reason,
+                      formatQuantityDetail(action.quantity),
+                      action.owner ? `Owner: ${action.owner}` : null,
+                      formatWorkSkillDetail(action.work_type, action.skill),
+                      action.reason,
                     ].filter(Boolean).join(' | ')}
                   </small>
-                  {step.apply && (
-                    <div className="step-apply">
+                  {action.apply && (
+                    <div className="action-apply">
                       <button
                         type="button"
                         disabled={disabled}
                         onClick={() => void onApply(index)}
-                        title={step.apply.target_summary}
+                        title={action.apply.target_summary}
                       >
-                        {state.status === 'pending' ? 'Applying' : success ? 'Applied' : step.apply.label}
+                        {state.status === 'pending' ? 'Applying' : success ? 'Applied' : action.apply.label}
                       </button>
-                      <small className={`step-apply-result ${state.response?.status ?? state.status}`}>
-                        {state.response?.message ?? state.error ?? step.apply.target_summary}
+                      <small className={`action-apply-result ${state.response?.status ?? state.status}`}>
+                        {state.response?.message ?? state.error ?? action.apply.target_summary}
                       </small>
                     </div>
                   )}
@@ -381,18 +381,18 @@ function AdviceCard({ item }: { item: AdviceItem }) {
   );
 }
 
-type StepApplyState = {
+type ActionApplyState = {
   status: 'idle' | 'pending' | 'done' | 'error';
   response: AdviceApplyResponse | null;
   error: string | null;
 };
 
-function stepKey(item: AdviceItem, stepIndex: number): string {
-  const step = item.steps[stepIndex];
-  const applyContext = step?.apply
-    ? `${step.apply.kind}:${step.apply.target_summary}:${step.apply.target_ids?.join(',') ?? ''}:${step.apply.thing_ids?.join(',') ?? ''}`
+function actionKey(item: AdviceItem, actionIndex: number): string {
+  const action = item.actions[actionIndex];
+  const applyContext = action?.apply
+    ? `${action.apply.kind}:${action.apply.target_summary}:${action.apply.target_ids?.join(',') ?? ''}:${action.apply.thing_ids?.join(',') ?? ''}`
     : 'text';
-  return `${item.id}:${item.issued_at}:${stepIndex}:${applyContext}`;
+  return `${item.id}:${item.issued_at}:${actionIndex}:${applyContext}`;
 }
 
 function PriorityCard({

@@ -28,7 +28,7 @@ treat the previous UI as reference only.
 
 - Inspect-first in v2: no autonomy toggles and no feedback/Pushback controls.
   Game writes appear only as Assisted Apply buttons on backend-allowlisted
-  advice steps, each requiring an explicit player click.
+  advice actions, each requiring an explicit player click.
 - Manual Run buttons may trigger RimBob re-evaluation, never RimWorld writes.
   Assisted Apply controls are separate from Run controls.
 - Localhost-only: Host binds loopback and serves the dashboard plus `/api/*`.
@@ -243,7 +243,7 @@ Design-level endpoint families:
 - Read-only icon gateway and cache status.
 - Developer-only manual raw LLM ingestion for ministers that expose the
   capability while provider quota is a practical blocker.
-- Player-confirmed Assisted Apply execution for allowlisted advice steps.
+- Player-confirmed Assisted Apply execution for allowlisted advice actions.
 
 All observability endpoints are read-only unless explicitly named as a manual
 RimBob re-evaluation trigger. They never mutate game state. Assisted Apply is a
@@ -298,7 +298,7 @@ cache is populated from the player's running game and is not committed.
 
 The dashboard may render an icon only when it has an explicit source:
 
-- `icon` refs carried by `steps[]` or flag `requests[]`.
+- `icon` refs carried by `actions[]` or flag `requests[]`.
 - Pawn ids for lazy portrait URLs.
 - Known def-name fields from structured payloads, such as crop/material/resource
   dictionaries.
@@ -402,11 +402,11 @@ player-facing; raw and debug views preserve the original `state_summary` text.
 It should name
 concrete food stores, growing areas/crop progress, acquisition opportunities,
 kitchen/storage/freezer signals, and confidence gaps before the action cards.
-Cards show rationale, ordered advice steps, citations, issue id or supersession
+Cards show rationale, concrete advice actions, citations, issue id or supersession
 when available, and coverage gaps. No feedback buttons are shown in v2.
 
-If a step carries a backend-approved executable handle, the Advice view may show
-an Apply control on that step. Apply controls must be visually distinct from
+If an action carries a backend-approved executable handle, the Advice view may show
+an Apply control on that action. Apply controls must be visually distinct from
 feedback, disabled when state is stale or validation fails, and followed by a
 compact result state that links to the SYSTEM/trace evidence for the attempted
 write and read-back.
@@ -417,11 +417,11 @@ no stored Agenda, Host initializes a labeled bootstrap Agenda before serving the
 dashboard. The no-agenda empty state is reserved for initialization/storage
 failure or intentionally disabled agenda storage.
 
-Advice steps are the actionable reading surface and should default open when an
+Advice actions are the actionable reading surface and should default open when an
 advice card mounts, including after browser refresh or a new active-advice
 snapshot. Raw/debug views should still expose legacy normalization metadata when
 old `resource_requests[]` or `suggested_actions[]` payloads were repaired into
-steps.
+actions.
 
 These rows may render real game icons only from explicit `icon` refs. The
 dashboard does not fuzzy-match reason or instruction text to asset names.
@@ -453,7 +453,7 @@ metrics, and endpoint coverage.
   summaries, such as the Food current-state table.
 - Debug tables use contract names by default. Friendly aliases are allowed only
   when they clarify a stable contract and do not hide the backend field.
-- Advice step cards render `kind` plus `instruction`, with quantity, owner,
+- Advice action cards render `kind` plus `instruction`, with quantity, owner,
   work/skill, and reason as secondary detail; do not introduce generic `what`
   labels in the dashboard or new raw minister output.
 - Avoid decorative hero sections, oversized empty cards, and one-note color
@@ -467,7 +467,7 @@ metrics, and endpoint coverage.
   wired.
 - Autonomy controls return only with M7+ autonomy work.
 - Broad RIMAPI write/control surfaces remain deferred; Assisted Apply is the
-  only MVP exception and is limited to backend-allowlisted advice steps.
+  only MVP exception and is limited to backend-allowlisted advice actions.
 - Hard-case icon variants such as stuff colors, crop growth stages, styles,
   rotations, motes/projectiles, and per-instance art remain deferred.
 - Hard-case action controls such as bills, schedules, pawn assignment, zones,

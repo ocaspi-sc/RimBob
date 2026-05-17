@@ -8,17 +8,17 @@ public static class AdviceApplyEndpoints
     {
         EndpointCoverageCatalog coverage = app.ServiceProvider.GetRequiredService<EndpointCoverageCatalog>();
         coverage.Register(
-            "/api/advice/{adviceId}/steps/{stepIndex}/apply",
+            "/api/advice/{adviceId}/actions/{actionIndex}/apply",
             "available",
-            "Player-confirmed Assisted Apply for allowlisted Food steps.");
+            "Player-confirmed Assisted Apply for allowlisted Food actions.");
 
-        app.MapPost("/api/advice/{adviceId}/steps/{stepIndex:int}/apply", async (
+        app.MapPost("/api/advice/{adviceId}/actions/{actionIndex:int}/apply", async (
             string adviceId,
-            int stepIndex,
+            int actionIndex,
             AssistedApplyService apply,
             CancellationToken ct) =>
         {
-            AssistedApplyResponse result = await apply.ApplyAsync(adviceId, stepIndex, ct);
+            AssistedApplyResponse result = await apply.ApplyAsync(adviceId, actionIndex, ct);
             return Results.Ok(result);
         });
 

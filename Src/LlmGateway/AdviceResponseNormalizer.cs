@@ -86,8 +86,9 @@ internal static class AdviceResponseNormalizer
         string title = LlmResponseParser.ReadString(node["title"]) ?? LlmResponseParser.HumanizeIdentifier(rawType);
         string body = LlmResponseParser.ReadString(node["body"]) ?? LlmResponseParser.ReadString(node["message"]) ?? title;
         string rationale = LlmResponseParser.ReadString(node["rationale"]) ?? notes ?? context.DefaultRationale;
-        IReadOnlyList<AdviceStep> steps = AdviceStepNormalizer.NormalizeOrConvertLegacy(
-            node["steps"],
+        IReadOnlyList<AdviceAction> actions = AdviceActionNormalizer.NormalizeOrConvertLegacy(
+            node["actions"] ?? node["Actions"],
+            node["steps"] ?? node["Steps"],
             node["resource_requests"],
             node["suggested_actions"],
             priority,
@@ -104,7 +105,7 @@ internal static class AdviceResponseNormalizer
             Title: title,
             Body: body,
             Rationale: rationale,
-            Steps: steps,
+            Actions: actions,
             GuideCitationIds: citationIds,
             IssuedAt: now,
             ExpiresAt: now.AddHours(priority >= AdvicePriority.High ? 4 : 24),
@@ -161,7 +162,7 @@ internal static class AdviceResponseNormalizer
     private static AdviceItem NormalizeStrictAdvice(AdviceItem advice) =>
         advice with
         {
-            Steps = advice.Steps.Select(AdviceStepNormalizer.Normalize).ToArray()
+            Actions = advice.Actions.Select(AdviceActionNormalizer.Normalize).ToArray()
         };
 
     private static IReadOnlyList<AgentFlag> NormalizeStrictFlags(IReadOnlyList<AgentFlag> flags) =>
@@ -172,8 +173,8 @@ internal static class AdviceResponseNormalizer
 
     private static bool IsCompleteStrictAdvice(AdviceItem advice) =>
         !string.IsNullOrWhiteSpace(advice.Id) &&
-        advice.Steps.All(step =>
-            !string.IsNullOrWhiteSpace(step.Instruction));
+        advice.Actions.All(action =>
+            !string.IsNullOrWhiteSpace(action.Instruction));
 
     private static IReadOnlyList<string> NormalizeCitationIds(JsonNode node, IReadOnlyList<GuideCitation> guideContext)
     {

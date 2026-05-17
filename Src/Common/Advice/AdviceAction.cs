@@ -4,12 +4,12 @@ using RimBob.Core.Aggregates;
 namespace RimBob.Core.Advice;
 
 /// <summary>
-/// One player-facing step in an AdviceItem. Most steps are rendered only; a
+/// One player-facing action in an AdviceItem. Most actions are rendered only; a
 /// narrow Assisted Apply allowlist can attach server-owned apply metadata.
 /// </summary>
-public sealed record AdviceStep(
+public sealed record AdviceAction(
     [property: JsonPropertyName("kind")]
-    AdviceStepKind Kind,
+    AdviceActionKind Kind,
     [property: JsonPropertyName("instruction")]
     string Instruction,
     [property: JsonPropertyName("quantity")]
@@ -25,9 +25,9 @@ public sealed record AdviceStep(
     [property: JsonPropertyName("icon")]
     IconRef? Icon = null,
     [property: JsonPropertyName("apply")]
-    AdviceStepApply? Apply = null);
+    AdviceActionApply? Apply = null);
 
-public sealed record AdviceStepApply(
+public sealed record AdviceActionApply(
     [property: JsonPropertyName("kind")]
     AdviceApplyKind Kind,
     [property: JsonPropertyName("label")]
@@ -74,8 +74,8 @@ public static class AssistedApplyLimits
     public const double MaxMissingTargetFraction = 0.25d;
 }
 
-[JsonConverter(typeof(SnakeCaseLowerEnumConverter<AdviceStepKind>))]
-public enum AdviceStepKind
+[JsonConverter(typeof(SnakeCaseLowerEnumConverter<AdviceActionKind>))]
+public enum AdviceActionKind
 {
     DesignateZone,
     MarkHarvest,

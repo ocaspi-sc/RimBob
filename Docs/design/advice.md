@@ -22,7 +22,7 @@ This doc defines:
 
 Feedback was moved to M5, just before M6 consumes it. `Modify` was replaced by
 `Pushback`: the player tells the minister why it is wrong in natural language
-instead of editing step text. Implicit state-diff feedback is not
+instead of editing action text. Implicit state-diff feedback is not
 part of MVP.
 
 ---
@@ -35,7 +35,7 @@ serialization; the design-level contract is:
 - Identity and source: id, issuing minister, advice type.
 - Urgency: one `priority` enum.
 - Player content: title, body, rationale.
-- Player/future-execution operations: ordered `steps[]`.
+- Player/future-execution operations: concrete `actions[]`.
 - Evidence: guide citations and briefing reference when available.
 - Lifecycle metadata: issue time, expiry, supersession, autonomy mode at issue.
 
@@ -57,33 +57,35 @@ player-facing advice.
 graduates one at a time. Adding an advice type is a design decision for that
 minister.
 
-### Steps
+### Actions
 
-`steps[]` are the single player-facing action path on an advice item. They are
-ordered, concrete "do X" operations. Resource prerequisites that matter to the
-player should appear as steps only when they are part of that action path.
+`actions[]` are the single player-facing action list on an advice item. They
+are concrete "do X" operations that may be prioritized by the emitter or UI but
+do not imply one ordered procedure. Resource prerequisites that matter to the
+player should appear as actions only when they are part of the actionable advice
+surface.
 
-Step kinds are shared across ministers and should describe the operation well
+Action kinds are shared across ministers and should describe the operation well
 enough to stand alone in the dashboard and future Auto mapping. Prefer explicit
 names such as `mark_harvest`, `mark_hunt`, `place_blueprint`,
 `production_bill`, `set_priority`, `designate_zone`, `set_stockpile_zone`, and
 `unforbid` over generic `note` output when the operation is known.
 
-Each step carries one short imperative instruction. Optional quantity, owner,
+Each action carries one short imperative instruction. Optional quantity, owner,
 work type, skill, reason, and icon metadata should be used only when the emitter
 can state them cleanly. Explanation belongs in body/rationale/current-state
-summary; step instructions should scan like compact UI/action primitives.
+summary; action instructions should scan like compact UI/action primitives.
 
-Steps may include an optional explicit `icon` ref when the emitter knows the
+Actions may include an optional explicit `icon` ref when the emitter knows the
 game def or id. Icon refs are rendering hints only; they are not execution
 inputs and should not be inferred from prose.
 
-Steps may also carry an explicit executable handle when the backend can map that
-step to an Assisted Apply operation. The handle is produced by deterministic code
-or accepted from model output only after strict validation; prose instructions
-alone are never executable.
+Actions may also carry an explicit executable handle when the backend can map
+that action to an Assisted Apply operation. The handle is produced by
+deterministic code or accepted from model output only after strict validation;
+prose instructions alone are never executable.
 
-Labor-like steps must name a RimWorld work-tab type when possible. "Labor
+Labor-like actions must name a RimWorld work-tab type when possible. "Labor
 capacity" by itself is too vague for advice, logs, or future Auto wiring.
 
 ### Resource Requests
@@ -96,9 +98,9 @@ issue: tiles, work-type-qualified labor, items, buildings, bills, stockpile
 space, attention, or trade capacity. They are advisory in MVP and do not
 allocate pawns, reserve tiles, create bills, or write to RIMAPI.
 
-Tolerant parsing may still accept legacy advice payloads with
-`resource_requests[]` and `suggested_actions[]`, but new prompts/specs should
-emit `steps[]` directly.
+Tolerant parsing may still accept legacy advice payloads with `steps[]`,
+`resource_requests[]`, and `suggested_actions[]`, but new prompts/specs should
+emit `actions[]` directly.
 
 ### Briefing Reference
 
@@ -243,19 +245,19 @@ Approval gates and replay requirements live in [`evaluation.md`](evaluation.md).
 ## Assisted Apply
 
 Assisted Apply is the MVP path for manually executing the safest concrete advice
-steps. It is not an autonomy mode and does not let a minister act on its own.
+actions. It is not an autonomy mode and does not let a minister act on its own.
 
-A step is eligible only when all of these are true:
+An action is eligible only when all of these are true:
 
-- The step kind maps to an allowlisted, single-operation RIMAPI write.
+- The action kind maps to an allowlisted, single-operation RIMAPI write.
 - The target is explicit and can be revalidated against fresh state.
 - The operation does not allocate pawns, force jobs, change schedules, edit bills,
   create broad zones, or make combat/medical/prisoner decisions.
 - The Host can read back or otherwise observe the expected result.
-- The dashboard requires an explicit player click for that one step.
+- The dashboard requires an explicit player click for that one action.
 
 The LLM never chooses raw endpoints, payloads, or arbitrary target ids. It may
-emit a structured step; deterministic code decides whether that step can expose
+emit a structured action; deterministic code decides whether that action can expose
 Apply. Initial candidates should be conservative: `unforbid` for known item
 stacks and `mark_harvest` for validated safe plant clusters. `mark_hunt` needs
 risk filters before it is eligible. Work priorities, bills, zones, pawn

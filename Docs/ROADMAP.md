@@ -14,7 +14,7 @@
 | M2 | Grounded reasoning (RAG) — Mayor cites guide passages; measurable agenda-quality improvement before adding feeders | Done |
 | M3 | First feeder advisor (Food) — sub-briefing into the Mayor; first cross-minister flag | Implemented |
 | M4 | First cabinet wave — Construction, Defense, Welfare feeding the Mayor; flag-severity-gated tactical alerts surface independently of the daily digest | Not started |
-| M4.5 | Assisted Apply — player-confirmed execution for the safest allowlisted advice steps | Not started |
+| M4.5 | Assisted Apply — player-confirmed execution for the safest allowlisted advice actions | Not started |
 | M5 | Feedback loop — Accept / Dismiss / Pushback wired; each minister owns and persists its own pushback list | Not started |
 | M6 | Refinement loop closes — pushbacks drive the first promoted rule per minister | Not started |
 | M7 (post-MVP) | First Auto graduation — one minister's narrowest advice type (e.g. stockpile-zone suggestions) gains an `Auto` mode behind the dial. Re-engages deferred HTN / Labor pieces | Not started |

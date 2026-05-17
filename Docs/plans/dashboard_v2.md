@@ -4,7 +4,7 @@
 
 Build Dashboard v2 as a new React implementation inside the existing dashboard package. Keep the Vite/package/build/Host wiring, but treat the previous dashboard UI as reference material only. The new app source tree owns its own shell, registries, layout, CSS, and components.
 
-The dashboard remains inspect-first and `Suggest` mode. It exposes what RimBob knows, what it recommended, why a minister woke up, what data was missing, and how the runtime is behaving. It may show Assisted Apply only for backend-allowlisted advice steps, and it does not show Pushback or feedback controls in v2.
+The dashboard remains inspect-first and `Suggest` mode. It exposes what RimBob knows, what it recommended, why a minister woke up, what data was missing, and how the runtime is behaving. It may show Assisted Apply only for backend-allowlisted advice actions, and it does not show Pushback or feedback controls in v2.
 
 ## Core Information Architecture
 
@@ -254,7 +254,7 @@ Do not stream arbitrary files into the UI. A later endpoint should return a boun
 - Confirm SYSTEM does not show minister tabs.
 - Confirm Mayor/Food render useful views from current endpoints.
 - Confirm missing backend capabilities render explicit "not exposed yet" or degraded coverage states.
-- Confirm no broad write/control UI exists; Assisted Apply appears only on backend-approved steps when that lifecycle is wired.
+- Confirm no broad write/control UI exists; Assisted Apply appears only on backend-approved actions when that lifecycle is wired.
 
 ## Assumptions
 

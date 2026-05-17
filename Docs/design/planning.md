@@ -13,7 +13,7 @@
 
 ## Purpose
 
-The future planner decomposes trusted minister advice into executable steps.
+The future planner decomposes trusted minister advice actions into executable steps.
 It exists only when RimBob is allowed to act autonomously through multi-step
 RIMAPI writes.
 

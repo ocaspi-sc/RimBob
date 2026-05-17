@@ -26,7 +26,7 @@ libraries available and avoids linking against RIMAPI.
 MVP remains `Suggest` mode by default. The service reads RIMAPI data, derives
 briefings, and publishes advice. A narrow Assisted Apply path may issue an
 allowlisted non-pawn RIMAPI write only after a player clicks a concrete advice
-step. Autonomous execution waits for a future per-minister `Auto` graduation.
+action. Autonomous execution waits for a future per-minister `Auto` graduation.
 
 ---
 
@@ -37,7 +37,7 @@ step. Autonomous execution waits for a future per-minister `Auto` graduation.
 - Ministers never call RIMAPI directly. They read briefings from the state
   store and emit structured advice.
 - Assisted Apply writes, when present, are owned by Host/infrastructure code that
-  validates the advice step, current state, allowlist, RIMAPI result, and
+  validates the advice action, current state, allowlist, RIMAPI result, and
   read-back evidence.
 - Shared domain contracts stay dependency-light. Code that is meant to be pure
   domain model must not take external infrastructure dependencies.

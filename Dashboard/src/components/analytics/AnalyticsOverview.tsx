@@ -74,9 +74,9 @@ export function AnalyticsOverview({
   const sseAnalytics = buildSseAnalytics(stream, health);
   const priorityCounts = countBy(activeAdvice, item => item.priority);
   const ministerCounts = countBy(activeAdvice, item => item.minister);
-  const stepKindCounts = countBy(
-    activeAdvice.flatMap(item => item.steps),
-    step => step.kind,
+  const actionKindCounts = countBy(
+    activeAdvice.flatMap(item => item.actions),
+    action => action.kind,
   );
 
   return (
@@ -176,7 +176,7 @@ export function AnalyticsOverview({
         <div className="analytics-columns">
           <CountPanel title="Priority mix" rows={priorityCounts} empty="No active advice priorities." />
           <CountPanel title="Minister mix" rows={ministerCounts} empty="No active minister advice." />
-          <CountPanel title="Step mix" rows={stepKindCounts} empty="No active advice steps." />
+          <CountPanel title="Action mix" rows={actionKindCounts} empty="No active advice actions." />
         </div>
       </DisclosureSection>
 

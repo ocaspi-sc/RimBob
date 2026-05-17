@@ -23,10 +23,10 @@ public sealed class AdviceTextStyleWarningsTests
                     Title: "Confirm the reachable indoor stockpile visibility before making meal decisions",
                     Body: "Body can carry context.",
                     Rationale: "Rationale can carry explanation.",
-                    Steps:
+                    Actions:
                     [
-                        new AdviceStep(
-                            AdviceStepKind.SetStockpileZone,
+                        new AdviceAction(
+                            AdviceActionKind.SetStockpileZone,
                             "Set one reachable indoor stockpile to accept meals. Verify the stored food category.",
                             Reason: "Food classification is missing and the buffer is below one day for the whole colony")
                     ],
@@ -47,8 +47,8 @@ public sealed class AdviceTextStyleWarningsTests
         IReadOnlyList<string> warnings = AdviceTextStyleWarnings.ForFood(response);
 
         warnings.Should().Contain(warning => warning.Contains("wordy_food.title"));
-        warnings.Should().Contain(warning => warning.Contains("steps[0].instruction"));
-        warnings.Should().Contain(warning => warning.Contains("steps[0].reason"));
+        warnings.Should().Contain(warning => warning.Contains("actions[0].instruction"));
+        warnings.Should().Contain(warning => warning.Contains("actions[0].reason"));
         warnings.Should().Contain(warning => warning.Contains("multiple sentences"));
         warnings.Should().Contain(warning => warning.Contains("wordy_flag.summary"));
     }
@@ -69,10 +69,10 @@ public sealed class AdviceTextStyleWarningsTests
                     Title: "Expose food stockpile",
                     Body: "Body can carry context.",
                     Rationale: "Rationale can carry explanation.",
-                    Steps:
+                    Actions:
                     [
-                        new AdviceStep(
-                            AdviceStepKind.SetStockpileZone,
+                        new AdviceAction(
+                            AdviceActionKind.SetStockpileZone,
                             "Set one stockpile to accept food.",
                             Reason: "Food classification is missing.")
                     ],

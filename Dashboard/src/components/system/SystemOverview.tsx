@@ -175,11 +175,11 @@ export function SystemOverview({
               <FieldLabel iconKey="message">Message</FieldLabel>
             </div>
             {applyAttempts.map(attempt => (
-              <div className="dense-row" key={`${attempt.at}-${attempt.advice_id}-${attempt.step_index}`}>
+              <div className="dense-row" key={`${attempt.at}-${attempt.advice_id}-${attempt.action_index}`}>
                 <span>{formatMaybeDate(attempt.at)}</span>
                 <span>{formatKind(attempt.kind)}</span>
                 <span>{attempt.status.replace(/_/g, ' ')}</span>
-                <code>{attempt.advice_id}#{attempt.step_index}</code>
+                <code>{attempt.advice_id}#{attempt.action_index}</code>
                 <span>{attempt.message}</span>
               </div>
             ))}

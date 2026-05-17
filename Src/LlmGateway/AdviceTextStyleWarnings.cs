@@ -20,16 +20,16 @@ public static class AdviceTextStyleWarnings
             string adviceId = string.IsNullOrWhiteSpace(advice.Id) ? "advice" : advice.Id;
             AddWordWarning(warnings, $"{adviceId}.title", advice.Title, MaxTitleWords, "keep titles to 3-7 words");
 
-            for (int i = 0; i < advice.Steps.Count; i++)
+            for (int i = 0; i < advice.Actions.Count; i++)
             {
-                AdviceStep step = advice.Steps[i];
-                string instructionField = $"{adviceId}.steps[{i}].instruction";
-                AddWordWarning(warnings, instructionField, step.Instruction, MaxInstructionWords, "use one short imperative sentence");
+                AdviceAction action = advice.Actions[i];
+                string instructionField = $"{adviceId}.actions[{i}].instruction";
+                AddWordWarning(warnings, instructionField, action.Instruction, MaxInstructionWords, "use one short imperative sentence");
 
-                if (!string.IsNullOrWhiteSpace(step.Reason))
-                    AddWordWarning(warnings, $"{adviceId}.steps[{i}].reason", step.Reason, MaxReasonWords, "use one short cause");
+                if (!string.IsNullOrWhiteSpace(action.Reason))
+                    AddWordWarning(warnings, $"{adviceId}.actions[{i}].reason", action.Reason, MaxReasonWords, "use one short cause");
 
-                if (SentenceCount(step.Instruction) > 1)
+                if (SentenceCount(action.Instruction) > 1)
                     warnings.Add($"{instructionField} has multiple sentences; use one short imperative sentence.");
             }
         }

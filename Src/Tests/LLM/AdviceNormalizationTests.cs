@@ -63,7 +63,7 @@ public sealed class AdviceNormalizationTests
     }
 
     [Fact]
-    public void AdviceStepNormalizer_ConvertsLegacyActionsAndTextFallback()
+    public void AdviceActionNormalizer_ConvertsLegacyActionsAndTextFallback()
     {
         JsonNode? root = JsonNode.Parse("""
         [
@@ -75,23 +75,50 @@ public sealed class AdviceNormalizationTests
         ]
         """);
 
-        IReadOnlyList<AdviceStep> steps = AdviceStepNormalizer.NormalizeOrConvertLegacy(
-            stepsNode: null,
+        IReadOnlyList<AdviceAction> actions = AdviceActionNormalizer.NormalizeOrConvertLegacy(
+            actionsNode: null,
+            legacyStepsNode: null,
             resourceRequestsNode: null,
             suggestedActionsNode: root,
             priority: AdvicePriority.Medium,
             context: Context(),
             json: Json);
 
-        steps.Should().HaveCount(2);
-        steps[0].Kind.Should().Be(AdviceStepKind.ProductionBill);
-        steps[0].Instruction.Should().Be("cook simple meals");
-        steps[1].Kind.Should().Be(AdviceStepKind.Note);
-        steps[1].Instruction.Should().Be("check whether berries are reachable");
+        actions.Should().HaveCount(2);
+        actions[0].Kind.Should().Be(AdviceActionKind.ProductionBill);
+        actions[0].Instruction.Should().Be("cook simple meals");
+        actions[1].Kind.Should().Be(AdviceActionKind.Note);
+        actions[1].Instruction.Should().Be("check whether berries are reachable");
     }
 
     [Fact]
-    public void AdviceStepNormalizer_StripsModelSuppliedApplyMetadata()
+    public void AdviceActionNormalizer_AcceptsLegacyStepsField()
+    {
+        JsonNode? root = JsonNode.Parse("""
+        [
+          {
+            "kind": "mark_harvest",
+            "instruction": "mark mature rice"
+          }
+        ]
+        """);
+
+        IReadOnlyList<AdviceAction> actions = AdviceActionNormalizer.NormalizeOrConvertLegacy(
+            actionsNode: null,
+            legacyStepsNode: root,
+            resourceRequestsNode: null,
+            suggestedActionsNode: null,
+            priority: AdvicePriority.Medium,
+            context: Context(),
+            json: Json);
+
+        AdviceAction action = actions.Should().ContainSingle().Subject;
+        action.Kind.Should().Be(AdviceActionKind.MarkHarvest);
+        action.Instruction.Should().Be("mark mature rice");
+    }
+
+    [Fact]
+    public void AdviceActionNormalizer_StripsModelSuppliedApplyMetadata()
     {
         JsonNode? root = JsonNode.Parse("""
         [
@@ -111,11 +138,11 @@ public sealed class AdviceNormalizationTests
         ]
         """);
 
-        IReadOnlyList<AdviceStep> steps = AdviceStepNormalizer.Normalize(root, Json);
+        IReadOnlyList<AdviceAction> actions = AdviceActionNormalizer.Normalize(root, Json);
 
-        AdviceStep step = steps.Should().ContainSingle().Subject;
-        step.Kind.Should().Be(AdviceStepKind.MarkHarvest);
-        step.Apply.Should().BeNull();
+        AdviceAction action = actions.Should().ContainSingle().Subject;
+        action.Kind.Should().Be(AdviceActionKind.MarkHarvest);
+        action.Apply.Should().BeNull();
     }
 
     private static LlmAdviceNormalizationContext Context() => new(
