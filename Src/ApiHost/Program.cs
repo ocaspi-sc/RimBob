@@ -210,6 +210,7 @@ app.MapStatusEndpoints();
 app.MapMinisterEndpoints();
 app.MapIconEndpoints();
 app.MapAdviceApplyEndpoints();
+app.MapDevBlogEndpoints();
 app.MapSystemEndpoints();
 
 // ── Startup checks ─────────────────────────────────────────────────────────

@@ -3,6 +3,7 @@ import { fetchStatus, fetchSystemHealth } from './api/status';
 import { findScope, ministerViews, scopeConfigs } from './dashboard/scopes';
 import { formatLastRun } from './dashboard/selectors';
 import { AnalyticsOverview } from './components/analytics/AnalyticsOverview';
+import { DevBlogOverview } from './components/devBlog/DevBlogOverview';
 import { DashboardHeader } from './components/layout/DashboardHeader';
 import { ColonySidebar } from './components/layout/ColonySidebar';
 import { InfoOverview } from './components/info/InfoOverview';
@@ -32,6 +33,7 @@ export default function App() {
   const isSystem = activeScope.kind === 'system';
   const isInfo = activeScope.kind === 'info';
   const isAnalytics = activeScope.kind === 'analytics';
+  const isDevBlog = activeScope.kind === 'dev_blog';
 
   return (
     <main className="dashboard-v2-shell">
@@ -71,6 +73,8 @@ export default function App() {
               snapshot={snapshot.data}
               stream={feed.stream}
             />
+          ) : isDevBlog ? (
+            <DevBlogOverview />
           ) : (
             <>
               <WorkspaceTitle

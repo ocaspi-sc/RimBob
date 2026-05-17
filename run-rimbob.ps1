@@ -27,7 +27,8 @@ if (-not [string]::IsNullOrWhiteSpace($ListenUrl)) {
 $dashboardConsoleScopes = @(
     [pscustomobject]@{ Label = "SYSTEM"; Scope = "system" },
     [pscustomobject]@{ Label = "INFO"; Scope = "info" },
-    [pscustomobject]@{ Label = "ANALYTICS"; Scope = "analytics" }
+    [pscustomobject]@{ Label = "ANALYTICS"; Scope = "analytics" },
+    [pscustomobject]@{ Label = "DEV BLOG"; Scope = "dev_blog" }
 )
 
 $dashboardMinisterScopes = @(

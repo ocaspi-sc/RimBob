@@ -70,8 +70,8 @@ button. Planned ministers show disabled/not-wired controls.
 
 ### Scopes
 
-Live non-minister scopes are SYSTEM, INFO, and ANALYTICS. They must be visually
-and functionally distinct:
+Live non-minister scopes are SYSTEM, INFO, ANALYTICS, and DEV BLOG. They must be
+visually and functionally distinct:
 
 - SYSTEM is the operations/debug console. It answers whether RimBob, Host,
   RIMAPI, SSE, LLM, logs, traces, and endpoints are working.
@@ -79,9 +79,13 @@ and functionally distinct:
   where to look; it does not carry live metrics.
 - ANALYTICS is the interpreted live-signal surface. It summarizes advice mix,
   colony pressure, SSE health, and candidate future analytics.
+- DEV BLOG is the repository-history surface. It reads the local Git `master`
+  history, turns commits into topic timelines, churn/LOC charts, pie summaries,
+  largest-commit callouts, and editorial suggestions.
 
-SYSTEM and ANALYTICS may read from the same bounded dashboard inputs, but SYSTEM
-renders raw/source diagnostics while ANALYTICS renders derived meaning. INFO
+SYSTEM, ANALYTICS, and DEV BLOG may read from bounded dashboard inputs, but each
+keeps a separate role: SYSTEM renders raw/source diagnostics, ANALYTICS renders
+derived live meaning, and DEV BLOG renders repository-history meaning. INFO
 stays static/reference-oriented so it does not become either a second SYSTEM
 page or a second ANALYTICS page.
 
@@ -228,6 +232,25 @@ ANALYTICS should prefer derived readouts from already-bounded dashboard inputs.
 Do not add broad backend endpoints just to fill ANALYTICS unless the same data
 is useful for SYSTEM or minister inspection surfaces too.
 
+### DEV BLOG View
+
+DEV BLOG is not a minister and does not show minister tabs or manual run
+controls. It is a developer/editorial surface for understanding how the project
+has changed over time.
+
+DEV BLOG owns:
+
+- Read-only analytics over every commit reachable from local Git `master`.
+- Topic-tag timelines derived from commit subjects and touched paths.
+- Commit-size histogram, cumulative net LOC growth, largest-commit callouts,
+  and pie/donut summaries by area, author, and topic.
+- Creative suggestions for release-note lanes, follow-up checks, and future
+  archaeology views.
+
+The scope should stay bounded and local. It may shell out to Git from Host, but
+it must not mutate the repository, stage files, or inspect uncommitted worktree
+state.
+
 ### Right Sidebar
 
 The right sidebar is always-on colony context independent of selected scope.
@@ -257,6 +280,7 @@ Design-level endpoint families:
 - Latest minister prompt, briefing, RAG, trace, and raw LLM output.
 - Colony snapshot/sidebar data.
 - Bounded log and replay-corpus metadata.
+- Read-only developer Git-history analytics for the DEV BLOG scope.
 - Read-only icon gateway and cache status.
 - Developer-only manual raw LLM ingestion for ministers that expose the
   capability while provider quota is a practical blocker.

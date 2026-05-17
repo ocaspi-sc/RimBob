@@ -3,7 +3,7 @@ import type { MinisterViewKey, ScopeKey } from './scopes';
 export interface PanelConfig {
   id: string;
   title: string;
-  scope: 'system' | 'info' | 'analytics' | 'minister';
+  scope: 'system' | 'info' | 'analytics' | 'dev_blog' | 'minister';
   view?: MinisterViewKey;
   requiredCapability: string;
 }
@@ -28,6 +28,10 @@ export const analyticsPanelRegistry: PanelConfig[] = [
   { id: 'analytics-colony', title: 'Colony Analytics', scope: 'analytics', requiredCapability: '/api/colony/snapshot' },
   { id: 'analytics-advice', title: 'Advice Analytics', scope: 'analytics', requiredCapability: 'active advice feed state' },
   { id: 'analytics-candidates', title: 'Analytics Candidates', scope: 'analytics', requiredCapability: 'static dashboard reference copy' },
+  { id: 'dev-blog-timeline', title: 'Topic Timeline', scope: 'dev_blog', requiredCapability: '/api/dev-blog/history' },
+  { id: 'dev-blog-loc-growth', title: 'LOC Growth', scope: 'dev_blog', requiredCapability: '/api/dev-blog/history' },
+  { id: 'dev-blog-commit-size', title: 'Commit Size Histogram', scope: 'dev_blog', requiredCapability: '/api/dev-blog/history' },
+  { id: 'dev-blog-suggestions', title: 'Editorial Suggestions', scope: 'dev_blog', requiredCapability: '/api/dev-blog/history' },
 ];
 
 export const ministerPanelRegistry: PanelConfig[] = [

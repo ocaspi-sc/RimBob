@@ -220,6 +220,11 @@ const scopeGuide = [
     description: 'Interpreted live metrics: advice mix, colony pressure, SSE health summary, and candidate analytics.',
   },
   {
+    name: 'DEV BLOG',
+    tag: 'Repository',
+    description: 'Git-derived master history analytics: topic timeline, commit-size spikes, LOC growth, pie charts, and editorial suggestions.',
+  },
+  {
     name: 'Mayor / Food / Cabinet',
     tag: 'Inspection',
     description: 'Minister-specific prompt, briefing, RAG, rules, raw LLM output, and advice evidence.',

@@ -76,5 +76,6 @@ function scopeStatusLabel(scope: ScopeConfig): string {
   if (scope.kind === 'system') return 'ops';
   if (scope.kind === 'info') return 'ref';
   if (scope.kind === 'analytics') return 'data';
+  if (scope.kind === 'dev_blog') return 'dev';
   return scope.status === 'live' ? 'live' : 'planned';
 }
