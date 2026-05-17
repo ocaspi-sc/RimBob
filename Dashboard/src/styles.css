@@ -1811,6 +1811,34 @@ code {
   min-width: 620px;
 }
 
+.icon-cache-groups {
+  display: grid;
+  gap: 10px;
+}
+
+.icon-cache-group {
+  display: grid;
+  gap: 5px;
+}
+
+.icon-cache-group-header {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.icon-cache-group-header strong {
+  color: var(--text);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.icon-cache-group-header span {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
 .icon-cache-strip {
   display: flex;
   flex-wrap: wrap;

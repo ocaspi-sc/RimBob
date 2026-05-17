@@ -11,6 +11,8 @@ import { SemanticLabel } from '../shared/SemanticIcon';
 import { StatusPill } from '../shared/StatusPill';
 import { Timeline } from '../shared/Timeline';
 
+type IconCacheFile = SystemHealth['icons']['files'][number];
+
 export function SystemOverview({
   events,
   health,
@@ -32,6 +34,7 @@ export function SystemOverview({
   const liveTestCount = tests?.categories.find(category => category.category.toLowerCase() === 'live')?.count ?? 0;
   const rimapi = health?.rimapi_coverage;
   const applyAttempts = health?.assisted_apply?.recent_attempts ?? [];
+  const iconGroups = icons ? groupIconCacheFiles(icons.files) : [];
 
   return (
     <div className="system-overview">
@@ -246,21 +249,31 @@ export function SystemOverview({
             {icons.files.length === 0 ? (
               <EmptyState code="ICON CACHE EMPTY">No cached PNG files exist under the icon cache directory.</EmptyState>
             ) : (
-              <div className="icon-cache-strip" aria-label="Cached icon files">
-                {icons.files.map(file => (
-                  <div
-                    className="icon-cache-tile"
-                    key={file.relativePath}
-                    title={`${file.kind}: ${file.id} | ${file.relativePath} | ${formatBytes(file.sizeBytes)}`}
-                  >
-                    <GameIcon
-                      fallback={file.id.slice(0, 1).toUpperCase()}
-                      label={`${file.id} cached icon`}
-                      size="sm"
-                      src={file.publicPath}
-                    />
-                    <code>{file.id}</code>
-                  </div>
+              <div className="icon-cache-groups" aria-label="Cached icon files">
+                {iconGroups.map(group => (
+                  <section className="icon-cache-group" key={group.key}>
+                    <div className="icon-cache-group-header">
+                      <strong>{group.label}</strong>
+                      <span>{group.files.length}</span>
+                    </div>
+                    <div className="icon-cache-strip">
+                      {group.files.map(file => (
+                        <div
+                          className="icon-cache-tile"
+                          key={file.relativePath}
+                          title={`${file.kind}: ${file.id} | ${file.relativePath} | ${formatBytes(file.sizeBytes)}`}
+                        >
+                          <GameIcon
+                            fallback={file.id.slice(0, 1).toUpperCase()}
+                            label={`${file.id} cached icon`}
+                            size="sm"
+                            src={file.publicPath}
+                          />
+                          <code>{file.id}</code>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
                 ))}
               </div>
             )}
@@ -389,6 +402,120 @@ function InfoLine({ label, value }: { label: string; value: string | number }) {
       <strong>{value}</strong>
     </div>
   );
+}
+
+function groupIconCacheFiles(files: IconCacheFile[]) {
+  const groups = new Map<string, { key: string; label: string; files: IconCacheFile[] }>();
+
+  for (const file of files) {
+    const group = iconCacheGroupFor(file);
+    const existing = groups.get(group.key);
+    if (existing) {
+      existing.files.push(file);
+    } else {
+      groups.set(group.key, { ...group, files: [file] });
+    }
+  }
+
+  return iconCacheGroupOrder
+    .map(key => groups.get(key))
+    .filter((group): group is { key: string; label: string; files: IconCacheFile[] } => Boolean(group))
+    .map(group => ({
+      ...group,
+      files: [...group.files].sort(compareIconCacheFiles),
+    }));
+}
+
+const iconCacheGroupOrder = [
+  'food',
+  'resources',
+  'buildings',
+  'weapons',
+  'apparel',
+  'medical',
+  'animals',
+  'terrain',
+  'pawns',
+  'other',
+];
+
+function iconCacheGroupFor(file: IconCacheFile): { key: string; label: string } {
+  if (file.kind === 'pawn-portrait') return { key: 'pawns', label: 'Pawns' };
+  if (file.kind === 'terrain') return { key: 'terrain', label: 'Terrain' };
+
+  const id = file.id.toLowerCase();
+  if (
+    id.startsWith('plant_') ||
+    id.startsWith('raw') ||
+    id.startsWith('meat_') ||
+    id.includes('meal') ||
+    id.includes('pemmican') ||
+    id.includes('kibble') ||
+    id.includes('nutrition')
+  ) return { key: 'food', label: 'Food & crops' };
+
+  if (
+    id.includes('steel') ||
+    id.includes('silver') ||
+    id.includes('gold') ||
+    id.includes('plasteel') ||
+    id.includes('wood') ||
+    id.includes('component') ||
+    id.includes('leather') ||
+    id.includes('cloth') ||
+    id.includes('chemfuel') ||
+    id.includes('stoneblock')
+  ) return { key: 'resources', label: 'Resources' };
+
+  if (
+    id.includes('bench') ||
+    id.includes('stove') ||
+    id.includes('table') ||
+    id.includes('cooler') ||
+    id.includes('generator') ||
+    id.includes('battery') ||
+    id.includes('conduit') ||
+    id.includes('comms') ||
+    id.includes('beacon') ||
+    id.includes('door') ||
+    id.includes('wall') ||
+    id.includes('bed') ||
+    id.includes('campfire') ||
+    id.includes('refinery')
+  ) return { key: 'buildings', label: 'Buildings & production' };
+
+  if (
+    id.startsWith('gun_') ||
+    id.startsWith('bow_') ||
+    id.startsWith('meleeweapon_') ||
+    id.includes('turret') ||
+    id.includes('mortar') ||
+    id.includes('trap') ||
+    id.includes('shieldbelt') ||
+    id.includes('lance')
+  ) return { key: 'weapons', label: 'Weapons & defense' };
+
+  if (id.startsWith('apparel_')) return { key: 'apparel', label: 'Apparel' };
+
+  if (
+    id.includes('medicine') ||
+    id.includes('bionic') ||
+    id.includes('archotech') ||
+    id.includes('prosthetic') ||
+    id.includes('heart') ||
+    id.includes('kidney') ||
+    id.includes('lung')
+  ) return { key: 'medical', label: 'Medical' };
+
+  if (id.startsWith('corpse_') || id.includes('hare') || id.includes('alpaca')) {
+    return { key: 'animals', label: 'Animals & corpses' };
+  }
+
+  return { key: 'other', label: 'Other cached defs' };
+}
+
+function compareIconCacheFiles(left: IconCacheFile, right: IconCacheFile): number {
+  return left.id.localeCompare(right.id, undefined, { sensitivity: 'base' });
 }
 
 function formatMaybeDate(iso: string | null): string {
