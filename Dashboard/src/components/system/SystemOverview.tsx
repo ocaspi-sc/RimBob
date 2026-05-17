@@ -256,7 +256,7 @@ export function SystemOverview({
                     <GameIcon
                       fallback={file.id.slice(0, 1).toUpperCase()}
                       label={`${file.id} cached icon`}
-                      size="md"
+                      size="sm"
                       src={file.publicPath}
                     />
                     <code>{file.id}</code>

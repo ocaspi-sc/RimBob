@@ -1767,29 +1767,28 @@ code {
 
 .icon-cache-strip {
   display: flex;
-  gap: 10px;
-  overflow-x: auto;
-  padding: 10px 2px 12px;
-  scrollbar-color: rgba(155, 208, 255, 0.35) rgba(255, 255, 255, 0.05);
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 4px 0 2px;
 }
 
 .icon-cache-tile {
   align-items: center;
   background: rgba(0, 0, 0, 0.18);
   border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 6px;
+  border-radius: 5px;
   display: grid;
-  flex: 0 0 74px;
-  gap: 6px;
+  flex: 0 0 48px;
+  gap: 3px;
   justify-items: center;
-  min-height: 74px;
-  padding: 8px 6px;
+  min-height: 49px;
+  padding: 4px 3px;
 }
 
 .icon-cache-tile code {
   color: var(--muted);
-  font-size: 0.64rem;
-  max-width: 64px;
+  font-size: 0.55rem;
+  max-width: 42px;
   overflow: hidden;
   text-align: center;
   text-overflow: ellipsis;
