@@ -95,6 +95,10 @@ as forbidden meals or other visible food-like items excluded from the reachable
 stored-food count, the briefing should carry that explanation so advice can name
 the concrete player action instead of saying only "visibility."
 
+Food should carry compact current bill state for known cooking workbenches.
+Rules use it to avoid repeating a simple-meal bill suggestion once a matching
+do-until bill already satisfies the desired target.
+
 Crop counts and progress should prefer the farm summary crop-type rows when
 available. Plant positions are useful spatial context, but the live plant list
 can be thing-like and omit crop/growth/zone fields.
@@ -113,7 +117,7 @@ The implemented briefing can be narrower than the target. Use
 fields.
 
 Deferred richer signals include exact zone yield/location, hunting risk scoring,
-bill state, freezer room temperature, spoilage timers, work-priority state, and
+freezer room temperature, spoilage timers, work-priority state, and
 caravan/trade availability.
 
 ---

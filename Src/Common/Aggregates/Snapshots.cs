@@ -72,6 +72,24 @@ public sealed record BuildingRecord(
     MapPosition? Position = null
 );
 
+public sealed record WorkTableRegistry(IReadOnlyList<WorkTableRecord> WorkTables);
+
+public sealed record WorkTableRecord(
+    string BuildingId,
+    IReadOnlyList<WorkTableBillRecord> Bills
+);
+
+public sealed record WorkTableBillRecord(
+    int LoadId,
+    string? RecipeDefName,
+    string? RecipeLabel,
+    bool Suspended,
+    bool Paused,
+    string? RepeatMode,
+    int RepeatCount,
+    int TargetCount
+);
+
 public sealed record PowerNetwork(float ProductionW, float ConsumptionW, float StoredWd, float CapacityWd);
 
 public sealed record ThreatBoard(
@@ -227,6 +245,7 @@ public static class AggregateDefaults
     public static readonly ColonistRegistry  Colonists   = new([]);
     public static readonly StockpileLedger   Stockpiles  = new([], new Dictionary<string, int>());
     public static readonly BuildingRegistry  Buildings   = new([]);
+    public static readonly WorkTableRegistry WorkTables  = new([]);
     public static readonly PowerNetwork      Power       = new(0f, 0f, 0f, 0f);
     public static readonly ThreatBoard       Threats     = new([], []);
     public static readonly WeatherSnapshot   Weather     = new("", 0f, 0f);

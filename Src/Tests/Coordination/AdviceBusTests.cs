@@ -100,6 +100,37 @@ public sealed class AdviceBusTests
         snapshot.StateSummaries.Should().ContainKey("Food").WhoseValue.Should().Be("Food is stable.");
     }
 
+    [Fact]
+    public void RemoveAppliedAction_RemovesOnlyThatActionAndPublishesSnapshot()
+    {
+        AdviceBus bus = new();
+        bus.ReplaceMinisterAdvice("Food", [Advice("food", "Food", [Action("harvest"), Action("bill")])], "Food summary");
+        List<AdviceSnapshot> snapshots = [];
+        bus.AdviceSnapshotPublished += snapshots.Add;
+
+        bool removed = bus.RemoveAppliedAction("food", 1);
+
+        removed.Should().BeTrue();
+        AdviceItem active = bus.ActiveAdvice().Should().ContainSingle().Subject;
+        active.Actions.Should().ContainSingle().Which.Instruction.Should().Be("harvest");
+        snapshots.Should().ContainSingle();
+        snapshots[0].Minister.Should().BeNull();
+        snapshots[0].Advice.Should().ContainSingle().Which.Actions.Should().ContainSingle();
+        snapshots[0].StateSummaries.Should().ContainKey("Food").WhoseValue.Should().Be("Food summary");
+    }
+
+    [Fact]
+    public void RemoveAppliedAction_RemovesAdviceWhenLastActionIsApplied()
+    {
+        AdviceBus bus = new();
+        bus.Publish(Advice("food", "Food", [Action("bill")]));
+
+        bool removed = bus.RemoveAppliedAction("food", 0);
+
+        removed.Should().BeTrue();
+        bus.ActiveAdvice().Should().BeEmpty();
+    }
+
     private static AdviceItem Advice(string id, string minister) => new(
         Id: id,
         Minister: minister,
@@ -112,6 +143,22 @@ public sealed class AdviceBusTests
         GuideCitationIds: [],
         IssuedAt: DateTimeOffset.UtcNow,
         ExpiresAt: DateTimeOffset.UtcNow.AddHours(1));
+
+    private static AdviceItem Advice(string id, string minister, IReadOnlyList<AdviceAction> actions) => new(
+        Id: id,
+        Minister: minister,
+        AdviceType: "food_security",
+        Priority: AdvicePriority.High,
+        Title: "Food low",
+        Body: "Body",
+        Rationale: "Rationale",
+        Actions: actions,
+        GuideCitationIds: [],
+        IssuedAt: DateTimeOffset.UtcNow,
+        ExpiresAt: DateTimeOffset.UtcNow.AddHours(1));
+
+    private static AdviceAction Action(string instruction) =>
+        new(AdviceActionKind.ProductionBill, instruction);
 }
 
 internal static class InputBuilderExtensions

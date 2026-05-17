@@ -233,6 +233,41 @@ public sealed class FoodRulesTests
     }
 
     [Fact]
+    public void MealsUnderstocked_WithSatisfiedSimpleMealBill_DoesNotRepeatCookBillAdvice()
+    {
+        FoodBriefing briefing = Briefing(days: 12f) with
+        {
+            MealsCount = 1,
+            RawFoodCount = 40,
+            ReadyToHarvest = 0,
+            Kitchen = KitchenWithSimpleMealBill(targetCount: 12)
+        };
+
+        RulesResult result = new Rules().Evaluate(briefing, ColonyContext.Default);
+
+        Decision decision = result.Should().BeOfType<Decision>().Subject;
+        decision.Trace.Should().NotBe("meals_understocked");
+        decision.Advice.Should().ContainSingle().Subject
+            .Actions.Should().NotContain(action => action.Kind == AdviceActionKind.ProductionBill);
+    }
+
+    [Fact]
+    public void UrgentShortage_WithSatisfiedSimpleMealBill_KeepsCookLaborButDropsBillAction()
+    {
+        FoodBriefing briefing = Briefing(days: 4f) with
+        {
+            Kitchen = KitchenWithSimpleMealBill(targetCount: 12)
+        };
+
+        Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
+            .Should().BeOfType<Decision>().Subject;
+
+        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        advice.Actions.Should().NotContain(action => action.Kind == AdviceActionKind.ProductionBill);
+        advice.Actions.Should().Contain(action => action.Kind == AdviceActionKind.SetPriority && action.WorkType == WorkType.Cook);
+    }
+
+    [Fact]
     public void UrgentShortage_WithOneCookingWorkbench_AttachesCookBillApply()
     {
         FoodBriefing briefing = Briefing(days: 4f) with
@@ -529,4 +564,23 @@ public sealed class FoodRulesTests
         ActiveThreat: false,
         RecentFoodIncidents: []
     );
+
+    private static FoodKitchenSummary KitchenWithSimpleMealBill(int targetCount) =>
+        new(1, 1, true, true)
+        {
+            CookingBuildingIds = ["stove-1"],
+            CookingBills =
+            [
+                new FoodCookingBillSummary(
+                    WorkbenchBuildingId: "stove-1",
+                    LoadId: 0,
+                    RecipeDefName: "CookMealSimple",
+                    RecipeLabel: "cook simple meal",
+                    Suspended: false,
+                    Paused: false,
+                    RepeatMode: "TargetCount",
+                    RepeatCount: 1,
+                    TargetCount: targetCount)
+            ]
+        };
 }

@@ -97,6 +97,45 @@ public sealed class AdviceBus
         }
     }
 
+    public bool RemoveAppliedAction(string adviceId, int actionIndex)
+    {
+        AdviceItem? updatedAdvice = null;
+        AdviceSnapshot snapshot;
+        lock (_lock)
+        {
+            PruneExpired(DateTimeOffset.UtcNow);
+            if (!_activeAdvice.TryGetValue(adviceId, out AdviceItem? advice))
+                return false;
+
+            if (actionIndex < 0 || actionIndex >= advice.Actions.Count)
+                return false;
+
+            List<AdviceAction> actions = advice.Actions.ToList();
+            actions.RemoveAt(actionIndex);
+            if (actions.Count == 0)
+            {
+                _activeAdvice.Remove(adviceId);
+            }
+            else
+            {
+                updatedAdvice = advice with { Actions = actions };
+                _activeAdvice[adviceId] = updatedAdvice;
+            }
+
+            Dictionary<string, string> summaries = new(_ministerStateSummaries, StringComparer.OrdinalIgnoreCase);
+            snapshot = new AdviceSnapshot(
+                Minister: null,
+                Advice: SortAdvice(_activeAdvice.Values).ToList(),
+                StateSummary: null,
+                StateSummaries: summaries);
+        }
+
+        AdviceSnapshotPublished?.Invoke(snapshot);
+        if (updatedAdvice is not null)
+            AdvicePublished?.Invoke(updatedAdvice);
+        return true;
+    }
+
     public AdviceSnapshot ActiveSnapshot()
     {
         lock (_lock)

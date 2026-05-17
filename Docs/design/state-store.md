@@ -24,8 +24,8 @@ RIMAPI       what is              what it means
 
 The state store keeps the current colony snapshot in a single visible root. The
 root contains domain aggregates for people, stockpiles, stored items, item defs,
-buildings, power, map context, threats, research, factions, economy, and other
-live state as slices need them.
+buildings, work-table bill state, power, map context, threats, research,
+factions, economy, and other live state as slices need them.
 
 Design rules:
 

@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using RimBob.Core.Aggregates;
 using RimBob.Ingestion;
 using RimBob.Ingestion.Dtos;
+using RimBob.State.Derivations.Common;
 
 namespace RimBob.State;
 
@@ -65,7 +66,9 @@ public sealed class IngestionDispatcher(
 
         state.Stockpiles.Update(MapAggregateMapper.FromStockpiles(zonesTask.Result, storedResources));
 
-        state.Buildings.Update(MapAggregateMapper.FromBuildings(buildingsTask.Result));
+        BuildingRegistry buildings = MapAggregateMapper.FromBuildings(buildingsTask.Result);
+        state.Buildings.Update(buildings);
+        state.WorkTables.Update(await ReadWorkTableBillsAsync(buildings, ct));
 
         state.Power.Update(MapAggregateMapper.FromPower(powerTask.Result));
 
@@ -75,5 +78,32 @@ public sealed class IngestionDispatcher(
 
         state.Resources.Update(ResourceAggregateMapper.FromResources(resourcesTask.Result));
         state.Research.Update(ResourceAggregateMapper.FromResearch(researchTask.Result));
+    }
+
+    private async Task<WorkTableRegistry> ReadWorkTableBillsAsync(
+        BuildingRegistry buildings,
+        CancellationToken ct)
+    {
+        List<WorkTableRecord> workTables = [];
+        foreach (BuildingRecord building in buildings.Buildings.Where(BuildingClassifier.IsCookingBuilding))
+        {
+            if (!int.TryParse(building.Id, out int buildingId))
+                continue;
+
+            try
+            {
+                IReadOnlyList<WorkTableBillDto> bills = await rimApi.GetWorkTableBillsAsync(buildingId, ct);
+                workTables.Add(MapAggregateMapper.FromWorkTableBills(building.Id, bills));
+            }
+            catch (Exception ex) when (!ct.IsCancellationRequested)
+            {
+                log.LogWarning(
+                    ex,
+                    "Could not refresh bills for cooking work table {BuildingId}; Food bill state will be unknown.",
+                    building.Id);
+            }
+        }
+
+        return new WorkTableRegistry(workTables);
     }
 }

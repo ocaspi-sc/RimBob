@@ -410,6 +410,27 @@ public sealed class FoodBriefingDerivationTests
     }
 
     [Fact]
+    public void Compute_DerivesCookingBillSummariesForFoodRules()
+    {
+        ColonyState s = StateWithColonists(1);
+        s.Buildings.Update(new BuildingRegistry([
+            new BuildingRecord("stove-1", "FueledStove", 1f, null, null, new MapPosition(10, 0, 10))
+        ]));
+        s.WorkTables.Update(new WorkTableRegistry([
+            new WorkTableRecord("stove-1", [
+                new WorkTableBillRecord(7, "CookMealSimple", "cook simple meal", false, false, "TargetCount", 1, 12)
+            ])
+        ]));
+
+        FoodBriefing b = FoodBriefingDerivation.Compute(s);
+
+        FoodCookingBillSummary bill = b.Kitchen.CookingBills.Should().ContainSingle().Subject;
+        bill.WorkbenchBuildingId.Should().Be("stove-1");
+        bill.RecipeDefName.Should().Be("CookMealSimple");
+        bill.TargetCount.Should().Be(12);
+    }
+
+    [Fact]
     public void Compute_DerivesCompactGrowingTerrainSummary()
     {
         ColonyState s = StateWithColonists(1);

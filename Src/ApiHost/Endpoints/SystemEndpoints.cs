@@ -30,6 +30,7 @@ public static class SystemEndpoints
         new("GET", "/api/v1/map/animals?map_id", "active_read", "Food", "Wild/tame animal source data for hunting assessment."),
         new("GET", "/api/v1/map/zones?map_id", "active_read", "Food/State store", "Growing and stockpile zones with cell lists."),
         new("GET", "/api/v1/map/buildings?map_id", "active_read", "Construction/Food", "Buildings, HP, power state, and working flags."),
+        new("GET", "/api/v1/buildings/bills?building_id", "active_read", "Food", "Current cooking work-table bills ingested after building refresh so Food can suppress already-satisfied bill advice."),
         new("GET", "/api/v1/map/power/info?map_id", "active_read", "Construction/Food", "Power production, consumption, storage, and capacity."),
         new("GET", "/api/v1/map/weather?map_id", "active_read", "Food/Defense", "Weather and outdoor temperature."),
         new("GET", "/api/v1/map/things?map_id", "active_read", "Food/State store", "Broad item and thing list; used as fallback/debug source behind stored resources."),
@@ -51,8 +52,7 @@ public static class SystemEndpoints
         new("GET", "/api/v1/faction/icon?id", "icon_gateway", "Dashboard", "Read-only faction icon fetch through /api/icons/faction/{loadId}."),
         new("GET", "/api/v1/pawn/portrait/image", "icon_gateway", "Dashboard", "Read-only lazy pawn portrait fetch; not prewarmed."),
         new("GET", "/api/v1/colonist/body/image?id", "icon_gateway", "Dashboard", "Read-only colonist body/head fetch; not prewarmed."),
-        new("GET", "/api/v1/buildings/recipes?building_id", "assisted_read", "Food Assisted Apply", "On-demand recipe resolution for the simple-meal bill upsert; not cached in ColonyState."),
-        new("GET", "/api/v1/buildings/bills?building_id", "assisted_read", "Food Assisted Apply", "On-demand bill preflight/readback for the simple-meal bill upsert; not cached in ColonyState.")
+        new("GET", "/api/v1/buildings/recipes?building_id", "assisted_read", "Food Assisted Apply", "On-demand recipe resolution for the simple-meal bill upsert; not cached in ColonyState.")
     ];
 
     private static readonly RimApiCoverageRow[] DeferredWriteStubs =

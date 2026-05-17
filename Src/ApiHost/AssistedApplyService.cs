@@ -70,6 +70,8 @@ public sealed class AssistedApplyService(
             AdviceApplyKind.UpsertProductionBill => await ApplyProductionBillAsync(adviceId, actionIndex, apply, ct),
             _ => Response("validation_failed", "That apply kind is not allowlisted.", apply.Kind, adviceId, actionIndex)
         };
+        if (ShouldClearAppliedAction(result))
+            adviceBus.RemoveAppliedAction(adviceId, actionIndex);
         Record(result);
         return result;
     }
@@ -465,6 +467,10 @@ public sealed class AssistedApplyService(
     private static bool IsRimApiUnavailable(Exception ex) =>
         ex is HttpRequestException or TaskCanceledException ||
         ex is RimApiHttpException { StatusCode: null or HttpStatusCode.NotFound or HttpStatusCode.NotImplemented or HttpStatusCode.BadGateway or HttpStatusCode.ServiceUnavailable };
+
+    private static bool ShouldClearAppliedAction(AssistedApplyResponse result) =>
+        string.Equals(result.Status, "applied", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(result.Status, "already_satisfied", StringComparison.OrdinalIgnoreCase);
 
     private static AssistedApplyResponse Response(
         string status,

@@ -272,6 +272,11 @@ Apply attempts must be logged with enough context to inspect the advice, target,
 validation decision, RIMAPI result, and read-back state in dashboard/system
 surfaces.
 
+When an apply returns `applied` or `already_satisfied`, the active advice
+snapshot should stop offering that same executable action. Future minister
+refreshes should also suppress the action when fresh state proves the operation
+is already satisfied.
+
 ---
 
 ## Autonomy Dial

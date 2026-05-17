@@ -82,6 +82,8 @@ public sealed class AssistedApplyServiceTests
         bus.Publish(Advice("food_meals_understocked", ProductionBillAction()));
         MinimalRefreshHandler handler = HandlerWithSingleStove();
         handler.EnqueueBillResponse(BillsJson());
+        handler.EnqueueBillResponse(BillsJson());
+        handler.EnqueueBillResponse(BillsJson(SimpleMealBillJson(403, 12)));
         handler.EnqueueBillResponse(BillsJson(SimpleMealBillJson(403, 12)));
         AssistedApplyService service = Service(bus, new ColonyState(), handler);
 
@@ -90,6 +92,7 @@ public sealed class AssistedApplyServiceTests
         response.Status.Should().Be("applied");
         response.Kind.Should().Be(AdviceApplyKind.UpsertProductionBill);
         response.Message.Should().Contain("created");
+        bus.ActiveAdvice().Should().BeEmpty();
         handler.AddBillPosted.Should().BeTrue();
         handler.UpdateBillPosted.Should().BeFalse();
         handler.LastBillWriteBody.Should().Contain("\"recipe_def_name\":\"CookMealSimple\"");
@@ -103,6 +106,8 @@ public sealed class AssistedApplyServiceTests
         bus.Publish(Advice("food_meals_understocked", ProductionBillAction()));
         MinimalRefreshHandler handler = HandlerWithSingleStove();
         handler.EnqueueBillResponse(BillsJson(SimpleMealBillJson(402, 6)));
+        handler.EnqueueBillResponse(BillsJson(SimpleMealBillJson(402, 6)));
+        handler.EnqueueBillResponse(BillsJson(SimpleMealBillJson(402, 12)));
         handler.EnqueueBillResponse(BillsJson(SimpleMealBillJson(402, 12)));
         AssistedApplyService service = Service(bus, new ColonyState(), handler);
 
@@ -123,6 +128,7 @@ public sealed class AssistedApplyServiceTests
         bus.Publish(Advice("food_meals_understocked", ProductionBillAction()));
         MinimalRefreshHandler handler = HandlerWithSingleStove();
         handler.EnqueueBillResponse(BillsJson(SimpleMealBillJson(402, 12)));
+        handler.EnqueueBillResponse(BillsJson(SimpleMealBillJson(402, 12)));
         AssistedApplyService service = Service(bus, new ColonyState(), handler);
 
         AssistedApplyResponse response = await service.ApplyAsync("food_meals_understocked", 0);
@@ -130,7 +136,7 @@ public sealed class AssistedApplyServiceTests
         response.Status.Should().Be("already_satisfied");
         handler.AddBillPosted.Should().BeFalse();
         handler.UpdateBillPosted.Should().BeFalse();
-        handler.BillListCalls.Should().Be(1);
+        handler.BillListCalls.Should().Be(2);
     }
 
     [Fact]
@@ -167,6 +173,7 @@ public sealed class AssistedApplyServiceTests
         AdviceBus bus = new();
         bus.Publish(Advice("food_meals_understocked", ProductionBillAction()));
         MinimalRefreshHandler handler = HandlerWithSingleStove();
+        handler.EnqueueBillResponse(BillsJson());
         handler.EnqueueBillResponse(BillsJson());
         handler.EnqueueBillResponse(BillsJson());
         AssistedApplyService service = Service(bus, new ColonyState(), handler);

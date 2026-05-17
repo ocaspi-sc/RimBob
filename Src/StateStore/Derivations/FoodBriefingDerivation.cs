@@ -104,6 +104,22 @@ public static class FoodBriefingDerivation
         IReadOnlyList<BuildingRecord> cookingBuildingRecords = s.Buildings.Value.Buildings
             .Where(BuildingClassifier.IsCookingBuilding)
             .ToList();
+        HashSet<string> cookingBuildingIds = cookingBuildingRecords
+            .Select(building => building.Id)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        IReadOnlyList<FoodCookingBillSummary> cookingBills = s.WorkTables.Value.WorkTables
+            .Where(workTable => cookingBuildingIds.Contains(workTable.BuildingId))
+            .SelectMany(workTable => workTable.Bills.Select(bill => new FoodCookingBillSummary(
+                workTable.BuildingId,
+                bill.LoadId,
+                bill.RecipeDefName,
+                bill.RecipeLabel,
+                bill.Suspended,
+                bill.Paused,
+                bill.RepeatMode,
+                bill.RepeatCount,
+                bill.TargetCount)))
+            .ToList();
         int cookingBuildings = cookingBuildingRecords.Count;
         int butcherTables = s.Buildings.Value.Buildings.Count(BuildingClassifier.IsButcherTable);
         return new FoodKitchenSummary(
@@ -112,7 +128,8 @@ public static class FoodBriefingDerivation
             HasCookingBuilding: cookingBuildings > 0,
             HasButcherTable: butcherTables > 0)
         {
-            CookingBuildingIds = cookingBuildingRecords.Select(building => building.Id).ToList()
+            CookingBuildingIds = cookingBuildingRecords.Select(building => building.Id).ToList(),
+            CookingBills = cookingBills
         };
     }
 

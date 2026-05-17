@@ -207,10 +207,23 @@ public sealed record FoodKitchenSummary(
 )
 {
     public IReadOnlyList<string> CookingBuildingIds { get; init; } = [];
+    public IReadOnlyList<FoodCookingBillSummary> CookingBills { get; init; } = [];
 
     public string? SingleCookingBuildingId =>
         CookingBuildingIds.Count == 1 ? CookingBuildingIds[0] : null;
 }
+
+public sealed record FoodCookingBillSummary(
+    string WorkbenchBuildingId,
+    int LoadId,
+    string? RecipeDefName,
+    string? RecipeLabel,
+    bool Suspended,
+    bool Paused,
+    string? RepeatMode,
+    int RepeatCount,
+    int TargetCount
+);
 
 public sealed record FoodDataCoverage(
     bool HasPlantPositions,

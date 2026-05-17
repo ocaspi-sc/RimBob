@@ -99,6 +99,9 @@ public static class FoodStateSummary
         parts.Add(Plural(briefing.Kitchen.CookingBuildings, "cooking station"));
         parts.Add(Plural(briefing.Infrastructure.Coolers, "cooler"));
         parts.Add($"{Plural(briefing.Storage.StockpileZones, "stockpile zone")} / {Plural(briefing.Storage.StockpileCells, "stockpile cell")}");
+        string billPosture = FormatSimpleMealBill(briefing);
+        if (!string.IsNullOrWhiteSpace(billPosture))
+            parts.Add(billPosture);
         string storagePosture = FormatStoragePosture(briefing);
         if (!string.IsNullOrWhiteSpace(storagePosture))
             parts.Add(storagePosture);
@@ -106,6 +109,18 @@ public static class FoodStateSummary
         if (briefing.RawFoodCount > 0 && briefing.MealsCount < briefing.ColonistCount * 2)
             parts.Add("raw food is waiting on cooking throughput");
         return $"Kitchen/storage: {string.Join("; ", parts)}.";
+    }
+
+    private static string FormatSimpleMealBill(FoodBriefing briefing)
+    {
+        FoodCookingBillSummary? bill = briefing.Kitchen.CookingBills.FirstOrDefault(candidate =>
+            string.Equals(candidate.RecipeDefName, "CookMealSimple", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(candidate.RecipeDefName, "CookMealSimpleBulk", StringComparison.OrdinalIgnoreCase));
+        if (bill is null)
+            return "";
+
+        string suspended = bill.Suspended ? " suspended" : "";
+        return $"simple meal bill until {bill.TargetCount} meals{suspended}";
     }
 
     private static string FormatStoragePosture(FoodBriefing briefing)

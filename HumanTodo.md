@@ -63,7 +63,8 @@
 - [x] Add durable Food decision/replay corpus persistence so M6 refinement can compare before/after outputs on historic inputs, not just fixtures.
 - [ ] Extend replay corpus persistence beyond Food and attach future Pushback/outcome fields once feedback is wired.
 - [ ] Improve Food hunting target risk/value scoring from live animal data.
-- [ ] Expand Food briefing with bill state, freezer room temperature, and spoilage timers when RIMAPI exposes them.
+- [x] Expand Food briefing with current cooking bill state so satisfied simple-meal bills suppress repeated bill advice.
+- [ ] Expand Food briefing with freezer room temperature and spoilage timers when RIMAPI exposes them.
 - [x] `Briefing` tab renders latest Mayor/Food briefing JSON.
 - [x] One-time bootstrap escalation now runs through explicit `PlayCycleContext.StartupBootstrap`; Food uses it in M3.
 - [x] Food active advice now publishes as a minister-scoped snapshot, so bootstrap LLM cards are replaced by the next successful Food cycle instead of lingering by unique id.

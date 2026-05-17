@@ -10,6 +10,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
     private const string Domain = "food";
     private const string SimpleMealRecipeSelector = "simple_meal";
     private const string BillRepeatModeTargetCount = "TargetCount";
+    private static readonly IReadOnlyList<string> SimpleMealRecipeDefs = ["CookMealSimple", "CookMealSimpleBulk"];
     private static readonly IconRef CampfireIcon = ItemIcon("Campfire");
     private static readonly IconRef CoolerIcon = ItemIcon("Cooler");
     private static readonly IconRef SimpleMealIcon = ItemIcon("MealSimple");
@@ -70,7 +71,10 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 days < 15f);
         }
 
-        if (briefing.MealsCount < briefing.ColonistCount * 2 && days > 7f && briefing.RawFoodCount > 0)
+        if (briefing.MealsCount < briefing.ColonistCount * 2 &&
+            days > 7f &&
+            briefing.RawFoodCount > 0 &&
+            (ShouldSuggestCookBill(briefing) || ShouldRequestCookingLabor(briefing, days)))
         {
             return DecisionFor(briefing, "meals_understocked",
                 FoodAdviceType.ManageCookBills,
@@ -337,13 +341,16 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 Icon: CampfireIcon));
         if (briefing.RawFoodCount > 0)
         {
-            actions.Add(new AdviceAction(
-                AdviceActionKind.ProductionBill,
-                CookBillActionText(briefing),
-                Quantity: SimpleMealTarget(briefing),
-                Reason: "raw food must become meals during an urgent shortage",
-                Icon: SimpleMealIcon,
-                Apply: CookBillApply(briefing)));
+            if (ShouldSuggestCookBill(briefing))
+            {
+                actions.Add(new AdviceAction(
+                    AdviceActionKind.ProductionBill,
+                    CookBillActionText(briefing),
+                    Quantity: SimpleMealTarget(briefing),
+                    Reason: "raw food must become meals during an urgent shortage",
+                    Icon: SimpleMealIcon,
+                    Apply: CookBillApply(briefing)));
+            }
             actions.Add(new AdviceAction(
                 AdviceActionKind.SetPriority,
                 "Put the best cook on Cook work until simple meals are stocked.",
@@ -371,15 +378,14 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
 
     private static IReadOnlyList<AdviceAction> CookBillActions(FoodBriefing briefing, float days)
     {
-        List<AdviceAction> actions =
-        [
-            new AdviceAction(AdviceActionKind.ProductionBill,
+        List<AdviceAction> actions = [];
+        if (ShouldSuggestCookBill(briefing))
+            actions.Add(new AdviceAction(AdviceActionKind.ProductionBill,
                 CookBillActionText(briefing),
                 Quantity: SimpleMealTarget(briefing),
                 Reason: "meal count is below two per colonist",
                 Icon: SimpleMealIcon,
-                Apply: CookBillApply(briefing))
-        ];
+                Apply: CookBillApply(briefing)));
         if (!briefing.Kitchen.HasCookingBuilding)
             actions.Add(new AdviceAction(
                 AdviceActionKind.PlaceBlueprint,
@@ -601,6 +607,25 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             RecipeSelectorKey: SimpleMealRecipeSelector,
             RepeatMode: BillRepeatModeTargetCount);
     }
+
+    private static bool ShouldSuggestCookBill(FoodBriefing briefing) =>
+        briefing.RawFoodCount > 0 &&
+        !HasSatisfiedSimpleMealBill(briefing);
+
+    private static bool HasSatisfiedSimpleMealBill(FoodBriefing briefing)
+    {
+        int target = Math.Min(SimpleMealTarget(briefing), AssistedApplyLimits.MaxProductionBillTarget);
+        return briefing.Kitchen.CookingBills.Any(bill =>
+            !bill.Suspended &&
+            string.Equals(bill.RepeatMode, BillRepeatModeTargetCount, StringComparison.OrdinalIgnoreCase) &&
+            bill.TargetCount >= target &&
+            IsSimpleMealBill(bill));
+    }
+
+    private static bool IsSimpleMealBill(FoodCookingBillSummary bill) =>
+        !string.IsNullOrWhiteSpace(bill.RecipeDefName) &&
+        SimpleMealRecipeDefs.Any(recipeDef =>
+            string.Equals(recipeDef, bill.RecipeDefName, StringComparison.OrdinalIgnoreCase));
 
     private static IconRef HarvestIcon(FoodBriefing briefing) =>
         ItemIcon(FirstNonBlank(

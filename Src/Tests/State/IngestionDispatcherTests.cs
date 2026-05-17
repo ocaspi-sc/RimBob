@@ -30,6 +30,7 @@ public sealed class IngestionDispatcherTests
         s.Colonists.Version.Should().Be(1);
         s.Stockpiles.Version.Should().Be(1);
         s.Buildings.Version.Should().Be(1);
+        s.WorkTables.Version.Should().Be(1);
         s.Power.Version.Should().Be(1);
         s.Threats.Version.Should().Be(1);
         s.Weather.Version.Should().Be(1);
@@ -75,6 +76,49 @@ public sealed class IngestionDispatcherTests
         s.Power.Value.ProductionW.Should().Be(2000f);
         s.Threats.Value.Lords.Should().ContainSingle()
             .Which.JobType.Should().Be("Raid");
+    }
+
+    [Fact]
+    public async Task RefreshAllAsync_CookingBills_FlowIntoFoodBriefingKitchen()
+    {
+        PathRouter router = StandardRouter()
+            .Add("api/v1/map/buildings?map_id", Envelope(new List<BuildingDto>
+            {
+                new(10, "FueledStove", "fueled stove", "Building_WorkTable_HeatPush", new PositionDto(5, 0, 5))
+            }))
+            .Add("api/v1/buildings/bills?building_id=10", Json("""
+                {
+                  "success": true,
+                  "data": [
+                    {
+                      "load_id": 7,
+                      "recipe_def_name": "CookMealSimple",
+                      "recipe_label": "cook simple meal",
+                      "suspended": false,
+                      "paused": false,
+                      "repeat_mode": "TargetCount",
+                      "repeat_count": 1,
+                      "target_count": 12
+                    }
+                  ],
+                  "errors": [],
+                  "warnings": [],
+                  "timestamp": null
+                }
+                """));
+        using HttpClient http = MakeClient(router);
+        ColonyState s = new();
+        IngestionDispatcher dispatcher = new(
+            new RimApiClient(http), s, new TestLogger<IngestionDispatcher>());
+
+        await dispatcher.RefreshAllAsync();
+
+        s.WorkTables.Value.WorkTables.Should().ContainSingle()
+            .Which.Bills.Should().ContainSingle()
+            .Which.TargetCount.Should().Be(12);
+        FoodBriefing briefing = FoodBriefingDerivation.Compute(s);
+        briefing.Kitchen.CookingBills.Should().ContainSingle()
+            .Which.RecipeDefName.Should().Be("CookMealSimple");
     }
 
     [Fact]

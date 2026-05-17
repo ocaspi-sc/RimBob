@@ -215,6 +215,21 @@ public static class MapAggregateMapper
                 Position: MapPosition(building.Position)))
             .ToList());
 
+    public static WorkTableRecord FromWorkTableBills(string buildingId, IReadOnlyList<WorkTableBillDto> bills) =>
+        new(
+            buildingId,
+            bills
+                .Select(bill => new WorkTableBillRecord(
+                    bill.LoadId,
+                    bill.RecipeDefName,
+                    bill.RecipeLabel,
+                    bill.Suspended,
+                    bill.Paused,
+                    bill.RepeatMode,
+                    bill.RepeatCount,
+                    bill.TargetCount))
+                .ToList());
+
     public static PowerNetwork FromPower(PowerInfoDto power) =>
         new(power.Production, power.Consumption, power.Stored, power.Capacity);
 

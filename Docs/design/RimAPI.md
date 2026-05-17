@@ -130,7 +130,7 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 |---|---|---|
 | GET | `/map/work-tables?map_id` | list tables |
 | GET | `/buildings/recipes?building_id` | available recipes; wrapped for simple-meal apply |
-| GET | `/buildings/bills?building_id` | bills on a table; wrapped for simple-meal apply |
+| GET | `/buildings/bills?building_id` | bills on a table; ingested for Food bill-state awareness and wrapped for simple-meal apply |
 | POST | `/buildings/bills/add` | add bill; wrapped only for simple-meal apply |
 | DELETE | `/buildings/bills/remove` | clear all |
 | GET | `/buildings/bill?building_id&bill_id` | one bill |
@@ -143,9 +143,11 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 > `/api/v1/dev/endpoints`. Recipe rows include `def_name`, `label`,
 > `work_amount`, `work_skill`, `products[]`, and `ingredients[]`. Bill rows
 > include `load_id`, `recipe_def_name`, `recipe_label`, `repeat_mode`, and
-> `target_count`. Create bill accepts `recipe_def_name`, `repeat_mode`, and
-> `target_count`; update bill accepts `repeat_mode` and `target_count`.
-> RimBob wraps only the idempotent simple-meal `TargetCount` path.
+> `target_count`. RimBob ingests the compact current bill state for cooking
+> workbenches so Food can avoid stale bill suggestions. Create bill accepts
+> `recipe_def_name`, `repeat_mode`, and `target_count`; update bill accepts
+> `repeat_mode` and `target_count`. RimBob wraps only the idempotent
+> simple-meal `TargetCount` path.
 
 ### Builder (blueprints)
 | Method | Path | Purpose |
