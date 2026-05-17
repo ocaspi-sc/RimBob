@@ -1,5 +1,124 @@
 import { DisclosureSection } from '../shared/DisclosureSection';
 
+// ── Highlights data ──────────────────────────────────────────────────────────
+
+interface FeatureEntry {
+  name: string;
+  tag: string;
+  description: string;
+}
+
+const features: FeatureEntry[] = [
+  {
+    name: 'Minister pattern',
+    tag: 'Architecture',
+    description: 'Colony decisions are split across independent advisors — Food and Mayor — each with its own briefing, rules, and LLM escalation path.',
+  },
+  {
+    name: 'Rules-first path',
+    tag: 'Runtime',
+    description: 'Deterministic rules run on every tick. The LLM is only called when rule logic hits a judgment call, keeping latency and cost low.',
+  },
+  {
+    name: 'LLM escalation',
+    tag: 'Runtime',
+    description: 'Gemini is consulted only when rules need interpretation or tradeoff reasoning. RAG snippets from the local corpus accompany every prompt.',
+  },
+  {
+    name: 'Versioned aggregates',
+    tag: 'State',
+    description: '13+ typed state slices (food, economy, threats, power, research…) are version-stamped so ministers skip recompute when nothing changed.',
+  },
+  {
+    name: 'Advice bus',
+    tag: 'Coordination',
+    description: 'Ministers publish to a shared pub/sub bus. They never call each other directly; cross-cutting signals travel as typed Flags.',
+  },
+  {
+    name: 'RAG knowledge base',
+    tag: 'Knowledge',
+    description: 'A local RimWorld guide corpus is chunked, embedded, and retrieved per-query. Ministers cite sources; humans can verify the reasoning.',
+  },
+  {
+    name: 'SSE streaming',
+    tag: 'Live feed',
+    description: 'The dashboard receives agenda and advice updates in real time via /api/advice/stream — no polling, no stale snapshots.',
+  },
+  {
+    name: 'Replay corpus',
+    tag: 'Refine',
+    description: 'Every minister input and output is appended to an immutable log. Rule and prompt changes can be back-tested against real colony history.',
+  },
+];
+
+interface StatEntry {
+  label: string;
+  value: string;
+}
+
+const codebaseStats: StatEntry[] = [
+  { label: 'Total LOC', value: '~25,200' },
+  { label: 'C# files', value: '154' },
+  { label: 'C# LOC', value: '~19,700' },
+  { label: 'TypeScript / TSX files', value: '55' },
+  { label: 'TypeScript LOC', value: '~5,500' },
+  { label: 'C# types (classes / records / interfaces / enums)', value: '~303' },
+  { label: 'Test files', value: '40' },
+  { label: 'Test LOC', value: '~6,900' },
+];
+
+const projectStats: StatEntry[] = [
+  { label: 'Backend projects', value: '9' },
+  { label: 'State aggregates', value: '13+' },
+  { label: 'API endpoints', value: '~14' },
+  { label: 'Ministers', value: '2 (Food, Mayor)' },
+  { label: 'React components', value: '~40' },
+  { label: 'Custom hooks', value: '6' },
+  { label: 'Disk size', value: '~1.2 GB (incl. build artifacts)' },
+  { label: 'Est. build time (solo senior SWE)', value: '6–9 months' },
+];
+
+interface DecisionEntry {
+  decision: string;
+  tag: string;
+  rationale: string;
+}
+
+const designDecisions: DecisionEntry[] = [
+  {
+    decision: 'Ministers are decoupled',
+    tag: 'Coupling',
+    rationale: 'Direct minister-to-minister calls create ordering and recursion problems. Flags on the advice bus let them communicate without knowing about each other.',
+  },
+  {
+    decision: 'Briefings hold derived facts only',
+    tag: 'Prompts',
+    rationale: 'Raw game state in a prompt inflates token cost and confuses the model. Briefings pre-compute the facts that matter — food days, threat level, worker gaps.',
+  },
+  {
+    decision: 'Rules before LLM, always',
+    tag: 'Cost',
+    rationale: 'Most ticks have obvious answers a rule can emit in <1 ms. Reserving the LLM for genuine ambiguity cuts API spend and makes advice predictable.',
+  },
+  {
+    decision: 'RAG over fine-tuning',
+    tag: 'Knowledge',
+    rationale: 'The RimWorld corpus changes when guides are updated. Retrieval keeps knowledge current without retraining; citations let players spot outdated snippets.',
+  },
+  {
+    decision: 'Append-only replay corpus',
+    tag: 'Safety',
+    rationale: 'Refinements must be testable against real history. Mutating the log would invalidate that signal, so writes are append-only and deletions are forbidden.',
+  },
+  {
+    decision: 'Versioned snapshots, not diffs',
+    tag: 'State',
+    rationale: 'Diffs are hard to replay and easy to corrupt. Full versioned snapshots are slightly larger but make any point-in-time state trivially reconstructable.',
+  },
+];
+
+// ── Glossary data ────────────────────────────────────────────────────────────
+
 interface GlossaryEntry {
   term: string;
   tag: string;
@@ -122,6 +241,43 @@ export function InfoOverview() {
         </div>
       </header>
 
+      {/* ── Highlights ─────────────────────────────────────────────────── */}
+      <DisclosureSection title="What RimBob does" defaultOpen meta={`${features.length} features`}>
+        <div className="analytics-ideas">
+          {features.map(f => (
+            <article key={f.name} className="analytics-idea">
+              <div>
+                <strong>{f.name}</strong>
+                <span>{f.tag}</span>
+              </div>
+              <p>{f.description}</p>
+            </article>
+          ))}
+        </div>
+      </DisclosureSection>
+
+      <DisclosureSection title="By the numbers" meta="codebase stats">
+        <div className="glossary-columns">
+          <StatList title="Code" entries={codebaseStats} />
+          <StatList title="Project" entries={projectStats} />
+        </div>
+      </DisclosureSection>
+
+      <DisclosureSection title="Design decisions" meta={`${designDecisions.length} choices`}>
+        <div className="analytics-ideas">
+          {designDecisions.map(d => (
+            <article key={d.decision} className="analytics-idea">
+              <div>
+                <strong>{d.decision}</strong>
+                <span>{d.tag}</span>
+              </div>
+              <p>{d.rationale}</p>
+            </article>
+          ))}
+        </div>
+      </DisclosureSection>
+
+      {/* ── Glossary ────────────────────────────────────────────────────── */}
       <DisclosureSection title="Important buzzwords" defaultOpen meta={`${rimbobGlossary.length + rimworldSignals.length} terms`}>
         <div className="glossary-columns">
           <GlossaryList title="RimBob terms" entries={rimbobGlossary} />
@@ -143,6 +299,22 @@ export function InfoOverview() {
         </div>
       </DisclosureSection>
     </div>
+  );
+}
+
+function StatList({ entries, title }: { entries: StatEntry[]; title: string }) {
+  return (
+    <section className="count-panel">
+      <h3>{title}</h3>
+      <div className="count-rows">
+        {entries.map(entry => (
+          <div className="count-row" key={entry.label}>
+            <span>{entry.label}</span>
+            <strong>{entry.value}</strong>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
