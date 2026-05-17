@@ -52,6 +52,17 @@ public sealed class IconCacheServiceTests
             Directory.EnumerateFiles(root, "*.tmp", SearchOption.AllDirectories).Should().BeEmpty();
             status.FileCount.Should().Be(1);
             status.FilesByKind.Should().ContainKey("terrain").WhoseValue.Should().Be(1);
+            status.Files.Should().ContainSingle().Which.Should().BeEquivalentTo(
+                new
+                {
+                    Kind = "terrain",
+                    Id = "Soil",
+                    Name = "Soil.png",
+                    RelativePath = "terrain/Soil.png",
+                    PublicPath = "/api/icons/terrain/Soil"
+                },
+                options => options.ExcludingMissingMembers());
+            status.Files.Single().SizeBytes.Should().BeGreaterThan(0);
         }
         finally
         {
@@ -210,6 +221,13 @@ public sealed class IconCacheServiceTests
             summary.FactionCandidates.Should().Be(1);
             summary.Failures.Should().Contain(failure => failure.Kind == "item" && failure.Id == "BadThing");
             status.FileCount.Should().Be(3);
+            status.Files.Should().HaveCount(3);
+            status.Files.Select(file => $"{file.Kind}:{file.Id}").Should().BeEquivalentTo(
+            [
+                "faction:7",
+                "item:MealSimple",
+                "terrain:Soil"
+            ]);
             status.LastWarm.Should().NotBeNull();
             status.LastWarm?.Succeeded.Should().Be(3);
         }

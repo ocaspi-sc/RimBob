@@ -12,6 +12,9 @@ public sealed class IconCacheService
     private const int WarmConcurrency = 2;
     private const int MaxStatusFailures = 100;
     private static readonly byte[] PngSignature = [137, 80, 78, 71, 13, 10, 26, 10];
+    private static readonly Regex PawnPortraitKeyPattern = new(
+        "^(?<pawnId>[0-9]+)-(?<width>[0-9]+)x(?<height>[0-9]+)-(?<direction>[A-Za-z]+)$",
+        RegexOptions.Compiled);
     private static readonly Regex SafeKeyPattern = new("^[A-Za-z0-9_.-]+$", RegexOptions.Compiled);
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
@@ -180,6 +183,11 @@ public sealed class IconCacheService
         FileInfo[] files = new DirectoryInfo(rootDirectory)
             .EnumerateFiles("*.png", SearchOption.AllDirectories)
             .ToArray();
+        IconCacheFile[] fileEntries = files
+            .Select(ToCacheFile)
+            .OrderBy(file => file.Kind, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(file => file.Id, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
 
         Dictionary<string, int> byKind = files
             .GroupBy(file => file.Directory?.Name ?? "unknown", StringComparer.OrdinalIgnoreCase)
@@ -196,6 +204,7 @@ public sealed class IconCacheService
             TotalBytes: files.Sum(file => file.Length),
             LatestWriteAt: latest,
             FilesByKind: byKind,
+            Files: fileEntries,
             LastWarm: BoundForStatus(manifest?.LastWarm));
     }
 
@@ -300,14 +309,48 @@ public sealed class IconCacheService
         return path;
     }
 
-    private static string PublicPath(string kind, string id) => kind switch
+    private IconCacheFile ToCacheFile(FileInfo file)
+    {
+        string kind = file.Directory?.Name ?? "unknown";
+        string id = Path.GetFileNameWithoutExtension(file.Name);
+        string relativePath = Path.GetRelativePath(rootDirectory, file.FullName)
+            .Replace(Path.DirectorySeparatorChar, '/')
+            .Replace(Path.AltDirectorySeparatorChar, '/');
+        DateTimeOffset lastWriteAt = new(DateTime.SpecifyKind(file.LastWriteTimeUtc, DateTimeKind.Utc));
+
+        return new IconCacheFile(
+            Kind: kind,
+            Id: id,
+            Name: file.Name,
+            RelativePath: relativePath,
+            SizeBytes: file.Length,
+            LastWriteAt: lastWriteAt,
+            PublicPath: PublicPathForCachedFile(kind, id));
+    }
+
+    private static string PublicPath(string kind, string id) =>
+        PublicPathForCachedFile(kind, id) ?? string.Empty;
+
+    private static string? PublicPathForCachedFile(string kind, string id) => kind switch
     {
         "item" => $"/api/icons/item/{Uri.EscapeDataString(id)}",
         "terrain" => $"/api/icons/terrain/{Uri.EscapeDataString(id)}",
         "faction" => $"/api/icons/faction/{Uri.EscapeDataString(id)}",
-        "pawn-portrait" => "/api/icons/pawn/{pawnId}/portrait",
-        _ => string.Empty
+        "pawn-portrait" => PawnPortraitPublicPath(id),
+        _ => null
     };
+
+    private static string? PawnPortraitPublicPath(string id)
+    {
+        Match match = PawnPortraitKeyPattern.Match(id);
+        if (!match.Success) return null;
+
+        string pawnId = match.Groups["pawnId"].Value;
+        string width = match.Groups["width"].Value;
+        string height = match.Groups["height"].Value;
+        string direction = match.Groups["direction"].Value;
+        return $"/api/icons/pawn/{Uri.EscapeDataString(pawnId)}/portrait?width={Uri.EscapeDataString(width)}&height={Uri.EscapeDataString(height)}&direction={Uri.EscapeDataString(direction)}";
+    }
 
     private static string SafeKey(string value)
     {
@@ -436,7 +479,17 @@ public sealed record IconCacheStatus(
     long TotalBytes,
     DateTimeOffset? LatestWriteAt,
     IReadOnlyDictionary<string, int> FilesByKind,
+    IReadOnlyList<IconCacheFile> Files,
     IconWarmSummary? LastWarm);
+
+public sealed record IconCacheFile(
+    string Kind,
+    string Id,
+    string Name,
+    string RelativePath,
+    long SizeBytes,
+    DateTimeOffset LastWriteAt,
+    string? PublicPath);
 
 public sealed record IconWarmSummary(
     DateTimeOffset StartedAt,

@@ -1760,6 +1760,38 @@ code {
   overflow-x: auto;
 }
 
+.icon-file-table {
+  max-height: 420px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.icon-file-table .dense-row {
+  grid-template-columns:
+    minmax(110px, 0.6fr)
+    minmax(180px, 1fr)
+    minmax(90px, 0.45fr)
+    minmax(180px, 0.95fr)
+    minmax(300px, 1.6fr);
+  min-width: 920px;
+}
+
+.cache-file-path {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.cache-file-path code,
+.cache-file-path small {
+  overflow-wrap: anywhere;
+}
+
+.cache-file-path small {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
 .icon-failure-table .dense-row {
   grid-template-columns: 90px minmax(160px, 0.8fr) minmax(320px, 1.8fr);
   min-width: 620px;

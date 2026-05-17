@@ -242,6 +242,31 @@ export function SystemOverview({
               <InfoLine label="Failures" value={icons.lastWarm?.failed ?? 'n/a'} />
               <InfoLine label="By kind" value={formatKindCounts(icons.filesByKind)} />
             </div>
+            {icons.files.length === 0 ? (
+              <EmptyState code="ICON CACHE EMPTY">No cached PNG files exist under the icon cache directory.</EmptyState>
+            ) : (
+              <div className="dense-table icon-file-table">
+                <div className="dense-row header">
+                  <FieldLabel iconKey="kind">Kind</FieldLabel>
+                  <FieldLabel iconKey="id">Id</FieldLabel>
+                  <FieldLabel iconKey="size">Size</FieldLabel>
+                  <FieldLabel iconKey="updated">Updated</FieldLabel>
+                  <FieldLabel iconKey="file">File</FieldLabel>
+                </div>
+                {icons.files.map(file => (
+                  <div className="dense-row" key={file.relativePath}>
+                    <span>{file.kind}</span>
+                    <code>{file.id}</code>
+                    <span>{formatBytes(file.sizeBytes)}</span>
+                    <span>{formatMaybeDate(file.lastWriteAt)}</span>
+                    <span className="cache-file-path">
+                      <code>{file.relativePath}</code>
+                      {file.publicPath && <small>{file.publicPath}</small>}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
             {icons.lastWarm && icons.lastWarm.failures.length > 0 && (
               <div className="dense-table icon-failure-table">
                 <div className="dense-row header">

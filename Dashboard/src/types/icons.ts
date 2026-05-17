@@ -24,6 +24,16 @@ export interface IconWarmSummary {
   failures: IconWarmFailure[];
 }
 
+export interface IconCacheFile {
+  kind: string;
+  id: string;
+  name: string;
+  relativePath: string;
+  sizeBytes: number;
+  lastWriteAt: string;
+  publicPath: string | null;
+}
+
 export interface IconCacheStatus {
   directory: string;
   exists: boolean;
@@ -31,5 +41,6 @@ export interface IconCacheStatus {
   totalBytes: number;
   latestWriteAt: string | null;
   filesByKind: Record<string, number>;
+  files: IconCacheFile[];
   lastWarm: IconWarmSummary | null;
 }
