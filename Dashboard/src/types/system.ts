@@ -92,6 +92,7 @@ export interface MinisterTrace {
   completedAt: string | null;
   path: string;
   ruleFired: string | null;
+  ruleDiagnostics: RuleTraceDetails | null;
   escalationReason: string | null;
   errorType: string | null;
   errorMessage: string | null;
@@ -100,6 +101,18 @@ export interface MinisterTrace {
   wakeupPayload: string | null;
   flag: unknown | null;
   note: string;
+}
+
+export interface RuleTraceDetails {
+  selectedRule: string | null;
+  matchedSignals: RuleTraceEntry[];
+  suppressedCandidates: RuleTraceEntry[];
+}
+
+export interface RuleTraceEntry {
+  rule: string;
+  outcome: string;
+  reason: string;
 }
 
 export interface AssistedApplyAttempt {

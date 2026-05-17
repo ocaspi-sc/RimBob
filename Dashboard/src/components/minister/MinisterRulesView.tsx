@@ -3,7 +3,7 @@ import type { ScopeConfig } from '../../dashboard/scopes';
 import { iconForSection, iconForView } from '../../dashboard/semanticIcons';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
 import type { AdviceItem } from '../../types/advice';
-import type { DashboardEvent } from '../../types/system';
+import type { DashboardEvent, RuleTraceDetails } from '../../types/system';
 import { DisclosureSection } from '../shared/DisclosureSection';
 import { EmptyState } from '../shared/EmptyState';
 import { DynamicTable, InspectorSurface, type InspectorSurfaceConfig } from '../shared/Inspector';
@@ -19,9 +19,11 @@ const traceInspectorConfig: InspectorSurfaceConfig = {
     'completed_at',
     'ruleFired',
     'rule_fired',
+    'ruleDiagnostics.selectedRule',
     'escalationReason',
     'escalation_reason',
   ],
+  hiddenKeys: ['ruleDiagnostics'],
   defaultOpenKeys: ['flag', 'flags', 'advice', 'emittedAdvice', 'emitted_advice'],
   preferredTables: [
     {
@@ -83,7 +85,12 @@ export function MinisterRulesView({
       {trace.error || !trace.data ? (
         <EmptyState code="TRACE NOT EXPOSED">{trace.error ?? 'No trace returned.'}</EmptyState>
       ) : (
-        <InspectorSurface value={trace.data} config={traceInspectorConfig} />
+        <>
+          {trace.data.ruleDiagnostics && (
+            <RuleDiagnosticsPanel details={trace.data.ruleDiagnostics} />
+          )}
+          <InspectorSurface value={trace.data} config={traceInspectorConfig} />
+        </>
       )}
 
       <DisclosureSection
@@ -105,6 +112,39 @@ export function MinisterRulesView({
         />
       </DisclosureSection>
     </div>
+  );
+}
+
+function RuleDiagnosticsPanel({ details }: { details: RuleTraceDetails }) {
+  return (
+    <DisclosureSection
+      title={<SemanticLabel icon={iconForView('rules')}><span>Rule diagnostics</span></SemanticLabel>}
+      defaultOpen
+      meta={`${details.matchedSignals.length} matched / ${details.suppressedCandidates.length} suppressed`}
+    >
+      <div className="inspector-field-grid">
+        <div className="inspector-field">
+          <SemanticLabel className="inspector-field-name" icon={iconForView('rules')}><code>selectedRule</code></SemanticLabel>
+          <span>{details.selectedRule ?? 'none'}</span>
+        </div>
+      </div>
+      <DynamicTable
+        rows={details.matchedSignals}
+        preferredColumns={['rule', 'outcome', 'reason']}
+        emptyMessage="No rules matched."
+      />
+      {details.suppressedCandidates.length > 0 && (
+        <DisclosureSection
+          title={<SemanticLabel icon={iconForView('rules')}><span>Suppressed candidates</span></SemanticLabel>}
+          meta={`${details.suppressedCandidates.length} lower-priority matches`}
+        >
+          <DynamicTable
+            rows={details.suppressedCandidates}
+            preferredColumns={['rule', 'outcome', 'reason']}
+          />
+        </DisclosureSection>
+      )}
+    </DisclosureSection>
   );
 }
 

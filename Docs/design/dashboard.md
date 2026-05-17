@@ -418,9 +418,9 @@ degraded or not-exposed coverage states.
 
 The Rules view answers: "Why did RimBob say this now?"
 
-Show trigger, rules-vs-LLM path, rule fired or escalation reason, relevant flag
-or wakeup payload, emitted advice/flags, briefing version/tick when available,
-and last error.
+Show trigger, rules-vs-LLM path, selected rule or escalation reason, matched
+signals, suppressed lower-priority candidates, relevant flag or wakeup payload,
+emitted advice/flags, briefing version/tick when available, and last error.
 
 ### Advice
 

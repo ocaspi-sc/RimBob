@@ -16,7 +16,25 @@ public abstract record RulesResult;
 public record Decision(
     IReadOnlyList<RimBob.Core.Advice.AdviceItem> Advice,
     IReadOnlyList<AgentFlag> Flags,
-    string Trace) : RulesResult;
+    string Trace,
+    RuleTraceDetails? Diagnostics = null) : RulesResult;
 
 /// <summary>Rules couldn't cover this case. Escalate to the LLM.</summary>
-public record Escalate(string Reason, object? Context = null) : RulesResult;
+public record Escalate(
+    string Reason,
+    object? Context = null,
+    RuleTraceDetails? Diagnostics = null) : RulesResult;
+
+/// <summary>
+/// Diagnostic trace of the rules layer: the selected rule plus lower-priority
+/// matches that were true but did not own the final path.
+/// </summary>
+public sealed record RuleTraceDetails(
+    string? SelectedRule,
+    IReadOnlyList<RuleTraceEntry> MatchedSignals,
+    IReadOnlyList<RuleTraceEntry> SuppressedCandidates);
+
+public sealed record RuleTraceEntry(
+    string Rule,
+    string Outcome,
+    string Reason);

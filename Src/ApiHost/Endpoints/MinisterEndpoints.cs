@@ -27,7 +27,7 @@ public static class MinisterEndpoints
             "/api/ministers/{minister}/llm-output/manual",
             _ => "partial",
             context => $"Developer manual raw LLM ingestion for {context.CapabilityNames(descriptor => descriptor.HasManualLlmOutput)}.");
-        coverage.Register("/api/ministers/{minister}/trace/latest", "available", "Latest minister trigger, status, rules/LLM path, rule trace, escalation reason, counts, and error detail.");
+        coverage.Register("/api/ministers/{minister}/trace/latest", "available", "Latest minister trigger, status, rules/LLM path, selected/suppressed rule diagnostics, escalation reason, counts, and error detail.");
         coverage.Register("/api/ministers/{minister}/rag/latest", "not_exposed_yet", "Planned RAG retrieval inspector.");
         coverage.Register(
             "/api/ministers/food/crop-math/latest",
@@ -296,6 +296,7 @@ public static class MinisterEndpoints
                     CompletedAt: null,
                     Path: "not_exposed_yet",
                     RuleFired: null,
+                    RuleDiagnostics: null,
                     EscalationReason: null,
                     ErrorType: null,
                     ErrorMessage: null,

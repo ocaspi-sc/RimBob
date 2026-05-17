@@ -31,6 +31,14 @@ public sealed class FoodRulesTests
         advice.Actions.Should().Contain(s => s.Kind == AdviceActionKind.ProductionBill);
         advice.Actions.Should().Contain(s => s.Kind == AdviceActionKind.SetPriority && s.WorkType == WorkType.Cook);
         advice.Actions.Should().NotContain(s => s.Kind == AdviceActionKind.Trade);
+        decision.Diagnostics.Should().NotBeNull();
+        decision.Diagnostics!.SelectedRule.Should().Be("emergency_food_flag");
+        decision.Diagnostics.MatchedSignals.Should().Contain(signal =>
+            signal.Rule == "emergency_food_flag" &&
+            signal.Outcome == "selected");
+        decision.Diagnostics.SuppressedCandidates.Should().Contain(signal =>
+            signal.Rule == "expand_growing_capacity" &&
+            signal.Outcome == "suppressed");
         AgentFlag flag = decision.Flags.Should().ContainSingle().Subject;
         flag.Severity.Should().Be(FlagSeverity.High);
         flag.Requests.Should().NotBeNull();
@@ -477,9 +485,16 @@ public sealed class FoodRulesTests
             WildAnimalCount = 0
         };
 
-        new Rules().Evaluate(briefing, ColonyContext.Default)
+        Escalate escalation = new Rules().Evaluate(briefing, ColonyContext.Default)
             .Should().BeOfType<Escalate>()
-            .Which.Reason.Should().Contain("Winter is close");
+            .Subject;
+
+        escalation.Reason.Should().Contain("Winter is close");
+        escalation.Diagnostics.Should().NotBeNull();
+        escalation.Diagnostics!.SelectedRule.Should().Be("winter_food_tradeoff");
+        escalation.Diagnostics.MatchedSignals.Should().Contain(signal =>
+            signal.Rule == "winter_food_tradeoff" &&
+            signal.Outcome == "escalated");
     }
 
     [Fact]

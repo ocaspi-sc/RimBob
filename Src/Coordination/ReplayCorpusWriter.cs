@@ -87,6 +87,8 @@ public sealed record MinisterReplayRecord(
     object? Context,
     [property: JsonPropertyName("rule_trace")]
     string? RuleTrace,
+    [property: JsonPropertyName("rule_trace_details")]
+    RuleTraceDetails? RuleTraceDetails,
     [property: JsonPropertyName("escalation_reason")]
     string? EscalationReason,
     [property: JsonPropertyName("escalation_context")]

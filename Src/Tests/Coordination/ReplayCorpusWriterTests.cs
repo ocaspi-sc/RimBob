@@ -37,6 +37,16 @@ public sealed class ReplayCorpusWriterTests
                 GuideCitationIds: [],
                 IssuedAt: capturedAt,
                 ExpiresAt: capturedAt.AddHours(4));
+            RuleTraceDetails traceDetails = new(
+                SelectedRule: "emergency_food_flag",
+                MatchedSignals:
+                [
+                    new RuleTraceEntry(
+                        Rule: "emergency_food_flag",
+                        Outcome: "selected",
+                        Reason: "food buffer 4.0d is below the 7d emergency threshold")
+                ],
+                SuppressedCandidates: []);
 
             MinisterReplayRecord record = new(
                 SchemaVersion: 2,
@@ -49,6 +59,7 @@ public sealed class ReplayCorpusWriterTests
                 Briefing: briefing,
                 Context: MinisterBriefingContext.Empty,
                 RuleTrace: "emergency_food_flag",
+                RuleTraceDetails: traceDetails,
                 EscalationReason: null,
                 EscalationContext: null,
                 GuideCitations: [citation],
@@ -89,6 +100,8 @@ public sealed class ReplayCorpusWriterTests
             root.GetProperty("briefing").GetProperty("estimated_days_of_food").GetSingle().Should().Be(4f);
             root.GetProperty("context").GetProperty("short_term_domains").GetArrayLength().Should().Be(0);
             root.GetProperty("rule_trace").GetString().Should().Be("emergency_food_flag");
+            root.GetProperty("rule_trace_details").GetProperty("selected_rule").GetString().Should().Be("emergency_food_flag");
+            root.GetProperty("rule_trace_details").GetProperty("matched_signals")[0].GetProperty("outcome").GetString().Should().Be("selected");
             root.GetProperty("guide_citations").GetArrayLength().Should().Be(1);
             root.GetProperty("guide_citations")[0].GetProperty("cite_id").GetString().Should().Be("food-guide-1");
             root.GetProperty("state_summary").GetString().Should().Be("Food is low and needs action.");

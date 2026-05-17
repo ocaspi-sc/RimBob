@@ -135,12 +135,14 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         if (days < 20f && briefing.WildAnimalCount > 0 && briefing.ReadyToHarvest == 0)
             return new Escalate(
                 "Food below 20 days with possible hunting path; target risk/value needs judgment.",
-                new { briefing.WildAnimalCount, briefing.ActiveThreat, briefing.Skills.BestCooking });
+                new { briefing.WildAnimalCount, briefing.ActiveThreat, briefing.Skills.BestCooking },
+                DiagnosticsFor(briefing, "hunting_ambiguity"));
 
         if (briefing.Season.DaysToWinter is < 20 && days < 30f)
             return new Escalate(
                 "Winter is close and food buffer is below target; crop/freezer/labor tradeoff needs guide-grounded judgment.",
-                new { briefing.Season.DaysToWinter, DaysOfFood = days, briefing.CropBreakdown });
+                new { briefing.Season.DaysToWinter, DaysOfFood = days, briefing.CropBreakdown },
+                DiagnosticsFor(briefing, "winter_food_tradeoff"));
 
         if (briefing.Infrastructure.Coolers == 0 && days >= 20f && briefing.FoodUnits > 0)
             return DecisionFor(briefing, "freezer_missing",
@@ -154,11 +156,12 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 false);
 
         if (days >= 30f)
-            return new Decision([], [], "maintain_security_threshold");
+            return new Decision([], [], "maintain_security_threshold", DiagnosticsFor(briefing, "maintain_security_threshold"));
 
         return new Escalate(
             "Food state is below ideal but no deterministic rule cleanly chooses the next action.",
-            new { DaysOfFood = days, briefing.ReadyToHarvest, briefing.WildHarvestCandidates, briefing.WildAnimalCount });
+            new { DaysOfFood = days, briefing.ReadyToHarvest, briefing.WildHarvestCandidates, briefing.WildAnimalCount },
+            DiagnosticsFor(briefing, "unresolved_food_gap"));
     }
 
     private static Decision DecisionFor(
@@ -203,8 +206,151 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 ExpiresAt: now.AddHours(24))]
             : [];
 
-        return new Decision([advice], flags, trace);
+        return new Decision([advice], flags, trace, DiagnosticsFor(briefing, trace));
     }
+
+    private static RuleTraceDetails DiagnosticsFor(FoodBriefing briefing, string selectedRule)
+    {
+        List<RuleTraceEntry> matches = RuleMatches(briefing);
+        int selectedIndex = matches.FindIndex(match =>
+            string.Equals(match.Rule, selectedRule, StringComparison.OrdinalIgnoreCase));
+
+        if (selectedIndex < 0)
+        {
+            matches.Add(new RuleTraceEntry(selectedRule, "selected", FallbackRuleReason(selectedRule, briefing)));
+            selectedIndex = matches.Count - 1;
+        }
+
+        List<RuleTraceEntry> annotated = new(matches.Count);
+        for (int i = 0; i < matches.Count; i++)
+        {
+            RuleTraceEntry match = matches[i];
+            string outcome = i == selectedIndex
+                ? SelectedOutcome(selectedRule)
+                : i > selectedIndex
+                    ? "suppressed"
+                    : "matched";
+            annotated.Add(match with { Outcome = outcome });
+        }
+
+        IReadOnlyList<RuleTraceEntry> suppressed = annotated
+            .Where(match => string.Equals(match.Outcome, "suppressed", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        return new RuleTraceDetails(selectedRule, annotated, suppressed);
+    }
+
+    private static List<RuleTraceEntry> RuleMatches(FoodBriefing briefing)
+    {
+        List<RuleTraceEntry> matches = [];
+        if (briefing.EstimatedDaysOfFood is null)
+        {
+            if (briefing.UnclassifiedFoodUnits > 0)
+            {
+                matches.Add(Match(
+                    "nutrition_signal_gap",
+                    $"{briefing.UnclassifiedFoodUnits} unclassified food units exist but days-of-food is unavailable"));
+            }
+            else
+            {
+                matches.Add(Match(
+                    "unknown_food_state",
+                    "food units and days-of-food are both unavailable"));
+            }
+
+            return matches;
+        }
+
+        float days = briefing.EstimatedDaysOfFood.Value;
+        if (days < 7f)
+        {
+            matches.Add(Match(
+                "emergency_food_flag",
+                $"food buffer {days:F1}d is below the 7d emergency threshold"));
+        }
+
+        if (briefing.ReadyToHarvest > 0)
+        {
+            matches.Add(Match(
+                "harvest_mature_crops",
+                $"{briefing.ReadyToHarvest} mature crop tiles are ready"));
+        }
+
+        if (briefing.MealsCount < briefing.ColonistCount * 2 &&
+            days > 7f &&
+            briefing.RawFoodCount > 0 &&
+            (ShouldSuggestCookBill(briefing) || ShouldRequestCookingLabor(briefing, days)))
+        {
+            matches.Add(Match(
+                "meals_understocked",
+                $"{briefing.MealsCount} meals for {briefing.ColonistCount} colonists while raw food exists"));
+        }
+
+        if (days < 20f && briefing.WildHarvestCandidates > 0 && briefing.ReadyToHarvest == 0)
+        {
+            matches.Add(Match(
+                "wild_harvest_available",
+                $"{briefing.WildHarvestCandidates} forage candidates are visible below the 20d target"));
+        }
+
+        if (days < 20f && CanSuggestHunting(briefing) && briefing.ReadyToHarvest == 0)
+        {
+            matches.Add(Match(
+                "hunt_low_risk_animals",
+                $"{briefing.WildHuntTargets.Count} low-risk hunt target summaries are visible"));
+        }
+
+        FoodCropCandidate? cropCandidate = FoodCropMath.Recommend(briefing).BestCandidate;
+        if (days < 20f && cropCandidate is not null)
+        {
+            matches.Add(Match(
+                "expand_growing_capacity",
+                $"{cropCandidate.Label} can add about {cropCandidate.ProjectedDaysAdded:F1}d from {cropCandidate.Tiles} tiles"));
+        }
+
+        if (days < 20f && briefing.WildAnimalCount > 0 && briefing.ReadyToHarvest == 0)
+        {
+            matches.Add(Match(
+                "hunting_ambiguity",
+                $"{briefing.WildAnimalCount} wild animals exist but target risk/value needs judgment"));
+        }
+
+        if (briefing.Season.DaysToWinter is < 20 && days < 30f)
+        {
+            matches.Add(Match(
+                "winter_food_tradeoff",
+                $"{briefing.Season.DaysToWinter}d to winter with {days:F1}d food"));
+        }
+
+        if (briefing.Infrastructure.Coolers == 0 && days >= 20f && briefing.FoodUnits > 0)
+        {
+            matches.Add(Match(
+                "freezer_missing",
+                $"{briefing.FoodUnits} food units exist but no cooler is visible"));
+        }
+
+        if (days >= 30f)
+        {
+            matches.Add(Match(
+                "maintain_security_threshold",
+                $"food buffer {days:F1}d meets the 30d security threshold"));
+        }
+
+        return matches;
+    }
+
+    private static RuleTraceEntry Match(string rule, string reason) =>
+        new(rule, "matched", reason);
+
+    private static string SelectedOutcome(string selectedRule) =>
+        selectedRule is "hunting_ambiguity" or "winter_food_tradeoff" or "unresolved_food_gap"
+            ? "escalated"
+            : "selected";
+
+    private static string FallbackRuleReason(string selectedRule, FoodBriefing briefing) =>
+        selectedRule == "unresolved_food_gap" && briefing.EstimatedDaysOfFood is float days
+            ? $"food buffer {days:F1}d is below target, but no deterministic action predicate matched"
+            : "selected rule did not have a matching predicate entry";
 
     private static AdvicePriority FoodBufferPriority(FoodBriefing briefing, float days)
     {

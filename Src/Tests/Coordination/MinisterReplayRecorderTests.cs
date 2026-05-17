@@ -85,13 +85,24 @@ public sealed class MinisterReplayRecorderTests
         CapturingReplayWriter writer = new();
         MinisterTraceStore traces = new();
         MinisterReplayRecorder recorder = new(writer, traces: traces);
+        RuleTraceDetails diagnostics = new(
+            SelectedRule: "emergency_food_flag",
+            MatchedSignals:
+            [
+                new RuleTraceEntry(
+                    Rule: "emergency_food_flag",
+                    Outcome: "selected",
+                    Reason: "food buffer 4.0d is below the 7d emergency threshold")
+            ],
+            SuppressedCandidates: []);
 
         await recorder.RecordAsync(new MinisterReplayEntry(
             Minister: "Food",
             Cycle: PlayCycleContext.ManualTrigger,
             Path: "rules",
             Briefing: FoodRulesTests.Briefing(4f),
-            RuleTrace: "emergency_food_flag"), CancellationToken.None);
+            RuleTrace: "emergency_food_flag",
+            RuleDiagnostics: diagnostics), CancellationToken.None);
 
         traces.Latest("Food").Should().NotBeNull();
         MinisterTraceSnapshot snapshot = traces.Latest("Food")!;
@@ -99,6 +110,8 @@ public sealed class MinisterReplayRecorderTests
         snapshot.Trigger.Should().Be(nameof(PlayCycleTrigger.ManualTrigger));
         snapshot.Path.Should().Be("rules");
         snapshot.RuleFired.Should().Be("emergency_food_flag");
+        snapshot.RuleDiagnostics.Should().NotBeNull();
+        snapshot.RuleDiagnostics!.SelectedRule.Should().Be("emergency_food_flag");
         snapshot.Note.Should().Contain("emergency_food_flag");
     }
 
