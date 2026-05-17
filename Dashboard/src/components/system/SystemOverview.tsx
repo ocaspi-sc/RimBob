@@ -5,6 +5,7 @@ import { systemPanelRegistry } from '../../dashboard/panelRegistry';
 import { CoverageTable } from '../shared/DataCoverage';
 import { DisclosureSection } from '../shared/DisclosureSection';
 import { EmptyState } from '../shared/EmptyState';
+import { GameIcon } from '../shared/GameIcon';
 import { MetricCard } from '../shared/MetricCard';
 import { SemanticLabel } from '../shared/SemanticIcon';
 import { StatusPill } from '../shared/StatusPill';
@@ -245,24 +246,20 @@ export function SystemOverview({
             {icons.files.length === 0 ? (
               <EmptyState code="ICON CACHE EMPTY">No cached PNG files exist under the icon cache directory.</EmptyState>
             ) : (
-              <div className="dense-table icon-file-table">
-                <div className="dense-row header">
-                  <FieldLabel iconKey="kind">Kind</FieldLabel>
-                  <FieldLabel iconKey="id">Id</FieldLabel>
-                  <FieldLabel iconKey="size">Size</FieldLabel>
-                  <FieldLabel iconKey="updated">Updated</FieldLabel>
-                  <FieldLabel iconKey="file">File</FieldLabel>
-                </div>
+              <div className="icon-cache-strip" aria-label="Cached icon files">
                 {icons.files.map(file => (
-                  <div className="dense-row" key={file.relativePath}>
-                    <span>{file.kind}</span>
+                  <div
+                    className="icon-cache-tile"
+                    key={file.relativePath}
+                    title={`${file.kind}: ${file.id} | ${file.relativePath} | ${formatBytes(file.sizeBytes)}`}
+                  >
+                    <GameIcon
+                      fallback={file.id.slice(0, 1).toUpperCase()}
+                      label={`${file.id} cached icon`}
+                      size="md"
+                      src={file.publicPath}
+                    />
                     <code>{file.id}</code>
-                    <span>{formatBytes(file.sizeBytes)}</span>
-                    <span>{formatMaybeDate(file.lastWriteAt)}</span>
-                    <span className="cache-file-path">
-                      <code>{file.relativePath}</code>
-                      {file.publicPath && <small>{file.publicPath}</small>}
-                    </span>
                   </div>
                 ))}
               </div>

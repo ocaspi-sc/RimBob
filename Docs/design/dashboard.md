@@ -157,8 +157,8 @@ SYSTEM owns:
   by `Src/Tests` category. This is source inventory, not a pass/fail test run
   result.
 - Icon cache metadata: local cache counts, byte totals, warm summary, skipped
-  candidates, bounded failure samples, and the full cached PNG file inventory
-  as file metadata.
+  candidates, bounded failure samples, and the full cached PNG inventory
+  rendered as the actual cached icons.
 - Latest minister traces: trigger, status, rules/LLM path, rule trace,
   escalation reason, emitted counts, and failure detail when available.
 - Recent event/advice timeline.
@@ -259,7 +259,8 @@ Icon cache metadata follows the same rule. SYSTEM may show counts, byte totals,
 kind totals, last warm result, skipped count, bounded failure samples, and the
 complete cached-file list from `var/icons/`, including relative path, kind,
 def/id, size, write time, and public Host URL when one exists. It should not
-expose or inline image bytes.
+expose or inline image bytes. The visible cache inventory should render as a
+compact row of the actual cached Host icons, not as a file table.
 
 The same health payload may expose test inventory metadata for SYSTEM. Count
 declared xUnit test methods by source category so the dashboard can answer

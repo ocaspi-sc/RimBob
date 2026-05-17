@@ -1760,41 +1760,40 @@ code {
   overflow-x: auto;
 }
 
-.icon-file-table {
-  max-height: 420px;
-  overflow: auto;
-  padding-right: 2px;
-}
-
-.icon-file-table .dense-row {
-  grid-template-columns:
-    minmax(110px, 0.6fr)
-    minmax(180px, 1fr)
-    minmax(90px, 0.45fr)
-    minmax(180px, 0.95fr)
-    minmax(300px, 1.6fr);
-  min-width: 920px;
-}
-
-.cache-file-path {
-  display: grid;
-  gap: 3px;
-  min-width: 0;
-}
-
-.cache-file-path code,
-.cache-file-path small {
-  overflow-wrap: anywhere;
-}
-
-.cache-file-path small {
-  color: var(--muted);
-  font-size: 0.72rem;
-}
-
 .icon-failure-table .dense-row {
   grid-template-columns: 90px minmax(160px, 0.8fr) minmax(320px, 1.8fr);
   min-width: 620px;
+}
+
+.icon-cache-strip {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 10px 2px 12px;
+  scrollbar-color: rgba(155, 208, 255, 0.35) rgba(255, 255, 255, 0.05);
+}
+
+.icon-cache-tile {
+  align-items: center;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  display: grid;
+  flex: 0 0 74px;
+  gap: 6px;
+  justify-items: center;
+  min-height: 74px;
+  padding: 8px 6px;
+}
+
+.icon-cache-tile code {
+  color: var(--muted);
+  font-size: 0.64rem;
+  max-width: 64px;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 @media (max-width: 1180px) {
