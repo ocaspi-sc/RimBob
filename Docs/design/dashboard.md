@@ -106,6 +106,10 @@ Use explicit game icons from the Host icon gateway in scope labels, view labels,
 section titles, field labels, compact metric labels, and obvious entity rows
 when they improve scan speed. Generic emoji are fallback-only. Icons annotate
 contract names; they must not replace, rename, or mutate backend field names.
+Player-facing advice prose may also receive deterministic inline icon cues for
+curated game terms, but the dashboard must preserve the original source text.
+This is presentation only: raw LLM output, JSON inspectors, backend payloads,
+and stored advice contracts are not rewritten to include those cues.
 
 Large objects use the standard disclosure pattern: a real button header with
 `aria-expanded` / `aria-controls`, plus a conditionally rendered panel in normal

@@ -1280,6 +1280,27 @@ code {
   word-break: normal;
 }
 
+.iconized-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.iconized-token {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+  vertical-align: baseline;
+}
+
+.iconized-token .semantic-icon.game-icon {
+  position: relative;
+  top: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+}
+
 .text-dump {
   margin: 0;
   max-height: 520px;
@@ -1532,10 +1553,19 @@ code {
   border-radius: 5px;
 }
 
-.action-list small {
+.action-list > div > small:not(.action-apply-result) {
   grid-column: 3;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
   color: var(--muted);
   line-height: 1.35;
+}
+
+.action-list > div > small:not(.action-apply-result) > span + span::before {
+  content: "|";
+  margin-right: 8px;
+  color: var(--dim);
 }
 
 .action-apply {

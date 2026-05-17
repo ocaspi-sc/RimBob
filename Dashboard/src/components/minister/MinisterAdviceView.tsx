@@ -16,6 +16,7 @@ import {
 import { DisclosureSection } from '../shared/DisclosureSection';
 import { EmptyState } from '../shared/EmptyState';
 import { GameIcon } from '../shared/GameIcon';
+import { IconizedText } from '../shared/IconizedText';
 import { SemanticIconCue, SemanticLabel } from '../shared/SemanticIcon';
 
 export function MinisterAdviceView({
@@ -67,13 +68,13 @@ export function MinisterAdviceView({
                         <span>{line.label ?? 'State'}</span>
                       </SemanticLabel>
                     </th>
-                    <td>{line.detail}</td>
+                    <td><IconizedText maxIcons={3} text={line.detail} /></td>
                   </tr>
                 ))}
               </tbody>
             </table>
           ) : (
-            <p>{stateSummary}</p>
+            <p><IconizedText maxIcons={3} text={stateSummary} /></p>
           )}
         </section>
       )}
@@ -147,7 +148,7 @@ function MayorAdvice({
       <header className="agenda-hero">
         <div>
           <span className="eyebrow">Mayor Advice</span>
-          <h2>{agenda.posture.summary}</h2>
+          <h2><IconizedText maxIcons={3} text={agenda.posture.summary} /></h2>
         </div>
         <div className="agenda-stamps">
           <span>v{agenda.version}</span>
@@ -157,8 +158,8 @@ function MayorAdvice({
       </header>
 
       <section className="posture-band">
-        <span>{agenda.posture.economic}</span>
-        <span>{agenda.posture.military}</span>
+        <span><IconizedText maxIcons={3} text={agenda.posture.economic} /></span>
+        <span><IconizedText maxIcons={3} text={agenda.posture.military} /></span>
       </section>
 
       <DisclosureSection
@@ -170,14 +171,14 @@ function MayorAdvice({
           {Object.entries(agenda.state_of_the_union).map(([key, value]) => (
             <article key={key}>
               <SemanticLabel icon={iconForAgendaCategory(key)}><strong>{key}</strong></SemanticLabel>
-              <p>{stripLeadingSymbol(value)}</p>
+              <p><IconizedText maxIcons={3} text={stripLeadingSymbol(value)} /></p>
             </article>
           ))}
         </div>
       </DisclosureSection>
 
       <DisclosureSection title={<SemanticLabel icon={iconForSection('what_changed')}><span>What changed</span></SemanticLabel>} defaultOpen>
-        <p className="notes-copy">{agenda.update_notes}</p>
+        <p className="notes-copy"><IconizedText maxIcons={3} text={agenda.update_notes} /></p>
       </DisclosureSection>
 
       <section className="priority-stack">
@@ -220,7 +221,7 @@ function MayorAdvice({
             <div className={`long-row ${item.status}`} key={item.id}>
               <span>{item.status}</span>
               <SemanticIconCue icon={iconForAgendaPriority(item.text)} size="xs" />
-              <p>{stripLeadingSymbol(item.text)}</p>
+              <p><IconizedText maxIcons={3} text={stripLeadingSymbol(item.text)} /></p>
             </div>
           ))}
         </div>
@@ -235,7 +236,7 @@ function MayorAdvice({
             {Object.entries(agenda.cabinet_direction).map(([minister, direction]) => (
               <article key={minister}>
                 <SemanticLabel icon={iconForAgendaCategory(minister) ?? iconForField(minister)}><strong>{minister}</strong></SemanticLabel>
-                <p>{direction}</p>
+                <p><IconizedText maxIcons={3} text={direction} /></p>
               </article>
             ))}
           </div>
@@ -276,14 +277,14 @@ function AdviceCard({ item }: { item: AdviceItem }) {
           <span className="eyebrow">
             <SemanticLabel icon={iconForField(item.advice_type)}><span>{item.advice_type}</span></SemanticLabel>
           </span>
-          <h3>{item.title}</h3>
+          <h3><IconizedText maxIcons={1} text={item.title} /></h3>
         </div>
         <div className="advice-badges">
           <span>{item.priority}</span>
         </div>
       </header>
-      <p>{item.body}</p>
-      <blockquote>{item.rationale}</blockquote>
+      <p><IconizedText maxIcons={3} text={item.body} /></p>
+      <blockquote><IconizedText maxIcons={3} text={item.rationale} /></blockquote>
       {item.actions.length > 0 && (
         <DisclosureSection title={<SemanticLabel icon={iconForField('actions')}><span>Actions</span></SemanticLabel>} defaultOpen meta={`${item.actions.length} actions`}>
           <div className="action-list">
@@ -302,15 +303,14 @@ function AdviceCard({ item }: { item: AdviceItem }) {
                     src={iconUrlFor(action.icon ?? actionIcon?.ref)}
                   />
                   <strong>{formatLabel(action.kind)}</strong>
-                  <span>{action.instruction}</span>
-                  <small>
-                    {[
-                      formatQuantityDetail(action.quantity),
-                      action.owner ? `Owner: ${action.owner}` : null,
-                      formatWorkSkillDetail(action.work_type, action.skill),
-                      action.reason,
-                    ].filter(Boolean).join(' | ')}
-                  </small>
+                  <span><IconizedText maxIcons={2} text={action.instruction} /></span>
+                  <ActionDetailLine
+                    owner={action.owner}
+                    quantity={action.quantity}
+                    reason={action.reason}
+                    skill={action.skill}
+                    workType={action.work_type}
+                  />
                   {action.apply && (
                     <div className="action-apply">
                       <button
@@ -362,8 +362,8 @@ function AdviceCard({ item }: { item: AdviceItem }) {
                     />
                   </span>
                   <span>{formatLabel(request.kind)}</span>
-                  <span>{request.request}</span>
-                  <span>{request.reason}</span>
+                  <span><IconizedText maxIcons={2} text={request.request} /></span>
+                  <span><IconizedText maxIcons={2} text={request.reason} /></span>
                   <span>{formatQuantity(request.quantity)}</span>
                   <span>{request.requested_from ?? '-'}</span>
                   <span>{formatWorkSkill(request.work_type, request.skill)}</span>
@@ -392,7 +392,7 @@ function AdviceCard({ item }: { item: AdviceItem }) {
                     src={iconUrlFor(action.icon ?? actionIcon?.ref)}
                   />
                   <strong>{action.kind}</strong>
-                  <span>{action.instruction}</span>
+                  <span><IconizedText maxIcons={2} text={action.instruction} /></span>
                 </div>
               );
             })}
@@ -436,12 +436,40 @@ function PriorityCard({
         {rank && <span className="rank">{rank}</span>}
         <SemanticIconCue className="priority-domain-icon" icon={icon} size="xs" />
       </div>
-      <p>{text}</p>
+      <p><IconizedText maxIcons={3} text={text} /></p>
       <footer>
         <span>{item.status}</span>
         {delta && <strong>{delta}</strong>}
       </footer>
     </article>
+  );
+}
+
+function ActionDetailLine({
+  owner,
+  quantity,
+  reason,
+  skill,
+  workType,
+}: {
+  owner: string | null | undefined;
+  quantity: number | null | undefined;
+  reason: string | null | undefined;
+  skill: string | null | undefined;
+  workType: string | null | undefined;
+}) {
+  const quantityDetail = formatQuantityDetail(quantity);
+  const workSkillDetail = formatWorkSkillDetail(workType, skill);
+
+  if (!quantityDetail && !owner && !workSkillDetail && !reason) return null;
+
+  return (
+    <small>
+      {quantityDetail && <span>{quantityDetail}</span>}
+      {owner && <span>{`Owner: ${owner}`}</span>}
+      {workSkillDetail && <span>{workSkillDetail}</span>}
+      {reason && <span><IconizedText maxIcons={2} text={reason} /></span>}
+    </small>
   );
 }
 
