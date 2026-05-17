@@ -144,7 +144,9 @@ for readability.
 `run-rimbob.ps1` is the preferred local launcher. It builds the dashboard and
 starts the Host hidden with a RimBob icon in the Windows notification area.
 Right-click the icon to open the dashboard, jump directly to dashboard
-scope/view combinations, or stop the Host; the icon exits when the Host exits.
+scope/view combinations in Chrome, or stop the Host; the icon exits when the
+Host exits. If Chrome is unavailable, dashboard commands fall back to the
+default browser.
 
 Use `run-rimbob.ps1 -Foreground` when terminal output must stay attached to the
 current shell for debugging or verification.

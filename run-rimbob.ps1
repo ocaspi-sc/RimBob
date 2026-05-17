@@ -182,6 +182,66 @@ function Stop-TrayHost {
     }
 }
 
+function Resolve-ChromePath {
+    $command = Get-Command "chrome.exe" -ErrorAction SilentlyContinue
+    if ($command -and -not [string]::IsNullOrWhiteSpace($command.Source)) {
+        return $command.Source
+    }
+
+    $registryPaths = @(
+        "HKCU:\Software\Microsoft\Windows\CurrentVersion\App Paths\chrome.exe",
+        "HKLM:\Software\Microsoft\Windows\CurrentVersion\App Paths\chrome.exe",
+        "HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\App Paths\chrome.exe"
+    )
+
+    foreach ($registryPath in $registryPaths) {
+        try {
+            $registryKey = Get-Item -Path $registryPath -ErrorAction Stop
+            $registryValue = [string]$registryKey.GetValue("")
+            if (-not [string]::IsNullOrWhiteSpace($registryValue) -and (Test-Path $registryValue)) {
+                return $registryValue
+            }
+        }
+        catch {
+            # Chrome is not registered at this location.
+        }
+    }
+
+    $candidatePaths = @()
+    if (-not [string]::IsNullOrWhiteSpace($env:ProgramFiles)) {
+        $candidatePaths += Join-Path $env:ProgramFiles "Google\Chrome\Application\chrome.exe"
+    }
+    if (-not [string]::IsNullOrWhiteSpace(${env:ProgramFiles(x86)})) {
+        $candidatePaths += Join-Path ${env:ProgramFiles(x86)} "Google\Chrome\Application\chrome.exe"
+    }
+    if (-not [string]::IsNullOrWhiteSpace($env:LocalAppData)) {
+        $candidatePaths += Join-Path $env:LocalAppData "Google\Chrome\Application\chrome.exe"
+    }
+
+    foreach ($candidatePath in $candidatePaths) {
+        if (Test-Path $candidatePath) {
+            return $candidatePath
+        }
+    }
+
+    return $null
+}
+
+function Open-DashboardUrl {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Url
+    )
+
+    $chromePath = Resolve-ChromePath
+    if (-not [string]::IsNullOrWhiteSpace($chromePath)) {
+        Start-Process -FilePath $chromePath -ArgumentList $Url
+        return
+    }
+
+    Start-Process $Url
+}
+
 function Get-DashboardViewUrl {
     param(
         [Parameter(Mandatory = $true)]
@@ -217,7 +277,7 @@ function Add-DashboardMenuCommand {
     $item.Tag = Get-DashboardViewUrl -Scope $Scope -View $View
     $item.Add_Click({
         param($Sender, $EventArgs)
-        Start-Process ([string]$Sender.Tag)
+        Open-DashboardUrl ([string]$Sender.Tag)
     })
 
     return $item
@@ -288,15 +348,15 @@ function Start-HostNotificationIcon {
     $notifyIcon.Text = "RimBob Host"
     $notifyIcon.Visible = $true
     $notifyIcon.BalloonTipTitle = "RimBob Host"
-    $notifyIcon.BalloonTipText = "RimBob is running. Right-click this icon to open the dashboard or stop the host."
+    $notifyIcon.BalloonTipText = "RimBob is running. Right-click this icon to open dashboard views in Chrome or stop the host."
     $notifyIcon.BalloonTipIcon = [System.Windows.Forms.ToolTipIcon]::Info
 
     $menu = New-Object System.Windows.Forms.ContextMenuStrip
     $statusItem = $menu.Items.Add("RimBob Host running")
     $statusItem.Enabled = $false
     [void]$menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
-    $openItem = $menu.Items.Add("Open Dashboard")
-    $openItem.Add_Click({ Start-Process $script:trayDashboardUrl })
+    $openItem = $menu.Items.Add("Open Dashboard in Chrome")
+    $openItem.Add_Click({ Open-DashboardUrl $script:trayDashboardUrl })
     [void]$menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
     Add-DashboardViewMenu -Menu $menu
     [void]$menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
@@ -307,7 +367,7 @@ function Start-HostNotificationIcon {
     })
 
     $notifyIcon.ContextMenuStrip = $menu
-    $notifyIcon.Add_DoubleClick({ Start-Process $script:trayDashboardUrl })
+    $notifyIcon.Add_DoubleClick({ Open-DashboardUrl $script:trayDashboardUrl })
     $notifyIcon.ShowBalloonTip(3000)
 
     $timer = New-Object System.Windows.Forms.Timer
@@ -373,7 +433,7 @@ function Start-HostNotificationArea {
 
     Write-Host ""
     Write-Host "RimBob host started in the Windows notification area."
-    Write-Host "Right-click the RimBob icon to open the dashboard or stop the host."
+    Write-Host "Right-click the RimBob icon to open dashboard views in Chrome or stop the host."
     Write-Host "Use -Foreground to keep the server attached to this terminal for debugging."
 }
 
