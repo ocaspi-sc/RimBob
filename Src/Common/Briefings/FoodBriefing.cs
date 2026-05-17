@@ -48,6 +48,8 @@ public sealed record FoodBriefing(
 
     public IReadOnlyList<FoodHarvestTarget> HarvestTargets { get; init; } = [];
 
+    public IReadOnlyList<FoodHuntTarget> HuntTargets { get; init; } = [];
+
     public int ExcludedFoodUnits =>
         Math.Min(UnclassifiedFoodUnits, UnclassifiedFoodItems.Sum(item => Math.Max(0, item.Count)));
 
@@ -119,6 +121,15 @@ public sealed record FoodHarvestTarget(
     MapRect Rect,
     IReadOnlyList<string> PlantIds,
     string? ZoneId,
+    string? Proximity,
+    string? Reference
+);
+
+public sealed record FoodHuntTarget(
+    string Def,
+    int Count,
+    MapRect Rect,
+    IReadOnlyList<string> AnimalIds,
     string? Proximity,
     string? Reference
 );

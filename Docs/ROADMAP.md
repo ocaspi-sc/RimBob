@@ -135,10 +135,11 @@ non-pawn RIMAPI operation, reads back/logs the result, and leaves the advice in
 `Suggest` mode.
 
 **Implemented allowlist:** `unforbid` known item stacks, `mark_harvest`
-validated safe plant clusters, and one idempotent simple-meal cook-bill upsert
-behind a single-workbench guard. `mark_hunt` waits for risk filters. Work
-priorities, broad bill editing, zones, pawn assignment, equipment,
-medical/prisoner actions, and combat controls stay out of the first slice.
+validated safe plant clusters, `mark_hunt` deterministic low-risk animal
+batches, and one idempotent simple-meal cook-bill upsert behind a
+single-workbench guard. Work priorities, broad bill editing, zones, pawn
+assignment, equipment, medical/prisoner actions, and combat controls stay out
+of the first slice.
 
 **Scope:** executable step handle, Host-owned allowlist and validator, RIMAPI
 write wrapper for the first operation, dashboard Apply/result state, and SYSTEM

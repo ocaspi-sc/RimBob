@@ -255,6 +255,7 @@ public sealed class FoodBriefingDerivationTests
         b.WildAnimalCount.Should().Be(1);
         b.WildHuntTargets.Should().ContainSingle()
             .Which.Def.Should().Be("Hare");
+        b.HuntTargets.Should().BeEmpty();
         b.Skills.BestPlants.Should().Be(10);
         b.Skills.QualifiedCooks.Should().Be(1);
     }
@@ -380,6 +381,9 @@ public sealed class FoodBriefingDerivationTests
             .Which.Proximity.Should().Contain("from kitchen");
         b.WildHuntTargets.Should().ContainSingle()
             .Which.Proximity.Should().Contain("from kitchen");
+        FoodHuntTarget huntTarget = b.HuntTargets.Should().ContainSingle().Subject;
+        huntTarget.AnimalIds.Should().Equal("hare1");
+        huntTarget.Rect.Should().Be(new MapRect(30, 10, 30, 10));
         b.CropZoneSummaries.Should().ContainSingle().Which.ReadyCount.Should().Be(1);
         b.DataCoverage.HasPlantPositions.Should().BeTrue();
         b.DataCoverage.HasAnimalPositions.Should().BeTrue();
@@ -506,6 +510,8 @@ public sealed class FoodBriefingDerivationTests
         b.WildAnimalCount.Should().Be(2);
         b.WildHuntTargets.Should().ContainSingle()
             .Which.Def.Should().Be("Hare");
+        b.HuntTargets.Should().ContainSingle()
+            .Which.AnimalIds.Should().Equal("a2");
     }
 
     private static ColonyState StateWithColonists(int count)

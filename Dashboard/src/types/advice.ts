@@ -2,7 +2,7 @@ import type { IconRef } from './icons';
 
 export type AdvicePriority = 'low' | 'medium' | 'high' | 'critical';
 
-export type AdviceApplyKind = 'mark_harvest_area' | 'unforbid_things' | 'upsert_production_bill';
+export type AdviceApplyKind = 'mark_harvest_area' | 'mark_hunt_area' | 'unforbid_things' | 'upsert_production_bill';
 
 export interface AdviceApplyRect {
   x1: number;

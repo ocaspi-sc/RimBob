@@ -64,7 +64,7 @@ public static class FoodBriefingDerivation
             CropZoneSummaries: DeriveCropZoneSummaries(s, reference),
             WildHarvestCandidates: foragePlants.Count,
             WildHarvestClusters: DeriveWildHarvestClusters(foragePlants, reference),
-            WildAnimalCount: s.Animals.Value.Animals.Count(IsHealthyWildAnimal),
+            WildAnimalCount: s.Animals.Value.Animals.Count(FoodHuntSafety.IsHealthyWildAnimal),
             WildHuntTargets: DeriveWildHuntTargets(s, reference),
             StockpileCells: s.Stockpiles.Value.Zones.Sum(z => z.CellCount),
             Skills: DeriveSkills(pawns),
@@ -81,7 +81,8 @@ public static class FoodBriefingDerivation
             CropHarvestNutritionByDef = DeriveCropHarvestNutrition(s.ThingDefs.Value),
             UnclassifiedFoodItems = food.UnclassifiedFoodItems,
             UnforbidTargets = DeriveUnforbidTargets(s),
-            HarvestTargets = DeriveHarvestTargets(s, reference, foragePlants)
+            HarvestTargets = DeriveHarvestTargets(s, reference, foragePlants),
+            HuntTargets = DeriveHuntTargets(s, reference, Math.Max(1, Math.Min(pawns.Count * 2, AssistedApplyLimits.MaxHuntTargets)))
         };
     }
 
@@ -493,10 +494,7 @@ public static class FoodBriefingDerivation
         ColonyState s,
         FoodReferencePoint? reference)
     {
-        IReadOnlyList<AnimalRecord> candidates = s.Animals.Value.Animals
-            .Where(IsHealthyWildAnimal)
-            .Where(animal => !IsDangerousHuntDef(animal.Def))
-            .ToList();
+        IReadOnlyList<AnimalRecord> candidates = LowRiskHuntCandidates(s);
 
         return candidates
             .GroupBy(animal => animal.Def, StringComparer.OrdinalIgnoreCase)
@@ -511,13 +509,114 @@ public static class FoodBriefingDerivation
                         Reference: reference?.Name),
                     distance);
             })
-            .OrderBy(candidate => HuntRiskRank(candidate.Target.Def))
+            .OrderBy(candidate => FoodHuntSafety.RiskRank(candidate.Target.Def))
             .ThenBy(candidate => candidate.Distance ?? int.MaxValue)
             .ThenByDescending(candidate => candidate.Target.Count)
             .Select(candidate => candidate.Target)
             .Take(3)
             .ToList();
     }
+
+    private static IReadOnlyList<FoodHuntTarget> DeriveHuntTargets(
+        ColonyState s,
+        FoodReferencePoint? reference,
+        int targetLimit)
+    {
+        IReadOnlyList<AnimalRecord> candidates = LowRiskHuntCandidates(s)
+            .Where(animal => animal.Position is not null)
+            .ToList();
+
+        return candidates
+            .GroupBy(animal => animal.Def, StringComparer.OrdinalIgnoreCase)
+            .Select(group => BuildHuntTarget(group.Key, group, reference, targetLimit))
+            .Where(candidate => candidate is not null)
+            .Cast<HuntTargetCandidate>()
+            .OrderBy(candidate => FoodHuntSafety.RiskRank(candidate.Target.Def))
+            .ThenBy(candidate => candidate.Distance ?? int.MaxValue)
+            .ThenByDescending(candidate => candidate.Target.Count)
+            .Select(candidate => candidate.Target)
+            .Take(3)
+            .ToList();
+    }
+
+    private static HuntTargetCandidate? BuildHuntTarget(
+        string def,
+        IEnumerable<AnimalRecord> animals,
+        FoodReferencePoint? reference,
+        int targetLimit)
+    {
+        IReadOnlyList<AnimalRecord> selected = SelectBoundedHuntAnimals(
+            animals.Where(animal => animal.Position is not null).ToList(),
+            reference,
+            targetLimit);
+        if (selected.Count == 0)
+            return null;
+
+        MapRect rect = RectFor(selected.Select(animal => animal.Position!));
+        int? distance = MapDistance.Nearest(selected.Select(animal => animal.Position), reference?.Position);
+        return new HuntTargetCandidate(
+            new FoodHuntTarget(
+                Def: def,
+                Count: selected.Count,
+                Rect: rect,
+                AnimalIds: selected.Select(animal => animal.Id).ToList(),
+                Proximity: MapDistance.ProximityLabel(distance, reference?.Name),
+                Reference: reference?.Name),
+            distance);
+    }
+
+    private static IReadOnlyList<AnimalRecord> SelectBoundedHuntAnimals(
+        IReadOnlyList<AnimalRecord> animals,
+        FoodReferencePoint? reference,
+        int targetLimit)
+    {
+        if (animals.Count == 0)
+            return [];
+
+        int limit = Math.Clamp(targetLimit, 1, AssistedApplyLimits.MaxHuntTargets);
+        List<AnimalRecord> orderedAnimals = OrderAnimalsForHuntTarget(animals, reference?.Position).ToList();
+        if (orderedAnimals.Count <= limit && FitsHuntApplyLimits(orderedAnimals))
+            return orderedAnimals;
+
+        List<AnimalRecord> selected = [];
+        foreach (AnimalRecord animal in orderedAnimals)
+        {
+            if (selected.Count >= limit)
+                break;
+
+            List<AnimalRecord> candidate = [..selected, animal];
+            if (FitsHuntApplyLimits(candidate))
+                selected = candidate;
+        }
+
+        return selected;
+    }
+
+    private static bool FitsHuntApplyLimits(IReadOnlyList<AnimalRecord> animals)
+    {
+        if (animals.Count == 0 || animals.Count > AssistedApplyLimits.MaxHuntTargets)
+            return false;
+
+        MapRect rect = RectFor(animals.Select(animal => animal.Position!));
+        return rect.Area > 0 && rect.Area <= AssistedApplyLimits.MaxHuntRectArea;
+    }
+
+    private static IOrderedEnumerable<AnimalRecord> OrderAnimalsForHuntTarget(
+        IEnumerable<AnimalRecord> animals,
+        MapPosition? reference)
+    {
+        return animals
+            .Where(animal => animal.Position is not null)
+            .OrderBy(animal => reference is null ? 0 : MapDistance.Manhattan(animal.Position!, reference))
+            .ThenBy(animal => animal.Position!.X)
+            .ThenBy(animal => animal.Position!.Z)
+            .ThenBy(animal => animal.Id, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static IReadOnlyList<AnimalRecord> LowRiskHuntCandidates(ColonyState s) =>
+        s.Animals.Value.Animals
+            .Where(FoodHuntSafety.IsLowRiskTarget)
+            .ToList();
 
     private static FoodGrowingTerrainSummary DeriveGrowingTerrain(TerrainSnapshot terrain)
     {
@@ -611,47 +710,9 @@ public static class FoodBriefingDerivation
         text.Contains("Poison", StringComparison.OrdinalIgnoreCase) ||
         text.Contains("ToxicFallout", StringComparison.OrdinalIgnoreCase);
 
-    private static bool IsHealthyWildAnimal(AnimalRecord animal) =>
-        !animal.Tame && animal.Health > 0.6f;
-
-    private static bool IsDangerousHuntDef(string def)
-    {
-        string normalized = def.ToLowerInvariant();
-        return ContainsAny(normalized,
-        [
-            "bear",
-            "boom",
-            "cobra",
-            "cougar",
-            "elephant",
-            "insect",
-            "lynx",
-            "mega",
-            "panther",
-            "rhinoceros",
-            "scaria",
-            "thrumbo",
-            "warg",
-            "wolf"
-        ]);
-    }
-
-    private static int HuntRiskRank(string def)
-    {
-        string normalized = def.ToLowerInvariant();
-        if (ContainsAny(normalized, ["hare", "rabbit", "squirrel", "rat", "turkey", "tortoise"]))
-            return 0;
-
-        if (ContainsAny(normalized, ["deer", "doe", "buck", "gazelle", "ibex", "elk", "caribou", "alpaca", "dromedary"]))
-            return 1;
-
-        return 2;
-    }
-
-    private static bool ContainsAny(string value, IReadOnlyList<string> tokens) =>
-        tokens.Any(token => value.Contains(token, StringComparison.OrdinalIgnoreCase));
-
     private sealed record HuntCandidateSummary(WildHuntTarget Target, int? Distance);
+
+    private sealed record HuntTargetCandidate(FoodHuntTarget Target, int? Distance);
 
     private sealed record HarvestTargetCandidate(IReadOnlyList<PlantRecord> Plants, int Area, int Distance);
 

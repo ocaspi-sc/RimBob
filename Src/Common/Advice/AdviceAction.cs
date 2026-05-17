@@ -69,6 +69,7 @@ public sealed record AdviceThingApplyTarget(
 public enum AdviceApplyKind
 {
     MarkHarvestArea,
+    MarkHuntArea,
     UnforbidThings,
     UpsertProductionBill
 }
@@ -77,6 +78,8 @@ public static class AssistedApplyLimits
 {
     public const int MaxHarvestTargets = 80;
     public const int MaxHarvestRectArea = 120;
+    public const int MaxHuntTargets = 12;
+    public const int MaxHuntRectArea = 120;
     public const int MaxUnforbidTargets = 50;
     public const int MaxProductionBillTarget = 50;
     public const double MaxMissingTargetFraction = 0.25d;

@@ -259,14 +259,17 @@ An action is eligible only when all of these are true:
 The LLM never chooses raw endpoints, payloads, or arbitrary target ids. It may
 emit a structured action; deterministic code decides whether that action can expose
 Apply. Initial candidates should be conservative: `unforbid` for known item
-stacks, `mark_harvest` for validated safe plant clusters, and one Food-owned
-simple-meal cook-bill upsert. The bill operation is intentionally narrow:
+stacks, `mark_harvest` for validated safe plant clusters, `mark_hunt` for
+deterministic low-risk animal batches, and one Food-owned simple-meal cook-bill
+upsert. The bill operation is intentionally narrow:
 exactly one current cooking workbench, backend-resolved simple-meal recipe,
 bounded do-until target, idempotent add-or-update, no delete/reorder/suspend
-changes, fresh-state revalidation, and RIMAPI read-back. `mark_hunt` needs risk
-filters before it is eligible. Work priorities, broad bill editing, zones, pawn
-assignment, equipment, medical, prisoner, and combat controls stay outside the
-first Assisted Apply slice.
+changes, fresh-state revalidation, and RIMAPI read-back. `mark_hunt` is eligible
+only when Food has already excluded risky/tame/unhealthy animals, has exact
+animal ids and a bounded rectangle, and fresh validation proves no unsafe or
+off-target animals are inside that rectangle. Work priorities, broad bill
+editing, zones, pawn assignment, equipment, medical, prisoner, and combat
+controls stay outside the first Assisted Apply slice.
 
 Apply attempts must be logged with enough context to inspect the advice, target,
 validation decision, RIMAPI result, and read-back state in dashboard/system

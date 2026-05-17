@@ -633,7 +633,8 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             WorkType: WorkType.Hunt,
             Skill: "Shooting",
             Reason: "low-risk wild animals are the best visible local food-acquisition path",
-            Icon: HuntingIcon(briefing));
+            Icon: HuntingIcon(briefing),
+            Apply: HuntApply(briefing));
 
     private static AdviceAction GrowingZoneAction(
         FoodCropCandidate candidate,
@@ -669,6 +670,33 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             TargetCount: target.Count,
             Rect: target.Rect,
             TargetIds: target.PlantIds);
+    }
+
+    private static AdviceActionApply? HuntApply(FoodBriefing briefing)
+    {
+        if (briefing.WildHuntTargets.Count == 0)
+            return null;
+
+        WildHuntTarget summaryTarget = briefing.WildHuntTargets[0];
+        FoodHuntTarget? target = briefing.HuntTargets
+            .Where(candidate => string.Equals(candidate.Def, summaryTarget.Def, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(candidate => candidate.Count)
+            .FirstOrDefault();
+        if (target is null)
+            return null;
+
+        string location = string.IsNullOrWhiteSpace(target.Proximity) ? "" : $" ({target.Proximity})";
+        string targetLabel = LabelDef(target.Def);
+        string summary = $"{target.Count} {targetLabel} hunt target{(target.Count == 1 ? "" : "s")}{location}";
+
+        return new AdviceActionApply(
+            Kind: AdviceApplyKind.MarkHuntArea,
+            Label: "Mark hunt",
+            TargetSummary: summary,
+            MapId: briefing.MapId,
+            TargetCount: target.Count,
+            Rect: target.Rect,
+            TargetIds: target.AnimalIds);
     }
 
     private static FoodHarvestTarget? SelectedCropHarvestTarget(FoodBriefing briefing)

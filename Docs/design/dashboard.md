@@ -29,8 +29,9 @@ treat the previous UI as reference only.
 - Inspect-first in v2: no autonomy toggles and no feedback/Pushback controls.
   Game writes appear only as Assisted Apply buttons on backend-allowlisted
   advice actions, each requiring an explicit player click. Current allowlisted
-  controls are safe food-stack unforbid, validated harvest designation, and the
-  single-workbench simple-meal bill upsert.
+  controls are safe food-stack unforbid, validated harvest designation,
+  validated low-risk hunt designation, and the single-workbench simple-meal bill
+  upsert.
 - Manual Run buttons may trigger RimBob re-evaluation, never RimWorld writes.
   Assisted Apply controls are separate from Run controls.
 - Localhost-only: Host binds loopback and serves the dashboard plus `/api/*`.

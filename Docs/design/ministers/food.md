@@ -211,11 +211,13 @@ In MVP advice actions and flag requests are rendered by default. Assisted Apply
 may later execute a narrow allowlist of Food actions after player confirmation,
 such as `unforbid` known food stacks, `mark_harvest` on validated safe plant
 clusters, or one idempotent simple-meal cook-bill upsert when exactly one
-cooking workbench is known. `mark_hunt` requires risk filters before
-eligibility. Broad bill editing, zones, pawn work priorities, and pawn
-assignment remain outside the first Food apply slice. In Auto, actions become
-inputs to the deferred planner/Labor/RIMAPI path, while flag requests remain the
-cross-minister coordination signal.
+cooking workbench is known. `mark_hunt` is eligible only for deterministic
+low-risk animal batches with exact ids, bounded area designation, and fresh
+validation that the rect contains no unsafe or off-target animals. Broad bill
+editing, zones, pawn work priorities, and pawn assignment remain outside the
+Food apply slice. In Auto, actions become inputs to the deferred
+planner/Labor/RIMAPI path, while flag requests remain the cross-minister
+coordination signal.
 
 Trade is not a normal Food action in M3. Food may flag procurement need when
 local paths are insufficient, but Economy/Trade or Mayor owns trade framing.

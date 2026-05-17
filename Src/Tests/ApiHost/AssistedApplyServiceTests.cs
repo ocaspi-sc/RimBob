@@ -76,6 +76,48 @@ public sealed class AssistedApplyServiceTests
     }
 
     [Fact]
+    public async Task ApplyAsync_WhenHuntTargetsRemainLowRisk_PostsHuntDesignation()
+    {
+        AdviceBus bus = new();
+        bus.Publish(Advice("food_hunt_low_risk_animals", HuntAction()));
+        MinimalRefreshHandler handler = HandlerWithHares();
+        AssistedApplyService service = Service(bus, new ColonyState(), handler);
+
+        AssistedApplyResponse response = await service.ApplyAsync("food_hunt_low_risk_animals", 0);
+
+        response.Status.Should().Be("applied");
+        response.Kind.Should().Be(AdviceApplyKind.MarkHuntArea);
+        response.Message.Should().Contain("Hunt designation");
+        bus.ActiveAdvice().Should().BeEmpty();
+        handler.DesignatePosted.Should().BeTrue();
+        handler.LastDesignateBody.Should().Contain("\"designation\":\"Hunt\"");
+    }
+
+    [Fact]
+    public async Task ApplyAsync_WhenHuntAreaContainsUnsafeAnimal_ReturnsStaleWithoutPosting()
+    {
+        AdviceBus bus = new();
+        bus.Publish(Advice("food_hunt_low_risk_animals", HuntAction()));
+        MinimalRefreshHandler handler = new()
+        {
+            MapAnimalsJson = """
+                {"success":true,"data":[
+                  {"id":"hare-1","def":"Hare","tame":false,"health":1.0,"position":{"x":40,"y":0,"z":50}},
+                  {"id":"hare-2","def":"Hare","tame":false,"health":1.0,"position":{"x":41,"y":0,"z":50}},
+                  {"id":"wolf-1","def":"Wolf","tame":false,"health":1.0,"position":{"x":41,"y":0,"z":50}}
+                ],"errors":null}
+                """
+        };
+        AssistedApplyService service = Service(bus, new ColonyState(), handler);
+
+        AssistedApplyResponse response = await service.ApplyAsync("food_hunt_low_risk_animals", 0);
+
+        response.Status.Should().Be("stale_advice");
+        response.Message.Should().Contain("unsafe");
+        handler.DesignatePosted.Should().BeFalse();
+    }
+
+    [Fact]
     public async Task ApplyAsync_WhenProductionBillMissing_AddsBillAndReadsBack()
     {
         AdviceBus bus = new();
@@ -230,12 +272,36 @@ public sealed class AssistedApplyServiceTests
                 RecipeSelectorKey: "simple_meal",
                 RepeatMode: "TargetCount"));
 
+    private static AdviceAction HuntAction() =>
+        new(
+            AdviceActionKind.MarkHunt,
+            "Mark up to 2 hares for hunting.",
+            Apply: new AdviceActionApply(
+                AdviceApplyKind.MarkHuntArea,
+                "Mark hunt",
+                "2 hare hunt targets",
+                MapId: 1,
+                TargetCount: 2,
+                Rect: new MapRect(40, 50, 41, 50),
+                TargetIds: ["hare-1", "hare-2"]));
+
     private static MinimalRefreshHandler HandlerWithSingleStove() =>
         new()
         {
             MapBuildingsJson = """
                 {"success":true,"data":[
                   {"id":10,"def":"FueledStove","label":"fueled stove","type":"Building_WorkTable","position":{"x":10,"y":0,"z":10}}
+                ],"errors":null}
+                """
+        };
+
+    private static MinimalRefreshHandler HandlerWithHares() =>
+        new()
+        {
+            MapAnimalsJson = """
+                {"success":true,"data":[
+                  {"id":"hare-1","def":"Hare","tame":false,"health":1.0,"position":{"x":40,"y":0,"z":50}},
+                  {"id":"hare-2","def":"Hare","tame":false,"health":1.0,"position":{"x":41,"y":0,"z":50}}
                 ],"errors":null}
                 """
         };
@@ -266,8 +332,10 @@ public sealed class AssistedApplyServiceTests
         public bool AddBillPosted { get; private set; }
         public bool UpdateBillPosted { get; private set; }
         public int BillListCalls { get; private set; }
+        public string LastDesignateBody { get; private set; } = "";
         public string LastBillWritePath { get; private set; } = "";
         public string LastBillWriteBody { get; private set; } = "";
+        public string MapAnimalsJson { get; init; } = """{"success":true,"data":[],"errors":null}""";
         public string MapBuildingsJson { get; init; } = """{"success":true,"data":[],"errors":null}""";
         public string RecipesJson { get; init; } = """
             {"success":true,"data":[
@@ -285,8 +353,7 @@ public sealed class AssistedApplyServiceTests
             string path = request.RequestUri?.PathAndQuery ?? "";
             if (path.Contains("order/designate/area", StringComparison.OrdinalIgnoreCase))
             {
-                DesignatePosted = true;
-                return JsonResponse("""{"success":true,"data":{},"errors":null}""");
+                return CaptureDesignateAsync(request, ct);
             }
 
             if (path.Contains("buildings/bills/add", StringComparison.OrdinalIgnoreCase))
@@ -330,7 +397,7 @@ public sealed class AssistedApplyServiceTests
             if (path.Contains("resources/stored", StringComparison.OrdinalIgnoreCase))
                 return JsonResponse("""{"success":true,"data":{},"errors":null}""");
             if (path.Contains("map/animals", StringComparison.OrdinalIgnoreCase))
-                return JsonResponse("""{"success":true,"data":[],"errors":null}""");
+                return JsonResponse(MapAnimalsJson);
             if (path.Contains("map/zones", StringComparison.OrdinalIgnoreCase))
                 return JsonResponse("""{"success":true,"data":{},"errors":null}""");
             if (path.Contains("map/terrain", StringComparison.OrdinalIgnoreCase))
@@ -351,6 +418,18 @@ public sealed class AssistedApplyServiceTests
                 return JsonResponse("""{"success":true,"data":{"name":"none","label":"None","progress":0,"research_points":0,"is_finished":false,"can_start_now":false,"progress_percent":0},"errors":null}""");
 
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        }
+
+        private async Task<HttpResponseMessage> CaptureDesignateAsync(
+            HttpRequestMessage request,
+            CancellationToken ct)
+        {
+            DesignatePosted = true;
+            LastDesignateBody = request.Content is null ? "" : await request.Content.ReadAsStringAsync(ct);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"success":true,"data":{},"errors":null}""", Encoding.UTF8, "application/json")
+            };
         }
 
         private async Task<HttpResponseMessage> CaptureBillWriteAsync(

@@ -1886,9 +1886,10 @@ code {
 .action-apply {
   grid-column: 3;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   min-width: 0;
+  width: 100%;
 }
 
 .action-apply button {
@@ -1914,7 +1915,10 @@ code {
 
 .action-apply-result {
   grid-column: auto;
-  overflow-wrap: anywhere;
+  flex: 1 1 auto;
+  min-width: 0;
+  line-height: 1.35;
+  overflow-wrap: break-word;
 }
 
 .action-apply-result.applied,
@@ -2307,9 +2311,28 @@ code {
     grid-template-columns: 1fr;
   }
 
-  .action-list small,
-  .action-apply {
+  .action-list > div {
+    align-items: start;
+  }
+
+  .action-list > div > span,
+  .action-list > div > small:not(.action-apply-result),
+  .action-list > div > .action-apply {
     grid-column: 1;
+    width: 100%;
+  }
+
+  .action-apply {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .action-apply button {
+    align-self: flex-start;
+  }
+
+  .action-apply-result {
+    width: 100%;
   }
 }
 

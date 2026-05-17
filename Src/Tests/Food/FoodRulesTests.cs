@@ -507,7 +507,11 @@ public sealed class FoodRulesTests
             ReadyToHarvest = 0,
             WildHarvestCandidates = 0,
             WildAnimalCount = 2,
-            WildHuntTargets = [new WildHuntTarget("Hare", 2, "nearby to kitchen", "kitchen")]
+            WildHuntTargets = [new WildHuntTarget("Hare", 2, "nearby to kitchen", "kitchen")],
+            HuntTargets =
+            [
+                new FoodHuntTarget("Hare", 2, new(40, 50, 41, 50), ["hare-1", "hare-2"], "nearby to kitchen", "kitchen")
+            ]
         };
 
         Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
@@ -524,6 +528,31 @@ public sealed class FoodRulesTests
         Action.Instruction.Should().NotContain("high-revenge");
         Action.WorkType.Should().Be(WorkType.Hunt);
         Action.Skill.Should().Be("Shooting");
+        Action.Apply.Should().NotBeNull();
+        Action.Apply!.Kind.Should().Be(AdviceApplyKind.MarkHuntArea);
+        Action.Apply.TargetIds.Should().Equal("hare-1", "hare-2");
+    }
+
+    [Fact]
+    public void LowBufferWithHuntSummaryButNoExactTarget_StaysTextOnly()
+    {
+        FoodBriefing briefing = Briefing(days: 12f) with
+        {
+            MealsCount = 20,
+            RawFoodCount = 0,
+            ReadyToHarvest = 0,
+            WildHarvestCandidates = 0,
+            WildAnimalCount = 3,
+            WildHuntTargets = [new WildHuntTarget("Hare", 3, "location unknown", null)]
+        };
+
+        Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
+            .Should().BeOfType<Decision>().Subject;
+
+        AdviceAction action = decision.Advice.Should().ContainSingle().Subject
+            .Actions.Should().ContainSingle().Subject;
+        action.Kind.Should().Be(AdviceActionKind.MarkHunt);
+        action.Apply.Should().BeNull();
     }
 
     [Fact]

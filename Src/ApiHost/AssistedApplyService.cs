@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using RimBob.Coordination;
 using RimBob.Core.Advice;
 using RimBob.Core.Aggregates;
+using RimBob.Core.Briefings;
 using RimBob.Ingestion;
 using RimBob.Ingestion.Dtos;
 using RimBob.State;
@@ -66,6 +67,7 @@ public sealed class AssistedApplyService(
         result = apply.Kind switch
         {
             AdviceApplyKind.MarkHarvestArea => await ApplyHarvestAsync(adviceId, actionIndex, apply, ct),
+            AdviceApplyKind.MarkHuntArea => await ApplyHuntAsync(adviceId, actionIndex, apply, ct),
             AdviceApplyKind.UnforbidThings => await ApplyUnforbidAsync(adviceId, actionIndex, apply, ct),
             AdviceApplyKind.UpsertProductionBill => await ApplyProductionBillAsync(adviceId, actionIndex, apply, ct),
             _ => Response("validation_failed", "That apply kind is not allowlisted.", apply.Kind, adviceId, actionIndex)
@@ -300,6 +302,90 @@ public sealed class AssistedApplyService(
             adviceId,
             actionIndex,
             new { target_count = readyInRect.Count, rect = apply.Rect });
+    }
+
+    private async Task<AssistedApplyResponse> ApplyHuntAsync(
+        string adviceId,
+        int actionIndex,
+        AdviceActionApply apply,
+        CancellationToken ct)
+    {
+        if (apply.Rect is null || apply.TargetIds is null || apply.TargetIds.Count == 0)
+            return Response("validation_failed", "Hunt apply is missing exact target data.", apply.Kind, adviceId, actionIndex);
+
+        HashSet<string> targetIds = apply.TargetIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (targetIds.Count != apply.TargetIds.Count)
+            return Response("validation_failed", "Hunt apply has duplicate target ids.", apply.Kind, adviceId, actionIndex);
+
+        if (apply.TargetIds.Count > AssistedApplyLimits.MaxHuntTargets ||
+            apply.Rect.Area <= 0 ||
+            apply.Rect.Area > AssistedApplyLimits.MaxHuntRectArea)
+        {
+            return Response("validation_failed", "Hunt target is too broad for assisted apply.", apply.Kind, adviceId, actionIndex);
+        }
+
+        AssistedApplyResponse? refreshFailure = await RefreshForValidationAsync(apply.Kind, adviceId, actionIndex, ct);
+        if (refreshFailure is not null)
+            return refreshFailure;
+
+        if (apply.MapId != state.Map.Value.Id)
+            return Response("stale_advice", "Advice targets a different map than the current colony map.", apply.Kind, adviceId, actionIndex);
+
+        IReadOnlyList<AnimalRecord> animalsInRect = state.Animals.Value.Animals
+            .Where(animal => IsInside(apply.Rect, animal.Position))
+            .ToList();
+        if (animalsInRect.Any(animal => !FoodHuntSafety.IsLowRiskTarget(animal)))
+            return Response("stale_advice", "Hunt area now contains unsafe or non-wild animals.", apply.Kind, adviceId, actionIndex);
+
+        IReadOnlyList<AnimalRecord> eligibleInRect = animalsInRect
+            .Where(FoodHuntSafety.IsLowRiskTarget)
+            .ToList();
+        if (eligibleInRect.Any(animal => !targetIds.Contains(animal.Id)))
+            return Response("stale_advice", "Hunt area now contains extra animals not covered by this advice.", apply.Kind, adviceId, actionIndex);
+
+        IReadOnlyList<AnimalRecord> currentTargets = eligibleInRect
+            .Where(animal => targetIds.Contains(animal.Id))
+            .ToList();
+        int missing = apply.TargetIds.Count - currentTargets.Count;
+        if (missing > AllowedMissing(apply.TargetIds.Count))
+            return Response("stale_advice", "Too many hunt targets changed since this advice was issued.", apply.Kind, adviceId, actionIndex);
+
+        if (currentTargets.Count == 0)
+            return Response("already_satisfied", "No targeted animals are currently available for hunting.", apply.Kind, adviceId, actionIndex);
+
+        try
+        {
+            await rimApi.DesignateAreaAsync(
+                apply.MapId,
+                "Hunt",
+                apply.Rect.X1,
+                apply.Rect.Z1,
+                apply.Rect.X2,
+                apply.Rect.Z2,
+                ct);
+        }
+        catch (Exception ex) when (IsRimApiUnavailable(ex))
+        {
+            log.LogWarning(ex, "RIMAPI hunt apply unavailable for advice {AdviceId} action {ActionIndex}", adviceId, actionIndex);
+            return Response("rimapi_unavailable", "RIMAPI is unavailable for hunt designation.", apply.Kind, adviceId, actionIndex);
+        }
+        catch (RimApiException ex)
+        {
+            log.LogWarning(ex, "RIMAPI rejected hunt apply for advice {AdviceId} action {ActionIndex}", adviceId, actionIndex);
+            return Response("rimapi_rejected", ex.Message, apply.Kind, adviceId, actionIndex);
+        }
+
+        AssistedApplyResponse? readbackFailure = await RefreshForReadbackAsync(apply.Kind, adviceId, actionIndex, ct);
+        if (readbackFailure is not null)
+            return readbackFailure;
+
+        return Response(
+            "applied",
+            $"Hunt designation submitted for {currentTargets.Count} animal target{(currentTargets.Count == 1 ? "" : "s")}.",
+            apply.Kind,
+            adviceId,
+            actionIndex,
+            new { target_count = currentTargets.Count, rect = apply.Rect });
     }
 
     private async Task<AssistedApplyResponse> ApplyUnforbidAsync(
