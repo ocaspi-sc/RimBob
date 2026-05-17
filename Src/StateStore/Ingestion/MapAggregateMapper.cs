@@ -212,7 +212,8 @@ public static class MapAggregateMapper
                 Hp: 1.0f,
                 PowerOn: null,
                 IsWorking: null,
-                Position: MapPosition(building.Position)))
+                Position: MapPosition(building.Position),
+                Label: building.Label))
             .ToList());
 
     public static WorkTableRecord FromWorkTableBills(string buildingId, IReadOnlyList<WorkTableBillDto> bills) =>

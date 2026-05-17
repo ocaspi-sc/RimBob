@@ -129,6 +129,13 @@ public static class FoodBriefingDerivation
             HasButcherTable: butcherTables > 0)
         {
             CookingBuildingIds = cookingBuildingRecords.Select(building => building.Id).ToList(),
+            CookingBuildingDetails = cookingBuildingRecords
+                .Select(building => new FoodCookingBuildingSummary(
+                    building.Id,
+                    building.Def,
+                    building.Label,
+                    building.Position))
+                .ToList(),
             CookingBills = cookingBills
         };
     }

@@ -1,4 +1,5 @@
 using RimBob.Core.Advice;
+using RimBob.Core.Aggregates;
 using RimBob.Core.Briefings;
 using RimBob.Core.Ministers;
 
@@ -600,7 +601,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         return new AdviceActionApply(
             Kind: AdviceApplyKind.UpsertProductionBill,
             Label: "Set simple meal bill",
-            TargetSummary: $"simple meal bill on one cooking station until {target} meals",
+            TargetSummary: $"simple meal bill on {CookingStationTarget(briefing)} until {target} meals",
             MapId: briefing.MapId,
             TargetCount: target,
             WorkbenchBuildingId: workbenchId,
@@ -719,7 +720,23 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
     }
 
     private static string CookBillActionText(FoodBriefing briefing) =>
-        $"Set/check simple meal bill target around {SimpleMealTarget(briefing)} meals; keep fine meals off until the buffer is stable.";
+        $"Set/check simple meal bill on {CookingStationTarget(briefing)} around {SimpleMealTarget(briefing)} meals; keep fine meals off until the buffer is stable.";
+
+    private static string CookingStationTarget(FoodBriefing briefing)
+    {
+        FoodCookingBuildingSummary? building = briefing.Kitchen.SingleCookingBuilding;
+        if (building is null)
+            return briefing.Kitchen.CookingBuildings > 1 ? "a cooking station" : "one cooking station";
+
+        string label = string.IsNullOrWhiteSpace(building.Label)
+            ? LabelBuildingDef(building.Def)
+            : building.Label.Trim();
+        string position = FormatPosition(building.Position);
+        return string.IsNullOrWhiteSpace(position) ? label : $"{label} at {position}";
+    }
+
+    private static string FormatPosition(MapPosition? position) =>
+        position is null ? "" : $"({position.X}, {position.Y}, {position.Z})";
 
     private static string EmergencyBody(FoodBriefing briefing, float days)
     {
@@ -786,6 +803,28 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         if (label.StartsWith("Animal_", StringComparison.OrdinalIgnoreCase))
             label = label["Animal_".Length..];
         return label.Replace('_', ' ').Trim().ToLowerInvariant();
+    }
+
+    private static string LabelBuildingDef(string def)
+    {
+        string normalized = def.Replace('_', ' ').Trim();
+        List<char> chars = new(normalized.Length + 4);
+        for (int i = 0; i < normalized.Length; i++)
+        {
+            char current = normalized[i];
+            if (i > 0 &&
+                char.IsUpper(current) &&
+                !char.IsWhiteSpace(normalized[i - 1]) &&
+                (char.IsLower(normalized[i - 1]) || (i + 1 < normalized.Length && char.IsLower(normalized[i + 1]))))
+            {
+                chars.Add(' ');
+            }
+
+            chars.Add(current);
+        }
+
+        string label = new string(chars.ToArray()).Trim().ToLowerInvariant();
+        return string.IsNullOrWhiteSpace(label) ? "cooking station" : label;
     }
 
     private static FlagSeverity ToFlagSeverity(AdvicePriority priority) => priority switch

@@ -193,7 +193,11 @@ public sealed class FoodRulesTests
             ReadyToHarvest = 0,
             Kitchen = new FoodKitchenSummary(1, 1, true, true)
             {
-                CookingBuildingIds = ["stove-1"]
+                CookingBuildingIds = ["stove-1"],
+                CookingBuildingDetails =
+                [
+                    new FoodCookingBuildingSummary("stove-1", "FueledStove", "fueled stove", new(93, 0, 186))
+                ]
             }
         };
 
@@ -202,8 +206,10 @@ public sealed class FoodRulesTests
 
         AdviceAction billAction = decision.Advice.Should().ContainSingle().Subject
             .Actions.Should().Contain(action => action.Kind == AdviceActionKind.ProductionBill).Subject;
+        billAction.Instruction.Should().Contain("fueled stove at (93, 0, 186)");
         billAction.Apply.Should().NotBeNull();
         billAction.Apply!.Kind.Should().Be(AdviceApplyKind.UpsertProductionBill);
+        billAction.Apply.TargetSummary.Should().Contain("fueled stove at (93, 0, 186)");
         billAction.Apply.WorkbenchBuildingId.Should().Be("stove-1");
         billAction.Apply.RecipeSelectorKey.Should().Be("simple_meal");
         billAction.Apply.RepeatMode.Should().Be("TargetCount");
@@ -274,7 +280,11 @@ public sealed class FoodRulesTests
         {
             Kitchen = new FoodKitchenSummary(1, 1, true, true)
             {
-                CookingBuildingIds = ["stove-1"]
+                CookingBuildingIds = ["stove-1"],
+                CookingBuildingDetails =
+                [
+                    new FoodCookingBuildingSummary("stove-1", "FueledStove", "fueled stove", new(93, 0, 186))
+                ]
             }
         };
 
@@ -283,6 +293,7 @@ public sealed class FoodRulesTests
 
         AdviceAction billAction = decision.Advice.Should().ContainSingle().Subject
             .Actions.Should().Contain(action => action.Kind == AdviceActionKind.ProductionBill).Subject;
+        billAction.Instruction.Should().Contain("fueled stove at (93, 0, 186)");
         billAction.Apply.Should().NotBeNull();
         billAction.Apply!.Kind.Should().Be(AdviceApplyKind.UpsertProductionBill);
     }
@@ -569,6 +580,10 @@ public sealed class FoodRulesTests
         new(1, 1, true, true)
         {
             CookingBuildingIds = ["stove-1"],
+            CookingBuildingDetails =
+            [
+                new FoodCookingBuildingSummary("stove-1", "FueledStove", "fueled stove", new(93, 0, 186))
+            ],
             CookingBills =
             [
                 new FoodCookingBillSummary(

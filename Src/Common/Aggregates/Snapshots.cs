@@ -69,7 +69,8 @@ public sealed record BuildingRecord(
     float  Hp,
     bool?  PowerOn,
     bool?  IsWorking,
-    MapPosition? Position = null
+    MapPosition? Position = null,
+    string? Label = null
 );
 
 public sealed record WorkTableRegistry(IReadOnlyList<WorkTableRecord> WorkTables);

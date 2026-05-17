@@ -73,6 +73,7 @@ public sealed class IngestionDispatcherTests
         s.Animals.Value.Animals.Single().Position.Should().BeEquivalentTo(new { X = 40, Y = 0, Z = 45 });
         s.Stockpiles.Value.Zones.Single().Center.Should().BeEquivalentTo(new { X = 2, Y = 0, Z = 2 });
         s.Buildings.Value.Buildings.Single().Position.Should().BeEquivalentTo(new { X = 5, Y = 0, Z = 5 });
+        s.Buildings.Value.Buildings.Single().Label.Should().Be("wooden bed");
         s.Power.Value.ProductionW.Should().Be(2000f);
         s.Threats.Value.Lords.Should().ContainSingle()
             .Which.JobType.Should().Be("Raid");
@@ -119,6 +120,8 @@ public sealed class IngestionDispatcherTests
         FoodBriefing briefing = FoodBriefingDerivation.Compute(s);
         briefing.Kitchen.CookingBills.Should().ContainSingle()
             .Which.RecipeDefName.Should().Be("CookMealSimple");
+        briefing.Kitchen.SingleCookingBuilding.Should().NotBeNull();
+        briefing.Kitchen.SingleCookingBuilding!.Label.Should().Be("fueled stove");
     }
 
     [Fact]

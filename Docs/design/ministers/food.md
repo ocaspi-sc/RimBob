@@ -98,6 +98,9 @@ the concrete player action instead of saying only "visibility."
 Food should carry compact current bill state for known cooking workbenches.
 Rules use it to avoid repeating a simple-meal bill suggestion once a matching
 do-until bill already satisfies the desired target.
+When a Food action targets one known cooking workbench, the player-facing
+instruction should name the station and position so the player can find the
+right kitchen in RimWorld.
 
 Crop counts and progress should prefer the farm summary crop-type rows when
 available. Plant positions are useful spatial context, but the live plant list

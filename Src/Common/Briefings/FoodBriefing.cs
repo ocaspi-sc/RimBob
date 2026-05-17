@@ -207,11 +207,31 @@ public sealed record FoodKitchenSummary(
 )
 {
     public IReadOnlyList<string> CookingBuildingIds { get; init; } = [];
+    public IReadOnlyList<FoodCookingBuildingSummary> CookingBuildingDetails { get; init; } = [];
     public IReadOnlyList<FoodCookingBillSummary> CookingBills { get; init; } = [];
 
-    public string? SingleCookingBuildingId =>
-        CookingBuildingIds.Count == 1 ? CookingBuildingIds[0] : null;
+    public string? SingleCookingBuildingId
+    {
+        get
+        {
+            if (CookingBuildingIds.Count == 1)
+                return CookingBuildingIds[0];
+            return CookingBuildingIds.Count == 0 && CookingBuildingDetails.Count == 1
+                ? CookingBuildingDetails[0].Id
+                : null;
+        }
+    }
+
+    public FoodCookingBuildingSummary? SingleCookingBuilding =>
+        CookingBuildingDetails.Count == 1 ? CookingBuildingDetails[0] : null;
 }
+
+public sealed record FoodCookingBuildingSummary(
+    string Id,
+    string Def,
+    string? Label,
+    MapPosition? Position
+);
 
 public sealed record FoodCookingBillSummary(
     string WorkbenchBuildingId,

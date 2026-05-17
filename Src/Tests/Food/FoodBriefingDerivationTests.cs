@@ -397,7 +397,7 @@ public sealed class FoodBriefingDerivationTests
     {
         ColonyState s = StateWithColonists(1);
         s.Buildings.Update(new BuildingRegistry([
-            new BuildingRecord("stove-1", "FueledStove", 1f, null, null, new MapPosition(10, 0, 10)),
+            new BuildingRecord("stove-1", "FueledStove", 1f, null, null, new MapPosition(10, 0, 10), "fueled stove"),
             new BuildingRecord("campfire-1", "Campfire", 1f, null, null, new MapPosition(11, 0, 10)),
             new BuildingRecord("butcher", "ButcherTable", 1f, null, null, new MapPosition(12, 0, 10))
         ]));
@@ -406,6 +406,9 @@ public sealed class FoodBriefingDerivationTests
 
         b.Kitchen.CookingBuildings.Should().Be(2);
         b.Kitchen.CookingBuildingIds.Should().Equal("stove-1", "campfire-1");
+        b.Kitchen.CookingBuildingDetails.Should().HaveCount(2);
+        b.Kitchen.CookingBuildingDetails[0].Label.Should().Be("fueled stove");
+        b.Kitchen.CookingBuildingDetails[0].Position.Should().Be(new MapPosition(10, 0, 10));
         b.Kitchen.SingleCookingBuildingId.Should().BeNull();
     }
 
@@ -414,7 +417,7 @@ public sealed class FoodBriefingDerivationTests
     {
         ColonyState s = StateWithColonists(1);
         s.Buildings.Update(new BuildingRegistry([
-            new BuildingRecord("stove-1", "FueledStove", 1f, null, null, new MapPosition(10, 0, 10))
+            new BuildingRecord("stove-1", "FueledStove", 1f, null, null, new MapPosition(10, 0, 10), "fueled stove")
         ]));
         s.WorkTables.Update(new WorkTableRegistry([
             new WorkTableRecord("stove-1", [
@@ -428,6 +431,8 @@ public sealed class FoodBriefingDerivationTests
         bill.WorkbenchBuildingId.Should().Be("stove-1");
         bill.RecipeDefName.Should().Be("CookMealSimple");
         bill.TargetCount.Should().Be(12);
+        b.Kitchen.SingleCookingBuilding.Should().NotBeNull();
+        b.Kitchen.SingleCookingBuilding!.Label.Should().Be("fueled stove");
     }
 
     [Fact]
