@@ -1,4 +1,4 @@
-# RimBob - Codex Instructions
+# RimBob - Agent Instructions
 
 This file is loaded by Codex at the start of every session. Keep it as an operating manual for agents. Product design truth lives in `Docs/DESIGN.md` and the linked design docs.
 
@@ -15,9 +15,9 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 - Offer pushback when a request seems risky, over-scoped, inconsistent with repo/design direction, or likely to have a simpler better path. Keep pushback concrete and concise; if the user clearly asked for implementation and the work is safe, state the concern and then proceed.
 - Design sessions are for exploration and docs. Do not write code unless asked.
 - Build sessions are for implementation. Do not redesign unless a blocker is found.
-- Store agent-created plans in `/.plans`. At session end, offer to update `HumanTodo.md` with new tasks uncovered.
+- Store agent-created plans in `Docs/plans/`. At session end, offer to update `HumanTodo.md` with new tasks uncovered.
 - For bug reports and user complaints, prefer the general correct fix over one-off workarounds.
-- Ask lots of questions. include the local context and tradeoff so the user can make an informed decision.
+- Ask targeted questions with local context and tradeoffs before committing to a path. Don't ask when the direction is clear.
 
 ## Coding
 
@@ -27,9 +27,10 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 
 ## GIT
 
+- `var/` is gitignored (icons, embeddings, agenda, replay corpus). Never stage anything under `var/`.
 - C:\dev\RimBob should always stay on master branch.
 - The only unstaged changes on C:\dev\RimBob should be manual edits by the human.
-- When changing code, Make sure it's in a worktree + feature branch that's correct for current task. if not, create a worktree first based off current master and work there, using commits generously. When finished, The usual MO is to squash the worktree and commit the feature into master so it lands, then close the worktree.
+- When changing code, make sure it's in a worktree + feature branch that's correct for the current task. If not, create a worktree first based off current master and work there, using commits generously. When finished, the usual MO is to squash-merge the feature branch into master so it lands, then remove the worktree.
 - When doing git operations, if there's a lock file or another session appears to be writing or committing, wait briefly and retry the narrow operation; do not force broad Git actions.
 
 ---
@@ -67,6 +68,7 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 
 ## Project Invariants
 
+- The active RIMAPI mod is a local fork at `C:\dev\RIMAPI-for-RimBob` (repo: `ocaspi-sc/RIMAPI-for-RimBob`), not the upstream `IlyaChichkov/RIMAPI`. RimBob still integrates over HTTP at `http://localhost:8765/`; nothing in this repo links against the mod.
 - RimBob is an assisted-gameplay advisor for RimWorld. The player keeps control.
 - MVP is suggest-only. Per-minister `Auto` graduation is deferred until M7+ and requires explicit player consent.
 - Mayor publishes the Agenda. Feeder ministers publish `AdviceItem`s. No minister calls RIMAPI write endpoints in MVP.
