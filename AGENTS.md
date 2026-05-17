@@ -18,6 +18,8 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 - Store agent-created plans in `Docs/plans/`. At session end, offer to update `HumanTodo.md` with new tasks uncovered.
 - For bug reports and user complaints, prefer the general correct fix over one-off workarounds.
 - Ask targeted questions with local context and tradeoffs before committing to a path. Don't ask when the direction is clear.
+- This project is maintained simultaneously by multiple AI agents from different companies.
+- After finishing a change, make sure I can see it. Rebuild if necessary.
 
 ## Coding
 
