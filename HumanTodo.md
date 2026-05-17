@@ -22,7 +22,7 @@
 - [x] [2026-05-14] #spike #backend #debt Review RimBob C# codebase and propose refactorings. [plan](.plans/recommended-refactorings.md)
 - [x] [2026-05-14] #debt #doc Complete the RimBob product rename.
 - [ ] [2026-05-17] #git #debt Migrate dirty legacy worktrees after their active slices land.
-- [ ] [2026-05-17] #git #ops Finish local folder rename after closing external handles; update origin URL after upstream repository rename.
+- [ ] [2026-05-17] #git #ops Update origin URL after upstream repository rename.
 - [ ] [2026-05-09] #spike #llm #test Benchmark optional TOON prompt encoding. [plan](Docs/plans/toon-prompt-encoding-spike.md)
 - [ ] [2026-05-09] #dashboard #ux Add button to dashboard "what was sent" / prompt-introspection screen that copies the full system + user prompt to the clipboard. Pairs with the manual-fallback flow (`logs/mayor-prompt-latest.md`, `POST /api/agenda/manual`) for when Gemini is rate-limited.
 
