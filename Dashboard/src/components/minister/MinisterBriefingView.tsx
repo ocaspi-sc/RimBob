@@ -78,7 +78,7 @@ function groupBriefing(scope: string, briefing: unknown): BriefingGroup[] {
     return [
       pickGroup('food_status', 'Food status', briefing, ['estimatedDaysOfFood', 'nutritionSource', 'reportedNutrition', 'fallbackNutrition', 'foodUnits', 'mealsCount', 'rawFoodCount', 'colonistCount'], true),
       pickGroup('crops', 'Crops', briefing, ['readyToHarvest', 'cropBreakdown', 'cropZoneSummaries']),
-      pickGroup('wild_harvest', 'Wild harvest', briefing, ['wildHarvestCandidates', 'wildHarvestClusters', 'wildAnimalCount']),
+      pickGroup('wild_harvest', 'Forage and hunting', briefing, ['wildHarvestCandidates', 'wildHarvestClusters', 'wildAnimalCount']),
       pickGroup('skills_and_labor', 'Skills and labor signals', briefing, ['skills']),
       pickGroup('infrastructure_and_storage', 'Infrastructure and storage', briefing, ['infrastructure', 'storage', 'stockpileCells']),
       pickGroup('kitchen_and_butchery', 'Kitchen and butchery', briefing, ['kitchen']),

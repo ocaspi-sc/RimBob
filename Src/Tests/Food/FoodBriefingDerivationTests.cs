@@ -259,6 +259,31 @@ public sealed class FoodBriefingDerivationTests
     }
 
     [Fact]
+    public void Compute_ForageHarvest_ExcludesStumpsGrassAndUnharvestablePlants()
+    {
+        ColonyState s = StateWithColonists(1);
+        s.Plants.Update(new PlantRegistry([
+            new PlantRecord("stump", "ChoppedStump", 1f, false, null, new MapPosition(1, 0, 1), IsHarvestable: true),
+            new PlantRecord("grass", "Plant_Grass", 1f, false, null, new MapPosition(2, 0, 1), IsHarvestable: true),
+            new PlantRecord("tall-grass", "Plant_TallGrass", 1f, false, null, new MapPosition(3, 0, 1), IsHarvestable: true),
+            new PlantRecord("berry", "Plant_Berry", 1f, false, null, new MapPosition(10, 0, 10), IsHarvestable: true),
+            new PlantRecord("agave", "Plant_Agave", 1f, false, null, new MapPosition(11, 0, 10), IsHarvestable: true),
+            new PlantRecord("unready-berry", "Plant_Berry", 1f, false, null, new MapPosition(12, 0, 10), IsHarvestable: false)
+        ]));
+
+        FoodBriefing b = FoodBriefingDerivation.Compute(s);
+
+        b.WildHarvestCandidates.Should().Be(2);
+        IReadOnlyList<string> clusterDefs = b.WildHarvestClusters.Select(cluster => cluster.Def).ToList();
+        clusterDefs.Should().BeEquivalentTo(["Plant_Berry", "Plant_Agave"]);
+        clusterDefs.Should().NotContain("ChoppedStump");
+        clusterDefs.Should().NotContain("Plant_Grass");
+        clusterDefs.Should().NotContain("Plant_TallGrass");
+        b.HarvestTargets.Where(target => target.Source == "wild").Select(target => target.Def)
+            .Should().BeEquivalentTo(["Plant_Berry", "Plant_Agave"]);
+    }
+
+    [Fact]
     public void Compute_DerivesThreatAndFreezerSignals()
     {
         ColonyState s = StateWithColonists(1);

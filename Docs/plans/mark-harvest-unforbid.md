@@ -90,7 +90,7 @@ one allowlisted non-pawn RIMAPI write, refreshes state, and reports the result.
   Do not attach an apply handle for category-only or position-only summary text.
 - Crop harvest targets use growing-zone cells when available; otherwise use
   exact ready plant positions only when they form a small bounded rectangle.
-- Wild harvest targets use exact ready wild plant positions only when they form
+- Forage harvest targets use exact ready edible plant positions only when they form
   a small bounded rectangle near the selected Food reference point.
 - Define and enforce caps in code/tests before wiring the button: maximum target
   count, maximum rect area, and maximum missing-target tolerance after refresh.

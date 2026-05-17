@@ -11,7 +11,7 @@
 <!-- entries go here -->
 - [x] [2026-05-17] #rimapi #fork Clone, build, and load the RimBob-compatible RIMAPI fork from `C:\dev\RIMAPI-for-RimBob`. [plan](Docs/plans/rimapi-fork-migration.md)
 - [ ] [2026-05-17] #rimapi #assisted After the RIMAPI fork lands, verify Food uses safe unforbid apply end to end.
-- [ ] [2026-05-17] #rimapi #harvest Add `is_harvestable` / `growth_progress` to `/map/plants` after migrating to a RIMAPI fork.
+- [x] [2026-05-17] #rimapi #harvest Add `is_harvestable` / `growth_progress` to `/map/plants` after migrating to a RIMAPI fork.
 - [ ] [2026-05-16] #rimapi #assisted Validate companion safe `/api/v1/order/unforbid` endpoint and remove RimBob fallback caveat.
 - [ ] [2026-05-16] #skill #debt Fix local skill validator Python dependency.
 - [ ] [2026-05-16] #replay #mayor Decide whether legacy `/api/agenda/manual` should emit replay records or be retired.
@@ -43,7 +43,7 @@
 ### Current implementation order
 
 1. [ ] **Verify Food safe `unforbid` Assisted Apply end to end.** Confirm the RIMAPI fork endpoint, RimBob backend executor, dashboard Apply UI, validation/read-back, and live game behavior work together.
-2. [ ] **Add harvestability/growth plant signals.** Add `is_harvestable` / `growth_progress` to RIMAPI `/map/plants`, then wire Food harvest logic and `mark_harvest` validation to those fields.
+2. [x] **Add harvestability/growth plant signals.** Add `is_harvestable` / `growth_progress` to RIMAPI `/map/plants`, then wire Food harvest logic and `mark_harvest` validation to those fields.
 3. [ ] **Investigate and fix/patch `total_nutrition == 0`.** Decide whether to patch RIMAPI upstream or compute a documented RimBob fallback from stored meal/raw-food counts.
 4. [x] **Ship Food M3 end to end.** Briefing fields, initial rules, first flag contract, Mayor digest ingestion, dashboard rendering for advice actions, then fixtures.
 5. [ ] **Add minimal CoS handling.** Implement the Mayor-side helper for dedupe, lead framing, and tactical-alert vs digest routing before multiple feeders exist.
@@ -179,7 +179,7 @@ Migrate from Codex Chrome plugin to Playwright for frontend.
 - "Manage Food Stockpile" requested labor; why not tiles to be marked as storage?
 - The most basic actions like hauling and cleaning should be automated by the game, and only request labor for urgent cases.
 - LABOR requests should specify what kind of work type or skill is required.
-- "Wild harvest" should say exactly where the nearest edible plants are and suggest marking them for harvest.
+- Forage advice should say exactly where the nearest edible plants are and suggest marking them for harvest.
 
 ### Dashboard v2
 

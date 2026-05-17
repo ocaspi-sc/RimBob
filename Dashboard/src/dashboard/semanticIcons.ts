@@ -31,7 +31,7 @@ const common = {
   defense: item('Gun_Revolver', 'Defense icon', 'DE'),
   economy: item('Silver', 'Economy icon', 'EC'),
   food: item('MealSimple', 'Food icon', 'FO'),
-  harvest: item('Plant_Rice', 'Wild harvest icon', 'HA'),
+  harvest: item('Plant_Rice', 'Forage harvest icon', 'HA'),
   info: item('TextBook', 'Info icon', 'IN'),
   industry: item('Steel', 'Industry icon', 'ID'),
   kitchen: item('MealSimple', 'Kitchen icon', 'KI'),

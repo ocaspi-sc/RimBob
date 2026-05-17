@@ -294,8 +294,14 @@ public sealed class FoodRulesTests
 
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
         advice.AdviceType.Should().Be("wild_harvest");
-        advice.Actions.Single().Instruction.Should().Contain("nearest 6 Plant_Berry");
-        advice.Actions.Single().Apply.Should().NotBeNull();
+        advice.Title.Should().Be("Forage can extend the buffer");
+        advice.Rationale.Should().Contain("Foraging edible plants");
+        AdviceAction action = advice.Actions.Single();
+        action.Instruction.Should().Contain("nearest 6 Plant_Berry");
+        action.Instruction.Should().NotContain("wild");
+        action.Reason.Should().Be("edible forage requires plant work");
+        action.Apply.Should().NotBeNull();
+        action.Apply!.Label.Should().Be("Mark forage");
         decision.Flags.Should().BeEmpty();
     }
 

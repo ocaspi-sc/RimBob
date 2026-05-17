@@ -156,6 +156,9 @@ public sealed record PlantDto
     [JsonPropertyName("is_crop")]
     public bool? DocumentedIsCrop { get; init; }
 
+    [JsonPropertyName("is_harvestable")]
+    public bool? LiveIsHarvestable { get; init; }
+
     [JsonPropertyName("zone_id")]
     [JsonConverter(typeof(FlexibleStringIdJsonConverter))]
     public string? ZoneId { get; init; }
@@ -171,6 +174,9 @@ public sealed record PlantDto
 
     [JsonIgnore]
     public bool IsCrop => DocumentedIsCrop ?? false;
+
+    [JsonIgnore]
+    public bool? IsHarvestable => LiveIsHarvestable;
 }
 
 // ── GET /map/animals?map_id ───────────────────────────────────────────────────

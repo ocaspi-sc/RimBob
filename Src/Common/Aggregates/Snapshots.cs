@@ -114,7 +114,8 @@ public sealed record PlantRecord(
     float Growth,
     bool IsCrop,
     string? ZoneId,
-    MapPosition? Position = null
+    MapPosition? Position = null,
+    bool? IsHarvestable = null
 );
 
 public sealed record ThingRegistry(IReadOnlyList<ThingRecord> Things);

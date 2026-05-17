@@ -111,7 +111,7 @@ Food's briefing should answer the nutrition-chain questions:
 - Is the current food buffer safe?
 - Which part of the chain is limiting: acquisition, cooking, storage, freezer,
   labor, season, threat, or data coverage?
-- What concrete opportunity is available now: harvest, wild plants, low-risk
+- What concrete opportunity is available now: harvest, forage plants, low-risk
   hunt targets, sowing, cooking, storage visibility, freezer/building request,
   or escalation?
 

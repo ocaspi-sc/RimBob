@@ -87,11 +87,11 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             return DecisionFor(briefing, "wild_harvest_available",
                 FoodAdviceType.WildHarvest,
                 days < 10f ? AdvicePriority.High : AdvicePriority.Medium,
-                "Wild food can extend the buffer",
+                "Forage can extend the buffer",
                 WildHarvestBody(briefing, days),
-                "Wild harvest is lower-risk than hunting when no mature crops are ready.",
+                "Foraging edible plants is lower-risk than hunting when no mature crops are ready.",
                 [WildHarvestAction(briefing, days)],
-                PlantLaborIfNeeded(briefing, days, "PlantCut work for wild harvest", "wild harvest requires plant work"),
+                PlantLaborIfNeeded(briefing, days, "PlantCut work for forage", "edible forage requires plant work"),
                 days < 10f);
 
         if (days < 20f && CanSuggestHunting(briefing) && briefing.ReadyToHarvest == 0)
@@ -469,7 +469,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             Owner: ShouldRequestPlantLabor(briefing, days) ? "Labor" : null,
             WorkType: WorkType.PlantCut,
             Skill: "Plants",
-            Reason: "wild harvest requires plant work",
+            Reason: "edible forage requires plant work",
             Icon: WildHarvestIcon(briefing),
             Apply: HarvestApply(briefing, "wild"));
 
@@ -503,7 +503,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         if (target is null)
             return null;
 
-        string label = source == "wild" ? "Mark wild harvest" : "Mark harvest";
+        string label = source == "wild" ? "Mark forage" : "Mark harvest";
         string zone = string.IsNullOrWhiteSpace(target.ZoneId) ? "" : $" in {target.ZoneId}";
         string location = string.IsNullOrWhiteSpace(target.Proximity) ? "" : $" ({target.Proximity})";
         string summary = $"{target.Count} {target.Def} plants{zone}{location}";
@@ -654,7 +654,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
     {
         WildHarvestCluster? cluster = briefing.WildHarvestClusters.FirstOrDefault();
         if (cluster is null)
-            return $"{briefing.WildHarvestCandidates} harvestable wild plants are visible while food is at {days:F1} days. Position data is unavailable, so do not assume exact location.";
+            return $"{briefing.WildHarvestCandidates} edible forage plants are visible while food is at {days:F1} days. Position data is unavailable, so do not assume exact location.";
         return $"{cluster.Count} harvestable {cluster.Def} plants are {cluster.Proximity ?? "visible"} while food is at {days:F1} days.";
     }
 
@@ -662,8 +662,8 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
     {
         WildHarvestCluster? cluster = briefing.WildHarvestClusters.FirstOrDefault();
         if (cluster is null)
-            return $"Mark safe edible wild plants for harvest; {briefing.WildHarvestCandidates} candidates are visible but no location summary is available.";
-        return $"Mark the nearest {cluster.Count} {cluster.Def} wild plants for harvest ({cluster.Proximity ?? "location unknown"}).";
+            return $"Mark edible forage for harvest; {briefing.WildHarvestCandidates} candidates are visible but no location summary is available.";
+        return $"Mark the nearest {cluster.Count} {cluster.Def} for harvest ({cluster.Proximity ?? "location unknown"}).";
     }
 
     private static string HuntingBody(FoodBriefing briefing, float days)

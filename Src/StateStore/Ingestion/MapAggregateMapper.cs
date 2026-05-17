@@ -42,7 +42,8 @@ public static class MapAggregateMapper
                 plant.Growth,
                 plant.IsCrop || knownCropDefs.Contains(plant.Def),
                 plant.ZoneId,
-                MapPosition(plant.Position)))
+                MapPosition(plant.Position),
+                plant.IsHarvestable))
             .ToList());
     }
 

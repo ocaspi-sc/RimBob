@@ -47,7 +47,7 @@ public sealed class FoodStateSummaryTests
         summary.Should().Contain("terrain 36 growable cells");
         summary.Should().Contain("rich soil fertility 1.4");
         summary.Should().Contain("\n- Acquisition:");
-        summary.Should().Contain("0 wild harvest candidates");
+        summary.Should().Contain("0 forage candidates");
         summary.Should().Contain("2 hares hunt targets");
         summary.Should().Contain("\n- Kitchen/storage:");
         summary.Should().Contain("1 cooking station");

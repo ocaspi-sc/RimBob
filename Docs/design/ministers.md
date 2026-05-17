@@ -172,7 +172,7 @@ Each minister owns either a production chain or a well-defined subsystem:
 
 | Minister | Boundary |
 |---|---|
-| Food | Nutrition chain: wild harvest, crop production, hunting-for-food, butchering, cooking, meals, food stockpiles, freezer integrity |
+| Food | Nutrition chain: forage/edible plant harvest, crop production, hunting-for-food, butchering, cooking, meals, food stockpiles, freezer integrity |
 | Defense | Threat response: raids, drafted combat, fortifications as defensive intent, weapons/ammo readiness |
 | Construction | Built infrastructure: rooms, power, temperature systems, base layout, non-defense blueprints |
 | Industry | Non-food production chain: stonecutting, tailoring, smithing, machining, fabrication, drug production, production stockpiles |

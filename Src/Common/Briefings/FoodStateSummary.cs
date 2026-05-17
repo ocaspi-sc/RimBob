@@ -81,7 +81,7 @@ public static class FoodStateSummary
     {
         List<string> parts =
         [
-            Plural(briefing.WildHarvestCandidates, "wild harvest candidate"),
+            Plural(briefing.WildHarvestCandidates, "forage candidate"),
             $"{Plural(briefing.WildAnimalCount, "wild animal")} visible"
         ];
         if (briefing.WildHuntTargets.Count > 0 && (briefing.EstimatedDaysOfFood ?? 0f) < 20f)

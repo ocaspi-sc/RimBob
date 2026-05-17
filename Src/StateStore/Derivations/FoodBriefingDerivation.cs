@@ -11,6 +11,12 @@ public static class FoodBriefingDerivation
     private const int QualifiedSkillLevel = 6;
     private const int CoolerAdjacentDistanceCells = 12;
     private static readonly IReadOnlyList<string> CropHarvestThingDefs = ["RawRice", "RawPotatoes", "RawCorn"];
+    private static readonly HashSet<string> EdibleForagePlantDefs = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "BerryBush",
+        "Plant_Agave",
+        "Plant_Berry"
+    };
 
     public static FoodBriefing Compute(ColonyState s, long briefingVersion = 0)
     {
@@ -35,6 +41,7 @@ public static class FoodBriefingDerivation
         FoodReferencePoint? reference = FindFoodReferencePoint(s, pawns);
         FoodKitchenSummary kitchen = DeriveKitchen(s);
         FoodStorageSummary storage = DeriveStorage(s, kitchen);
+        IReadOnlyList<PlantRecord> foragePlants = ReadyFoodForagePlants(s.Plants.Value.Plants);
 
         return new FoodBriefing(
             BriefingVersion: briefingVersion,
@@ -54,8 +61,8 @@ public static class FoodBriefingDerivation
                 .Select(c => new FoodCropSummary(c.Def, c.Count, c.AverageGrowth))
                 .ToList(),
             CropZoneSummaries: DeriveCropZoneSummaries(s, reference),
-            WildHarvestCandidates: s.Plants.Value.Plants.Count(p => !p.IsCrop && p.Growth >= 0.85f),
-            WildHarvestClusters: DeriveWildHarvestClusters(s, reference),
+            WildHarvestCandidates: foragePlants.Count,
+            WildHarvestClusters: DeriveWildHarvestClusters(foragePlants, reference),
             WildAnimalCount: s.Animals.Value.Animals.Count(IsHealthyWildAnimal),
             WildHuntTargets: DeriveWildHuntTargets(s, reference),
             StockpileCells: s.Stockpiles.Value.Zones.Sum(z => z.CellCount),
@@ -73,7 +80,7 @@ public static class FoodBriefingDerivation
             CropHarvestNutritionByDef = DeriveCropHarvestNutrition(s.ThingDefs.Value),
             UnclassifiedFoodItems = food.UnclassifiedFoodItems,
             UnforbidTargets = DeriveUnforbidTargets(s),
-            HarvestTargets = DeriveHarvestTargets(s, reference)
+            HarvestTargets = DeriveHarvestTargets(s, reference, foragePlants)
         };
     }
 
@@ -204,19 +211,20 @@ public static class FoodBriefingDerivation
 
     private static IReadOnlyList<FoodHarvestTarget> DeriveHarvestTargets(
         ColonyState s,
-        FoodReferencePoint? reference)
+        FoodReferencePoint? reference,
+        IReadOnlyList<PlantRecord> foragePlants)
     {
         List<FoodHarvestTarget> targets = [];
 
         targets.AddRange(s.Plants.Value.Plants
-            .Where(plant => plant.IsCrop && plant.Growth >= 0.85f && plant.Position is not null)
+            .Where(plant => plant.IsCrop && IsHarvestReady(plant) && plant.Position is not null)
             .GroupBy(plant => new { plant.Def, plant.ZoneId })
             .Select(group => BuildHarvestTarget("crop", group.Key.Def, group.Key.ZoneId, group, reference))
             .Where(target => target is not null)
             .Cast<FoodHarvestTarget>());
 
-        targets.AddRange(s.Plants.Value.Plants
-            .Where(plant => !plant.IsCrop && plant.Growth >= 0.85f && plant.Position is not null)
+        targets.AddRange(foragePlants
+            .Where(plant => plant.Position is not null)
             .GroupBy(plant => plant.Def)
             .Select(group => BuildHarvestTarget("wild", group.Key, null, group, reference))
             .Where(target => target is not null)
@@ -343,11 +351,10 @@ public static class FoodBriefingDerivation
     }
 
     private static IReadOnlyList<WildHarvestCluster> DeriveWildHarvestClusters(
-        ColonyState s,
+        IReadOnlyList<PlantRecord> foragePlants,
         FoodReferencePoint? reference)
     {
-        return s.Plants.Value.Plants
-            .Where(p => !p.IsCrop && p.Growth >= 0.85f)
+        return foragePlants
             .GroupBy(p => p.Def)
             .Select(g =>
             {
@@ -359,13 +366,23 @@ public static class FoodBriefingDerivation
                     Proximity: MapDistance.ProximityLabel(distance, reference?.Name),
                     Reference: reference?.Name);
             })
-            .OrderBy(c => MapDistance.Nearest(s.Plants.Value.Plants
-                .Where(p => !p.IsCrop && p.Growth >= 0.85f && p.Def == c.Def)
+            .OrderBy(c => MapDistance.Nearest(foragePlants
+                .Where(p => p.Def == c.Def)
                 .Select(p => p.Position), reference?.Position) ?? int.MaxValue)
             .ThenByDescending(c => c.Count)
             .Take(3)
             .ToList();
     }
+
+    private static IReadOnlyList<PlantRecord> ReadyFoodForagePlants(IReadOnlyList<PlantRecord> plants) =>
+        plants
+            .Where(plant => !plant.IsCrop)
+            .Where(IsHarvestReady)
+            .Where(plant => EdibleForagePlantDefs.Contains(plant.Def))
+            .ToList();
+
+    private static bool IsHarvestReady(PlantRecord plant) =>
+        plant.IsHarvestable ?? plant.Growth >= 0.85f;
 
     private static IReadOnlyList<WildHuntTarget> DeriveWildHuntTargets(
         ColonyState s,

@@ -160,6 +160,8 @@ public sealed class RimApiClientTests
                       "categories": ["Plants"],
                       "position": { "x": 85, "y": 0, "z": 190 },
                       "stack_count": 1,
+                      "growth_progress": 0.91,
+                      "is_harvestable": true,
                       "is_forbidden": false
                     }
                   ],
@@ -174,6 +176,8 @@ public sealed class RimApiClientTests
         PlantDto plant = result.Should().ContainSingle().Which;
         plant.Id.Should().Be("44187");
         plant.Def.Should().Be("Plant_Rice");
+        plant.Growth.Should().BeApproximately(0.91f, 0.00001f);
+        plant.IsHarvestable.Should().BeTrue();
         plant.Position.Should().BeEquivalentTo(new { X = 85, Y = 0, Z = 190 });
     }
 

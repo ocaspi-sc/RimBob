@@ -83,7 +83,7 @@ Status: implemented. Food rules now compute advice priority dynamically, use sta
 
 4. Fix concrete Food advice cases.
    - Low meals with raw food: suggest simple meal bill target and cooking work type only if urgent or cook coverage is missing.
-   - Wild harvest: suggest marking nearest edible cluster(s) for harvest when cluster data exists; otherwise say only that edible wild harvest candidates exist.
+   - Forage: suggest marking nearest edible cluster(s) for harvest when cluster data exists; otherwise say only that edible forage candidates exist.
    - Stockpile/freezer: request tile count/proximity or building need; do not represent basic zone marking as generic labor.
    - Growing expansion: request N growing tiles with constraints/proximity, not exact layout.
    - Routine hauling/cleaning: assume RimWorld automation unless there is urgent evidence it blocks food access or spoilage prevention.
@@ -140,7 +140,7 @@ Status: implemented for this slice. Backend tests cover priority/work metadata s
    - Priority changes as days of food, season, and action availability change.
    - Labor requests name work type and skill when applicable.
    - Tile requests use quantity plus proximity/constraint text.
-   - Wild harvest advice uses cluster/proximity data when available and avoids fake specificity when unavailable.
+   - Forage advice uses cluster/proximity data when available and avoids fake specificity when unavailable.
 
 3. Prompt/LLM tests.
    - Food prompt includes closed advice types, `priority`, work type requirements, and sparse-output instruction.

@@ -11,7 +11,7 @@
 
 Food owns food security across the full nutrition chain:
 
-- Acquisition: crops, wild harvest, hunting-for-food, and emergency procurement
+- Acquisition: crops, forage/edible plant harvest, hunting-for-food, and emergency procurement
   pressure.
 - Processing: butchering, cooking, meal mix, and preserving bills.
 - Storage: food stockpiles, freezer capacity, freezer temperature, and spoilage
@@ -55,7 +55,7 @@ Adding or removing one is a design decision, but the exact enum list belongs in
 `Src/Common/Advice/FoodAdviceType.cs`.
 
 Food advice types should cover food security, growing capacity, harvest,
-wild-harvest, hunting, cooking, butchering, freezer/storage, trade/procurement
+forage/edible-plant harvest, hunting, cooking, butchering, freezer/storage, trade/procurement
 pressure, and food-event recovery.
 
 ---
@@ -68,7 +68,7 @@ Food's briefing should answer:
 - Is the nutrition signal trusted, fallback-derived, or missing?
 - Which chain stage is limiting: acquisition, cooking, storage, freezer, labor,
   season, active threat, or data coverage?
-- What immediate opportunity exists: ready harvest, edible wild cluster, crop
+- What immediate opportunity exists: ready harvest, edible forage cluster, crop
   expansion, meal production, storage visibility, freezer/building request, or
   escalation?
 - What facts are missing and therefore should temper advice confidence?
@@ -122,7 +122,7 @@ caravan/trade availability.
 
 Rules should cover obvious food-chain states: safe buffer, unknown or unreliable
 nutrition signal, emergency shortage, mature harvest, understocked meals with raw
-food, wild harvest availability, growing capacity, and missing freezer/storage
+food, forage availability, growing capacity, and missing freezer/storage
 support.
 
 Rules should compute priority from live state where possible: days of food,
@@ -165,6 +165,10 @@ sowable path is visible.
 Food LLM notes are trace labels, not player advice. Keep them terse and aligned
 with advice vocabulary.
 
+Food's player-facing output should use forage/edible-plant language for
+natural map plants and reserve backend terms such as `wild_harvest` for raw
+debug contracts. It should name the actual edible plant when possible.
+
 Food's player-facing output starts with a short current-state summary before
 the advice list. This summary is derived from the briefing rather than trusted
 to LLM prose; the dashboard may render the labelled lines as a compact table. It
@@ -188,7 +192,7 @@ in the relevant action instruction.
 
 Food may use action or flag metadata for:
 
-- Tiles: growing area, wild harvest area, freezer expansion, stockpile space.
+- Tiles: growing area, forage harvest area, freezer expansion, stockpile space.
 - Labor: specific RimWorld work types such as cooking, growing, plant cutting,
   hunting, or urgent hauling.
 - Items/buildings: coolers, butcher table, stove/campfire, shelves, power
@@ -216,7 +220,7 @@ local paths are insufficient, but Economy/Trade or Mayor owns trade framing.
 | Action family | Food ownership |
 |---|---|
 | Growing zones for food crops | Size, crop, timing, urgency |
-| Wild plant harvest for nutrition | Target and timing |
+| Forage harvest for nutrition | Target and timing |
 | Hunting for nutrition | Need and target recommendation, with Defense risk veto possible |
 | Butchering | Bill need and backlog |
 | Cooking | Bill type and stock target |
@@ -248,7 +252,7 @@ Hard cases:
 
 ## RAG Retrieval Profile
 
-Food retrieval topics include food, farming, crops, wild harvest, hunting,
+Food retrieval topics include food, farming, crops, forage/edible plant harvest, hunting,
 freezer, cooking, nutrition, and spoilage.
 
 Retrieval is useful for crop choice, seasonal timing, freezer/cooking policy,
