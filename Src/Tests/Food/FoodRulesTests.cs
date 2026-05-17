@@ -506,8 +506,8 @@ public sealed class FoodRulesTests
             RawFoodCount = 0,
             ReadyToHarvest = 0,
             WildHarvestCandidates = 0,
-            WildAnimalCount = 3,
-            WildHuntTargets = [new WildHuntTarget("Hare", 3, "nearby to kitchen", "kitchen")]
+            WildAnimalCount = 2,
+            WildHuntTargets = [new WildHuntTarget("Hare", 2, "nearby to kitchen", "kitchen")]
         };
 
         Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
@@ -518,6 +518,10 @@ public sealed class FoodRulesTests
         advice.AdviceType.Should().Be("hunt_for_food");
         AdviceAction Action = advice.Actions.Should().ContainSingle().Subject;
         Action.Kind.Should().Be(AdviceActionKind.MarkHunt);
+        Action.Instruction.Should().Be("Mark up to 2 hares for hunting (nearby to kitchen).");
+        Action.Instruction.Should().NotContain("skip predators");
+        Action.Instruction.Should().NotContain("tame");
+        Action.Instruction.Should().NotContain("high-revenge");
         Action.WorkType.Should().Be(WorkType.Hunt);
         Action.Skill.Should().Be("Shooting");
     }

@@ -862,7 +862,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         WildHuntTarget target = briefing.WildHuntTargets[0];
         int count = Math.Min(target.Count, Math.Max(1, briefing.ColonistCount * 2));
         string location = string.IsNullOrWhiteSpace(target.Proximity) ? "location unknown" : target.Proximity;
-        return $"Mark up to {count} {LabelDef(target.Def)} for hunting ({location}); skip predators, tame/bonded animals, and high-revenge targets.";
+        return $"Mark up to {count} {LabelDef(target.Def, count)} for hunting ({location}).";
     }
 
     private static string CookBillActionText(FoodBriefing briefing) =>
@@ -949,6 +949,14 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         if (label.StartsWith("Animal_", StringComparison.OrdinalIgnoreCase))
             label = label["Animal_".Length..];
         return label.Replace('_', ' ').Trim().ToLowerInvariant();
+    }
+
+    private static string LabelDef(string def, int count)
+    {
+        string label = LabelDef(def);
+        if (count == 1 || label.EndsWith("s", StringComparison.OrdinalIgnoreCase))
+            return label;
+        return $"{label}s";
     }
 
     private static string LabelBuildingDef(string def)
