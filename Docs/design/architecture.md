@@ -142,8 +142,9 @@ for readability.
 ## Local Run
 
 `run-rimbob.ps1` is the preferred local launcher. It builds the dashboard and
-starts the Host in a minimized taskbar-visible PowerShell window named
-`RimBob Server`; that window closes automatically when RimBob exits.
+starts the Host hidden with a RimBob icon in the Windows notification area.
+Right-click the icon to open the dashboard or stop the Host; the icon exits when
+the Host exits.
 
 Use `run-rimbob.ps1 -Foreground` when terminal output must stay attached to the
 current shell for debugging or verification.
