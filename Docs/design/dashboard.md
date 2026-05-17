@@ -308,6 +308,12 @@ panel entries. Failure samples from the last warm run should not be presented
 as current missing-icon errors when the same kind/id is now present in the
 cached-file inventory.
 
+The static warm fetches each candidate with a bounded retry (transient RIMAPI
+failures self-heal across attempts; deterministic key errors fail fast), so a
+single flaky warm should no longer leave large swaths of renderable defs marked
+missing. A failure sample therefore reflects a candidate that stayed unresolved
+across all attempts, not a one-off upstream hiccup.
+
 The same health payload may expose test inventory metadata for SYSTEM. Count
 declared xUnit test methods by source category so the dashboard can answer
 "what coverage areas exist?" without claiming the suite just executed.
