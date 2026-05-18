@@ -11,29 +11,27 @@ export function ChainTable({ model }: { model: AdviceChainModel }) {
   const nodes = buildDiagramNodes(model.paths);
 
   return (
-    <div className="chain-diagram-stack" aria-label="Food chain diagram variants">
-      {DIAGRAM_VARIANTS.map(variant => (
-        <section className={`chain-diagram-panel chain-diagram--${variant.key}`} key={variant.key}>
-          <header className="chain-diagram-heading">
-            <div>
-              <span className="chain-diagram-kicker">{variant.kicker}</span>
-              <h3>{variant.name}</h3>
-            </div>
-            <p>{variant.description}</p>
-          </header>
-          <FlowCanvas nodes={nodes} variantKey={variant.key} />
-        </section>
-      ))}
+    <div className="chain-diagram-stack" aria-label="Food chain diagram">
+      <section className="chain-diagram-panel chain-diagram--orders">
+        <header className="chain-diagram-heading">
+          <div>
+            <span className="chain-diagram-kicker">Food chain</span>
+            <h3>Work Order Flow</h3>
+          </div>
+          <p>Grow, forage, and hunt merge into the same storage, cooking, and cold-chain path.</p>
+        </header>
+        <FlowCanvas nodes={nodes} />
+      </section>
     </div>
   );
 }
 
-function FlowCanvas({ nodes, variantKey }: { nodes: DiagramNode[]; variantKey: DiagramVariantKey }) {
+function FlowCanvas({ nodes }: { nodes: DiagramNode[] }) {
   return (
-    <div className={`food-flow food-flow--${variantKey}`}>
+    <div className="food-flow food-flow--orders">
       <svg aria-hidden className="food-flow-wires" preserveAspectRatio="none" viewBox="0 0 100 100">
         <defs>
-          <marker id={`arrow-${variantKey}`} markerHeight="7" markerWidth="7" orient="auto" refX="6" refY="3.5">
+          <marker id="arrow-orders" markerHeight="7" markerWidth="7" orient="auto" refX="6" refY="3.5">
             <path d="M0,0 L7,3.5 L0,7 Z" />
           </marker>
         </defs>
@@ -41,13 +39,13 @@ function FlowCanvas({ nodes, variantKey }: { nodes: DiagramNode[]; variantKey: D
           <path
             className={`food-flow-wire food-flow-wire--${edge.route}`}
             d={wirePath(edge)}
-            key={`${variantKey}-${edge.from}-${edge.to}`}
-            markerEnd={`url(#arrow-${variantKey})`}
+            key={`${edge.from}-${edge.to}`}
+            markerEnd="url(#arrow-orders)"
           />
         ))}
       </svg>
       {nodes.map(node => (
-        <FlowNode key={`${variantKey}-${node.id}`} node={node} />
+        <FlowNode key={node.id} node={node} />
       ))}
     </div>
   );
@@ -61,7 +59,7 @@ function FlowNode({ node }: { node: DiagramNode }) {
 
   return (
     <article className={`food-flow-node food-flow-node--${node.route} chain-fact--${classFor(node.status)}`} style={style}>
-      <SemanticIconCue className="chain-fact-icon" icon={iconForField(node.iconKey)} size="xs" />
+      <SemanticIconCue className="chain-fact-icon" icon={iconForField(node.iconKey)} size="sm" />
       <div>
         <h4>{node.title}</h4>
         <p>
@@ -72,28 +70,6 @@ function FlowNode({ node }: { node: DiagramNode }) {
   );
 }
 
-const DIAGRAM_VARIANTS = [
-  {
-    key: 'orders',
-    kicker: 'Option 01',
-    name: 'Work Order Flow',
-    description: 'Chunky job-board boxes with the shared food chain merged.',
-  },
-  {
-    key: 'console',
-    kicker: 'Option 02',
-    name: 'Supply Console Flow',
-    description: 'Dark terminal diagram with circuit-style routing.',
-  },
-  {
-    key: 'blueprint',
-    kicker: 'Option 03',
-    name: 'Cold Chain Blueprint',
-    description: 'Technical map focused on the final storage and cooking path.',
-  },
-] as const;
-
-type DiagramVariantKey = (typeof DIAGRAM_VARIANTS)[number]['key'];
 type DiagramRoute = 'common' | 'forage' | 'grow' | 'hunt';
 type RouteKind = 'forage' | 'grow' | 'hunt';
 
@@ -117,7 +93,6 @@ type DiagramNodeId =
   | 'plant'
   | 'storage'
   | 'targets'
-  | 'wait'
   | 'wild'
   | 'zone';
 
@@ -128,23 +103,21 @@ type FlowEdge = {
 };
 
 const NODE_POSITIONS: Record<DiagramNodeId, { x: number; y: number }> = {
-  zone: { x: 7, y: 18 },
-  plant: { x: 20, y: 18 },
-  wait: { x: 33, y: 18 },
-  wild: { x: 20, y: 45 },
-  harvest: { x: 47, y: 31 },
-  targets: { x: 7, y: 74 },
-  hunt: { x: 20, y: 74 },
-  butcher: { x: 33, y: 74 },
-  storage: { x: 61, y: 45 },
-  cook: { x: 74, y: 45 },
-  fridge: { x: 87, y: 45 },
+  zone: { x: 8, y: 18 },
+  plant: { x: 24, y: 18 },
+  wild: { x: 24, y: 45 },
+  harvest: { x: 44, y: 31 },
+  targets: { x: 8, y: 74 },
+  hunt: { x: 24, y: 74 },
+  butcher: { x: 40, y: 74 },
+  storage: { x: 60, y: 45 },
+  cook: { x: 76, y: 45 },
+  fridge: { x: 92, y: 45 },
 };
 
 const FLOW_EDGES: FlowEdge[] = [
   { from: 'zone', to: 'plant', route: 'grow' },
-  { from: 'plant', to: 'wait', route: 'grow' },
-  { from: 'wait', to: 'harvest', route: 'grow' },
+  { from: 'plant', to: 'harvest', route: 'grow' },
   { from: 'wild', to: 'harvest', route: 'forage' },
   { from: 'harvest', to: 'storage', route: 'common' },
   { from: 'targets', to: 'hunt', route: 'hunt' },
@@ -178,10 +151,9 @@ function buildDiagramNodes(paths: AdviceChainPath[]): DiagramNode[] {
   return [
     node('zone', 'Zone', compactDetail(growZone?.detail, 'grow area'), growZone?.status ?? 'available', 'grow', 'crop_zone_summaries'),
     node('plant', 'Plant', compactDetail(growHarvest?.detail, 'crops growing'), growHarvest ? 'have' : 'available', 'grow', 'crop_breakdown'),
-    node('wait', 'Wait', waitDetail(growHarvest), growHarvest?.status === 'have' ? 'have' : 'available', 'grow', 'season'),
     node('wild', 'Wild Plants', compactDetail(forageHarvest?.detail, 'berries visible'), forageHarvest?.status ?? 'available', 'forage', 'wild_harvest_clusters'),
     node('harvest', 'Harvest', mergedActionDetail([growHarvest, forageHarvest]), mostUrgentStatus([growHarvest, forageHarvest]), 'common', 'mark_harvest'),
-    node('targets', 'Targets', compactDetail(huntStep?.detail, 'animals visible'), huntStep?.status ?? 'available', 'hunt', 'wild_animal_count'),
+    node('targets', 'Targets', compactDetail(huntStep?.detail, 'animals visible'), currentSupplyStatus(huntStep), 'hunt', 'wild_animal_count'),
     node('hunt', 'Hunt', statusPhrase(huntStep), huntStep?.status ?? 'available', 'hunt', 'mark_hunt'),
     node('butcher', 'Butcher', compactDetail(butcher?.detail, 'butcher table'), butcher?.status ?? 'available', 'hunt', 'kitchen_and_butchery'),
     node('storage', 'Storage', compactDetail(storage?.detail, 'stockpile'), storage?.status ?? 'available', 'common', 'storage'),
@@ -247,6 +219,12 @@ function statusRank(status: AdviceChainStepStatus): number {
   return 1;
 }
 
+function currentSupplyStatus(step: AdviceChainStep | undefined): AdviceChainStepStatus {
+  if (!step) return 'available';
+  if (step.status === 'blocked' || step.status === 'trigger') return step.status;
+  return 'have';
+}
+
 function findStep(path: AdviceChainPath | undefined, key: string): AdviceChainStep | undefined {
   return path?.steps.find(step => step.key === key);
 }
@@ -273,14 +251,6 @@ function mergedActionDetail(steps: Array<AdviceChainStep | undefined>): string {
   if (urgent.status === 'action') return ACTION_REQUESTED;
   if (urgent.status === 'blocked') return cleanBlockedDetail(urgent.detail);
   return compactDetail(urgent.detail, statusPhrase(urgent));
-}
-
-function waitDetail(step: AdviceChainStep | undefined): string {
-  if (!step) return 'not planted';
-  const percent = step.detail.match(/\b(\d+(?:\.\d+)?)%/);
-  if (percent) return `${percent[1]}% grown`;
-  if (step.status === 'action') return 'not ready';
-  return compactDetail(step.detail, 'growing');
 }
 
 function refrigeratorStatus(storage: AdviceChainStep | undefined): AdviceChainStepStatus {

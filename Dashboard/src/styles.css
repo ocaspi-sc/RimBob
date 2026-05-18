@@ -2481,7 +2481,7 @@ code {
 
 .chain-diagram-stack {
   display: grid;
-  gap: 18px;
+  gap: 0;
 }
 
 .chain-diagram-panel {
@@ -2490,8 +2490,8 @@ code {
   --panel-line: rgba(157, 171, 182, 0.24);
   --panel-accent: #4ab8ff;
   display: grid;
-  gap: 14px;
-  padding: 14px;
+  gap: 16px;
+  padding: 16px;
   border: 1px solid var(--panel-line);
   border-radius: 8px;
   color: var(--panel-ink);
@@ -2541,7 +2541,7 @@ code {
   position: relative;
   width: 100%;
   min-width: 0;
-  height: 342px;
+  height: 364px;
   border-radius: 7px;
   overflow: hidden;
 }
@@ -2570,8 +2570,8 @@ code {
   stroke: var(--wire-color, rgba(132, 220, 255, 0.72));
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 0.62;
-  filter: drop-shadow(0 0 4px rgba(82, 196, 255, 0.24));
+  stroke-width: 0.74;
+  filter: drop-shadow(0 0 5px rgba(82, 196, 255, 0.28));
 }
 
 .food-flow-wire--grow {
@@ -2588,7 +2588,7 @@ code {
 
 .food-flow-wire--common {
   --wire-color: rgba(240, 217, 132, 0.84);
-  stroke-width: 0.82;
+  stroke-width: 1;
 }
 
 .food-flow-node {
@@ -2597,13 +2597,13 @@ code {
   position: absolute;
   left: var(--node-x);
   top: var(--node-y);
-  width: clamp(108px, 12.8%, 122px);
-  min-height: 82px;
+  width: clamp(124px, 14.1%, 142px);
+  min-height: 92px;
   display: grid;
-  grid-template-columns: 20px minmax(0, 1fr);
-  gap: 5px;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 8px;
   align-items: start;
-  padding: 9px;
+  padding: 10px;
   border: 1px solid rgba(var(--state-rgb), 0.42);
   border-radius: 5px;
   color: var(--panel-ink);
@@ -2614,14 +2614,14 @@ code {
 .food-flow-node h4 {
   margin: 0 0 4px;
   color: var(--panel-ink);
-  font-size: 0.86rem;
+  font-size: 0.94rem;
   line-height: 1.05;
 }
 
 .food-flow-node p {
   margin: 0;
   color: var(--panel-muted);
-  font-size: 0.65rem;
+  font-size: 0.68rem;
   font-weight: 750;
   line-height: 1.22;
   overflow-wrap: normal;
@@ -2635,11 +2635,13 @@ code {
 }
 
 .food-flow-node .chain-fact-icon.game-icon {
-  width: 19px;
-  height: 19px;
+  width: 31px;
+  height: 31px;
   border-color: rgba(var(--route-rgb), 0.34);
   background: rgba(var(--route-rgb), 0.15);
-  box-shadow: 0 0 12px rgba(var(--route-rgb), 0.12);
+  box-shadow:
+    0 0 0 1px rgba(var(--route-rgb), 0.18),
+    0 0 18px rgba(var(--route-rgb), 0.2);
 }
 
 .food-flow-node--grow {
@@ -2718,82 +2720,31 @@ code {
     0 12px 24px rgba(0, 0, 0, 0.28);
 }
 
-.chain-diagram--console {
-  --panel-accent: #49f5c8;
-  background:
-    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(73, 245, 200, 0.07), rgba(255, 209, 102, 0.04), rgba(6, 8, 11, 0.98)),
-    #05080a;
-  background-size: 100% 9px, auto, auto;
-}
-
-.food-flow--console {
-  background:
-    radial-gradient(circle at 64% 45%, rgba(73, 245, 200, 0.13), transparent 28%),
-    linear-gradient(rgba(73, 245, 200, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(73, 245, 200, 0.055) 1px, transparent 1px),
-    rgba(2, 5, 7, 0.92);
-  background-size: auto, 10px 10px, 10px 10px, auto;
-}
-
-.food-flow--console .food-flow-node {
-  width: clamp(110px, 13%, 124px);
-  border-radius: 3px;
-  border-color: rgba(var(--route-rgb), 0.52);
-  background:
-    linear-gradient(180deg, rgba(var(--route-rgb), 0.13), rgba(1, 8, 9, 0.82) 54%),
-    rgba(2, 5, 6, 0.92);
+.food-flow--orders .food-flow-node.chain-fact--have {
+  border-color: rgba(104, 231, 135, 0.7);
+  border-top-color: #68e787;
   box-shadow:
-    inset 5px 0 0 rgba(var(--route-rgb), 0.78),
-    0 0 22px rgba(var(--route-rgb), 0.08);
+    inset 0 4px 0 rgba(104, 231, 135, 0.74),
+    0 0 20px rgba(104, 231, 135, 0.12),
+    0 12px 24px rgba(0, 0, 0, 0.28);
 }
 
-.food-flow--console .food-flow-node h4 {
-  font-family: "Cascadia Mono", Consolas, monospace;
-  text-transform: uppercase;
+.food-flow--orders .food-flow-node.chain-fact--action {
+  border-color: rgba(70, 184, 255, 0.86);
+  border-top-color: #46b8ff;
+  box-shadow:
+    inset 0 4px 0 rgba(70, 184, 255, 0.82),
+    0 0 24px rgba(70, 184, 255, 0.22),
+    0 12px 24px rgba(0, 0, 0, 0.28);
 }
 
-.food-flow--console .food-flow-node p {
-  font-family: "Cascadia Mono", Consolas, monospace;
-}
-
-.chain-diagram--blueprint {
-  --panel-accent: #8ed8ff;
-  background:
-    linear-gradient(90deg, rgba(142, 216, 255, 0.08) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(142, 216, 255, 0.07) 1px, transparent 1px),
-    linear-gradient(135deg, rgba(12, 26, 38, 0.98), rgba(4, 8, 14, 0.98));
-  background-size: 32px 32px, 32px 32px, auto;
-}
-
-.food-flow--blueprint {
-  background:
-    linear-gradient(90deg, rgba(142, 216, 255, 0.08) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(142, 216, 255, 0.08) 1px, transparent 1px),
-    radial-gradient(circle at 64% 45%, rgba(240, 217, 132, 0.12), transparent 24%),
-    rgba(6, 15, 24, 0.74);
-  background-size: 28px 28px, 28px 28px, auto, auto;
-}
-
-.food-flow--blueprint .food-flow-node {
-  width: clamp(108px, 12.8%, 122px);
-  min-height: 76px;
-  border-radius: 0;
-  border-style: dashed;
-  background:
-    linear-gradient(180deg, rgba(var(--route-rgb), 0.12), rgba(4, 11, 17, 0.76)),
-    rgba(4, 11, 17, 0.88);
-}
-
-.food-flow--blueprint .food-flow-node h4 {
-  color: #f7fbff;
-  font-family: "Cascadia Mono", Consolas, monospace;
-  font-size: 0.84rem;
-  text-transform: uppercase;
-}
-
-.food-flow--blueprint .food-flow-wire {
-  stroke-dasharray: 1.6 1.4;
+.food-flow--orders .food-flow-node.chain-fact--blocked {
+  border-color: rgba(255, 96, 86, 0.72);
+  border-top-color: #ff6056;
+  box-shadow:
+    inset 0 4px 0 rgba(255, 96, 86, 0.72),
+    0 0 22px rgba(255, 96, 86, 0.14),
+    0 12px 24px rgba(0, 0, 0, 0.28);
 }
 
 .chain-cell--trigger,
