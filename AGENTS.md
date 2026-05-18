@@ -35,6 +35,7 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 - The only unstaged changes on C:\dev\RimBob should be manual edits by the human.
 - When changing code, make sure it's in a worktree + feature branch that's correct for the current task. If not, create a worktree first based off current master and work there, using commits generously. When finished, the usual MO is to squash-merge the feature branch into master so it lands, then remove the worktree.
 - When doing git operations, if there's a lock file or another session appears to be writing or committing, wait briefly and retry the narrow operation; do not force broad Git actions.
+- Commit messages should contain some tags, a title, and a summary of the changes.
 
 ---
 
