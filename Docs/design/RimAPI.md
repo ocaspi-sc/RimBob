@@ -160,6 +160,13 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 | Method | Path | Purpose |
 |---|---|---|
 | POST | `/order/designate/area` | designate Mine / Deconstruct / Harvest / Hunt over a rect |
+| POST | `/order/unforbid` | safely clear the forbidden flag on explicit haulable thing ids |
+
+> **Verified shape (RimBob fork).** `/order/unforbid` accepts `map_id` and
+> `thing_ids[]`. The sibling fork rejects empty or oversized batches, malformed
+> ids, missing targets, non-map targets, and non-haulable targets. Successful
+> responses include `requested`, `matched`, `changed`, `already_allowed`,
+> `missing`, `non_map_targets`, and `non_item_targets`.
 
 ### Lord (AI groups)
 | Method | Path | Purpose |
