@@ -192,9 +192,11 @@ the current trigger, an action the advice is driving, a capability the colony
 already has, an idle available path, or a blocked prerequisite. The dashboard
 renders the model as three compact route cards: Grow, Hunt, and Forage. Shared
 whole-colony facts such as the low-food trigger and final meal target stay in the
-structured model but are not repeated as visible route nodes. Green marks a
-current-good route, blue marks emitted action, gray marks future/idle capacity,
-and red marks blocked prerequisites.
+structured model but are not repeated as visible route nodes. The cards use
+route-specific accent colors, icon-led rows, and terse labels such as Zone,
+Crops, Harvest, Cook, and Store. Green marks covered/current-good steps, blue
+marks emitted action, gray marks future/idle capacity, and red marks blocked
+prerequisites.
 
 Crop selection should be grounded in deterministic yield math exposed through
 briefing context and rule decisions. The LLM may use guides to explain or adjust

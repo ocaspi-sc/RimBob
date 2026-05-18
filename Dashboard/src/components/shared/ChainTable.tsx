@@ -1,20 +1,49 @@
 import type { AdviceChainModel, AdviceChainPath, AdviceChainStep, AdviceChainStepStatus } from '../../types/advice';
+import { iconForField } from '../../dashboard/semanticIcons';
+import { SemanticIconCue } from './SemanticIcon';
 
 export function ChainTable({ model }: { model: AdviceChainModel }) {
   if (!model.paths.length) return null;
 
   return (
     <div className="chain-route-grid" aria-label="Food route status">
-      {model.paths.map(path => (
-        <article className={`chain-route-card chain-cell--${classFor(routeStatus(path))}`} key={path.name}>
-          <span>{formatStatus(routeStatus(path))}</span>
-          <h3>{routeName(path.name)}</h3>
-          <p>{routeSummary(path)}</p>
-        </article>
-      ))}
+      {model.paths.map(path => {
+        const route = routeKind(path);
+        const status = routeStatus(path);
+        return (
+          <article className={`chain-route-card chain-route--${route}`} key={path.name}>
+            <header>
+              <SemanticIconCue className="chain-route-icon" icon={routeIcon(route)} size="sm" />
+              <div>
+                <h3>{routeName(path.name)}</h3>
+                <span className={`chain-route-status chain-fact--${classFor(status)}`}>{formatStatus(status)}</span>
+              </div>
+            </header>
+            <ul className="chain-route-facts">
+              {routeFacts(path).map(fact => (
+                <li className={`chain-route-fact chain-fact--${classFor(fact.status)}`} key={fact.key}>
+                  <SemanticIconCue className="chain-fact-icon" icon={iconForField(fact.iconKey)} size="xs" />
+                  <span className="chain-fact-label">{fact.label}</span>
+                  <span className="chain-fact-value">{fact.value}</span>
+                </li>
+              ))}
+            </ul>
+          </article>
+        );
+      })}
     </div>
   );
 }
+
+type RouteFact = {
+  iconKey: string;
+  key: string;
+  label: string;
+  status: AdviceChainStepStatus;
+  value: string;
+};
+
+type RouteKind = 'forage' | 'grow' | 'hunt';
 
 function classFor(status: AdviceChainStepStatus): AdviceChainStepStatus {
   return status;
@@ -32,6 +61,19 @@ function routeName(name: string): string {
   return name.replace(/\s+path$/i, '');
 }
 
+function routeKind(path: AdviceChainPath): RouteKind {
+  const name = path.name.toLowerCase();
+  if (name.includes('hunt')) return 'hunt';
+  if (name.includes('forage')) return 'forage';
+  return 'grow';
+}
+
+function routeIcon(route: RouteKind) {
+  if (route === 'hunt') return iconForField('mark_hunt');
+  if (route === 'forage') return iconForField('wild_harvest_clusters');
+  return iconForField('crop_zone_summaries');
+}
+
 function routeStatus(path: AdviceChainPath): AdviceChainStepStatus {
   const steps = routeSteps(path);
 
@@ -40,18 +82,6 @@ function routeStatus(path: AdviceChainPath): AdviceChainStepStatus {
   if (steps.some(step => step.status === 'available')) return 'available';
   if (steps.every(step => step.status === 'have')) return 'have';
   return 'available';
-}
-
-function routeSummary(path: AdviceChainPath): string {
-  const steps = routeSteps(path);
-  const actionSteps = steps.filter(step => step.status === 'action');
-  const blockedSteps = steps.filter(step => step.status === 'blocked');
-  const futureSteps = steps.filter(step => step.status === 'available' || step.status === 'trigger');
-
-  if (actionSteps.length > 0) return `Action: ${labelList(actionSteps)}`;
-  if (blockedSteps.length > 0) return `Blocked: ${labelList(blockedSteps)}`;
-  if (futureSteps.length > 0) return `Future: ${labelList(futureSteps)}`;
-  return 'Current state good';
 }
 
 function routeSteps(path: AdviceChainPath): AdviceChainStep[] {
@@ -63,9 +93,99 @@ function isSharedStep(step: AdviceChainStep): boolean {
   return key.endsWith('.trigger') || key.endsWith('.meals') || step.label === 'Food buffer' || step.label === 'Meals';
 }
 
-function labelList(steps: AdviceChainStep[]): string {
-  return steps
-    .map(step => step.label)
-    .filter((label, index, labels) => labels.indexOf(label) === index)
-    .join(', ');
+function routeFacts(path: AdviceChainPath): RouteFact[] {
+  const route = routeKind(path);
+  if (route === 'hunt') return huntFacts(path);
+  if (route === 'forage') return forageFacts(path);
+  return growFacts(path);
+}
+
+function growFacts(path: AdviceChainPath): RouteFact[] {
+  const zone = findStep(path, 'grow.zone');
+  const harvest = findStep(path, 'grow.harvest');
+  const cook = findStep(path, 'grow.cook');
+  const store = findStep(path, 'grow.store');
+
+  return compactFacts([
+    stepFact('zone', 'Zone', zone, 'crop_zone_summaries', stepDetail(zone)),
+    stepFact('crops', 'Crops', harvest, 'crop_breakdown', stepDetail(harvest)),
+    stepFact('harvest', 'Harvest', harvest, 'mark_harvest', statusPhrase(harvest)),
+    stepFact('cook', 'Cook', cook, 'production_bill', detailOrStatus(cook)),
+    stepFact('store', 'Store', store, 'storage', statusPhrase(store)),
+  ]);
+}
+
+function huntFacts(path: AdviceChainPath): RouteFact[] {
+  const hunt = findStep(path, 'hunt.hunt');
+  const butcher = findStep(path, 'hunt.butcher');
+  const cook = findStep(path, 'hunt.cook');
+  const store = findStep(path, 'hunt.store');
+
+  return compactFacts([
+    stepFact('target', 'Target', hunt, 'wild_animal_count', stepDetail(hunt)),
+    stepFact('hunt', 'Hunt', hunt, 'mark_hunt', statusPhrase(hunt)),
+    stepFact('butcher', 'Butcher', butcher, 'kitchen_and_butchery', stepDetail(butcher)),
+    stepFact('cook', 'Cook', cook, 'production_bill', detailOrStatus(cook)),
+    stepFact('store', 'Store', store, 'storage', statusPhrase(store)),
+  ]);
+}
+
+function forageFacts(path: AdviceChainPath): RouteFact[] {
+  const forage = findStep(path, 'forage.harvest');
+  const cook = findStep(path, 'forage.cook');
+  const store = findStep(path, 'forage.store');
+
+  return compactFacts([
+    stepFact('plants', 'Plants', forage, 'wild_harvest_clusters', stepDetail(forage)),
+    stepFact('harvest', 'Harvest', forage, 'mark_harvest', statusPhrase(forage)),
+    stepFact('cook', 'Cook', cook, 'production_bill', detailOrStatus(cook)),
+    stepFact('store', 'Store', store, 'storage', statusPhrase(store)),
+  ]);
+}
+
+function stepFact(
+  key: string,
+  label: string,
+  step: AdviceChainStep | undefined,
+  iconKey: string,
+  value: string,
+): RouteFact | null {
+  if (!step) return null;
+  return { iconKey, key, label, status: step.status, value };
+}
+
+function compactFacts(facts: Array<RouteFact | null>): RouteFact[] {
+  return facts.filter((fact): fact is RouteFact => fact !== null).slice(0, 5);
+}
+
+function findStep(path: AdviceChainPath, key: string): AdviceChainStep | undefined {
+  return path.steps.find(step => step.key === key);
+}
+
+function detailOrStatus(step: AdviceChainStep | undefined): string {
+  if (!step) return '-';
+  if (step.status === 'action') return 'action requested';
+  if (step.status === 'blocked') return cleanBlockedDetail(step.detail);
+  return step.detail;
+}
+
+function stepDetail(step: AdviceChainStep | undefined): string {
+  if (!step) return '-';
+  return step.status === 'blocked' ? cleanBlockedDetail(step.detail) : step.detail;
+}
+
+function statusPhrase(step: AdviceChainStep | undefined): string {
+  if (!step) return '-';
+  if (step.status === 'action') return 'action requested';
+  if (step.status === 'blocked') return cleanBlockedDetail(step.detail);
+  if (step.status === 'available') return 'available';
+  if (step.status === 'have') return 'covered';
+  return 'pressure';
+}
+
+function cleanBlockedDetail(detail: string): string {
+  return detail
+    .replace(/^no food /i, 'no ')
+    .replace(/^no /i, 'no ')
+    .replace(/ visible$/i, '');
 }

@@ -1840,6 +1840,7 @@ code {
   border: 1px solid rgba(127, 138, 159, 0.32);
   border-radius: var(--radius);
   background: rgba(20, 33, 39, 0.74);
+  overflow-x: auto;
 }
 
 .advice-chain-heading {
@@ -1850,39 +1851,149 @@ code {
 }
 
 .chain-route-grid {
+  min-width: 720px;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 12px;
 }
 
 .chain-route-card {
-  min-height: 86px;
+  --route-accent: rgba(127, 138, 159, 0.7);
+  --route-border: rgba(127, 138, 159, 0.28);
+  --route-tint: rgba(127, 138, 159, 0.12);
+  min-height: 172px;
   display: grid;
-  align-content: space-between;
-  gap: 8px;
-  padding: 10px 11px;
-  border: 1px solid rgba(127, 138, 159, 0.2);
+  align-content: start;
+  gap: 11px;
+  padding: 12px;
+  border: 1px solid var(--route-border);
   border-radius: 6px;
+  background:
+    linear-gradient(180deg, var(--route-tint), rgba(8, 11, 13, 0.32)),
+    rgba(8, 11, 13, 0.44);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 12px 28px rgba(0, 0, 0, 0.16);
 }
 
-.chain-route-card span {
+.chain-route--grow {
+  --route-accent: rgba(91, 226, 151, 0.86);
+  --route-border: rgba(91, 226, 151, 0.42);
+  --route-tint: rgba(54, 138, 82, 0.22);
+}
+
+.chain-route--hunt {
+  --route-accent: rgba(245, 177, 95, 0.88);
+  --route-border: rgba(245, 177, 95, 0.44);
+  --route-tint: rgba(152, 88, 48, 0.22);
+}
+
+.chain-route--forage {
+  --route-accent: rgba(82, 196, 255, 0.86);
+  --route-border: rgba(82, 196, 255, 0.44);
+  --route-tint: rgba(42, 111, 147, 0.22);
+}
+
+.chain-route-card header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 9px;
+  align-items: center;
+}
+
+.chain-route-icon.game-icon {
+  width: 34px;
+  height: 34px;
+  border-color: var(--route-border);
+  background:
+    radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.18), transparent 48%),
+    rgba(255, 255, 255, 0.06);
+  box-shadow: 0 0 0 1px var(--route-border);
+}
+
+.chain-route-card header span {
+  width: max-content;
+  display: inline-flex;
+  align-items: center;
+  margin-top: 4px;
+  padding: 2px 6px;
+  border: 1px solid rgba(127, 138, 159, 0.2);
+  border-radius: 999px;
   color: rgba(231, 237, 240, 0.78);
   font-size: 0.66rem;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
 .chain-route-card h3 {
   margin: 0;
   color: var(--text);
-  font-size: 1rem;
+  font-size: 1.02rem;
   line-height: 1.1;
 }
 
-.chain-route-card p {
+.chain-route-facts {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chain-route-fact {
+  min-height: 30px;
+  display: grid;
+  grid-template-columns: 24px minmax(54px, max-content) minmax(0, 1fr);
+  gap: 7px;
+  align-items: center;
+  padding: 4px 7px 4px 4px;
+  border: 1px solid rgba(127, 138, 159, 0.16);
+  border-radius: 5px;
+  background: rgba(4, 7, 9, 0.28);
+}
+
+.chain-fact-icon.game-icon {
+  width: 22px;
+  height: 22px;
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.chain-fact-label {
+  color: rgba(231, 237, 240, 0.7);
+  font-size: 0.69rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.chain-fact-value {
+  min-width: 0;
   margin: 0;
   color: rgba(231, 237, 240, 0.86);
-  font-size: 0.77rem;
+  font-size: 0.76rem;
   line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.chain-fact--action {
+  background: rgba(40, 151, 214, 0.2);
+  border-color: rgba(82, 196, 255, 0.42);
+}
+
+.chain-fact--blocked {
+  background: rgba(255, 107, 107, 0.12);
+  border-color: rgba(255, 107, 107, 0.32);
+}
+
+.chain-fact--have {
+  background: rgba(64, 178, 113, 0.14);
+  border-color: rgba(91, 226, 151, 0.26);
+}
+
+.chain-fact--available {
+  background: rgba(127, 138, 159, 0.12);
+  border-color: rgba(148, 160, 181, 0.24);
 }
 
 .chain-cell--trigger,

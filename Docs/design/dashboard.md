@@ -490,10 +490,11 @@ kitchen/storage/freezer signals, and confidence gaps before the action cards.
 Food's planning/production panel renders from backend `chain` data as three
 compact route cards: Grow, Hunt, and Forage. Shared whole-colony steps such as
 food-buffer pressure and the final meal target are not repeated visually. The
-cards use one status model: action, have, available, and blocked. Color semantics
-are stable across the panel: green means the current route is already good, blue
-means the current advice emitted an action for that route, gray means
-idle/future capacity, and red means a blocked prerequisite.
+cards use different route accent colors and icon-led short rows for route facts,
+for example Zone, Crops, Harvest, Cook, and Store. Row status semantics are
+stable across the panel: green means covered/current-good, blue means the
+current advice emitted an action, gray means idle/future capacity, and red means
+a blocked prerequisite.
 Cards show rationale, concrete advice actions, citations, issue id or supersession
 when available, and coverage gaps. No feedback buttons are shown in v2.
 

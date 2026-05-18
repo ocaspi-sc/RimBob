@@ -9,9 +9,10 @@ grow path, the hunt path, the forage path, etc., and which of those this cycle's
 advice is actually driving.
 
 This adds, per food snapshot (above the cards), a **planning/production route
-view** as three small side-by-side cards: Grow, Hunt, and Forage. Each card
-summarizes the route state and is colored by role: the route this advice acts
-on, what the colony already has, idle-but-available routes, and blocked routes.
+view** as three small side-by-side cards: Grow, Hunt, and Forage. Each card has
+its own route color and icon-led short rows for route facts: what the colony
+already has, what this advice acts on, idle-but-available steps, and blocked
+steps.
 
 **Decisions already made with the user:**
 - Generation is **deterministic code from `FoodBriefing` + emitted advice**, not
@@ -122,7 +123,9 @@ serializer options → `chain` / `chains`).
 - **New `Dashboard/src/components/shared/ChainTable.tsx`**: one compact card per
   `AdviceChainPath`, rendered side by side as Grow, Hunt, and Forage. Shared
   start/end steps remain in the model but are excluded from the compact visual
-  summary so `Food buffer` and `Meals` are not repeated three times.
+  summary so `Food buffer` and `Meals` are not repeated three times. Each card
+  renders icon-led short rows such as Zone, Crops, Harvest, Cook, Store, Target,
+  Butcher, and Plants.
 - **[MinisterAdviceView.tsx](Dashboard/src/components/minister/MinisterAdviceView.tsx)**:
   add prop `chain: AdviceChainModel | null`; render a new `<section
   className="advice-chain">` (eyebrow "Food Routes") between the
@@ -172,9 +175,9 @@ serializer options → `chain` / `chains`).
 - `cd Dashboard && npm run build` — `tsc` + vite build clean.
 - End-to-end: `.\run-rimbob.ps1`, open the dashboard Food → Advice view with
   live RimWorld/RIMAPI state. Confirm above the advice list: three small route
-  cards labelled Grow, Hunt, and Forage, with the active advice route blue,
-  current-good routes green, idle/future routes gray, and blocked routes red.
-  Confirm the panel disappears when state is unhydrated and re-appears on
-  refresh.
+  cards labelled Grow, Hunt, and Forage, with distinct route colors, icon-led
+  short rows, blue action-requested rows, green covered rows, gray future rows,
+  and red blocked rows. Confirm the panel disappears when state is unhydrated and
+  re-appears on refresh.
 - Inspect a replay corpus record to confirm the structured chain model is
   persisted alongside the existing state summary.
