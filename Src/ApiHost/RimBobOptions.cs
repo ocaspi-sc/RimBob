@@ -11,6 +11,7 @@ public sealed class RimBobOptions
     public string ListenUrl { get; init; } = "http://localhost:5000";
     public string RimApiBaseUrl { get; init; } = "http://localhost:8765/";
     public bool PingLlmOnStartup { get; init; } = true;
+    public string? DataRoot { get; init; }
     public string? LogsRoot { get; init; }
     public string? IconCacheRoot { get; init; }
 
@@ -41,6 +42,6 @@ public sealed class RagOptions
     /// <summary>Path (relative to ContentRoot) where guide markdown lives.</summary>
     public string GuidesRoot { get; init; } = "Docs/guides";
 
-    /// <summary>Path (relative to ContentRoot) for the on-disk embedding cache.</summary>
-    public string CacheRoot { get; init; } = "var/embeddings";
+    /// <summary>Path for the on-disk embedding cache. Relative paths resolve under RimBob's stable data root.</summary>
+    public string CacheRoot { get; init; } = "embeddings";
 }

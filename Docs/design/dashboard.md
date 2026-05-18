@@ -166,6 +166,9 @@ SYSTEM owns:
 
 - Runtime and Mayor/cabinet run state, including the full Host executable path
   so operators can see which checkout is actually serving the dashboard.
+- Persistent runtime storage metadata, including the stable data root and the
+  resolved Agenda store, latest ColonyState snapshot, and RAG embedding cache
+  paths.
 - RIMAPI reachability.
 - SSE diagnostics.
 - LLM health from actual request/parse status, not only key configuration.
@@ -306,6 +309,14 @@ machine-local storage under LocalAppData (`RimBob/logs`), not the active
 repository or worktree; `RimBob:LogsRoot` may override it. Serilog logs,
 structured decision logs, replay corpus records, Mayor prompt dumps, and manual
 fallback files should stay under that same root.
+
+The same payload owns persistent runtime data paths. It should expose the
+stable data root plus the resolved Agenda store, latest ColonyState snapshot,
+and RAG embedding cache paths so SYSTEM can prove those artifacts are not
+forking per branch or worktree. The default data root is stable machine-local
+storage under LocalAppData (`RimBob`), not the active repository or worktree;
+`RimBob:DataRoot` may override it. Relative child paths, including
+`RimBob:Rag:CacheRoot`, resolve under that data root.
 
 Icon cache metadata follows the same rule. SYSTEM may show counts, byte totals,
 kind totals, warm job state (`idle`, `running`, `completed`, or `failed`), live

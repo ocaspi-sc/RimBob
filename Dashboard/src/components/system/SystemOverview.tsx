@@ -41,6 +41,7 @@ export function SystemOverview({
   const liveTestCount = tests?.categories.find(category => category.category.toLowerCase() === 'live')?.count ?? 0;
   const rimapi = health?.rimapi_coverage;
   const colonySnapshot = health?.colony_snapshot;
+  const storage = health?.storage;
   const applyAttempts = health?.assisted_apply?.recent_attempts ?? [];
   const iconGroups = icons ? groupIconCacheFiles(icons.files) : [];
   const iconFailureState = icons ? summarizeIconWarmFailures(icons) : null;
@@ -141,6 +142,8 @@ export function SystemOverview({
               <InfoLine label="Host path" value={health?.runtime.host_process_path ?? 'not exposed'} />
               <InfoLine label="Content root" value={health?.runtime.content_root ?? 'not exposed'} />
               <InfoLine label="Runtime root" value={health?.runtime.runtime_root ?? 'not exposed'} />
+              <InfoLine label="Data root" value={storage?.data_root ?? 'not exposed'} />
+              <InfoLine label="Agenda store" value={storage?.agenda_store_path ?? 'not exposed'} />
             </div>
           </div>
 
@@ -171,6 +174,7 @@ export function SystemOverview({
               <InfoLine label="Chunks" value={health?.rag.chunk_count ?? 'n/a'} />
               <InfoLine label="Model" value={health?.rag.embedding_model ?? 'not exposed'} />
               <InfoLine label="Guides" value={health?.rag.guides_root ?? 'not exposed'} />
+              <InfoLine label="Cache root" value={health?.rag.cache_root ?? storage?.embedding_cache_root ?? 'not exposed'} />
             </div>
           </div>
 
@@ -217,6 +221,7 @@ export function SystemOverview({
             </div>
             <div className="stacked-lines">
               <InfoLine label="Path" value={colonySnapshot.path ?? 'not configured'} />
+              <InfoLine label="Configured path" value={storage?.colony_state_snapshot_path ?? 'not exposed'} />
               <InfoLine label="Snapshot id" value={colonySnapshot.snapshot_id ?? 'none'} />
               <InfoLine label="Capture source" value={colonySnapshot.source ?? 'none'} />
               <InfoLine label="Schema" value={colonySnapshot.schema_version ?? 'none'} />

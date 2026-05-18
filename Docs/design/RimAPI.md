@@ -199,9 +199,11 @@ outside the localhost read-only dashboard posture.
 
 The static cache warmer uses `/def/all`, `/item/image`, `/terrain/image`,
 `/factions`, and `/faction/icon` to cache enumerable static art locally under
-ignored `var/icons/`. Pawn portraits, colonist body images, stuff-colored
-variants, growth-stage variants, styled variants, rotations, projectiles, motes,
-and other per-instance hard cases are skipped or fetched lazily.
+the stable machine-local RimBob icon cache root. Pawn portraits, colonist body
+images, stuff-colored variants, growth-stage variants, styled variants,
+rotations, projectiles, motes, and other per-instance hard cases are skipped or
+fetched lazily. `RimBob:IconCacheRoot` may override that cache root; relative
+overrides resolve under the same stable machine-local RimBob root.
 
 ### Overlay / UI
 | Method | Path | Purpose |

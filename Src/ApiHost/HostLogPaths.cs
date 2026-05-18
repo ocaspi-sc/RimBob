@@ -4,14 +4,7 @@ internal static class HostLogPaths
 {
     public static string ResolveLogsDirectory(string contentRootPath, string? configuredPath)
     {
-        if (!string.IsNullOrWhiteSpace(configuredPath))
-        {
-            return Path.GetFullPath(Path.IsPathRooted(configuredPath)
-                ? configuredPath
-                : Path.Combine(ResolveStableLocalRoot(contentRootPath), configuredPath));
-        }
-
-        return Path.Combine(ResolveStableLocalRoot(contentRootPath), "logs");
+        return ResolveStablePath(contentRootPath, configuredPath, "logs");
     }
 
     public static string ResolveVarDirectory(string contentRootPath)
@@ -21,14 +14,29 @@ internal static class HostLogPaths
 
     public static string ResolveIconCacheDirectory(string contentRootPath, string? configuredPath)
     {
+        return ResolveStablePath(contentRootPath, configuredPath, "icons");
+    }
+
+    public static string ResolveDataRootDirectory(string contentRootPath, string? configuredPath)
+    {
+        return ResolveStablePath(contentRootPath, configuredPath, null);
+    }
+
+    public static string ResolveDataDirectory(
+        string contentRootPath,
+        string? configuredDataRoot,
+        string? configuredPath,
+        string defaultRelativePath)
+    {
+        string dataRoot = ResolveDataRootDirectory(contentRootPath, configuredDataRoot);
         if (!string.IsNullOrWhiteSpace(configuredPath))
         {
             return Path.GetFullPath(Path.IsPathRooted(configuredPath)
                 ? configuredPath
-                : Path.Combine(ResolveStableLocalRoot(contentRootPath), configuredPath));
+                : Path.Combine(dataRoot, configuredPath));
         }
 
-        return Path.Combine(ResolveStableLocalRoot(contentRootPath), "icons");
+        return Path.GetFullPath(Path.Combine(dataRoot, defaultRelativePath));
     }
 
     public static string ResolveRuntimeRoot(string contentRootPath)
@@ -48,14 +56,38 @@ internal static class HostLogPaths
         return contentRootPath;
     }
 
-    private static string ResolveStableLocalRoot(string contentRootPath)
+    private static string ResolveStableLocalRoot()
     {
         string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         if (!string.IsNullOrWhiteSpace(localAppData))
         {
-            return Path.Combine(localAppData, "RimBob");
+            return Path.GetFullPath(Path.Combine(localAppData, "RimBob"));
         }
 
-        return ResolveVarDirectory(contentRootPath);
+        string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (!string.IsNullOrWhiteSpace(userProfile))
+        {
+            return Path.GetFullPath(Path.Combine(userProfile, ".local", "share", "RimBob"));
+        }
+
+        return Path.GetFullPath(Path.Combine(Path.GetTempPath(), "RimBob"));
+    }
+
+    private static string ResolveStablePath(
+        string contentRootPath,
+        string? configuredPath,
+        string? defaultRelativePath)
+    {
+        string stableRoot = ResolveStableLocalRoot();
+        if (!string.IsNullOrWhiteSpace(configuredPath))
+        {
+            return Path.GetFullPath(Path.IsPathRooted(configuredPath)
+                ? configuredPath
+                : Path.Combine(stableRoot, configuredPath));
+        }
+
+        return string.IsNullOrWhiteSpace(defaultRelativePath)
+            ? stableRoot
+            : Path.GetFullPath(Path.Combine(stableRoot, defaultRelativePath));
     }
 }

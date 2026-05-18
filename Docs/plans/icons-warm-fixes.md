@@ -21,7 +21,8 @@ has no incremental recovery path.
   - `WarmStaticAsync(ct)` pulls `/api/v1/def/all` + `/api/v1/factions`, builds
     item/terrain/faction candidates, fans out through
     `WarmCandidateAsync` under `SemaphoreSlim gate` with `WarmConcurrency = 2`,
-    then writes `var/icons/icon-cache-manifest.json` via `WriteManifestAsync`.
+    then writes the configured stable icon cache manifest via
+    `WriteManifestAsync`.
   - `WarmCandidateAsync` now retries each candidate `warmAttempts` (default 3)
     times with linear backoff `warmRetryDelay` (default 400ms, injectable via
     ctor; tests pass `TimeSpan.Zero`). Deterministic `ArgumentException`

@@ -104,9 +104,16 @@ public static class SystemEndpoints
             MayorBriefing mayorBriefing = briefings.GetMayorBriefing();
             FoodBriefing foodBriefing = briefings.GetFoodBriefing();
             string logsDir = HostLogPaths.ResolveLogsDirectory(env.ContentRootPath, opts.LogsRoot);
+            string dataRoot = HostLogPaths.ResolveDataRootDirectory(env.ContentRootPath, opts.DataRoot);
+            string agendaStorePath = Path.Combine(dataRoot, "agenda", "agenda-store.json");
+            string colonyStateSnapshotPath = Path.Combine(dataRoot, "state", "latest-colony-state.json");
             string runtimeRoot = HostLogPaths.ResolveRuntimeRoot(env.ContentRootPath);
             string guidesRoot = ResolvePath(env.ContentRootPath, opts.Rag.GuidesRoot);
-            string cacheRoot = ResolvePath(env.ContentRootPath, opts.Rag.CacheRoot);
+            string cacheRoot = HostLogPaths.ResolveDataDirectory(
+                env.ContentRootPath,
+                opts.DataRoot,
+                opts.Rag.CacheRoot,
+                "embeddings");
             IReadOnlyList<AgentFlag> activeFlags = flags.Active();
             RawLlmOutputSnapshot? latestLlm = rawOutputs.LatestAny();
             ColonySnapshotStatus colonySnapshot = colonySnapshotStore.GetStatus();
@@ -133,6 +140,13 @@ public static class SystemEndpoints
                     mayor_completed_at = mayor.CompletedAt,
                     mayor_last_llm_success_at = mayor.LastLlmSuccessAt,
                     mayor_last_error = mayor.LastError,
+                },
+                storage = new
+                {
+                    data_root = dataRoot,
+                    agenda_store_path = agendaStorePath,
+                    colony_state_snapshot_path = colonyStateSnapshotPath,
+                    embedding_cache_root = cacheRoot,
                 },
                 colony_snapshot = ColonySnapshotMetadata(colonySnapshot),
                 llm = new

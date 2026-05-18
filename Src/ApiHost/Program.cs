@@ -22,12 +22,12 @@ RimBobOptions options = builder.Configuration
     .Get<RimBobOptions>() ?? new RimBobOptions();
 
 string logsDir = HostLogPaths.ResolveLogsDirectory(builder.Environment.ContentRootPath, options.LogsRoot);
-string varDir = HostLogPaths.ResolveVarDirectory(builder.Environment.ContentRootPath);
+string dataRoot = HostLogPaths.ResolveDataRootDirectory(builder.Environment.ContentRootPath, options.DataRoot);
 Directory.CreateDirectory(logsDir);
-Directory.CreateDirectory(varDir);
-string agendaStorePath = Path.Combine(varDir, "agenda", "agenda-store.json");
+Directory.CreateDirectory(dataRoot);
+string agendaStorePath = Path.Combine(dataRoot, "agenda", "agenda-store.json");
 AgendaStore agendaStore = await AgendaStore.LoadAsync(agendaStorePath);
-string colonyStateSnapshotPath = Path.Combine(varDir, "state", "latest-colony-state.json");
+string colonyStateSnapshotPath = Path.Combine(dataRoot, "state", "latest-colony-state.json");
 ColonyStateSnapshotStore colonySnapshotStore = await ColonyStateSnapshotStore.LoadAsync(colonyStateSnapshotPath);
 
 // ── Logging: Serilog reads from appsettings.json ───────────────────────────
@@ -123,9 +123,11 @@ builder.Services.AddSingleton<KnowledgeBase>();
 builder.Services.AddSingleton<EmbeddingCache>(sp =>
 {
     RimBobOptions opts = sp.GetRequiredService<IOptions<RimBobOptions>>().Value;
-    string cacheDir = Path.IsPathRooted(opts.Rag.CacheRoot)
-        ? opts.Rag.CacheRoot
-        : Path.Combine(builder.Environment.ContentRootPath, opts.Rag.CacheRoot);
+    string cacheDir = HostLogPaths.ResolveDataDirectory(
+        builder.Environment.ContentRootPath,
+        opts.DataRoot,
+        opts.Rag.CacheRoot,
+        "embeddings");
     return new EmbeddingCache(cacheDir);
 });
 builder.Services.AddSingleton<MayorRagRetriever>(sp =>

@@ -82,9 +82,11 @@ new Agenda, not a patch. The server owns versioning, history storage, and
 broadcast.
 
 The current Agenda and bounded history are durable Host runtime state. Host
-loads them from ignored `var/agenda/agenda-store.json` on startup before the
-dashboard endpoints or SSE stream are exposed. If a new Mayor run fails, the
-previous persisted Agenda remains the current Agenda.
+loads them from the resolved stable machine-local data root
+(`agenda/agenda-store.json` below `RimBob:DataRoot`, or the default LocalAppData
+RimBob root) on startup before the dashboard endpoints or SSE stream are
+exposed. If a new Mayor run fails, the previous persisted Agenda remains the
+current Agenda.
 
 If Host starts with no persisted Agenda, it initializes a conservative
 server-side bootstrap Agenda from the current briefing before the dashboard is

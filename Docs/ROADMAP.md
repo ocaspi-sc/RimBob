@@ -87,7 +87,7 @@
 
 **Scope:**
 - `KnowledgeBase` in-process cosine store.
-- Guide ingestion from `Docs/guides/**/*.md` with SHA-256 embedding cache under `var/embeddings`.
+- Guide ingestion from `Docs/guides/**/*.md` with SHA-256 embedding cache under the stable machine-local RimBob data root.
 - Gemini embedding via `gemini-embedding-001`.
 - RAG retrieval for long-tail lookups, surfaced in agenda `guide_citations[]` and per-item `cite_ids[]`.
 - Side-by-side fixture: same briefing, with/without RAG, agenda diff captured.

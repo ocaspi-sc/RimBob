@@ -50,9 +50,11 @@ current scale.
 
 ## Snapshot Persistence
 
-Host persists the latest full curated `ColonyState` snapshot under ignored
-runtime storage after a complete live RIMAPI refresh succeeds. This is not raw
-RIMAPI endpoint mirroring; it is the aggregate root ministers already read.
+Host persists the latest full curated `ColonyState` snapshot under the stable
+machine-local data root after a complete live RIMAPI refresh succeeds. This is
+not raw RIMAPI endpoint mirroring; it is the aggregate root ministers already
+read. The default location is `state/latest-colony-state.json` below
+LocalAppData's RimBob data root, overrideable through `RimBob:DataRoot`.
 
 On startup, Host may restore that latest snapshot before agenda bootstrap so
 the dashboard and bootstrap briefings can show last-known colony state when
@@ -66,6 +68,10 @@ restore because versions are process-local cache invalidation signals, not
 durable history. Timestamped state history and per-aggregate staleness remain
 future work. Assisted Apply still forces a fresh live refresh and must not
 execute from restored snapshot state.
+
+SYSTEM must expose the resolved snapshot path and current snapshot metadata so
+operators can distinguish real live state from restored stale state and verify
+the snapshot is not tied to the active checkout or worktree.
 
 ---
 

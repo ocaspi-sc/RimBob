@@ -115,7 +115,8 @@ harmful to trust, especially for threat or emergency advice.
 
 When new advice replaces an older unresolved item, use supersession or a stable
 same-issue id so the active dashboard view updates instead of stacking duplicate
-cards. History belongs in logs/replay, not in active cards.
+cards. History belongs in the Host-resolved logs root's replay corpus, not in
+active cards.
 
 ### Active Advice Snapshots
 

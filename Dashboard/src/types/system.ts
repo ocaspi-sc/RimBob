@@ -160,6 +160,12 @@ export interface SystemHealth {
     mayor_last_llm_success_at: string | null;
     mayor_last_error: string | null;
   };
+  storage: {
+    data_root: string;
+    agenda_store_path: string;
+    colony_state_snapshot_path: string;
+    embedding_cache_root: string;
+  };
   colony_snapshot: ColonySnapshotMetadata;
   llm: {
     provider: string;
