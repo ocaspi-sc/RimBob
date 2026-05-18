@@ -43,6 +43,73 @@ public sealed class IngestionDispatcherTests
         s.Animals.Version.Should().Be(1);
         s.Resources.Version.Should().Be(1);
         s.Research.Version.Should().Be(1);
+        s.LastRefreshSource.Should().Be(ColonyStateOrigin.Live);
+        s.LastLiveRefreshAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task RefreshAllAsync_Success_PersistsColonySnapshot()
+    {
+        string path = NewTempSnapshotPath();
+        try
+        {
+            PathRouter router = StandardRouter();
+            using HttpClient http = MakeClient(router);
+            ColonyState state = new();
+            ColonyStateSnapshotStore store = new(path, new TestLogger<ColonyStateSnapshotStore>());
+            IngestionDispatcher dispatcher = new(
+                new RimApiClient(http),
+                state,
+                new TestLogger<IngestionDispatcher>(),
+                store);
+
+            await dispatcher.RefreshAllAsync();
+
+            File.Exists(path).Should().BeTrue();
+            ColonySnapshotStatus status = store.GetStatus();
+            status.HasSnapshot.Should().BeTrue();
+            status.LastSaveError.Should().BeNull();
+
+            ColonyStateSnapshotStore loaded = await ColonyStateSnapshotStore.LoadAsync(
+                path,
+                new TestLogger<ColonyStateSnapshotStore>());
+            loaded.Latest.Should().NotBeNull();
+            loaded.Latest!.GameTick.Should().Be(12_345);
+            loaded.Latest.MapId.Should().Be(0);
+        }
+        finally
+        {
+            DeleteTempFile(path);
+        }
+    }
+
+    [Fact]
+    public async Task RefreshAllAsync_Failure_DoesNotPersistColonySnapshot()
+    {
+        string path = NewTempSnapshotPath();
+        try
+        {
+            PathRouter router = new PathRouter()
+                .Add("api/v1/maps", Envelope(new List<MapInfoDto>()));
+            using HttpClient http = MakeClient(router);
+            ColonyStateSnapshotStore store = new(path, new TestLogger<ColonyStateSnapshotStore>());
+            IngestionDispatcher dispatcher = new(
+                new RimApiClient(http),
+                new ColonyState(),
+                new TestLogger<IngestionDispatcher>(),
+                store);
+
+            Func<Task> act = () => dispatcher.RefreshAllAsync();
+
+            await act.Should().ThrowAsync<InvalidOperationException>()
+                .WithMessage("*no maps*");
+            File.Exists(path).Should().BeFalse();
+            store.GetStatus().HasSnapshot.Should().BeFalse();
+        }
+        finally
+        {
+            DeleteTempFile(path);
+        }
     }
 
     [Fact]
@@ -643,6 +710,16 @@ public sealed class IngestionDispatcherTests
                 """))
             .Add("api/v1/resources/summary",       Envelope(resources))
             .Add("api/v1/research/progress",       Envelope(research));
+    }
+
+    private static string NewTempSnapshotPath() =>
+        Path.Combine(Path.GetTempPath(), "rimbob-ingestion-snapshot-tests", Guid.NewGuid().ToString("N"), "latest-colony-state.json");
+
+    private static void DeleteTempFile(string path)
+    {
+        string? directory = Path.GetDirectoryName(path);
+        if (directory is not null && Directory.Exists(directory))
+            Directory.Delete(directory, recursive: true);
     }
 
     private static HttpClient MakeClient(PathRouter router) =>

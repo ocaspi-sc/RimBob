@@ -14,7 +14,8 @@ namespace RimBob.State;
 public sealed class IngestionDispatcher(
     RimApiClient rimApi,
     ColonyState state,
-    ILogger<IngestionDispatcher> log)
+    ILogger<IngestionDispatcher> log,
+    ColonyStateSnapshotStore? snapshotStore = null)
 {
     public async Task RefreshAllAsync(CancellationToken ct = default)
     {
@@ -78,6 +79,21 @@ public sealed class IngestionDispatcher(
 
         state.Resources.Update(ResourceAggregateMapper.FromResources(resourcesTask.Result));
         state.Research.Update(ResourceAggregateMapper.FromResearch(researchTask.Result));
+
+        state.LastRefreshSource = ColonyStateOrigin.Live;
+        state.LastLiveRefreshAt = DateTimeOffset.UtcNow;
+
+        if (snapshotStore is not null)
+        {
+            try
+            {
+                await snapshotStore.SaveAsync(state, ct);
+            }
+            catch (Exception ex) when (!ct.IsCancellationRequested)
+            {
+                log.LogWarning(ex, "Could not persist colony state snapshot after RIMAPI refresh.");
+            }
+        }
     }
 
     private async Task<WorkTableRegistry> ReadWorkTableBillsAsync(

@@ -1,4 +1,5 @@
 import type { ColonySnapshot, PawnLine } from '../../types/colony';
+import type { ColonySnapshotMetadata } from '../../types/system';
 import { itemIconUrl, pawnPortraitUrl } from '../../api/icons';
 import { iconForField, iconForSection } from '../../dashboard/semanticIcons';
 import { EmptyState } from '../shared/EmptyState';
@@ -10,10 +11,12 @@ export function ColonySidebar({
   error,
   loadedAt,
   snapshot,
+  staleSnapshot,
 }: {
   error: string | null;
   loadedAt: string | null;
   snapshot: ColonySnapshot | null;
+  staleSnapshot: ColonySnapshotMetadata | null;
 }) {
   if (error && !snapshot) {
     return (
@@ -89,6 +92,11 @@ export function ColonySidebar({
       </section>
 
       <footer className={`sidebar-footer ${error ? 'warn' : ''}`}>
+        {staleSnapshot && (
+          <strong className="snapshot-stale-chip" role="status">
+            SNAPSHOT - stale{staleSnapshot.captured_at ? ` (captured ${formatSnapshotCaptured(staleSnapshot.captured_at)})` : ''}
+          </strong>
+        )}
         <span>briefing v{snapshot.briefingVersion}{loadedAt ? ` | updated ${formatLoadedAt(loadedAt)}` : ''}</span>
         {error && (
           <strong role="status">Snapshot poll failed; showing last successful data.</strong>
@@ -195,4 +203,10 @@ function formatLoadedAt(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatSnapshotCaptured(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return date.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }

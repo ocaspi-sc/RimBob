@@ -683,7 +683,7 @@ public static class FoodBriefingDerivation
             HasWorkPriorities: false,
             HasTradeAvailability: false)
         {
-            HasLiveState = s.GetVersionsForFoodBriefing().Any(version => version > 0),
+            HasLiveState = s.LastRefreshSource == ColonyStateOrigin.Live,
             HasItemFoodClassification = food.HasItemFoodClassification,
             HasTerrainFertility = s.Terrain.Value.CellCountsByDef.Count > 0 &&
                                   s.Terrain.Value.DefsByName.Values.Any(def => def.SupportsGrowing)

@@ -517,6 +517,8 @@ public sealed class FoodBriefingDerivationTests
     private static ColonyState StateWithColonists(int count)
     {
         ColonyState s = new();
+        s.LastRefreshSource = ColonyStateOrigin.Live;
+        s.LastLiveRefreshAt = DateTimeOffset.UtcNow;
         s.Economy.Update(new EconomyLedger(300_000, 0f, "", "", false, "5th of Aprimay, 5500, 14h"));
         s.Colonists.Update(new ColonistRegistry(Enumerable.Range(0, count)
             .Select(i => new ColonistRecord(

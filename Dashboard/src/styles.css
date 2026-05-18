@@ -2352,8 +2352,18 @@ code {
   font-weight: 700;
 }
 
+.snapshot-stale-chip {
+  width: fit-content;
+  border: 1px solid rgba(245, 158, 11, 0.38);
+  border-radius: 6px;
+  background: rgba(245, 158, 11, 0.10);
+  padding: 4px 7px;
+  letter-spacing: 0;
+}
+
 .icon-cache-panel,
-.test-inventory-panel {
+.test-inventory-panel,
+.colony-snapshot-panel {
   display: grid;
   gap: 12px;
 }

@@ -84,6 +84,7 @@ public static class SystemEndpoints
             IOptions<RimBobOptions> options,
             IWebHostEnvironment env,
             ColonyState colony,
+            ColonyStateSnapshotStore colonySnapshotStore,
             AgendaStore agendaStore,
             AdviceBus adviceBus,
             BriefingCache briefings,
@@ -108,6 +109,7 @@ public static class SystemEndpoints
             string cacheRoot = ResolvePath(env.ContentRootPath, opts.Rag.CacheRoot);
             IReadOnlyList<AgentFlag> activeFlags = flags.Active();
             RawLlmOutputSnapshot? latestLlm = rawOutputs.LatestAny();
+            ColonySnapshotStatus colonySnapshot = colonySnapshotStore.GetStatus();
 
             return Results.Ok(new
             {
@@ -118,7 +120,9 @@ public static class SystemEndpoints
                     host_process_path = Environment.ProcessPath ?? "unknown",
                     content_root = env.ContentRootPath,
                     runtime_root = runtimeRoot,
-                    rimapi_reachable = colony.Economy.Version > 0,
+                    rimapi_reachable = colony.LastLiveRefreshAt is not null,
+                    colony_state_origin = colony.LastRefreshSource.ToString().ToLowerInvariant(),
+                    last_live_refresh_at = colony.LastLiveRefreshAt,
                     briefing_version = mayorBriefing.BriefingVersion,
                     food_briefing_version = foodBriefing.BriefingVersion,
                     agenda_version = agendaStore.Current?.Version,
@@ -130,6 +134,7 @@ public static class SystemEndpoints
                     mayor_last_llm_success_at = mayor.LastLlmSuccessAt,
                     mayor_last_error = mayor.LastError,
                 },
+                colony_snapshot = ColonySnapshotMetadata(colonySnapshot),
                 llm = new
                 {
                     provider = "Gemini",
@@ -179,6 +184,23 @@ public static class SystemEndpoints
         Path.IsPathRooted(configuredPath)
             ? configuredPath
             : Path.Combine(contentRoot, configuredPath);
+
+    private static object ColonySnapshotMetadata(ColonySnapshotStatus status) =>
+        new
+        {
+            path = status.Path,
+            has_snapshot = status.HasSnapshot,
+            snapshot_id = status.SnapshotId,
+            captured_at = status.CapturedAt,
+            age_seconds = status.Age is null ? (double?)null : Math.Round(status.Age.Value.TotalSeconds, 1),
+            game_tick = status.GameTick,
+            map_id = status.MapId,
+            source = status.Source,
+            schema_version = status.SchemaVersion,
+            last_save_at = status.LastSaveAt,
+            last_save_error = status.LastSaveError,
+            load_error = status.LoadError,
+        };
 
     private static object ReplayCorpusMetadata(string logsDir)
     {

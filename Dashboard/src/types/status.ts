@@ -1,6 +1,7 @@
 export interface RimBobStatus {
   server: string;
   rimapi_reachable: boolean;
+  colony_state_origin?: string;
   llm_configured: boolean;
   llm_status: string;
   llm_last_event_at: string | null;

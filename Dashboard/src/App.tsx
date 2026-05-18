@@ -34,6 +34,11 @@ export default function App() {
   const isInfo = activeScope.kind === 'info';
   const isAnalytics = activeScope.kind === 'analytics';
   const isDevBlog = activeScope.kind === 'dev_blog';
+  const staleSnapshot = systemHealth.data &&
+    !systemHealth.data.runtime.rimapi_reachable &&
+    systemHealth.data.colony_snapshot.has_snapshot
+    ? systemHealth.data.colony_snapshot
+    : null;
 
   return (
     <main className="dashboard-v2-shell">
@@ -108,6 +113,7 @@ export default function App() {
           snapshot={snapshot.data}
           error={snapshot.error}
           loadedAt={snapshot.loadedAt}
+          staleSnapshot={staleSnapshot}
         />
       </div>
     </main>

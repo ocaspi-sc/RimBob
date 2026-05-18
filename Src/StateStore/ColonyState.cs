@@ -3,6 +3,13 @@ using RimBob.Core.Versioning;
 
 namespace RimBob.State;
 
+public enum ColonyStateOrigin
+{
+    None,
+    Live,
+    Snapshot
+}
+
 /// <summary>
 /// Single root container for all colony aggregates. Ingestion writes here;
 /// briefings (via BriefingCache) read here. Each aggregate carries its own
@@ -28,6 +35,10 @@ public sealed class ColonyState
     public Versioned<AnimalRegistry>   Animals    { get; } = new(AggregateDefaults.Animals);
     public Versioned<ResourceSummary>  Resources  { get; } = new(AggregateDefaults.Resources);
     public Versioned<ResearchInfo>     Research   { get; } = new(AggregateDefaults.Research);
+
+    public ColonyStateOrigin LastRefreshSource { get; set; } = ColonyStateOrigin.None;
+
+    public DateTimeOffset? LastLiveRefreshAt { get; set; }
 
     /// <summary>
     /// Canonical name → version pairs for every aggregate the MayorBriefing reads.

@@ -33,7 +33,8 @@ public static class StatusEndpoints
             return Results.Ok(new
             {
                 server            = "ok",
-                rimapi_reachable  = colony.Economy.Version > 0,
+                rimapi_reachable  = colony.LastLiveRefreshAt is not null,
+                colony_state_origin = colony.LastRefreshSource.ToString().ToLowerInvariant(),
                 llm_configured    = llm.IsConfigured,
                 llm_key_count      = llm.ConfiguredKeyCount,
                 llm_status        = LlmStatus(llm.IsConfigured, latestLlm),

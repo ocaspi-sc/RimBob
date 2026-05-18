@@ -84,6 +84,21 @@ export interface RimApiCoverageMetadata {
   missing_priorities: RimApiCoverageRow[];
 }
 
+export interface ColonySnapshotMetadata {
+  path: string | null;
+  has_snapshot: boolean;
+  snapshot_id: string | null;
+  captured_at: string | null;
+  age_seconds: number | null;
+  game_tick: number | null;
+  map_id: number | null;
+  source: string | null;
+  schema_version: number | null;
+  last_save_at: string | null;
+  last_save_error: string | null;
+  load_error: string | null;
+}
+
 export interface MinisterTrace {
   minister: string;
   trigger: string;
@@ -132,6 +147,8 @@ export interface SystemHealth {
     content_root: string;
     runtime_root: string;
     rimapi_reachable: boolean;
+    colony_state_origin: string;
+    last_live_refresh_at: string | null;
     briefing_version: number;
     food_briefing_version: number;
     agenda_version: number | null;
@@ -143,6 +160,7 @@ export interface SystemHealth {
     mayor_last_llm_success_at: string | null;
     mayor_last_error: string | null;
   };
+  colony_snapshot: ColonySnapshotMetadata;
   llm: {
     provider: string;
     configured: boolean;

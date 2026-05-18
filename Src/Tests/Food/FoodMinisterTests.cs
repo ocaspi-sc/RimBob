@@ -217,6 +217,8 @@ public sealed class FoodMinisterTests
 
         public void SetFoodDays(float days, int wildAnimals = 0, string dateTimeRaw = "5th of Aprimay, 5500, 14h", string animalDef = "Hare")
         {
+            Colony.LastRefreshSource = ColonyStateOrigin.Live;
+            Colony.LastLiveRefreshAt = DateTimeOffset.UtcNow;
             Colony.Economy.Update(new EconomyLedger(300_000, 0f, "", "", false, dateTimeRaw));
             Colony.Colonists.Update(new ColonistRegistry([
                 new ColonistRecord("p1", "P1", 30, "Female", 1f, 0.7f, 1f, false, false, null, null, [], []),

@@ -175,6 +175,8 @@ SYSTEM owns:
 - RIMAPI integration snapshot: cached upstream endpoint denominator, active
   reads, represented client methods, deferred write stubs, and missing
   high-priority endpoints.
+- Colony state snapshot metadata: latest curated snapshot path, capture time,
+  age, load/save errors, and whether current state is live or restored/stale.
 - Test inventory metadata: declared xUnit `[Fact]` / `[Theory]` counts grouped
   by `Src/Tests` category. This is source inventory, not a pass/fail test run
   result.
@@ -265,6 +267,8 @@ threat, weather, research, and colonist cards where available.
 If a sidebar poll fails after a successful snapshot, keep rendering the last
 snapshot and show a compact stale/error note. Do not replace the whole sidebar
 with a failure panel unless no snapshot has ever loaded in this page session.
+If Host is serving restored ColonyState while RIMAPI is unreachable, show a
+compact stale snapshot chip near the sidebar footer.
 
 ---
 

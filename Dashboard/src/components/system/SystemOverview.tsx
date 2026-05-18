@@ -40,6 +40,7 @@ export function SystemOverview({
   const tests = health?.tests;
   const liveTestCount = tests?.categories.find(category => category.category.toLowerCase() === 'live')?.count ?? 0;
   const rimapi = health?.rimapi_coverage;
+  const colonySnapshot = health?.colony_snapshot;
   const applyAttempts = health?.assisted_apply?.recent_attempts ?? [];
   const iconGroups = icons ? groupIconCacheFiles(icons.files) : [];
   const iconFailureState = icons ? summarizeIconWarmFailures(icons) : null;
@@ -188,6 +189,44 @@ export function SystemOverview({
             </div>
           </div>
         </section>
+      </DisclosureSection>
+
+      <DisclosureSection
+        title={<SectionTitle iconKey="snapshot">Colony snapshot</SectionTitle>}
+        meta={colonySnapshot ? snapshotMeta(colonySnapshot, health?.runtime.rimapi_reachable ?? false) : 'not exposed'}
+      >
+        {!colonySnapshot ? (
+          <EmptyState code="COLONY SNAPSHOT MISSING">/api/system/health did not expose colony snapshot metadata.</EmptyState>
+        ) : (
+          <div className="colony-snapshot-panel">
+            <div className="metric-grid compact">
+              <MetricCard
+                label={<FieldLabel iconKey="snapshot">Snapshot</FieldLabel>}
+                value={colonySnapshot.has_snapshot ? 'present' : 'missing'}
+                tone={colonySnapshot.load_error ? 'error' : colonySnapshot.has_snapshot ? 'ok' : 'warn'}
+              />
+              <MetricCard
+                label={<FieldLabel iconKey="status">Current origin</FieldLabel>}
+                value={health?.runtime.colony_state_origin ?? status?.colony_state_origin ?? 'unknown'}
+                tone={health?.runtime.rimapi_reachable ? 'ok' : colonySnapshot.has_snapshot ? 'warn' : 'neutral'}
+              />
+              <MetricCard label={<FieldLabel iconKey="captured_at">Captured</FieldLabel>} value={formatMaybeDate(colonySnapshot.captured_at)} />
+              <MetricCard label={<FieldLabel iconKey="age">Age</FieldLabel>} value={formatAgeSeconds(colonySnapshot.age_seconds)} />
+              <MetricCard label={<FieldLabel iconKey="game_tick">Game tick</FieldLabel>} value={colonySnapshot.game_tick?.toLocaleString() ?? 'none'} />
+              <MetricCard label={<FieldLabel iconKey="map">Map</FieldLabel>} value={colonySnapshot.map_id ?? 'none'} />
+            </div>
+            <div className="stacked-lines">
+              <InfoLine label="Path" value={colonySnapshot.path ?? 'not configured'} />
+              <InfoLine label="Snapshot id" value={colonySnapshot.snapshot_id ?? 'none'} />
+              <InfoLine label="Capture source" value={colonySnapshot.source ?? 'none'} />
+              <InfoLine label="Schema" value={colonySnapshot.schema_version ?? 'none'} />
+              <InfoLine label="Last live refresh" value={formatMaybeDate(health?.runtime.last_live_refresh_at ?? null)} />
+              <InfoLine label="Last save" value={formatMaybeDate(colonySnapshot.last_save_at)} />
+              <InfoLine label="Last save error" value={colonySnapshot.last_save_error ?? 'none'} />
+              <InfoLine label="Load error" value={colonySnapshot.load_error ?? 'none'} />
+            </div>
+          </div>
+        )}
       </DisclosureSection>
 
       <DisclosureSection title={<SectionTitle iconKey="assisted_apply">Assisted Apply</SectionTitle>} meta={`${applyAttempts.length} recent attempts`}>
@@ -626,6 +665,26 @@ function formatMaybeDate(iso: string | null): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;
   return date.toLocaleString();
+}
+
+function snapshotMeta(snapshot: SystemHealth['colony_snapshot'], rimapiReachable: boolean): string {
+  if (snapshot.load_error) return 'load error';
+  if (!snapshot.has_snapshot) return 'no snapshot';
+  if (!rimapiReachable) return `stale ${formatAgeSeconds(snapshot.age_seconds)}`;
+  return `saved ${formatAgeSeconds(snapshot.age_seconds)} ago`;
+}
+
+function formatAgeSeconds(seconds: number | null): string {
+  if (seconds == null) return 'none';
+  if (seconds < 60) return `${Math.max(0, Math.round(seconds))}s`;
+
+  const minutes = seconds / 60;
+  if (minutes < 60) return `${Math.round(minutes)}m`;
+
+  const hours = minutes / 60;
+  if (hours < 48) return `${hours.toFixed(1)}h`;
+
+  return `${Math.round(hours / 24)}d`;
 }
 
 function llmToneFor(status: string): 'ok' | 'warn' | 'error' | 'idle' {

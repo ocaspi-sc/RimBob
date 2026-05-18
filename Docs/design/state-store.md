@@ -48,6 +48,25 @@ dependency changes.
 This stays pull-based and inspectable. No reactive framework is required for the
 current scale.
 
+## Snapshot Persistence
+
+Host persists the latest full curated `ColonyState` snapshot under ignored
+runtime storage after a complete live RIMAPI refresh succeeds. This is not raw
+RIMAPI endpoint mirroring; it is the aggregate root ministers already read.
+
+On startup, Host may restore that latest snapshot before agenda bootstrap so
+the dashboard and bootstrap briefings can show last-known colony state when
+RIMAPI is down. Restored state is explicitly marked snapshot-sourced and stale
+until the first successful live refresh replaces it. Runtime health and the
+dashboard must surface that origin instead of treating restored aggregates as
+live.
+
+The snapshot is latest-only for now. Aggregate version counters restart after a
+restore because versions are process-local cache invalidation signals, not
+durable history. Timestamped state history and per-aggregate staleness remain
+future work. Assisted Apply still forces a fresh live refresh and must not
+execute from restored snapshot state.
+
 ---
 
 ## Refresh Cadence
@@ -161,4 +180,4 @@ clean and makes derivations independently testable.
 - [ ] Thread-safety requirements for the shared colony snapshot.
 - [ ] Multi-map support: MVP assumes one home map.
 - [ ] Trend-history retention and sampling once more ministers consume it.
-- [ ] Whether briefings need explicit stale-after timestamps.
+- [ ] Whether briefings need explicit per-aggregate stale-after timestamps.

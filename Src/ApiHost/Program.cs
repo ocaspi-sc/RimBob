@@ -27,6 +27,8 @@ Directory.CreateDirectory(logsDir);
 Directory.CreateDirectory(varDir);
 string agendaStorePath = Path.Combine(varDir, "agenda", "agenda-store.json");
 AgendaStore agendaStore = await AgendaStore.LoadAsync(agendaStorePath);
+string colonyStateSnapshotPath = Path.Combine(varDir, "state", "latest-colony-state.json");
+ColonyStateSnapshotStore colonySnapshotStore = await ColonyStateSnapshotStore.LoadAsync(colonyStateSnapshotPath);
 
 // ── Logging: Serilog reads from appsettings.json ───────────────────────────
 builder.Host.UseSerilog((ctx, services, cfg) =>
@@ -89,6 +91,7 @@ builder.Services.AddSingleton<LlmClient>(sp =>
 });
 
 builder.Services.AddSingleton<ColonyState>();
+builder.Services.AddSingleton(colonySnapshotStore);
 builder.Services.AddSingleton<BriefingCache>();
 builder.Services.AddSingleton<IngestionDispatcher>();
 
@@ -202,6 +205,7 @@ builder.Services.AddSingleton<MinisterOfFood>();
 builder.Services.AddSingleton<IMinister>(sp => sp.GetRequiredService<Mayor>());
 builder.Services.AddSingleton<IMinister>(sp => sp.GetRequiredService<MinisterOfFood>());
 builder.Services.AddSingleton<CabinetCycle>();
+builder.Services.AddHostedService<ColonySnapshotRestoreHostedService>();
 builder.Services.AddHostedService<AgendaBootstrapHostedService>();
 builder.Services.AddHostedService<DayTickOrchestrator>();
 
@@ -211,6 +215,12 @@ app.Logger.LogInformation(
     "Agenda store path: {AgendaStorePath} current_version={AgendaVersion}",
     agendaStorePath,
     agendaStore.Current?.Version);
+ColonySnapshotStatus colonySnapshotStatus = colonySnapshotStore.GetStatus();
+app.Logger.LogInformation(
+    "Colony state snapshot path: {SnapshotPath} has_snapshot={HasSnapshot} load_error={LoadError}",
+    colonyStateSnapshotPath,
+    colonySnapshotStatus.HasSnapshot,
+    colonySnapshotStatus.LoadError);
 
 // ── Middleware ─────────────────────────────────────────────────────────────
 app.UseDefaultFiles();
