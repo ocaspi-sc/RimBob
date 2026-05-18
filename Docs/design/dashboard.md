@@ -164,7 +164,8 @@ states.
 
 SYSTEM owns:
 
-- Runtime and Mayor/cabinet run state.
+- Runtime and Mayor/cabinet run state, including the full Host executable path
+  so operators can see which checkout is actually serving the dashboard.
 - RIMAPI reachability.
 - SSE diagnostics.
 - LLM health from actual request/parse status, not only key configuration.
@@ -177,9 +178,10 @@ SYSTEM owns:
 - Test inventory metadata: declared xUnit `[Fact]` / `[Theory]` counts grouped
   by `Src/Tests` category. This is source inventory, not a pass/fail test run
   result.
-- Icon cache metadata: local cache counts, byte totals, warm summary, skipped
-  candidates, bounded failure samples, and the full cached PNG inventory
-  rendered as the actual cached icons.
+- Icon cache metadata: local cache counts, byte totals, warm job lifecycle,
+  skipped candidates, deferred candidates, bounded failure samples, per-def
+  warm state, and the full cached PNG inventory rendered as the actual cached
+  icons.
 - Latest minister traces: trigger, status, rules/LLM path, rule trace,
   escalation reason, emitted counts, and failure detail when available.
 - Recent event/advice timeline.
@@ -294,25 +296,42 @@ separate action endpoint family, not an observability endpoint.
 `/api/system/health` owns dashboard-visible metadata for known log and
 diagnostic artifacts. It should expose bounded metadata such as location,
 patterns, counts, byte totals, latest write time, and recent-file summaries, not
-raw log file contents or full replay payloads.
+raw log file contents or full replay payloads. The default logs root is stable
+machine-local storage under LocalAppData (`RimBob/logs`), not the active
+repository or worktree; `RimBob:LogsRoot` may override it. Serilog logs,
+structured decision logs, replay corpus records, Mayor prompt dumps, and manual
+fallback files should stay under that same root.
 
 Icon cache metadata follows the same rule. SYSTEM may show counts, byte totals,
-kind totals, last warm result, skipped count, bounded failure samples, and the
-complete cached-file list from `var/icons/`, including relative path, kind,
-def/id, size, write time, and public Host URL when one exists. It should not
-expose or inline image bytes. The visible cache inventory should render as a
-compact grouped set of wrapping rows of the actual cached Host icons, not as a
-file table. Groups should be derived from stable cache metadata and def-name
-patterns so new warmed icons land in a useful place without hand-maintained
-panel entries. Failure samples from the last warm run should not be presented
-as current missing-icon errors when the same kind/id is now present in the
-cached-file inventory.
+kind totals, warm job state (`idle`, `running`, `completed`, or `failed`), live
+job progress, last warm result, skipped count, deferred count, bounded failure
+samples, and the complete cached-file list from the configured icon cache
+directory, including relative path, kind, def/id, size, write time, and public
+Host URL when one exists. The default icon cache root is stable machine-local
+storage under LocalAppData (`RimBob/icons`), not the active repository or
+worktree; `RimBob:IconCacheRoot` may override it. Relative overrides resolve
+under the same stable machine-local RimBob root. It should not expose or inline
+image bytes. The visible cache inventory should render as a compact grouped set
+of wrapping rows of the actual cached Host icons, not as a file table. Groups
+should be derived from stable cache metadata and def-name patterns so new
+warmed icons land in a useful place without hand-maintained panel entries.
 
-The static warm fetches each candidate with a bounded retry (transient RIMAPI
-failures self-heal across attempts; deterministic key errors fail fast), so a
-single flaky warm should no longer leave large swaths of renderable defs marked
-missing. A failure sample therefore reflects a candidate that stayed unresolved
-across all attempts, not a one-off upstream hiccup.
+The static warm runs as a Host-owned background job, not as request-bound work.
+The POST that starts warming returns immediately with the current job state;
+client disconnects must not cancel an in-flight warm. The manifest is
+incremental and mergeable: persisted PNG successes remain accounted for across
+partial runs, later failed-only warm attempts, and Host restarts. Status samples
+are derived from per-def state plus the current cached-file inventory, not a
+frozen end-of-run list; a def that is now present on disk must not keep showing
+as a current missing-icon error.
+
+The static warm fetches each candidate with conservative pacing and bounded
+retry. Transient RIMAPI failures and `result: "missing"` icon responses are
+tracked separately so the operator can tell under-load/no-asset failures from
+transport failures. Deterministic key errors fail fast. A failure sample
+therefore reflects a candidate that stayed unresolved across all attempts, not
+a one-off upstream hiccup. Faction icons depend on a loaded world; when no
+world is loaded, faction warming is `deferred`, not `failed`.
 
 The same health payload may expose test inventory metadata for SYSTEM. Count
 declared xUnit test methods by source category so the dashboard can answer
@@ -350,7 +369,9 @@ endpoints.
 ### Icon Rendering
 
 Dashboard icons are read-only Host URLs backed by the local runtime cache. The
-cache is populated from the player's running game and is not committed.
+cache is populated from the player's running game, is not committed, and should
+not fork per worktree unless an operator explicitly configures a worktree-local
+`RimBob:IconCacheRoot`.
 
 The dashboard may render an icon only when it has an explicit source:
 

@@ -12,8 +12,8 @@ public static class IconEndpoints
         coverage.Register("/api/icons/faction/{loadId}", "available", "Read-only cached current-world faction icon PNG gateway.");
         coverage.Register("/api/icons/pawn/{pawnId}/portrait", "available", "Read-only cached pawn portrait PNG gateway; not prewarmed.");
         coverage.Register("/api/icons/colonist/{pawnId}/body", "available", "Read-only colonist body/head image cache fetch; not prewarmed.");
-        coverage.Register("/api/icons/cache/status", "available", "Local icon cache status and last warm summary.");
-        coverage.Register("/api/icons/cache/warm", "available", "Static item, terrain, and faction icon cache warmer.");
+        coverage.Register("/api/icons/cache/status", "available", "Local icon cache status, warm job progress, and manifest summary.");
+        coverage.Register("/api/icons/cache/warm", "available", "Background static item, terrain, and faction icon cache warmer.");
 
         app.MapGet("/api/icons/item/{defName}", async Task<IResult> (
             string defName,
@@ -57,10 +57,16 @@ public static class IconEndpoints
         app.MapGet("/api/icons/cache/status", (IconCacheService icons) =>
             Results.Ok(icons.GetStatus()));
 
-        app.MapPost("/api/icons/cache/warm", async Task<IResult> (
+        app.MapPost("/api/icons/cache/warm", (
+            string? scope,
             IconCacheService icons,
-            CancellationToken ct) =>
-            await JsonAsync(() => icons.WarmStaticAsync(ct), ct));
+            HttpContext context) =>
+        {
+            IconWarmJobStatus status = icons.StartWarm(scope);
+            string location = "/api/icons/cache/status";
+            context.Response.Headers.Location = location;
+            return Results.Accepted(location, status);
+        });
 
         return app;
     }

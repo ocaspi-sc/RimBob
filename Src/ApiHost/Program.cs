@@ -17,7 +17,11 @@ var builder = WebApplication.CreateBuilder(args);
 // appsettings.Local.json is gitignored; safe place for the Gemini key in dev.
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: false);
 
-string logsDir = HostLogPaths.ResolveLogsDirectory(builder.Environment.ContentRootPath);
+RimBobOptions options = builder.Configuration
+    .GetSection(RimBobOptions.SectionName)
+    .Get<RimBobOptions>() ?? new RimBobOptions();
+
+string logsDir = HostLogPaths.ResolveLogsDirectory(builder.Environment.ContentRootPath, options.LogsRoot);
 string varDir = HostLogPaths.ResolveVarDirectory(builder.Environment.ContentRootPath);
 Directory.CreateDirectory(logsDir);
 Directory.CreateDirectory(varDir);
@@ -44,10 +48,6 @@ builder.Services
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
-var options = builder.Configuration
-    .GetSection(RimBobOptions.SectionName)
-    .Get<RimBobOptions>() ?? new RimBobOptions();
-
 // Localhost-only bind (design/dashboard.md). Never 0.0.0.0.
 builder.WebHost.UseUrls(options.ListenUrl);
 
@@ -59,10 +59,24 @@ builder.Services.AddHttpClient<RimApiClient>((sp, c) =>
     c.Timeout = TimeSpan.FromSeconds(10);
 });
 builder.Services.AddSingleton<IconCacheService>(sp =>
-    new IconCacheService(
-        Path.Combine(varDir, "icons"),
+{
+    RimBobOptions opts = sp.GetRequiredService<IOptions<RimBobOptions>>().Value;
+    IconWarmOptions iconWarm = opts.IconWarm;
+    IHostApplicationLifetime lifetime = sp.GetRequiredService<IHostApplicationLifetime>();
+    string iconCacheRoot = HostLogPaths.ResolveIconCacheDirectory(
+        builder.Environment.ContentRootPath,
+        opts.IconCacheRoot);
+    return new IconCacheService(
+        iconCacheRoot,
         sp.GetRequiredService<RimApiClient>(),
-        sp.GetRequiredService<ILogger<IconCacheService>>()));
+        sp.GetRequiredService<ILogger<IconCacheService>>(),
+        iconWarm.Attempts,
+        TimeSpan.FromMilliseconds(iconWarm.RetryDelayMilliseconds),
+        iconWarm.Concurrency,
+        TimeSpan.FromMilliseconds(iconWarm.RequestIntervalMilliseconds),
+        iconWarm.CheckpointInterval,
+        lifetime.ApplicationStopping);
+});
 builder.Services.AddSingleton<PromptBuilder>();
 builder.Services.AddSingleton<RawLlmOutputStore>();
 builder.Services.AddSingleton<LlmClient>(sp =>
@@ -92,6 +106,9 @@ builder.Services.AddSingleton<IReplayCorpusWriter>(sp =>
 builder.Services.AddSingleton(new ReplayCorpusRawOutputReader(Path.Combine(logsDir, "replay")));
 builder.Services.AddSingleton<MinisterReplayRecorder>();
 builder.Services.AddSingleton<MayorAgendaRules>();
+builder.Services.AddSingleton(new MayorFilePaths(
+    Path.Combine(logsDir, "mayor-prompt-latest.md"),
+    Path.Combine(logsDir, "mayor-response.json")));
 builder.Services.AddSingleton<MayorStatus>();
 builder.Services.AddSingleton<SseDiagnostics>();
 

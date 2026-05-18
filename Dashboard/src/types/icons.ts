@@ -8,7 +8,9 @@ export interface IconRef {
 export interface IconWarmFailure {
   kind: string;
   id: string;
+  status: 'failed' | 'deferred' | string;
   error: string;
+  failureKind: 'missing' | 'transport' | 'rimapi_error' | 'invalid_response' | 'bad_key' | 'deferred' | string | null;
 }
 
 export interface IconWarmSummary {
@@ -17,11 +19,29 @@ export interface IconWarmSummary {
   totalCandidates: number;
   succeeded: number;
   failed: number;
+  deferred: number;
   skipped: number;
   itemCandidates: number;
   terrainCandidates: number;
   factionCandidates: number;
+  missingFailures: number;
+  transportFailures: number;
   failures: IconWarmFailure[];
+}
+
+export interface IconWarmJobStatus {
+  state: 'idle' | 'running' | 'completed' | 'failed' | string;
+  jobId: string | null;
+  scope: 'all' | 'failed' | string;
+  startedAt: string | null;
+  updatedAt: string | null;
+  completedAt: string | null;
+  total: number;
+  done: number;
+  succeeded: number;
+  failed: number;
+  deferred: number;
+  error: string | null;
 }
 
 export interface IconCacheFile {
@@ -43,4 +63,5 @@ export interface IconCacheStatus {
   filesByKind: Record<string, number>;
   files: IconCacheFile[];
   lastWarm: IconWarmSummary | null;
+  warmJob: IconWarmJobStatus;
 }

@@ -102,7 +102,8 @@ public static class SystemEndpoints
             RimBobOptions opts = options.Value;
             MayorBriefing mayorBriefing = briefings.GetMayorBriefing();
             FoodBriefing foodBriefing = briefings.GetFoodBriefing();
-            string logsDir = HostLogPaths.ResolveLogsDirectory(env.ContentRootPath);
+            string logsDir = HostLogPaths.ResolveLogsDirectory(env.ContentRootPath, opts.LogsRoot);
+            string runtimeRoot = HostLogPaths.ResolveRuntimeRoot(env.ContentRootPath);
             string guidesRoot = ResolvePath(env.ContentRootPath, opts.Rag.GuidesRoot);
             string cacheRoot = ResolvePath(env.ContentRootPath, opts.Rag.CacheRoot);
             IReadOnlyList<AgentFlag> activeFlags = flags.Active();
@@ -114,6 +115,9 @@ public static class SystemEndpoints
                 runtime = new
                 {
                     server = "ok",
+                    host_process_path = Environment.ProcessPath ?? "unknown",
+                    content_root = env.ContentRootPath,
+                    runtime_root = runtimeRoot,
                     rimapi_reachable = colony.Economy.Version > 0,
                     briefing_version = mayorBriefing.BriefingVersion,
                     food_briefing_version = foodBriefing.BriefingVersion,

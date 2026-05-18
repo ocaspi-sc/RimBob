@@ -128,6 +128,9 @@ export interface SystemHealth {
   generated_at: string;
   runtime: {
     server: string;
+    host_process_path: string;
+    content_root: string;
+    runtime_root: string;
     rimapi_reachable: boolean;
     briefing_version: number;
     food_briefing_version: number;

@@ -640,6 +640,10 @@ code {
   gap: 8px;
 }
 
+.runtime-source-lines {
+  margin-top: 12px;
+}
+
 .glossary-columns,
 .analytics-columns,
 .sse-info-grid {
@@ -2249,8 +2253,29 @@ code {
 }
 
 .icon-failure-table .dense-row {
-  grid-template-columns: 90px minmax(160px, 0.8fr) minmax(320px, 1.8fr);
-  min-width: 620px;
+  grid-template-columns: 92px 90px minmax(160px, 0.8fr) minmax(320px, 1.8fr);
+  min-width: 720px;
+}
+
+.icon-warm-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.icon-warm-action-status {
+  color: var(--muted);
+  font-size: 0.74rem;
+  overflow-wrap: anywhere;
+}
+
+.icon-warm-action-status.error {
+  color: var(--error);
+}
+
+.icon-warm-action-status.ok {
+  color: var(--ok);
 }
 
 .icon-cache-groups {

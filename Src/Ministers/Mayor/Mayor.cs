@@ -26,17 +26,20 @@ public sealed class Mayor(
     FlagChannel         flags,
     ILogger<Mayor>      log,
     MinisterReplayRecorder? replay = null,
-    string? manualResponsePath = null
+    string? manualResponsePath = null,
+    MayorFilePaths? filePaths = null
 ) : IMinister
 {
     private const int ShortTermCap = 5;
-    private static readonly string PromptDumpPath     = Path.Combine("logs", "mayor-prompt-latest.md");
-    private static readonly string DefaultManualResponsePath = Path.Combine("logs", "mayor-response.json");
+    private static readonly MayorFilePaths DefaultFilePaths = new(
+        Path.Combine("logs", "mayor-prompt-latest.md"),
+        Path.Combine("logs", "mayor-response.json"));
     private static readonly JsonSerializerOptions ManualResponseJson = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
     };
-    private readonly string _manualResponsePath = manualResponsePath ?? DefaultManualResponsePath;
+    private readonly MayorFilePaths _filePaths = filePaths ?? DefaultFilePaths;
+    private readonly string _manualResponsePath = manualResponsePath ?? (filePaths ?? DefaultFilePaths).ManualResponsePath;
 
     public string Name => "Mayor";
 
@@ -242,9 +245,9 @@ public sealed class Mayor(
     }
 
     /// <summary>
-    /// Manual fallback: if logs/mayor-response.json was saved more recently than the
-    /// last successful Gemini call, parse it and return as the cycle's input. The user
-    /// drops a response from another LLM there when Gemini is rate-limited.
+    /// Manual fallback: if the configured mayor response file was saved more recently
+    /// than the last successful Gemini call, parse it and return as the cycle's input.
+    /// The user drops a response from another LLM there when Gemini is rate-limited.
     /// </summary>
     private async Task<Core.Advice.MayorAgendaInput?> TryLoadManualResponseAsync(
         PlayCycleContext cycle,
@@ -424,12 +427,12 @@ public sealed class Mayor(
                 $"previous agenda v{previous?.Version ?? 0}, retrieved {retrieved.Count} guides, " +
                 $"written {DateTime.UtcNow:O} -->\n\n" +
                 $"# system\n\n{system}\n\n# user\n\n{user}\n";
-            Directory.CreateDirectory(Path.GetDirectoryName(PromptDumpPath)!);
-            File.WriteAllText(PromptDumpPath, body);
+            Directory.CreateDirectory(Path.GetDirectoryName(_filePaths.PromptDumpPath)!);
+            File.WriteAllText(_filePaths.PromptDumpPath, body);
         }
         catch (Exception ex)
         {
-            log.LogWarning(ex, "Failed to dump Mayor prompt to {Path}", PromptDumpPath);
+            log.LogWarning(ex, "Failed to dump Mayor prompt to {Path}", _filePaths.PromptDumpPath);
         }
     }
 
@@ -446,3 +449,5 @@ public sealed class Mayor(
         return string.Join(',', fired);
     }
 }
+
+public sealed record MayorFilePaths(string PromptDumpPath, string ManualResponsePath);

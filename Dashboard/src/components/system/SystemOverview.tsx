@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { startIconCacheWarm } from '../../api/icons';
 import type { RimBobStatus } from '../../types/status';
 import type { DashboardEvent, RimApiCoverageRow, StreamDiagnostics, SystemHealth } from '../../types/system';
 import { iconForField, iconForSection, iconForScope } from '../../dashboard/semanticIcons';
@@ -26,9 +28,14 @@ export function SystemOverview({
   status: RimBobStatus | null;
   stream: StreamDiagnostics;
 }) {
+  const [iconWarmAction, setIconWarmAction] = useState<{ status: 'idle' | 'pending' | 'ok' | 'error'; message: string | null }>({
+    status: 'idle',
+    message: null,
+  });
   const backendSse = health?.sse;
   const llmStatus = health?.llm.status ?? status?.llm_status ?? ((status?.llm_configured ?? health?.llm.configured) ? 'ready' : 'missing_key');
   const icons = health?.icons;
+  const warmJob = icons?.warmJob ?? null;
   const replay = health?.logs.replay_corpus;
   const tests = health?.tests;
   const liveTestCount = tests?.categories.find(category => category.category.toLowerCase() === 'live')?.count ?? 0;
@@ -36,6 +43,17 @@ export function SystemOverview({
   const applyAttempts = health?.assisted_apply?.recent_attempts ?? [];
   const iconGroups = icons ? groupIconCacheFiles(icons.files) : [];
   const iconFailureState = icons ? summarizeIconWarmFailures(icons) : null;
+  const warmRunning = warmJob?.state === 'running' || iconWarmAction.status === 'pending';
+
+  async function onStartIconWarm(scope: 'all' | 'failed') {
+    setIconWarmAction({ status: 'pending', message: scope === 'failed' ? 'Starting failed-only warm...' : 'Starting full warm...' });
+    try {
+      const status = await startIconCacheWarm(scope);
+      setIconWarmAction({ status: 'ok', message: `Warm job ${status.state}: ${status.scope}` });
+    } catch (error) {
+      setIconWarmAction({ status: 'error', message: error instanceof Error ? error.message : 'Icon warm failed to start.' });
+    }
+  }
 
   return (
     <div className="system-overview">
@@ -117,6 +135,11 @@ export function SystemOverview({
               <MetricCard label={<FieldLabel iconKey="advice">Advice</FieldLabel>} value={health?.runtime.active_advice_count ?? 'n/a'} />
               <MetricCard label={<FieldLabel iconKey="flags">Flags</FieldLabel>} value={health?.runtime.active_flag_count ?? 'n/a'} />
               <MetricCard label={<FieldLabel iconKey="mayor">Mayor</FieldLabel>} value={status?.mayor_running ? 'running' : 'idle'} tone={status?.mayor_last_error ? 'error' : status?.mayor_running ? 'ok' : 'neutral'} />
+            </div>
+            <div className="stacked-lines runtime-source-lines">
+              <InfoLine label="Host path" value={health?.runtime.host_process_path ?? 'not exposed'} />
+              <InfoLine label="Content root" value={health?.runtime.content_root ?? 'not exposed'} />
+              <InfoLine label="Runtime root" value={health?.runtime.runtime_root ?? 'not exposed'} />
             </div>
           </div>
 
@@ -225,7 +248,10 @@ export function SystemOverview({
         )}
       </DisclosureSection>
 
-      <DisclosureSection title={<SectionTitle iconKey="icon_cache">Icon cache</SectionTitle>} meta={icons ? `${icons.fileCount} cached PNGs` : 'not exposed'}>
+      <DisclosureSection
+        title={<SectionTitle iconKey="icon_cache">Icon cache</SectionTitle>}
+        meta={icons ? `${icons.fileCount} cached PNGs | ${warmJob?.state ?? 'idle'}` : 'not exposed'}
+      >
         {!icons ? (
           <EmptyState code="ICON CACHE MISSING">/api/system/health did not expose icon cache metadata.</EmptyState>
         ) : (
@@ -237,14 +263,58 @@ export function SystemOverview({
               <MetricCard
                 label={<FieldLabel iconKey="warm_result">Warm result</FieldLabel>}
                 value={icons.lastWarm ? `${icons.lastWarm.succeeded}/${icons.lastWarm.totalCandidates}` : 'not run'}
+                note={icons.lastWarm ? `${icons.lastWarm.failed} failed / ${icons.lastWarm.deferred} deferred` : undefined}
                 tone={!icons.lastWarm ? 'warn' : icons.lastWarm.failed > 0 ? 'warn' : 'ok'}
               />
+              <MetricCard
+                label={<FieldLabel iconKey="status">Warm job</FieldLabel>}
+                value={warmJob?.state ?? 'idle'}
+                note={warmJob && warmJob.total > 0 ? `${warmJob.done}/${warmJob.total} ${warmJob.scope}` : warmJob?.scope}
+                tone={warmJobTone(warmJob?.state)}
+              />
+              <MetricCard
+                label={<FieldLabel iconKey="missing">Missing failures</FieldLabel>}
+                value={icons.lastWarm?.missingFailures ?? 0}
+                tone={(icons.lastWarm?.missingFailures ?? 0) > 0 ? 'warn' : 'ok'}
+              />
+              <MetricCard
+                label={<FieldLabel iconKey="transport">Transport failures</FieldLabel>}
+                value={icons.lastWarm?.transportFailures ?? 0}
+                tone={(icons.lastWarm?.transportFailures ?? 0) > 0 ? 'warn' : 'ok'}
+              />
+            </div>
+            <div className="icon-warm-actions">
+              <button
+                type="button"
+                className="trigger-button"
+                disabled={warmRunning}
+                onClick={() => void onStartIconWarm('all')}
+              >
+                {warmRunning && warmJob?.scope === 'all' ? 'Warming...' : 'Warm all'}
+              </button>
+              <button
+                type="button"
+                className="trigger-button"
+                disabled={warmRunning || (icons.lastWarm?.failed ?? 0) === 0}
+                onClick={() => void onStartIconWarm('failed')}
+              >
+                {warmRunning && warmJob?.scope === 'failed' ? 'Re-warming...' : 'Re-warm failed'}
+              </button>
+              {iconWarmAction.message && (
+                <small className={`icon-warm-action-status ${iconWarmAction.status}`}>
+                  {iconWarmAction.message}
+                </small>
+              )}
             </div>
             <div className="stacked-lines">
               <InfoLine label="Directory" value={icons.directory} />
               <InfoLine label="Latest write" value={formatMaybeDate(icons.latestWriteAt)} />
+              <InfoLine label="Job id" value={warmJob?.jobId ?? 'none'} />
+              <InfoLine label="Job updated" value={formatMaybeDate(warmJob?.updatedAt ?? null)} />
+              <InfoLine label="Job error" value={warmJob?.error ?? 'none'} />
               <InfoLine label="Skipped" value={icons.lastWarm?.skipped ?? 'n/a'} />
               <InfoLine label="Failures" value={icons.lastWarm?.failed ?? 'n/a'} />
+              <InfoLine label="Deferred" value={icons.lastWarm?.deferred ?? 'n/a'} />
               {iconFailureState && iconFailureState.resolvedSampleCount > 0 && (
                 <InfoLine
                   label="Cached after failure sample"
@@ -283,15 +353,17 @@ export function SystemOverview({
                 ))}
               </div>
             )}
-            {iconFailureState && iconFailureState.unresolvedFailures.length > 0 && (
+            {iconFailureState && iconFailureState.activeIssues.length > 0 && (
               <div className="dense-table icon-failure-table">
                 <div className="dense-row header">
+                  <FieldLabel iconKey="status">Status</FieldLabel>
                   <FieldLabel iconKey="kind">Kind</FieldLabel>
                   <FieldLabel iconKey="id">Id</FieldLabel>
                   <FieldLabel iconKey="error">Error</FieldLabel>
                 </div>
-                {iconFailureState.unresolvedFailures.slice(0, 12).map(failure => (
+                {iconFailureState.activeIssues.slice(0, 12).map(failure => (
                   <div className="dense-row" key={`${failure.kind}-${failure.id}-${failure.error}`}>
+                    <span>{failure.status}</span>
                     <span>{failure.kind}</span>
                     <code>{failure.id}</code>
                     <span>{failure.error}</span>
@@ -416,12 +488,18 @@ function summarizeIconWarmFailures(icons: SystemHealth['icons']) {
   }
 
   const cached = new Set(icons.files.map(file => iconFailureKey(file.kind, file.id)));
-  const unresolvedFailures = icons.lastWarm.failures.filter(failure => !cached.has(iconFailureKey(failure.kind, failure.id)));
+  const activeIssues = icons.lastWarm.failures.filter(failure => {
+    if (failure.status === 'failed') {
+      return !cached.has(iconFailureKey(failure.kind, failure.id));
+    }
+
+    return true;
+  });
 
   return {
-    resolvedSampleCount: icons.lastWarm.failures.length - unresolvedFailures.length,
+    resolvedSampleCount: icons.lastWarm.failures.length - activeIssues.length,
     sampleCount: icons.lastWarm.failures.length,
-    unresolvedFailures,
+    activeIssues,
   };
 }
 
@@ -555,6 +633,13 @@ function llmToneFor(status: string): 'ok' | 'warn' | 'error' | 'idle' {
   if (status === 'ready' || status === 'not_seen_yet') return 'warn';
   if (status === 'parsed' || status === 'normalized') return 'ok';
   return 'warn';
+}
+
+function warmJobTone(status: string | null | undefined): 'neutral' | 'ok' | 'warn' | 'error' {
+  if (status === 'completed') return 'ok';
+  if (status === 'failed') return 'error';
+  if (status === 'running') return 'warn';
+  return 'neutral';
 }
 
 function shorten(value: string): string {

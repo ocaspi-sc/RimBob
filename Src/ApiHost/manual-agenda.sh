@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Manual fallback: post a MayorAgendaInput JSON (from another LLM) to the running
-# Host. The system prompt + last user message are in `logs/mayor-prompt-latest.md`.
+# Host. The system prompt + last user message are in the configured logs root
+# as `mayor-prompt-latest.md` (SYSTEM shows the active logs directory).
 #
 # Usage:
 #   ./manual-agenda.sh response.json        # paste from a file

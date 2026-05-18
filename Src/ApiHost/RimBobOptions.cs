@@ -11,6 +11,8 @@ public sealed class RimBobOptions
     public string ListenUrl { get; init; } = "http://localhost:5000";
     public string RimApiBaseUrl { get; init; } = "http://localhost:8765/";
     public bool PingLlmOnStartup { get; init; } = true;
+    public string? LogsRoot { get; init; }
+    public string? IconCacheRoot { get; init; }
 
     /// <summary>
     /// Optional ordered Gemini keys for quota/key failures. Local dev can place
@@ -22,6 +24,8 @@ public sealed class RimBobOptions
     public string[] GeminiApiKeys { get; init; } = [];
 
     public RagOptions Rag { get; init; } = new();
+
+    public IconWarmOptions IconWarm { get; init; } = new();
 }
 
 /// <summary>

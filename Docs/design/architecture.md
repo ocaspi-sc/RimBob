@@ -167,6 +167,13 @@ fallback list for quota/key failures.
 The Host should tolerate missing LLM credentials well enough to boot health and
 dashboard surfaces; actual LLM calls can report degraded provider health.
 
+Host runtime logs use a stable machine-local logs root by default, not the
+active repository or worktree. `RimBob:LogsRoot` may override that root; relative
+overrides resolve under the same stable machine-local RimBob root. Keep
+Serilog logs, structured decision logs, replay corpus records, Mayor prompt
+dumps, and manual fallback files together there so SYSTEM can report one
+operator-visible log location.
+
 ---
 
 ## Observability

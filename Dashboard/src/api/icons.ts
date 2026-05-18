@@ -1,4 +1,6 @@
 import type { IconRef } from '../types/icons';
+import type { IconWarmJobStatus } from '../types/icons';
+import { postJson } from './http';
 
 export function iconUrlFor(ref: IconRef | null | undefined): string | null {
   if (!ref || !ref.id) return null;
@@ -40,4 +42,12 @@ export function pawnPortraitUrl(
 ): string | null {
   if (pawnId === null || pawnId === undefined || pawnId === '') return null;
   return `/api/icons/pawn/${encodeURIComponent(String(pawnId))}/portrait?width=${width}&height=${height}&direction=${encodeURIComponent(direction)}`;
+}
+
+export async function startIconCacheWarm(
+  scope: 'all' | 'failed' = 'all',
+  signal?: AbortSignal,
+): Promise<IconWarmJobStatus> {
+  const suffix = scope === 'failed' ? '?scope=failed' : '';
+  return await postJson<IconWarmJobStatus>(`/api/icons/cache/warm${suffix}`, signal);
 }
