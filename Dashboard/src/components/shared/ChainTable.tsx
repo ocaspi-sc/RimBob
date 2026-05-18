@@ -2,67 +2,258 @@ import type { AdviceChainModel, AdviceChainPath, AdviceChainStep, AdviceChainSte
 import { iconForField } from '../../dashboard/semanticIcons';
 import { SemanticIconCue } from './SemanticIcon';
 
+const ACTION_REQUESTED = '\u26a1 Action Requested';
+
 export function ChainTable({ model }: { model: AdviceChainModel }) {
   if (!model.paths.length) return null;
 
+  const paths = orderedPaths(model.paths);
+
   return (
-    <div className="chain-variation-stack" aria-label="Food route panel variations">
-      {PANEL_VARIANTS.map(variant => (
-        <section className={`chain-variant-panel chain-variant--${variant.key}`} key={variant.key}>
-          <header className="chain-variant-heading">
+    <div className="chain-concept-stack" aria-label="Food route panel concepts">
+      {PANEL_CONCEPTS.map(concept => (
+        <section className={`chain-concept-panel chain-concept--${concept.key}`} key={concept.key}>
+          <header className="chain-concept-heading">
             <div>
-              <span>{variant.kicker}</span>
-              <h3>{variant.name}</h3>
+              <span className="chain-concept-kicker">{concept.kicker}</span>
+              <h3>{concept.name}</h3>
             </div>
-            <div aria-hidden className="chain-variant-icon-strip">
-              {model.paths.map(path => (
-                <SemanticIconCue icon={routeIcon(routeKind(path))} key={`${variant.key}-${path.name}`} size="xs" />
-              ))}
-            </div>
+            <p>{concept.description}</p>
           </header>
-          <div className="chain-route-grid">
-            {model.paths.map(path => (
-              <RouteCard key={`${variant.key}-${path.name}`} path={path} />
-            ))}
-          </div>
+          {renderConcept(concept.key, paths)}
         </section>
       ))}
     </div>
   );
 }
 
-function RouteCard({ path }: { path: AdviceChainPath }) {
-  const route = routeKind(path);
-  const status = routeStatus(path);
-
+function JobCardsConcept({ paths }: { paths: AdviceChainPath[] }) {
   return (
-    <article className={`chain-route-card chain-route--${route}`}>
-      <header>
-        <SemanticIconCue className="chain-route-icon" icon={routeIcon(route)} size="sm" />
-        <div>
-          <h4>{routeName(path.name)}</h4>
-          <span className={`chain-route-status chain-fact--${classFor(status)}`}>{formatStatus(status)}</span>
-        </div>
-      </header>
-      <ul className="chain-route-facts">
-        {routeFacts(path).map(fact => (
-          <li className={`chain-route-fact chain-fact--${classFor(fact.status)}`} key={fact.key}>
-            <SemanticIconCue className="chain-fact-icon" icon={iconForField(fact.iconKey)} size="xs" />
-            <span className="chain-fact-label">{fact.label}</span>
-            <span className="chain-fact-value">{fact.value}</span>
-          </li>
-        ))}
-      </ul>
-    </article>
+    <div className="job-card-grid">
+      {paths.map(path => {
+        const route = routeKind(path);
+        const status = routeStatus(path);
+
+        return (
+          <article className={`job-card job-card--${route} chain-route--${route}`} key={path.name}>
+            <header className="job-card-header">
+              <SemanticIconCue className="chain-route-icon" icon={routeIcon(route)} size="sm" />
+              <div>
+                <h4>{routeName(path.name)}</h4>
+                <span className={`chain-status-badge chain-fact--${classFor(status)}`}>
+                  <StateText status={status} />
+                </span>
+              </div>
+            </header>
+            <ul className="job-bullet-list">
+              {routeFacts(path).slice(0, 4).map(fact => (
+                <li className={`job-bullet chain-fact--${classFor(fact.status)}`} key={fact.key}>
+                  <SemanticIconCue className="chain-fact-icon" icon={iconForField(fact.iconKey)} size="xs" />
+                  <span className="chain-fact-label">{fact.label}</span>
+                  <span className="chain-fact-value">
+                    <StateText status={fact.status} text={fact.value} />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </article>
+        );
+      })}
+    </div>
   );
 }
 
-const PANEL_VARIANTS = [
-  { key: 'neon', kicker: 'Option 01', name: 'Neon Nutrient Grid' },
-  { key: 'hazard', kicker: 'Option 02', name: 'Crisis Command Board' },
-  { key: 'botanic', kicker: 'Option 03', name: 'Biolume Crop Lab' },
-  { key: 'ledger', kicker: 'Option 04', name: 'Rimsteel Provision Ledger' },
+function ConsoleConcept({ paths }: { paths: AdviceChainPath[] }) {
+  return (
+    <div className="console-rack">
+      {paths.map(path => {
+        const route = routeKind(path);
+        const status = routeStatus(path);
+
+        return (
+          <article className={`console-module console-module--${route} chain-route--${route}`} key={path.name}>
+            <span className="console-state-rail" aria-hidden />
+            <div className="console-module-body">
+              <header className="console-module-header">
+                <span className="console-callsign">{routeCode(route)}-01</span>
+                <SemanticIconCue className="chain-route-icon" icon={routeIcon(route)} size="sm" />
+                <div>
+                  <h4>{routeName(path.name)}</h4>
+                  <span className={`chain-status-badge chain-fact--${classFor(status)}`}>
+                    <StateText status={status} />
+                  </span>
+                </div>
+              </header>
+              <div className="console-readouts">
+                {routeFacts(path).slice(0, 4).map(fact => (
+                  <div className={`console-readout chain-fact--${classFor(fact.status)}`} key={fact.key}>
+                    <SemanticIconCue className="chain-fact-icon" icon={iconForField(fact.iconKey)} size="xs" />
+                    <span className="chain-fact-label">{fact.label}</span>
+                    <span className="chain-fact-value">
+                      <StateText status={fact.status} text={fact.value} />
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </article>
+        );
+      })}
+    </div>
+  );
+}
+
+function SubwayConcept({ paths }: { paths: AdviceChainPath[] }) {
+  return (
+    <div className="subway-map">
+      {paths.map(path => {
+        const route = routeKind(path);
+        const status = routeStatus(path);
+
+        return (
+          <article className={`subway-route subway-route--${route} chain-route--${route}`} key={path.name}>
+            <header className="subway-route-title">
+              <SemanticIconCue className="chain-route-icon" icon={routeIcon(route)} size="sm" />
+              <div>
+                <h4>{routeName(path.name)}</h4>
+                <span className={`chain-status-badge chain-fact--${classFor(status)}`}>
+                  <StateText status={status} />
+                </span>
+              </div>
+            </header>
+            <ol className="subway-stops">
+              {routeFacts(path).slice(0, 5).map(fact => (
+                <li className={`subway-stop chain-fact--${classFor(fact.status)}`} key={fact.key}>
+                  <span className="subway-stop-dot">
+                    <SemanticIconCue className="chain-fact-icon" icon={iconForField(fact.iconKey)} size="xs" />
+                  </span>
+                  <span className="chain-fact-label">{fact.label}</span>
+                  <span className="chain-fact-value">
+                    <StateText status={fact.status} text={fact.value} />
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </article>
+        );
+      })}
+    </div>
+  );
+}
+
+function QuartermasterConcept({ paths }: { paths: AdviceChainPath[] }) {
+  return (
+    <div className="quartermaster-board">
+      {paths.map(path => {
+        const route = routeKind(path);
+        const status = routeStatus(path);
+
+        return (
+          <article className={`quartermaster-ticket quartermaster-ticket--${route} chain-route--${route}`} key={path.name}>
+            <span className="ticket-pin" aria-hidden />
+            <header className="ticket-header">
+              <SemanticIconCue className="chain-route-icon" icon={routeIcon(route)} size="sm" />
+              <div>
+                <span>{routeCode(route)} order</span>
+                <h4>{routeName(path.name)}</h4>
+              </div>
+            </header>
+            <div className={`ticket-stamp chain-fact--${classFor(status)}`}>
+              <StateText status={status} />
+            </div>
+            <ul className="ticket-lines">
+              {routeFacts(path).slice(0, 4).map(fact => (
+                <li className={`ticket-line chain-fact--${classFor(fact.status)}`} key={fact.key}>
+                  <SemanticIconCue className="chain-fact-icon" icon={iconForField(fact.iconKey)} size="xs" />
+                  <span className="chain-fact-label">{fact.label}</span>
+                  <span className="chain-fact-value">
+                    <StateText status={fact.status} text={fact.value} />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </article>
+        );
+      })}
+    </div>
+  );
+}
+
+function TacticalConcept({ paths }: { paths: AdviceChainPath[] }) {
+  return (
+    <div className="tactical-grid">
+      {paths.map(path => {
+        const route = routeKind(path);
+        const status = routeStatus(path);
+        const primary = primaryFact(path);
+
+        return (
+          <article className={`tactical-card tactical-card--${route} chain-route--${route}`} key={path.name}>
+            <header className="tactical-header">
+              <span className="tactical-index">{routeCode(route)}</span>
+              <SemanticIconCue className="chain-route-icon" icon={routeIcon(route)} size="sm" />
+            </header>
+            <h4>{routeName(path.name)}</h4>
+            <div className={`tactical-primary chain-fact--${classFor(status)}`}>
+              <StateText status={status} />
+            </div>
+            <div className="tactical-chips">
+              {routeFacts(path).slice(0, 4).map(fact => (
+                <span className={`tactical-chip chain-fact--${classFor(fact.status)}`} key={fact.key}>
+                  <SemanticIconCue className="chain-fact-icon" icon={iconForField(fact.iconKey)} size="xs" />
+                  <span className="chain-fact-label">{fact.label}</span>
+                </span>
+              ))}
+            </div>
+            {primary ? (
+              <footer className={`tactical-command chain-fact--${classFor(primary.status)}`}>
+                <span>{primary.label}</span>
+                <strong>
+                  <StateText status={primary.status} text={primary.value} />
+                </strong>
+              </footer>
+            ) : null}
+          </article>
+        );
+      })}
+    </div>
+  );
+}
+
+const PANEL_CONCEPTS = [
+  {
+    key: 'jobs',
+    kicker: 'Option 01',
+    name: 'RimWorld Job Cards',
+    description: 'Chunky work orders with short icon bullets.',
+  },
+  {
+    key: 'console',
+    kicker: 'Option 02',
+    name: 'Colony Supply Console',
+    description: 'A darker terminal rack with live readouts.',
+  },
+  {
+    key: 'subway',
+    kicker: 'Option 03',
+    name: 'Food Chain Subway Map',
+    description: 'Routes and stops show the supply chain flow.',
+  },
+  {
+    key: 'quartermaster',
+    kicker: 'Option 04',
+    name: 'Quartermaster Board',
+    description: 'Pinned colony orders with stamped state.',
+  },
+  {
+    key: 'tactical',
+    kicker: 'Option 05',
+    name: 'Tactical Cards',
+    description: 'Strategy-game command cards with loud action bars.',
+  },
 ] as const;
+
+type PanelConceptKey = (typeof PANEL_CONCEPTS)[number]['key'];
 
 type RouteFact = {
   iconKey: string;
@@ -74,16 +265,41 @@ type RouteFact = {
 
 type RouteKind = 'forage' | 'grow' | 'hunt';
 
+function renderConcept(key: PanelConceptKey, paths: AdviceChainPath[]) {
+  if (key === 'jobs') return <JobCardsConcept paths={paths} />;
+  if (key === 'console') return <ConsoleConcept paths={paths} />;
+  if (key === 'subway') return <SubwayConcept paths={paths} />;
+  if (key === 'quartermaster') return <QuartermasterConcept paths={paths} />;
+  return <TacticalConcept paths={paths} />;
+}
+
+function StateText({ status, text }: { status: AdviceChainStepStatus; text?: string }) {
+  const display = text ?? formatStatus(status);
+  if (status === 'action') return <strong>{display}</strong>;
+  return <>{display}</>;
+}
+
 function classFor(status: AdviceChainStepStatus): AdviceChainStepStatus {
   return status;
 }
 
 function formatStatus(status: AdviceChainStepStatus): string {
   if (status === 'have') return 'current good';
-  if (status === 'action') return '⚡ Action Requested';
+  if (status === 'action') return ACTION_REQUESTED;
   if (status === 'available') return 'future';
   if (status === 'blocked') return 'blocked';
   return 'trigger';
+}
+
+function orderedPaths(paths: AdviceChainPath[]): AdviceChainPath[] {
+  const order: Record<RouteKind, number> = { grow: 0, hunt: 1, forage: 2 };
+  return [...paths].sort((left, right) => order[routeKind(left)] - order[routeKind(right)]);
+}
+
+function routeCode(route: RouteKind): string {
+  if (route === 'hunt') return 'HNT';
+  if (route === 'forage') return 'FRG';
+  return 'GRO';
 }
 
 function routeName(name: string): string {
@@ -187,13 +403,21 @@ function compactFacts(facts: Array<RouteFact | null>): RouteFact[] {
   return facts.filter((fact): fact is RouteFact => fact !== null).slice(0, 5);
 }
 
+function primaryFact(path: AdviceChainPath): RouteFact | undefined {
+  const facts = routeFacts(path);
+  return facts.find(fact => fact.status === 'action')
+    ?? facts.find(fact => fact.status === 'blocked')
+    ?? facts.find(fact => fact.status === 'available')
+    ?? facts[0];
+}
+
 function findStep(path: AdviceChainPath, key: string): AdviceChainStep | undefined {
   return path.steps.find(step => step.key === key);
 }
 
 function detailOrStatus(step: AdviceChainStep | undefined): string {
   if (!step) return '-';
-  if (step.status === 'action') return '⚡ Action Requested';
+  if (step.status === 'action') return ACTION_REQUESTED;
   if (step.status === 'blocked') return cleanBlockedDetail(step.detail);
   return step.detail;
 }
@@ -205,7 +429,7 @@ function stepDetail(step: AdviceChainStep | undefined): string {
 
 function statusPhrase(step: AdviceChainStep | undefined): string {
   if (!step) return '-';
-  if (step.status === 'action') return '⚡ Action Requested';
+  if (step.status === 'action') return ACTION_REQUESTED;
   if (step.status === 'blocked') return cleanBlockedDetail(step.detail);
   if (step.status === 'available') return 'available';
   if (step.status === 'have') return 'covered';
