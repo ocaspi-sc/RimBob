@@ -4,6 +4,7 @@ export function GameIcon({
   className = '',
   decorative = false,
   fallback = '?',
+  fallbackSrc = null,
   label,
   size = 'sm',
   src,
@@ -11,17 +12,26 @@ export function GameIcon({
   className?: string;
   decorative?: boolean;
   fallback?: string;
+  fallbackSrc?: string | null;
   label: string;
   size?: 'xs' | 'sm' | 'md';
   src: string | null;
 }) {
-  const [failed, setFailed] = useState(false);
+  const [failedFallback, setFailedFallback] = useState(false);
+  const [failedPrimary, setFailedPrimary] = useState(false);
 
   useEffect(() => {
-    setFailed(false);
-  }, [src]);
+    setFailedFallback(false);
+    setFailedPrimary(false);
+  }, [fallbackSrc, src]);
 
-  const showImage = Boolean(src && !failed);
+  const usableFallbackSrc = fallbackSrc && fallbackSrc !== src ? fallbackSrc : null;
+  const activeSrc = src && !failedPrimary
+    ? src
+    : usableFallbackSrc && !failedFallback
+      ? usableFallbackSrc
+      : null;
+  const showImage = Boolean(activeSrc);
 
   return (
     <span
@@ -35,8 +45,14 @@ export function GameIcon({
           alt={decorative ? '' : label}
           decoding="async"
           loading="lazy"
-          src={src ?? undefined}
-          onError={() => setFailed(true)}
+          src={activeSrc ?? undefined}
+          onError={() => {
+            if (activeSrc === src) {
+              setFailedPrimary(true);
+            } else {
+              setFailedFallback(true);
+            }
+          }}
         />
       ) : (
         <span aria-hidden="true" className="game-icon-fallback">{fallback}</span>

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using RimBob.Ingestion;
@@ -13,6 +14,8 @@ public sealed class IconCacheService
     private const int DefaultWarmAttempts = 3;
     private const int DefaultWarmCheckpointInterval = 25;
     private const int MaxStatusFailures = 100;
+    private const int RedXPlaceholderPngLength = 1132;
+    private const string RedXPlaceholderPngSha256 = "0D25BE2358B9CC93B0154E9BE5CE4769FBB30023C2D6CBC46E636798917DC13B";
     private static readonly TimeSpan DefaultWarmRetryDelay = TimeSpan.FromMilliseconds(400);
     private static readonly TimeSpan DefaultWarmRequestInterval = TimeSpan.FromMilliseconds(100);
     private static readonly byte[] PngSignature = [137, 80, 78, 71, 13, 10, 26, 10];
@@ -188,6 +191,7 @@ public sealed class IconCacheService
         IconCacheManifest? manifest = ReadManifest();
         FileInfo[] files = new DirectoryInfo(rootDirectory)
             .EnumerateFiles("*.png", SearchOption.AllDirectories)
+            .Where(file => !IsKnownPlaceholderPng(file))
             .ToArray();
         IconCacheFile[] fileEntries = files
             .Select(ToCacheFile)
@@ -548,7 +552,8 @@ public sealed class IconCacheService
         CancellationToken ct)
     {
         string path = ResolveIconPath(kind, id);
-        if (File.Exists(path))
+        FileInfo existing = new(path);
+        if (existing.Exists && !IsKnownPlaceholderPng(existing))
         {
             await MarkCachedSuccessAsync(kind, id, ct);
             return new IconFile(path, ContentTypePng, PublicPath(kind, id));
@@ -571,7 +576,7 @@ public sealed class IconCacheService
             ?? throw new InvalidOperationException($"Could not resolve icon directory for {path}");
         Directory.CreateDirectory(directory);
 
-        byte[] bytes = DecodePng(base64);
+        byte[] bytes = DecodePng(base64, $"{kind} {id}");
         string tempPath = $"{path}.{Guid.NewGuid():N}.tmp";
         try
         {
@@ -756,7 +761,7 @@ public sealed class IconCacheService
             IconWarmFailureKinds.InvalidResponse);
     }
 
-    private static byte[] DecodePng(string base64)
+    private static byte[] DecodePng(string base64, string label)
     {
         string trimmed = base64.Trim();
         int comma = trimmed.IndexOf(',');
@@ -771,7 +776,42 @@ public sealed class IconCacheService
             throw new FormatException("RIMAPI icon response was not a PNG image.");
         }
 
+        if (IsKnownPlaceholderPng(bytes))
+        {
+            throw new IconImageUnavailableException(
+                $"RIMAPI returned a placeholder red-X image for {label}.",
+                IconWarmFailureKinds.Placeholder);
+        }
+
         return bytes;
+    }
+
+    private static bool IsKnownPlaceholderPng(FileInfo file)
+    {
+        if (file.Length != RedXPlaceholderPngLength)
+        {
+            return false;
+        }
+
+        try
+        {
+            return IsKnownPlaceholderPng(File.ReadAllBytes(file.FullName));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
+    private static bool IsKnownPlaceholderPng(byte[] bytes)
+    {
+        if (bytes.Length != RedXPlaceholderPngLength)
+        {
+            return false;
+        }
+
+        string hash = Convert.ToHexString(SHA256.HashData(bytes));
+        return string.Equals(hash, RedXPlaceholderPngSha256, StringComparison.OrdinalIgnoreCase);
     }
 
     private static void ValidatePortraitParameters(int width, int height, string direction)
@@ -853,13 +893,23 @@ public sealed class IconCacheService
             .ToList();
 
         List<IconWarmEntry> succeeded = staticEntries
-            .Where(entry => entry.Status == IconWarmEntryStatus.Succeeded || HasCachedFile(entry.Kind, entry.Id))
+            .Where(entry => HasCachedFile(entry.Kind, entry.Id))
+            .ToList();
+        List<IconWarmEntry> placeholderFailures = staticEntries
+            .Where(entry => entry.Status == IconWarmEntryStatus.Succeeded && HasPlaceholderFile(entry.Kind, entry.Id))
+            .Select(entry => entry with
+            {
+                Status = IconWarmEntryStatus.Failed,
+                LastError = "Cached icon is a placeholder red-X image.",
+                FailureKind = IconWarmFailureKinds.Placeholder
+            })
             .ToList();
         List<IconWarmEntry> deferred = staticEntries
             .Where(entry => entry.Status == IconWarmEntryStatus.Deferred && !HasCachedFile(entry.Kind, entry.Id))
             .ToList();
         List<IconWarmEntry> failed = staticEntries
             .Where(entry => entry.Status == IconWarmEntryStatus.Failed && !HasCachedFile(entry.Kind, entry.Id))
+            .Concat(placeholderFailures)
             .ToList();
 
         List<IconWarmFailure> issues = failed
@@ -895,7 +945,21 @@ public sealed class IconCacheService
     {
         try
         {
-            return File.Exists(ResolveIconPath(kind, id));
+            FileInfo file = new(ResolveIconPath(kind, id));
+            return file.Exists && !IsKnownPlaceholderPng(file);
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
+    }
+
+    private bool HasPlaceholderFile(string kind, string id)
+    {
+        try
+        {
+            FileInfo file = new(ResolveIconPath(kind, id));
+            return file.Exists && IsKnownPlaceholderPng(file);
         }
         catch (ArgumentException)
         {
@@ -1159,6 +1223,7 @@ internal static class IconWarmFailureKinds
     public const string InvalidResponse = "invalid_response";
     public const string BadKey = "bad_key";
     public const string Deferred = "deferred";
+    public const string Placeholder = "placeholder";
 }
 
 internal sealed record IconCacheManifest(

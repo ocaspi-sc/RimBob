@@ -12,6 +12,7 @@ namespace RimBob.Tests.ApiHost;
 public sealed class IconCacheServiceTests
 {
     private const string PngBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=";
+    private const string RedXPlaceholderPngBase64 = "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAEM0lEQVR4Ae1bzUsbQRSfJCopEttSCbUGUZCix3qRCr147Z/Qv6/HHu2x0EMpvdijIoVAUeqhYogU08aPzm9lktnnZj7fLsTdgXHmzey8j9++92Z2N9bON9ZuRYlLvcS2J6aXHoAZ3QPeH77WyQfbf7fxdWRbCgCM3hsYXfowOlfEjNKHQAUA8YjSkZUHlO6WE4MrDyCAlI709gDso3rFuWG1dZacH9DX5+ieG4Iu5TczMxCrj08FWlQ67yvDGwAqYHv5SKB2JAhFlM58T2wvdZPKIS8KgDea4UWAsLZwNjJcARELQhAAK/Juw3i0egEIm4un+hBbH8bvrhyl+AGE3c6BaD+6SI37EN5H/6bk3lnoi3brjxiIppit/UvJ21rsiuHfWXF88SwZH6Rm7c8aNG80ZZyruz2gk5L30+ZArD/5LfqXrURSxiVEgzQZ5AH7J2tpLoTiDAdlPBGRIvd/mfVJXUyIIADAY+/wFWGVJjlA0GM+zX1M7f0w6zG+MrsXDADYAYThcC6bsxyNyQlZMU8FfYw0Hvy8cwCNMdyBtxvfx7p55oTxwrueLeaRd1CUB1J97ri4/43yACVGKaNo2vqEg0vM2+RR+SaaBQAIsCnlAoJTzFtyj8nYrDk2ABQIoTmhqJinIHjnAMqAxqBvThCWfZ475qn+rB6gmPuEQ9Exr3RUbS4AgLkLCMgLeLAxFRsf01qXudwAgHAob8oJtidIjn3eBgI7AMgJekVOaNzejKqoy7Sj1etaXegVMY/6QX6kubxqpnjRfGMzzmWeHYAsoTDGp+Tt9rouhQAAgS4gXN80rLlDV56jXxgAtniHMY36tVhq9TjscubBDoAe/0nMYp+X7/CQ8ZNyI0f1SlTdWT5IvV67x49cH0uyA0AVctnn6RqXYzNdE0rnCoDL2X6S4kWBkBsALmf7T8ebxnMCQMjrHaMCnv1ZwPd53vfZwfcdozJ0UsvuAS4xT/d5SlNl8wwHVgBcYn6SsZPGFRh5gcAGgEvM2872AMH07JBHTvDOAcnerm6LbH1jnq7XWCXdonNCtAeExDw1mtJFhkMUADExT42mdFEgBAPAEfPUaEoXkRO8AcBb+XX5UXTnxZHI+lYX+zxPz/7ICcPbuVHV3x2gj2+R0Ad63X0xoDCaaW8AwA7Z2FRs7mtamzVn42fTJ4unGgsCQH35VUz01qasfq1P38TXpI9NRhAA305ejj5/6wJs+7x+bUgfINBzAoyHPqHFGwCcxVE/S6EHvedJH3Re7/BMOeFnvy2+SD30a3yB8D4I6QK6vbZoNoZiP+IO6Pxc+/CEreWulBv+uwAly9sD1EK054P5wo1X8jmMB68oAJQy09x6hwBdYDvbc4PDLa/0HlABwO2i08av8oBpu2Pc+lYewI3otPGj23pyrp42I2L0rVX/PB0D3wNYW/ok+B9TbtOWqkx3MAAAAABJRU5ErkJggg==";
 
     [Fact]
     public async Task GetItemIconAsync_WhenKeyIsUnsafe_RejectsTraversalAndWritesNothing()
@@ -63,6 +64,137 @@ public sealed class IconCacheServiceTests
                 },
                 options => options.ExcludingMissingMembers());
             status.Files.Single().SizeBytes.Should().BeGreaterThan(0);
+        }
+        finally
+        {
+            DeleteTempRoot(root);
+        }
+    }
+
+    [Fact]
+    public async Task GetItemIconAsync_WhenRimApiReturnsPlaceholderRedX_RejectsAndWritesNothing()
+    {
+        string root = NewTempRoot();
+        try
+        {
+            IconCacheService sut = NewService(root, _ => ImageEnvelope("Frame_Cooler", RedXPlaceholderPngBase64));
+
+            Func<Task> act = () => sut.GetItemIconAsync("Frame_Cooler");
+
+            await act.Should().ThrowAsync<InvalidOperationException>()
+                .WithMessage("*placeholder red-X image*");
+            sut.GetStatus().FileCount.Should().Be(0);
+            Directory.EnumerateFiles(root, "*.png", SearchOption.AllDirectories).Should().BeEmpty();
+        }
+        finally
+        {
+            DeleteTempRoot(root);
+        }
+    }
+
+    [Fact]
+    public async Task GetStatus_IgnoresExistingPlaceholderRedXPngFiles()
+    {
+        string root = NewTempRoot();
+        try
+        {
+            string itemDir = Path.Combine(root, "item");
+            Directory.CreateDirectory(itemDir);
+            await File.WriteAllBytesAsync(
+                Path.Combine(itemDir, "Frame_Cooler.png"),
+                Convert.FromBase64String(RedXPlaceholderPngBase64));
+            await File.WriteAllBytesAsync(
+                Path.Combine(itemDir, "MealSimple.png"),
+                Convert.FromBase64String(PngBase64));
+            IconCacheService sut = NewService(root, _ => ImageEnvelope("MealSimple"));
+
+            IconCacheStatus status = sut.GetStatus();
+
+            status.FileCount.Should().Be(1);
+            status.Files.Should().ContainSingle(file => file.Kind == "item" && file.Id == "MealSimple");
+            status.Files.Should().NotContain(file => file.Id == "Frame_Cooler");
+        }
+        finally
+        {
+            DeleteTempRoot(root);
+        }
+    }
+
+    [Fact]
+    public async Task GetItemIconAsync_WhenCachedPlaceholderExists_RefetchesAndOverwritesWithUsablePng()
+    {
+        string root = NewTempRoot();
+        try
+        {
+            string itemDir = Path.Combine(root, "item");
+            Directory.CreateDirectory(itemDir);
+            string iconPath = Path.Combine(itemDir, "Frame_Cooler.png");
+            await File.WriteAllBytesAsync(iconPath, Convert.FromBase64String(RedXPlaceholderPngBase64));
+            int imageCalls = 0;
+            IconCacheService sut = NewService(root, request =>
+            {
+                string path = request.RequestUri?.PathAndQuery ?? string.Empty;
+                if (path.Contains("item/image", StringComparison.OrdinalIgnoreCase))
+                {
+                    imageCalls++;
+                    return ImageEnvelope("Frame_Cooler");
+                }
+
+                return new HttpResponseMessage(HttpStatusCode.NotFound);
+            });
+
+            IconFile file = await sut.GetItemIconAsync("Frame_Cooler");
+
+            imageCalls.Should().Be(1);
+            file.Path.Should().Be(iconPath);
+            File.ReadAllBytes(iconPath).Should().Equal(Convert.FromBase64String(PngBase64));
+            sut.GetStatus().Files.Should().ContainSingle(entry => entry.Id == "Frame_Cooler");
+        }
+        finally
+        {
+            DeleteTempRoot(root);
+        }
+    }
+
+    [Fact]
+    public async Task GetStatus_WhenSuccessfulManifestEntryNowHasPlaceholderFile_ReclassifiesItAsFailure()
+    {
+        string root = NewTempRoot();
+        try
+        {
+            IconCacheService sut = NewService(root, request =>
+            {
+                string path = request.RequestUri?.PathAndQuery ?? string.Empty;
+                if (path.Contains("def/all", StringComparison.OrdinalIgnoreCase))
+                {
+                    return SingleThingCatalog("Frame_Cooler");
+                }
+
+                if (path.Equals("/api/v1/factions", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Json("""{ "success": true, "data": [], "errors": null, "warnings": null, "timestamp": null }""");
+                }
+
+                if (path.Contains("item/image", StringComparison.OrdinalIgnoreCase))
+                {
+                    return ImageEnvelope("Frame_Cooler");
+                }
+
+                return new HttpResponseMessage(HttpStatusCode.NotFound);
+            });
+            IconWarmSummary first = await sut.WarmStaticAsync();
+            string iconPath = Path.Combine(root, "item", "Frame_Cooler.png");
+            await File.WriteAllBytesAsync(iconPath, Convert.FromBase64String(RedXPlaceholderPngBase64));
+
+            IconCacheStatus status = sut.GetStatus();
+
+            first.Succeeded.Should().Be(1);
+            status.FileCount.Should().Be(0);
+            status.LastWarm?.Succeeded.Should().Be(0);
+            status.LastWarm?.Failed.Should().Be(1);
+            status.LastWarm?.Failures.Should().ContainSingle(failure =>
+                failure.Id == "Frame_Cooler" &&
+                failure.FailureKind == "placeholder");
         }
         finally
         {
@@ -230,6 +362,50 @@ public sealed class IconCacheServiceTests
             ]);
             status.LastWarm.Should().NotBeNull();
             status.LastWarm?.Succeeded.Should().Be(3);
+        }
+        finally
+        {
+            DeleteTempRoot(root);
+        }
+    }
+
+    [Fact]
+    public async Task WarmStaticAsync_WhenIconReturnsPlaceholderRedX_RecordsPlaceholderFailureAndDoesNotCache()
+    {
+        string root = NewTempRoot();
+        try
+        {
+            IconCacheService sut = NewService(root, request =>
+            {
+                string path = request.RequestUri?.PathAndQuery ?? string.Empty;
+                if (path.Contains("def/all", StringComparison.OrdinalIgnoreCase))
+                {
+                    return SingleThingCatalog("Frame_Cooler");
+                }
+
+                if (path.Equals("/api/v1/factions", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Json("""{ "success": true, "data": [], "errors": null, "warnings": null, "timestamp": null }""");
+                }
+
+                if (path.Contains("item/image", StringComparison.OrdinalIgnoreCase))
+                {
+                    return ImageEnvelope("Frame_Cooler", RedXPlaceholderPngBase64);
+                }
+
+                return new HttpResponseMessage(HttpStatusCode.NotFound);
+            });
+
+            IconWarmSummary summary = await sut.WarmStaticAsync();
+            IconCacheStatus status = sut.GetStatus();
+
+            summary.Succeeded.Should().Be(0);
+            summary.Failed.Should().Be(1);
+            summary.Failures.Should().ContainSingle(failure =>
+                failure.Kind == "item" &&
+                failure.Id == "Frame_Cooler" &&
+                failure.FailureKind == "placeholder");
+            status.FileCount.Should().Be(0);
         }
         finally
         {
@@ -917,13 +1093,16 @@ public sealed class IconCacheServiceTests
     }
 
     private static HttpResponseMessage ImageEnvelope(string name) =>
+        ImageEnvelope(name, PngBase64);
+
+    private static HttpResponseMessage ImageEnvelope(string name, string imageBase64) =>
         Json($$"""
             {
               "success": true,
               "data": {
                 "name": "{{name}}",
                 "result": "ok",
-                "image_base64": "{{PngBase64}}"
+                "image_base64": "{{imageBase64}}"
               },
               "errors": null,
               "warnings": null,

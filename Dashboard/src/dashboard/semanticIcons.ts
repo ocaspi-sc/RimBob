@@ -357,7 +357,7 @@ export function iconForStateSummaryLine(label: string | null, detail: string): S
   }
   if (labelKey === 'kitchen_storage') {
     if (text.includes('cooking') || text.includes('meal')) return common.kitchen;
-    if (text.includes('cooler') || text.includes('freezer')) return item('Frame_Cooler', 'Cooler icon', 'CO');
+    if (text.includes('cooler') || text.includes('freezer')) return item('Cooler', 'Cooler icon', 'CO');
     return common.storage;
   }
   if (labelKey === 'confidence_gaps') return common.data;

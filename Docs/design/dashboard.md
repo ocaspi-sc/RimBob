@@ -182,8 +182,9 @@ SYSTEM owns:
   result.
 - Icon cache metadata: local cache counts, byte totals, warm job lifecycle,
   skipped candidates, deferred candidates, bounded failure samples, per-def
-  warm state, and the full cached PNG inventory rendered as the actual cached
-  icons.
+  warm state, and the full usable cached PNG inventory rendered as the actual
+  cached icons. Upstream placeholder red-X PNGs are invalid cache artifacts:
+  they should be treated as missing/unusable, not displayed as real game art.
 - Latest minister traces: trigger, status, rules/LLM path, rule trace,
   escalation reason, emitted counts, and failure detail when available.
 - Recent event/advice timeline.
