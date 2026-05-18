@@ -1,6 +1,7 @@
 using FluentAssertions;
 using RimBob.Coordination;
 using RimBob.Core.Advice;
+using RimBob.Core.Briefings;
 
 namespace RimBob.Tests.Coordination;
 
@@ -70,6 +71,22 @@ public sealed class AdviceBusTests
     }
 
     [Fact]
+    public void ReplaceMinisterAdvice_PublishesAndReplaysMinisterChain()
+    {
+        AdviceBus bus = new();
+        AdviceChainModel chain = Chain();
+        List<AdviceSnapshot> snapshots = [];
+        bus.AdviceSnapshotPublished += snapshots.Add;
+
+        bus.ReplaceMinisterAdvice("Food", [Advice("new_food", "Food")], "Food is low.", chain);
+
+        snapshots.Should().ContainSingle();
+        snapshots[0].Chain.Should().BeSameAs(chain);
+        AdviceSnapshot active = bus.ActiveSnapshot();
+        active.Chains.Should().ContainKey("Food").WhoseValue.Should().BeSameAs(chain);
+    }
+
+    [Fact]
     public void ReplaceMinisterAdvice_EmptySnapshotClearsMinisterAdvice()
     {
         AdviceBus bus = new();
@@ -120,6 +137,21 @@ public sealed class AdviceBusTests
     }
 
     [Fact]
+    public void RemoveAppliedAction_PreservesMinisterChains()
+    {
+        AdviceBus bus = new();
+        AdviceChainModel chain = Chain();
+        bus.ReplaceMinisterAdvice("Food", [Advice("food", "Food", [Action("harvest"), Action("bill")])], "Food summary", chain);
+        List<AdviceSnapshot> snapshots = [];
+        bus.AdviceSnapshotPublished += snapshots.Add;
+
+        bus.RemoveAppliedAction("food", 1).Should().BeTrue();
+
+        snapshots.Should().ContainSingle();
+        snapshots[0].Chains.Should().ContainKey("Food").WhoseValue.Should().BeSameAs(chain);
+    }
+
+    [Fact]
     public void RemoveAppliedAction_RemovesAdviceWhenLastActionIsApplied()
     {
         AdviceBus bus = new();
@@ -159,6 +191,14 @@ public sealed class AdviceBusTests
 
     private static AdviceAction Action(string instruction) =>
         new(AdviceActionKind.ProductionBill, instruction);
+
+    private static AdviceChainModel Chain() => new(
+    [
+        new AdviceChainPath("Grow path",
+        [
+            new AdviceChainStep("grow.trigger", "Food buffer", "4.0 days", AdviceChainStepStatus.Trigger)
+        ])
+    ]);
 }
 
 internal static class InputBuilderExtensions

@@ -77,6 +77,24 @@ export interface SuggestedAction {
   icon?: IconRef | null;
 }
 
+export type AdviceChainStepStatus = 'trigger' | 'action' | 'have' | 'available' | 'blocked';
+
+export interface AdviceChainStep {
+  key: string;
+  label: string;
+  detail: string;
+  status: AdviceChainStepStatus;
+}
+
+export interface AdviceChainPath {
+  name: string;
+  steps: AdviceChainStep[];
+}
+
+export interface AdviceChainModel {
+  paths: AdviceChainPath[];
+}
+
 export interface AdviceItem {
   id: string;
   minister: string;
@@ -99,4 +117,6 @@ export interface AdviceSnapshot {
   advice: AdviceItem[];
   state_summary?: string | null;
   state_summaries?: Record<string, string> | null;
+  chain?: AdviceChainModel | null;
+  chains?: Record<string, AdviceChainModel> | null;
 }

@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using RimBob.Core.Advice;
+using RimBob.Core.Briefings;
 using RimBob.Core.Ministers;
 
 namespace RimBob.Coordination;
@@ -101,10 +102,12 @@ public sealed record MinisterReplayRecord(
     IReadOnlyList<AgentFlag> Flags,
     [property: JsonPropertyName("state_summary")]
     string? StateSummary,
+    [property: JsonPropertyName("chain")]
+    AdviceChainModel? Chain = null,
     [property: JsonPropertyName("error")]
-    ReplayErrorSummary? Error,
+    ReplayErrorSummary? Error = null,
     [property: JsonPropertyName("llm")]
-    ReplayLlmMetadata? Llm,
+    ReplayLlmMetadata? Llm = null,
     [property: JsonPropertyName("output_kind")]
     string? OutputKind = null,
     [property: JsonPropertyName("output")]

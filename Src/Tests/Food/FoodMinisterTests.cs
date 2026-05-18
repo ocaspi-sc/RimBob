@@ -98,6 +98,8 @@ public sealed class FoodMinisterTests
         record.Context.Should().BeOfType<MinisterBriefingContext>();
         record.Advice.Should().ContainSingle().Which.AdviceType.Should().Be("food_security");
         record.Flags.Should().ContainSingle().Which.Domain.Should().Be("food");
+        record.Chain.Should().NotBeNull();
+        record.Chain!.Paths.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -146,6 +148,7 @@ public sealed class FoodMinisterTests
         IReadOnlyDictionary<string, string> stateSummaries = h.Bus.ActiveSnapshot().StateSummaries!;
         stateSummaries.Should().ContainKey("Food")
             .WhoseValue.Should().Contain("Stores:");
+        h.Bus.ActiveSnapshot().Chains.Should().ContainKey("Food");
         stateSummaries["Food"].Should().Contain("25.0 days");
         stateSummaries["Food"].Should().NotBe("Food is below target and hunting may be viable.");
         h.Flags.Active(FlagSeverity.Medium).Should().ContainSingle().Which.Summary.Should().Be("LLM food flag");

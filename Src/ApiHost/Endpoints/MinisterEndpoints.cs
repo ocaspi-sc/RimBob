@@ -194,6 +194,7 @@ public static class MinisterEndpoints
                 FoodLlmParseResult parseResult = FoodLlmResponseParser.Parse(text, briefing, retrieved);
                 IReadOnlyList<string> styleWarnings = AdviceTextStyleWarnings.ForFood(parseResult.Response);
                 string stateSummary = FoodStateSummary.Build(briefing);
+                AdviceChainModel chain = FoodChainModelBuilder.Build(briefing, parseResult.Response.Advice);
                 outputs.Record(new RawLlmOutputSnapshot(
                     Minister: scope.Label,
                     Provider: "Codex",
@@ -219,11 +220,12 @@ public static class MinisterEndpoints
                     Advice: parseResult.Response.Advice,
                     Flags: parseResult.Response.Flags,
                     StateSummary: stateSummary,
+                    Chain: chain,
                     LlmAttemptStarted: capturedAt,
                     OutputKind: "advice_flags",
                     Output: new { advice = parseResult.Response.Advice, flags = parseResult.Response.Flags }), ct);
 
-                bus.ReplaceMinisterAdvice(scope.Label, parseResult.Response.Advice, stateSummary);
+                bus.ReplaceMinisterAdvice(scope.Label, parseResult.Response.Advice, stateSummary, chain);
                 foreach (AgentFlag flag in parseResult.Response.Flags)
                     flags.Publish(flag);
 

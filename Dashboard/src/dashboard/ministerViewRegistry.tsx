@@ -6,13 +6,14 @@ import { MinisterRagView } from '../components/minister/MinisterRagView';
 import { MinisterRawLlmView } from '../components/minister/MinisterRawLlmView';
 import { MinisterRulesView } from '../components/minister/MinisterRulesView';
 import { ministerViews, type MinisterViewKey, type ScopeConfig } from './scopes';
-import type { AdviceItem } from '../types/advice';
+import type { AdviceChainModel, AdviceItem } from '../types/advice';
 import type { MayorAgenda } from '../types/agenda';
 import type { DashboardEvent, SystemHealth } from '../types/system';
 
 export interface MinisterViewContext {
   activeAdvice: AdviceItem[];
   agenda: MayorAgenda | null;
+  chains: Record<string, AdviceChainModel>;
   events: DashboardEvent[];
   previousAgenda: MayorAgenda | null;
   scope: ScopeConfig;
@@ -38,12 +39,13 @@ const ministerViewRenderers: Record<MinisterViewKey, MinisterViewRenderer> = {
   rules: ({ activeAdvice, events, scope }) => (
     <MinisterRulesView scope={scope} events={events} advice={activeAdvice} />
   ),
-  advice: ({ activeAdvice, agenda, previousAgenda, scope, stateSummaries }) => (
+  advice: ({ activeAdvice, agenda, chains, previousAgenda, scope, stateSummaries }) => (
     <MinisterAdviceView
       scope={scope}
       agenda={agenda}
       previousAgenda={previousAgenda}
       advice={activeAdvice}
+      chain={chains[scope.label] ?? chains[scope.key] ?? null}
       stateSummary={stateSummaries[scope.label] ?? stateSummaries[scope.key] ?? null}
     />
   ),

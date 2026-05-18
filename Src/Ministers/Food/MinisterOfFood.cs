@@ -47,7 +47,8 @@ public sealed class MinisterOfFood(
         {
             case Decision decision:
                 string ruleStateSummary = FoodStateSummary.Build(briefing);
-                PublishSnapshot(decision.Advice, decision.Flags, ruleStateSummary);
+                AdviceChainModel ruleChain = FoodChainModelBuilder.Build(briefing, decision.Advice);
+                PublishSnapshot(decision.Advice, decision.Flags, ruleStateSummary, ruleChain);
                 await PersistReplayAsync(new MinisterReplayEntry(
                     Minister: Name,
                     Cycle: cycle,
@@ -61,7 +62,8 @@ public sealed class MinisterOfFood(
                     GuideCitations: null,
                     Advice: decision.Advice,
                     Flags: decision.Flags,
-                    StateSummary: ruleStateSummary), ct);
+                    StateSummary: ruleStateSummary,
+                    Chain: ruleChain), ct);
                 log.LogInformation(
                     "Food rules decision trace={Trace} advice={AdviceCount} flags={FlagCount}",
                     decision.Trace, decision.Advice.Count, decision.Flags.Count);
@@ -91,7 +93,8 @@ public sealed class MinisterOfFood(
             citations = await retriever.RetrieveAsync(briefing, ct);
             FoodLlmResponse response = await llm.CallFoodAsync(briefing, context, citations, cropCandidates, ct);
             string stateSummary = FoodStateSummary.Build(briefing);
-            PublishSnapshot(response.Advice, response.Flags, stateSummary);
+            AdviceChainModel chain = FoodChainModelBuilder.Build(briefing, response.Advice);
+            PublishSnapshot(response.Advice, response.Flags, stateSummary, chain);
             await PersistReplayAsync(new MinisterReplayEntry(
                 Minister: Name,
                 Cycle: cycle,
@@ -106,6 +109,7 @@ public sealed class MinisterOfFood(
                 Advice: response.Advice,
                 Flags: response.Flags,
                 StateSummary: stateSummary,
+                Chain: chain,
                 LlmAttemptStarted: llmAttemptStarted,
                 OutputKind: "advice_flags",
                 Output: new { advice = response.Advice, flags = response.Flags }), ct);
@@ -141,9 +145,10 @@ public sealed class MinisterOfFood(
     private void PublishSnapshot(
         IReadOnlyList<AdviceItem> advice,
         IReadOnlyList<AgentFlag> emittedFlags,
-        string? stateSummary)
+        string? stateSummary,
+        AdviceChainModel? chain)
     {
-        bus.ReplaceMinisterAdvice(Name, advice, stateSummary);
+        bus.ReplaceMinisterAdvice(Name, advice, stateSummary, chain);
         foreach (AgentFlag flag in emittedFlags)
             flags.Publish(flag);
     }

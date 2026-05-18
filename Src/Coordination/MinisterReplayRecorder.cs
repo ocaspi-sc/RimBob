@@ -1,4 +1,5 @@
 using RimBob.Core.Advice;
+using RimBob.Core.Briefings;
 using RimBob.Core.Ministers;
 using RimBob.LLM;
 
@@ -47,6 +48,7 @@ public sealed class MinisterReplayRecorder(
             Advice: entry.Advice ?? [],
             Flags: entry.Flags ?? [],
             StateSummary: entry.StateSummary,
+            Chain: entry.Chain,
             Error: entry.Error,
             Llm: llm,
             OutputKind: entry.OutputKind,
@@ -90,6 +92,7 @@ public sealed record MinisterReplayEntry(
     IReadOnlyList<AdviceItem>? Advice = null,
     IReadOnlyList<AgentFlag>? Flags = null,
     string? StateSummary = null,
+    AdviceChainModel? Chain = null,
     ReplayErrorSummary? Error = null,
     DateTimeOffset? LlmAttemptStarted = null,
     ReplayLlmMetadata? Llm = null,

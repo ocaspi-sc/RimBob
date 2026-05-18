@@ -1,4 +1,5 @@
 using RimBob.Core.Advice;
+using RimBob.Core.Briefings;
 
 namespace RimBob.Coordination;
 
@@ -11,6 +12,8 @@ public sealed class AdviceBus
     private readonly object _lock = new();
     private readonly Dictionary<string, AdviceItem> _activeAdvice = new();
     private readonly Dictionary<string, string> _ministerStateSummaries =
+        new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, AdviceChainModel> _ministerChains =
         new(StringComparer.OrdinalIgnoreCase);
 
     public event Action<AgendaUpdated>? AgendaUpdated;
@@ -31,7 +34,8 @@ public sealed class AdviceBus
     public void ReplaceMinisterAdvice(
         string minister,
         IReadOnlyList<AdviceItem> advice,
-        string? stateSummary = null)
+        string? stateSummary = null,
+        AdviceChainModel? chain = null)
     {
         if (string.IsNullOrWhiteSpace(minister))
             throw new ArgumentException("Minister name is required.", nameof(minister));
@@ -69,12 +73,17 @@ public sealed class AdviceBus
             else
                 _ministerStateSummaries[minister] = stateSummary.Trim();
 
+            if (chain is null)
+                _ministerChains.Remove(minister);
+            else
+                _ministerChains[minister] = chain;
+
             currentMinisterAdvice = SortAdvice(_activeAdvice.Values
                 .Where(item => string.Equals(item.Minister, minister, StringComparison.OrdinalIgnoreCase)))
                 .ToList();
         }
 
-        AdviceSnapshotPublished?.Invoke(new AdviceSnapshot(minister, currentMinisterAdvice, NormalizeStateSummary(stateSummary)));
+        AdviceSnapshotPublished?.Invoke(new AdviceSnapshot(minister, currentMinisterAdvice, NormalizeStateSummary(stateSummary), Chain: chain));
         foreach (AdviceItem item in currentMinisterAdvice)
             AdvicePublished?.Invoke(item);
     }
@@ -123,11 +132,14 @@ public sealed class AdviceBus
             }
 
             Dictionary<string, string> summaries = new(_ministerStateSummaries, StringComparer.OrdinalIgnoreCase);
+            Dictionary<string, AdviceChainModel> chains = new(_ministerChains, StringComparer.OrdinalIgnoreCase);
             snapshot = new AdviceSnapshot(
                 Minister: null,
                 Advice: SortAdvice(_activeAdvice.Values).ToList(),
                 StateSummary: null,
-                StateSummaries: summaries);
+                StateSummaries: summaries,
+                Chain: null,
+                Chains: chains);
         }
 
         AdviceSnapshotPublished?.Invoke(snapshot);
@@ -142,11 +154,14 @@ public sealed class AdviceBus
         {
             PruneExpired(DateTimeOffset.UtcNow);
             Dictionary<string, string> summaries = new(_ministerStateSummaries, StringComparer.OrdinalIgnoreCase);
+            Dictionary<string, AdviceChainModel> chains = new(_ministerChains, StringComparer.OrdinalIgnoreCase);
             return new AdviceSnapshot(
                 Minister: null,
                 Advice: SortAdvice(_activeAdvice.Values).ToList(),
                 StateSummary: null,
-                StateSummaries: summaries);
+                StateSummaries: summaries,
+                Chain: null,
+                Chains: chains);
         }
     }
 
@@ -174,4 +189,6 @@ public sealed record AdviceSnapshot(
     string? Minister,
     IReadOnlyList<AdviceItem> Advice,
     string? StateSummary = null,
-    IReadOnlyDictionary<string, string>? StateSummaries = null);
+    IReadOnlyDictionary<string, string>? StateSummaries = null,
+    AdviceChainModel? Chain = null,
+    IReadOnlyDictionary<string, AdviceChainModel>? Chains = null);

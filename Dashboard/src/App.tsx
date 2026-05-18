@@ -92,6 +92,7 @@ export default function App() {
               <MinisterWorkspace
                 activeAdvice={feed.feed.activeAdvice}
                 agenda={feed.agenda}
+                chains={feed.feed.chains}
                 events={feed.events}
                 previousAgenda={feed.previousAgenda}
                 scope={activeScope}

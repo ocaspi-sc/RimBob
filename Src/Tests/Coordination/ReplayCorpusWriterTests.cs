@@ -37,6 +37,13 @@ public sealed class ReplayCorpusWriterTests
                 GuideCitationIds: [],
                 IssuedAt: capturedAt,
                 ExpiresAt: capturedAt.AddHours(4));
+            AdviceChainModel chain = new(
+            [
+                new AdviceChainPath("Grow path",
+                [
+                    new AdviceChainStep("grow.trigger", "Food buffer", "4.0 days", AdviceChainStepStatus.Trigger)
+                ])
+            ]);
             RuleTraceDetails traceDetails = new(
                 SelectedRule: "emergency_food_flag",
                 MatchedSignals:
@@ -66,6 +73,7 @@ public sealed class ReplayCorpusWriterTests
                 Advice: [advice],
                 Flags: [],
                 StateSummary: "Food is low and needs action.",
+                Chain: chain,
                 Error: null,
                 Llm: new ReplayLlmMetadata(
                     Provider: "Gemini",
@@ -105,6 +113,7 @@ public sealed class ReplayCorpusWriterTests
             root.GetProperty("guide_citations").GetArrayLength().Should().Be(1);
             root.GetProperty("guide_citations")[0].GetProperty("cite_id").GetString().Should().Be("food-guide-1");
             root.GetProperty("state_summary").GetString().Should().Be("Food is low and needs action.");
+            root.GetProperty("chain").GetProperty("paths")[0].GetProperty("steps")[0].GetProperty("status").GetString().Should().Be("trigger");
             root.GetProperty("llm").GetProperty("raw_output").GetString().Should().Be("{\"advice\":[]}");
             root.GetProperty("llm").GetProperty("api_key_index").GetInt32().Should().Be(2);
             root.GetProperty("llm").GetProperty("api_key_label").GetString().Should().Be("fallback_1");

@@ -140,7 +140,9 @@ public static class AgendaStreamEndpoint
             minister = snapshot.Minister,
             advice = snapshot.Advice,
             state_summary = snapshot.StateSummary,
-            state_summaries = snapshot.StateSummaries
+            state_summaries = snapshot.StateSummaries,
+            chain = snapshot.Chain,
+            chains = snapshot.Chains
         }, Json);
         await ctx.Response.WriteAsync($"event: advice_snapshot\nid: {id}\ndata: {payload}\n\n", ct);
         await ctx.Response.Body.FlushAsync(ct);

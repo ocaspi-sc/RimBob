@@ -381,7 +381,9 @@ Design event types:
 
 - Agenda update: full current Mayor agenda.
 - Advice snapshot: authoritative active advice set, either global or
-  minister-scoped.
+  minister-scoped. Feeder snapshots may include whole-minister `state_summary`
+  and deterministic `chain` data; global replay snapshots may include the
+  corresponding per-minister dictionaries.
 - Single advice item: retained for compatibility and event timelines; snapshots
   are authoritative for removing stale cards.
 
@@ -456,14 +458,21 @@ emitted advice/flags, briefing version/tick when available, and last error.
 ### Advice
 
 Mayor Advice renders the Agenda as the Mayor's player-facing output. Feeder
-minister Advice renders the minister's current-state summary first, then active
-`AdviceItem`s sorted by priority. For Food, this summary is a deterministic
-briefing-derived labelled summary, not LLM prose. The Advice view may render it
-as a compact table with lightweight icon-database cues because it is
-player-facing; raw and debug views preserve the original `state_summary` text.
-It should name
-concrete food stores, growing areas/crop progress, acquisition opportunities,
+minister Advice renders the minister's current-state summary first, then any
+deterministic whole-minister chain visualization, then active `AdviceItem`s
+sorted by priority. For Food, this summary is a deterministic briefing-derived
+labelled summary, not LLM prose. The Advice view may render it as a compact
+table with lightweight icon-database cues because it is player-facing; raw and
+debug views preserve the original `state_summary` text. It should name concrete
+food stores, growing areas/crop progress, acquisition opportunities,
 kitchen/storage/freezer signals, and confidence gaps before the action cards.
+Food's planning/production panel renders from backend `chain` data as three
+compact route cards: Grow, Hunt, and Forage. Shared whole-colony steps such as
+food-buffer pressure and the final meal target are not repeated visually. The
+cards use one status model: action, have, available, and blocked. Color semantics
+are stable across the panel: green means the current route is already good, blue
+means the current advice emitted an action for that route, gray means
+idle/future capacity, and red means a blocked prerequisite.
 Cards show rationale, concrete advice actions, citations, issue id or supersession
 when available, and coverage gaps. No feedback buttons are shown in v2.
 

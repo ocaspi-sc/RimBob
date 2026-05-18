@@ -1,4 +1,4 @@
-import type { AdviceItem, AdviceSnapshot } from '../types/advice';
+import type { AdviceChainModel, AdviceItem, AdviceSnapshot } from '../types/advice';
 import type { MayorAgenda } from '../types/agenda';
 import type { DashboardEvent, FeedState, StreamDiagnostics } from '../types/system';
 
@@ -42,6 +42,7 @@ export const initialAdviceFeedState: AdviceFeedState = {
     agendaEvents: 0,
     adviceEvents: 0,
     activeAdvice: [],
+    chains: {},
     stateSummaries: {},
   },
   stream: initialDiagnostics,
@@ -138,6 +139,12 @@ export function adviceFeedReducer(
         action.snapshot.state_summary,
         action.snapshot.state_summaries,
       );
+      const chains = mergeChains(
+        state.feed.chains,
+        snapshotMinister,
+        action.snapshot.chain,
+        action.snapshot.chains,
+      );
 
       return {
         ...state,
@@ -145,6 +152,7 @@ export function adviceFeedReducer(
           ...state.feed,
           adviceEvents: state.feed.adviceEvents + 1,
           activeAdvice,
+          chains,
           stateSummaries,
         },
         stream: recordStreamEvent(state.stream, action.readyState, 'advice_snapshot', action.eventId),
@@ -232,6 +240,25 @@ function mergeStateSummaries(
   const next = { ...current };
   if (stateSummary && stateSummary.trim().length > 0) {
     next[snapshotMinister] = stateSummary.trim();
+  } else {
+    delete next[snapshotMinister];
+  }
+  return next;
+}
+
+function mergeChains(
+  current: Record<string, AdviceChainModel>,
+  snapshotMinister: string | null | undefined,
+  chain: AdviceChainModel | null | undefined,
+  chains: Record<string, AdviceChainModel> | null | undefined,
+): Record<string, AdviceChainModel> {
+  if (!snapshotMinister) {
+    return chains ? { ...chains } : current;
+  }
+
+  const next = { ...current };
+  if (chain) {
+    next[snapshotMinister] = chain;
   } else {
     delete next[snapshotMinister];
   }

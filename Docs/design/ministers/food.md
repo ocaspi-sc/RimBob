@@ -184,6 +184,18 @@ meals/raw/unclassified food, days-of-food, growing areas and crop progress,
 acquisition opportunities, kitchen/storage/freezer signals, and confidence data
 gaps; individual advice items expose one concrete `actions[]` list for the player.
 
+Food also publishes a deterministic planning/production chain model on its
+active-advice snapshot. The model is derived from `FoodBriefing` plus the
+emitted active advice, not from an LLM diagram request. It groups the current
+food response into grow, hunt, and forage paths, then marks each path step as
+the current trigger, an action the advice is driving, a capability the colony
+already has, an idle available path, or a blocked prerequisite. The dashboard
+renders the model as three compact route cards: Grow, Hunt, and Forage. Shared
+whole-colony facts such as the low-food trigger and final meal target stay in the
+structured model but are not repeated as visible route nodes. Green marks a
+current-good route, blue marks emitted action, gray marks future/idle capacity,
+and red marks blocked prerequisites.
+
 Crop selection should be grounded in deterministic yield math exposed through
 briefing context and rule decisions. The LLM may use guides to explain or adjust
 a candidate, but it should not invent crop math.

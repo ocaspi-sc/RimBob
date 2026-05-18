@@ -131,6 +131,12 @@ summary is a compact briefing-derived bullet list so it stays factual about
 stores, growing areas, acquisition, storage/kitchen state, and data gaps even
 when the LLM writes its own raw `state_summary`.
 
+Feeder snapshots may also carry a deterministic chain model for the whole
+minister read. This is not an `AdviceItem` field and is not authored by the
+LLM. For Food, backend code derives the model from `FoodBriefing` plus the
+emitted active advice so the dashboard can show how the current food pressure
+connects to grow, hunt, forage, cook, storage, and meal outcomes.
+
 If a cycle fails before producing rules output or successful LLM output, keep
 the previous active snapshot rather than clearing it.
 
