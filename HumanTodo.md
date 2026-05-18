@@ -9,6 +9,7 @@
 ## Captured by /todo
 
 <!-- entries go here -->
+- [x] [2026-05-19] #persistence #advice #mayor Implement unified minister output persistence (reload-on-boot, no boot regen, breaking /api/agenda/* → /api/ministers/{minister}/* migration). [plan](Docs/plans/unified-minister-output-persistence.md)
 - [ ] [2026-05-18] #ops #cleanup Remove legacy repo-local icon/log artifacts after AppData cache/log paths stay verified.
 - [x] [2026-05-17] #rimapi #fork Clone, build, and load the RimBob-compatible RIMAPI fork from `C:\dev\RIMAPI-for-RimBob`. [plan](Docs/plans/rimapi-fork-migration.md)
 - [x] [2026-05-17] #rimapi #assisted After the RIMAPI fork lands, verify Food uses safe unforbid apply end to end.
