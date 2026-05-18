@@ -94,6 +94,7 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 - Sync the worktree with `master` before verification builds (see GIT → "Sync before verifying"). A build missing already-landed changes is not a valid verification.
 - After build verification, run RimBob again and verify the Host is reachable, especially if a live `RimBob.Host` process was stopped.
 - Prefer `.\run-rimbob.ps1` after builds. Use `.\run-rimbob.ps1 -Foreground` when terminal output must stay attached.
+- Port `5000` is reserved for the main `C:\dev\RimBob` checkout. When running RimBob from any worktree, use a different `-ListenUrl` / port, then verify `/api/system/health` and the `RimBob.Host.exe` process path before calling the worktree build live.
 - Use manual `npm.cmd run build` / `dotnet run` only when debugging one side of the stack.
 - When adding backend logs, replay corpus files, prompt dumps, traces, or diagnostics, update dashboard-visible metadata in the same turn. If intentionally hidden, add a concrete `HumanTodo.md` follow-up and mention it in the final response.
 
