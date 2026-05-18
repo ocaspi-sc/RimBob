@@ -34,6 +34,8 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 - C:\dev\RimBob should always stay on master branch.
 - The only unstaged changes on C:\dev\RimBob should be manual edits by the human.
 - When changing code, make sure it's in a worktree + feature branch that's correct for the current task. If not, create a worktree first based off current master and work there, using commits generously. When finished, the usual MO is to squash-merge the feature branch into master so it lands, then remove the worktree.
+- Sync before verifying: before any build that validates behavior or gates a land, run `git merge master` in the worktree so you build the integrated result, not a stale snapshot missing changes other agents already landed. Resolve conflicts before building; never skip the sync to dodge them. If `master` is being written by another session, apply the git wait-and-retry rule below.
+- Shrink the staleness window; do not sync across worktrees. Keep slices small and squash-merge to master as soon as a slice is green, so other worktrees are never far behind. Master is the only integration point — never merge or cherry-pick another agent's unlanded feature branch. If a task grows large, split it and land the independent parts early rather than letting one branch diverge.
 - When doing git operations, if there's a lock file or another session appears to be writing or committing, wait briefly and retry the narrow operation; do not force broad Git actions.
 - Commit messages should contain some tags, a title, and a summary of the changes.
 
@@ -89,6 +91,7 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 
 ## Build And Verification
 
+- Sync the worktree with `master` before verification builds (see GIT → "Sync before verifying"). A build missing already-landed changes is not a valid verification.
 - After build verification, run RimBob again and verify the Host is reachable, especially if a live `RimBob.Host` process was stopped.
 - Prefer `.\run-rimbob.ps1` after builds. Use `.\run-rimbob.ps1 -Foreground` when terminal output must stay attached.
 - Use manual `npm.cmd run build` / `dotnet run` only when debugging one side of the stack.
