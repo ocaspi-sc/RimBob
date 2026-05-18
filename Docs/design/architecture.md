@@ -161,6 +161,8 @@ current shell for debugging or verification.
 
 Tracked config contains only non-secret defaults. Gemini API keys and other
 secrets must stay in environment variables or gitignored local config.
+`GEMINI_API_KEY` provides one Gemini key. `GEMINI_API_KEYS` provides an ordered
+fallback list for quota/key failures.
 
 The Host should tolerate missing LLM credentials well enough to boot health and
 dashboard surfaces; actual LLM calls can report degraded provider health.

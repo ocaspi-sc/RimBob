@@ -38,8 +38,8 @@ Builds and runs the RimBob.Host ASP.NET Core project. This single process serves
    |---|---|
    | `✓ RIMAPI handshake OK — first pawn: {name}` | RimWorld is running with a colony open |
    | `✗ {reason}` / `Start RimWorld with the RIMAPI mod…` | RimWorld not reachable — advisory only, server still runs |
-   | `✓ GEMINI_API_KEY present` | LLM calls will work |
-   | `✗ GEMINI_API_KEY env var not set` | LLM calls will fail; rules-based advice still works |
+   | `✓ Gemini API key(s) present: {count}` | LLM calls will work |
+   | `✗ Gemini API key not set` | LLM calls will fail; rules-based advice still works |
    | `✓ Gemini ping OK` | Gemini API reachable |
    | `✗ Gemini ping failed (see logs)` | Gemini unreachable |
    | `Dashboard: {url}` | Server is up; show this URL to the user |
@@ -59,7 +59,7 @@ After building, restart the .NET host to pick up the new bundle. If the user ask
 
 ## Environment notes
 
-- `GEMINI_API_KEY` must be set in the environment for LLM calls to work. Missing key → warn, but don't abort.
+- `GEMINI_API_KEY` provides one Gemini key. `GEMINI_API_KEYS` provides an ordered fallback list. Missing key → warn, but don't abort.
 - RIMAPI runs at `http://localhost:8765/` by default. If RimWorld isn't running the handshake fails but the server continues normally.
 - The server binds to `127.0.0.1` only (never `0.0.0.0`) — this is by design.
 

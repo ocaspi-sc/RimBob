@@ -153,6 +153,7 @@ static IEmbedder? ResolveEmbedder(RimBobOptions opts, IServiceProvider sp)
 static IReadOnlyList<string> ResolveGeminiApiKeys(RimBobOptions opts)
 {
     List<string> keys = [];
+    AddGeminiKeys(keys, SplitGeminiKeyList(Environment.GetEnvironmentVariable("GEMINI_API_KEY")));
     AddGeminiKeys(keys, SplitGeminiKeyList(Environment.GetEnvironmentVariable("GEMINI_API_KEYS")));
     AddGeminiKeys(keys, opts.GeminiApiKeys);
     return keys
@@ -243,7 +244,7 @@ app.Lifetime.ApplicationStarted.Register(() =>
             if (!llm.IsConfigured)
             {
                 Log.Warning("Gemini API key not set — LLM calls will fail at runtime");
-                Console.WriteLine("✗ Gemini API key not set (env GEMINI_API_KEYS or RimBob.GeminiApiKeys in appsettings.Local.json)");
+                Console.WriteLine("✗ Gemini API key not set (env GEMINI_API_KEY, GEMINI_API_KEYS, or RimBob.GeminiApiKeys in appsettings.Local.json)");
             }
             else if (opts.PingLlmOnStartup)
             {

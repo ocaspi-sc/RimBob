@@ -53,9 +53,10 @@ cd Dashboard
 npm install
 ```
 
-Set Gemini API keys as an ordered list. Either export them as an env var:
+Set Gemini API keys with either env var:
 
 ```powershell
+$env:GEMINI_API_KEY = "single-key-here"
 $env:GEMINI_API_KEYS = "primary-key-here;secondary-key-here"
 ```
 
@@ -72,7 +73,7 @@ $env:GEMINI_API_KEYS = "primary-key-here;secondary-key-here"
 }
 ```
 
-`GEMINI_API_KEYS` accepts a semicolon, comma, or newline separated list. The host tries keys in order and only advances to the next key for quota/rate-limit/key failures.
+`GEMINI_API_KEY` accepts one key. `GEMINI_API_KEYS` accepts a semicolon, comma, or newline separated ordered list. The host tries keys in order and only advances to the next key for quota/rate-limit/key failures.
 
 Don't put keys in `appsettings.json` or `appsettings.Development.json` - both are tracked.
 

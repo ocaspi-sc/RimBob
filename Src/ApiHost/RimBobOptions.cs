@@ -15,8 +15,9 @@ public sealed class RimBobOptions
     /// <summary>
     /// Optional ordered Gemini keys for quota/key failures. Local dev can place
     /// these in appsettings.Local.json; env var GEMINI_API_KEYS can provide a
-    /// semicolon/comma/newline separated list. Never put keys in appsettings.json
-    /// or appsettings.Development.json - both are tracked.
+    /// semicolon/comma/newline separated list. Env var GEMINI_API_KEY can provide
+    /// one key. Never put keys in appsettings.json or appsettings.Development.json
+    /// - both are tracked.
     /// </summary>
     public string[] GeminiApiKeys { get; init; } = [];
 
