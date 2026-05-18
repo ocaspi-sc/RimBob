@@ -6,34 +6,63 @@ export function ChainTable({ model }: { model: AdviceChainModel }) {
   if (!model.paths.length) return null;
 
   return (
-    <div className="chain-route-grid" aria-label="Food route status">
-      {model.paths.map(path => {
-        const route = routeKind(path);
-        const status = routeStatus(path);
-        return (
-          <article className={`chain-route-card chain-route--${route}`} key={path.name}>
-            <header>
-              <SemanticIconCue className="chain-route-icon" icon={routeIcon(route)} size="sm" />
-              <div>
-                <h3>{routeName(path.name)}</h3>
-                <span className={`chain-route-status chain-fact--${classFor(status)}`}>{formatStatus(status)}</span>
-              </div>
-            </header>
-            <ul className="chain-route-facts">
-              {routeFacts(path).map(fact => (
-                <li className={`chain-route-fact chain-fact--${classFor(fact.status)}`} key={fact.key}>
-                  <SemanticIconCue className="chain-fact-icon" icon={iconForField(fact.iconKey)} size="xs" />
-                  <span className="chain-fact-label">{fact.label}</span>
-                  <span className="chain-fact-value">{fact.value}</span>
-                </li>
+    <div className="chain-variation-stack" aria-label="Food route panel variations">
+      {PANEL_VARIANTS.map(variant => (
+        <section className={`chain-variant-panel chain-variant--${variant.key}`} key={variant.key}>
+          <header className="chain-variant-heading">
+            <div>
+              <span>{variant.kicker}</span>
+              <h3>{variant.name}</h3>
+            </div>
+            <div aria-hidden className="chain-variant-icon-strip">
+              {model.paths.map(path => (
+                <SemanticIconCue icon={routeIcon(routeKind(path))} key={`${variant.key}-${path.name}`} size="xs" />
               ))}
-            </ul>
-          </article>
-        );
-      })}
+            </div>
+          </header>
+          <div className="chain-route-grid">
+            {model.paths.map(path => (
+              <RouteCard key={`${variant.key}-${path.name}`} path={path} />
+            ))}
+          </div>
+        </section>
+      ))}
     </div>
   );
 }
+
+function RouteCard({ path }: { path: AdviceChainPath }) {
+  const route = routeKind(path);
+  const status = routeStatus(path);
+
+  return (
+    <article className={`chain-route-card chain-route--${route}`}>
+      <header>
+        <SemanticIconCue className="chain-route-icon" icon={routeIcon(route)} size="sm" />
+        <div>
+          <h4>{routeName(path.name)}</h4>
+          <span className={`chain-route-status chain-fact--${classFor(status)}`}>{formatStatus(status)}</span>
+        </div>
+      </header>
+      <ul className="chain-route-facts">
+        {routeFacts(path).map(fact => (
+          <li className={`chain-route-fact chain-fact--${classFor(fact.status)}`} key={fact.key}>
+            <SemanticIconCue className="chain-fact-icon" icon={iconForField(fact.iconKey)} size="xs" />
+            <span className="chain-fact-label">{fact.label}</span>
+            <span className="chain-fact-value">{fact.value}</span>
+          </li>
+        ))}
+      </ul>
+    </article>
+  );
+}
+
+const PANEL_VARIANTS = [
+  { key: 'neon', kicker: 'Option 01', name: 'Neon Nutrient Grid' },
+  { key: 'hazard', kicker: 'Option 02', name: 'Crisis Command Board' },
+  { key: 'botanic', kicker: 'Option 03', name: 'Biolume Crop Lab' },
+  { key: 'ledger', kicker: 'Option 04', name: 'Rimsteel Provision Ledger' },
+] as const;
 
 type RouteFact = {
   iconKey: string;
@@ -51,7 +80,7 @@ function classFor(status: AdviceChainStepStatus): AdviceChainStepStatus {
 
 function formatStatus(status: AdviceChainStepStatus): string {
   if (status === 'have') return 'current good';
-  if (status === 'action') return 'action emitted';
+  if (status === 'action') return '⚡ Action Requested';
   if (status === 'available') return 'future';
   if (status === 'blocked') return 'blocked';
   return 'trigger';
@@ -164,7 +193,7 @@ function findStep(path: AdviceChainPath, key: string): AdviceChainStep | undefin
 
 function detailOrStatus(step: AdviceChainStep | undefined): string {
   if (!step) return '-';
-  if (step.status === 'action') return 'action requested';
+  if (step.status === 'action') return '⚡ Action Requested';
   if (step.status === 'blocked') return cleanBlockedDetail(step.detail);
   return step.detail;
 }
@@ -176,7 +205,7 @@ function stepDetail(step: AdviceChainStep | undefined): string {
 
 function statusPhrase(step: AdviceChainStep | undefined): string {
   if (!step) return '-';
-  if (step.status === 'action') return 'action requested';
+  if (step.status === 'action') return '⚡ Action Requested';
   if (step.status === 'blocked') return cleanBlockedDetail(step.detail);
   if (step.status === 'available') return 'available';
   if (step.status === 'have') return 'covered';
