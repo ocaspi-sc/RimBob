@@ -11,9 +11,9 @@
 <!-- entries go here -->
 - [ ] [2026-05-18] #ops #cleanup Remove legacy repo-local icon/log artifacts after AppData cache/log paths stay verified.
 - [x] [2026-05-17] #rimapi #fork Clone, build, and load the RimBob-compatible RIMAPI fork from `C:\dev\RIMAPI-for-RimBob`. [plan](Docs/plans/rimapi-fork-migration.md)
-- [ ] [2026-05-17] #rimapi #assisted After the RIMAPI fork lands, verify Food uses safe unforbid apply end to end.
+- [x] [2026-05-17] #rimapi #assisted After the RIMAPI fork lands, verify Food uses safe unforbid apply end to end.
 - [x] [2026-05-17] #rimapi #harvest Add `is_harvestable` / `growth_progress` to `/map/plants` after migrating to a RIMAPI fork.
-- [ ] [2026-05-16] #rimapi #assisted Validate companion safe `/api/v1/order/unforbid` endpoint and remove RimBob fallback caveat.
+- [x] [2026-05-16] #rimapi #assisted Validate companion safe `/api/v1/order/unforbid` endpoint and remove RimBob fallback caveat.
 - [ ] [2026-05-16] #skill #debt Fix local skill validator Python dependency.
 - [x] [2026-05-16] #replay #mayor Retire legacy `/api/agenda/manual`; manual Mayor fallback now posts to `/api/ministers/mayor/snapshot/manual`.
 - [ ] [2026-05-16] #dashboard #markdown Add restricted player-facing Markdown rendering when advice bodies or guide snippets need rich formatting; keep raw/debug views unrendered.
@@ -43,7 +43,7 @@
 
 ### Current implementation order
 
-1. [ ] **Verify Food safe `unforbid` Assisted Apply end to end.** Confirm the RIMAPI fork endpoint, RimBob backend executor, dashboard Apply UI, validation/read-back, and live game behavior work together.
+1. [x] **Verify Food safe `unforbid` Assisted Apply end to end.** Confirm the RIMAPI fork endpoint, RimBob backend executor, dashboard Apply UI, validation/read-back, and live game behavior work together.
 2. [x] **Add harvestability/growth plant signals.** Add `is_harvestable` / `growth_progress` to RIMAPI `/map/plants`, then wire Food harvest logic and `mark_harvest` validation to those fields.
 3. [ ] **Investigate and fix/patch `total_nutrition == 0`.** Decide whether to patch RIMAPI upstream or compute a documented RimBob fallback from stored meal/raw-food counts.
 4. [x] **Ship Food M3 end to end.** Briefing fields, initial rules, first flag contract, Mayor digest ingestion, dashboard rendering for advice actions, then fixtures.
@@ -83,7 +83,7 @@
 
 - [ ] Extend the action ownership sketch into a full RIMAPI action/endpoint catalogue, preserving owner/requester/executor labels.
 - [ ] Reconcile the Medical/Welfare boundary across docs (`Docs/DESIGN.md` still describes Welfare as owning medical sub-blocks, while `Docs/design/ministers.md` splits Medical into its own subsystem).
-- [ ] Update `Docs/design/dashboard.md` to remove stale Modify / `modified_actions` / implicit-feedback language and align it with Pushback-only feedback.
+- [x] Update `Docs/design/dashboard.md` to remove stale Modify / `modified_actions` / implicit-feedback language and align it with Pushback-only feedback.
 - [ ] Expand the roadmap beyond the first cabinet wave: explicitly schedule Industry, Medical, Research, and Economy instead of leaving them only in post-MVP notes.
 
 #### Cabinet rollout planning
