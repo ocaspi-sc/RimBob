@@ -2479,6 +2479,323 @@ code {
   text-transform: uppercase;
 }
 
+.chain-diagram-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.chain-diagram-panel {
+  --panel-ink: rgba(243, 248, 249, 0.95);
+  --panel-muted: rgba(212, 224, 228, 0.68);
+  --panel-line: rgba(157, 171, 182, 0.24);
+  --panel-accent: #4ab8ff;
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--panel-line);
+  border-radius: 8px;
+  color: var(--panel-ink);
+  overflow: hidden;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 18px 42px rgba(0, 0, 0, 0.24);
+}
+
+.chain-diagram-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--panel-line);
+}
+
+.chain-diagram-kicker {
+  display: inline-flex;
+  margin-bottom: 4px;
+  color: var(--panel-accent);
+  font-size: 0.66rem;
+  font-weight: 950;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.chain-diagram-heading h3 {
+  margin: 0;
+  color: var(--panel-ink);
+  font-size: 1.06rem;
+  line-height: 1.12;
+}
+
+.chain-diagram-heading p {
+  flex: 0 1 320px;
+  max-width: 340px;
+  margin: 0;
+  color: var(--panel-muted);
+  font-size: 0.76rem;
+  line-height: 1.35;
+  text-align: right;
+}
+
+.food-flow {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  height: 342px;
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.food-flow::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.food-flow-wires {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.food-flow-wires marker path {
+  fill: var(--wire-color, rgba(132, 220, 255, 0.82));
+}
+
+.food-flow-wire {
+  fill: none;
+  stroke: var(--wire-color, rgba(132, 220, 255, 0.72));
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 0.62;
+  filter: drop-shadow(0 0 4px rgba(82, 196, 255, 0.24));
+}
+
+.food-flow-wire--grow {
+  --wire-color: rgba(104, 231, 135, 0.76);
+}
+
+.food-flow-wire--forage {
+  --wire-color: rgba(84, 199, 255, 0.78);
+}
+
+.food-flow-wire--hunt {
+  --wire-color: rgba(255, 113, 93, 0.78);
+}
+
+.food-flow-wire--common {
+  --wire-color: rgba(240, 217, 132, 0.84);
+  stroke-width: 0.82;
+}
+
+.food-flow-node {
+  --route-rgb: 157, 171, 182;
+  --route-accent: #d6e0e4;
+  position: absolute;
+  left: var(--node-x);
+  top: var(--node-y);
+  width: clamp(108px, 12.8%, 122px);
+  min-height: 82px;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 5px;
+  align-items: start;
+  padding: 9px;
+  border: 1px solid rgba(var(--state-rgb), 0.42);
+  border-radius: 5px;
+  color: var(--panel-ink);
+  transform: translate(-50%, -50%);
+  z-index: 2;
+}
+
+.food-flow-node h4 {
+  margin: 0 0 4px;
+  color: var(--panel-ink);
+  font-size: 0.86rem;
+  line-height: 1.05;
+}
+
+.food-flow-node p {
+  margin: 0;
+  color: var(--panel-muted);
+  font-size: 0.65rem;
+  font-weight: 750;
+  line-height: 1.22;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.food-flow-node strong {
+  color: #fff;
+  font-weight: 950;
+  text-shadow: 0 0 13px rgba(70, 184, 255, 0.72);
+}
+
+.food-flow-node .chain-fact-icon.game-icon {
+  width: 19px;
+  height: 19px;
+  border-color: rgba(var(--route-rgb), 0.34);
+  background: rgba(var(--route-rgb), 0.15);
+  box-shadow: 0 0 12px rgba(var(--route-rgb), 0.12);
+}
+
+.food-flow-node--grow {
+  --route-rgb: 104, 231, 135;
+  --route-accent: #68e787;
+}
+
+.food-flow-node--forage {
+  --route-rgb: 84, 199, 255;
+  --route-accent: #54c7ff;
+}
+
+.food-flow-node--hunt {
+  --route-rgb: 255, 113, 93;
+  --route-accent: #ff715d;
+}
+
+.food-flow-node--common {
+  --route-rgb: 240, 217, 132;
+  --route-accent: #f0d984;
+}
+
+.food-flow-node.chain-fact--have {
+  background:
+    linear-gradient(180deg, rgba(var(--route-rgb), 0.15), transparent 58%),
+    rgba(11, 26, 19, 0.78);
+}
+
+.food-flow-node.chain-fact--action {
+  border-color: rgba(70, 184, 255, 0.88);
+  background:
+    linear-gradient(135deg, rgba(70, 184, 255, 0.32), rgba(var(--route-rgb), 0.16)),
+    rgba(9, 21, 30, 0.88);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 0 22px rgba(70, 184, 255, 0.2);
+}
+
+.food-flow-node.chain-fact--available {
+  background:
+    linear-gradient(180deg, rgba(var(--route-rgb), 0.11), transparent 55%),
+    rgba(22, 27, 34, 0.82);
+}
+
+.food-flow-node.chain-fact--blocked {
+  background:
+    linear-gradient(135deg, rgba(255, 96, 86, 0.22), rgba(var(--route-rgb), 0.1)),
+    rgba(29, 13, 13, 0.86);
+}
+
+.food-flow--orders {
+  background:
+    linear-gradient(90deg, rgba(255, 209, 102, 0.08), transparent 24%, rgba(84, 199, 255, 0.08)),
+    linear-gradient(135deg, rgba(34, 38, 36, 0.98), rgba(16, 21, 24, 0.98));
+}
+
+.chain-diagram--orders {
+  --panel-accent: #ffd166;
+  background:
+    linear-gradient(90deg, rgba(255, 209, 102, 0.08), transparent 18%, rgba(84, 199, 255, 0.08)),
+    linear-gradient(135deg, rgba(34, 38, 36, 0.98), rgba(16, 21, 24, 0.98));
+}
+
+.food-flow--orders::before {
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 36px),
+    repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 36px);
+}
+
+.food-flow--orders .food-flow-node {
+  border-width: 2px;
+  border-color: rgba(var(--route-rgb), 0.48);
+  border-top-color: var(--route-accent);
+  box-shadow:
+    inset 0 4px 0 rgba(var(--route-rgb), 0.7),
+    0 12px 24px rgba(0, 0, 0, 0.28);
+}
+
+.chain-diagram--console {
+  --panel-accent: #49f5c8;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(73, 245, 200, 0.07), rgba(255, 209, 102, 0.04), rgba(6, 8, 11, 0.98)),
+    #05080a;
+  background-size: 100% 9px, auto, auto;
+}
+
+.food-flow--console {
+  background:
+    radial-gradient(circle at 64% 45%, rgba(73, 245, 200, 0.13), transparent 28%),
+    linear-gradient(rgba(73, 245, 200, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(73, 245, 200, 0.055) 1px, transparent 1px),
+    rgba(2, 5, 7, 0.92);
+  background-size: auto, 10px 10px, 10px 10px, auto;
+}
+
+.food-flow--console .food-flow-node {
+  width: clamp(110px, 13%, 124px);
+  border-radius: 3px;
+  border-color: rgba(var(--route-rgb), 0.52);
+  background:
+    linear-gradient(180deg, rgba(var(--route-rgb), 0.13), rgba(1, 8, 9, 0.82) 54%),
+    rgba(2, 5, 6, 0.92);
+  box-shadow:
+    inset 5px 0 0 rgba(var(--route-rgb), 0.78),
+    0 0 22px rgba(var(--route-rgb), 0.08);
+}
+
+.food-flow--console .food-flow-node h4 {
+  font-family: "Cascadia Mono", Consolas, monospace;
+  text-transform: uppercase;
+}
+
+.food-flow--console .food-flow-node p {
+  font-family: "Cascadia Mono", Consolas, monospace;
+}
+
+.chain-diagram--blueprint {
+  --panel-accent: #8ed8ff;
+  background:
+    linear-gradient(90deg, rgba(142, 216, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(142, 216, 255, 0.07) 1px, transparent 1px),
+    linear-gradient(135deg, rgba(12, 26, 38, 0.98), rgba(4, 8, 14, 0.98));
+  background-size: 32px 32px, 32px 32px, auto;
+}
+
+.food-flow--blueprint {
+  background:
+    linear-gradient(90deg, rgba(142, 216, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(142, 216, 255, 0.08) 1px, transparent 1px),
+    radial-gradient(circle at 64% 45%, rgba(240, 217, 132, 0.12), transparent 24%),
+    rgba(6, 15, 24, 0.74);
+  background-size: 28px 28px, 28px 28px, auto, auto;
+}
+
+.food-flow--blueprint .food-flow-node {
+  width: clamp(108px, 12.8%, 122px);
+  min-height: 76px;
+  border-radius: 0;
+  border-style: dashed;
+  background:
+    linear-gradient(180deg, rgba(var(--route-rgb), 0.12), rgba(4, 11, 17, 0.76)),
+    rgba(4, 11, 17, 0.88);
+}
+
+.food-flow--blueprint .food-flow-node h4 {
+  color: #f7fbff;
+  font-family: "Cascadia Mono", Consolas, monospace;
+  font-size: 0.84rem;
+  text-transform: uppercase;
+}
+
+.food-flow--blueprint .food-flow-wire {
+  stroke-dasharray: 1.6 1.4;
+}
+
 .chain-cell--trigger,
 .chain-legend--trigger {
   background: rgba(240, 189, 95, 0.16);

@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import type { AdviceChainModel, AdviceChainPath, AdviceChainStep, AdviceChainStepStatus } from '../../types/advice';
 import { iconForField } from '../../dashboard/semanticIcons';
 import { SemanticIconCue } from './SemanticIcon';
@@ -7,303 +8,214 @@ const ACTION_REQUESTED = '\u26a1 Action Requested';
 export function ChainTable({ model }: { model: AdviceChainModel }) {
   if (!model.paths.length) return null;
 
-  const paths = orderedPaths(model.paths);
+  const nodes = buildDiagramNodes(model.paths);
 
   return (
-    <div className="chain-concept-stack" aria-label="Food route panel concepts">
-      {PANEL_CONCEPTS.map(concept => (
-        <section className={`chain-concept-panel chain-concept--${concept.key}`} key={concept.key}>
-          <header className="chain-concept-heading">
+    <div className="chain-diagram-stack" aria-label="Food chain diagram variants">
+      {DIAGRAM_VARIANTS.map(variant => (
+        <section className={`chain-diagram-panel chain-diagram--${variant.key}`} key={variant.key}>
+          <header className="chain-diagram-heading">
             <div>
-              <span className="chain-concept-kicker">{concept.kicker}</span>
-              <h3>{concept.name}</h3>
+              <span className="chain-diagram-kicker">{variant.kicker}</span>
+              <h3>{variant.name}</h3>
             </div>
-            <p>{concept.description}</p>
+            <p>{variant.description}</p>
           </header>
-          {renderConcept(concept.key, paths)}
+          <FlowCanvas nodes={nodes} variantKey={variant.key} />
         </section>
       ))}
     </div>
   );
 }
 
-function JobCardsConcept({ paths }: { paths: AdviceChainPath[] }) {
+function FlowCanvas({ nodes, variantKey }: { nodes: DiagramNode[]; variantKey: DiagramVariantKey }) {
   return (
-    <div className="job-card-grid">
-      {paths.map(path => {
-        const route = routeKind(path);
-        const status = routeStatus(path);
-
-        return (
-          <article className={`job-card job-card--${route} chain-route--${route}`} key={path.name}>
-            <header className="job-card-header">
-              <SemanticIconCue className="chain-route-icon" icon={routeIcon(route)} size="sm" />
-              <div>
-                <h4>{routeName(path.name)}</h4>
-                <span className={`chain-status-badge chain-fact--${classFor(status)}`}>
-                  <StateText status={status} />
-                </span>
-              </div>
-            </header>
-            <ul className="job-bullet-list">
-              {routeFacts(path).slice(0, 4).map(fact => (
-                <li className={`job-bullet chain-fact--${classFor(fact.status)}`} key={fact.key}>
-                  <SemanticIconCue className="chain-fact-icon" icon={iconForField(fact.iconKey)} size="xs" />
-                  <span className="chain-fact-label">{fact.label}</span>
-                  <span className="chain-fact-value">
-                    <StateText status={fact.status} text={fact.value} />
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </article>
-        );
-      })}
+    <div className={`food-flow food-flow--${variantKey}`}>
+      <svg aria-hidden className="food-flow-wires" preserveAspectRatio="none" viewBox="0 0 100 100">
+        <defs>
+          <marker id={`arrow-${variantKey}`} markerHeight="7" markerWidth="7" orient="auto" refX="6" refY="3.5">
+            <path d="M0,0 L7,3.5 L0,7 Z" />
+          </marker>
+        </defs>
+        {FLOW_EDGES.map(edge => (
+          <path
+            className={`food-flow-wire food-flow-wire--${edge.route}`}
+            d={wirePath(edge)}
+            key={`${variantKey}-${edge.from}-${edge.to}`}
+            markerEnd={`url(#arrow-${variantKey})`}
+          />
+        ))}
+      </svg>
+      {nodes.map(node => (
+        <FlowNode key={`${variantKey}-${node.id}`} node={node} />
+      ))}
     </div>
   );
 }
 
-function ConsoleConcept({ paths }: { paths: AdviceChainPath[] }) {
-  return (
-    <div className="console-rack">
-      {paths.map(path => {
-        const route = routeKind(path);
-        const status = routeStatus(path);
+function FlowNode({ node }: { node: DiagramNode }) {
+  const style = {
+    '--node-x': `${node.x}%`,
+    '--node-y': `${node.y}%`,
+  } as CSSProperties;
 
-        return (
-          <article className={`console-module console-module--${route} chain-route--${route}`} key={path.name}>
-            <span className="console-state-rail" aria-hidden />
-            <div className="console-module-body">
-              <header className="console-module-header">
-                <span className="console-callsign">{routeCode(route)}-01</span>
-                <SemanticIconCue className="chain-route-icon" icon={routeIcon(route)} size="sm" />
-                <div>
-                  <h4>{routeName(path.name)}</h4>
-                  <span className={`chain-status-badge chain-fact--${classFor(status)}`}>
-                    <StateText status={status} />
-                  </span>
-                </div>
-              </header>
-              <div className="console-readouts">
-                {routeFacts(path).slice(0, 4).map(fact => (
-                  <div className={`console-readout chain-fact--${classFor(fact.status)}`} key={fact.key}>
-                    <SemanticIconCue className="chain-fact-icon" icon={iconForField(fact.iconKey)} size="xs" />
-                    <span className="chain-fact-label">{fact.label}</span>
-                    <span className="chain-fact-value">
-                      <StateText status={fact.status} text={fact.value} />
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </article>
-        );
-      })}
-    </div>
+  return (
+    <article className={`food-flow-node food-flow-node--${node.route} chain-fact--${classFor(node.status)}`} style={style}>
+      <SemanticIconCue className="chain-fact-icon" icon={iconForField(node.iconKey)} size="xs" />
+      <div>
+        <h4>{node.title}</h4>
+        <p>
+          <StateText status={node.status} text={node.detail} />
+        </p>
+      </div>
+    </article>
   );
 }
 
-function SubwayConcept({ paths }: { paths: AdviceChainPath[] }) {
-  return (
-    <div className="subway-map">
-      {paths.map(path => {
-        const route = routeKind(path);
-        const status = routeStatus(path);
-
-        return (
-          <article className={`subway-route subway-route--${route} chain-route--${route}`} key={path.name}>
-            <header className="subway-route-title">
-              <SemanticIconCue className="chain-route-icon" icon={routeIcon(route)} size="sm" />
-              <div>
-                <h4>{routeName(path.name)}</h4>
-                <span className={`chain-status-badge chain-fact--${classFor(status)}`}>
-                  <StateText status={status} />
-                </span>
-              </div>
-            </header>
-            <ol className="subway-stops">
-              {routeFacts(path).slice(0, 5).map(fact => (
-                <li className={`subway-stop chain-fact--${classFor(fact.status)}`} key={fact.key}>
-                  <span className="subway-stop-dot">
-                    <SemanticIconCue className="chain-fact-icon" icon={iconForField(fact.iconKey)} size="xs" />
-                  </span>
-                  <span className="chain-fact-label">{fact.label}</span>
-                  <span className="chain-fact-value">
-                    <StateText status={fact.status} text={fact.value} />
-                  </span>
-                </li>
-              ))}
-            </ol>
-          </article>
-        );
-      })}
-    </div>
-  );
-}
-
-function QuartermasterConcept({ paths }: { paths: AdviceChainPath[] }) {
-  return (
-    <div className="quartermaster-board">
-      {paths.map(path => {
-        const route = routeKind(path);
-        const status = routeStatus(path);
-
-        return (
-          <article className={`quartermaster-ticket quartermaster-ticket--${route} chain-route--${route}`} key={path.name}>
-            <span className="ticket-pin" aria-hidden />
-            <header className="ticket-header">
-              <SemanticIconCue className="chain-route-icon" icon={routeIcon(route)} size="sm" />
-              <div>
-                <span>{routeCode(route)} order</span>
-                <h4>{routeName(path.name)}</h4>
-              </div>
-            </header>
-            <div className={`ticket-stamp chain-fact--${classFor(status)}`}>
-              <StateText status={status} />
-            </div>
-            <ul className="ticket-lines">
-              {routeFacts(path).slice(0, 4).map(fact => (
-                <li className={`ticket-line chain-fact--${classFor(fact.status)}`} key={fact.key}>
-                  <SemanticIconCue className="chain-fact-icon" icon={iconForField(fact.iconKey)} size="xs" />
-                  <span className="chain-fact-label">{fact.label}</span>
-                  <span className="chain-fact-value">
-                    <StateText status={fact.status} text={fact.value} />
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </article>
-        );
-      })}
-    </div>
-  );
-}
-
-function TacticalConcept({ paths }: { paths: AdviceChainPath[] }) {
-  return (
-    <div className="tactical-grid">
-      {paths.map(path => {
-        const route = routeKind(path);
-        const status = routeStatus(path);
-        const primary = primaryFact(path);
-
-        return (
-          <article className={`tactical-card tactical-card--${route} chain-route--${route}`} key={path.name}>
-            <header className="tactical-header">
-              <span className="tactical-index">{routeCode(route)}</span>
-              <SemanticIconCue className="chain-route-icon" icon={routeIcon(route)} size="sm" />
-            </header>
-            <h4>{routeName(path.name)}</h4>
-            <div className={`tactical-primary chain-fact--${classFor(status)}`}>
-              <StateText status={status} />
-            </div>
-            <div className="tactical-chips">
-              {routeFacts(path).slice(0, 4).map(fact => (
-                <span className={`tactical-chip chain-fact--${classFor(fact.status)}`} key={fact.key}>
-                  <SemanticIconCue className="chain-fact-icon" icon={iconForField(fact.iconKey)} size="xs" />
-                  <span className="chain-fact-label">{fact.label}</span>
-                </span>
-              ))}
-            </div>
-            {primary ? (
-              <footer className={`tactical-command chain-fact--${classFor(primary.status)}`}>
-                <span>{primary.label}</span>
-                <strong>
-                  <StateText status={primary.status} text={primary.value} />
-                </strong>
-              </footer>
-            ) : null}
-          </article>
-        );
-      })}
-    </div>
-  );
-}
-
-const PANEL_CONCEPTS = [
+const DIAGRAM_VARIANTS = [
   {
-    key: 'jobs',
+    key: 'orders',
     kicker: 'Option 01',
-    name: 'RimWorld Job Cards',
-    description: 'Chunky work orders with short icon bullets.',
+    name: 'Work Order Flow',
+    description: 'Chunky job-board boxes with the shared food chain merged.',
   },
   {
     key: 'console',
     kicker: 'Option 02',
-    name: 'Colony Supply Console',
-    description: 'A darker terminal rack with live readouts.',
+    name: 'Supply Console Flow',
+    description: 'Dark terminal diagram with circuit-style routing.',
   },
   {
-    key: 'subway',
+    key: 'blueprint',
     kicker: 'Option 03',
-    name: 'Food Chain Subway Map',
-    description: 'Routes and stops show the supply chain flow.',
-  },
-  {
-    key: 'quartermaster',
-    kicker: 'Option 04',
-    name: 'Quartermaster Board',
-    description: 'Pinned colony orders with stamped state.',
-  },
-  {
-    key: 'tactical',
-    kicker: 'Option 05',
-    name: 'Tactical Cards',
-    description: 'Strategy-game command cards with loud action bars.',
+    name: 'Cold Chain Blueprint',
+    description: 'Technical map focused on the final storage and cooking path.',
   },
 ] as const;
 
-type PanelConceptKey = (typeof PANEL_CONCEPTS)[number]['key'];
-
-type RouteFact = {
-  iconKey: string;
-  key: string;
-  label: string;
-  status: AdviceChainStepStatus;
-  value: string;
-};
-
+type DiagramVariantKey = (typeof DIAGRAM_VARIANTS)[number]['key'];
+type DiagramRoute = 'common' | 'forage' | 'grow' | 'hunt';
 type RouteKind = 'forage' | 'grow' | 'hunt';
 
-function renderConcept(key: PanelConceptKey, paths: AdviceChainPath[]) {
-  if (key === 'jobs') return <JobCardsConcept paths={paths} />;
-  if (key === 'console') return <ConsoleConcept paths={paths} />;
-  if (key === 'subway') return <SubwayConcept paths={paths} />;
-  if (key === 'quartermaster') return <QuartermasterConcept paths={paths} />;
-  return <TacticalConcept paths={paths} />;
+type DiagramNode = {
+  detail: string;
+  iconKey: string;
+  id: DiagramNodeId;
+  route: DiagramRoute;
+  status: AdviceChainStepStatus;
+  title: string;
+  x: number;
+  y: number;
+};
+
+type DiagramNodeId =
+  | 'butcher'
+  | 'cook'
+  | 'fridge'
+  | 'harvest'
+  | 'hunt'
+  | 'plant'
+  | 'storage'
+  | 'targets'
+  | 'wait'
+  | 'wild'
+  | 'zone';
+
+type FlowEdge = {
+  from: DiagramNodeId;
+  route: DiagramRoute;
+  to: DiagramNodeId;
+};
+
+const NODE_POSITIONS: Record<DiagramNodeId, { x: number; y: number }> = {
+  zone: { x: 7, y: 18 },
+  plant: { x: 20, y: 18 },
+  wait: { x: 33, y: 18 },
+  wild: { x: 20, y: 45 },
+  harvest: { x: 47, y: 31 },
+  targets: { x: 7, y: 74 },
+  hunt: { x: 20, y: 74 },
+  butcher: { x: 33, y: 74 },
+  storage: { x: 61, y: 45 },
+  cook: { x: 74, y: 45 },
+  fridge: { x: 87, y: 45 },
+};
+
+const FLOW_EDGES: FlowEdge[] = [
+  { from: 'zone', to: 'plant', route: 'grow' },
+  { from: 'plant', to: 'wait', route: 'grow' },
+  { from: 'wait', to: 'harvest', route: 'grow' },
+  { from: 'wild', to: 'harvest', route: 'forage' },
+  { from: 'harvest', to: 'storage', route: 'common' },
+  { from: 'targets', to: 'hunt', route: 'hunt' },
+  { from: 'hunt', to: 'butcher', route: 'hunt' },
+  { from: 'butcher', to: 'storage', route: 'hunt' },
+  { from: 'storage', to: 'cook', route: 'common' },
+  { from: 'cook', to: 'fridge', route: 'common' },
+];
+
+function buildDiagramNodes(paths: AdviceChainPath[]): DiagramNode[] {
+  const grow = pathByRoute(paths, 'grow');
+  const forage = pathByRoute(paths, 'forage');
+  const hunt = pathByRoute(paths, 'hunt');
+
+  const growZone = findStep(grow, 'grow.zone');
+  const growHarvest = findStep(grow, 'grow.harvest');
+  const forageHarvest = findStep(forage, 'forage.harvest');
+  const huntStep = findStep(hunt, 'hunt.hunt');
+  const butcher = findStep(hunt, 'hunt.butcher');
+  const storage = mostUrgentStep([
+    findStep(grow, 'grow.store'),
+    findStep(forage, 'forage.store'),
+    findStep(hunt, 'hunt.store'),
+  ]);
+  const cook = mostUrgentStep([
+    findStep(grow, 'grow.cook'),
+    findStep(forage, 'forage.cook'),
+    findStep(hunt, 'hunt.cook'),
+  ]);
+
+  return [
+    node('zone', 'Zone', compactDetail(growZone?.detail, 'grow area'), growZone?.status ?? 'available', 'grow', 'crop_zone_summaries'),
+    node('plant', 'Plant', compactDetail(growHarvest?.detail, 'crops growing'), growHarvest ? 'have' : 'available', 'grow', 'crop_breakdown'),
+    node('wait', 'Wait', waitDetail(growHarvest), growHarvest?.status === 'have' ? 'have' : 'available', 'grow', 'season'),
+    node('wild', 'Wild Plants', compactDetail(forageHarvest?.detail, 'berries visible'), forageHarvest?.status ?? 'available', 'forage', 'wild_harvest_clusters'),
+    node('harvest', 'Harvest', mergedActionDetail([growHarvest, forageHarvest]), mostUrgentStatus([growHarvest, forageHarvest]), 'common', 'mark_harvest'),
+    node('targets', 'Targets', compactDetail(huntStep?.detail, 'animals visible'), huntStep?.status ?? 'available', 'hunt', 'wild_animal_count'),
+    node('hunt', 'Hunt', statusPhrase(huntStep), huntStep?.status ?? 'available', 'hunt', 'mark_hunt'),
+    node('butcher', 'Butcher', compactDetail(butcher?.detail, 'butcher table'), butcher?.status ?? 'available', 'hunt', 'kitchen_and_butchery'),
+    node('storage', 'Storage', compactDetail(storage?.detail, 'stockpile'), storage?.status ?? 'available', 'common', 'storage'),
+    node('cook', 'Cook', detailOrStatus(cook), cook?.status ?? 'available', 'common', 'production_bill'),
+    node('fridge', 'Refridge', refrigeratorDetail(storage), refrigeratorStatus(storage), 'common', 'storage'),
+  ];
 }
 
-function StateText({ status, text }: { status: AdviceChainStepStatus; text?: string }) {
-  const display = text ?? formatStatus(status);
-  if (status === 'action') return <strong>{display}</strong>;
-  return <>{display}</>;
+function node(
+  id: DiagramNodeId,
+  title: string,
+  detail: string,
+  status: AdviceChainStepStatus,
+  route: DiagramRoute,
+  iconKey: string,
+): DiagramNode {
+  const position = NODE_POSITIONS[id];
+  return { detail, iconKey, id, route, status, title, x: position.x, y: position.y };
 }
 
-function classFor(status: AdviceChainStepStatus): AdviceChainStepStatus {
-  return status;
+function StateText({ status, text }: { status: AdviceChainStepStatus; text: string }) {
+  if (status === 'action') return <strong>{text}</strong>;
+  return <>{text}</>;
 }
 
-function formatStatus(status: AdviceChainStepStatus): string {
-  if (status === 'have') return 'current good';
-  if (status === 'action') return ACTION_REQUESTED;
-  if (status === 'available') return 'future';
-  if (status === 'blocked') return 'blocked';
-  return 'trigger';
+function wirePath(edge: FlowEdge): string {
+  const from = NODE_POSITIONS[edge.from];
+  const to = NODE_POSITIONS[edge.to];
+  const bend = Math.abs(from.y - to.y) > 8 ? ` C ${from.x + 6},${from.y} ${to.x - 6},${to.y}` : ' L';
+  return `M ${from.x},${from.y}${bend} ${to.x},${to.y}`;
 }
 
-function orderedPaths(paths: AdviceChainPath[]): AdviceChainPath[] {
-  const order: Record<RouteKind, number> = { grow: 0, hunt: 1, forage: 2 };
-  return [...paths].sort((left, right) => order[routeKind(left)] - order[routeKind(right)]);
-}
-
-function routeCode(route: RouteKind): string {
-  if (route === 'hunt') return 'HNT';
-  if (route === 'forage') return 'FRG';
-  return 'GRO';
-}
-
-function routeName(name: string): string {
-  return name.replace(/\s+path$/i, '');
+function pathByRoute(paths: AdviceChainPath[], route: RouteKind): AdviceChainPath | undefined {
+  return paths.find(path => routeKind(path) === route);
 }
 
 function routeKind(path: AdviceChainPath): RouteKind {
@@ -313,127 +225,91 @@ function routeKind(path: AdviceChainPath): RouteKind {
   return 'grow';
 }
 
-function routeIcon(route: RouteKind) {
-  if (route === 'hunt') return iconForField('mark_hunt');
-  if (route === 'forage') return iconForField('wild_harvest_clusters');
-  return iconForField('crop_zone_summaries');
+function classFor(status: AdviceChainStepStatus): AdviceChainStepStatus {
+  return status;
 }
 
-function routeStatus(path: AdviceChainPath): AdviceChainStepStatus {
-  const steps = routeSteps(path);
-
-  if (steps.some(step => step.status === 'action')) return 'action';
-  if (steps.some(step => step.status === 'blocked')) return 'blocked';
-  if (steps.some(step => step.status === 'available')) return 'available';
-  if (steps.every(step => step.status === 'have')) return 'have';
-  return 'available';
+function mostUrgentStep(steps: Array<AdviceChainStep | undefined>): AdviceChainStep | undefined {
+  return steps
+    .filter((step): step is AdviceChainStep => step !== undefined)
+    .sort((left, right) => statusRank(right.status) - statusRank(left.status))[0];
 }
 
-function routeSteps(path: AdviceChainPath): AdviceChainStep[] {
-  return path.steps.filter(step => !isSharedStep(step));
+function mostUrgentStatus(steps: Array<AdviceChainStep | undefined>): AdviceChainStepStatus {
+  return mostUrgentStep(steps)?.status ?? 'available';
 }
 
-function isSharedStep(step: AdviceChainStep): boolean {
-  const key = step.key.toLowerCase();
-  return key.endsWith('.trigger') || key.endsWith('.meals') || step.label === 'Food buffer' || step.label === 'Meals';
+function statusRank(status: AdviceChainStepStatus): number {
+  if (status === 'action') return 5;
+  if (status === 'blocked') return 4;
+  if (status === 'trigger') return 3;
+  if (status === 'available') return 2;
+  return 1;
 }
 
-function routeFacts(path: AdviceChainPath): RouteFact[] {
-  const route = routeKind(path);
-  if (route === 'hunt') return huntFacts(path);
-  if (route === 'forage') return forageFacts(path);
-  return growFacts(path);
-}
-
-function growFacts(path: AdviceChainPath): RouteFact[] {
-  const zone = findStep(path, 'grow.zone');
-  const harvest = findStep(path, 'grow.harvest');
-  const cook = findStep(path, 'grow.cook');
-  const store = findStep(path, 'grow.store');
-
-  return compactFacts([
-    stepFact('zone', 'Zone', zone, 'crop_zone_summaries', stepDetail(zone)),
-    stepFact('crops', 'Crops', harvest, 'crop_breakdown', stepDetail(harvest)),
-    stepFact('harvest', 'Harvest', harvest, 'mark_harvest', statusPhrase(harvest)),
-    stepFact('cook', 'Cook', cook, 'production_bill', detailOrStatus(cook)),
-    stepFact('store', 'Store', store, 'storage', statusPhrase(store)),
-  ]);
-}
-
-function huntFacts(path: AdviceChainPath): RouteFact[] {
-  const hunt = findStep(path, 'hunt.hunt');
-  const butcher = findStep(path, 'hunt.butcher');
-  const cook = findStep(path, 'hunt.cook');
-  const store = findStep(path, 'hunt.store');
-
-  return compactFacts([
-    stepFact('target', 'Target', hunt, 'wild_animal_count', stepDetail(hunt)),
-    stepFact('hunt', 'Hunt', hunt, 'mark_hunt', statusPhrase(hunt)),
-    stepFact('butcher', 'Butcher', butcher, 'kitchen_and_butchery', stepDetail(butcher)),
-    stepFact('cook', 'Cook', cook, 'production_bill', detailOrStatus(cook)),
-    stepFact('store', 'Store', store, 'storage', statusPhrase(store)),
-  ]);
-}
-
-function forageFacts(path: AdviceChainPath): RouteFact[] {
-  const forage = findStep(path, 'forage.harvest');
-  const cook = findStep(path, 'forage.cook');
-  const store = findStep(path, 'forage.store');
-
-  return compactFacts([
-    stepFact('plants', 'Plants', forage, 'wild_harvest_clusters', stepDetail(forage)),
-    stepFact('harvest', 'Harvest', forage, 'mark_harvest', statusPhrase(forage)),
-    stepFact('cook', 'Cook', cook, 'production_bill', detailOrStatus(cook)),
-    stepFact('store', 'Store', store, 'storage', statusPhrase(store)),
-  ]);
-}
-
-function stepFact(
-  key: string,
-  label: string,
-  step: AdviceChainStep | undefined,
-  iconKey: string,
-  value: string,
-): RouteFact | null {
-  if (!step) return null;
-  return { iconKey, key, label, status: step.status, value };
-}
-
-function compactFacts(facts: Array<RouteFact | null>): RouteFact[] {
-  return facts.filter((fact): fact is RouteFact => fact !== null).slice(0, 5);
-}
-
-function primaryFact(path: AdviceChainPath): RouteFact | undefined {
-  const facts = routeFacts(path);
-  return facts.find(fact => fact.status === 'action')
-    ?? facts.find(fact => fact.status === 'blocked')
-    ?? facts.find(fact => fact.status === 'available')
-    ?? facts[0];
-}
-
-function findStep(path: AdviceChainPath, key: string): AdviceChainStep | undefined {
-  return path.steps.find(step => step.key === key);
+function findStep(path: AdviceChainPath | undefined, key: string): AdviceChainStep | undefined {
+  return path?.steps.find(step => step.key === key);
 }
 
 function detailOrStatus(step: AdviceChainStep | undefined): string {
-  if (!step) return '-';
+  if (!step) return 'pending';
   if (step.status === 'action') return ACTION_REQUESTED;
   if (step.status === 'blocked') return cleanBlockedDetail(step.detail);
-  return step.detail;
-}
-
-function stepDetail(step: AdviceChainStep | undefined): string {
-  if (!step) return '-';
-  return step.status === 'blocked' ? cleanBlockedDetail(step.detail) : step.detail;
+  return compactDetail(step.detail, 'ready');
 }
 
 function statusPhrase(step: AdviceChainStep | undefined): string {
-  if (!step) return '-';
+  if (!step) return 'pending';
   if (step.status === 'action') return ACTION_REQUESTED;
   if (step.status === 'blocked') return cleanBlockedDetail(step.detail);
   if (step.status === 'available') return 'available';
   if (step.status === 'have') return 'covered';
   return 'pressure';
+}
+
+function mergedActionDetail(steps: Array<AdviceChainStep | undefined>): string {
+  const urgent = mostUrgentStep(steps);
+  if (!urgent) return 'pending';
+  if (urgent.status === 'action') return ACTION_REQUESTED;
+  if (urgent.status === 'blocked') return cleanBlockedDetail(urgent.detail);
+  return compactDetail(urgent.detail, statusPhrase(urgent));
+}
+
+function waitDetail(step: AdviceChainStep | undefined): string {
+  if (!step) return 'not planted';
+  const percent = step.detail.match(/\b(\d+(?:\.\d+)?)%/);
+  if (percent) return `${percent[1]}% grown`;
+  if (step.status === 'action') return 'not ready';
+  return compactDetail(step.detail, 'growing');
+}
+
+function refrigeratorStatus(storage: AdviceChainStep | undefined): AdviceChainStepStatus {
+  if (!storage) return 'available';
+  return storage.detail.toLowerCase().includes('no cooler') ? 'blocked' : storage.status;
+}
+
+function refrigeratorDetail(storage: AdviceChainStep | undefined): string {
+  if (!storage) return 'future cold room';
+  if (storage.detail.toLowerCase().includes('no cooler')) return 'no cooler';
+  if (storage.status === 'have') return 'cold storage';
+  return compactDetail(storage.detail, 'future cold room');
+}
+
+function compactDetail(value: string | undefined, fallback: string): string {
+  if (!value || value.trim() === '') return fallback;
+  const cleaned = cleanBlockedDetail(value)
+    .replace(/\s*\([^)]{18,}\)/g, '')
+    .replace(/\s+/g, ' ')
+    .replace(/\b(\d+) crop tiles in (\d+) growing area\b/i, '$1 tiles / $2 zone')
+    .replace(/\b(\d+) ([a-z]+) plants at (\d+(?:\.\d+)?)%/i, '$1 $2 / $3%')
+    .replace(/\b(\d+) berry plants\b/i, '$1 berries')
+    .replace(/\b(\d+) stockpile zones; no cooler\b/i, '$1 zones / no cooler')
+    .replace(/\b(\d+) butcher table\b/i, '$1 table')
+    .replace(/\)+$/g, '')
+    .trim();
+  if (cleaned.length <= 34) return cleaned;
+  const boundary = cleaned.slice(0, 34).lastIndexOf(' ');
+  return `${cleaned.slice(0, boundary > 18 ? boundary : 34)}...`;
 }
 
 function cleanBlockedDetail(detail: string): string {

@@ -85,7 +85,7 @@ export function MinisterAdviceView({
       {hasChain && chain && (
         <section className="advice-chain">
           <div className="advice-chain-heading">
-            <span className="eyebrow">Food Routes - 5 Concepts</span>
+            <span className="eyebrow">Food Chain - Diagram Concepts</span>
           </div>
           <ChainTable model={chain} />
         </section>
