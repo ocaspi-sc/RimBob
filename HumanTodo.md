@@ -15,7 +15,7 @@
 - [x] [2026-05-17] #rimapi #harvest Add `is_harvestable` / `growth_progress` to `/map/plants` after migrating to a RIMAPI fork.
 - [ ] [2026-05-16] #rimapi #assisted Validate companion safe `/api/v1/order/unforbid` endpoint and remove RimBob fallback caveat.
 - [ ] [2026-05-16] #skill #debt Fix local skill validator Python dependency.
-- [ ] [2026-05-16] #replay #mayor Decide whether legacy `/api/agenda/manual` should emit replay records or be retired.
+- [x] [2026-05-16] #replay #mayor Retire legacy `/api/agenda/manual`; manual Mayor fallback now posts to `/api/ministers/mayor/snapshot/manual`.
 - [ ] [2026-05-16] #dashboard #markdown Add restricted player-facing Markdown rendering when advice bodies or guide snippets need rich formatting; keep raw/debug views unrendered.
 - [x] [2026-05-15] #food #advice #schema Collapse Food advice into one priority-tagged action list. [plan](.plans/collapse-food-advice-steps.md)
 - [ ] [2026-05-15] #idea #llm #rag Provide ministers with more RAG knowledge.
@@ -25,7 +25,7 @@
 - [ ] [2026-05-17] #git #debt Migrate dirty legacy worktrees after their active slices land.
 - [ ] [2026-05-17] #git #ops Update origin URL after upstream repository rename.
 - [ ] [2026-05-09] #spike #llm #test Benchmark optional TOON prompt encoding. [plan](Docs/plans/toon-prompt-encoding-spike.md)
-- [ ] [2026-05-09] #dashboard #ux Add button to dashboard "what was sent" / prompt-introspection screen that copies the full system + user prompt to the clipboard. Pairs with the manual-fallback flow (`logs/mayor-prompt-latest.md`, `POST /api/agenda/manual`) for when Gemini is rate-limited.
+- [ ] [2026-05-09] #dashboard #ux Add button to dashboard "what was sent" / prompt-introspection screen that copies the full system + user prompt to the clipboard. Pairs with the manual-fallback flow (`logs/mayor-prompt-latest.md`, `POST /api/ministers/mayor/snapshot/manual`) for when Gemini is rate-limited.
 
 ---
 
@@ -72,7 +72,7 @@
 
 ### Later (M5 - Feedback loop)
 
-- [ ] `POST /api/agenda/{version}/item/{id}/feedback` writes a `FeedbackEvent` to the decision log.
+- [ ] Minister snapshot feedback route writes a `FeedbackEvent` to the decision log.
 - [ ] Wire dashboard Accept / Dismiss / Pushback buttons (Pushback modal opens an editable text field, posts `pushback_text`).
 - [ ] `Decision Log` tab renders the last N `FeedbackEvent`s with the originating Agenda bullet.
 - [ ] Per-minister persistent pushback list (each minister owns + carries forward player corrections).

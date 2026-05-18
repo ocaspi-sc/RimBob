@@ -42,6 +42,7 @@ export function SystemOverview({
   const rimapi = health?.rimapi_coverage;
   const colonySnapshot = health?.colony_snapshot;
   const storage = health?.storage;
+  const ministerOutputs = health?.minister_outputs;
   const applyAttempts = health?.assisted_apply?.recent_attempts ?? [];
   const iconGroups = icons ? groupIconCacheFiles(icons.files) : [];
   const iconFailureState = icons ? summarizeIconWarmFailures(icons) : null;
@@ -133,7 +134,7 @@ export function SystemOverview({
             <div className="metric-grid">
               <MetricCard label={<FieldLabel iconKey="host">Host</FieldLabel>} value={status?.server ?? health?.runtime.server ?? 'checking'} tone={status ? 'ok' : 'neutral'} />
               <MetricCard label={<FieldLabel iconKey="rimapi">RIMAPI</FieldLabel>} value={(status?.rimapi_reachable ?? health?.runtime.rimapi_reachable) ? 'reachable' : 'waiting'} tone={(status?.rimapi_reachable ?? health?.runtime.rimapi_reachable) ? 'ok' : 'warn'} />
-              <MetricCard label={<FieldLabel iconKey="agenda">Agenda</FieldLabel>} value={health?.runtime.agenda_version ?? status?.agenda_version ?? 'none'} />
+              <MetricCard label={<FieldLabel iconKey="agenda">Mayor snapshot</FieldLabel>} value={health?.runtime.mayor_snapshot_version ?? status?.mayor_snapshot_version ?? 'none'} />
               <MetricCard label={<FieldLabel iconKey="advice">Advice</FieldLabel>} value={health?.runtime.active_advice_count ?? 'n/a'} />
               <MetricCard label={<FieldLabel iconKey="flags">Flags</FieldLabel>} value={health?.runtime.active_flag_count ?? 'n/a'} />
               <MetricCard label={<FieldLabel iconKey="mayor">Mayor</FieldLabel>} value={status?.mayor_running ? 'running' : 'idle'} tone={status?.mayor_last_error ? 'error' : status?.mayor_running ? 'ok' : 'neutral'} />
@@ -143,7 +144,7 @@ export function SystemOverview({
               <InfoLine label="Content root" value={health?.runtime.content_root ?? 'not exposed'} />
               <InfoLine label="Runtime root" value={health?.runtime.runtime_root ?? 'not exposed'} />
               <InfoLine label="Data root" value={storage?.data_root ?? 'not exposed'} />
-              <InfoLine label="Agenda store" value={storage?.agenda_store_path ?? 'not exposed'} />
+              <InfoLine label="Minister output root" value={storage?.minister_output_root ?? 'not exposed'} />
             </div>
           </div>
 
@@ -193,6 +194,49 @@ export function SystemOverview({
             </div>
           </div>
         </section>
+      </DisclosureSection>
+
+      <DisclosureSection
+        title={<SectionTitle iconKey="snapshot">Minister outputs</SectionTitle>}
+        meta={ministerOutputs ? `${ministerOutputs.snapshots.length} snapshots` : 'not exposed'}
+      >
+        {!ministerOutputs ? (
+          <EmptyState code="MINISTER OUTPUTS MISSING">/api/system/health did not expose minister output metadata.</EmptyState>
+        ) : (
+          <div className="minister-output-panel">
+            <div className="metric-grid compact">
+              <MetricCard label={<FieldLabel iconKey="directory">Root</FieldLabel>} value={ministerOutputs.exists ? 'present' : 'missing'} tone={ministerOutputs.exists ? 'ok' : 'warn'} />
+              <MetricCard label={<FieldLabel iconKey="snapshot">Snapshots</FieldLabel>} value={ministerOutputs.snapshots.length} />
+            </div>
+            <div className="stacked-lines">
+              <InfoLine label="Root path" value={ministerOutputs.root_path ?? 'not configured'} />
+            </div>
+            {ministerOutputs.snapshots.length === 0 ? (
+              <EmptyState code="NO MINISTER OUTPUTS">No persisted minister output snapshots exist yet.</EmptyState>
+            ) : (
+              <div className="dense-table minister-output-table">
+                <div className="dense-row header">
+                  <FieldLabel iconKey="minister">Minister</FieldLabel>
+                  <FieldLabel iconKey="kind">Kind</FieldLabel>
+                  <FieldLabel iconKey="version">Generation</FieldLabel>
+                  <FieldLabel iconKey="updated">Persisted</FieldLabel>
+                  <FieldLabel iconKey="status">State</FieldLabel>
+                  <FieldLabel iconKey="path">Path</FieldLabel>
+                </div>
+                {ministerOutputs.snapshots.map(snapshot => (
+                  <div className="dense-row" key={`${snapshot.minister}-${snapshot.output_kind}`}>
+                    <span>{snapshot.minister}</span>
+                    <span>{snapshot.output_kind}</span>
+                    <span>{snapshot.generation ?? 'none'}</span>
+                    <span>{formatMaybeDate(snapshot.persisted_at)}</span>
+                    <span>{snapshot.last_error ? `${snapshot.state}: ${snapshot.last_error}` : snapshot.state}</span>
+                    <span>{snapshot.path ?? 'not configured'}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </DisclosureSection>
 
       <DisclosureSection

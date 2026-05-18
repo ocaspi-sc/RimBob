@@ -66,9 +66,8 @@ public sealed class DayTickOrchestrator : BackgroundService
                 {
                     _lastDay = day;
                     _log.LogInformation(
-                        "Startup ingestion complete (tick={Tick}, day={Day}); firing initial {Cycle} cycle",
+                        "Startup ingestion complete (tick={Tick}, day={Day}); waiting for day rollover or manual {Cycle} trigger",
                         tick, day, _cycleName);
-                    await _runCycle(PlayCycleContext.StartupBootstrap, ct);
                 }
                 else if (day != _lastDay)
                 {

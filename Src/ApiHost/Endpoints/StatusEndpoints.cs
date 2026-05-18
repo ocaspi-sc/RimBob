@@ -22,7 +22,7 @@ public static class StatusEndpoints
 
         app.MapGet("/api/status", (
             ColonyState     colony,
-            AgendaStore     agendaStore,
+            MinisterOutputStore outputStore,
             BriefingCache   briefings,
             LlmClient       llm,
             RawLlmOutputStore rawOutputs,
@@ -41,7 +41,7 @@ public static class StatusEndpoints
                 llm_last_event_at = latestLlm?.CapturedAt,
                 llm_last_error    = LlmLastError(latestLlm),
                 briefing_version  = briefing.BriefingVersion,
-                agenda_version    = agendaStore.Current?.Version,
+                mayor_snapshot_version = outputStore.CurrentMayorAgenda?.Version,
                 mayor_running     = mayor.IsRunning,
                 mayor_started_at  = mayor.StartedAt,
                 mayor_completed_at = mayor.CompletedAt,
@@ -52,7 +52,7 @@ public static class StatusEndpoints
 
         app.MapGet("/api/mayor/prompt", async (
             BriefingCache   briefings,
-            AgendaStore     agendaStore,
+            MinisterOutputStore outputStore,
             PromptBuilder   prompts,
             MayorRagRetriever  retriever,
             FlagChannel flags,
@@ -61,7 +61,7 @@ public static class StatusEndpoints
             MayorBriefing briefing = briefings.GetMayorBriefing();
             IReadOnlyList<GuideCitation> retrieved = await retriever.RetrieveAsync(briefing, [], ct);
             IReadOnlyList<AgentFlag> activeFlags = flags.Active(FlagSeverity.Medium);
-            string user = prompts.BuildMayorUserMessage(briefing, agendaStore.Current, [], retrieved, activeFlags);
+            string user = prompts.BuildMayorUserMessage(briefing, [], retrieved, activeFlags);
             string system;
             try   { system = prompts.MayorSystemPrompt; }
             catch (FileNotFoundException ex) { system = $"(prompt file not found: {ex.FileName})"; }

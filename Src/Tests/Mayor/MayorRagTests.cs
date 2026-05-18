@@ -41,8 +41,8 @@ public sealed class MayorRagTests
 
         await h.Mayor.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
 
-        h.Store.Current.Should().NotBeNull();
-        h.Store.Current!.GuideCitations.Should().BeEmpty();
+        h.Store.CurrentMayorAgenda.Should().NotBeNull();
+        h.Store.CurrentMayorAgenda!.GuideCitations.Should().BeEmpty();
         h.LastGuideContext.Should().BeEmpty();
     }
 
@@ -63,10 +63,10 @@ public sealed class MayorRagTests
 
         await h.Mayor.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
 
-        h.Store.Current.Should().NotBeNull();
-        h.Store.Current!.GuideCitations.Should().HaveCount(2);
-        h.Store.Current.GuideCitations[0].CiteId.Should().Be("g1");
-        h.Store.Current.GuideCitations[0].Snippet.Should().Contain("60-day food buffer");
+        h.Store.CurrentMayorAgenda.Should().NotBeNull();
+        h.Store.CurrentMayorAgenda!.GuideCitations.Should().HaveCount(2);
+        h.Store.CurrentMayorAgenda.GuideCitations[0].CiteId.Should().Be("g1");
+        h.Store.CurrentMayorAgenda.GuideCitations[0].Snippet.Should().Contain("60-day food buffer");
 
         h.LastGuideContext.Should().HaveCount(2);
         h.LastGuideContext.Select(c => c.SourcePath)
@@ -108,7 +108,7 @@ public sealed class MayorRagTests
     {
         public ColonyState        Colony { get; }
         public BriefingCache      Cache  { get; }
-        public AgendaStore        Store  { get; }
+        public MinisterOutputStore Store { get; }
         public AdviceBus          Bus    { get; }
         public MayorMinister      Mayor  { get; }
         public IReadOnlyList<GuideCitation> LastGuideContext { get; private set; } = [];
@@ -120,7 +120,7 @@ public sealed class MayorRagTests
             Store  = new();
             Bus    = new();
 
-            LlmClient.MayorCallExecutor executor = (_, _, _, retrieved, _, _) =>
+            LlmClient.MayorCallExecutor executor = (_, _, retrieved, _, _) =>
             {
                 LastGuideContext = retrieved;
                 return Task.FromResult(InputBuilder.Default with { UpdateNotes = "rag-test" });

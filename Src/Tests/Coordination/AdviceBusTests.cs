@@ -87,6 +87,32 @@ public sealed class AdviceBusTests
     }
 
     [Fact]
+    public async Task ReplaceMinisterAdvice_CoalescesLatestSnapshotForPersistence()
+    {
+        string root = NewSnapshotRoot();
+        try
+        {
+            MinisterOutputStore store = await MinisterOutputStore.LoadAsync(root);
+            AdviceBus bus = new(store);
+
+            bus.ReplaceMinisterAdvice("Food", [Advice("old_food", "Food")], "Old summary.");
+            bus.ReplaceMinisterAdvice("Food", [Advice("new_food", "Food")], "New summary.");
+            await store.FlushPendingAdviceAsync();
+
+            MinisterOutputStore restored = await MinisterOutputStore.LoadAsync(root);
+            AdviceSnapshot? snapshot = restored.GetAdviceSnapshot("food");
+
+            snapshot.Should().NotBeNull();
+            snapshot!.Advice.Should().ContainSingle().Which.Id.Should().Be("new_food");
+            snapshot.StateSummary.Should().Be("New summary.");
+        }
+        finally
+        {
+            CleanupSnapshot(root);
+        }
+    }
+
+    [Fact]
     public void ReplaceMinisterAdvice_EmptySnapshotClearsMinisterAdvice()
     {
         AdviceBus bus = new();
@@ -199,6 +225,20 @@ public sealed class AdviceBusTests
             new AdviceChainStep("grow.trigger", "Food buffer", "4.0 days", AdviceChainStepStatus.Trigger)
         ])
     ]);
+
+    private static string NewSnapshotRoot() =>
+        Path.Combine(
+            Path.GetTempPath(),
+            "rimbob-advice-bus-tests",
+            Guid.NewGuid().ToString("N"),
+            "ministers");
+
+    private static void CleanupSnapshot(string root)
+    {
+        string? directory = Path.GetDirectoryName(root);
+        if (!string.IsNullOrWhiteSpace(directory) && Directory.Exists(directory))
+            Directory.Delete(directory, recursive: true);
+    }
 }
 
 internal static class InputBuilderExtensions

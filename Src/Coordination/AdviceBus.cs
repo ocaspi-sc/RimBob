@@ -10,6 +10,7 @@ namespace RimBob.Coordination;
 public sealed class AdviceBus
 {
     private readonly object _lock = new();
+    private readonly MinisterOutputStore? _outputStore;
     private readonly Dictionary<string, AdviceItem> _activeAdvice = new();
     private readonly Dictionary<string, string> _ministerStateSummaries =
         new(StringComparer.OrdinalIgnoreCase);
@@ -20,14 +21,24 @@ public sealed class AdviceBus
     public event Action<AdviceItem>?    AdvicePublished;
     public event Action<AdviceSnapshot>? AdviceSnapshotPublished;
 
+    public AdviceBus(MinisterOutputStore? outputStore = null)
+    {
+        _outputStore = outputStore;
+        if (outputStore is not null)
+            Hydrate(outputStore.AdviceSnapshots());
+    }
+
     public void Publish(AgendaUpdated e) => AgendaUpdated?.Invoke(e);
     public void Publish(AdviceItem item)
     {
+        AdviceSnapshot snapshot;
         lock (_lock)
         {
             _activeAdvice[item.Id] = item;
             PruneExpired(DateTimeOffset.UtcNow);
+            snapshot = BuildMinisterSnapshotLocked(item.Minister);
         }
+        _outputStore?.QueueAdviceSnapshot(snapshot);
         AdvicePublished?.Invoke(item);
     }
 
@@ -83,7 +94,9 @@ public sealed class AdviceBus
                 .ToList();
         }
 
-        AdviceSnapshotPublished?.Invoke(new AdviceSnapshot(minister, currentMinisterAdvice, NormalizeStateSummary(stateSummary), Chain: chain));
+        AdviceSnapshot snapshot = new(minister, currentMinisterAdvice, NormalizeStateSummary(stateSummary), Chain: chain);
+        _outputStore?.QueueAdviceSnapshot(snapshot);
+        AdviceSnapshotPublished?.Invoke(snapshot);
         foreach (AdviceItem item in currentMinisterAdvice)
             AdvicePublished?.Invoke(item);
     }
@@ -110,6 +123,7 @@ public sealed class AdviceBus
     {
         AdviceItem? updatedAdvice = null;
         AdviceSnapshot snapshot;
+        AdviceSnapshot? ministerSnapshot;
         lock (_lock)
         {
             PruneExpired(DateTimeOffset.UtcNow);
@@ -133,6 +147,7 @@ public sealed class AdviceBus
 
             Dictionary<string, string> summaries = new(_ministerStateSummaries, StringComparer.OrdinalIgnoreCase);
             Dictionary<string, AdviceChainModel> chains = new(_ministerChains, StringComparer.OrdinalIgnoreCase);
+            ministerSnapshot = BuildMinisterSnapshotLocked(advice.Minister);
             snapshot = new AdviceSnapshot(
                 Minister: null,
                 Advice: SortAdvice(_activeAdvice.Values).ToList(),
@@ -142,10 +157,40 @@ public sealed class AdviceBus
                 Chains: chains);
         }
 
+        if (ministerSnapshot is not null)
+            _outputStore?.QueueAdviceSnapshot(ministerSnapshot);
         AdviceSnapshotPublished?.Invoke(snapshot);
         if (updatedAdvice is not null)
             AdvicePublished?.Invoke(updatedAdvice);
         return true;
+    }
+
+    public void Hydrate(IReadOnlyList<AdviceSnapshot> snapshots)
+    {
+        lock (_lock)
+        {
+            _activeAdvice.Clear();
+            _ministerStateSummaries.Clear();
+            _ministerChains.Clear();
+
+            DateTimeOffset now = DateTimeOffset.UtcNow;
+            foreach (AdviceSnapshot snapshot in snapshots)
+            {
+                if (string.IsNullOrWhiteSpace(snapshot.Minister))
+                    continue;
+
+                string minister = snapshot.Minister;
+                foreach (AdviceItem item in snapshot.Advice)
+                    if (item.ExpiresAt > now)
+                        _activeAdvice[item.Id] = item;
+
+                if (!string.IsNullOrWhiteSpace(snapshot.StateSummary))
+                    _ministerStateSummaries[minister] = snapshot.StateSummary.Trim();
+
+                if (snapshot.Chain is not null)
+                    _ministerChains[minister] = snapshot.Chain;
+            }
+        }
     }
 
     public AdviceSnapshot ActiveSnapshot()
@@ -173,6 +218,25 @@ public sealed class AdviceBus
             .ToList();
         foreach (string id in expired)
             _activeAdvice.Remove(id);
+    }
+
+    private AdviceSnapshot BuildMinisterSnapshotLocked(string minister)
+    {
+        string? stateSummary = _ministerStateSummaries.TryGetValue(minister, out string? summary)
+            ? summary
+            : null;
+        AdviceChainModel? chain = _ministerChains.TryGetValue(minister, out AdviceChainModel? currentChain)
+            ? currentChain
+            : null;
+        return new AdviceSnapshot(
+            Minister: minister,
+            Advice: SortAdvice(_activeAdvice.Values
+                .Where(item => string.Equals(item.Minister, minister, StringComparison.OrdinalIgnoreCase)))
+                .ToList(),
+            StateSummary: stateSummary,
+            StateSummaries: null,
+            Chain: chain,
+            Chains: null);
     }
 
     private static IOrderedEnumerable<AdviceItem> SortAdvice(IEnumerable<AdviceItem> advice) =>

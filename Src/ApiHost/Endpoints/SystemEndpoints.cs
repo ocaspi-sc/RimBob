@@ -85,7 +85,7 @@ public static class SystemEndpoints
             IWebHostEnvironment env,
             ColonyState colony,
             ColonyStateSnapshotStore colonySnapshotStore,
-            AgendaStore agendaStore,
+            MinisterOutputStore outputStore,
             AdviceBus adviceBus,
             BriefingCache briefings,
             FlagChannel flags,
@@ -105,7 +105,7 @@ public static class SystemEndpoints
             FoodBriefing foodBriefing = briefings.GetFoodBriefing();
             string logsDir = HostLogPaths.ResolveLogsDirectory(env.ContentRootPath, opts.LogsRoot);
             string dataRoot = HostLogPaths.ResolveDataRootDirectory(env.ContentRootPath, opts.DataRoot);
-            string agendaStorePath = Path.Combine(dataRoot, "agenda", "agenda-store.json");
+            string ministerOutputRoot = Path.Combine(dataRoot, "ministers");
             string colonyStateSnapshotPath = Path.Combine(dataRoot, "state", "latest-colony-state.json");
             string runtimeRoot = HostLogPaths.ResolveRuntimeRoot(env.ContentRootPath);
             string guidesRoot = ResolvePath(env.ContentRootPath, opts.Rag.GuidesRoot);
@@ -117,6 +117,7 @@ public static class SystemEndpoints
             IReadOnlyList<AgentFlag> activeFlags = flags.Active();
             RawLlmOutputSnapshot? latestLlm = rawOutputs.LatestAny();
             ColonySnapshotStatus colonySnapshot = colonySnapshotStore.GetStatus();
+            MinisterOutputStoreStatus outputStatus = outputStore.GetStatus();
 
             return Results.Ok(new
             {
@@ -132,7 +133,7 @@ public static class SystemEndpoints
                     last_live_refresh_at = colony.LastLiveRefreshAt,
                     briefing_version = mayorBriefing.BriefingVersion,
                     food_briefing_version = foodBriefing.BriefingVersion,
-                    agenda_version = agendaStore.Current?.Version,
+                    mayor_snapshot_version = outputStore.CurrentMayorAgenda?.Version,
                     active_advice_count = adviceBus.ActiveAdvice().Count,
                     active_flag_count = activeFlags.Count,
                     mayor_running = mayor.IsRunning,
@@ -144,10 +145,11 @@ public static class SystemEndpoints
                 storage = new
                 {
                     data_root = dataRoot,
-                    agenda_store_path = agendaStorePath,
+                    minister_output_root = ministerOutputRoot,
                     colony_state_snapshot_path = colonyStateSnapshotPath,
                     embedding_cache_root = cacheRoot,
                 },
+                minister_outputs = outputStatus,
                 colony_snapshot = ColonySnapshotMetadata(colonySnapshot),
                 llm = new
                 {
@@ -186,7 +188,7 @@ public static class SystemEndpoints
                 {
                     recent_attempts = assistedApply.LatestAttempts(),
                 },
-                endpoint_coverage = endpointCoverage.Snapshot(new EndpointCoverageContext(agendaStore, registry)),
+                endpoint_coverage = endpointCoverage.Snapshot(new EndpointCoverageContext(outputStore, registry)),
                 rimapi_coverage = RimApiCoverageMetadata(),
             });
         });

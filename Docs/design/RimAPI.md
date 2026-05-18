@@ -277,3 +277,19 @@ When a minister needs an endpoint from one of these, fetch the upstream docs, ad
 - Polling cadences are defined in [state-store.md](state-store.md) (slow / fast / event-diff). No SSE consumption.
 - Write ownership per minister is defined in `design/ministers/<name>.md`. Only Labor issues pawn-allocation writes ([labor.md](ministers/labor.md)). MVP Assisted Apply may use a tiny non-pawn write allowlist after player confirmation; fetch and document upstream endpoint shapes before adding each write.
 - Upstream is GPL-3.0; we link only via HTTP, never in-process.
+
+## RimBob Host Output Endpoints
+
+The Host-facing dashboard contract for player-facing minister output is now the
+uniform minister snapshot surface, not an Agenda-specific route family:
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/ministers/{minister}/snapshot` | Latest typed minister output snapshot. `mayor` returns `MayorAgenda`; feeders return `AdviceSnapshot`. |
+| POST | `/api/ministers/mayor/snapshot/manual` | Developer manual Mayor snapshot fallback ingestion. |
+| GET | `/api/advice/stream` | SSE replay/live feed for Mayor agenda updates and feeder advice snapshots. |
+
+`/api/agenda/latest`, `/api/agenda/history`, and `/api/agenda/manual` are
+retired with no compatibility aliases. Status payloads use
+`mayor_snapshot_version` instead of `agenda_version`; SYSTEM exposes the
+resolved minister output root and per-minister persistence metadata.

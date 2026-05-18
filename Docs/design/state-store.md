@@ -73,6 +73,20 @@ SYSTEM must expose the resolved snapshot path and current snapshot metadata so
 operators can distinguish real live state from restored stale state and verify
 the snapshot is not tied to the active checkout or worktree.
 
+## Minister Output Persistence
+
+Host also persists each minister's latest player-facing output under the stable
+machine-local data root. The unified minister output store writes one file per
+minister under `ministers/<minister>.json`: the Mayor stores a typed
+`MayorAgenda`, and feeder ministers store their typed `AdviceSnapshot`
+including advice items, state summary, and chain data.
+
+This store is not a history system and does not replace the replay corpus. It
+exists so the dashboard and SSE replay can show the last good output
+immediately after Host restart without running a cabinet cycle merely because
+the executable was rebuilt. SYSTEM should expose the output root plus
+per-minister persisted time, generation, and load/flush state.
+
 ---
 
 ## Refresh Cadence

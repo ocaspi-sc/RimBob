@@ -12,7 +12,7 @@ public sealed class DayTickOrchestratorTests
     private const long TicksPerDay = 60_000;
 
     [Fact]
-    public async Task FirstObservation_TriggersMayor()
+    public async Task FirstObservation_DoesNotTriggerCabinet()
     {
         ColonyState colony = new();
         colony.Economy.Update(new EconomyLedger(TicksPerDay * 3, 0, "", "", false, ""));
@@ -21,8 +21,8 @@ public sealed class DayTickOrchestratorTests
         DayTickOrchestrator sut = new(colony, mayor, NullLogger<DayTickOrchestrator>.Instance);
         await RunOneCycleAsync(sut);
 
-        mayor.WakeCount.Should().Be(1);
-        mayor.Triggers.Should().ContainSingle().Which.Should().Be(PlayCycleTrigger.StartupBootstrap);
+        mayor.WakeCount.Should().Be(0);
+        mayor.Triggers.Should().BeEmpty();
     }
 
     [Fact]
@@ -34,12 +34,12 @@ public sealed class DayTickOrchestratorTests
 
         colony.Economy.Update(new EconomyLedger(TicksPerDay * 3, 0, "", "", false, ""));
         await RunOneCycleAsync(sut);  // first observation → fires
-        mayor.WakeCount.Should().Be(1);
+        mayor.WakeCount.Should().Be(0);
 
         colony.Economy.Update(new EconomyLedger(TicksPerDay * 4, 0, "", "", false, ""));
         await RunOneCycleAsync(sut);  // day rollover → fires again
-        mayor.WakeCount.Should().Be(2);
-        mayor.Triggers.Should().Equal(PlayCycleTrigger.StartupBootstrap, PlayCycleTrigger.CabinetRefresh);
+        mayor.WakeCount.Should().Be(1);
+        mayor.Triggers.Should().Equal(PlayCycleTrigger.CabinetRefresh);
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public sealed class DayTickOrchestratorTests
         colony.Economy.Update(new EconomyLedger(TicksPerDay * 3 + 59_999, 0, "", "", false, ""));
         await RunOneCycleAsync(sut);
 
-        mayor.WakeCount.Should().Be(1);
+        mayor.WakeCount.Should().Be(0);
     }
 
     [Fact]
@@ -74,7 +74,7 @@ public sealed class DayTickOrchestratorTests
         Func<Task> act = () => RunOneCycleAsync(sut);
         await act.Should().NotThrowAsync();
 
-        mayor.WakeCount.Should().Be(1);
+        mayor.WakeCount.Should().Be(0);
     }
 
     /// <summary>

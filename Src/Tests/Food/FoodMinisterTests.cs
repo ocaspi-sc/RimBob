@@ -211,7 +211,7 @@ public sealed class FoodMinisterTests
             LlmClient llm = new(NullLogger<LlmClient>.Instance, executor);
             FoodRagRetriever retriever = new(new KnowledgeBase(), null, false, 0, NullLogger<FoodRagRetriever>.Instance);
             MinisterReplayRecorder? replayRecorder = replay is null ? null : new MinisterReplayRecorder(replay);
-            Minister = new(Cache, new Rules(), new AgendaStore(), Bus, Flags, llm, retriever,
+            Minister = new(Cache, new Rules(), new MinisterOutputStore(), Bus, Flags, llm, retriever,
                 NullLogger<MinisterOfFood>.Instance, replayRecorder);
         }
 

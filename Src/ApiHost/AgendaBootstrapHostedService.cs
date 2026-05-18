@@ -10,7 +10,7 @@ using RimBob.State;
 namespace RimBob.Host;
 
 public sealed class AgendaBootstrapHostedService(
-    AgendaStore agendaStore,
+    MinisterOutputStore outputStore,
     BriefingCache briefings,
     MayorAgendaRules rules,
     FlagChannel flags,
@@ -19,11 +19,9 @@ public sealed class AgendaBootstrapHostedService(
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        if (agendaStore.Current is not null)
+        if (outputStore.HasAnyOutput)
         {
-            log.LogInformation(
-                "Mayor agenda bootstrap skipped; current agenda v{Version} already exists.",
-                agendaStore.Current.Version);
+            log.LogInformation("Minister output bootstrap skipped; persisted output already exists.");
             return;
         }
 
@@ -36,7 +34,7 @@ public sealed class AgendaBootstrapHostedService(
             activeFlags,
             "No persisted Mayor agenda existed at Host startup.");
 
-        MayorAgenda agenda = await agendaStore.UpdateAsync(input, FormatTick(briefing), cancellationToken);
+        MayorAgenda agenda = await outputStore.UpdateMayorAsync(input, FormatTick(briefing), cancellationToken);
         bus.Publish(new AgendaUpdated(agenda));
 
         log.LogWarning(

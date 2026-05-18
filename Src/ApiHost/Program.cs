@@ -25,8 +25,8 @@ string logsDir = HostLogPaths.ResolveLogsDirectory(builder.Environment.ContentRo
 string dataRoot = HostLogPaths.ResolveDataRootDirectory(builder.Environment.ContentRootPath, options.DataRoot);
 Directory.CreateDirectory(logsDir);
 Directory.CreateDirectory(dataRoot);
-string agendaStorePath = Path.Combine(dataRoot, "agenda", "agenda-store.json");
-AgendaStore agendaStore = await AgendaStore.LoadAsync(agendaStorePath);
+string ministerOutputRoot = Path.Combine(dataRoot, "ministers");
+MinisterOutputStore ministerOutputStore = await MinisterOutputStore.LoadAsync(ministerOutputRoot);
 string colonyStateSnapshotPath = Path.Combine(dataRoot, "state", "latest-colony-state.json");
 ColonyStateSnapshotStore colonySnapshotStore = await ColonyStateSnapshotStore.LoadAsync(colonyStateSnapshotPath);
 
@@ -95,8 +95,8 @@ builder.Services.AddSingleton(colonySnapshotStore);
 builder.Services.AddSingleton<BriefingCache>();
 builder.Services.AddSingleton<IngestionDispatcher>();
 
-builder.Services.AddSingleton<AdviceBus>();
-builder.Services.AddSingleton(agendaStore);
+builder.Services.AddSingleton(ministerOutputStore);
+builder.Services.AddSingleton<AdviceBus>(sp => new AdviceBus(sp.GetRequiredService<MinisterOutputStore>()));
 builder.Services.AddSingleton<FlagChannel>();
 builder.Services.AddSingleton<MinisterRegistry>();
 builder.Services.AddSingleton<EndpointCoverageCatalog>();
@@ -214,9 +214,9 @@ builder.Services.AddHostedService<DayTickOrchestrator>();
 var app = builder.Build();
 app.Logger.LogInformation("Host logs directory: {LogsDirectory}", logsDir);
 app.Logger.LogInformation(
-    "Agenda store path: {AgendaStorePath} current_version={AgendaVersion}",
-    agendaStorePath,
-    agendaStore.Current?.Version);
+    "Minister output root: {MinisterOutputRoot} mayor_snapshot_version={Version}",
+    ministerOutputRoot,
+    ministerOutputStore.CurrentMayorAgenda?.Version);
 ColonySnapshotStatus colonySnapshotStatus = colonySnapshotStore.GetStatus();
 app.Logger.LogInformation(
     "Colony state snapshot path: {SnapshotPath} has_snapshot={HasSnapshot} load_error={LoadError}",
@@ -233,7 +233,6 @@ app.MapGet("/api/health", () => Results.Ok(new { status = "ok", service = "RimBo
 
 app.MapCabinetEndpoints();
 app.MapAgendaStream();
-app.MapAgendaEndpoints();
 app.MapAutonomyEndpoints();
 app.MapColonyEndpoints();
 app.MapStatusEndpoints();

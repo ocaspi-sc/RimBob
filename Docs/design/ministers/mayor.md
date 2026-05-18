@@ -37,8 +37,8 @@ Rules can shape:
 - quiet-day brevity,
 - active flag priorities.
 
-Everything else goes through the LLM with the current briefing, agenda, flags,
-trends, and guide context.
+Everything else goes through the LLM with the current briefing, flags, trends,
+and guide context. The previous Agenda is not prompt input.
 
 ---
 
@@ -58,11 +58,14 @@ See [`rag.md`](../rag.md).
 
 ## Output
 
-The Mayor outputs a complete new Agenda, not a diff. The server owns versioning,
-history, and broadcast.
+The Mayor outputs a complete new Agenda, not a diff. The unified minister
+output store owns version stamping, latest-snapshot persistence, reload on
+startup, and broadcast via the advice stream. History belongs in the replay
+corpus.
 
-Agenda bullets remain free text. The Mayor should reuse stable ids for carried
-items and create new ids only for genuinely new priorities.
+Agenda bullets remain free text. The Mayor should use stable semantic ids for
+obvious recurring issues, but it no longer receives the prior Agenda as a
+continuity input.
 
 Post-M5 tactical alerts may become separate urgent advice items when feeder flag
 severity warrants it. That path is not part of the current Mayor MVP.
@@ -77,7 +80,6 @@ The Mayor may receive:
 
 - Date and phase context.
 - Colony-wide briefing.
-- Current Agenda.
 - Active relevant flags and CoS/Mayor-side arbitration output.
 - Trend windows.
 - Recent explicit feedback and Pushback summaries.

@@ -125,6 +125,12 @@ an append-only feed. Each minister play cycle should publish its current active
 set as a minister-scoped snapshot. A successful empty snapshot means the
 minister currently has no active advice.
 
+Active feeder snapshots are durable across Host restarts through the unified
+minister output store. The dashboard should reload the last good advice,
+state-summary, and chain snapshot immediately after boot instead of blanking
+until the next cabinet cycle. This store is latest-only; historical advice
+records remain in the replay corpus.
+
 Feeder snapshots may carry one player-facing current-state summary above the
 advice items. That summary describes the whole minister read; it is not an
 `AdviceItem`, a resource request, or an executable action. For Food, this

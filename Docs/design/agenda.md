@@ -9,8 +9,9 @@
 
 ## What The Agenda Is
 
-The Agenda is the living planning document the Mayor maintains. It persists
-across turns and evolves as the colony changes.
+The Agenda is the structured player-facing snapshot the Mayor produces. It is
+persisted through the unified minister output store alongside feeder advice
+snapshots.
 
 In MVP, the Agenda is the Mayor's advice. There is no separate `daily_digest`
 `AdviceItem`. The player reads it as a ranked to-do list: free-text bullets for
@@ -18,8 +19,9 @@ short-term priorities and long-term goals, plus a short explanation of what
 changed.
 
 The Agenda is also the read-only interface between the Mayor and feeder
-ministers. It tells ministers where the Mayor wants attention without direct
-minister-to-minister messaging.
+ministers. Feeders read the latest persisted Mayor snapshot for
+`cabinet_direction`; this remains a sanctioned Mayor-to-feeder channel without
+direct minister-to-minister messaging.
 
 ---
 
@@ -30,7 +32,7 @@ Design-level fields:
 - Version and timing metadata.
 - Strategic posture.
 - `state_of_the_union`: one terse interpretive sentence per relevant category.
-- `update_notes`: what changed since the previous agenda.
+- `update_notes`: short state-change commentary for the current snapshot.
 - `short_term`: free-text bullets with stable ids and status.
 - `long_term`: free-text bullets with stable ids and status.
 - `cabinet_direction`: optional free-text direction per active minister.
@@ -44,9 +46,10 @@ Agenda bullets are free text. Do not add structured action-kind catalogues,
 domain tags, deadline fields, or nested schemas unless implementation proves
 they are needed.
 
-Bullet ids should remain stable across versions when a continuing item is
-carried forward. This lets the dashboard distinguish new, updated, completed,
-and deferred items.
+Bullet ids should remain stable for obvious recurring issues when the Mayor can
+infer them from the current briefing and flags. The server no longer feeds the
+prior Agenda back into the Mayor prompt, so ids are no longer a server-side
+continuity contract.
 
 Statuses are `active`, `completed`, and `deferred`. Completed/deferred items may
 stay visible briefly so the player sees the change, then move to history.
@@ -76,24 +79,24 @@ citations are valid when RAG is disabled, unavailable, or irrelevant.
 
 ## Turn-End Update
 
-At agenda time, the Mayor receives the current agenda plus the latest briefing,
-active relevant flags, trends, and guide context. The Mayor outputs a complete
-new Agenda, not a patch. The server owns versioning, history storage, and
-broadcast.
+At agenda time, the Mayor receives the latest briefing, active relevant flags,
+trends, and guide context. It does not receive the previous Agenda. The Mayor
+outputs a complete new Agenda, not a patch. The unified minister output store
+owns version stamping, latest-snapshot persistence, and reload on Host startup.
 
-The current Agenda and bounded history are durable Host runtime state. Host
-loads them from the resolved stable machine-local data root
-(`agenda/agenda-store.json` below `RimBob:DataRoot`, or the default LocalAppData
-RimBob root) on startup before the dashboard endpoints or SSE stream are
-exposed. If a new Mayor run fails, the previous persisted Agenda remains the
-current Agenda.
+The latest Mayor Agenda is durable Host runtime state under the stable
+machine-local data root, stored as `ministers/mayor.json` below
+`RimBob:DataRoot` or the default LocalAppData RimBob root. The store is
+latest-only; history belongs in the replay corpus.
 
-If Host starts with no persisted Agenda, it initializes a conservative
-server-side bootstrap Agenda from the current briefing before the dashboard is
-served. The bootstrap must be clearly labeled in `update_notes`, should only
-contain safe `Suggest`-mode priorities, and is replaced by the next successful
-Mayor LLM run. If the Mayor LLM fails twice before any Agenda exists, the Mayor
-uses the same bootstrap path rather than leaving `/api/agenda/latest` empty.
+If Host starts with no persisted minister output at all, it initializes a
+conservative server-side bootstrap Agenda from the current briefing before the
+dashboard is served. The bootstrap must be clearly labeled in `update_notes`,
+should only contain safe `Suggest`-mode priorities, and is replaced by the next
+successful Mayor LLM run. A rebuild with any persisted minister output reloads
+that output and does not fire the cabinet just to populate the dashboard. If the
+Mayor LLM fails twice before any Agenda exists, the Mayor uses the same
+bootstrap path rather than leaving the Mayor snapshot empty.
 
 Manual dashboard runs refresh live state and evaluate RimBob through the cabinet
 trigger path. They are RimBob evaluation controls, not game writes.
@@ -104,7 +107,7 @@ trigger path. They are RimBob evaluation controls, not game writes.
 
 | Concept | What it is | Producer | Timing |
 |---|---|---|---|
-| `MayorAgenda` | Living plan and Mayor output | Mayor | Startup/daily/manual refresh |
+| `MayorAgenda` | Structured Mayor snapshot | Mayor | Bootstrap only on empty first run, then daily/manual refresh |
 | `AdviceItem` | Tactical/operational advice | Feeder ministers | Minister triggers |
 | Tactical alert | Urgent interruption | Future Mayor/feeder path | Severity spike |
 
@@ -153,15 +156,17 @@ and Dashboard source.
 
 The design contract is:
 
-- The dashboard can fetch the latest agenda and bounded agenda history.
+- The dashboard can fetch the latest Mayor snapshot through the minister
+  snapshot route.
 - The advice stream can broadcast full agenda updates.
 - New dashboard connections receive the current agenda when one exists.
-- The latest agenda endpoint returns the persisted current agenda after Host
-  restart. During normal Host startup, missing agenda state is initialized with
-  a labeled bootstrap Agenda; `204` should only appear if initialization cannot
-  complete or the Host is intentionally running without agenda storage.
+- The latest Mayor snapshot endpoint returns the persisted current agenda after
+  Host restart. During normal Host startup, missing output state is initialized
+  with a labeled bootstrap Agenda only on a genuine empty first run; `204`
+  should only appear if initialization cannot complete or output storage is
+  intentionally unavailable.
 - Idle streams stay alive.
-- Manual refresh triggers the same safe `Suggest`-mode Mayor evaluation path.
+- Manual refresh triggers the same safe `Suggest`-mode cabinet evaluation path.
 
 Exact endpoint names, event framing, and payload fields live in Host endpoint
 code and Dashboard API clients.
