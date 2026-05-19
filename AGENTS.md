@@ -76,14 +76,14 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 
 - The active RIMAPI mod is a local fork at `C:\dev\RIMAPI-for-RimBob` (repo: `ocaspi-sc/RIMAPI-for-RimBob`), not the upstream `IlyaChichkov/RIMAPI`. RimBob still integrates over HTTP at `http://localhost:8765/`; nothing in this repo links against the mod.
 - RimBob is an assisted-gameplay advisor for RimWorld. The player keeps control.
-- MVP is suggest-only. Per-minister `Auto` graduation is deferred until M7+ and requires explicit player consent.
-- Mayor publishes the Agenda. Feeder ministers publish `AdviceItem`s. No minister calls RIMAPI write endpoints in MVP.
+- MVP autonomy is suggest-only. Narrow player-confirmed Assisted Apply (M4.5) is a manual click path attached to `Suggest` advice, not `Auto`. Per-minister `Auto` graduation is deferred until M7+ and requires explicit player consent.
+- Mayor publishes the Agenda. Feeder ministers publish `AdviceItem`s. No minister autonomously writes to RIMAPI; the Host executes only allowlisted single-operation writes, and only on an explicit player Apply click.
 - No direct minister-to-minister communication. Coordination flows through flags; CoS arbitrates; Mayor synthesizes.
 - Rules handle common cases first. LLMs run only on escalation.
 - Briefings are the quality lever: keep them tight; derived facts belong in the state store, not prompts.
 - Player Accept / Dismiss / Pushback is the explicit refinement signal. Implicit state-diff feedback is out of MVP.
 - Dashboard and Host are localhost-only. Host binds `127.0.0.1`, never `0.0.0.0`.
-- Deferred Auto epic: HTN planner, bulletin board, Labor solver, RIMAPI write coverage, and "only Labor touches pawn allocation." Do not implement before M7.
+- Deferred Auto epic: HTN planner, bulletin board, Labor solver, broad RIMAPI write coverage, and "only Labor touches pawn allocation." Do not implement before M7. (The narrow allowlisted Assisted Apply writes are the only MVP exception.)
 - Dashboard is for debugging. it should reflect exact state.
 - When adding new features, note how it should be reflected in the dashboard. maybe suggest a new panel.
 
