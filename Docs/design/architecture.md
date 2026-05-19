@@ -174,6 +174,11 @@ Serilog logs, structured decision logs, replay corpus records, Mayor prompt
 dumps, and manual fallback files together there so SYSTEM can report one
 operator-visible log location.
 
+Host fatal startup/run failures are process-local failures, not Windows UI
+prompts. The Host logs unhandled fatal exceptions, flushes Serilog, and exits
+non-zero without relying on Windows Error Reporting dialogs that block agents or
+hidden tray launches.
+
 Host runtime data also uses stable machine-local storage by default. The data
 root holds the Agenda store, latest curated ColonyState snapshot, and RAG
 embedding cache so these do not fork per checkout. `RimBob:DataRoot` may
