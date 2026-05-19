@@ -1,6 +1,14 @@
 import { DisclosureSection } from '../shared/DisclosureSection';
 import { iconForField, iconForInfoTerm, iconForScope } from '../../dashboard/semanticIcons';
+import type { DashboardViewDefinition, DashboardViewKey } from '../../dashboard/scopes';
+import { ViewTabs } from '../layout/ViewTabs';
 import { SemanticLabel } from '../shared/SemanticIcon';
+
+interface ConsoleViewProps {
+  selectedView: DashboardViewKey;
+  views: DashboardViewDefinition[];
+  onSelectView: (view: DashboardViewKey) => void;
+}
 
 // ── Highlights data ──────────────────────────────────────────────────────────
 
@@ -231,7 +239,34 @@ const scopeGuide = [
   },
 ];
 
-export function InfoOverview() {
+const dataSources = [
+  {
+    name: 'Live Host health',
+    tag: 'SYSTEM',
+    description: 'Runtime status, process identity, endpoint coverage, logs, storage roots, and provider state come from /api/system/health.',
+  },
+  {
+    name: 'Live colony snapshot',
+    tag: 'Sidebar',
+    description: 'The right sidebar reads /api/colony/snapshot and can show restored stale state when RIMAPI is down.',
+  },
+  {
+    name: 'Advice stream',
+    tag: 'SSE',
+    description: 'Agenda and active advice updates arrive through /api/advice/stream and are kept in the dashboard session buffer.',
+  },
+  {
+    name: 'Static reference copy',
+    tag: 'INFO',
+    description: 'Glossary and scope guidance are intentionally static so INFO does not become another live metrics page.',
+  },
+];
+
+export function InfoOverview({
+  selectedView,
+  views,
+  onSelectView,
+}: ConsoleViewProps) {
   return (
     <div className="info-overview">
       <header className="info-hero system-card reference-card">
@@ -248,7 +283,16 @@ export function InfoOverview() {
         </div>
       </header>
 
+      <ViewTabs
+        activeView={selectedView}
+        ariaLabel="INFO reference views"
+        views={views}
+        onSelect={onSelectView}
+      />
+
       {/* ── Highlights ─────────────────────────────────────────────────── */}
+      {selectedView === 'overview' && (
+        <>
       <DisclosureSection title={<SemanticLabel icon={iconForScope('info')}><span>What RimBob does</span></SemanticLabel>} defaultOpen meta={`${features.length} features`}>
         <div className="analytics-ideas">
           {features.map(f => (
@@ -269,8 +313,12 @@ export function InfoOverview() {
           <StatList title="Project" entries={projectStats} />
         </div>
       </DisclosureSection>
+        </>
+      )}
 
-      <DisclosureSection title={<SemanticLabel icon={iconForField('rules')}><span>Design decisions</span></SemanticLabel>} meta={`${designDecisions.length} choices`}>
+      {selectedView === 'contracts' && (
+        <>
+      <DisclosureSection title={<SemanticLabel icon={iconForField('rules')}><span>Design decisions</span></SemanticLabel>} defaultOpen meta={`${designDecisions.length} choices`}>
         <div className="analytics-ideas">
           {designDecisions.map(d => (
             <article key={d.decision} className="analytics-idea">
@@ -285,6 +333,10 @@ export function InfoOverview() {
       </DisclosureSection>
 
       {/* ── Glossary ────────────────────────────────────────────────────── */}
+        </>
+      )}
+
+      {selectedView === 'glossary' && (
       <DisclosureSection title={<SemanticLabel icon={iconForField('info')}><span>Important buzzwords</span></SemanticLabel>} defaultOpen meta={`${rimbobGlossary.length + rimworldSignals.length} terms`}>
         <div className="glossary-columns">
           <GlossaryList title="RimBob terms" entries={rimbobGlossary} />
@@ -292,6 +344,10 @@ export function InfoOverview() {
         </div>
       </DisclosureSection>
 
+      )}
+
+      {selectedView === 'data_sources' && (
+        <>
       <DisclosureSection title={<SemanticLabel icon={iconForScope('system')}><span>Where to look</span></SemanticLabel>} defaultOpen meta="scope guide">
         <div className="analytics-ideas">
           {scopeGuide.map(scope => (
@@ -305,6 +361,21 @@ export function InfoOverview() {
           ))}
         </div>
       </DisclosureSection>
+      <DisclosureSection title={<SemanticLabel icon={iconForField('source')}><span>Data sources</span></SemanticLabel>} defaultOpen meta={`${dataSources.length} sources`}>
+        <div className="analytics-ideas">
+          {dataSources.map(source => (
+            <article key={source.name} className="analytics-idea">
+              <div>
+                <SemanticLabel icon={iconForInfoTerm(source.name, source.tag)}><strong>{source.name}</strong></SemanticLabel>
+                <span>{source.tag}</span>
+              </div>
+              <p>{source.description}</p>
+            </article>
+          ))}
+        </div>
+      </DisclosureSection>
+        </>
+      )}
     </div>
   );
 }

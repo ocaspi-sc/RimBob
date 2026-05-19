@@ -60,7 +60,7 @@ Dashboard v2 has four stable regions:
 
 - Header: product title, runtime status, and global manual trigger.
 - Left rail: inspected scope selector.
-- Main workspace: SYSTEM overview, INFO reference, ANALYTICS signals, or
+- Main workspace: SYSTEM, INFO, ANALYTICS, and DEV BLOG local tabs, or
   minister inspector tabs.
 - Right sidebar: compact colony facts plus colonist cards.
 
@@ -95,6 +95,18 @@ but disabled or marked not wired until backend data exists: Construction,
 Defense, Welfare, Medical, Research, Industry, Economy, and Chief of Staff.
 
 The left rail selects the inspected scope, not the view.
+
+Non-minister console scopes use a shallow local tab bar:
+
+- SYSTEM: Runtime, Connectivity, Storage, Coverage, Events.
+- INFO: Overview, Glossary, Contracts, Data Sources.
+- ANALYTICS: Session, Colony, Advice, SSE, Candidates.
+- DEV BLOG: Timeline, Churn, Commits, Topics, Suggestions.
+
+Console tabs are first-class dashboard views for URL/storage validation and
+launcher deep links, but they do not change cabinet ownership. Keep the tab
+layer shallow: use collapsed disclosures inside each tab instead of nesting a
+second tab system.
 
 ### Minister Views
 
@@ -154,9 +166,9 @@ re-renders when the payload content has not changed.
 
 ### SYSTEM View
 
-SYSTEM is not a minister and does not show minister tabs. It starts as one
-overview page with compact panels. Split it later only if the overview becomes
-too large.
+SYSTEM is not a minister and does not show minister tabs. It uses local tabs to
+separate dense operational data: runtime identity, connectivity/provider state,
+storage/cache/log metadata, endpoint/test coverage, and event/trace timelines.
 
 SYSTEM should visually read as operations: runtime state, endpoint names,
 diagnostic labels, traces, logs, raw health, and explicit failure/degraded
@@ -216,6 +228,8 @@ INFO owns:
 - RimWorld signals: a compact dictionary for terms that commonly affect advice,
   such as food days, work type, skill, downed, wealth pressure, and power net.
 - Scope guide: when to use SYSTEM, ANALYTICS, and minister inspection views.
+- Data-source guide: which dashboard surfaces are live, persisted/restored,
+  SSE/session buffered, or static reference copy.
 
 ### ANALYTICS View
 
@@ -598,8 +612,8 @@ metrics, and endpoint coverage.
 
 ## Open Questions
 
-- [ ] Should SYSTEM split into multiple tabs after log and RAG health surfaces
-      mature?
+- [ ] Which console tabs should get direct toolbar affordances once their
+      diagnostics become routine operator workflows?
 - [ ] Which decision-log fields should become durable trace history versus
       in-memory recent-run state?
 - [ ] Should browser notifications be scoped to tactical alerts only?

@@ -2,12 +2,14 @@ import type { AdviceItem } from '../../types/advice';
 import type { MayorAgenda } from '../../types/agenda';
 import type { ColonySnapshot } from '../../types/colony';
 import type { DashboardEvent, StreamDiagnostics, SystemHealth } from '../../types/system';
+import type { DashboardViewDefinition, DashboardViewKey } from '../../dashboard/scopes';
 import type { SemanticIconSpec } from '../../dashboard/semanticIcons';
 import { iconForActionKind, iconForField, iconForInfoTerm, iconForScope } from '../../dashboard/semanticIcons';
 import { DisclosureSection } from '../shared/DisclosureSection';
 import { MetricCard } from '../shared/MetricCard';
 import { SemanticLabel } from '../shared/SemanticIcon';
 import { Timeline } from '../shared/Timeline';
+import { ViewTabs } from '../layout/ViewTabs';
 
 interface AnalyticsIdea {
   name: string;
@@ -63,15 +65,21 @@ export function AnalyticsOverview({
   agenda,
   events,
   health,
+  onSelectView,
+  selectedView,
   snapshot,
   stream,
+  views,
 }: {
   activeAdvice: AdviceItem[];
   agenda: MayorAgenda | null;
   events: DashboardEvent[];
   health: SystemHealth | null;
+  onSelectView: (view: DashboardViewKey) => void;
+  selectedView: DashboardViewKey;
   snapshot: ColonySnapshot | null;
   stream: StreamDiagnostics;
+  views: DashboardViewDefinition[];
 }) {
   const analytics = buildAnalytics(activeAdvice, agenda, health, snapshot);
   const sseAnalytics = buildSseAnalytics(stream, health);
@@ -103,6 +111,14 @@ export function AnalyticsOverview({
         </div>
       </header>
 
+      <ViewTabs
+        activeView={selectedView}
+        ariaLabel="ANALYTICS signal views"
+        views={views}
+        onSelect={onSelectView}
+      />
+
+      {selectedView === 'session' && (
       <section className="system-grid info-metric-grid">
         <div className="system-card">
           <div className="section-heading">
@@ -118,7 +134,11 @@ export function AnalyticsOverview({
             <MetricCard label={metricLabel('trace_count', 'Trace count')} value={health?.traces.length ?? 'n/a'} />
           </div>
         </div>
+      </section>
+      )}
 
+      {selectedView === 'colony' && (
+      <section className="system-grid info-metric-grid">
         <div className="system-card">
           <div className="section-heading">
             <span className="eyebrow">Colony analytics</span>
@@ -134,7 +154,9 @@ export function AnalyticsOverview({
           </div>
         </div>
       </section>
+      )}
 
+      {selectedView === 'sse' && (
       <DisclosureSection title={<SemanticLabel icon={iconForField('sse')}><span>SSE health summary</span></SemanticLabel>} defaultOpen meta={sseAnalytics.summary}>
         <div className="sse-info-grid">
           <div className="system-card compact-info-card">
@@ -174,7 +196,9 @@ export function AnalyticsOverview({
           </div>
         </div>
       </DisclosureSection>
+      )}
 
+      {selectedView === 'advice' && (
       <DisclosureSection title={<SemanticLabel icon={iconForField('advice')}><span>Advice analytics</span></SemanticLabel>} defaultOpen meta={`${activeAdvice.length} active cards`}>
         <div className="analytics-columns">
           <CountPanel title="Priority mix" titleIcon={iconForField('priority')} rows={priorityCounts} empty="No active advice priorities." />
@@ -182,7 +206,9 @@ export function AnalyticsOverview({
           <CountPanel title="Action mix" titleIcon={iconForField('actions')} rows={actionKindCounts} empty="No active advice actions." iconForRow={iconForActionKind} />
         </div>
       </DisclosureSection>
+      )}
 
+      {selectedView === 'candidates' && (
       <DisclosureSection title={<SemanticLabel icon={iconForScope('analytics')}><span>Analytics worth adding next</span></SemanticLabel>} defaultOpen meta={`${analyticsIdeas.length} candidates`}>
         <div className="analytics-ideas">
           {analyticsIdeas.map(idea => (
@@ -196,10 +222,13 @@ export function AnalyticsOverview({
           ))}
         </div>
       </DisclosureSection>
+      )}
 
+      {selectedView === 'session' && (
       <DisclosureSection title={<SemanticLabel icon={iconForField('events')}><span>Recent dashboard events</span></SemanticLabel>} meta={`${events.length} buffered`}>
         <Timeline events={events} limit={10} />
       </DisclosureSection>
+      )}
     </div>
   );
 }

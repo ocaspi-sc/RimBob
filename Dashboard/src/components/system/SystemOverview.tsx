@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { startIconCacheWarm } from '../../api/icons';
+import type { DashboardViewDefinition, DashboardViewKey } from '../../dashboard/scopes';
 import type { RimBobStatus } from '../../types/status';
 import type { DashboardEvent, RimApiCoverageRow, StreamDiagnostics, SystemHealth } from '../../types/system';
 import { iconForField, iconForSection, iconForScope } from '../../dashboard/semanticIcons';
@@ -12,6 +13,7 @@ import { MetricCard } from '../shared/MetricCard';
 import { SemanticLabel } from '../shared/SemanticIcon';
 import { StatusPill } from '../shared/StatusPill';
 import { Timeline } from '../shared/Timeline';
+import { ViewTabs } from '../layout/ViewTabs';
 
 type IconCacheFile = SystemHealth['icons']['files'][number];
 
@@ -19,14 +21,20 @@ export function SystemOverview({
   events,
   health,
   healthError,
+  onSelectView,
+  selectedView,
   status,
   stream,
+  views,
 }: {
   events: DashboardEvent[];
   health: SystemHealth | null;
   healthError: string | null;
+  onSelectView: (view: DashboardViewKey) => void;
+  selectedView: DashboardViewKey;
   status: RimBobStatus | null;
   stream: StreamDiagnostics;
+  views: DashboardViewDefinition[];
 }) {
   const [iconWarmAction, setIconWarmAction] = useState<{ status: 'idle' | 'pending' | 'ok' | 'error'; message: string | null }>({
     status: 'idle',
@@ -34,6 +42,8 @@ export function SystemOverview({
   });
   const backendSse = health?.sse;
   const llmStatus = health?.llm.status ?? status?.llm_status ?? ((status?.llm_configured ?? health?.llm.configured) ? 'ready' : 'missing_key');
+  const llmTone = llmToneFor(llmStatus);
+  const llmMetricTone = llmTone === 'idle' ? 'neutral' : llmTone;
   const icons = health?.icons;
   const warmJob = icons?.warmJob ?? null;
   const replay = health?.logs.replay_corpus;
@@ -74,17 +84,72 @@ export function SystemOverview({
         </div>
       </header>
 
+      <ViewTabs
+        activeView={selectedView}
+        ariaLabel="SYSTEM operations views"
+        views={views}
+        onSelect={onSelectView}
+      />
+
+      {selectedView === 'coverage' && (
       <div className="panel-registry-note">
         <span>Panel registry</span>
         {systemPanelRegistry.map(panel => (
           <code key={panel.id}>{panel.id}</code>
         ))}
       </div>
+      )}
 
       {healthError && (
         <EmptyState code="SYSTEM HEALTH DEGRADED">{healthError}</EmptyState>
       )}
 
+      {selectedView === 'connectivity' && (
+      <DisclosureSection
+        title={<SectionTitle iconKey="sse">Connectivity and providers</SectionTitle>}
+        defaultOpen
+        meta={(status?.rimapi_reachable ?? health?.runtime.rimapi_reachable) ? 'RIMAPI reachable' : 'RIMAPI waiting'}
+      >
+        <section className="system-grid">
+          <div className="system-card">
+            <div className="section-heading">
+              <span className="eyebrow">RIMAPI / LLM</span>
+              <h2><SectionTitle iconKey="rimapi">External links</SectionTitle></h2>
+            </div>
+            <div className="metric-grid compact">
+              <MetricCard label={<FieldLabel iconKey="rimapi">RIMAPI</FieldLabel>} value={(status?.rimapi_reachable ?? health?.runtime.rimapi_reachable) ? 'reachable' : 'waiting'} tone={(status?.rimapi_reachable ?? health?.runtime.rimapi_reachable) ? 'ok' : 'warn'} />
+              <MetricCard label={<FieldLabel iconKey="llm">LLM</FieldLabel>} value={llmStatus.replace(/_/g, ' ')} tone={llmMetricTone} />
+              <MetricCard label={<FieldLabel iconKey="keys">Configured keys</FieldLabel>} value={(status?.llm_configured ?? health?.llm.configured) ? 'present' : 'missing'} tone={(status?.llm_configured ?? health?.llm.configured) ? 'ok' : 'error'} />
+              <MetricCard label={<FieldLabel iconKey="last_event">Last LLM event</FieldLabel>} value={formatMaybeDate(health?.llm.last_event_at ?? status?.llm_last_event_at ?? null)} />
+            </div>
+            <div className="stacked-lines runtime-source-lines">
+              <InfoLine label="Last LLM success" value={formatMaybeDate(health?.llm.last_success_at ?? status?.mayor_last_llm_success_at ?? null)} />
+              <InfoLine label="Last LLM error" value={shorten(health?.llm.last_error ?? status?.llm_last_error ?? status?.mayor_last_error ?? 'none')} />
+            </div>
+          </div>
+
+          <div className="system-card">
+            <div className="section-heading">
+              <span className="eyebrow">SSE</span>
+              <h2><SectionTitle iconKey="sse">Advice stream</SectionTitle></h2>
+            </div>
+            <div className="metric-grid compact">
+              <MetricCard label={<FieldLabel iconKey="client">Client</FieldLabel>} value={stream.state} tone={stream.state === 'open' ? 'ok' : stream.state === 'error' ? 'warn' : 'neutral'} />
+              <MetricCard label={<FieldLabel iconKey="events">Client events</FieldLabel>} value={stream.eventCount} />
+              <MetricCard label={<FieldLabel iconKey="server_events">Server events</FieldLabel>} value={backendSse?.eventCount ?? 'n/a'} />
+              <MetricCard label={<FieldLabel iconKey="connections">Connections</FieldLabel>} value={backendSse?.activeConnections ?? 'n/a'} />
+            </div>
+            <div className="stacked-lines runtime-source-lines">
+              <InfoLine label="Last client event" value={stream.lastEventType ?? 'none'} />
+              <InfoLine label="Last server event" value={backendSse?.lastEventType ?? 'none'} />
+              <InfoLine label="Last server error" value={backendSse?.lastError ?? 'none'} />
+            </div>
+          </div>
+        </section>
+      </DisclosureSection>
+      )}
+
+      {selectedView === 'coverage' && (
       <DisclosureSection title={<SectionTitle iconKey="tests">Test inventory</SectionTitle>} meta={tests ? `${tests.total_count} declared tests` : 'not exposed'}>
         {!tests ? (
           <EmptyState code="TEST INVENTORY MISSING">/api/system/health did not expose test metadata.</EmptyState>
@@ -120,7 +185,9 @@ export function SystemOverview({
           </div>
         )}
       </DisclosureSection>
+      )}
 
+      {selectedView === 'runtime' && (
       <DisclosureSection
         title={<SectionTitle iconKey="runtime">Runtime diagnostics</SectionTitle>}
         meta={(status?.rimapi_reachable ?? health?.runtime.rimapi_reachable) ? 'RIMAPI reachable' : 'RIMAPI waiting'}
@@ -154,7 +221,7 @@ export function SystemOverview({
               <h2><SectionTitle iconKey="llm">Gemini</SectionTitle></h2>
             </div>
             <div className="stacked-lines">
-              <StatusPill tone={llmToneFor(llmStatus)}>
+              <StatusPill tone={llmTone}>
                 {llmStatus.replace(/_/g, ' ')}
               </StatusPill>
               <InfoLine label="Configured" value={(status?.llm_configured ?? health?.llm.configured) ? 'yes' : 'no'} />
@@ -195,7 +262,9 @@ export function SystemOverview({
           </div>
         </section>
       </DisclosureSection>
+      )}
 
+      {selectedView === 'storage' && (
       <DisclosureSection
         title={<SectionTitle iconKey="snapshot">Minister outputs</SectionTitle>}
         meta={ministerOutputs ? `${ministerOutputs.snapshots.length} snapshots` : 'not exposed'}
@@ -238,7 +307,9 @@ export function SystemOverview({
           </div>
         )}
       </DisclosureSection>
+      )}
 
+      {selectedView === 'storage' && (
       <DisclosureSection
         title={<SectionTitle iconKey="snapshot">Colony snapshot</SectionTitle>}
         meta={colonySnapshot ? snapshotMeta(colonySnapshot, health?.runtime.rimapi_reachable ?? false) : 'not exposed'}
@@ -277,7 +348,9 @@ export function SystemOverview({
           </div>
         )}
       </DisclosureSection>
+      )}
 
+      {selectedView === 'events' && (
       <DisclosureSection title={<SectionTitle iconKey="assisted_apply">Assisted Apply</SectionTitle>} meta={`${applyAttempts.length} recent attempts`}>
         {applyAttempts.length === 0 ? (
           <EmptyState code="NO APPLY ATTEMPTS">No Assisted Apply attempts have been recorded this session.</EmptyState>
@@ -302,7 +375,9 @@ export function SystemOverview({
           </div>
         )}
       </DisclosureSection>
+      )}
 
+      {selectedView === 'coverage' && (
       <DisclosureSection title={<SectionTitle iconKey="rimapi">RIMAPI integration snapshot</SectionTitle>} meta={rimapi ? `${rimapi.active_read_count}/${rimapi.cached_upstream_endpoint_total} cached endpoints` : 'not exposed'}>
         {!rimapi ? (
           <EmptyState code="RIMAPI COVERAGE MISSING">/api/system/health did not expose RIMAPI coverage metadata.</EmptyState>
@@ -335,7 +410,9 @@ export function SystemOverview({
           </div>
         )}
       </DisclosureSection>
+      )}
 
+      {selectedView === 'storage' && (
       <DisclosureSection
         title={<SectionTitle iconKey="icon_cache">Icon cache</SectionTitle>}
         meta={icons ? `${icons.fileCount} cached PNGs | ${warmJob?.state ?? 'idle'}` : 'not exposed'}
@@ -462,15 +539,21 @@ export function SystemOverview({
           </div>
         )}
       </DisclosureSection>
+      )}
 
+      {selectedView === 'coverage' && (
       <DisclosureSection title={<SectionTitle iconKey="endpoint_coverage">Endpoint and data coverage</SectionTitle>} meta={`${health?.endpoint_coverage.length ?? 0} surfaces`}>
         <CoverageTable rows={health?.endpoint_coverage ?? []} />
       </DisclosureSection>
+      )}
 
+      {selectedView === 'events' && (
       <DisclosureSection title={<SectionTitle iconKey="recent_events">Recent events</SectionTitle>} meta={`${events.length} buffered`}>
         <Timeline events={events} limit={16} />
       </DisclosureSection>
+      )}
 
+      {selectedView === 'events' && (
       <DisclosureSection title={<SectionTitle iconKey="logs">Logs and traces</SectionTitle>} meta={health?.logs.directory ?? 'not exposed'}>
         <div className="stacked-lines">
           <InfoLine label="Log directory" value={health?.logs.directory ?? 'not exposed'} />
@@ -520,6 +603,7 @@ export function SystemOverview({
           </div>
         )}
       </DisclosureSection>
+      )}
     </div>
   );
 }

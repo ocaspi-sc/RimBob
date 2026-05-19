@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import {
+  defaultViewForScope,
   findScope,
-  ministerViews,
+  isDashboardViewKey,
   scopeConfigs,
-  type MinisterViewKey,
+  viewForScope,
+  type DashboardViewKey,
   type ScopeKey,
 } from '../dashboard/scopes';
 
@@ -14,14 +16,15 @@ const ViewQueryKey = 'view';
 
 export interface DashboardSelection {
   selectedScope: ScopeKey;
-  selectedView: MinisterViewKey;
+  selectedView: DashboardViewKey;
   selectScope: (scope: ScopeKey) => void;
-  selectView: (view: MinisterViewKey) => void;
+  selectView: (view: DashboardViewKey) => void;
 }
 
 export function useDashboardSelection(): DashboardSelection {
-  const [selectedScope, setSelectedScope] = useState<ScopeKey>(() => readInitialSelection().scope);
-  const [selectedView, setSelectedView] = useState<MinisterViewKey>(() => readInitialSelection().view);
+  const initialSelection = readInitialSelection();
+  const [selectedScope, setSelectedScope] = useState<ScopeKey>(() => initialSelection.scope);
+  const [selectedView, setSelectedView] = useState<DashboardViewKey>(() => initialSelection.view);
 
   useEffect(() => {
     writeStoredValue(SelectedScopeStorageKey, selectedScope);
@@ -33,23 +36,24 @@ export function useDashboardSelection(): DashboardSelection {
 
   const selectScope = (scope: ScopeKey) => {
     setSelectedScope(scope);
-    if (findScope(scope).kind === 'minister') {
-      setSelectedView('advice');
-    }
+    setSelectedView(defaultViewForScope(findScope(scope)));
   };
 
   return {
     selectedScope,
     selectedView,
     selectScope,
-    selectView: setSelectedView,
+    selectView: view => setSelectedView(viewForScope(findScope(selectedScope), view)),
   };
 }
 
-function readInitialSelection(): { scope: ScopeKey; view: MinisterViewKey } {
+function readInitialSelection(): { scope: ScopeKey; view: DashboardViewKey } {
+  const scope = readQueryScope() ?? readStoredScope();
+  const view = readQueryView() ?? readStoredView();
+
   return {
-    scope: readQueryScope() ?? readStoredScope(),
-    view: readQueryView() ?? readStoredView(),
+    scope,
+    view: viewForScope(findScope(scope), view),
   };
 }
 
@@ -58,9 +62,9 @@ function readStoredScope(): ScopeKey {
   return isScopeKey(stored) ? stored : 'system';
 }
 
-function readStoredView(): MinisterViewKey {
+function readStoredView(): DashboardViewKey {
   const stored = readStoredValue(SelectedViewStorageKey);
-  return isMinisterViewKey(stored) ? stored : 'advice';
+  return isDashboardViewKey(stored) ? stored : 'runtime';
 }
 
 function readStoredValue(key: string): string | null {
@@ -92,9 +96,9 @@ function readQueryScope(): ScopeKey | null {
   return isScopeKey(queryValue) ? queryValue : null;
 }
 
-function readQueryView(): MinisterViewKey | null {
+function readQueryView(): DashboardViewKey | null {
   const queryValue = readQueryValue(ViewQueryKey);
-  return isMinisterViewKey(queryValue) ? queryValue : null;
+  return isDashboardViewKey(queryValue) ? queryValue : null;
 }
 
 function writeStoredValue(key: string, value: string) {
@@ -111,8 +115,4 @@ function writeStoredValue(key: string, value: string) {
 
 function isScopeKey(value: string | null): value is ScopeKey {
   return typeof value === 'string' && scopeConfigs.some(scope => scope.key === value);
-}
-
-function isMinisterViewKey(value: string | null): value is MinisterViewKey {
-  return typeof value === 'string' && ministerViews.some(view => view.key === value);
 }

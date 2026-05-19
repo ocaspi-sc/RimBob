@@ -1,6 +1,6 @@
 import { fetchColonySnapshot } from './api/colony';
 import { fetchStatus, fetchSystemHealth } from './api/status';
-import { findScope, ministerViews, scopeConfigs } from './dashboard/scopes';
+import { findScope, isMinisterViewKey, ministerViews, scopeConfigs, viewForScope, viewsForScope } from './dashboard/scopes';
 import { formatLastRun } from './dashboard/selectors';
 import { AnalyticsOverview } from './components/analytics/AnalyticsOverview';
 import { DevBlogOverview } from './components/devBlog/DevBlogOverview';
@@ -30,6 +30,9 @@ export default function App() {
   const feed = useAdviceFeed();
 
   const activeScope = findScope(selection.selectedScope);
+  const activeView = viewForScope(activeScope, selection.selectedView);
+  const activeViews = viewsForScope(activeScope);
+  const activeMinisterView = isMinisterViewKey(activeView) ? activeView : 'advice';
   const isSystem = activeScope.kind === 'system';
   const isInfo = activeScope.kind === 'info';
   const isAnalytics = activeScope.kind === 'analytics';
@@ -66,9 +69,16 @@ export default function App() {
               healthError={systemHealth.error}
               stream={feed.stream}
               events={feed.events}
+              selectedView={activeView}
+              views={activeViews}
+              onSelectView={selection.selectView}
             />
           ) : isInfo ? (
-            <InfoOverview />
+            <InfoOverview
+              selectedView={activeView}
+              views={activeViews}
+              onSelectView={selection.selectView}
+            />
           ) : isAnalytics ? (
             <AnalyticsOverview
               activeAdvice={feed.feed.activeAdvice}
@@ -77,9 +87,16 @@ export default function App() {
               health={systemHealth.data}
               snapshot={snapshot.data}
               stream={feed.stream}
+              selectedView={activeView}
+              views={activeViews}
+              onSelectView={selection.selectView}
             />
           ) : isDevBlog ? (
-            <DevBlogOverview />
+            <DevBlogOverview
+              selectedView={activeView}
+              views={activeViews}
+              onSelectView={selection.selectView}
+            />
           ) : (
             <>
               <WorkspaceTitle
@@ -90,7 +107,8 @@ export default function App() {
                 onTrigger={() => void triggers.triggerMinisterNow(activeScope)}
               />
               <ViewTabs
-                activeView={selection.selectedView}
+                activeView={activeMinisterView}
+                ariaLabel={`${activeScope.label} inspection views`}
                 views={ministerViews}
                 onSelect={selection.selectView}
               />
@@ -101,7 +119,7 @@ export default function App() {
                 events={feed.events}
                 previousAgenda={feed.previousAgenda}
                 scope={activeScope}
-                selectedView={selection.selectedView}
+                selectedView={activeMinisterView}
                 stateSummaries={feed.feed.stateSummaries}
                 systemHealth={systemHealth.data}
               />

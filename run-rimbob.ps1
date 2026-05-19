@@ -24,11 +24,42 @@ if (-not [string]::IsNullOrWhiteSpace($ListenUrl)) {
     $dashboardUrl = $ListenUrl
 }
 
+$dashboardSystemViews = @(
+    [pscustomobject]@{ Label = "Runtime"; View = "runtime" },
+    [pscustomobject]@{ Label = "Connectivity"; View = "connectivity" },
+    [pscustomobject]@{ Label = "Storage"; View = "storage" },
+    [pscustomobject]@{ Label = "Coverage"; View = "coverage" },
+    [pscustomobject]@{ Label = "Events"; View = "events" }
+)
+
+$dashboardInfoViews = @(
+    [pscustomobject]@{ Label = "Overview"; View = "overview" },
+    [pscustomobject]@{ Label = "Glossary"; View = "glossary" },
+    [pscustomobject]@{ Label = "Contracts"; View = "contracts" },
+    [pscustomobject]@{ Label = "Data Sources"; View = "data_sources" }
+)
+
+$dashboardAnalyticsViews = @(
+    [pscustomobject]@{ Label = "Session"; View = "session" },
+    [pscustomobject]@{ Label = "Colony"; View = "colony" },
+    [pscustomobject]@{ Label = "Advice"; View = "advice" },
+    [pscustomobject]@{ Label = "SSE"; View = "sse" },
+    [pscustomobject]@{ Label = "Candidates"; View = "candidates" }
+)
+
+$dashboardDevBlogViews = @(
+    [pscustomobject]@{ Label = "Timeline"; View = "timeline" },
+    [pscustomobject]@{ Label = "Churn"; View = "churn" },
+    [pscustomobject]@{ Label = "Commits"; View = "commits" },
+    [pscustomobject]@{ Label = "Topics"; View = "topics" },
+    [pscustomobject]@{ Label = "Suggestions"; View = "suggestions" }
+)
+
 $dashboardConsoleScopes = @(
-    [pscustomobject]@{ Label = "SYSTEM"; Scope = "system" },
-    [pscustomobject]@{ Label = "INFO"; Scope = "info" },
-    [pscustomobject]@{ Label = "ANALYTICS"; Scope = "analytics" },
-    [pscustomobject]@{ Label = "DEV BLOG"; Scope = "dev_blog" }
+    [pscustomobject]@{ Label = "SYSTEM"; Scope = "system"; Views = $dashboardSystemViews },
+    [pscustomobject]@{ Label = "INFO"; Scope = "info"; Views = $dashboardInfoViews },
+    [pscustomobject]@{ Label = "ANALYTICS"; Scope = "analytics"; Views = $dashboardAnalyticsViews },
+    [pscustomobject]@{ Label = "DEV BLOG"; Scope = "dev_blog"; Views = $dashboardDevBlogViews }
 )
 
 $dashboardMinisterScopes = @(
@@ -291,10 +322,16 @@ function Add-DashboardViewMenu {
     )
 
     foreach ($consoleScope in $dashboardConsoleScopes) {
-        [void](Add-DashboardMenuCommand `
-            -Items $Menu.Items `
-            -Label $consoleScope.Label `
-            -Scope $consoleScope.Scope)
+        $scopeItem = New-Object System.Windows.Forms.ToolStripMenuItem -ArgumentList $consoleScope.Label
+        foreach ($view in $consoleScope.Views) {
+            [void](Add-DashboardMenuCommand `
+                -Items $scopeItem.DropDownItems `
+                -Label $view.Label `
+                -Scope $consoleScope.Scope `
+                -View $view.View)
+        }
+
+        [void]$Menu.Items.Add($scopeItem)
     }
 
     [void]$Menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))

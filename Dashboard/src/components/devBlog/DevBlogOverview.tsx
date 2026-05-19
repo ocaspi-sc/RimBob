@@ -6,16 +6,26 @@ import type {
   DevBlogLocPoint,
   DevBlogTimelinePoint,
 } from '../../types/devBlog';
+import type { DashboardViewDefinition, DashboardViewKey } from '../../dashboard/scopes';
 import { iconForField, iconForScope } from '../../dashboard/semanticIcons';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { DisclosureSection } from '../shared/DisclosureSection';
 import { EmptyState } from '../shared/EmptyState';
 import { MetricCard } from '../shared/MetricCard';
 import { SemanticLabel } from '../shared/SemanticIcon';
+import { ViewTabs } from '../layout/ViewTabs';
 
 const chartColors = ['#62d8e6', '#50d38d', '#f0bd5f', '#a78bfa', '#ff6b6b', '#78a8ff', '#d2f970', '#ff9f7a'];
 
-export function DevBlogOverview() {
+export function DevBlogOverview({
+  onSelectView,
+  selectedView,
+  views,
+}: {
+  onSelectView: (view: DashboardViewKey) => void;
+  selectedView: DashboardViewKey;
+  views: DashboardViewDefinition[];
+}) {
   const history = useAsyncResource(fetchDevBlogHistory, []);
 
   if (history.loading) {
@@ -26,10 +36,27 @@ export function DevBlogOverview() {
     return <EmptyState code="DEV BLOG UNAVAILABLE">{history.error ?? 'No Git history analytics were returned.'}</EmptyState>;
   }
 
-  return <DevBlogContent history={history.data} />;
+  return (
+    <DevBlogContent
+      history={history.data}
+      selectedView={selectedView}
+      views={views}
+      onSelectView={onSelectView}
+    />
+  );
 }
 
-function DevBlogContent({ history }: { history: DevBlogHistory }) {
+function DevBlogContent({
+  history,
+  onSelectView,
+  selectedView,
+  views,
+}: {
+  history: DevBlogHistory;
+  onSelectView: (view: DashboardViewKey) => void;
+  selectedView: DashboardViewKey;
+  views: DashboardViewDefinition[];
+}) {
   const defaultTags = useMemo(
     () => history.tagSlices.slice(0, 5).map(slice => slice.label),
     [history.tagSlices],
@@ -69,6 +96,14 @@ function DevBlogContent({ history }: { history: DevBlogHistory }) {
         </div>
       </header>
 
+      <ViewTabs
+        activeView={selectedView}
+        ariaLabel="DEV BLOG history views"
+        views={views}
+        onSelect={onSelectView}
+      />
+
+      {selectedView === 'commits' && (
       <section className="system-grid info-metric-grid">
         <div className="system-card">
           <div className="section-heading">
@@ -92,7 +127,11 @@ function DevBlogContent({ history }: { history: DevBlogHistory }) {
             <code>{history.repositoryRoot}</code>
           </div>
         </div>
+      </section>
+      )}
 
+      {selectedView === 'suggestions' && (
+      <section className="system-grid info-metric-grid">
         <div className="system-card">
           <div className="section-heading">
             <span className="eyebrow">Editorial suggestions</span>
@@ -108,7 +147,9 @@ function DevBlogContent({ history }: { history: DevBlogHistory }) {
           </div>
         </div>
       </section>
+      )}
 
+      {selectedView === 'timeline' && (
       <DisclosureSection title={<SemanticLabel icon={iconForField('timeline')}><span>Topic timeline</span></SemanticLabel>} defaultOpen meta={`${topTags.length} top tags`}>
         <div className="tag-toggle-row" aria-label="Toggle tags in timeline">
           <button type="button" onClick={() => setSelectedTags(defaultTags)}>Top 5</button>
@@ -128,8 +169,11 @@ function DevBlogContent({ history }: { history: DevBlogHistory }) {
         </div>
         <TagTimelineChart points={history.tagTimeline} selectedTags={selectedTags} tagOrder={topTags.map(tag => tag.label)} />
       </DisclosureSection>
+      )}
 
+      {(selectedView === 'churn' || selectedView === 'commits') && (
       <section className="dev-blog-chart-grid">
+        {selectedView === 'commits' && (
         <div className="system-card">
           <div className="section-heading">
             <span className="eyebrow">Commit size</span>
@@ -137,7 +181,9 @@ function DevBlogContent({ history }: { history: DevBlogHistory }) {
           </div>
           <CommitHistogram bins={history.commitSizeHistogram} />
         </div>
+        )}
 
+        {selectedView === 'churn' && (
         <div className="system-card">
           <div className="section-heading">
             <span className="eyebrow">Line count</span>
@@ -145,8 +191,11 @@ function DevBlogContent({ history }: { history: DevBlogHistory }) {
           </div>
           <LocGrowthChart points={history.locGrowth} />
         </div>
+        )}
       </section>
+      )}
 
+      {selectedView === 'topics' && (
       <DisclosureSection title={<SemanticLabel icon={iconForField('category')}><span>Pie charts</span></SemanticLabel>} defaultOpen meta="area, topic">
         <div className="dev-blog-pie-grid">
           <DonutChart
@@ -167,6 +216,7 @@ function DevBlogContent({ history }: { history: DevBlogHistory }) {
           />
         </div>
       </DisclosureSection>
+      )}
     </div>
   );
 }

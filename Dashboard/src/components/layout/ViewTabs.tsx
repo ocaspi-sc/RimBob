@@ -1,18 +1,20 @@
-import type { MinisterViewKey } from '../../dashboard/scopes';
+import type { DashboardViewDefinition, DashboardViewKey } from '../../dashboard/scopes';
 import { iconForView } from '../../dashboard/semanticIcons';
 import { SemanticIconCue } from '../shared/SemanticIcon';
 
 export function ViewTabs({
+  ariaLabel = 'Workspace views',
   activeView,
   views,
   onSelect,
 }: {
-  activeView: MinisterViewKey;
-  views: Array<{ key: MinisterViewKey; label: string }>;
-  onSelect: (view: MinisterViewKey) => void;
+  activeView: DashboardViewKey;
+  ariaLabel?: string;
+  views: DashboardViewDefinition[];
+  onSelect: (view: DashboardViewKey) => void;
 }) {
   return (
-    <div className="view-tabs" role="tablist" aria-label="Minister inspection views">
+    <div className="view-tabs" role="tablist" aria-label={ariaLabel}>
       {views.map(view => (
         <button
           key={view.key}
