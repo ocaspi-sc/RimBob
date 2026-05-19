@@ -508,14 +508,14 @@ table with lightweight icon-database cues because it is player-facing; raw and
 debug views preserve the original `state_summary` text. It should name concrete
 food stores, growing areas/crop progress, acquisition opportunities,
 kitchen/storage/freezer signals, and confidence gaps before the action cards.
-Food's planning/production panel renders from backend `chain` data as three
-compact route cards: Grow, Hunt, and Forage. Shared whole-colony steps such as
-food-buffer pressure and the final meal target are not repeated visually. The
-cards use different route accent colors and icon-led short rows for route facts,
-for example Zone, Crops, Harvest, Cook, and Store. Row status semantics are
-stable across the panel: green means covered/current-good, blue means the
-current advice emitted an action, gray means idle/future capacity, and red means
-a blocked prerequisite.
+Food's planning/production panel renders from backend `chain` data as one merged
+work-order diagram. Grow, forage, and hunt enter as separate colored routes,
+then merge into the shared Harvest/Butcher -> Storage -> Cook -> Refridge path.
+Every step is a small icon-led box with short factual subtext; crop waiting
+belongs under Plant rather than as its own node. State color semantics are stable
+across the diagram: green means covered/current state, blue means the current
+advice emitted an action, gray means idle/future capacity, and red means a
+blocked prerequisite.
 Cards show rationale, concrete advice actions, citations, issue id or supersession
 when available, and coverage gaps. No feedback buttons are shown in v2.
 
