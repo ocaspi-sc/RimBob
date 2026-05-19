@@ -14,6 +14,7 @@ public sealed class IconCacheService
     private const int DefaultWarmAttempts = 3;
     private const int DefaultWarmCheckpointInterval = 25;
     private const int MaxStatusFailures = 100;
+    private const int TerrainIconMaxDimension = 128;
     private const int RedXPlaceholderPngLength = 1132;
     private const string RedXPlaceholderPngSha256 = "0D25BE2358B9CC93B0154E9BE5CE4769FBB30023C2D6CBC46E636798917DC13B";
     private static readonly TimeSpan DefaultWarmRetryDelay = TimeSpan.FromMilliseconds(400);
@@ -555,6 +556,7 @@ public sealed class IconCacheService
         FileInfo existing = new(path);
         if (existing.Exists && !IsKnownPlaceholderPng(existing))
         {
+            await NormalizeExistingTerrainIconAsync(path, kind, id, ct);
             await MarkCachedSuccessAsync(kind, id, ct);
             return new IconFile(path, ContentTypePng, PublicPath(kind, id));
         }
@@ -577,6 +579,7 @@ public sealed class IconCacheService
         Directory.CreateDirectory(directory);
 
         byte[] bytes = DecodePng(base64, $"{kind} {id}");
+        bytes = NormalizeCachedPng(kind, bytes);
         string tempPath = $"{path}.{Guid.NewGuid():N}.tmp";
         try
         {
@@ -592,6 +595,51 @@ public sealed class IconCacheService
         }
 
         return new IconFile(path, ContentTypePng, PublicPath(kind, id));
+    }
+
+    private async Task NormalizeExistingTerrainIconAsync(
+        string path,
+        string kind,
+        string id,
+        CancellationToken ct)
+    {
+        if (!IsTerrainIcon(kind))
+        {
+            return;
+        }
+
+        try
+        {
+            byte[] original = await File.ReadAllBytesAsync(path, ct);
+            byte[] normalized = NormalizeCachedPng(kind, original);
+            if (ReferenceEquals(original, normalized))
+            {
+                return;
+            }
+
+            string tempPath = $"{path}.{Guid.NewGuid():N}.tmp";
+            try
+            {
+                await File.WriteAllBytesAsync(tempPath, normalized, ct);
+                File.Move(tempPath, path, overwrite: true);
+                log.LogDebug(
+                    "Normalized terrain icon {IconId} from {OriginalBytes} bytes to {NormalizedBytes} bytes.",
+                    id,
+                    original.Length,
+                    normalized.Length);
+            }
+            finally
+            {
+                if (File.Exists(tempPath))
+                {
+                    File.Delete(tempPath);
+                }
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or FormatException)
+        {
+            log.LogWarning(ex, "Could not normalize cached terrain icon {IconId}; serving existing PNG.", id);
+        }
     }
 
     private async Task MarkCachedSuccessAsync(string kind, string id, CancellationToken ct)
@@ -785,6 +833,14 @@ public sealed class IconCacheService
 
         return bytes;
     }
+
+    private static byte[] NormalizeCachedPng(string kind, byte[] bytes) =>
+        IsTerrainIcon(kind)
+            ? PngThumbnailer.DownscaleToFit(bytes, TerrainIconMaxDimension)
+            : bytes;
+
+    private static bool IsTerrainIcon(string kind) =>
+        string.Equals(kind, "terrain", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsKnownPlaceholderPng(FileInfo file)
     {

@@ -1,3 +1,5 @@
+using System.Buffers.Binary;
+using System.IO.Compression;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -64,6 +66,70 @@ public sealed class IconCacheServiceTests
                 },
                 options => options.ExcludingMissingMembers());
             status.Files.Single().SizeBytes.Should().BeGreaterThan(0);
+        }
+        finally
+        {
+            DeleteTempRoot(root);
+        }
+    }
+
+    [Fact]
+    public async Task GetTerrainIconAsync_WhenRimApiReturnsLargeTerrainPng_CachesThumbnail()
+    {
+        string root = NewTempRoot();
+        try
+        {
+            byte[] source = CreateRgbaPng(width: 256, height: 128);
+            IconCacheService sut = NewService(root, request =>
+            {
+                string path = request.RequestUri?.PathAndQuery ?? string.Empty;
+                return path.Contains("terrain/image", StringComparison.OrdinalIgnoreCase)
+                    ? ImageEnvelope("Soil", Convert.ToBase64String(source))
+                    : new HttpResponseMessage(HttpStatusCode.NotFound);
+            });
+
+            IconFile file = await sut.GetTerrainIconAsync("Soil");
+            (int width, int height) = ReadPngSize(file.Path);
+
+            width.Should().Be(128);
+            height.Should().Be(64);
+            File.ReadAllBytes(file.Path).Length.Should().BeLessThan(source.Length);
+        }
+        finally
+        {
+            DeleteTempRoot(root);
+        }
+    }
+
+    [Fact]
+    public async Task GetTerrainIconAsync_WhenExistingLargeTerrainPng_DownscalesInPlaceWithoutRefetch()
+    {
+        string root = NewTempRoot();
+        try
+        {
+            string terrainDir = Path.Combine(root, "terrain");
+            Directory.CreateDirectory(terrainDir);
+            string iconPath = Path.Combine(terrainDir, "Soil.png");
+            await File.WriteAllBytesAsync(iconPath, CreateRgbaPng(width: 256, height: 128));
+            int imageCalls = 0;
+            IconCacheService sut = NewService(root, request =>
+            {
+                string path = request.RequestUri?.PathAndQuery ?? string.Empty;
+                if (path.Contains("terrain/image", StringComparison.OrdinalIgnoreCase))
+                {
+                    imageCalls++;
+                    return ImageEnvelope("Soil");
+                }
+
+                return new HttpResponseMessage(HttpStatusCode.NotFound);
+            });
+
+            IconFile file = await sut.GetTerrainIconAsync("Soil");
+            (int width, int height) = ReadPngSize(file.Path);
+
+            imageCalls.Should().Be(0);
+            width.Should().Be(128);
+            height.Should().Be(64);
         }
         finally
         {
@@ -1191,6 +1257,102 @@ public sealed class IconCacheServiceTests
         }
 
         throw new TimeoutException("Icon warm job did not finish in time.");
+    }
+
+    private static (int Width, int Height) ReadPngSize(string path)
+    {
+        byte[] bytes = File.ReadAllBytes(path);
+        return (
+            checked((int)BinaryPrimitives.ReadUInt32BigEndian(bytes.AsSpan(16, 4))),
+            checked((int)BinaryPrimitives.ReadUInt32BigEndian(bytes.AsSpan(20, 4))));
+    }
+
+    private static byte[] CreateRgbaPng(int width, int height)
+    {
+        byte[] signature = [137, 80, 78, 71, 13, 10, 26, 10];
+        byte[] ihdrType = Encoding.ASCII.GetBytes("IHDR");
+        byte[] idatType = Encoding.ASCII.GetBytes("IDAT");
+        byte[] iendType = Encoding.ASCII.GetBytes("IEND");
+
+        using MemoryStream raw = new();
+        for (int y = 0; y < height; y++)
+        {
+            raw.WriteByte(0);
+            for (int x = 0; x < width; x++)
+            {
+                raw.WriteByte((byte)(x % 256));
+                raw.WriteByte((byte)(y % 256));
+                raw.WriteByte(96);
+                raw.WriteByte(255);
+            }
+        }
+
+        using MemoryStream compressed = new();
+        using (ZLibStream zlib = new(compressed, CompressionLevel.Optimal, leaveOpen: true))
+        {
+            raw.Position = 0;
+            raw.CopyTo(zlib);
+        }
+
+        using MemoryStream png = new();
+        png.Write(signature);
+        byte[] ihdr = new byte[13];
+        BinaryPrimitives.WriteUInt32BigEndian(ihdr.AsSpan(0, 4), checked((uint)width));
+        BinaryPrimitives.WriteUInt32BigEndian(ihdr.AsSpan(4, 4), checked((uint)height));
+        ihdr[8] = 8;
+        ihdr[9] = 6;
+        WritePngChunk(png, ihdrType, ihdr);
+        WritePngChunk(png, idatType, compressed.ToArray());
+        WritePngChunk(png, iendType, []);
+        return png.ToArray();
+    }
+
+    private static void WritePngChunk(Stream output, byte[] type, byte[] data)
+    {
+        Span<byte> length = stackalloc byte[4];
+        BinaryPrimitives.WriteUInt32BigEndian(length, checked((uint)data.Length));
+        output.Write(length);
+        output.Write(type);
+        output.Write(data);
+
+        Span<byte> crc = stackalloc byte[4];
+        BinaryPrimitives.WriteUInt32BigEndian(crc, PngCrc(type, data));
+        output.Write(crc);
+    }
+
+    private static uint PngCrc(byte[] type, byte[] data)
+    {
+        uint crc = 0xffffffffu;
+        foreach (byte value in type)
+        {
+            crc = PngCrcTable[(crc ^ value) & 0xff] ^ (crc >> 8);
+        }
+
+        foreach (byte value in data)
+        {
+            crc = PngCrcTable[(crc ^ value) & 0xff] ^ (crc >> 8);
+        }
+
+        return crc ^ 0xffffffffu;
+    }
+
+    private static readonly uint[] PngCrcTable = BuildPngCrcTable();
+
+    private static uint[] BuildPngCrcTable()
+    {
+        uint[] table = new uint[256];
+        for (uint i = 0; i < table.Length; i++)
+        {
+            uint crc = i;
+            for (int bit = 0; bit < 8; bit++)
+            {
+                crc = (crc & 1) == 1 ? 0xedb88320u ^ (crc >> 1) : crc >> 1;
+            }
+
+            table[i] = crc;
+        }
+
+        return table;
     }
 
     private static HttpResponseMessage Json(string json) =>

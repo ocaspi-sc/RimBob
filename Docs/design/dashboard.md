@@ -417,6 +417,9 @@ Dashboard icons are read-only Host URLs backed by the local runtime cache. The
 cache is populated from the player's running game, is not committed, and should
 not fork per worktree unless an operator explicitly configures a worktree-local
 `RimBob:IconCacheRoot`.
+Terrain images are cached as dashboard-sized thumbnails, not full source
+textures, because terrain endpoints can return large tile textures that are not
+useful at icon scale.
 
 The dashboard may render an icon only when it has an explicit source:
 
