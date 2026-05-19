@@ -206,7 +206,9 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 ExpiresAt: now.AddHours(24))]
             : [];
 
-        return new Decision([advice], flags, trace, DiagnosticsFor(briefing, trace));
+        RuleTraceDetails diagnostics = DiagnosticsFor(briefing, trace)
+            .WithEmissions("rules", trace, [advice], flags);
+        return new Decision([advice], flags, trace, diagnostics);
     }
 
     private static RuleTraceDetails DiagnosticsFor(FoodBriefing briefing, string selectedRule)

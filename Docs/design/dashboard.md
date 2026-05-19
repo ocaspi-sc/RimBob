@@ -496,6 +496,10 @@ The Rules view answers: "Why did RimBob say this now?"
 Show trigger, rules-vs-LLM path, selected rule or escalation reason, matched
 signals, suppressed lower-priority candidates, relevant flag or wakeup payload,
 emitted advice/flags, briefing version/tick when available, and last error.
+Rules trace/replay diagnostics should also include emitted action provenance so
+the operator can see which rule or LLM-after-escalation path produced each
+action row. Keep that provenance in trace/replay diagnostics; raw `actions[]`
+remains the player-facing action contract.
 
 ### Advice
 

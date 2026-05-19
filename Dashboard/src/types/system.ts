@@ -138,12 +138,47 @@ export interface RuleTraceDetails {
   selectedRule: string | null;
   matchedSignals: RuleTraceEntry[];
   suppressedCandidates: RuleTraceEntry[];
+  emittedAdvice?: RuleEmittedAdviceTrace[];
+  emittedActions?: RuleEmittedActionTrace[];
+  emittedFlags?: RuleEmittedFlagTrace[];
 }
 
 export interface RuleTraceEntry {
   rule: string;
   outcome: string;
   reason: string;
+}
+
+export interface RuleEmittedAdviceTrace {
+  source: string;
+  rule: string;
+  adviceId: string;
+  adviceType: string;
+  priority: string;
+  title: string;
+  actionCount: number;
+}
+
+export interface RuleEmittedActionTrace {
+  source: string;
+  rule: string;
+  adviceId: string;
+  actionIndex: number;
+  kind: string;
+  instruction: string;
+  reason: string | null;
+  applyKind: string | null;
+  applyLabel: string | null;
+  applyTargetSummary: string | null;
+}
+
+export interface RuleEmittedFlagTrace {
+  source: string;
+  rule: string;
+  flagId: string;
+  severity: string;
+  summary: string;
+  requestCount: number;
 }
 
 export interface AssistedApplyAttempt {

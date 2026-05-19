@@ -1433,6 +1433,49 @@ code {
     minmax(360px, 2fr);
 }
 
+.rule-emissions-table {
+  margin-bottom: 10px;
+}
+
+.rule-emissions-table .dynamic-table {
+  min-width: 980px;
+}
+
+.rule-emissions-action-table .dynamic-row {
+  grid-template-columns:
+    minmax(112px, 0.6fr)
+    minmax(170px, 0.95fr)
+    minmax(190px, 1fr)
+    minmax(82px, 0.45fr)
+    minmax(126px, 0.65fr)
+    minmax(300px, 1.8fr)
+    minmax(250px, 1.4fr)
+    minmax(130px, 0.7fr)
+    minmax(120px, 0.7fr)
+    minmax(240px, 1.25fr);
+}
+
+.rule-emissions-advice-table .dynamic-row {
+  grid-template-columns:
+    minmax(112px, 0.6fr)
+    minmax(170px, 0.95fr)
+    minmax(190px, 1fr)
+    minmax(148px, 0.8fr)
+    minmax(94px, 0.5fr)
+    minmax(280px, 1.5fr)
+    minmax(90px, 0.5fr);
+}
+
+.rule-emissions-flag-table .dynamic-row {
+  grid-template-columns:
+    minmax(112px, 0.6fr)
+    minmax(170px, 0.95fr)
+    minmax(180px, 1fr)
+    minmax(92px, 0.5fr)
+    minmax(300px, 1.7fr)
+    minmax(100px, 0.55fr);
+}
+
 .json-tree {
   font-family: "Cascadia Mono", "Consolas", monospace;
   font-size: 0.82rem;

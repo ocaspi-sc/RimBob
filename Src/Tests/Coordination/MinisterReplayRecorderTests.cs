@@ -1,5 +1,6 @@
 using FluentAssertions;
 using RimBob.Coordination;
+using RimBob.Core.Advice;
 using RimBob.Core.Ministers;
 using RimBob.LLM;
 using RimBob.Tests.Food;
@@ -95,6 +96,25 @@ public sealed class MinisterReplayRecorderTests
                     Reason: "food buffer 4.0d is below the 7d emergency threshold")
             ],
             SuppressedCandidates: []);
+        AdviceItem advice = new(
+            Id: "food_emergency_food_flag",
+            Minister: "Food",
+            AdviceType: "food_security",
+            Priority: AdvicePriority.High,
+            Title: "Food crisis within a week",
+            Body: "Food is low.",
+            Rationale: "Food below 7 days is an urgent survival risk.",
+            Actions:
+            [
+                new AdviceAction(
+                    AdviceActionKind.ProductionBill,
+                    "Set/check simple meal bill.",
+                    Reason: "raw food must become meals during an urgent shortage")
+            ],
+            GuideCitationIds: [],
+            IssuedAt: DateTimeOffset.UtcNow,
+            ExpiresAt: DateTimeOffset.UtcNow.AddHours(4));
+        diagnostics = diagnostics.WithEmissions("rules", "emergency_food_flag", [advice], []);
 
         await recorder.RecordAsync(new MinisterReplayEntry(
             Minister: "Food",
@@ -102,7 +122,8 @@ public sealed class MinisterReplayRecorderTests
             Path: "rules",
             Briefing: FoodRulesTests.Briefing(4f),
             RuleTrace: "emergency_food_flag",
-            RuleDiagnostics: diagnostics), CancellationToken.None);
+            RuleDiagnostics: diagnostics,
+            Advice: [advice]), CancellationToken.None);
 
         traces.Latest("Food").Should().NotBeNull();
         MinisterTraceSnapshot snapshot = traces.Latest("Food")!;
@@ -112,6 +133,11 @@ public sealed class MinisterReplayRecorderTests
         snapshot.RuleFired.Should().Be("emergency_food_flag");
         snapshot.RuleDiagnostics.Should().NotBeNull();
         snapshot.RuleDiagnostics!.SelectedRule.Should().Be("emergency_food_flag");
+        snapshot.RuleDiagnostics.EmittedActions.Should().ContainSingle(row =>
+            row.Source == "rules" &&
+            row.Rule == "emergency_food_flag" &&
+            row.AdviceId == "food_emergency_food_flag" &&
+            row.Kind == AdviceActionKind.ProductionBill);
         snapshot.Note.Should().Contain("emergency_food_flag");
     }
 
