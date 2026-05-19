@@ -186,7 +186,7 @@ public sealed class IconCacheService
     public async Task<IconWarmSummary> WarmStaticAsync(CancellationToken ct = default) =>
         await WarmStaticAsync(IconWarmScope.All, null, ct);
 
-    public IconCacheStatus GetStatus()
+    public IconCacheStatus GetStatus(bool includeFiles = false)
     {
         Directory.CreateDirectory(rootDirectory);
         IconCacheManifest? manifest = ReadManifest();
@@ -194,11 +194,13 @@ public sealed class IconCacheService
             .EnumerateFiles("*.png", SearchOption.AllDirectories)
             .Where(file => !IsKnownPlaceholderPng(file))
             .ToArray();
-        IconCacheFile[] fileEntries = files
-            .Select(ToCacheFile)
-            .OrderBy(file => file.Kind, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(file => file.Id, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+        IconCacheFile[] fileEntries = includeFiles
+            ? files
+                .Select(ToCacheFile)
+                .OrderBy(file => file.Kind, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(file => file.Id, StringComparer.OrdinalIgnoreCase)
+                .ToArray()
+            : [];
 
         Dictionary<string, int> byKind = files
             .GroupBy(file => file.Directory?.Name ?? "unknown", StringComparer.OrdinalIgnoreCase)
@@ -222,6 +224,7 @@ public sealed class IconCacheService
             TotalBytes: files.Sum(file => file.Length),
             LatestWriteAt: latest,
             FilesByKind: byKind,
+            FilesIncluded: includeFiles,
             Files: fileEntries,
             LastWarm: BoundForStatus(lastWarm),
             WarmJob: CurrentWarmJob(manifest?.LastJob));
@@ -1175,6 +1178,7 @@ public sealed record IconCacheStatus(
     long TotalBytes,
     DateTimeOffset? LatestWriteAt,
     IReadOnlyDictionary<string, int> FilesByKind,
+    bool FilesIncluded,
     IReadOnlyList<IconCacheFile> Files,
     IconWarmSummary? LastWarm,
     IconWarmJobStatus WarmJob);

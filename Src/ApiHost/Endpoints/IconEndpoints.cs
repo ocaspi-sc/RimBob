@@ -12,7 +12,7 @@ public static class IconEndpoints
         coverage.Register("/api/icons/faction/{loadId}", "available", "Read-only cached current-world faction icon PNG gateway.");
         coverage.Register("/api/icons/pawn/{pawnId}/portrait", "available", "Read-only cached pawn portrait PNG gateway; not prewarmed.");
         coverage.Register("/api/icons/colonist/{pawnId}/body", "available", "Read-only colonist body/head image cache fetch; not prewarmed.");
-        coverage.Register("/api/icons/cache/status", "available", "Local icon cache status, warm job progress, and manifest summary.");
+        coverage.Register("/api/icons/cache/status", "available", "Local icon cache summary by default; append ?includeFiles=true for the full usable PNG inventory.");
         coverage.Register("/api/icons/cache/warm", "available", "Background static item, terrain, and faction icon cache warmer.");
 
         app.MapGet("/api/icons/item/{defName}", async Task<IResult> (
@@ -54,8 +54,8 @@ public static class IconEndpoints
             CancellationToken ct) =>
             await JsonAsync(() => icons.GetColonistBodyAsync(pawnId, ct), ct));
 
-        app.MapGet("/api/icons/cache/status", (IconCacheService icons) =>
-            Results.Ok(icons.GetStatus()));
+        app.MapGet("/api/icons/cache/status", (bool? includeFiles, IconCacheService icons) =>
+            Results.Ok(icons.GetStatus(includeFiles == true)));
 
         app.MapPost("/api/icons/cache/warm", (
             string? scope,

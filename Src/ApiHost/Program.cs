@@ -80,6 +80,7 @@ try
             lifetime.ApplicationStopping);
     });
     builder.Services.AddSingleton<PromptBuilder>();
+    builder.Services.AddSingleton<PromptInspectorCache>();
     builder.Services.AddSingleton<RawLlmOutputStore>();
     builder.Services.AddSingleton<LlmClient>(sp =>
     {

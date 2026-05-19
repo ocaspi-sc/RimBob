@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { startIconCacheWarm } from '../../api/icons';
+import { useEffect, useState } from 'react';
+import { fetchIconCacheStatus, startIconCacheWarm } from '../../api/icons';
 import type { DashboardViewDefinition, DashboardViewKey } from '../../dashboard/scopes';
 import type { RimBobStatus } from '../../types/status';
 import type { DashboardEvent, RimApiCoverageRow, StreamDiagnostics, SystemHealth } from '../../types/system';
@@ -44,7 +44,26 @@ export function SystemOverview({
   const llmStatus = health?.llm.status ?? status?.llm_status ?? ((status?.llm_configured ?? health?.llm.configured) ? 'ready' : 'missing_key');
   const llmTone = llmToneFor(llmStatus);
   const llmMetricTone = llmTone === 'idle' ? 'neutral' : llmTone;
-  const icons = health?.icons;
+  const healthIcons = health?.icons ?? null;
+  const iconSummaryKey = healthIcons
+    ? `${healthIcons.fileCount}:${healthIcons.totalBytes}:${healthIcons.latestWriteAt ?? 'none'}:${healthIcons.lastWarm?.completedAt ?? 'none'}`
+    : null;
+  const [iconInventory, setIconInventory] = useState<SystemHealth['icons'] | null>(null);
+  const [iconInventoryKey, setIconInventoryKey] = useState<string | null>(null);
+  const [iconInventoryStatus, setIconInventoryStatus] = useState<{ state: 'idle' | 'loading' | 'error'; message: string | null }>({
+    state: 'idle',
+    message: null,
+  });
+  const iconInventoryReady = selectedView === 'storage'
+    && iconInventoryKey === iconSummaryKey
+    && iconInventory?.filesIncluded === true;
+  const icons = healthIcons
+    ? {
+        ...healthIcons,
+        filesIncluded: iconInventoryReady ? true : healthIcons.filesIncluded,
+        files: iconInventoryReady ? iconInventory.files : healthIcons.files,
+      }
+    : null;
   const warmJob = icons?.warmJob ?? null;
   const replay = health?.logs.replay_corpus;
   const tests = health?.tests;
@@ -57,6 +76,41 @@ export function SystemOverview({
   const iconGroups = icons ? groupIconCacheFiles(icons.files) : [];
   const iconFailureState = icons ? summarizeIconWarmFailures(icons) : null;
   const warmRunning = warmJob?.state === 'running' || iconWarmAction.status === 'pending';
+
+  useEffect(() => {
+    if (selectedView !== 'storage' || !healthIcons || !iconSummaryKey) {
+      return;
+    }
+
+    if (healthIcons.filesIncluded) {
+      setIconInventory(healthIcons);
+      setIconInventoryKey(iconSummaryKey);
+      setIconInventoryStatus({ state: 'idle', message: null });
+      return;
+    }
+
+    if (iconInventoryKey === iconSummaryKey && iconInventory?.filesIncluded) {
+      return;
+    }
+
+    const controller = new AbortController();
+    setIconInventoryStatus({ state: 'loading', message: 'Loading icon inventory...' });
+    fetchIconCacheStatus(true, controller.signal)
+      .then(status => {
+        setIconInventory(status);
+        setIconInventoryKey(iconSummaryKey);
+        setIconInventoryStatus({ state: 'idle', message: null });
+      })
+      .catch(error => {
+        if (controller.signal.aborted) return;
+        setIconInventoryStatus({
+          state: 'error',
+          message: error instanceof Error ? error.message : 'Icon inventory could not be loaded.',
+        });
+      });
+
+    return () => controller.abort();
+  }, [healthIcons, iconInventory, iconInventoryKey, iconSummaryKey, selectedView]);
 
   async function onStartIconWarm(scope: 'all' | 'failed') {
     setIconWarmAction({ status: 'pending', message: scope === 'failed' ? 'Starting failed-only warm...' : 'Starting full warm...' });
@@ -488,7 +542,11 @@ export function SystemOverview({
               )}
               <InfoLine label="By kind" value={formatKindCounts(icons.filesByKind)} />
             </div>
-            {icons.files.length === 0 ? (
+            {!icons.filesIncluded ? (
+              <EmptyState code={iconInventoryStatus.state === 'error' ? 'ICON INVENTORY ERROR' : 'ICON INVENTORY SUMMARY'}>
+                {iconInventoryStatus.message ?? 'Full cached PNG inventory is loaded only for this SYSTEM storage view.'}
+              </EmptyState>
+            ) : icons.files.length === 0 ? (
               <EmptyState code="ICON CACHE EMPTY">No cached PNG files exist under the icon cache directory.</EmptyState>
             ) : (
               <div className="icon-cache-groups" aria-label="Cached icon files">

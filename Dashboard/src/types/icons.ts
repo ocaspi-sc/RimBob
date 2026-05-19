@@ -61,6 +61,7 @@ export interface IconCacheStatus {
   totalBytes: number;
   latestWriteAt: string | null;
   filesByKind: Record<string, number>;
+  filesIncluded: boolean;
   files: IconCacheFile[];
   lastWarm: IconWarmSummary | null;
   warmJob: IconWarmJobStatus;

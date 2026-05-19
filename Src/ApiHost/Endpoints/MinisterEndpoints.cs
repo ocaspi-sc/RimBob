@@ -51,9 +51,11 @@ public static class MinisterEndpoints
             BriefingCache briefings,
             MinisterOutputStore outputStore,
             PromptBuilder prompts,
+            PromptInspectorCache promptCache,
             MayorRagRetriever mayorRetriever,
             FoodRagRetriever foodRetriever,
             FlagChannel flags,
+            bool? refresh,
             CancellationToken ct) =>
         {
             MinisterDescriptor? scope = registry.FindMinister(minister);
@@ -79,20 +81,49 @@ public static class MinisterEndpoints
             if (scope.Key == "mayor")
             {
                 MayorBriefing briefing = briefings.GetMayorBriefing();
-                IReadOnlyList<GuideCitation> retrieved = await mayorRetriever.RetrieveAsync(briefing, [], ct);
                 IReadOnlyList<AgentFlag> activeFlags = flags.Active(FlagSeverity.Medium);
-                string user = prompts.BuildMayorUserMessage(briefing, [], retrieved, activeFlags);
-                return Results.Ok(new { system = ReadPromptOrPlaceholder(() => prompts.MayorSystemPrompt), user });
+                string key = PromptInspectorCache.BuildKey(
+                    scope.Key,
+                    briefing.BriefingVersion,
+                    outputStore.CurrentMayorAgenda?.Version,
+                    PromptInspectorCache.HashJson(activeFlags));
+                PromptInspectorPayload payload = await promptCache.GetOrCreateAsync(
+                    key,
+                    refresh == true,
+                    async cancellationToken =>
+                    {
+                        IReadOnlyList<GuideCitation> retrieved = await mayorRetriever.RetrieveAsync(briefing, [], cancellationToken);
+                        string user = prompts.BuildMayorUserMessage(briefing, [], retrieved, activeFlags);
+                        return new PromptInspectorPayload(
+                            ReadPromptOrPlaceholder(() => prompts.MayorSystemPrompt),
+                            user);
+                    },
+                    ct);
+                return Results.Ok(payload);
             }
 
             if (scope.Key == "food")
             {
                 FoodBriefing briefing = briefings.GetFoodBriefing();
-                MinisterBriefingContext context = MinisterOfFood.BuildContext(outputStore.CurrentMayorAgenda);
-                IReadOnlyList<GuideCitation> retrieved = await foodRetriever.RetrieveAsync(briefing, ct);
-                IReadOnlyList<FoodPromptCropCandidate> cropCandidates = MinisterOfFood.BuildCropCandidates(briefing);
-                string user = prompts.BuildFoodUserMessage(briefing, context, retrieved, cropCandidates);
-                return Results.Ok(new { system = ReadPromptOrPlaceholder(() => prompts.FoodSystemPrompt), user });
+                string key = PromptInspectorCache.BuildKey(
+                    scope.Key,
+                    briefing.BriefingVersion,
+                    outputStore.CurrentMayorAgenda?.Version);
+                PromptInspectorPayload payload = await promptCache.GetOrCreateAsync(
+                    key,
+                    refresh == true,
+                    async cancellationToken =>
+                    {
+                        MinisterBriefingContext context = MinisterOfFood.BuildContext(outputStore.CurrentMayorAgenda);
+                        IReadOnlyList<GuideCitation> retrieved = await foodRetriever.RetrieveAsync(briefing, cancellationToken);
+                        IReadOnlyList<FoodPromptCropCandidate> cropCandidates = MinisterOfFood.BuildCropCandidates(briefing);
+                        string user = prompts.BuildFoodUserMessage(briefing, context, retrieved, cropCandidates);
+                        return new PromptInspectorPayload(
+                            ReadPromptOrPlaceholder(() => prompts.FoodSystemPrompt),
+                            user);
+                    },
+                    ct);
+                return Results.Ok(payload);
             }
 
             return Results.Problem(

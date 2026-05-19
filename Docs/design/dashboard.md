@@ -200,10 +200,11 @@ SYSTEM owns:
   by `Src/Tests` category. This is source inventory, not a pass/fail test run
   result.
 - Icon cache metadata: local cache counts, byte totals, warm job lifecycle,
-  skipped candidates, deferred candidates, bounded failure samples, per-def
-  warm state, and the full usable cached PNG inventory rendered as the actual
-  cached icons. Upstream placeholder red-X PNGs are invalid cache artifacts:
-  they should be treated as missing/unusable, not displayed as real game art.
+  skipped candidates, deferred candidates, bounded failure samples, and per-def
+  warm state. The full usable cached PNG inventory belongs behind the explicit
+  icon-cache debug request, then renders as actual cached icons. Upstream
+  placeholder red-X PNGs are invalid cache artifacts: they should be treated as
+  missing/unusable, not displayed as real game art.
 - Latest minister traces: trigger, status, rules/LLM path, rule trace,
   escalation reason, emitted counts, and failure detail when available.
 - Recent event/advice timeline.
@@ -276,7 +277,9 @@ DEV BLOG owns:
 
 The scope should stay bounded and local. It may shell out to Git from Host, but
 it must not mutate the repository, stage files, or inspect uncommitted worktree
-state.
+state. The Host may cache the parsed report and validate it against the current
+local `master` commit so normal dashboard polling does not rerun the full Git
+history scan.
 
 ### Right Sidebar
 
@@ -319,6 +322,11 @@ All observability endpoints are read-only unless explicitly named as a manual
 RimBob re-evaluation trigger. They never mutate game state. Assisted Apply is a
 separate action endpoint family, not an observability endpoint.
 
+Prompt inspector endpoints should preserve the exact `{ system, user }` payload
+shape for dashboard consumers, but may cache the rebuilt prompt briefly by
+minister and source-state version. An explicit refresh parameter should force a
+fresh rebuild for debugging when the operator needs to re-run retrieval.
+
 `/api/system/health` owns dashboard-visible metadata for known log and
 diagnostic artifacts. It should expose bounded metadata such as location,
 patterns, counts, byte totals, latest write time, and recent-file summaries, not
@@ -349,17 +357,19 @@ or fail with a stale-advice result after backend validation.
 
 Icon cache metadata follows the same rule. SYSTEM may show counts, byte totals,
 kind totals, warm job state (`idle`, `running`, `completed`, or `failed`), live
-job progress, last warm result, skipped count, deferred count, bounded failure
-samples, and the complete cached-file list from the configured icon cache
-directory, including relative path, kind, def/id, size, write time, and public
-Host URL when one exists. The default icon cache root is stable machine-local
-storage under LocalAppData (`RimBob/icons`), not the active repository or
-worktree; `RimBob:IconCacheRoot` may override it. Relative overrides resolve
-under the same stable machine-local RimBob root. It should not expose or inline
-image bytes. The visible cache inventory should render as a compact grouped set
-of wrapping rows of the actual cached Host icons, not as a file table. Groups
-should be derived from stable cache metadata and def-name patterns so new
-warmed icons land in a useful place without hand-maintained panel entries.
+job progress, last warm result, skipped count, deferred count, and bounded
+failure samples from `/api/system/health` or the default icon-cache status
+request. The complete cached-file list is an explicit debug payload requested
+from `/api/icons/cache/status?includeFiles=true`; it includes relative path,
+kind, def/id, size, write time, and public Host URL when one exists. The default
+icon cache root is stable machine-local storage under LocalAppData
+(`RimBob/icons`), not the active repository or worktree; `RimBob:IconCacheRoot`
+may override it. Relative overrides resolve under the same stable machine-local
+RimBob root. It should not expose or inline image bytes. The visible cache
+inventory should render as a compact grouped set of wrapping rows of the actual
+cached Host icons, not as a file table. Groups should be derived from stable
+cache metadata and def-name patterns so new warmed icons land in a useful place
+without hand-maintained panel entries.
 
 The static warm runs as a Host-owned background job, not as request-bound work.
 The POST that starts warming returns immediately with the current job state;

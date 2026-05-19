@@ -77,7 +77,7 @@ public static class SystemEndpoints
     public static IEndpointRouteBuilder MapSystemEndpoints(this IEndpointRouteBuilder app)
     {
         EndpointCoverageCatalog coverage = app.ServiceProvider.GetRequiredService<EndpointCoverageCatalog>();
-        coverage.Register("/api/system/health", "available", "Runtime, LLM, RAG, logs, traces, tests, Host endpoint coverage, and RIMAPI coverage metadata.");
+        coverage.Register("/api/system/health", "available", "Runtime, LLM, RAG, logs, traces, tests, lightweight icon summary, Host endpoint coverage, and RIMAPI coverage metadata.");
         coverage.Register("/api/system/logs/recent", "not_exposed_yet", "Planned bounded log tail.");
 
         app.MapGet("/api/system/health", (
@@ -182,7 +182,7 @@ public static class SystemEndpoints
                     recent_endpoint = "not_exposed_yet",
                 },
                 tests = TestInventoryMetadata(env.ContentRootPath),
-                icons = iconCache.GetStatus(),
+                icons = iconCache.GetStatus(includeFiles: false),
                 traces = traces.LatestAll(),
                 assisted_apply = new
                 {

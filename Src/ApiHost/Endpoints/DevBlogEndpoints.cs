@@ -7,6 +7,8 @@ namespace RimBob.Host.Endpoints;
 
 public static class DevBlogEndpoints
 {
+    private static readonly DevBlogHistoryCache HistoryCache = new(new DevBlogHistoryAnalyzer(), TimeSpan.FromSeconds(30));
+
     public static IEndpointRouteBuilder MapDevBlogEndpoints(this IEndpointRouteBuilder app)
     {
         EndpointCoverageCatalog coverage = app.ServiceProvider.GetRequiredService<EndpointCoverageCatalog>();
@@ -17,8 +19,7 @@ public static class DevBlogEndpoints
             CancellationToken ct) =>
         {
             string repositoryRoot = HostLogPaths.ResolveRuntimeRoot(env.ContentRootPath);
-            DevBlogHistoryAnalyzer analyzer = new();
-            DevBlogHistoryReadResult result = await analyzer.ReadMasterHistoryAsync(repositoryRoot, ct);
+            DevBlogHistoryReadResult result = await HistoryCache.ReadMasterHistoryAsync(repositoryRoot, ct);
 
             return result.Report is null
                 ? Results.Problem(
@@ -32,7 +33,103 @@ public static class DevBlogEndpoints
     }
 }
 
-public sealed class DevBlogHistoryAnalyzer
+public sealed class DevBlogHistoryCache(
+    IDevBlogHistoryReader reader,
+    TimeSpan ttl,
+    Func<DateTimeOffset>? utcNow = null)
+{
+    private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly Func<DateTimeOffset> _utcNow = utcNow ?? (() => DateTimeOffset.UtcNow);
+    private DevBlogHistoryCacheEntry? _entry;
+
+    public async Task<DevBlogHistoryReadResult> ReadMasterHistoryAsync(string repositoryRoot, CancellationToken ct)
+    {
+        DateTimeOffset now = _utcNow();
+        DevBlogHistoryCacheEntry? entry = _entry;
+        string? observedHead = null;
+        if (entry is not null && SameRepository(entry, repositoryRoot))
+        {
+            DevBlogHeadReadResult head = await reader.ReadMasterHeadAsync(repositoryRoot, ct);
+            if (head.HeadHash is null)
+            {
+                return new DevBlogHistoryReadResult(null, head.Error ?? "Git master head could not be read.");
+            }
+
+            observedHead = head.HeadHash;
+            if (IsFresh(entry, repositoryRoot, now)
+                && string.Equals(entry.MasterHead, observedHead, StringComparison.Ordinal))
+            {
+                return new DevBlogHistoryReadResult(entry.Report, null, entry.MasterHead);
+            }
+        }
+
+        await _gate.WaitAsync(ct);
+        try
+        {
+            now = _utcNow();
+            entry = _entry;
+            if (entry is not null && SameRepository(entry, repositoryRoot))
+            {
+                if (observedHead is null)
+                {
+                    DevBlogHeadReadResult head = await reader.ReadMasterHeadAsync(repositoryRoot, ct);
+                    if (head.HeadHash is null)
+                    {
+                        return new DevBlogHistoryReadResult(null, head.Error ?? "Git master head could not be read.");
+                    }
+
+                    observedHead = head.HeadHash;
+                }
+
+                if (string.Equals(entry.MasterHead, observedHead, StringComparison.Ordinal))
+                {
+                    DevBlogHistoryCacheEntry extended = entry with { ExpiresAt = now.Add(ttl) };
+                    _entry = extended;
+                    return new DevBlogHistoryReadResult(extended.Report, null, extended.MasterHead);
+                }
+            }
+
+            DevBlogHistoryReadResult refreshed = await reader.ReadMasterHistoryAsync(repositoryRoot, ct);
+            if (refreshed.Report is null)
+            {
+                return refreshed;
+            }
+
+            string masterHead = refreshed.MasterHead ?? "";
+            _entry = new DevBlogHistoryCacheEntry(
+                RepositoryRoot: repositoryRoot,
+                MasterHead: masterHead,
+                Report: refreshed.Report,
+                ExpiresAt: now.Add(ttl));
+            return refreshed;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    private static bool IsFresh(DevBlogHistoryCacheEntry entry, string repositoryRoot, DateTimeOffset now) =>
+        SameRepository(entry, repositoryRoot) && entry.ExpiresAt > now;
+
+    private static bool SameRepository(DevBlogHistoryCacheEntry entry, string repositoryRoot) =>
+        string.Equals(entry.RepositoryRoot, repositoryRoot, StringComparison.OrdinalIgnoreCase);
+
+    private sealed record DevBlogHistoryCacheEntry(
+        string RepositoryRoot,
+        string MasterHead,
+        DevBlogHistoryReport Report,
+        DateTimeOffset ExpiresAt);
+}
+
+public interface IDevBlogHistoryReader
+{
+    Task<DevBlogHistoryReadResult> ReadMasterHistoryAsync(string repositoryRoot, CancellationToken ct);
+
+    Task<DevBlogHeadReadResult> ReadMasterHeadAsync(string repositoryRoot, CancellationToken ct);
+}
+
+public sealed class DevBlogHistoryAnalyzer : IDevBlogHistoryReader
 {
     private const char RecordSeparator = '\u001e';
     private const char FieldSeparator = '\u001f';
@@ -46,7 +143,24 @@ public sealed class DevBlogHistoryAnalyzer
         }
 
         IReadOnlyList<GitCommitRecord> commits = ParseGitLog(git.Stdout);
-        return new DevBlogHistoryReadResult(Analyze(repositoryRoot, commits), null);
+        return new DevBlogHistoryReadResult(
+            Analyze(repositoryRoot, commits),
+            null,
+            commits.FirstOrDefault()?.Hash);
+    }
+
+    public async Task<DevBlogHeadReadResult> ReadMasterHeadAsync(string repositoryRoot, CancellationToken ct)
+    {
+        GitCommandResult git = await ReadGitHeadAsync(repositoryRoot, ct);
+        if (!git.Success)
+        {
+            return new DevBlogHeadReadResult(null, git.Error);
+        }
+
+        string head = git.Stdout.Trim();
+        return string.IsNullOrWhiteSpace(head)
+            ? new DevBlogHeadReadResult(null, "git rev-parse master returned no commit hash.")
+            : new DevBlogHeadReadResult(head, null);
     }
 
     public static IReadOnlyList<GitCommitRecord> ParseGitLog(string text)
@@ -223,6 +337,30 @@ public sealed class DevBlogHistoryAnalyzer
 
     private static async Task<GitCommandResult> ReadGitHistoryAsync(string repositoryRoot, CancellationToken ct)
     {
+        string[] arguments =
+        [
+            "log",
+            "master",
+            "--numstat",
+            "--date=iso-strict",
+            $"--pretty=format:%x1e%H%x1f%aI%x1f%an%x1f%s%x1f%D"
+        ];
+        return await RunGitAsync(repositoryRoot, arguments, TimeSpan.FromSeconds(10), "git log master", ct);
+    }
+
+    private static async Task<GitCommandResult> ReadGitHeadAsync(string repositoryRoot, CancellationToken ct)
+    {
+        string[] arguments = ["rev-parse", "master"];
+        return await RunGitAsync(repositoryRoot, arguments, TimeSpan.FromSeconds(3), "git rev-parse master", ct);
+    }
+
+    private static async Task<GitCommandResult> RunGitAsync(
+        string repositoryRoot,
+        IReadOnlyList<string> arguments,
+        TimeSpan timeoutDuration,
+        string commandDescription,
+        CancellationToken ct)
+    {
         ProcessStartInfo startInfo = new()
         {
             FileName = "git",
@@ -232,11 +370,10 @@ public sealed class DevBlogHistoryAnalyzer
             UseShellExecute = false,
             CreateNoWindow = true,
         };
-        startInfo.ArgumentList.Add("log");
-        startInfo.ArgumentList.Add("master");
-        startInfo.ArgumentList.Add("--numstat");
-        startInfo.ArgumentList.Add("--date=iso-strict");
-        startInfo.ArgumentList.Add($"--pretty=format:%x1e%H%x1f%aI%x1f%an%x1f%s%x1f%D");
+        foreach (string argument in arguments)
+        {
+            startInfo.ArgumentList.Add(argument);
+        }
 
         using Process process = new() { StartInfo = startInfo };
         try
@@ -253,7 +390,7 @@ public sealed class DevBlogHistoryAnalyzer
         }
 
         using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        timeout.CancelAfter(TimeSpan.FromSeconds(10));
+        timeout.CancelAfter(timeoutDuration);
 
         Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync(timeout.Token);
         Task<string> stderrTask = process.StandardError.ReadToEndAsync(timeout.Token);
@@ -266,7 +403,7 @@ public sealed class DevBlogHistoryAnalyzer
 
             return process.ExitCode == 0
                 ? new GitCommandResult(true, stdout, "")
-                : new GitCommandResult(false, stdout, $"git log master failed with exit code {process.ExitCode}: {stderr.Trim()}");
+                : new GitCommandResult(false, stdout, $"{commandDescription} failed with exit code {process.ExitCode}: {stderr.Trim()}");
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
@@ -275,7 +412,7 @@ public sealed class DevBlogHistoryAnalyzer
                 process.Kill(entireProcessTree: true);
             }
 
-            return new GitCommandResult(false, "", "git log master timed out after 10 seconds.");
+            return new GitCommandResult(false, "", $"{commandDescription} timed out after {timeoutDuration.TotalSeconds:0} seconds.");
         }
     }
 
@@ -604,7 +741,9 @@ public sealed class DevBlogHistoryAnalyzer
     }
 }
 
-public sealed record DevBlogHistoryReadResult(DevBlogHistoryReport? Report, string? Error);
+public sealed record DevBlogHistoryReadResult(DevBlogHistoryReport? Report, string? Error, string? MasterHead = null);
+
+public sealed record DevBlogHeadReadResult(string? HeadHash, string? Error);
 
 public sealed record GitCommitRecord(
     string Hash,

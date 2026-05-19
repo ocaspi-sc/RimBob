@@ -1,6 +1,6 @@
 import type { IconRef } from '../types/icons';
-import type { IconWarmJobStatus } from '../types/icons';
-import { postJson } from './http';
+import type { IconCacheStatus, IconWarmJobStatus } from '../types/icons';
+import { postJson, readJson } from './http';
 
 export function iconUrlFor(ref: IconRef | null | undefined): string | null {
   if (!ref || !ref.id) return null;
@@ -50,4 +50,9 @@ export async function startIconCacheWarm(
 ): Promise<IconWarmJobStatus> {
   const suffix = scope === 'failed' ? '?scope=failed' : '';
   return await postJson<IconWarmJobStatus>(`/api/icons/cache/warm${suffix}`, signal);
+}
+
+export async function fetchIconCacheStatus(includeFiles = false, signal?: AbortSignal): Promise<IconCacheStatus> {
+  const suffix = includeFiles ? '?includeFiles=true' : '';
+  return await readJson<IconCacheStatus>(`/api/icons/cache/status${suffix}`, signal);
 }

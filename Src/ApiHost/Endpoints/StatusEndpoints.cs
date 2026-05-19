@@ -54,18 +54,33 @@ public static class StatusEndpoints
             BriefingCache   briefings,
             MinisterOutputStore outputStore,
             PromptBuilder   prompts,
+            PromptInspectorCache promptCache,
             MayorRagRetriever  retriever,
             FlagChannel flags,
+            bool? refresh,
             CancellationToken ct) =>
         {
             MayorBriefing briefing = briefings.GetMayorBriefing();
-            IReadOnlyList<GuideCitation> retrieved = await retriever.RetrieveAsync(briefing, [], ct);
             IReadOnlyList<AgentFlag> activeFlags = flags.Active(FlagSeverity.Medium);
-            string user = prompts.BuildMayorUserMessage(briefing, [], retrieved, activeFlags);
-            string system;
-            try   { system = prompts.MayorSystemPrompt; }
-            catch (FileNotFoundException ex) { system = $"(prompt file not found: {ex.FileName})"; }
-            return Results.Ok(new { system, user });
+            string key = PromptInspectorCache.BuildKey(
+                "mayor",
+                briefing.BriefingVersion,
+                outputStore.CurrentMayorAgenda?.Version,
+                PromptInspectorCache.HashJson(activeFlags));
+            PromptInspectorPayload payload = await promptCache.GetOrCreateAsync(
+                key,
+                refresh == true,
+                async cancellationToken =>
+                {
+                    IReadOnlyList<GuideCitation> retrieved = await retriever.RetrieveAsync(briefing, [], cancellationToken);
+                    string user = prompts.BuildMayorUserMessage(briefing, [], retrieved, activeFlags);
+                    string system;
+                    try { system = prompts.MayorSystemPrompt; }
+                    catch (FileNotFoundException ex) { system = $"(prompt file not found: {ex.FileName})"; }
+                    return new PromptInspectorPayload(system, user);
+                },
+                ct);
+            return Results.Ok(payload);
         });
 
         return app;

@@ -45,7 +45,7 @@ public sealed class IconCacheServiceTests
             IconCacheService sut = NewService(root, _ => ImageEnvelope("Soil"));
 
             IconFile file = await sut.GetTerrainIconAsync("Soil");
-            IconCacheStatus status = sut.GetStatus();
+            IconCacheStatus status = sut.GetStatus(includeFiles: true);
 
             Path.GetFullPath(file.Path)
                 .StartsWith(Path.GetFullPath(root), StringComparison.OrdinalIgnoreCase)
@@ -55,6 +55,7 @@ public sealed class IconCacheServiceTests
             Directory.EnumerateFiles(root, "*.tmp", SearchOption.AllDirectories).Should().BeEmpty();
             status.FileCount.Should().Be(1);
             status.FilesByKind.Should().ContainKey("terrain").WhoseValue.Should().Be(1);
+            status.FilesIncluded.Should().BeTrue();
             status.Files.Should().ContainSingle().Which.Should().BeEquivalentTo(
                 new
                 {
@@ -66,6 +67,41 @@ public sealed class IconCacheServiceTests
                 },
                 options => options.ExcludingMissingMembers());
             status.Files.Single().SizeBytes.Should().BeGreaterThan(0);
+        }
+        finally
+        {
+            DeleteTempRoot(root);
+        }
+    }
+
+    [Fact]
+    public async Task GetStatus_ByDefault_ReturnsSummaryWithoutFileInventory()
+    {
+        string root = NewTempRoot();
+        try
+        {
+            IconCacheService sut = NewService(root, _ => ImageEnvelope("Soil"));
+
+            await sut.GetTerrainIconAsync("Soil");
+            IconCacheStatus status = sut.GetStatus();
+
+            status.Directory.Should().Be(Path.GetFullPath(root));
+            status.Exists.Should().BeTrue();
+            status.FileCount.Should().Be(1);
+            status.TotalBytes.Should().BeGreaterThan(0);
+            status.LatestWriteAt.Should().NotBeNull();
+            status.FilesByKind.Should().ContainKey("terrain").WhoseValue.Should().Be(1);
+            status.FilesIncluded.Should().BeFalse();
+            status.Files.Should().BeEmpty();
+            status.LastWarm.Should().BeNull();
+            status.WarmJob.State.Should().Be("idle");
+
+            JsonSerializerOptions jsonOptions = new(JsonSerializerDefaults.Web);
+            string json = JsonSerializer.Serialize(status, jsonOptions);
+            using JsonDocument document = JsonDocument.Parse(json);
+            document.RootElement.GetProperty("filesIncluded").GetBoolean().Should().BeFalse();
+            document.RootElement.GetProperty("files").GetArrayLength().Should().Be(0);
+            document.RootElement.TryGetProperty("files_included", out JsonElement _).Should().BeFalse();
         }
         finally
         {
@@ -174,7 +210,7 @@ public sealed class IconCacheServiceTests
                 Convert.FromBase64String(PngBase64));
             IconCacheService sut = NewService(root, _ => ImageEnvelope("MealSimple"));
 
-            IconCacheStatus status = sut.GetStatus();
+            IconCacheStatus status = sut.GetStatus(includeFiles: true);
 
             status.FileCount.Should().Be(1);
             status.Files.Should().ContainSingle(file => file.Kind == "item" && file.Id == "MealSimple");
@@ -214,7 +250,7 @@ public sealed class IconCacheServiceTests
             imageCalls.Should().Be(1);
             file.Path.Should().Be(iconPath);
             File.ReadAllBytes(iconPath).Should().Equal(Convert.FromBase64String(PngBase64));
-            sut.GetStatus().Files.Should().ContainSingle(entry => entry.Id == "Frame_Cooler");
+            sut.GetStatus(includeFiles: true).Files.Should().ContainSingle(entry => entry.Id == "Frame_Cooler");
         }
         finally
         {
@@ -252,7 +288,7 @@ public sealed class IconCacheServiceTests
             string iconPath = Path.Combine(root, "item", "Frame_Cooler.png");
             await File.WriteAllBytesAsync(iconPath, Convert.FromBase64String(RedXPlaceholderPngBase64));
 
-            IconCacheStatus status = sut.GetStatus();
+            IconCacheStatus status = sut.GetStatus(includeFiles: true);
 
             first.Succeeded.Should().Be(1);
             status.FileCount.Should().Be(0);
@@ -408,7 +444,7 @@ public sealed class IconCacheServiceTests
             });
 
             IconWarmSummary summary = await sut.WarmStaticAsync();
-            IconCacheStatus status = sut.GetStatus();
+            IconCacheStatus status = sut.GetStatus(includeFiles: true);
 
             summary.TotalCandidates.Should().Be(4);
             summary.Succeeded.Should().Be(3);
