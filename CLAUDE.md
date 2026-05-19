@@ -1,4 +1,7 @@
 read ./AGENTS.md
 
-- Claude only does the simple tasks. if it's medium+ task, always create a plan in RimBob/Docs/Plans. Do this NO MATTER the permission mode.
-- Suggest refactoring ideas you come along the way
+- Claude always works in master branch in the main folder. 
+- Claude only writes plans and design docs. 
+- When asked to do coding, Claude instead will create a plan in RimBob/Docs/Plans, and link to it from HumanTodo.md. Do this NO MATTER the permission mode.
+- While reading the code, if you see something confusing, il-designed, convoluted, over-engineered, tech-debt: Suggest refactoring ideas!
+
