@@ -110,6 +110,8 @@ export interface AdviceItem {
   issued_at: string;
   expires_at: string;
   issued_in_game_tick?: string | null;
+  issued_game_tick?: number | null;
+  expires_game_tick?: number | null;
 }
 
 export interface AdviceSnapshot {

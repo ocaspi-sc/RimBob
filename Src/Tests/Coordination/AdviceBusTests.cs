@@ -130,6 +130,21 @@ public sealed class AdviceBusTests
     }
 
     [Fact]
+    public void Hydrate_ReplaysExpiredLatestAdviceForInspection()
+    {
+        AdviceBus bus = new();
+        AdviceItem expired = Advice("old_food", "Food") with
+        {
+            ExpiresAt = DateTimeOffset.UtcNow.AddHours(-1)
+        };
+
+        bus.Hydrate([new AdviceSnapshot("Food", [expired], "Stored Food state.")]);
+
+        bus.ActiveAdvice().Should().ContainSingle().Which.Id.Should().Be("old_food");
+        bus.ActiveSnapshot().StateSummaries.Should().ContainKey("Food").WhoseValue.Should().Be("Stored Food state.");
+    }
+
+    [Fact]
     public void ActiveSnapshot_ReplaysMinisterStateSummaries()
     {
         AdviceBus bus = new();

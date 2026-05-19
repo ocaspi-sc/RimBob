@@ -22,12 +22,15 @@ public sealed class FoodRulesTests
     [Fact]
     public void UrgentShortage_EmitsHighFoodSecurityAdviceAndFlag()
     {
-        RulesResult result = new Rules().Evaluate(Briefing(days: 4f), ColonyContext.Default);
+        FoodBriefing briefing = Briefing(days: 4f);
+        RulesResult result = new Rules().Evaluate(briefing, ColonyContext.Default);
 
         Decision decision = result.Should().BeOfType<Decision>().Subject;
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
         advice.AdviceType.Should().Be("food_security");
         advice.Priority.Should().Be(AdvicePriority.High);
+        advice.IssuedGameTick.Should().Be(briefing.GameTick);
+        advice.ExpiresGameTick.Should().Be(briefing.GameTick + AdviceFreshness.TicksPerGameDay);
         advice.Actions.Should().Contain(s => s.Kind == AdviceActionKind.ProductionBill);
         advice.Actions.Should().Contain(s => s.Kind == AdviceActionKind.SetPriority && s.WorkType == WorkType.Cook);
         advice.Actions.Should().NotContain(s => s.Kind == AdviceActionKind.Trade);

@@ -2847,6 +2847,11 @@ code {
   border-color: rgba(240, 189, 95, 0.45);
 }
 
+.advice-card.v2.expired {
+  border-color: rgba(255, 105, 105, 0.34);
+  background: rgba(54, 42, 44, 0.72);
+}
+
 .advice-badges {
   display: flex;
   align-items: start;
@@ -2858,6 +2863,25 @@ code {
   border: 1px solid var(--line);
   border-radius: 999px;
   color: var(--muted);
+}
+
+.advice-badges span.expired {
+  border-color: rgba(255, 105, 105, 0.4);
+  color: #ffb5b5;
+}
+
+.advice-badges span.fresh {
+  border-color: rgba(83, 197, 154, 0.32);
+  color: #a8dec8;
+}
+
+.advice-expiry-note {
+  border: 1px solid rgba(255, 105, 105, 0.26);
+  border-radius: 6px;
+  color: #ffcfcc;
+  font-size: 0.82rem;
+  margin: 0.65rem 0;
+  padding: 0.5rem 0.6rem;
 }
 
 .action-list > div {

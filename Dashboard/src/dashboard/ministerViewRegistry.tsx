@@ -46,12 +46,13 @@ const ministerViewRenderers: Record<MinisterViewKey, MinisterViewRenderer> = {
       scope={scope}
     />
   ),
-  advice: ({ activeAdvice, agenda, previousAgenda, scope, stateSummaries }) => (
+  advice: ({ activeAdvice, agenda, previousAgenda, scope, stateSummaries, systemHealth }) => (
     <MinisterAdviceView
       scope={scope}
       agenda={agenda}
       previousAgenda={previousAgenda}
       advice={activeAdvice}
+      currentGameTick={systemHealth?.colony_snapshot.game_tick ?? null}
       stateSummary={stateSummaries[scope.label] ?? stateSummaries[scope.key] ?? null}
     />
   ),

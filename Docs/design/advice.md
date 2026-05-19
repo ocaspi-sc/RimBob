@@ -108,10 +108,19 @@ Advice should point back to the briefing snapshot or recoverable source data it
 was based on. The dashboard uses this for inspection; refinement uses it for
 replay.
 
-### Expiry And Supersession
+### Expiry, Freshness, And Supersession
 
-Advice can expire by time or by resolved game state. Stale active cards are
-harmful to trust, especially for threat or emergency advice.
+Advice freshness is primarily game-time based. Wall-clock issue times remain
+audit metadata, but gameplay advice should expire against the latest known game
+tick or by resolved game state, not because RimWorld was paused, closed, or
+RIMAPI was unreachable while real time passed. Stale cards are harmful when
+treated as current, especially for threat or emergency advice, but they are
+still useful inspection evidence.
+
+Expired advice should not disappear from the latest minister snapshot. The
+dashboard should keep showing the last persisted advice and clearly mark it as
+expired/stale. Assisted Apply may only execute after fresh live validation and
+must reject expired game-tick advice.
 
 When new advice replaces an older unresolved item, use supersession or a stable
 same-issue id so the active dashboard view updates instead of stacking duplicate
@@ -120,10 +129,10 @@ active cards.
 
 ### Active Advice Snapshots
 
-The active advice surface is the issuing minister's latest successful view, not
-an append-only feed. Each minister play cycle should publish its current active
-set as a minister-scoped snapshot. A successful empty snapshot means the
-minister currently has no active advice.
+The advice surface is the issuing minister's latest successful view, not an
+append-only feed and not a wall-clock TTL cache. Each minister play cycle should
+publish its current set as a minister-scoped snapshot. A successful empty
+snapshot means the minister currently has no advice items.
 
 Active feeder snapshots are durable across Host restarts through the unified
 minister output store. The dashboard should reload the last good advice,

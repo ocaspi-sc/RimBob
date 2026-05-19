@@ -110,6 +110,8 @@ internal static class AdviceResponseNormalizer
             IssuedAt: now,
             ExpiresAt: now.AddHours(priority >= AdvicePriority.High ? 4 : 24),
             IssuedInGameTick: FormatTick(context.Date),
+            IssuedGameTick: context.GameTick,
+            ExpiresGameTick: AdviceFreshness.ExpiresGameTick(context.GameTick, priority),
             BriefingRef: new BriefingRef(context.Minister, context.BriefingVersion, $"{context.Domain}:{context.BriefingVersion}")
         );
     }

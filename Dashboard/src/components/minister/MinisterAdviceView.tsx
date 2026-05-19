@@ -22,12 +22,14 @@ import { SemanticIconCue, SemanticLabel } from '../shared/SemanticIcon';
 export function MinisterAdviceView({
   advice,
   agenda,
+  currentGameTick,
   previousAgenda,
   scope,
   stateSummary,
 }: {
   advice: AdviceItem[];
   agenda: MayorAgenda | null;
+  currentGameTick: number | null;
   previousAgenda: MayorAgenda | null;
   scope: ScopeConfig;
   stateSummary: string | null;
@@ -53,7 +55,7 @@ export function MinisterAdviceView({
       <header className="view-heading">
         <span className="eyebrow">{scope.label}</span>
         <h2><SemanticLabel icon={iconForView('advice')}><span>Advice</span></SemanticLabel></h2>
-        <p>Active feeder minister advice from the SSE feed.</p>
+        <p>Latest feeder minister advice from the persisted SSE snapshot.</p>
       </header>
       {stateSummary && (
         <section className="advice-state-summary">
@@ -79,10 +81,10 @@ export function MinisterAdviceView({
         </section>
       )}
       {ministerAdvice.length === 0 && (
-        <EmptyState code="NO ACTIVE ADVICE">{scope.label} has no active advice items for this state.</EmptyState>
+        <EmptyState code="NO ADVICE ITEMS">{scope.label} has no advice items in the latest snapshot.</EmptyState>
       )}
       <div className="advice-stack">
-        {ministerAdvice.map(item => <AdviceCard key={item.id} item={item} />)}
+        {ministerAdvice.map(item => <AdviceCard currentGameTick={currentGameTick} key={item.id} item={item} />)}
       </div>
     </div>
   );
@@ -246,8 +248,15 @@ function MayorAdvice({
   );
 }
 
-function AdviceCard({ item }: { item: AdviceItem }) {
+function AdviceCard({
+  currentGameTick,
+  item,
+}: {
+  currentGameTick: number | null;
+  item: AdviceItem;
+}) {
   const [applyState, setApplyState] = useState<Record<string, ActionApplyState>>({});
+  const expiry = adviceExpiryState(item, currentGameTick);
 
   const onApply = async (actionIndex: number) => {
     const key = actionKey(item, actionIndex);
@@ -271,7 +280,7 @@ function AdviceCard({ item }: { item: AdviceItem }) {
   };
 
   return (
-    <article className={`advice-card v2 ${item.priority}`}>
+    <article className={`advice-card v2 ${item.priority} ${expiry.expired ? 'expired' : ''}`}>
       <header>
         <div>
           <span className="eyebrow">
@@ -281,8 +290,14 @@ function AdviceCard({ item }: { item: AdviceItem }) {
         </div>
         <div className="advice-badges">
           <span>{item.priority}</span>
+          <span className={expiry.expired ? 'expired' : 'fresh'}>{expiry.label}</span>
         </div>
       </header>
+      {expiry.message && (
+        <p className={`advice-expiry-note ${expiry.expired ? 'expired' : 'fresh'}`}>
+          {expiry.message}
+        </p>
+      )}
       <p><IconizedText maxIcons={3} text={item.body} /></p>
       <blockquote><IconizedText maxIcons={3} text={item.rationale} /></blockquote>
       {item.actions.length > 0 && (
@@ -292,7 +307,7 @@ function AdviceCard({ item }: { item: AdviceItem }) {
               const key = actionKey(item, index);
               const state = applyState[key] ?? { status: 'idle' as const, response: null, error: null };
               const success = state.response?.status === 'applied' || state.response?.status === 'already_satisfied';
-              const disabled = state.status === 'pending' || success;
+              const disabled = state.status === 'pending' || success || expiry.expired;
               const actionIcon = iconForActionKind(action.kind);
               const fallbackIconUrl = action.icon ? iconUrlFor(actionIcon?.ref) : null;
               return (
@@ -321,10 +336,10 @@ function AdviceCard({ item }: { item: AdviceItem }) {
                         onClick={() => void onApply(index)}
                         title={action.apply.target_summary}
                       >
-                        {state.status === 'pending' ? 'Applying' : success ? 'Applied' : action.apply.label}
+                        {expiry.expired ? 'Expired' : state.status === 'pending' ? 'Applying' : success ? 'Applied' : action.apply.label}
                       </button>
                       <small className={`action-apply-result ${state.response?.status ?? state.status}`}>
-                        {state.response?.message ?? state.error ?? action.apply.target_summary}
+                        {state.response?.message ?? state.error ?? (expiry.expired ? expiry.message : action.apply.target_summary)}
                       </small>
                     </div>
                   )}
@@ -415,6 +430,60 @@ type ActionApplyState = {
   error: string | null;
 };
 
+type AdviceExpiryState = {
+  expired: boolean;
+  label: string;
+  message: string | null;
+};
+
+const TICKS_PER_GAME_DAY = 60_000;
+
+function adviceExpiryState(item: AdviceItem, currentGameTick: number | null): AdviceExpiryState {
+  if (typeof item.expires_game_tick === 'number') {
+    if (typeof currentGameTick === 'number') {
+      const remaining = item.expires_game_tick - currentGameTick;
+      if (remaining <= 0) {
+        return {
+          expired: true,
+          label: 'expired',
+          message: `Expired at game tick ${formatInteger(item.expires_game_tick)}; latest known tick is ${formatInteger(currentGameTick)}. Latest persisted advice is shown for inspection.`,
+        };
+      }
+
+      return {
+        expired: false,
+        label: `valid ${formatGameTickDelta(remaining)}`,
+        message: null,
+      };
+    }
+
+    return {
+      expired: false,
+      label: 'game clock unknown',
+      message: `Expires at game tick ${formatInteger(item.expires_game_tick)}, but the current game tick is not available.`,
+    };
+  }
+
+  const expiresAtMs = Date.parse(item.expires_at);
+  if (Number.isNaN(expiresAtMs)) {
+    return { expired: false, label: 'freshness unknown', message: null };
+  }
+
+  if (expiresAtMs <= Date.now()) {
+    return {
+      expired: true,
+      label: 'expired',
+      message: `Expired by the older wall-clock TTL at ${formatDateTime(item.expires_at)}. Latest persisted advice is shown for inspection.`,
+    };
+  }
+
+  return {
+    expired: false,
+    label: 'legacy TTL',
+    message: null,
+  };
+}
+
 function actionKey(item: AdviceItem, actionIndex: number): string {
   const action = item.actions[actionIndex];
   const applyContext = action?.apply
@@ -494,6 +563,22 @@ function formatTime(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;
   return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatDateTime(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return date.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' });
+}
+
+function formatGameTickDelta(ticks: number): string {
+  const days = ticks / TICKS_PER_GAME_DAY;
+  if (days >= 1) return `${days.toFixed(days >= 10 ? 0 : 1)}d`;
+  return `${formatInteger(Math.max(0, Math.round(ticks)))}t`;
+}
+
+function formatInteger(value: number): string {
+  return Math.round(value).toLocaleString();
 }
 
 function formatLabel(value: string | null | undefined): string {

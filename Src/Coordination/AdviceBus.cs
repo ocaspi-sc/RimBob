@@ -35,7 +35,6 @@ public sealed class AdviceBus
         lock (_lock)
         {
             _activeAdvice[item.Id] = item;
-            PruneExpired(DateTimeOffset.UtcNow);
             snapshot = BuildMinisterSnapshotLocked(item.Minister);
         }
         _outputStore?.QueueAdviceSnapshot(snapshot);
@@ -60,12 +59,9 @@ public sealed class AdviceBus
         }
 
         IReadOnlyList<AdviceItem> currentMinisterAdvice;
-        DateTimeOffset now = DateTimeOffset.UtcNow;
 
         lock (_lock)
         {
-            PruneExpired(now);
-
             List<string> existingIds = _activeAdvice
                 .Where(kv => string.Equals(kv.Value.Minister, minister, StringComparison.OrdinalIgnoreCase))
                 .Select(kv => kv.Key)
@@ -74,10 +70,7 @@ public sealed class AdviceBus
                 _activeAdvice.Remove(id);
 
             foreach (AdviceItem item in advice)
-            {
-                if (item.ExpiresAt > now)
-                    _activeAdvice[item.Id] = item;
-            }
+                _activeAdvice[item.Id] = item;
 
             if (string.IsNullOrWhiteSpace(stateSummary))
                 _ministerStateSummaries.Remove(minister);
@@ -105,7 +98,6 @@ public sealed class AdviceBus
     {
         lock (_lock)
         {
-            PruneExpired(DateTimeOffset.UtcNow);
             return SortAdvice(_activeAdvice.Values).ToList();
         }
     }
@@ -114,7 +106,6 @@ public sealed class AdviceBus
     {
         lock (_lock)
         {
-            PruneExpired(DateTimeOffset.UtcNow);
             return _activeAdvice.TryGetValue(id, out advice);
         }
     }
@@ -126,7 +117,6 @@ public sealed class AdviceBus
         AdviceSnapshot? ministerSnapshot;
         lock (_lock)
         {
-            PruneExpired(DateTimeOffset.UtcNow);
             if (!_activeAdvice.TryGetValue(adviceId, out AdviceItem? advice))
                 return false;
 
@@ -173,7 +163,6 @@ public sealed class AdviceBus
             _ministerStateSummaries.Clear();
             _ministerChains.Clear();
 
-            DateTimeOffset now = DateTimeOffset.UtcNow;
             foreach (AdviceSnapshot snapshot in snapshots)
             {
                 if (string.IsNullOrWhiteSpace(snapshot.Minister))
@@ -181,8 +170,7 @@ public sealed class AdviceBus
 
                 string minister = snapshot.Minister;
                 foreach (AdviceItem item in snapshot.Advice)
-                    if (item.ExpiresAt > now)
-                        _activeAdvice[item.Id] = item;
+                    _activeAdvice[item.Id] = item;
 
                 if (!string.IsNullOrWhiteSpace(snapshot.StateSummary))
                     _ministerStateSummaries[minister] = snapshot.StateSummary.Trim();
@@ -197,7 +185,6 @@ public sealed class AdviceBus
     {
         lock (_lock)
         {
-            PruneExpired(DateTimeOffset.UtcNow);
             Dictionary<string, string> summaries = new(_ministerStateSummaries, StringComparer.OrdinalIgnoreCase);
             Dictionary<string, AdviceChainModel> chains = new(_ministerChains, StringComparer.OrdinalIgnoreCase);
             return new AdviceSnapshot(
@@ -208,16 +195,6 @@ public sealed class AdviceBus
                 Chain: null,
                 Chains: chains);
         }
-    }
-
-    private void PruneExpired(DateTimeOffset now)
-    {
-        List<string> expired = _activeAdvice
-            .Where(kv => kv.Value.ExpiresAt <= now)
-            .Select(kv => kv.Key)
-            .ToList();
-        foreach (string id in expired)
-            _activeAdvice.Remove(id);
     }
 
     private AdviceSnapshot BuildMinisterSnapshotLocked(string minister)

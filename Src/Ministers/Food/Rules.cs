@@ -191,6 +191,8 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             IssuedAt: now,
             ExpiresAt: now.AddHours(priority >= AdvicePriority.High ? 4 : 24),
             IssuedInGameTick: FormatTick(briefing),
+            IssuedGameTick: briefing.GameTick,
+            ExpiresGameTick: AdviceFreshness.ExpiresGameTick(briefing.GameTick, priority),
             BriefingRef: new BriefingRef(MinisterName, briefing.BriefingVersion, $"food:{briefing.BriefingVersion}")
         );
 

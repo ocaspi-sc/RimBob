@@ -28,6 +28,35 @@ public sealed class AssistedApplyServiceTests
     }
 
     [Fact]
+    public async Task ApplyAsync_WhenAdviceExpiredByGameTick_ReturnsStaleWithoutRimApi()
+    {
+        AdviceBus bus = new();
+        bus.Publish(Advice("food_harvest_mature_crops", new AdviceAction(
+            AdviceActionKind.MarkHarvest,
+            "Mark harvest.",
+            Apply: new AdviceActionApply(
+                AdviceApplyKind.MarkHarvestArea,
+                "Mark harvest",
+                "4 rice plants",
+                MapId: 1,
+                TargetCount: 4,
+                Rect: new MapRect(10, 20, 13, 20),
+                TargetIds: ["plant-1", "plant-2", "plant-3", "plant-4"]))) with
+        {
+            IssuedGameTick = 1_000,
+            ExpiresGameTick = 2_000
+        });
+        ColonyState state = new();
+        state.Economy.Update(new EconomyLedger(2_000, 0, "Cassandra", "Playing", false, "5th of Aprimay, 5500, 14h"));
+        AssistedApplyService service = Service(bus, state);
+
+        AssistedApplyResponse response = await service.ApplyAsync("food_harvest_mature_crops", 0);
+
+        response.Status.Should().Be("stale_advice");
+        response.Message.Should().Contain("game tick 2000");
+    }
+
+    [Fact]
     public async Task ApplyAsync_WhenHarvestRectTooBroad_ReturnsValidationFailedWithoutRimApi()
     {
         AdviceBus bus = new();

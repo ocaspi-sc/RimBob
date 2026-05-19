@@ -332,6 +332,8 @@ public sealed class LlmClientTests
         advice.IssuedAt.Should().BeAfter(before);
         advice.ExpiresAt.Should().BeAfter(DateTimeOffset.UtcNow);
         advice.IssuedInGameTick.Should().Be("Y5500AprimayD5");
+        advice.IssuedGameTick.Should().Be(300_000);
+        advice.ExpiresGameTick.Should().Be(360_000);
         advice.BriefingRef.Should().Be(new BriefingRef("Food", 1, "food:1"));
         result.Response.Flags.Should().ContainSingle().Which.ExpiresAt.Should().BeAfter(DateTimeOffset.UtcNow);
     }

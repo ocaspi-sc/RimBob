@@ -31,6 +31,10 @@ public sealed record AdviceItem(
     DateTimeOffset ExpiresAt,
     [property: JsonPropertyName("issued_in_game_tick")]
     string? IssuedInGameTick = null,
+    [property: JsonPropertyName("issued_game_tick")]
+    long? IssuedGameTick = null,
+    [property: JsonPropertyName("expires_game_tick")]
+    long? ExpiresGameTick = null,
     [property: JsonPropertyName("briefing_ref")]
     BriefingRef? BriefingRef = null,
     [property: JsonPropertyName("supersedes")]

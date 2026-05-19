@@ -40,6 +40,9 @@ treat the previous UI as reference only.
   briefing, RAG, rules/trace, raw LLM output, and current advice.
 - Debug-first: preserve backend contract language except in explicitly
   player-facing advice views.
+- Latest advice stays visible: expired or stale persisted minister advice is
+  still rendered for inspection and labeled as stale rather than replaced by an
+  empty state.
 
 ---
 
@@ -337,6 +340,12 @@ SYSTEM should also show per-minister output metadata from the unified store:
 minister key, output kind, generation, persisted time, path, and load/flush
 state. This is the dashboard-visible proof that the last good Mayor Agenda and
 feeder advice snapshots were reloaded rather than regenerated.
+
+Minister Advice views render the latest persisted feeder snapshot, including
+expired advice. Advice freshness labels should use game-tick expiry when the
+payload provides it. Older wall-clock-only snapshots may be labeled as legacy
+TTL output. Apply controls for expired advice should stay visible but disabled
+or fail with a stale-advice result after backend validation.
 
 Icon cache metadata follows the same rule. SYSTEM may show counts, byte totals,
 kind totals, warm job state (`idle`, `running`, `completed`, or `failed`), live

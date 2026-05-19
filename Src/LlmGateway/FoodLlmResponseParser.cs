@@ -105,6 +105,12 @@ public static class FoodLlmResponseParser
                     IssuedInGameTick = string.IsNullOrWhiteSpace(item.IssuedInGameTick)
                         ? FormatTick(briefing.Date)
                         : item.IssuedInGameTick,
+                    IssuedGameTick = item.IssuedGameTick is > 0
+                        ? item.IssuedGameTick
+                        : briefing.GameTick,
+                    ExpiresGameTick = IsUsefulGameExpiry(item.ExpiresGameTick, briefing.GameTick)
+                        ? item.ExpiresGameTick
+                        : AdviceFreshness.ExpiresGameTick(briefing.GameTick, item.Priority),
                     BriefingRef = item.BriefingRef ??
                         new BriefingRef("Food", briefing.BriefingVersion, $"food:{briefing.BriefingVersion}")
                 };
@@ -128,6 +134,11 @@ public static class FoodLlmResponseParser
 
     private static bool IsUsefulExpiry(DateTimeOffset value, DateTimeOffset now) =>
         value > now && value <= now.AddDays(7);
+
+    private static bool IsUsefulGameExpiry(long? value, long gameTick) =>
+        value is { } expiresGameTick &&
+        expiresGameTick > gameTick &&
+        expiresGameTick <= gameTick + AdviceFreshness.TicksPerGameDay * 7;
 
     private static string FormatTick(DateStamp date) =>
         $"Y{date.Year ?? 0}{date.Quadrum ?? "?"}D{date.Day ?? 0}";

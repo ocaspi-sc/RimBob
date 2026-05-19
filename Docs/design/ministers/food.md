@@ -153,6 +153,12 @@ Food publishes active advice as a minister snapshot. Stable same-issue ids are
 preferred where possible so the dashboard updates the current card instead of
 accumulating duplicates.
 
+Food advice freshness is based on game ticks. Wall-clock issue timestamps remain
+audit metadata, but a paused or closed RimWorld session should not make Food
+advice disappear. The dashboard keeps showing the latest persisted Food
+snapshot and marks expired advice; Assisted Apply still requires live
+validation before executing any target.
+
 ---
 
 ## Output Quality

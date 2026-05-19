@@ -48,6 +48,13 @@ public sealed class AssistedApplyService(
             return result;
         }
 
+        AssistedApplyResponse? staleAdvice = StaleAdviceIfExpired(advice, null, adviceId, actionIndex);
+        if (staleAdvice is not null)
+        {
+            Record(staleAdvice);
+            return staleAdvice;
+        }
+
         if (actionIndex < 0 || actionIndex >= advice.Actions.Count)
         {
             result = Response("validation_failed", "The selected advice action no longer exists.", null, adviceId, actionIndex);
@@ -66,10 +73,10 @@ public sealed class AssistedApplyService(
 
         result = apply.Kind switch
         {
-            AdviceApplyKind.MarkHarvestArea => await ApplyHarvestAsync(adviceId, actionIndex, apply, ct),
-            AdviceApplyKind.MarkHuntArea => await ApplyHuntAsync(adviceId, actionIndex, apply, ct),
-            AdviceApplyKind.UnforbidThings => await ApplyUnforbidAsync(adviceId, actionIndex, apply, ct),
-            AdviceApplyKind.UpsertProductionBill => await ApplyProductionBillAsync(adviceId, actionIndex, apply, ct),
+            AdviceApplyKind.MarkHarvestArea => await ApplyHarvestAsync(advice, adviceId, actionIndex, apply, ct),
+            AdviceApplyKind.MarkHuntArea => await ApplyHuntAsync(advice, adviceId, actionIndex, apply, ct),
+            AdviceApplyKind.UnforbidThings => await ApplyUnforbidAsync(advice, adviceId, actionIndex, apply, ct),
+            AdviceApplyKind.UpsertProductionBill => await ApplyProductionBillAsync(advice, adviceId, actionIndex, apply, ct),
             _ => Response("validation_failed", "That apply kind is not allowlisted.", apply.Kind, adviceId, actionIndex)
         };
         if (ShouldClearAppliedAction(result))
@@ -79,6 +86,7 @@ public sealed class AssistedApplyService(
     }
 
     private async Task<AssistedApplyResponse> ApplyProductionBillAsync(
+        AdviceItem advice,
         string adviceId,
         int actionIndex,
         AdviceActionApply apply,
@@ -102,7 +110,7 @@ public sealed class AssistedApplyService(
         if (apply.TargetCount > AssistedApplyLimits.MaxProductionBillTarget)
             return Response("validation_failed", "Bill target is too high for assisted apply.", apply.Kind, adviceId, actionIndex);
 
-        AssistedApplyResponse? refreshFailure = await RefreshForValidationAsync(apply.Kind, adviceId, actionIndex, ct);
+        AssistedApplyResponse? refreshFailure = await RefreshForValidationAsync(advice, apply.Kind, adviceId, actionIndex, ct);
         if (refreshFailure is not null)
             return refreshFailure;
 
@@ -227,6 +235,7 @@ public sealed class AssistedApplyService(
     }
 
     private async Task<AssistedApplyResponse> ApplyHarvestAsync(
+        AdviceItem advice,
         string adviceId,
         int actionIndex,
         AdviceActionApply apply,
@@ -242,7 +251,7 @@ public sealed class AssistedApplyService(
             return Response("validation_failed", "Harvest target is too broad for assisted apply.", apply.Kind, adviceId, actionIndex);
         }
 
-        AssistedApplyResponse? refreshFailure = await RefreshForValidationAsync(apply.Kind, adviceId, actionIndex, ct);
+        AssistedApplyResponse? refreshFailure = await RefreshForValidationAsync(advice, apply.Kind, adviceId, actionIndex, ct);
         if (refreshFailure is not null)
             return refreshFailure;
 
@@ -305,6 +314,7 @@ public sealed class AssistedApplyService(
     }
 
     private async Task<AssistedApplyResponse> ApplyHuntAsync(
+        AdviceItem advice,
         string adviceId,
         int actionIndex,
         AdviceActionApply apply,
@@ -324,7 +334,7 @@ public sealed class AssistedApplyService(
             return Response("validation_failed", "Hunt target is too broad for assisted apply.", apply.Kind, adviceId, actionIndex);
         }
 
-        AssistedApplyResponse? refreshFailure = await RefreshForValidationAsync(apply.Kind, adviceId, actionIndex, ct);
+        AssistedApplyResponse? refreshFailure = await RefreshForValidationAsync(advice, apply.Kind, adviceId, actionIndex, ct);
         if (refreshFailure is not null)
             return refreshFailure;
 
@@ -389,6 +399,7 @@ public sealed class AssistedApplyService(
     }
 
     private async Task<AssistedApplyResponse> ApplyUnforbidAsync(
+        AdviceItem advice,
         string adviceId,
         int actionIndex,
         AdviceActionApply apply,
@@ -400,7 +411,7 @@ public sealed class AssistedApplyService(
         if (apply.ThingTargets.Count > AssistedApplyLimits.MaxUnforbidTargets)
             return Response("validation_failed", "Unforbid target batch is too broad for assisted apply.", apply.Kind, adviceId, actionIndex);
 
-        AssistedApplyResponse? refreshFailure = await RefreshForValidationAsync(apply.Kind, adviceId, actionIndex, ct);
+        AssistedApplyResponse? refreshFailure = await RefreshForValidationAsync(advice, apply.Kind, adviceId, actionIndex, ct);
         if (refreshFailure is not null)
             return refreshFailure;
 
@@ -460,6 +471,7 @@ public sealed class AssistedApplyService(
     }
 
     private async Task<AssistedApplyResponse?> RefreshForValidationAsync(
+        AdviceItem advice,
         AdviceApplyKind kind,
         string adviceId,
         int actionIndex,
@@ -468,7 +480,7 @@ public sealed class AssistedApplyService(
         try
         {
             await ingestion.RefreshAllAsync(ct);
-            return null;
+            return StaleAdviceIfExpired(advice, kind, adviceId, actionIndex);
         }
         catch (Exception ex) when (IsRimApiUnavailable(ex))
         {
@@ -480,6 +492,22 @@ public sealed class AssistedApplyService(
             log.LogWarning(ex, "Assisted apply validation refresh failed.");
             return Response("validation_failed", $"Could not refresh game state before apply: {ex.Message}", kind, adviceId, actionIndex);
         }
+    }
+
+    private AssistedApplyResponse? StaleAdviceIfExpired(
+        AdviceItem advice,
+        AdviceApplyKind? kind,
+        string adviceId,
+        int actionIndex)
+    {
+        long currentGameTick = state.Economy.Value.Tick;
+        if (!AdviceFreshness.IsExpiredForGameTick(advice, currentGameTick))
+            return null;
+
+        string message = advice.ExpiresGameTick is { } expiresGameTick
+            ? $"That advice expired at game tick {expiresGameTick}; current tick is {currentGameTick}."
+            : "That advice is no longer current.";
+        return Response("stale_advice", message, kind, adviceId, actionIndex);
     }
 
     private async Task<AssistedApplyResponse?> RefreshForReadbackAsync(
