@@ -7,7 +7,7 @@ using RimBob.Host;
 namespace RimBob.Host.Endpoints;
 
 /// <summary>
-/// GET /api/advice/stream - SSE feed. On connect replays the current MayorAgenda
+/// GET /api/advice/stream - SSE feed. On connect replays the current Mayor snapshot
 /// and active feeder advice, then forwards live AdviceBus events.
 /// </summary>
 public static class AgendaStreamEndpoint
@@ -27,7 +27,7 @@ public static class AgendaStreamEndpoint
 
     private static async Task HandleAsync(
         HttpContext ctx,
-        AgendaStore store,
+        MinisterOutputStore store,
         AdviceBus bus,
         SseDiagnostics diagnostics,
         ILoggerFactory loggerFactory,
@@ -55,7 +55,7 @@ public static class AgendaStreamEndpoint
 
         try
         {
-            if (store.Current is { } current)
+            if (store.CurrentMayorAgenda is { } current)
                 await WriteAgendaAsync(ctx, current, diagnostics, ct);
             AdviceSnapshot activeSnapshot = bus.ActiveSnapshot();
             IReadOnlyList<AdviceItem> activeAdvice = activeSnapshot.Advice;

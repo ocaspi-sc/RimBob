@@ -306,9 +306,11 @@ function AdviceCard({ item }: { item: AdviceItem }) {
               const success = state.response?.status === 'applied' || state.response?.status === 'already_satisfied';
               const disabled = state.status === 'pending' || success;
               const actionIcon = iconForActionKind(action.kind);
+              const fallbackIconUrl = action.icon ? iconUrlFor(actionIcon?.ref) : null;
               return (
                 <div key={`${item.id}-action-${index}`}>
                   <GameIcon
+                    fallbackSrc={fallbackIconUrl}
                     fallback={actionIcon?.fallback ?? '-'}
                     label={actionIcon?.label ?? `${formatLabel(action.kind)} icon`}
                     size="xs"
@@ -363,10 +365,12 @@ function AdviceCard({ item }: { item: AdviceItem }) {
             </div>
             {item.resource_requests?.map((request, index) => {
               const requestIcon = iconForActionKind(request.kind);
+              const fallbackIconUrl = request.icon ? iconUrlFor(requestIcon?.ref) : null;
               return (
                 <div className="dense-row" key={`${item.id}-request-${index}`}>
                   <span className="icon-cell">
                     <GameIcon
+                      fallbackSrc={fallbackIconUrl}
                       fallback={requestIcon?.fallback ?? '-'}
                       label={requestIcon?.label ?? `${formatLabel(request.kind)} icon`}
                       size="xs"
@@ -395,9 +399,11 @@ function AdviceCard({ item }: { item: AdviceItem }) {
           <div className="action-list">
             {item.suggested_actions?.map((action, index) => {
               const actionIcon = iconForActionKind(action.kind);
+              const fallbackIconUrl = action.icon ? iconUrlFor(actionIcon?.ref) : null;
               return (
                 <div key={`${item.id}-action-${index}`}>
                   <GameIcon
+                    fallbackSrc={fallbackIconUrl}
                     fallback={actionIcon?.fallback ?? '-'}
                     label={actionIcon?.label ?? `${formatLabel(action.kind)} icon`}
                     size="xs"

@@ -5,7 +5,7 @@ namespace RimBob.Host.Endpoints;
 public sealed record EndpointCoverageRow(string Endpoint, string State, string Note);
 
 public sealed record EndpointCoverageContext(
-    AgendaStore AgendaStore,
+    MinisterOutputStore MinisterOutputStore,
     MinisterRegistry Ministers)
 {
     public string CapabilityNames(Func<MinisterDescriptor, bool> capability)

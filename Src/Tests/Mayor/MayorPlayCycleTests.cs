@@ -19,20 +19,20 @@ public sealed class MayorPlayCycleTests
     [Fact]
     public async Task FirstCycle_StoresAgendaV1AndPublishesEvent()
     {
-        Harness h = new((_, _, _, _, _, _) => CannedAgenda("first"));
+        Harness h = new((_, _, _, _, _) => CannedAgenda("first"));
 
         await h.Mayor.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
 
-        h.Store.Current.Should().NotBeNull();
-        h.Store.Current!.Version.Should().Be(1);
-        h.Store.Current.UpdateNotes.Should().Be("first");
+        h.Store.CurrentMayorAgenda.Should().NotBeNull();
+        h.Store.CurrentMayorAgenda!.Version.Should().Be(1);
+        h.Store.CurrentMayorAgenda.UpdateNotes.Should().Be("first");
         h.PublishedAgendas.Should().ContainSingle().Which.Version.Should().Be(1);
     }
 
     [Fact]
     public async Task FirstCycle_PersistsMayorLlmReplayRecord()
     {
-        Harness h = new((_, _, _, _, _, _) => CannedAgenda("first"));
+        Harness h = new((_, _, _, _, _) => CannedAgenda("first"));
 
         await h.Mayor.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
 
@@ -49,17 +49,16 @@ public sealed class MayorPlayCycleTests
     }
 
     [Fact]
-    public async Task SecondCycle_IncrementsVersionAndPushesPreviousIntoHistory()
+    public async Task SecondCycle_IncrementsSnapshotVersion()
     {
         int call = 0;
-        Harness h = new((_, _, _, _, _, _) => CannedAgenda($"v{++call}"));
+        Harness h = new((_, _, _, _, _) => CannedAgenda($"v{++call}"));
 
         await h.Mayor.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
         await h.Mayor.RunPlayCycle(PlayCycleContext.CabinetRefresh, CancellationToken.None);
 
-        h.Store.Current!.Version.Should().Be(2);
-        h.Store.Current.UpdateNotes.Should().Be("v2");
-        h.Store.History.Should().ContainSingle().Which.UpdateNotes.Should().Be("v1");
+        h.Store.CurrentMayorAgenda!.Version.Should().Be(2);
+        h.Store.CurrentMayorAgenda.UpdateNotes.Should().Be("v2");
         h.PublishedAgendas.Should().HaveCount(2);
     }
 
@@ -67,7 +66,7 @@ public sealed class MayorPlayCycleTests
     public async Task ShortTermOverCap_OnFirstCallTriggersRetry_SecondCallTruncates()
     {
         int call = 0;
-        Harness h = new((_, _, _, _, _, _) =>
+        Harness h = new((_, _, _, _, _) =>
         {
             call++;
             // Both attempts return 6 items; Mayor truncates after the second attempt.
@@ -81,8 +80,8 @@ public sealed class MayorPlayCycleTests
         await h.Mayor.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
 
         call.Should().Be(2);
-        h.Store.Current.Should().NotBeNull();
-        h.Store.Current!.ShortTerm.Should().HaveCount(5);
+        h.Store.CurrentMayorAgenda.Should().NotBeNull();
+        h.Store.CurrentMayorAgenda!.ShortTerm.Should().HaveCount(5);
         h.Replay.Records.Should().ContainSingle(r =>
             r.Path == "llm_failed" && r.Error != null && r.Error.Type == "ValidationRejected");
         h.Replay.Records.Should().ContainSingle(r =>
@@ -92,14 +91,14 @@ public sealed class MayorPlayCycleTests
     [Fact]
     public async Task LlmAlwaysThrows_WithNoExistingAgenda_PublishesBootstrapAgenda()
     {
-        Harness h = new((_, _, _, _, _, _) => throw new InvalidOperationException("boom"));
+        Harness h = new((_, _, _, _, _) => throw new InvalidOperationException("boom"));
 
         await h.Mayor.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
 
-        h.Store.Current.Should().NotBeNull();
-        h.Store.Current!.Version.Should().Be(1);
-        h.Store.Current.UpdateNotes.Should().Contain("LLM failed twice");
-        h.Store.Current.ShortTerm.Should().Contain(item => item.Id == "bootstrap_replace_with_mayor_run");
+        h.Store.CurrentMayorAgenda.Should().NotBeNull();
+        h.Store.CurrentMayorAgenda!.Version.Should().Be(1);
+        h.Store.CurrentMayorAgenda.UpdateNotes.Should().Contain("LLM failed twice");
+        h.Store.CurrentMayorAgenda.ShortTerm.Should().Contain(item => item.Id == "bootstrap_replace_with_mayor_run");
         h.PublishedAgendas.Should().ContainSingle().Which.Version.Should().Be(1);
         h.Replay.Records.Where(r => r.Path == "llm_failed")
             .Should().HaveCount(2)
@@ -109,13 +108,13 @@ public sealed class MayorPlayCycleTests
     [Fact]
     public async Task LlmAlwaysThrows_WithExistingAgenda_KeepsCurrentAgendaAndDoesNotPublish()
     {
-        Harness h = new((_, _, _, _, _, _) => throw new InvalidOperationException("boom"));
-        await h.Store.UpdateAsync(InputBuilder.Default with { UpdateNotes = "existing" }, "tick0");
+        Harness h = new((_, _, _, _, _) => throw new InvalidOperationException("boom"));
+        await h.Store.UpdateMayorAsync(InputBuilder.Default with { UpdateNotes = "existing" }, "tick0");
 
         await h.Mayor.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
 
-        h.Store.Current.Should().NotBeNull();
-        h.Store.Current!.UpdateNotes.Should().Be("existing");
+        h.Store.CurrentMayorAgenda.Should().NotBeNull();
+        h.Store.CurrentMayorAgenda!.UpdateNotes.Should().Be("existing");
         h.PublishedAgendas.Should().BeEmpty();
     }
 
@@ -123,7 +122,7 @@ public sealed class MayorPlayCycleTests
     public async Task ManualResponseFile_PersistsReplayRecordWithoutCallingProvider()
     {
         int calls = 0;
-        Harness h = new((_, _, _, _, _, _) =>
+        Harness h = new((_, _, _, _, _) =>
         {
             calls++;
             return CannedAgenda("provider");
@@ -133,8 +132,8 @@ public sealed class MayorPlayCycleTests
         await h.Mayor.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
 
         calls.Should().Be(0);
-        h.Store.Current.Should().NotBeNull();
-        h.Store.Current!.UpdateNotes.Should().Be("manual");
+        h.Store.CurrentMayorAgenda.Should().NotBeNull();
+        h.Store.CurrentMayorAgenda!.UpdateNotes.Should().Be("manual");
         MinisterReplayRecord record = h.Replay.Records.Should()
             .ContainSingle(r => r.Path == "llm" && r.EscalationReason == "manual_llm_response_file")
             .Subject;
@@ -147,14 +146,14 @@ public sealed class MayorPlayCycleTests
     [Fact]
     public async Task ManualResponseFileParseFailure_PersistsFailureThenFallsThroughToProvider()
     {
-        Harness h = new((_, _, _, _, _, _) => CannedAgenda("fallback"));
+        Harness h = new((_, _, _, _, _) => CannedAgenda("fallback"));
         Directory.CreateDirectory(Path.GetDirectoryName(h.ManualResponsePath)!);
         File.WriteAllText(h.ManualResponsePath, "{");
 
         await h.Mayor.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
 
-        h.Store.Current.Should().NotBeNull();
-        h.Store.Current!.UpdateNotes.Should().Be("fallback");
+        h.Store.CurrentMayorAgenda.Should().NotBeNull();
+        h.Store.CurrentMayorAgenda!.UpdateNotes.Should().Be("fallback");
         h.Replay.Records.Should().ContainSingle(r =>
             r.Path == "llm_failed" && r.EscalationReason == "manual_llm_response_file");
         h.Replay.Records.Should().ContainSingle(r =>
@@ -178,7 +177,7 @@ public sealed class MayorPlayCycleTests
     {
         public ColonyState     Colony   { get; }
         public BriefingCache   Cache    { get; }
-        public AgendaStore     Store    { get; }
+        public MinisterOutputStore Store { get; }
         public AdviceBus       Bus      { get; }
         public MayorMinister   Mayor    { get; }
         public CapturingReplayWriter Replay { get; } = new();

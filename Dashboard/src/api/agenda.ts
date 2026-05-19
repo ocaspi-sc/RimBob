@@ -1,9 +1,9 @@
 import type { MayorAgenda } from '../types/agenda';
 
 export async function fetchLatestAgenda(signal?: AbortSignal): Promise<MayorAgenda | null> {
-  const response = await fetch('/api/agenda/latest', { signal });
+  const response = await fetch('/api/ministers/mayor/snapshot', { signal });
   if (response.status === 204) return null;
-  if (!response.ok) throw new Error(`/api/agenda/latest returned ${response.status}`);
+  if (!response.ok) throw new Error(`/api/ministers/mayor/snapshot returned ${response.status}`);
 
   return await response.json() as MayorAgenda;
 }

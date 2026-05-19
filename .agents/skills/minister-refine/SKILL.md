@@ -15,7 +15,7 @@ Refine one RimBob minister from evidence. Default to an evidence-backed proposal
    - Also check future pushbacks at `Src/Cabinet/<Minister>/Pushbacks/*.jsonl`. If absent, continue from logs and say Pushbacks are not wired yet.
 
 2. Summarize logs.
-   - Check durable replay records first at `logs/replay/<minister>-*.jsonl`; these are the preferred input for before/after comparisons.
+   - Check durable replay records first under the Host-resolved logs root, usually LocalAppData `RimBob/logs/replay/<minister>-*.jsonl`; these are the preferred input for before/after comparisons. Use SYSTEM health or `RimBob:LogsRoot` to resolve the exact machine path.
    - Run the helper:
      ```powershell
      py .agents\skills\minister-refine\scripts\summarize_decision_log.py --repo . --minister Food --days 7
@@ -25,7 +25,7 @@ Refine one RimBob minister from evidence. Default to an evidence-backed proposal
    - Check whether records are replayable: briefing payload or ref, trigger/context, active flags/agenda context, prompt/raw LLM output when relevant, normalized output, feedback/Pushback, and outcome. If fields are missing, classify that as a `Logging gap`.
 
 3. Build a replay set.
-   - Prefer a historic corpus sampled from `logs/replay/<minister>-*.jsonl`, then enrich it from decision logs and Pushbacks when useful.
+   - Prefer a historic corpus sampled from the Host-resolved logs root's `replay/<minister>-*.jsonl`, then enrich it from decision logs and Pushbacks when useful.
    - Fall back to decision logs when replay records are absent or incomplete. Fall back to fixtures only when historic records are not replayable yet, and say that the comparison is fixture-only.
    - Keep the same input corpus for before/after. Do not judge an improvement from a single hand-picked example.
 
@@ -51,7 +51,7 @@ Refine one RimBob minister from evidence. Default to an evidence-backed proposal
 
 7. Run a Codex-vs-Gemini calibration pass when requested.
    - Use this path when the user explicitly asks for Codex/subagent comparison, manual Codex generation, or a provider-quality calibration pass.
-   - Sample replayable historic LLM records from `logs/replay/<minister>-*.jsonl`; preserve the exact system prompt if captured, user prompt or briefing JSON, play-cycle context, flags, agenda/RAG context, recorded Gemini raw output, and recorded normalized output.
+   - Sample replayable historic LLM records from the Host-resolved logs root's `replay/<minister>-*.jsonl`; preserve the exact system prompt if captured, user prompt or briefing JSON, play-cycle context, flags, agenda/RAG context, recorded Gemini raw output, and recorded normalized output.
    - Trigger the `run-minister-using-subagent` workflow against the historic inputs: pass the exact captured prompt/context to the subagent, require JSON only, and keep the live minister prompt as the schema/style source of truth when the replay record lacks a prompt snapshot.
    - Do not overwrite live Raw LLM output or POST to `/api/ministers/{minister}/llm-output/manual` during historic calibration unless the user explicitly asks for live manual ingestion. Historic calibration should produce comparison artifacts first.
    - Compare Codex output to the recorded Gemini output on schema validity, suggest-only scope, use of briefing facts, step/action concreteness, priority, flags, compact structured strings, style warnings, and whether non-target concerns stayed quiet.

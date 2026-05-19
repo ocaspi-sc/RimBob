@@ -160,6 +160,13 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 | Method | Path | Purpose |
 |---|---|---|
 | POST | `/order/designate/area` | designate Mine / Deconstruct / Harvest / Hunt over a rect |
+| POST | `/order/unforbid` | safely clear the forbidden flag on explicit haulable thing ids |
+
+> **Verified shape (RimBob fork).** `/order/unforbid` accepts `map_id` and
+> `thing_ids[]`. The sibling fork rejects empty or oversized batches, malformed
+> ids, missing targets, non-map targets, and non-haulable targets. Successful
+> responses include `requested`, `matched`, `changed`, `already_allowed`,
+> `missing`, `non_map_targets`, and `non_item_targets`.
 
 ### Lord (AI groups)
 | Method | Path | Purpose |
@@ -199,9 +206,11 @@ outside the localhost read-only dashboard posture.
 
 The static cache warmer uses `/def/all`, `/item/image`, `/terrain/image`,
 `/factions`, and `/faction/icon` to cache enumerable static art locally under
-ignored `var/icons/`. Pawn portraits, colonist body images, stuff-colored
-variants, growth-stage variants, styled variants, rotations, projectiles, motes,
-and other per-instance hard cases are skipped or fetched lazily.
+the stable machine-local RimBob icon cache root. Pawn portraits, colonist body
+images, stuff-colored variants, growth-stage variants, styled variants,
+rotations, projectiles, motes, and other per-instance hard cases are skipped or
+fetched lazily. `RimBob:IconCacheRoot` may override that cache root; relative
+overrides resolve under the same stable machine-local RimBob root.
 
 ### Overlay / UI
 | Method | Path | Purpose |
@@ -275,3 +284,19 @@ When a minister needs an endpoint from one of these, fetch the upstream docs, ad
 - Polling cadences are defined in [state-store.md](state-store.md) (slow / fast / event-diff). No SSE consumption.
 - Write ownership per minister is defined in `design/ministers/<name>.md`. Only Labor issues pawn-allocation writes ([labor.md](ministers/labor.md)). MVP Assisted Apply may use a tiny non-pawn write allowlist after player confirmation; fetch and document upstream endpoint shapes before adding each write.
 - Upstream is GPL-3.0; we link only via HTTP, never in-process.
+
+## RimBob Host Output Endpoints
+
+The Host-facing dashboard contract for player-facing minister output is now the
+uniform minister snapshot surface, not an Agenda-specific route family:
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/ministers/{minister}/snapshot` | Latest typed minister output snapshot. `mayor` returns `MayorAgenda`; feeders return `AdviceSnapshot`. |
+| POST | `/api/ministers/mayor/snapshot/manual` | Developer manual Mayor snapshot fallback ingestion. |
+| GET | `/api/advice/stream` | SSE replay/live feed for Mayor agenda updates and feeder advice snapshots. |
+
+`/api/agenda/latest`, `/api/agenda/history`, and `/api/agenda/manual` are
+retired with no compatibility aliases. Status payloads use
+`mayor_snapshot_version` instead of `agenda_version`; SYSTEM exposes the
+resolved minister output root and per-minister persistence metadata.

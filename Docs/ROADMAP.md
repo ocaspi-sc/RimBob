@@ -75,6 +75,11 @@
 - `GET /api/mayor/prompt` — system + user message that would be sent to Gemini next turn (introspection).
 - Dashboard restyled to a dark command-center console: topbar (status pill + manual cabinet run + poll cadence), tab rail (with `MODULE LOCKED · Coming in M{n}` placeholders), main-console panel (Agenda tab), sidebar panel (Colony telemetry).
 
+**Lifecycle update:** Mayor Agenda and feeder active-advice snapshots now reload
+from the unified latest-only minister output store. `/api/agenda/*` has been
+retired in favor of `/api/ministers/{minister}/snapshot`, and Host rebuilds no
+longer fire a cabinet cycle just to repopulate the dashboard.
+
 ---
 
 ## M2 — Grounded reasoning (RAG)
@@ -87,7 +92,7 @@
 
 **Scope:**
 - `KnowledgeBase` in-process cosine store.
-- Guide ingestion from `Docs/guides/**/*.md` with SHA-256 embedding cache under `var/embeddings`.
+- Guide ingestion from `Docs/guides/**/*.md` with SHA-256 embedding cache under the stable machine-local RimBob data root.
 - Gemini embedding via `gemini-embedding-001`.
 - RAG retrieval for long-tail lookups, surfaced in agenda `guide_citations[]` and per-item `cite_ids[]`.
 - Side-by-side fixture: same briefing, with/without RAG, agenda diff captured.

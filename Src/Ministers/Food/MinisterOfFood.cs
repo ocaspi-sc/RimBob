@@ -12,7 +12,7 @@ namespace RimBob.Ministers.Food;
 public sealed class MinisterOfFood(
     BriefingCache briefings,
     Rules rules,
-    AgendaStore agendaStore,
+    MinisterOutputStore outputStore,
     AdviceBus bus,
     FlagChannel flags,
     LlmClient llm,
@@ -153,7 +153,7 @@ public sealed class MinisterOfFood(
             flags.Publish(flag);
     }
 
-    private MinisterBriefingContext BuildContext() => BuildContext(agendaStore.Current);
+    private MinisterBriefingContext BuildContext() => BuildContext(outputStore.CurrentMayorAgenda);
 
     public static IReadOnlyList<FoodPromptCropCandidate> BuildCropCandidates(FoodBriefing briefing) =>
         FoodCropMath.Recommend(briefing).Candidates

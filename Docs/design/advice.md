@@ -115,7 +115,8 @@ harmful to trust, especially for threat or emergency advice.
 
 When new advice replaces an older unresolved item, use supersession or a stable
 same-issue id so the active dashboard view updates instead of stacking duplicate
-cards. History belongs in logs/replay, not in active cards.
+cards. History belongs in the Host-resolved logs root's replay corpus, not in
+active cards.
 
 ### Active Advice Snapshots
 
@@ -123,6 +124,12 @@ The active advice surface is the issuing minister's latest successful view, not
 an append-only feed. Each minister play cycle should publish its current active
 set as a minister-scoped snapshot. A successful empty snapshot means the
 minister currently has no active advice.
+
+Active feeder snapshots are durable across Host restarts through the unified
+minister output store. The dashboard should reload the last good advice,
+state-summary, and chain snapshot immediately after boot instead of blanking
+until the next cabinet cycle. This store is latest-only; historical advice
+records remain in the replay corpus.
 
 Feeder snapshots may carry one player-facing current-state summary above the
 advice items. That summary describes the whole minister read; it is not an

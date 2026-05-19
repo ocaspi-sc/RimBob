@@ -344,7 +344,8 @@ Construction should follow the newer rule:
 Likely code path:
 
 - use `MinisterReplayRecorder`
-- write replay records under `logs/replay/construction-YYYYMMDD.jsonl`
+- write replay records under the Host-resolved logs root at
+  `replay/construction-YYYYMMDD.jsonl`
 - include:
   - briefing
   - play cycle context

@@ -37,15 +37,17 @@ The durable trigger vocabulary is:
 - `Heartbeat`
 - `ScheduledWakeupFired`
 
-Exact C# contracts live in `Src/Common/Ministers/`. Current runtime uses startup
-bootstrap, cabinet refresh, and manual dashboard triggers; the other trigger
-names are reserved extension points.
+Exact C# contracts live in `Src/Common/Ministers/`. Current runtime uses cabinet
+refresh and manual dashboard triggers; `StartupBootstrap` remains a vocabulary
+value for explicitly labeled first-run/bootstrap flows, not a Host-rebuild
+cabinet wake.
 
 ### First Live Cycle Bootstrap
 
-Every feeder minister gets one special case on its first live cycle after Host
-startup, or the first cycle after that minister is newly introduced into a save:
-bootstrap via escalation first, then return to normal rules-first behavior.
+Every feeder minister may get one special case on its first live cycle after it
+is newly introduced into a save: bootstrap via escalation first, then return to
+normal rules-first behavior. Host rebuilds do not trigger this by themselves;
+persisted snapshots reload instead.
 
 Rationale:
 
@@ -59,7 +61,8 @@ Constraints:
 - Bootstrap is one-time behavior, not a standing exception to rules-first.
 - If the briefing cannot support concrete advice, the minister should say that
   rather than fabricate precision.
-- Mayor remains separate: the Mayor already writes an LLM-backed agenda on wake.
+- Mayor remains separate: a labeled bootstrap Agenda is created only when no
+  persisted minister output exists at all.
 
 Scheduled wakeups may be registered by rules or escalation output. A fired
 wakeup still runs the normal rules-first evaluation cycle; its payload is an

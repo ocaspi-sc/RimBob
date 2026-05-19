@@ -4,7 +4,7 @@ namespace RimBob.Core.Advice;
 
 /// <summary>
 /// Mayor's proposed agenda content — what the LLM produces. Version and
-/// updated_in_game_tick are server-assigned by AgendaStore.UpdateAsync.
+/// updated_in_game_tick are server-assigned by MinisterOutputStore.UpdateMayorAsync.
 /// </summary>
 public sealed record MayorAgendaInput(
     [property: JsonPropertyName("posture")]            MayorPosture                        Posture,

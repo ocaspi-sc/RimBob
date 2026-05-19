@@ -19,8 +19,8 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 - For bug reports and user complaints, prefer the general correct fix over one-off workarounds.
 - Ask targeted questions with local context and tradeoffs before committing to a path. Don't ask when the direction is clear.
 - This project is maintained simultaneously by multiple AI agents from different companies.
-- After finishing a change, make sure I can see it. Rebuild if necessary.
-- No legacy
+- After finishing a change, make sure I can see it. Rebuild if necessary, and include a clickable URL or file link to the result.
+- We don't care about legacy or breaking changes. be brave.
 
 ## Coding
 
@@ -34,6 +34,8 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 - C:\dev\RimBob should always stay on master branch.
 - The only unstaged changes on C:\dev\RimBob should be manual edits by the human.
 - When changing code, make sure it's in a worktree + feature branch that's correct for the current task. If not, create a worktree first based off current master and work there, using commits generously. When finished, the usual MO is to squash-merge the feature branch into master so it lands, then remove the worktree.
+- Sync before verifying: before any build that validates behavior or gates a land, run `git merge master` in the worktree so you build the integrated result, not a stale snapshot missing changes other agents already landed. Resolve conflicts before building; never skip the sync to dodge them. If `master` is being written by another session, apply the git wait-and-retry rule below.
+- Shrink the staleness window; do not sync across worktrees. Keep slices small and squash-merge to master as soon as a slice is green, so other worktrees are never far behind. Master is the only integration point — never merge or cherry-pick another agent's unlanded feature branch. If a task grows large, split it and land the independent parts early rather than letting one branch diverge.
 - When doing git operations, if there's a lock file or another session appears to be writing or committing, wait briefly and retry the narrow operation; do not force broad Git actions.
 - Commit messages should contain some tags, a title, and a summary of the changes.
 
@@ -89,8 +91,10 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 
 ## Build And Verification
 
+- Sync the worktree with `master` before verification builds (see GIT → "Sync before verifying"). A build missing already-landed changes is not a valid verification.
 - After build verification, run RimBob again and verify the Host is reachable, especially if a live `RimBob.Host` process was stopped.
 - Prefer `.\run-rimbob.ps1` after builds. Use `.\run-rimbob.ps1 -Foreground` when terminal output must stay attached.
+- Port `5000` is reserved for the main `C:\dev\RimBob` checkout. When running RimBob from any worktree, use a different `-ListenUrl` / port, then verify `/api/system/health` and the `RimBob.Host.exe` process path before calling the worktree build live.
 - Use manual `npm.cmd run build` / `dotnet run` only when debugging one side of the stack.
 - When adding backend logs, replay corpus files, prompt dumps, traces, or diagnostics, update dashboard-visible metadata in the same turn. If intentionally hidden, add a concrete `HumanTodo.md` follow-up and mention it in the final response.
 

@@ -166,6 +166,9 @@ SYSTEM owns:
 
 - Runtime and Mayor/cabinet run state, including the full Host executable path
   so operators can see which checkout is actually serving the dashboard.
+- Persistent runtime storage metadata, including the stable data root, unified
+  minister output store, latest ColonyState snapshot, and RAG embedding cache
+  paths.
 - RIMAPI reachability.
 - SSE diagnostics.
 - LLM health from actual request/parse status, not only key configuration.
@@ -182,8 +185,9 @@ SYSTEM owns:
   result.
 - Icon cache metadata: local cache counts, byte totals, warm job lifecycle,
   skipped candidates, deferred candidates, bounded failure samples, per-def
-  warm state, and the full cached PNG inventory rendered as the actual cached
-  icons.
+  warm state, and the full usable cached PNG inventory rendered as the actual
+  cached icons. Upstream placeholder red-X PNGs are invalid cache artifacts:
+  they should be treated as missing/unusable, not displayed as real game art.
 - Latest minister traces: trigger, status, rules/LLM path, rule trace,
   escalation reason, emitted counts, and failure detail when available.
 - Recent event/advice timeline.
@@ -283,7 +287,7 @@ Design-level endpoint families:
 - Runtime/status and system health.
 - Advice SSE stream.
 - Manual cabinet/minister triggers.
-- Agenda and active advice reads.
+- Typed minister snapshot reads for the Mayor and feeder active advice.
 - Latest minister prompt, briefing, RAG, trace, and raw LLM output.
 - Colony snapshot/sidebar data.
 - Bounded log and replay-corpus metadata.
@@ -305,6 +309,19 @@ machine-local storage under LocalAppData (`RimBob/logs`), not the active
 repository or worktree; `RimBob:LogsRoot` may override it. Serilog logs,
 structured decision logs, replay corpus records, Mayor prompt dumps, and manual
 fallback files should stay under that same root.
+
+The same payload owns persistent runtime data paths. It should expose the
+stable data root plus the resolved minister output root, latest ColonyState
+snapshot, and RAG embedding cache paths so SYSTEM can prove those artifacts are
+not forking per branch or worktree. The default data root is stable
+machine-local storage under LocalAppData (`RimBob`), not the active repository
+or worktree; `RimBob:DataRoot` may override it. Relative child paths, including
+`RimBob:Rag:CacheRoot`, resolve under that data root.
+
+SYSTEM should also show per-minister output metadata from the unified store:
+minister key, output kind, generation, persisted time, path, and load/flush
+state. This is the dashboard-visible proof that the last good Mayor Agenda and
+feeder advice snapshots were reloaded rather than regenerated.
 
 Icon cache metadata follows the same rule. SYSTEM may show counts, byte totals,
 kind totals, warm job state (`idle`, `running`, `completed`, or `failed`), live
@@ -509,10 +526,12 @@ compact result state that links to the SYSTEM/trace evidence for the attempted
 write and read-back.
 
 The dashboard does not cache Agenda documents in browser storage. Stale agenda
-recovery comes from Host-owned durable agenda storage. On a fresh runtime with
-no stored Agenda, Host initializes a labeled bootstrap Agenda before serving the
-dashboard. The no-agenda empty state is reserved for initialization/storage
-failure or intentionally disabled agenda storage.
+and feeder-advice recovery comes from the Host-owned unified minister output
+store. On a fresh runtime with no persisted minister output at all, Host
+initializes a labeled bootstrap Agenda before serving the dashboard. Rebuilds
+reload persisted snapshots and do not fire the cabinet just to populate the UI.
+The no-output empty state is reserved for initialization/storage failure or
+intentionally disabled output storage.
 
 Advice actions are the actionable reading surface and should default open when an
 advice card mounts, including after browser refresh or a new active-advice

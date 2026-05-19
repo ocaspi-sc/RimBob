@@ -9,7 +9,7 @@ namespace RimBob.LLM;
 
 /// <summary>
 /// Assembles prompts for LLM calls. System prompts are read from disk once and cached;
-/// user messages are built fresh from briefing + prior agenda + agenda directives + retrieved
+/// user messages are built fresh from briefing + agenda directives + retrieved
 /// guide passages (M2 RAG).
 /// </summary>
 public sealed class PromptBuilder
@@ -28,7 +28,6 @@ public sealed class PromptBuilder
 
     public string BuildMayorUserMessage(
         MayorBriefing           briefing,
-        MayorAgenda?            previousAgenda,
         IReadOnlyList<string>   agendaDirectives,
         IReadOnlyList<GuideCitation> guideContext,
         IReadOnlyList<AgentFlag>? activeFlags = null)
@@ -36,7 +35,7 @@ public sealed class PromptBuilder
         IReadOnlyList<GuideContextEntry>? guides = guideContext.Count == 0
             ? null
             : [.. guideContext.Select(c => new GuideContextEntry(c.CiteId, c.Heading, c.SourcePath, c.Snippet))];
-        MayorPromptPayload payload = new(briefing, previousAgenda, agendaDirectives, guides, activeFlags);
+        MayorPromptPayload payload = new(briefing, agendaDirectives, guides, activeFlags);
         return JsonSerializer.Serialize(payload, UserMessageJson);
     }
 
@@ -74,7 +73,6 @@ public sealed class PromptBuilder
 
 internal sealed record MayorPromptPayload(
     [property: JsonPropertyName("briefing")]         MayorBriefing                  Briefing,
-    [property: JsonPropertyName("previous_agenda")]  MayorAgenda?                   PreviousAgenda,
     [property: JsonPropertyName("agenda_directives")] IReadOnlyList<string>         AgendaDirectives,
     [property: JsonPropertyName("guide_context")] IReadOnlyList<GuideContextEntry>? GuideContext,
     [property: JsonPropertyName("active_flags")] IReadOnlyList<AgentFlag>? ActiveFlags

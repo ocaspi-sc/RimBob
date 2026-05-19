@@ -22,12 +22,12 @@ RimBobOptions options = builder.Configuration
     .Get<RimBobOptions>() ?? new RimBobOptions();
 
 string logsDir = HostLogPaths.ResolveLogsDirectory(builder.Environment.ContentRootPath, options.LogsRoot);
-string varDir = HostLogPaths.ResolveVarDirectory(builder.Environment.ContentRootPath);
+string dataRoot = HostLogPaths.ResolveDataRootDirectory(builder.Environment.ContentRootPath, options.DataRoot);
 Directory.CreateDirectory(logsDir);
-Directory.CreateDirectory(varDir);
-string agendaStorePath = Path.Combine(varDir, "agenda", "agenda-store.json");
-AgendaStore agendaStore = await AgendaStore.LoadAsync(agendaStorePath);
-string colonyStateSnapshotPath = Path.Combine(varDir, "state", "latest-colony-state.json");
+Directory.CreateDirectory(dataRoot);
+string ministerOutputRoot = Path.Combine(dataRoot, "ministers");
+MinisterOutputStore ministerOutputStore = await MinisterOutputStore.LoadAsync(ministerOutputRoot);
+string colonyStateSnapshotPath = Path.Combine(dataRoot, "state", "latest-colony-state.json");
 ColonyStateSnapshotStore colonySnapshotStore = await ColonyStateSnapshotStore.LoadAsync(colonyStateSnapshotPath);
 
 // ── Logging: Serilog reads from appsettings.json ───────────────────────────
@@ -95,8 +95,8 @@ builder.Services.AddSingleton(colonySnapshotStore);
 builder.Services.AddSingleton<BriefingCache>();
 builder.Services.AddSingleton<IngestionDispatcher>();
 
-builder.Services.AddSingleton<AdviceBus>();
-builder.Services.AddSingleton(agendaStore);
+builder.Services.AddSingleton(ministerOutputStore);
+builder.Services.AddSingleton<AdviceBus>(sp => new AdviceBus(sp.GetRequiredService<MinisterOutputStore>()));
 builder.Services.AddSingleton<FlagChannel>();
 builder.Services.AddSingleton<MinisterRegistry>();
 builder.Services.AddSingleton<EndpointCoverageCatalog>();
@@ -123,9 +123,11 @@ builder.Services.AddSingleton<KnowledgeBase>();
 builder.Services.AddSingleton<EmbeddingCache>(sp =>
 {
     RimBobOptions opts = sp.GetRequiredService<IOptions<RimBobOptions>>().Value;
-    string cacheDir = Path.IsPathRooted(opts.Rag.CacheRoot)
-        ? opts.Rag.CacheRoot
-        : Path.Combine(builder.Environment.ContentRootPath, opts.Rag.CacheRoot);
+    string cacheDir = HostLogPaths.ResolveDataDirectory(
+        builder.Environment.ContentRootPath,
+        opts.DataRoot,
+        opts.Rag.CacheRoot,
+        "embeddings");
     return new EmbeddingCache(cacheDir);
 });
 builder.Services.AddSingleton<MayorRagRetriever>(sp =>
@@ -212,9 +214,9 @@ builder.Services.AddHostedService<DayTickOrchestrator>();
 var app = builder.Build();
 app.Logger.LogInformation("Host logs directory: {LogsDirectory}", logsDir);
 app.Logger.LogInformation(
-    "Agenda store path: {AgendaStorePath} current_version={AgendaVersion}",
-    agendaStorePath,
-    agendaStore.Current?.Version);
+    "Minister output root: {MinisterOutputRoot} mayor_snapshot_version={Version}",
+    ministerOutputRoot,
+    ministerOutputStore.CurrentMayorAgenda?.Version);
 ColonySnapshotStatus colonySnapshotStatus = colonySnapshotStore.GetStatus();
 app.Logger.LogInformation(
     "Colony state snapshot path: {SnapshotPath} has_snapshot={HasSnapshot} load_error={LoadError}",
@@ -231,7 +233,6 @@ app.MapGet("/api/health", () => Results.Ok(new { status = "ok", service = "RimBo
 
 app.MapCabinetEndpoints();
 app.MapAgendaStream();
-app.MapAgendaEndpoints();
 app.MapAutonomyEndpoints();
 app.MapColonyEndpoints();
 app.MapStatusEndpoints();

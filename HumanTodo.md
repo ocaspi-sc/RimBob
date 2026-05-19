@@ -9,12 +9,14 @@
 ## Captured by /todo
 
 <!-- entries go here -->
+- [x] [2026-05-19] #persistence #advice #mayor Implement unified minister output persistence (reload-on-boot, no boot regen, breaking /api/agenda/* → /api/ministers/{minister}/* migration). [plan](Docs/plans/unified-minister-output-persistence.md)
+- [ ] [2026-05-18] #ops #cleanup Remove legacy repo-local icon/log artifacts after AppData cache/log paths stay verified.
 - [x] [2026-05-17] #rimapi #fork Clone, build, and load the RimBob-compatible RIMAPI fork from `C:\dev\RIMAPI-for-RimBob`. [plan](Docs/plans/rimapi-fork-migration.md)
-- [ ] [2026-05-17] #rimapi #assisted After the RIMAPI fork lands, verify Food uses safe unforbid apply end to end.
+- [x] [2026-05-17] #rimapi #assisted After the RIMAPI fork lands, verify Food uses safe unforbid apply end to end.
 - [x] [2026-05-17] #rimapi #harvest Add `is_harvestable` / `growth_progress` to `/map/plants` after migrating to a RIMAPI fork.
-- [ ] [2026-05-16] #rimapi #assisted Validate companion safe `/api/v1/order/unforbid` endpoint and remove RimBob fallback caveat.
+- [x] [2026-05-16] #rimapi #assisted Validate companion safe `/api/v1/order/unforbid` endpoint and remove RimBob fallback caveat.
 - [ ] [2026-05-16] #skill #debt Fix local skill validator Python dependency.
-- [ ] [2026-05-16] #replay #mayor Decide whether legacy `/api/agenda/manual` should emit replay records or be retired.
+- [x] [2026-05-16] #replay #mayor Retire legacy `/api/agenda/manual`; manual Mayor fallback now posts to `/api/ministers/mayor/snapshot/manual`.
 - [ ] [2026-05-16] #dashboard #markdown Add restricted player-facing Markdown rendering when advice bodies or guide snippets need rich formatting; keep raw/debug views unrendered.
 - [x] [2026-05-15] #food #advice #schema Collapse Food advice into one priority-tagged action list. [plan](.plans/collapse-food-advice-steps.md)
 - [ ] [2026-05-15] #idea #llm #rag Provide ministers with more RAG knowledge.
@@ -24,7 +26,7 @@
 - [ ] [2026-05-17] #git #debt Migrate dirty legacy worktrees after their active slices land.
 - [ ] [2026-05-17] #git #ops Update origin URL after upstream repository rename.
 - [ ] [2026-05-09] #spike #llm #test Benchmark optional TOON prompt encoding. [plan](Docs/plans/toon-prompt-encoding-spike.md)
-- [ ] [2026-05-09] #dashboard #ux Add button to dashboard "what was sent" / prompt-introspection screen that copies the full system + user prompt to the clipboard. Pairs with the manual-fallback flow (`logs/mayor-prompt-latest.md`, `POST /api/agenda/manual`) for when Gemini is rate-limited.
+- [ ] [2026-05-09] #dashboard #ux Add button to dashboard "what was sent" / prompt-introspection screen that copies the full system + user prompt to the clipboard. Pairs with the manual-fallback flow (`logs/mayor-prompt-latest.md`, `POST /api/ministers/mayor/snapshot/manual`) for when Gemini is rate-limited.
 
 ---
 
@@ -42,7 +44,7 @@
 
 ### Current implementation order
 
-1. [ ] **Verify Food safe `unforbid` Assisted Apply end to end.** Confirm the RIMAPI fork endpoint, RimBob backend executor, dashboard Apply UI, validation/read-back, and live game behavior work together.
+1. [x] **Verify Food safe `unforbid` Assisted Apply end to end.** Confirm the RIMAPI fork endpoint, RimBob backend executor, dashboard Apply UI, validation/read-back, and live game behavior work together.
 2. [x] **Add harvestability/growth plant signals.** Add `is_harvestable` / `growth_progress` to RIMAPI `/map/plants`, then wire Food harvest logic and `mark_harvest` validation to those fields.
 3. [ ] **Investigate and fix/patch `total_nutrition == 0`.** Decide whether to patch RIMAPI upstream or compute a documented RimBob fallback from stored meal/raw-food counts.
 4. [x] **Ship Food M3 end to end.** Briefing fields, initial rules, first flag contract, Mayor digest ingestion, dashboard rendering for advice actions, then fixtures.
@@ -71,7 +73,7 @@
 
 ### Later (M5 - Feedback loop)
 
-- [ ] `POST /api/agenda/{version}/item/{id}/feedback` writes a `FeedbackEvent` to the decision log.
+- [ ] Minister snapshot feedback route writes a `FeedbackEvent` to the decision log.
 - [ ] Wire dashboard Accept / Dismiss / Pushback buttons (Pushback modal opens an editable text field, posts `pushback_text`).
 - [ ] `Decision Log` tab renders the last N `FeedbackEvent`s with the originating Agenda bullet.
 - [ ] Per-minister persistent pushback list (each minister owns + carries forward player corrections).
@@ -82,7 +84,7 @@
 
 - [ ] Extend the action ownership sketch into a full RIMAPI action/endpoint catalogue, preserving owner/requester/executor labels.
 - [ ] Reconcile the Medical/Welfare boundary across docs (`Docs/DESIGN.md` still describes Welfare as owning medical sub-blocks, while `Docs/design/ministers.md` splits Medical into its own subsystem).
-- [ ] Update `Docs/design/dashboard.md` to remove stale Modify / `modified_actions` / implicit-feedback language and align it with Pushback-only feedback.
+- [x] Update `Docs/design/dashboard.md` to remove stale Modify / `modified_actions` / implicit-feedback language and align it with Pushback-only feedback.
 - [ ] Expand the roadmap beyond the first cabinet wave: explicitly schedule Industry, Medical, Research, and Economy instead of leaving them only in post-MVP notes.
 
 #### Cabinet rollout planning
@@ -144,7 +146,7 @@ See [`Docs/DESIGN.md`](Docs/DESIGN.md) decision log and Open Questions sections 
 - [x] **M1 W8 - Doc reconciliation.** ROADMAP M1 + this file rewritten to reflect Agenda pivot; agenda.md / dashboard.md SSE envelope simplified to `data: {full MayorAgenda}`.
 - [x] **M1.5 - Live operability.** Wake Mayor on Host startup, periodic `IngestionDispatcher` calls in `DayTickOrchestrator`, `state_of_the_union` per-category dict, `MayorAgenda.GeneratedAt`, `MayorStatus`, `/api/colony/snapshot`, `/api/status`, `/api/mayor/prompt`, manual cabinet run control, dark command-center dashboard with sidebar telemetry.
 - [x] **RIMAPI gap closure.** `ColonistDetailedDto` rewritten for actual nested v2 shape (`pawn` + `detailes.work_info` + `detailes.medical_info`) - names, ages, mood, skills, traits, current_job now populate. New `/resources/summary` and `/research/progress` endpoints in `RimApiClient` feed `ResourceSummary` + `ResearchInfo` aggregates. Mayor system prompt teaches the model what `food.estimated_days_of_food == null` means (request stockpile audit, do not assume starvation). `Docs/design/RimAPI.md` annotated with verified shapes for the three controllers.
-- [x] **M2 - Grounded reasoning / RAG.** `RimBob.Knowledge` now has an in-process cosine store, markdown guide ingestion from `Docs/guides`, Gemini embedding + disk cache under `var/embeddings`, Mayor retrieval via `guide_context[]`, server-stamped `MayorAgenda.guide_citations[]`, `AgendaPriority.cite_ids`, and RAG-vs-no-RAG fixture snapshots under `Src/Tests/Mayor/Fixtures/rag-vs-norag/`. Tier 1 evergreen prompt distillation and polished dashboard footnote rendering are follow-ups.
+- [x] **M2 - Grounded reasoning / RAG.** `RimBob.Knowledge` now has an in-process cosine store, markdown guide ingestion from `Docs/guides`, Gemini embedding + disk cache under the stable machine-local RimBob data root, Mayor retrieval via `guide_context[]`, server-stamped `MayorAgenda.guide_citations[]`, `AgendaPriority.cite_ids`, and RAG-vs-no-RAG fixture snapshots under `Src/Tests/Mayor/Fixtures/rag-vs-norag/`. Tier 1 evergreen prompt distillation and polished dashboard footnote rendering are follow-ups.
 - [x] **Advice actions and flag resource requests.** `AdviceItem.actions[]` is the player-facing action list, while `AgentFlag.Requests` keeps the shared `ResourceRequest` schema for cross-minister needs without executing allocation in MVP.
 
 ---

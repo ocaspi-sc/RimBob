@@ -59,7 +59,7 @@ public static class SystemEndpoints
     [
         new("POST", "/api/v1/map/zone/growing", "deferred_write_stub", "Food Auto", "Stub exists; body shape unverified and not called in suggest-only MVP."),
         new("POST", "/api/v1/order/designate/area", "assisted_write", "Food Assisted Apply", "Used for player-confirmed harvest and hunt designations over bounded rects."),
-        new("POST", "/api/v1/order/unforbid", "upstream_dependency", "Food Assisted Apply", "Safe item-id unforbid endpoint expected from the companion RIMAPI change; destructive forbidden endpoints are not used."),
+        new("POST", "/api/v1/order/unforbid", "assisted_write", "Food Assisted Apply", "Used for player-confirmed safe item-id unforbid over explicit haulable thing ids; destructive forbidden endpoints are not used."),
         new("POST", "/api/v1/buildings/bills/add", "assisted_write", "Food Assisted Apply", "Creates only an allowlisted simple-meal TargetCount bill after player click and fresh validation."),
         new("PUT", "/api/v1/buildings/bill/update", "assisted_write", "Food Assisted Apply", "Updates only an existing simple-meal bill target; never deletes, reorders, or suspends bills.")
     ];
@@ -85,7 +85,7 @@ public static class SystemEndpoints
             IWebHostEnvironment env,
             ColonyState colony,
             ColonyStateSnapshotStore colonySnapshotStore,
-            AgendaStore agendaStore,
+            MinisterOutputStore outputStore,
             AdviceBus adviceBus,
             BriefingCache briefings,
             FlagChannel flags,
@@ -104,12 +104,20 @@ public static class SystemEndpoints
             MayorBriefing mayorBriefing = briefings.GetMayorBriefing();
             FoodBriefing foodBriefing = briefings.GetFoodBriefing();
             string logsDir = HostLogPaths.ResolveLogsDirectory(env.ContentRootPath, opts.LogsRoot);
+            string dataRoot = HostLogPaths.ResolveDataRootDirectory(env.ContentRootPath, opts.DataRoot);
+            string ministerOutputRoot = Path.Combine(dataRoot, "ministers");
+            string colonyStateSnapshotPath = Path.Combine(dataRoot, "state", "latest-colony-state.json");
             string runtimeRoot = HostLogPaths.ResolveRuntimeRoot(env.ContentRootPath);
             string guidesRoot = ResolvePath(env.ContentRootPath, opts.Rag.GuidesRoot);
-            string cacheRoot = ResolvePath(env.ContentRootPath, opts.Rag.CacheRoot);
+            string cacheRoot = HostLogPaths.ResolveDataDirectory(
+                env.ContentRootPath,
+                opts.DataRoot,
+                opts.Rag.CacheRoot,
+                "embeddings");
             IReadOnlyList<AgentFlag> activeFlags = flags.Active();
             RawLlmOutputSnapshot? latestLlm = rawOutputs.LatestAny();
             ColonySnapshotStatus colonySnapshot = colonySnapshotStore.GetStatus();
+            MinisterOutputStoreStatus outputStatus = outputStore.GetStatus();
 
             return Results.Ok(new
             {
@@ -125,7 +133,7 @@ public static class SystemEndpoints
                     last_live_refresh_at = colony.LastLiveRefreshAt,
                     briefing_version = mayorBriefing.BriefingVersion,
                     food_briefing_version = foodBriefing.BriefingVersion,
-                    agenda_version = agendaStore.Current?.Version,
+                    mayor_snapshot_version = outputStore.CurrentMayorAgenda?.Version,
                     active_advice_count = adviceBus.ActiveAdvice().Count,
                     active_flag_count = activeFlags.Count,
                     mayor_running = mayor.IsRunning,
@@ -134,6 +142,14 @@ public static class SystemEndpoints
                     mayor_last_llm_success_at = mayor.LastLlmSuccessAt,
                     mayor_last_error = mayor.LastError,
                 },
+                storage = new
+                {
+                    data_root = dataRoot,
+                    minister_output_root = ministerOutputRoot,
+                    colony_state_snapshot_path = colonyStateSnapshotPath,
+                    embedding_cache_root = cacheRoot,
+                },
+                minister_outputs = outputStatus,
                 colony_snapshot = ColonySnapshotMetadata(colonySnapshot),
                 llm = new
                 {
@@ -172,7 +188,7 @@ public static class SystemEndpoints
                 {
                     recent_attempts = assistedApply.LatestAttempts(),
                 },
-                endpoint_coverage = endpointCoverage.Snapshot(new EndpointCoverageContext(agendaStore, registry)),
+                endpoint_coverage = endpointCoverage.Snapshot(new EndpointCoverageContext(outputStore, registry)),
                 rimapi_coverage = RimApiCoverageMetadata(),
             });
         });

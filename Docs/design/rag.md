@@ -78,6 +78,14 @@ Embedding cache behavior must be deterministic and debuggable: unchanged guide
 text should not be re-embedded on every run, and stale cache handling should be
 visible in diagnostics.
 
+The embedding cache is durable Host runtime data, not a branch artifact. By
+default it lives under the stable machine-local data root at `embeddings/`;
+`RimBob:DataRoot` may move all persistent runtime data, and
+`RimBob:Rag:CacheRoot` may override only the embedding cache. Relative
+`RimBob:Rag:CacheRoot` values resolve under the stable data root. SYSTEM should
+show the resolved cache root alongside RAG health so operators can verify it is
+not tied to the active checkout or worktree.
+
 If the corpus grows large enough that local retrieval becomes slow or awkward,
 revisit Qdrant, sqlite-vss, or another vector backend behind the same design
 contract.

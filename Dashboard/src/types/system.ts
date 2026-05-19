@@ -99,6 +99,22 @@ export interface ColonySnapshotMetadata {
   load_error: string | null;
 }
 
+export interface MinisterOutputSnapshotMetadata {
+  minister: string;
+  output_kind: string;
+  path: string | null;
+  generation: number | null;
+  persisted_at: string | null;
+  state: string;
+  last_error: string | null;
+}
+
+export interface MinisterOutputStoreMetadata {
+  root_path: string | null;
+  exists: boolean;
+  snapshots: MinisterOutputSnapshotMetadata[];
+}
+
 export interface MinisterTrace {
   minister: string;
   trigger: string;
@@ -151,7 +167,7 @@ export interface SystemHealth {
     last_live_refresh_at: string | null;
     briefing_version: number;
     food_briefing_version: number;
-    agenda_version: number | null;
+    mayor_snapshot_version: number | null;
     active_advice_count: number;
     active_flag_count: number;
     mayor_running: boolean;
@@ -160,6 +176,13 @@ export interface SystemHealth {
     mayor_last_llm_success_at: string | null;
     mayor_last_error: string | null;
   };
+  storage: {
+    data_root: string;
+    minister_output_root: string;
+    colony_state_snapshot_path: string;
+    embedding_cache_root: string;
+  };
+  minister_outputs: MinisterOutputStoreMetadata;
   colony_snapshot: ColonySnapshotMetadata;
   llm: {
     provider: string;

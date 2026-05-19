@@ -27,6 +27,14 @@ public static class MinisterEndpoints
             "/api/ministers/{minister}/llm-output/manual",
             _ => "partial",
             context => $"Developer manual raw LLM ingestion for {context.CapabilityNames(descriptor => descriptor.HasManualLlmOutput)}.");
+        coverage.Register(
+            "/api/ministers/{minister}/snapshot",
+            _ => "available",
+            _ => "Latest persisted typed minister output snapshot: MayorAgenda for mayor, AdviceSnapshot for feeders.");
+        coverage.Register(
+            "/api/ministers/mayor/snapshot/manual",
+            "available",
+            "Developer manual Mayor snapshot fallback ingestion.");
         coverage.Register("/api/ministers/{minister}/trace/latest", "available", "Latest minister trigger, status, rules/LLM path, selected/suppressed rule diagnostics, escalation reason, counts, and error detail.");
         coverage.Register("/api/ministers/{minister}/rag/latest", "not_exposed_yet", "Planned RAG retrieval inspector.");
         coverage.Register(
@@ -41,7 +49,7 @@ public static class MinisterEndpoints
             string minister,
             MinisterRegistry registry,
             BriefingCache briefings,
-            AgendaStore agendaStore,
+            MinisterOutputStore outputStore,
             PromptBuilder prompts,
             MayorRagRetriever mayorRetriever,
             FoodRagRetriever foodRetriever,
@@ -73,14 +81,14 @@ public static class MinisterEndpoints
                 MayorBriefing briefing = briefings.GetMayorBriefing();
                 IReadOnlyList<GuideCitation> retrieved = await mayorRetriever.RetrieveAsync(briefing, [], ct);
                 IReadOnlyList<AgentFlag> activeFlags = flags.Active(FlagSeverity.Medium);
-                string user = prompts.BuildMayorUserMessage(briefing, agendaStore.Current, [], retrieved, activeFlags);
+                string user = prompts.BuildMayorUserMessage(briefing, [], retrieved, activeFlags);
                 return Results.Ok(new { system = ReadPromptOrPlaceholder(() => prompts.MayorSystemPrompt), user });
             }
 
             if (scope.Key == "food")
             {
                 FoodBriefing briefing = briefings.GetFoodBriefing();
-                MinisterBriefingContext context = MinisterOfFood.BuildContext(agendaStore.Current);
+                MinisterBriefingContext context = MinisterOfFood.BuildContext(outputStore.CurrentMayorAgenda);
                 IReadOnlyList<GuideCitation> retrieved = await foodRetriever.RetrieveAsync(briefing, ct);
                 IReadOnlyList<FoodPromptCropCandidate> cropCandidates = MinisterOfFood.BuildCropCandidates(briefing);
                 string user = prompts.BuildFoodUserMessage(briefing, context, retrieved, cropCandidates);
@@ -108,6 +116,41 @@ public static class MinisterEndpoints
                 GrowingTerrain: briefing.GrowingTerrain,
                 BestCandidate: recommendation.BestCandidate,
                 Candidates: recommendation.Candidates));
+        });
+
+        app.MapGet("/api/ministers/{minister}/snapshot", (
+            string minister,
+            MinisterRegistry registry,
+            MinisterOutputStore outputStore) =>
+        {
+            MinisterDescriptor? scope = registry.FindMinister(minister);
+            if (scope is null)
+                return Results.NotFound(new { error = $"Unknown minister scope '{minister}'." });
+
+            if (scope.Key == "mayor")
+                return outputStore.CurrentMayorAgenda is { } agenda ? Results.Ok(agenda) : Results.NoContent();
+
+            AdviceSnapshot? snapshot = outputStore.GetAdviceSnapshot(scope.Label)
+                                       ?? outputStore.GetAdviceSnapshot(scope.Key);
+            return snapshot is not null ? Results.Ok(snapshot) : Results.NoContent();
+        });
+
+        app.MapPost("/api/ministers/mayor/snapshot/manual", async (
+            MayorAgendaInput input,
+            BriefingCache briefings,
+            MinisterOutputStore outputStore,
+            AdviceBus bus,
+            CancellationToken ct) =>
+        {
+            MayorAgendaInput capped = input.ShortTerm.Count > 5
+                ? input with { ShortTerm = input.ShortTerm.Take(5).ToList() }
+                : input;
+
+            MayorBriefing briefing = briefings.GetMayorBriefing();
+            string tick = $"Y{briefing.Date.Year ?? 0}{briefing.Date.Quadrum ?? "?"}D{briefing.Date.Day ?? 0}";
+            MayorAgenda stamped = await outputStore.UpdateMayorAsync(capped, tick, ct);
+            bus.Publish(new AgendaUpdated(stamped));
+            return Results.Ok(stamped);
         });
 
         app.MapGet("/api/ministers/{minister}/llm-output/latest", (
@@ -156,7 +199,7 @@ public static class MinisterEndpoints
             JsonElement body,
             MinisterRegistry registry,
             BriefingCache briefings,
-            AgendaStore agendaStore,
+            MinisterOutputStore outputStore,
             PromptBuilder prompts,
             FoodRagRetriever foodRetriever,
             RawLlmOutputStore outputs,
@@ -182,7 +225,7 @@ public static class MinisterEndpoints
                 return Results.BadRequest(new { error = "Manual LLM output text is required." });
 
             FoodBriefing briefing = briefings.GetFoodBriefing();
-            MinisterBriefingContext context = MinisterOfFood.BuildContext(agendaStore.Current);
+            MinisterBriefingContext context = MinisterOfFood.BuildContext(outputStore.CurrentMayorAgenda);
             IReadOnlyList<GuideCitation> retrieved = await foodRetriever.RetrieveAsync(briefing, ct);
             IReadOnlyList<FoodPromptCropCandidate> cropCandidates = MinisterOfFood.BuildCropCandidates(briefing);
             string user = prompts.BuildFoodUserMessage(briefing, context, retrieved, cropCandidates);

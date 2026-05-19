@@ -2,10 +2,10 @@ using System.Text.Json.Serialization;
 
 namespace RimBob.Core.Advice;
 
-// Schema only — wired in M2.
+// Schema only; wired in the deferred feedback milestone.
 public sealed record FeedbackEvent(
     [property: JsonPropertyName("source")]              string         Source,
-    [property: JsonPropertyName("agenda_version")]      int?           AgendaVersion,
+    [property: JsonPropertyName("snapshot_version")]    int?           SnapshotVersion,
     [property: JsonPropertyName("item_id")]             string?        ItemId,
     [property: JsonPropertyName("action")]              FeedbackAction Action,
     [property: JsonPropertyName("note")]                string?        Note,

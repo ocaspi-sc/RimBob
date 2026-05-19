@@ -25,7 +25,6 @@ public sealed class LlmClient
 
     public delegate Task<MayorAgendaInput> MayorCallExecutor(
         MayorBriefing           briefing,
-        MayorAgenda?            previous,
         IReadOnlyList<string>   agendaDirectives,
         IReadOnlyList<GuideCitation> guideContext,
         IReadOnlyList<AgentFlag> activeFlags,
@@ -167,25 +166,24 @@ public sealed class LlmClient
     }
 
     /// <summary>
-    /// Calls Gemini to produce a new MayorAgendaInput from the current briefing and
-    /// (optionally) the previous agenda. Forces JSON output via responseMimeType.
+    /// Calls Gemini to produce a new MayorAgendaInput from the current briefing.
+    /// Forces JSON output via responseMimeType.
     /// Throws if the API key is missing or the response can't be parsed.
     /// </summary>
     public async Task<MayorAgendaInput> CallMayorAsync(
         MayorBriefing           briefing,
-        MayorAgenda?            previousAgenda,
         IReadOnlyList<string>   agendaDirectives,
         IReadOnlyList<GuideCitation> guideContext,
         IReadOnlyList<AgentFlag>? activeFlags,
         CancellationToken       ct)
     {
         if (_mayorExecutor is not null)
-            return await _mayorExecutor(briefing, previousAgenda, agendaDirectives, guideContext, activeFlags ?? [], ct);
+            return await _mayorExecutor(briefing, agendaDirectives, guideContext, activeFlags ?? [], ct);
 
         if (_clients.Count == 0)
             throw new InvalidOperationException("No Gemini API keys configured - cannot call Mayor LLM.");
 
-        string userMessage = _prompts.BuildMayorUserMessage(briefing, previousAgenda, agendaDirectives, guideContext, activeFlags);
+        string userMessage = _prompts.BuildMayorUserMessage(briefing, agendaDirectives, guideContext, activeFlags);
         GenerateContentConfig config = new()
         {
             SystemInstruction = new Content { Parts = [new Part { Text = _prompts.MayorSystemPrompt }] },

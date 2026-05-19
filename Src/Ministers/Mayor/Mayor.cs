@@ -17,7 +17,7 @@ namespace RimBob.Ministers.Mayor;
 public sealed class Mayor(
     BriefingCache       briefings,
     MayorAgendaRules          rules,
-    AgendaStore         agendaStore,
+    MinisterOutputStore outputStore,
     LlmClient           llm,
     PromptBuilder       prompts,
     AdviceBus           bus,
@@ -52,20 +52,19 @@ public sealed class Mayor(
             MayorBriefing briefing                 = briefings.GetMayorBriefing();
             IReadOnlyList<AgentFlag> activeFlags    = flags.Active(FlagSeverity.Medium);
             MayorDirectiveSet directiveSet          = rules.Evaluate(briefing, ColonyContext.Default, activeFlags);
-            Core.Advice.MayorAgenda? previous      = agendaStore.Current;
+            Core.Advice.MayorAgenda? current       = outputStore.CurrentMayorAgenda;
 
             log.LogInformation(
-                "Mayor wake briefing_version={BriefingVersion} previous_agenda_version={PrevVersion} directives=[{Directives}]",
-                briefing.BriefingVersion, previous?.Version ?? 0, FormatDirectives(directiveSet));
+                "Mayor wake briefing_version={BriefingVersion} current_snapshot_version={Version} directives=[{Directives}]",
+                briefing.BriefingVersion, current?.Version ?? 0, FormatDirectives(directiveSet));
 
             IReadOnlyList<GuideCitation> retrieved = await retriever.RetrieveAsync(briefing, directiveSet.Directives, ct);
 
-            DumpPrompt(briefing, previous, directiveSet.Directives, retrieved, activeFlags);
+            DumpPrompt(briefing, directiveSet.Directives, retrieved, activeFlags);
 
             Core.Advice.MayorAgendaInput? input = await TryLoadManualResponseAsync(
                 cycle,
                 briefing,
-                previous,
                 directiveSet.Directives,
                 retrieved,
                 activeFlags,
@@ -75,7 +74,6 @@ public sealed class Mayor(
                 input = await CallLlmWithRetryAsync(
                     cycle,
                     briefing,
-                    previous,
                     directiveSet.Directives,
                     retrieved,
                     activeFlags,
@@ -83,7 +81,7 @@ public sealed class Mayor(
                 if (input is null)
                 {
                     cycleError = "LLM call failed twice";
-                    if (previous is not null)
+                    if (current is not null)
                     {
                         log.LogError("Mayor LLM call failed twice; agenda not updated this turn.");
                         return;
@@ -94,7 +92,7 @@ public sealed class Mayor(
                         directiveSet.Directives,
                         activeFlags,
                         "Mayor LLM failed twice before any agenda was persisted.");
-                    log.LogWarning("Mayor LLM failed twice with no previous agenda; publishing bootstrap agenda.");
+                        log.LogWarning("Mayor LLM failed twice with no current agenda; publishing bootstrap agenda.");
                 }
                 else
                 {
@@ -108,7 +106,7 @@ public sealed class Mayor(
             Core.Advice.MayorAgenda stamped;
             try
             {
-                stamped = await agendaStore.UpdateAsync(input, FormatTick(briefing), ct);
+                stamped = await outputStore.UpdateMayorAsync(input, FormatTick(briefing), ct);
             }
             catch (OperationCanceledException) { throw; }
             catch (Exception ex)
@@ -135,7 +133,7 @@ public sealed class Mayor(
 
     private async Task<Core.Advice.MayorAgendaInput?> CallLlmWithRetryAsync(
         PlayCycleContext cycle,
-        MayorBriefing briefing, Core.Advice.MayorAgenda? previous,
+        MayorBriefing briefing,
         IReadOnlyList<string> directives, IReadOnlyList<GuideCitation> retrieved,
         IReadOnlyList<AgentFlag> activeFlags, CancellationToken ct)
     {
@@ -144,7 +142,7 @@ public sealed class Mayor(
             DateTimeOffset llmAttemptStarted = DateTimeOffset.UtcNow;
             try
             {
-                Core.Advice.MayorAgendaInput input = await llm.CallMayorAsync(briefing, previous, directives, retrieved, activeFlags, ct);
+                Core.Advice.MayorAgendaInput input = await llm.CallMayorAsync(briefing, directives, retrieved, activeFlags, ct);
                 if (input.ShortTerm.Count > ShortTermCap)
                 {
                     log.LogWarning(
@@ -159,7 +157,7 @@ public sealed class Mayor(
                             Cycle: cycle,
                             Path: "llm",
                             Briefing: briefing,
-                            Context: BuildMayorReplayContext(previous, directives, activeFlags),
+                            Context: BuildMayorReplayContext(directives, activeFlags),
                             EscalationReason: "mayor_agenda_update",
                             EscalationContext: new
                             {
@@ -179,7 +177,7 @@ public sealed class Mayor(
                         Cycle: cycle,
                         Path: "llm_failed",
                         Briefing: briefing,
-                        Context: BuildMayorReplayContext(previous, directives, activeFlags),
+                        Context: BuildMayorReplayContext(directives, activeFlags),
                         EscalationReason: "mayor_agenda_update",
                         EscalationContext: new
                         {
@@ -203,7 +201,7 @@ public sealed class Mayor(
                     Cycle: cycle,
                     Path: "llm",
                     Briefing: briefing,
-                    Context: BuildMayorReplayContext(previous, directives, activeFlags),
+                    Context: BuildMayorReplayContext(directives, activeFlags),
                     EscalationReason: "mayor_agenda_update",
                     EscalationContext: new
                     {
@@ -225,7 +223,7 @@ public sealed class Mayor(
                     Cycle: cycle,
                     Path: "llm_failed",
                     Briefing: briefing,
-                    Context: BuildMayorReplayContext(previous, directives, activeFlags),
+                    Context: BuildMayorReplayContext(directives, activeFlags),
                     EscalationReason: "mayor_agenda_update",
                     EscalationContext: new
                     {
@@ -252,7 +250,6 @@ public sealed class Mayor(
     private async Task<Core.Advice.MayorAgendaInput?> TryLoadManualResponseAsync(
         PlayCycleContext cycle,
         MayorBriefing briefing,
-        Core.Advice.MayorAgenda? previous,
         IReadOnlyList<string> directives,
         IReadOnlyList<GuideCitation> retrieved,
         IReadOnlyList<AgentFlag> activeFlags,
@@ -279,7 +276,6 @@ public sealed class Mayor(
             body = await File.ReadAllTextAsync(_manualResponsePath, ct);
             (systemPromptChars, userPromptChars) = ManualPromptLengths(
                 briefing,
-                previous,
                 directives,
                 retrieved,
                 activeFlags);
@@ -292,7 +288,7 @@ public sealed class Mayor(
                     Cycle: cycle,
                     Path: "llm_failed",
                     Briefing: briefing,
-                    Context: BuildMayorReplayContext(previous, directives, activeFlags),
+                    Context: BuildMayorReplayContext(directives, activeFlags),
                     EscalationReason: "manual_llm_response_file",
                     EscalationContext: new
                     {
@@ -315,7 +311,7 @@ public sealed class Mayor(
                 Cycle: cycle,
                 Path: "llm",
                 Briefing: briefing,
-                Context: BuildMayorReplayContext(previous, directives, activeFlags),
+                Context: BuildMayorReplayContext(directives, activeFlags),
                 EscalationReason: "manual_llm_response_file",
                 EscalationContext: new
                 {
@@ -343,7 +339,7 @@ public sealed class Mayor(
                 Cycle: cycle,
                 Path: "llm_failed",
                 Briefing: briefing,
-                Context: BuildMayorReplayContext(previous, directives, activeFlags),
+                Context: BuildMayorReplayContext(directives, activeFlags),
                 EscalationReason: "manual_llm_response_file",
                 EscalationContext: new
                 {
@@ -365,19 +361,16 @@ public sealed class Mayor(
         replay?.RecordAsync(entry, ct) ?? Task.CompletedTask;
 
     private static object BuildMayorReplayContext(
-        Core.Advice.MayorAgenda? previous,
         IReadOnlyList<string> directives,
         IReadOnlyList<AgentFlag> activeFlags) =>
         new
         {
-            previous_agenda_version = previous?.Version,
             directives,
             active_flags = activeFlags
         };
 
     private (int SystemPromptChars, int UserPromptChars) ManualPromptLengths(
         MayorBriefing briefing,
-        Core.Advice.MayorAgenda? previous,
         IReadOnlyList<string> directives,
         IReadOnlyList<GuideCitation> retrieved,
         IReadOnlyList<AgentFlag> activeFlags)
@@ -385,7 +378,7 @@ public sealed class Mayor(
         try
         {
             string system = prompts.MayorSystemPrompt;
-            string user = prompts.BuildMayorUserMessage(briefing, previous, directives, retrieved, activeFlags);
+            string user = prompts.BuildMayorUserMessage(briefing, directives, retrieved, activeFlags);
             return (system.Length, user.Length);
         }
         catch (Exception ex)
@@ -414,17 +407,17 @@ public sealed class Mayor(
             LatencyMs: 0,
             RawOutput: rawOutput);
 
-    private void DumpPrompt(MayorBriefing briefing, Core.Advice.MayorAgenda? previous,
+    private void DumpPrompt(MayorBriefing briefing,
                             IReadOnlyList<string> directives, IReadOnlyList<GuideCitation> retrieved,
                             IReadOnlyList<AgentFlag> activeFlags)
     {
         try
         {
             string system = prompts.MayorSystemPrompt;
-            string user   = prompts.BuildMayorUserMessage(briefing, previous, directives, retrieved, activeFlags);
+            string user   = prompts.BuildMayorUserMessage(briefing, directives, retrieved, activeFlags);
             string body   =
                 $"<!-- Mayor prompt snapshot — briefing v{briefing.BriefingVersion}, " +
-                $"previous agenda v{previous?.Version ?? 0}, retrieved {retrieved.Count} guides, " +
+                $"retrieved {retrieved.Count} guides, " +
                 $"written {DateTime.UtcNow:O} -->\n\n" +
                 $"# system\n\n{system}\n\n# user\n\n{user}\n";
             Directory.CreateDirectory(Path.GetDirectoryName(_filePaths.PromptDumpPath)!);
