@@ -9,30 +9,36 @@ Builds and runs the RimBob.Host ASP.NET Core project. This single process serves
 
 ## Project layout
 
-- **Solution**: `C:\dev\RimBob\Src\RimBob.sln`
-- **Startup project**: `C:\dev\RimBob\Src\ApiHost` (`RimBob.Host`)
-- **Default URL**: `http://localhost:5000`
+- **Solution**: `<current repo root>\Src\RimBob.sln`
+- **Startup project**: `<current repo root>\Src\ApiHost` (`RimBob.Host`)
+- **Default URL**: `http://localhost:5000` for the real `C:\dev\RimBob` checkout only. Worktrees must use a different localhost port with `-ListenUrl`.
 - **Stack**: .NET 9, Serilog, Kestrel (localhost-only bind)
 
 ## Steps
 
-1. **Check if already running** — ping `http://localhost:5000/api/health`. If it returns `{"status":"ok"}`, tell the user RimBob is already running and provide the dashboard URL. Skip to step 4.
+1. **Resolve checkout and URL** — run `git rev-parse --show-toplevel` and compare the repo root to `C:\dev\RimBob`.
 
-   **Exception: if you (or anyone in this session) just rebuilt code that the Host loads,** the running Host is stale. Kill it (`taskkill //F //PID <pid>`) and continue from step 2 so the new build takes effect. The user's standing rule: **always restart the host after a rebuild.** Don't ask before killing — see the kill-host-for-rebuild memory.
+   - If this is the real `C:\dev\RimBob` checkout, use `http://localhost:5000`.
+   - If this is any worktree, do **not** stop or reuse the server on port `5000`. Treat that port as owned by the real checkout. Pick a free non-5000 localhost port instead, usually `5002` or the next open port, and pass it as `-ListenUrl http://localhost:<port>`.
 
-2. **Build** — run:
+2. **Check if already running** — ping the selected URL's `/api/health`. If it returns `{"status":"ok"}`, verify the `RimBob.Host.exe` process path before telling the user it is already running. For worktree runs, a healthy `http://localhost:5000` response is not enough; still run this worktree on its selected non-5000 port.
+
+   **Exception: if you (or anyone in this session) just rebuilt code that the Host loads,** the running Host for the selected URL is stale. Restart only that selected-url Host so the new build takes effect. From a worktree, do not kill a `5000` Host unless the user explicitly asked to restart the real checkout.
+
+3. **Build** — run from the current repo root:
    ```
-   dotnet build C:\dev\RimBob\Src\ApiHost\RimBob.Host.csproj --configuration Debug
+   dotnet build .\Src\ApiHost\RimBob.Host.csproj --configuration Debug
    ```
    Surface any build errors to the user immediately. Do not proceed if the build fails.
 
-3. **Run** — start the server in the background and capture stdout:
+4. **Run** — start the server with the repo launcher. Use the selected `-ListenUrl` argument when running from a worktree:
    ```
-   dotnet run --project C:\dev\RimBob\Src\ApiHost\RimBob.Host.csproj --no-build
+   .\run-rimbob.ps1
+   .\run-rimbob.ps1 -ListenUrl http://localhost:<port>
    ```
-   Wait up to 15 seconds, reading stdout until you see either `Dashboard:` (success) or a fatal error line.
+   Add `-Foreground` only when terminal output must stay attached for debugging. After launch, wait up to 15 seconds for the selected URL's `/api/health` to return `{"status":"ok"}`.
 
-4. **Read the startup output** — the process writes these lines to stdout after startup checks complete. Parse them and relay each one to the user:
+5. **Read the startup output** — if foreground stdout is available, the process writes these lines after startup checks complete. Parse them and relay each one to the user:
 
    | Line | Meaning |
    |---|---|
@@ -65,4 +71,4 @@ After building, restart the .NET host to pick up the new bundle. If the user ask
 
 ## Quick health check (no build)
 
-If the user just wants to verify the server is up, hit `http://localhost:5000/api/health` and report the JSON response.
+If the user just wants to verify the server is up, resolve the checkout and hit the selected URL's `/api/health`. Use `http://localhost:5000/api/health` only for the real `C:\dev\RimBob` checkout; from a worktree, use the chosen non-5000 port.
