@@ -1,0 +1,4 @@
+interface:
+  display_name: "Inspect Repo For Idea"
+  short_description: "Mine external repos for RimBob ideas"
+  default_prompt: "Use $inspect-repo-for-idea to inspect this repository for ideas that could improve RimBob and capture useful follow-ups."
