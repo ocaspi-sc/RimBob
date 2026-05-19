@@ -33,7 +33,19 @@ public sealed class ReplayCorpusWriterTests
                 Title: "Food test",
                 Body: "Body",
                 Rationale: "Rationale",
-                Actions: [],
+                Actions:
+                [
+                    new AdviceAction(
+                        AdviceActionKind.MarkHunt,
+                        "Mark up to 2 hares for hunting.",
+                        Reason: "low-risk wild animals are the best visible local food-acquisition path",
+                        Apply: new AdviceActionApply(
+                            AdviceApplyKind.MarkHuntArea,
+                            "Mark hunt",
+                            "2 hare hunt targets",
+                            1,
+                            2))
+                ],
                 GuideCitationIds: [],
                 IssuedAt: capturedAt,
                 ExpiresAt: capturedAt.AddHours(4));
@@ -54,6 +66,7 @@ public sealed class ReplayCorpusWriterTests
                         Reason: "food buffer 4.0d is below the 7d emergency threshold")
                 ],
                 SuppressedCandidates: []);
+            traceDetails = traceDetails.WithEmissions("rules", "emergency_food_flag", [advice], []);
 
             MinisterReplayRecord record = new(
                 SchemaVersion: 2,
@@ -110,6 +123,13 @@ public sealed class ReplayCorpusWriterTests
             root.GetProperty("rule_trace").GetString().Should().Be("emergency_food_flag");
             root.GetProperty("rule_trace_details").GetProperty("selected_rule").GetString().Should().Be("emergency_food_flag");
             root.GetProperty("rule_trace_details").GetProperty("matched_signals")[0].GetProperty("outcome").GetString().Should().Be("selected");
+            JsonElement emittedAction = root.GetProperty("rule_trace_details").GetProperty("emitted_actions")[0];
+            emittedAction.GetProperty("source").GetString().Should().Be("rules");
+            emittedAction.GetProperty("rule").GetString().Should().Be("emergency_food_flag");
+            emittedAction.GetProperty("advice_id").GetString().Should().Be("food_test");
+            emittedAction.GetProperty("action_index").GetInt32().Should().Be(0);
+            emittedAction.GetProperty("kind").GetString().Should().Be("mark_hunt");
+            emittedAction.GetProperty("apply_kind").GetString().Should().Be("mark_hunt_area");
             root.GetProperty("guide_citations").GetArrayLength().Should().Be(1);
             root.GetProperty("guide_citations")[0].GetProperty("cite_id").GetString().Should().Be("food-guide-1");
             root.GetProperty("state_summary").GetString().Should().Be("Food is low and needs action.");

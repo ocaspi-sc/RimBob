@@ -116,11 +116,15 @@ export function MinisterRulesView({
 }
 
 function RuleDiagnosticsPanel({ details }: { details: RuleTraceDetails }) {
+  const emittedAdvice = details.emittedAdvice ?? [];
+  const emittedActions = details.emittedActions ?? [];
+  const emittedFlags = details.emittedFlags ?? [];
+
   return (
     <DisclosureSection
       title={<SemanticLabel icon={iconForView('rules')}><span>Rule diagnostics</span></SemanticLabel>}
       defaultOpen
-      meta={`${details.matchedSignals.length} matched / ${details.suppressedCandidates.length} suppressed`}
+      meta={`${emittedActions.length} emitted actions / ${details.matchedSignals.length} matched / ${details.suppressedCandidates.length} suppressed`}
     >
       <div className="inspector-field-grid">
         <div className="inspector-field">
@@ -128,6 +132,45 @@ function RuleDiagnosticsPanel({ details }: { details: RuleTraceDetails }) {
           <span>{details.selectedRule ?? 'none'}</span>
         </div>
       </div>
+      <DisclosureSection
+        title={<SemanticLabel icon={iconForView('advice')}><span>Emitted actions by rule</span></SemanticLabel>}
+        defaultOpen
+        meta={`${emittedActions.length} actions`}
+      >
+        <div className="rule-emissions-table rule-emissions-action-table">
+          <DynamicTable
+            rows={emittedActions}
+            preferredColumns={['source', 'rule', 'adviceId', 'actionIndex', 'kind', 'instruction', 'reason', 'applyKind', 'applyLabel', 'applyTargetSummary']}
+            maxColumns={10}
+            emptyMessage="No actions were emitted by this run."
+          />
+        </div>
+      </DisclosureSection>
+      {(emittedAdvice.length > 0 || emittedFlags.length > 0) && (
+        <DisclosureSection
+          title={<SemanticLabel icon={iconForSection('active_advice_emitted')}><span>Emitted advice and flags</span></SemanticLabel>}
+          meta={`${emittedAdvice.length} advice / ${emittedFlags.length} flags`}
+        >
+          {emittedAdvice.length > 0 && (
+            <div className="rule-emissions-table rule-emissions-advice-table">
+              <DynamicTable
+                rows={emittedAdvice}
+                preferredColumns={['source', 'rule', 'adviceId', 'adviceType', 'priority', 'title', 'actionCount']}
+                maxColumns={7}
+              />
+            </div>
+          )}
+          {emittedFlags.length > 0 && (
+            <div className="rule-emissions-table rule-emissions-flag-table">
+              <DynamicTable
+                rows={emittedFlags}
+                preferredColumns={['source', 'rule', 'flagId', 'severity', 'summary', 'requestCount']}
+                maxColumns={6}
+              />
+            </div>
+          )}
+        </DisclosureSection>
+      )}
       <div className="rule-diagnostics-table">
         <DynamicTable
           rows={details.matchedSignals}

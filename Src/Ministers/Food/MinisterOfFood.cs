@@ -34,7 +34,12 @@ public sealed class MinisterOfFood(
                 cycle,
                 briefing,
                 context,
-                new Escalate("bootstrap_first_live_cycle", new { briefing.BriefingVersion, briefing.GameTick }),
+                new Escalate(
+                    "bootstrap_first_live_cycle",
+                    new { briefing.BriefingVersion, briefing.GameTick },
+                    RuleTraceDetails.Escalated(
+                        "bootstrap_first_live_cycle",
+                        "first live Food cycle forces an LLM bootstrap memo")),
                 ct);
             if (bootstrapped) return;
 
@@ -94,6 +99,7 @@ public sealed class MinisterOfFood(
             FoodLlmResponse response = await llm.CallFoodAsync(briefing, context, citations, cropCandidates, ct);
             string stateSummary = FoodStateSummary.Build(briefing);
             AdviceChainModel chain = FoodChainModelBuilder.Build(briefing, response.Advice);
+            RuleTraceDetails ruleDiagnostics = DiagnosticsWithLlmEmissions(escalate, response);
             PublishSnapshot(response.Advice, response.Flags, stateSummary, chain);
             await PersistReplayAsync(new MinisterReplayEntry(
                 Minister: Name,
@@ -102,7 +108,7 @@ public sealed class MinisterOfFood(
                 Briefing: briefing,
                 Context: context,
                 RuleTrace: null,
-                RuleDiagnostics: escalate.Diagnostics,
+                RuleDiagnostics: ruleDiagnostics,
                 EscalationReason: escalate.Reason,
                 EscalationContext: escalationContext,
                 GuideCitations: citations,
@@ -141,6 +147,18 @@ public sealed class MinisterOfFood(
 
     private Task PersistReplayAsync(MinisterReplayEntry entry, CancellationToken ct) =>
         replay?.RecordAsync(entry, ct) ?? Task.CompletedTask;
+
+    private static RuleTraceDetails DiagnosticsWithLlmEmissions(Escalate escalate, FoodLlmResponse response)
+    {
+        string rule = escalate.Diagnostics?.SelectedRule ?? escalate.Reason;
+        RuleTraceDetails diagnostics = escalate.Diagnostics
+            ?? RuleTraceDetails.Escalated(rule, escalate.Reason);
+        return diagnostics.WithEmissions(
+            "llm_after_escalation",
+            rule,
+            response.Advice,
+            response.Flags);
+    }
 
     private void PublishSnapshot(
         IReadOnlyList<AdviceItem> advice,

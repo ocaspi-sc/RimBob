@@ -88,6 +88,12 @@ public sealed class FoodMinisterTests
         h.SetFoodDays(4f);
         await h.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
 
+        MinisterReplayRecord bootstrap = replay.Records.Single(r => r.EscalationReason == "bootstrap_first_live_cycle");
+        bootstrap.RuleTraceDetails.Should().NotBeNull();
+        bootstrap.RuleTraceDetails!.SelectedRule.Should().Be("bootstrap_first_live_cycle");
+        bootstrap.RuleTraceDetails.MatchedSignals.Should().ContainSingle(signal =>
+            signal.Rule == "bootstrap_first_live_cycle" &&
+            signal.Outcome == "escalated");
         replay.Records.Should().Contain(r => r.Path == "rules" && r.RuleTrace == "emergency_food_flag");
         MinisterReplayRecord record = replay.Records.Single(r => r.Path == "rules" && r.RuleTrace == "emergency_food_flag");
         record.SchemaVersion.Should().Be(2);
@@ -122,6 +128,7 @@ public sealed class FoodMinisterTests
     [Fact]
     public async Task Escalation_UsesFoodLlmResponse_AfterBootstrap()
     {
+        CapturingReplayWriter replay = new();
         int calls = 0;
         List<IReadOnlyList<FoodPromptCropCandidate>> candidateCalls = [];
         Harness h = new((_, _, _, cropCandidates, _) =>
@@ -132,9 +139,9 @@ public sealed class FoodMinisterTests
                 ? new FoodLlmResponse([], [])
                 : new FoodLlmResponse(
                     "Food is below target and hunting may be viable.",
-                    [FoodAdvice("llm_food")],
+                    [FoodAdvice("llm_food", withAction: true)],
                     [new AgentFlag("food:llm", "Food", FlagSeverity.Medium, "food", "LLM food flag")]));
-        });
+        }, replay);
         h.SetFoodDays(35f);
 
         await h.Minister.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
@@ -152,6 +159,20 @@ public sealed class FoodMinisterTests
         stateSummaries["Food"].Should().Contain("25.0 days");
         stateSummaries["Food"].Should().NotBe("Food is below target and hunting may be viable.");
         h.Flags.Active(FlagSeverity.Medium).Should().ContainSingle().Which.Summary.Should().Be("LLM food flag");
+        MinisterReplayRecord llmRecord = replay.Records.Single(r =>
+            r.Path == "llm" &&
+            r.Advice.Any(advice => advice.Id == "llm_food"));
+        llmRecord.RuleTraceDetails.Should().NotBeNull();
+        llmRecord.RuleTraceDetails!.SelectedRule.Should().Be("winter_food_tradeoff");
+        llmRecord.RuleTraceDetails.EmittedActions.Should().ContainSingle(row =>
+            row.Source == "llm_after_escalation" &&
+            row.Rule == "winter_food_tradeoff" &&
+            row.AdviceId == "llm_food" &&
+            row.Kind == AdviceActionKind.MarkHunt);
+        llmRecord.RuleTraceDetails.EmittedFlags.Should().ContainSingle(row =>
+            row.Source == "llm_after_escalation" &&
+            row.Rule == "winter_food_tradeoff" &&
+            row.FlagId == "food:llm");
     }
 
     [Fact]
@@ -182,7 +203,7 @@ public sealed class FoodMinisterTests
         record.Flags.Should().BeEmpty();
     }
 
-    private static AdviceItem FoodAdvice(string id) => new(
+    private static AdviceItem FoodAdvice(string id, bool withAction = false) => new(
         Id: id,
         Minister: "Food",
         AdviceType: "hunt_for_food",
@@ -190,7 +211,12 @@ public sealed class FoodMinisterTests
         Title: "Hunt carefully",
         Body: "Use safe targets.",
         Rationale: "LLM selected hunting path.",
-        Actions: [],
+        Actions: withAction
+            ? [new AdviceAction(
+                AdviceActionKind.MarkHunt,
+                "Mark a small safe hunting batch.",
+                Reason: "LLM selected hunting after deterministic rules escalated.")]
+            : [],
         GuideCitationIds: [],
         IssuedAt: DateTimeOffset.UtcNow,
         ExpiresAt: DateTimeOffset.UtcNow.AddHours(4));

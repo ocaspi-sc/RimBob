@@ -39,6 +39,16 @@ public sealed class FoodRulesTests
         decision.Diagnostics.SuppressedCandidates.Should().Contain(signal =>
             signal.Rule == "expand_growing_capacity" &&
             signal.Outcome == "suppressed");
+        decision.Diagnostics.EmittedAdvice.Should().ContainSingle(row =>
+            row.Source == "rules" &&
+            row.Rule == "emergency_food_flag" &&
+            row.AdviceId == advice.Id &&
+            row.ActionCount == advice.Actions.Count);
+        decision.Diagnostics.EmittedActions.Should().HaveCount(advice.Actions.Count);
+        decision.Diagnostics.EmittedActions.Should().OnlyContain(row =>
+            row.Source == "rules" &&
+            row.Rule == "emergency_food_flag" &&
+            row.AdviceId == advice.Id);
         AgentFlag flag = decision.Flags.Should().ContainSingle().Subject;
         flag.Severity.Should().Be(FlagSeverity.High);
         flag.Requests.Should().NotBeNull();
@@ -518,6 +528,7 @@ public sealed class FoodRulesTests
             .Should().BeOfType<Decision>().Subject;
 
         decision.Trace.Should().Be("hunt_low_risk_animals");
+        decision.Diagnostics.Should().NotBeNull();
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
         advice.AdviceType.Should().Be("hunt_for_food");
         AdviceAction Action = advice.Actions.Should().ContainSingle().Subject;
@@ -531,6 +542,14 @@ public sealed class FoodRulesTests
         Action.Apply.Should().NotBeNull();
         Action.Apply!.Kind.Should().Be(AdviceApplyKind.MarkHuntArea);
         Action.Apply.TargetIds.Should().Equal("hare-1", "hare-2");
+        decision.Diagnostics!.EmittedActions.Should().ContainSingle(row =>
+            row.Source == "rules" &&
+            row.Rule == "hunt_low_risk_animals" &&
+            row.AdviceId == advice.Id &&
+            row.ActionIndex == 0 &&
+            row.Kind == AdviceActionKind.MarkHunt &&
+            row.ApplyKind == AdviceApplyKind.MarkHuntArea &&
+            row.ApplyLabel == "Mark hunt");
     }
 
     [Fact]
