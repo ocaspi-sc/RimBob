@@ -190,13 +190,14 @@ emitted active advice, not from an LLM diagram request. It groups the current
 food response into grow, hunt, and forage paths, then marks each path step as
 the current trigger, an action the advice is driving, a capability the colony
 already has, an idle available path, or a blocked prerequisite. The dashboard
-renders the model as three compact route cards: Grow, Hunt, and Forage. Shared
-whole-colony facts such as the low-food trigger and final meal target stay in the
-structured model but are not repeated as visible route nodes. The cards use
-route-specific accent colors, icon-led rows, and terse labels such as Zone,
-Crops, Harvest, Cook, and Store. Green marks covered/current-good steps, blue
-marks emitted action, gray marks future/idle capacity, and red marks blocked
-prerequisites.
+renders the model in the minister Infographics view as one merged work-order
+diagram. Grow, Hunt, and Forage use separate colored routes, then join through
+shared Harvest/Butcher, Storage, Cook, and Fridge nodes. Shared whole-colony
+facts such as the low-food trigger and final meal target stay in the structured
+model but are not repeated as visible route nodes. The diagram uses icon-led
+nodes and terse labels such as Zone, Crops, Harvest, Cook, and Store. Green
+marks covered/current-good steps, blue marks emitted action, gray marks
+future/idle capacity, and red marks blocked prerequisites.
 
 Crop selection should be grounded in deterministic yield math exposed through
 briefing context and rule decisions. The LLM may use guides to explain or adjust

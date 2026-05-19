@@ -81,6 +81,7 @@ $dashboardMinisterViews = @(
     [pscustomobject]@{ Label = "RAG"; View = "rag" },
     [pscustomobject]@{ Label = "Rules"; View = "rules" },
     [pscustomobject]@{ Label = "Raw LLM Output"; View = "raw_llm" },
+    [pscustomobject]@{ Label = "Infographics"; View = "infographics" },
     [pscustomobject]@{ Label = "Advice"; View = "advice" }
 )
 

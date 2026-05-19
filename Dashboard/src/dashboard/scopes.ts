@@ -16,7 +16,7 @@ export type ScopeKey =
 
 export type ScopeKind = 'system' | 'info' | 'analytics' | 'dev_blog' | 'minister';
 export type ScopeStatus = 'live' | 'planned' | 'reference';
-export type MinisterViewKey = 'prompt' | 'raw_llm' | 'briefing' | 'rag' | 'rules' | 'advice';
+export type MinisterViewKey = 'prompt' | 'raw_llm' | 'briefing' | 'rag' | 'rules' | 'infographics' | 'advice';
 export type SystemViewKey = 'runtime' | 'connectivity' | 'storage' | 'coverage' | 'events';
 export type InfoViewKey = 'overview' | 'glossary' | 'contracts' | 'data_sources';
 export type AnalyticsViewKey = 'session' | 'colony' | 'advice' | 'sse' | 'candidates';
@@ -78,6 +78,7 @@ export const ministerViews: Array<{ key: MinisterViewKey; label: string }> = [
   { key: 'rag', label: 'RAG' },
   { key: 'rules', label: 'Rules' },
   { key: 'raw_llm', label: 'Raw LLM Output' },
+  { key: 'infographics', label: 'Infographics' },
   { key: 'advice', label: 'Advice' },
 ];
 

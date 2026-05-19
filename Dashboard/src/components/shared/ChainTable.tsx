@@ -158,7 +158,7 @@ function buildDiagramNodes(paths: AdviceChainPath[]): DiagramNode[] {
     node('butcher', 'Butcher', compactDetail(butcher?.detail, 'butcher table'), butcher?.status ?? 'available', 'hunt', 'kitchen_and_butchery'),
     node('storage', 'Storage', compactDetail(storage?.detail, 'stockpile'), storage?.status ?? 'available', 'common', 'storage'),
     node('cook', 'Cook', detailOrStatus(cook), cook?.status ?? 'available', 'common', 'production_bill'),
-    node('fridge', 'Refridge', refrigeratorDetail(storage), refrigeratorStatus(storage), 'common', 'storage'),
+    node('fridge', 'Fridge', refrigeratorDetail(storage), refrigeratorStatus(storage), 'common', 'storage'),
   ];
 }
 

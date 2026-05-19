@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react';
 import { MinisterAdviceView } from '../components/minister/MinisterAdviceView';
 import { MinisterBriefingView } from '../components/minister/MinisterBriefingView';
+import { MinisterInfographicsView } from '../components/minister/MinisterInfographicsView';
 import { MinisterPromptView } from '../components/minister/MinisterPromptView';
 import { MinisterRagView } from '../components/minister/MinisterRagView';
 import { MinisterRawLlmView } from '../components/minister/MinisterRawLlmView';
@@ -39,13 +40,18 @@ const ministerViewRenderers: Record<MinisterViewKey, MinisterViewRenderer> = {
   rules: ({ activeAdvice, events, scope }) => (
     <MinisterRulesView scope={scope} events={events} advice={activeAdvice} />
   ),
-  advice: ({ activeAdvice, agenda, chains, previousAgenda, scope, stateSummaries }) => (
+  infographics: ({ chains, scope }) => (
+    <MinisterInfographicsView
+      chain={chains[scope.label] ?? chains[scope.key] ?? null}
+      scope={scope}
+    />
+  ),
+  advice: ({ activeAdvice, agenda, previousAgenda, scope, stateSummaries }) => (
     <MinisterAdviceView
       scope={scope}
       agenda={agenda}
       previousAgenda={previousAgenda}
       advice={activeAdvice}
-      chain={chains[scope.label] ?? chains[scope.key] ?? null}
       stateSummary={stateSummaries[scope.label] ?? stateSummaries[scope.key] ?? null}
     />
   ),

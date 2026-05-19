@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { MayorAgenda, AgendaPriority } from '../../types/agenda';
-import type { AdviceApplyResponse, AdviceChainModel, AdviceItem } from '../../types/advice';
+import type { AdviceApplyResponse, AdviceItem } from '../../types/advice';
 import type { ScopeConfig } from '../../dashboard/scopes';
 import { applyAdviceAction } from '../../api/advice';
 import { iconUrlFor } from '../../api/icons';
@@ -14,7 +14,6 @@ import {
   iconForView,
 } from '../../dashboard/semanticIcons';
 import { DisclosureSection } from '../shared/DisclosureSection';
-import { ChainTable } from '../shared/ChainTable';
 import { EmptyState } from '../shared/EmptyState';
 import { GameIcon } from '../shared/GameIcon';
 import { IconizedText } from '../shared/IconizedText';
@@ -23,14 +22,12 @@ import { SemanticIconCue, SemanticLabel } from '../shared/SemanticIcon';
 export function MinisterAdviceView({
   advice,
   agenda,
-  chain,
   previousAgenda,
   scope,
   stateSummary,
 }: {
   advice: AdviceItem[];
   agenda: MayorAgenda | null;
-  chain: AdviceChainModel | null;
   previousAgenda: MayorAgenda | null;
   scope: ScopeConfig;
   stateSummary: string | null;
@@ -50,7 +47,6 @@ export function MinisterAdviceView({
   }
 
   const currentStateLines = stateSummary ? splitStateSummary(stateSummary) : [];
-  const hasChain = Boolean(chain?.paths.length);
 
   return (
     <div className="minister-view advice-view">
@@ -80,14 +76,6 @@ export function MinisterAdviceView({
           ) : (
             <p><IconizedText maxIcons={3} text={stateSummary} /></p>
           )}
-        </section>
-      )}
-      {hasChain && chain && (
-        <section className="advice-chain">
-          <div className="advice-chain-heading">
-            <span className="eyebrow">Food Chain - Work Order Flow</span>
-          </div>
-          <ChainTable model={chain} />
         </section>
       )}
       {ministerAdvice.length === 0 && (

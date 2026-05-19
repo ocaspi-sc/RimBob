@@ -117,6 +117,7 @@ Minister scopes use a fixed top tab bar:
 - RAG
 - Rules
 - Raw LLM Output
+- Infographics
 - Advice
 
 Use explicit game icons from the Host icon gateway in scope labels, view labels,
@@ -515,25 +516,32 @@ the operator can see which rule or LLM-after-escalation path produced each
 action row. Keep that provenance in trace/replay diagnostics; raw `actions[]`
 remains the player-facing action contract.
 
+### Infographics
+
+Infographics renders visual, deterministic readouts derived from minister
+snapshot data. It is for whole-minister models that are easier to read as a
+diagram than as advice text or raw JSON.
+
+Food's Infographics view renders backend `chain` data as one merged work-order
+diagram. Grow, forage, and hunt enter as separate colored routes, then merge
+into the shared Harvest/Butcher -> Storage -> Cook -> Fridge path. Every step
+is a small icon-led box with short factual subtext; crop waiting belongs under
+Plant rather than as its own node. State color semantics are stable across the
+diagram: green means covered/current state, blue means the current advice
+emitted an action, gray means idle/future capacity, and red means a blocked
+prerequisite.
+
 ### Advice
 
 Mayor Advice renders the Agenda as the Mayor's player-facing output. Feeder
-minister Advice renders the minister's current-state summary first, then any
-deterministic whole-minister chain visualization, then active `AdviceItem`s
-sorted by priority. For Food, this summary is a deterministic briefing-derived
-labelled summary, not LLM prose. The Advice view may render it as a compact
-table with lightweight icon-database cues because it is player-facing; raw and
-debug views preserve the original `state_summary` text. It should name concrete
-food stores, growing areas/crop progress, acquisition opportunities,
-kitchen/storage/freezer signals, and confidence gaps before the action cards.
-Food's planning/production panel renders from backend `chain` data as one merged
-work-order diagram. Grow, forage, and hunt enter as separate colored routes,
-then merge into the shared Harvest/Butcher -> Storage -> Cook -> Refridge path.
-Every step is a small icon-led box with short factual subtext; crop waiting
-belongs under Plant rather than as its own node. State color semantics are stable
-across the diagram: green means covered/current state, blue means the current
-advice emitted an action, gray means idle/future capacity, and red means a
-blocked prerequisite.
+minister Advice renders the minister's current-state summary first, then active
+`AdviceItem`s sorted by priority. For Food, this summary is a deterministic
+briefing-derived labelled summary, not LLM prose. The Advice view may render it
+as a compact table with lightweight icon-database cues because it is
+player-facing; raw and debug views preserve the original `state_summary` text.
+It should name concrete food stores, growing areas/crop progress, acquisition
+opportunities, kitchen/storage/freezer signals, and confidence gaps before the
+action cards.
 Cards show rationale, concrete advice actions, citations, issue id or supersession
 when available, and coverage gaps. No feedback buttons are shown in v2.
 
