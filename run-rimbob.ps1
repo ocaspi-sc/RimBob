@@ -19,6 +19,8 @@ $hostProject = Join-Path $hostDir "RimBob.Host.csproj"
 $hostExe = Join-Path $hostDir "bin\$Configuration\net9.0\RimBob.Host.exe"
 $nodeModulesDir = Join-Path $dashboardDir "node_modules"
 $dashboardUrl = "http://localhost:5000"
+$script:hostExitCode = 0
+$script:trayStopRequested = $false
 
 if (-not [string]::IsNullOrWhiteSpace($ListenUrl)) {
     $dashboardUrl = $ListenUrl
@@ -126,6 +128,7 @@ function Start-HostForeground {
         Push-Location $hostDir
         try {
             & dotnet @dotnetArgs
+            $script:hostExitCode = if ($null -eq $LASTEXITCODE) { 0 } else { $LASTEXITCODE }
         }
         finally {
             Pop-Location
@@ -209,6 +212,8 @@ function Dispose-RimBobTrayIcon {
 }
 
 function Stop-TrayHost {
+    $script:trayStopRequested = $true
+
     if ($script:trayHostProcess -and -not $script:trayHostProcess.HasExited) {
         $script:trayHostProcess.Kill()
         [void]$script:trayHostProcess.WaitForExit(5000)
@@ -417,6 +422,7 @@ function Start-HostNotificationIcon {
         }
     })
     $timer.Start()
+    $hostExitCode = 0
 
     try {
         [System.Windows.Forms.Application]::Run($script:trayContext)
@@ -429,8 +435,16 @@ function Start-HostNotificationIcon {
         Dispose-RimBobTrayIcon $trayIconResources
 
         if ($script:trayHostProcess) {
+            if ($script:trayHostProcess.HasExited) {
+                $hostExitCode = $script:trayHostProcess.ExitCode
+            }
+
             $script:trayHostProcess.Dispose()
         }
+    }
+
+    if (-not $script:trayStopRequested -and $hostExitCode -ne 0) {
+        exit $hostExitCode
     }
 }
 
@@ -539,6 +553,10 @@ if ($HostOnly -and $Tray) {
 elseif ($HostOnly -or $Foreground) {
     Write-Host "Press Ctrl+C to stop RimBob."
     Start-HostForeground
+
+    if ($script:hostExitCode -ne 0) {
+        exit $script:hostExitCode
+    }
 }
 else {
     Invoke-HostBuild

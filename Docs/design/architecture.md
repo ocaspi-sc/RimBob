@@ -177,7 +177,8 @@ operator-visible log location.
 Host fatal startup/run failures are process-local failures, not Windows UI
 prompts. The Host logs unhandled fatal exceptions, flushes Serilog, and exits
 non-zero without relying on Windows Error Reporting dialogs that block agents or
-hidden tray launches.
+hidden tray launches. `run-rimbob.ps1` foreground and tray-child paths preserve
+that Host exit code unless the tray was explicitly stopped by the user.
 
 Host runtime data also uses stable machine-local storage by default. The data
 root holds the Agenda store, latest curated ColonyState snapshot, and RAG
