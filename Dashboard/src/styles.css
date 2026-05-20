@@ -877,81 +877,6 @@ code {
   line-height: 1.4;
 }
 
-.tag-toggle-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-  margin-bottom: 12px;
-}
-
-.tag-toggle-row button {
-  min-height: 30px;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  border: 1px solid var(--line-soft);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.035);
-  color: var(--muted);
-  padding: 5px 9px;
-  cursor: pointer;
-  font-size: 0.78rem;
-  font-weight: 700;
-}
-
-.tag-toggle-row button:hover,
-.tag-toggle-row button.active {
-  border-color: rgba(240, 189, 95, 0.68);
-  color: var(--text);
-  background: rgba(240, 189, 95, 0.1);
-}
-
-.tag-toggle-row button span {
-  width: 9px;
-  height: 9px;
-  border-radius: 999px;
-}
-
-.velocity-control-bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-
-.velocity-control-bar .tag-toggle-row {
-  margin-bottom: 0;
-}
-
-.velocity-chart-mode {
-  display: inline-flex;
-  flex: 0 0 auto;
-  gap: 2px;
-  padding: 3px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.24);
-}
-
-.velocity-chart-mode button {
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--muted);
-  padding: 5px 10px;
-  cursor: pointer;
-  font-size: 0.74rem;
-  font-weight: 800;
-}
-
-.velocity-chart-mode button:hover,
-.velocity-chart-mode button.active {
-  background: rgba(240, 189, 95, 0.16);
-  color: var(--text);
-}
-
 .dev-chart {
   min-width: 0;
   overflow-x: auto;
@@ -967,34 +892,6 @@ code {
 .dev-chart text {
   fill: var(--muted);
   font-size: 11px;
-}
-
-.daily-velocity-chart {
-  margin-bottom: 12px;
-}
-
-.velocity-point {
-  cursor: pointer;
-  outline: none;
-}
-
-.velocity-point:focus-visible {
-  stroke: var(--text);
-  stroke-width: 2;
-}
-
-.velocity-bar rect {
-  cursor: pointer;
-  opacity: 0.72;
-  outline: none;
-}
-
-.velocity-bar rect:hover,
-.velocity-bar rect:focus-visible,
-.velocity-bar.active rect {
-  opacity: 0.96;
-  stroke: rgba(255, 255, 255, 0.42);
-  stroke-width: 1.2;
 }
 
 .feature-index {

@@ -28,7 +28,6 @@ export const analyticsPanelRegistry: PanelConfig[] = [
   { id: 'analytics-colony', title: 'Colony Analytics', scope: 'analytics', requiredCapability: '/api/colony/snapshot' },
   { id: 'analytics-advice', title: 'Advice Analytics', scope: 'analytics', requiredCapability: 'active advice feed state' },
   { id: 'analytics-candidates', title: 'Analytics Candidates', scope: 'analytics', requiredCapability: 'static dashboard reference copy' },
-  { id: 'dev-blog-velocity', title: 'Velocity Chart', scope: 'dev_blog', requiredCapability: '/api/dev-blog/history' },
   { id: 'dev-blog-features', title: 'Feature Index and Tag Timeline', scope: 'dev_blog', requiredCapability: '/api/dev-blog/history' },
   { id: 'dev-blog-loc-growth', title: 'LOC Growth', scope: 'dev_blog', requiredCapability: '/api/dev-blog/history' },
   { id: 'dev-blog-commit-size', title: 'Commit Size Histogram', scope: 'dev_blog', requiredCapability: '/api/dev-blog/history' },

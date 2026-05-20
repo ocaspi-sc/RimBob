@@ -20,7 +20,7 @@ export type MinisterViewKey = 'prompt' | 'raw_llm' | 'briefing' | 'rag' | 'rules
 export type SystemViewKey = 'runtime' | 'connectivity' | 'storage' | 'coverage' | 'events';
 export type InfoViewKey = 'overview' | 'glossary' | 'contracts' | 'data_sources';
 export type AnalyticsViewKey = 'session' | 'colony' | 'advice' | 'sse' | 'candidates';
-export type DevBlogViewKey = 'velocity' | 'features' | 'churn' | 'commits' | 'topics' | 'suggestions';
+export type DevBlogViewKey = 'features' | 'churn' | 'commits' | 'topics' | 'suggestions';
 export type DashboardViewKey =
   | MinisterViewKey
   | SystemViewKey
@@ -65,7 +65,6 @@ export const analyticsViews: DashboardViewDefinition[] = [
 ];
 
 export const devBlogViews: DashboardViewDefinition[] = [
-  { key: 'velocity', label: 'Velocity' },
   { key: 'features', label: 'Features' },
   { key: 'churn', label: 'Churn' },
   { key: 'commits', label: 'Commits' },

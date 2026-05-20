@@ -1,8 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { fetchDevBlogHistory } from '../../api/devBlog';
 import type {
   DevBlogDailyAreaRow,
-  DevBlogDailyVelocityPoint,
   DevBlogHistory,
   DevBlogHistogramBin,
   DevBlogLaneCommit,
@@ -247,14 +246,6 @@ const manualCommitTitles: Record<string, string> = {
   'fe4f3396': 'Output sync',
   'ff687e0b': 'Warm hardening',
 };
-const velocityChartModes: Array<{ key: VelocityChartMode; label: string; title: string }> = [
-  { key: 'lines', label: 'Lines', title: 'Independent lane lines' },
-  { key: 'stacked', label: 'Stacked', title: 'Cumulative stacked lane lines' },
-  { key: 'bars', label: 'Day bars', title: 'Suggested daily stacked bars' },
-];
-
-type VelocityChartMode = 'lines' | 'stacked' | 'bars';
-
 export function DevBlogOverview({
   onSelectView,
   selectedView,
@@ -295,27 +286,9 @@ function DevBlogContent({
   selectedView: DashboardViewKey;
   views: DashboardViewDefinition[];
 }) {
-  const defaultVelocityLanes = useMemo(
-    () => history.velocityLanes,
-    [history.velocityLanes],
-  );
-  const [selectedVelocityLanes, setSelectedVelocityLanes] = useState<string[]>(defaultVelocityLanes);
-  const [velocityChartMode, setVelocityChartMode] = useState<VelocityChartMode>('lines');
-  const [activeDay, setActiveDay] = useState<string | null>(history.dailyAreaVelocity[0]?.date ?? null);
   const largeCommits = history.commitSizeHistogram
     .filter(bin => bin.min >= 1000)
     .reduce((total, bin) => total + bin.count, 0);
-
-  const toggleVelocityLane = (lane: string) => {
-    setSelectedVelocityLanes(current =>
-      current.includes(lane)
-        ? current.filter(item => item !== lane)
-        : [...current, lane],
-    );
-  };
-  const selectVelocityDay = (date: string) => {
-    setActiveDay(date);
-  };
 
   return (
     <div className="dev-blog-overview">
@@ -392,49 +365,6 @@ function DevBlogContent({
       </section>
       )}
 
-      {selectedView === 'velocity' && (
-      <DisclosureSection title={<SemanticLabel icon={iconForField('timeline')}><span>Area velocity chart</span></SemanticLabel>} defaultOpen meta={`${history.dailyVelocity.length} days`}>
-        <div className="velocity-control-bar">
-          <div className="tag-toggle-row velocity-toggle-row" aria-label="Toggle lanes in velocity chart">
-            {history.velocityLanes.map((lane, index) => (
-              <button
-                key={lane}
-                type="button"
-                aria-pressed={selectedVelocityLanes.includes(lane)}
-                className={selectedVelocityLanes.includes(lane) ? 'active' : ''}
-                onClick={() => toggleVelocityLane(lane)}
-              >
-                <span style={{ backgroundColor: chartColor(index) }} />
-                {lane}
-              </button>
-            ))}
-          </div>
-          <div className="velocity-chart-mode" role="group" aria-label="Daily velocity chart mode">
-            {velocityChartModes.map(mode => (
-              <button
-                key={mode.key}
-                type="button"
-                title={mode.title}
-                aria-pressed={velocityChartMode === mode.key}
-                className={velocityChartMode === mode.key ? 'active' : ''}
-                onClick={() => setVelocityChartMode(mode.key)}
-              >
-                {mode.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        <DailyVelocityChart
-          points={history.dailyVelocity}
-          lanes={selectedVelocityLanes}
-          laneOrder={history.velocityLanes}
-          mode={velocityChartMode}
-          activeDay={activeDay}
-          onDaySelect={selectVelocityDay}
-        />
-      </DisclosureSection>
-      )}
-
       {selectedView === 'features' && (
       <FeatureIndex rows={history.dailyAreaVelocity} />
       )}
@@ -489,161 +419,8 @@ function DevBlogContent({
   );
 }
 
-function DailyVelocityChart({
-  points,
-  lanes,
-  laneOrder,
-  mode,
-  activeDay,
-  onDaySelect,
-}: {
-  points: DevBlogDailyVelocityPoint[];
-  lanes: string[];
-  laneOrder: string[];
-  mode: VelocityChartMode;
-  activeDay: string | null;
-  onDaySelect: (date: string) => void;
-}) {
-  const selectedLanes = lanes.filter(lane => laneOrder.includes(lane));
-  if (points.length === 0) {
-    return <EmptyState code="NO VELOCITY DATA">No daily scope data was generated.</EmptyState>;
-  }
-
-  const width = 920;
-  const height = 310;
-  const padding = { top: 18, right: 28, bottom: 38, left: 56 };
-  const plotWidth = width - padding.left - padding.right;
-  const plotHeight = height - padding.top - padding.bottom;
-  const stackTotals = points.map(point =>
-    selectedLanes.reduce((total, lane) => total + (point.laneScopePoints[lane] ?? 0), 0),
-  );
-  const maxValue = Math.max(
-    1,
-    ...points.map(point => point.uniqueScopePoints),
-    ...(mode === 'lines'
-      ? points.flatMap(point => selectedLanes.map(lane => point.laneScopePoints[lane] ?? 0))
-      : stackTotals),
-  );
-  const xFor = (index: number) => padding.left + (points.length <= 1 ? 0 : (index / (points.length - 1)) * plotWidth);
-  const yFor = (value: number) => padding.top + ((maxValue - value) / maxValue) * plotHeight;
-  const stackValueFor = (point: DevBlogDailyVelocityPoint, laneIndex: number) =>
-    selectedLanes
-      .slice(0, laneIndex + 1)
-      .reduce((total, lane) => total + (point.laneScopePoints[lane] ?? 0), 0);
-  const uniquePath = points
-    .map((point, index) => `${index === 0 ? 'M' : 'L'} ${xFor(index).toFixed(1)} ${yFor(point.uniqueScopePoints).toFixed(1)}`)
-    .join(' ');
-  const barWidth = Math.max(10, Math.min(30, plotWidth / Math.max(1, points.length) * 0.58));
-
-  return (
-    <div className="dev-chart daily-velocity-chart">
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Daily area velocity by scope points, ${mode} view`}>
-        <title>{`Daily area velocity by scope points, ${mode} view`}</title>
-        {[0, 0.25, 0.5, 0.75, 1].map(step => {
-          const y = padding.top + step * plotHeight;
-          return <line key={step} x1={padding.left} x2={width - padding.right} y1={y} y2={y} className="chart-grid-line" />;
-        })}
-        <text x={padding.left} y={height - 12}>{points[0]?.date}</text>
-        <text x={width - padding.right} y={height - 12} textAnchor="end">{points[points.length - 1]?.date}</text>
-        <text x={10} y={padding.top + 4}>{formatNumber(maxValue)}</text>
-        <text x={10} y={padding.top + plotHeight}>0</text>
-        <path d={uniquePath} fill="none" stroke="rgba(255,255,255,0.34)" strokeWidth="2" strokeDasharray="6 6" strokeLinecap="round" strokeLinejoin="round" />
-        {mode === 'bars' && points.map((point, pointIndex) => {
-          let stacked = 0;
-          return (
-            <g key={point.date} className={point.date === activeDay ? 'velocity-bar active' : 'velocity-bar'}>
-              {selectedLanes.map(lane => {
-                const value = point.laneScopePoints[lane] ?? 0;
-                if (value === 0) {
-                  return null;
-                }
-                const color = chartColor(laneOrder.indexOf(lane));
-                const y = yFor(stacked + value);
-                const heightSegment = Math.max(1, yFor(stacked) - y);
-                stacked += value;
-                return (
-                  <rect
-                    key={`${point.date}-${lane}`}
-                    x={xFor(pointIndex) - barWidth / 2}
-                    y={y}
-                    width={barWidth}
-                    height={heightSegment}
-                    rx="3"
-                    fill={color}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => onDaySelect(point.date)}
-                    onKeyDown={event => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        onDaySelect(point.date);
-                      }
-                    }}
-                  >
-                    <title>{`${lane} on ${point.date}: ${formatNumber(value)} pts, stacked total ${formatNumber(stacked)} pts`}</title>
-                  </rect>
-                );
-              })}
-            </g>
-          );
-        })}
-        {mode !== 'bars' && selectedLanes.map((lane, laneIndex) => {
-          const color = chartColor(laneOrder.indexOf(lane));
-          const path = points
-            .map((point, index) => {
-              const value = mode === 'stacked'
-                ? stackValueFor(point, laneIndex)
-                : point.laneScopePoints[lane] ?? 0;
-              return `${index === 0 ? 'M' : 'L'} ${xFor(index).toFixed(1)} ${yFor(value).toFixed(1)}`;
-            })
-            .join(' ');
-
-          return (
-            <g key={lane}>
-              <path
-                d={path}
-                fill="none"
-                stroke={color}
-                strokeWidth={mode === 'stacked' ? 2.5 : 3}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              {points.map((point, index) => {
-                const value = point.laneScopePoints[lane] ?? 0;
-                const plottedValue = mode === 'stacked' ? stackValueFor(point, laneIndex) : value;
-                const count = point.laneCommitCounts[lane] ?? 0;
-                return (
-                  <circle
-                    key={`${lane}-${point.date}`}
-                    cx={xFor(index)}
-                    cy={yFor(plottedValue)}
-                    r={point.date === activeDay ? 5.5 : 4}
-                    fill={color}
-                    className="velocity-point"
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => onDaySelect(point.date)}
-                    onKeyDown={event => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        onDaySelect(point.date);
-                      }
-                    }}
-                  >
-                    <title>{`${lane} on ${point.date}: ${formatNumber(value)} pts, ${count} commits${mode === 'stacked' ? `, stacked total ${formatNumber(plottedValue)} pts` : ''}`}</title>
-                  </circle>
-                );
-              })}
-            </g>
-          );
-        })}
-      </svg>
-    </div>
-  );
-}
-
 function FeatureIndex({ rows }: { rows: DevBlogDailyAreaRow[] }) {
-  const [selectedTags, setSelectedTags] = useState<Set<string>>(() => new Set());
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
   if (rows.length === 0) {
     return <EmptyState code="NO FEATURE WORK">No feature activity was generated.</EmptyState>;
@@ -657,29 +434,21 @@ function FeatureIndex({ rows }: { rows: DevBlogDailyAreaRow[] }) {
   const tagSummaries = buildFeatureTagSummaries(features);
   const tagTimeline = buildFeatureTagTimeline(rows);
   const availableTags = new Set(tagSummaries.map(tag => tag.tag));
-  const activeTags = Array.from(selectedTags).filter(tag => availableTags.has(tag));
-  const chartTags = activeTags.length > 0
-    ? activeTags
+  const activeTag = selectedTag && availableTags.has(selectedTag) ? selectedTag : null;
+  const chartTags = activeTag
+    ? [activeTag]
     : tagSummaries.slice(0, Math.min(8, tagSummaries.length)).map(summary => summary.tag);
-  const visibleFeatures = activeTags.length === 0
+  const visibleFeatures = activeTag === null
     ? features
-    : features.filter(feature => activeTags.some(tag => feature.tags.includes(tag)));
+    : features.filter(feature => feature.tags.includes(activeTag));
   const visibleScopePoints = visibleFeatures.reduce((total, feature) => total + feature.scopePoints, 0);
 
-  function toggleTag(tag: string) {
-    setSelectedTags(current => {
-      const next = new Set(current);
-      if (next.has(tag)) {
-        next.delete(tag);
-      } else {
-        next.add(tag);
-      }
-      return next;
-    });
+  function selectTag(tag: string) {
+    setSelectedTag(tag);
   }
 
   function clearTags() {
-    setSelectedTags(new Set());
+    setSelectedTag(null);
   }
 
   return (
@@ -687,7 +456,7 @@ function FeatureIndex({ rows }: { rows: DevBlogDailyAreaRow[] }) {
       <DisclosureSection
         title={<SemanticLabel icon={iconForField('timeline')}><span>Feature tag timeline</span></SemanticLabel>}
         defaultOpen
-        meta={activeTags.length === 0 ? `${chartTags.length} top tags` : `${chartTags.length} selected tags`}
+        meta={activeTag === null ? `${chartTags.length} top tags` : featureTagLabel(activeTag)}
       >
         <FeatureTagTimelineChart
           points={tagTimeline}
@@ -699,27 +468,27 @@ function FeatureIndex({ rows }: { rows: DevBlogDailyAreaRow[] }) {
         <aside className="feature-filter-sidebar" aria-label="Feature tag filters">
           <div className="feature-filter-sidebar-heading">
             <strong>Tags</strong>
-            <small>{activeTags.length === 0 ? 'overview' : `${activeTags.length} active`}</small>
+            <small>{activeTag === null ? 'overview' : '1 active'}</small>
           </div>
           <div className="feature-filter-bar">
             <button
               type="button"
-              aria-pressed={activeTags.length === 0}
-              className={`feature-filter-button ${activeTags.length === 0 ? 'active' : ''}`}
+              aria-pressed={activeTag === null}
+              className={`feature-filter-button ${activeTag === null ? 'active' : ''}`}
               onClick={clearTags}
             >
               <strong>All features</strong>
               <small>{features.length} / {formatNumber(features.reduce((total, feature) => total + feature.scopePoints, 0))}</small>
             </button>
             {tagSummaries.map(summary => {
-              const active = activeTags.includes(summary.tag);
+              const active = activeTag === summary.tag;
               return (
                 <button
                   key={summary.tag}
                   type="button"
                   aria-pressed={active}
                   className={`feature-filter-button ${active ? 'active' : ''}`}
-                  onClick={() => toggleTag(summary.tag)}
+                  onClick={() => selectTag(summary.tag)}
                 >
                   <strong>{featureTagLabel(summary.tag)}</strong>
                   <small>{summary.featureCount} / {formatNumber(summary.scopePoints)}</small>
@@ -730,11 +499,11 @@ function FeatureIndex({ rows }: { rows: DevBlogDailyAreaRow[] }) {
         </aside>
         <div className="feature-index-results">
           <div className="feature-filter-summary">
-            <strong>{activeTags.length === 0 ? 'All features' : `Any tag: ${activeTags.map(featureTagLabel).join(' / ')}`}</strong>
+            <strong>{activeTag === null ? 'All features' : featureTagLabel(activeTag)}</strong>
             <small>{visibleFeatures.length} features / {formatNumber(visibleScopePoints)} score</small>
           </div>
           {visibleFeatures.length === 0 ? (
-            <EmptyState code="NO MATCHING FEATURES">No features match any selected tag.</EmptyState>
+            <EmptyState code="NO MATCHING FEATURES">No features match the selected tag.</EmptyState>
           ) : (
             <div className="feature-section-list">
               {visibleFeatures.map(feature => (
@@ -1342,7 +1111,7 @@ function featureDisplayInfo(featureKey: string): { title: string; description: s
     case 'Dev Blog analytics':
       return {
         title: '📈 Dev Blog Archaeology',
-        description: 'Git-derived commit history views, velocity charts, feature rollups, and editorial trimming.',
+        description: 'Git-derived commit history views, tag timelines, feature rollups, and editorial trimming.',
         icon: iconForScope('dev_blog'),
       };
     case 'Icon cache and gateway':
