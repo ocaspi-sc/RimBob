@@ -1,5 +1,59 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
+  <UsingTask
+    TaskName="IncrementRimBobBuildVersion"
+    TaskFactory="RoslynCodeTaskFactory"
+    AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <VersionFile ParameterType="System.String" Required="true" />
+      <CodeFile ParameterType="System.String" Required="true" />
+      <InitialPreviousVersion ParameterType="System.String" Required="true" />
+      <NextVersion ParameterType="System.String" Output="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System" />
+      <Using Namespace="System.Globalization" />
+      <Using Namespace="System.IO" />
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        string directory = Path.GetDirectoryName(VersionFile) ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        Version previous = Version.Parse(InitialPreviousVersion);
+        if (File.Exists(VersionFile))
+        {
+            string existing = File.ReadAllText(VersionFile).Trim();
+            if (!string.IsNullOrWhiteSpace(existing))
+            {
+                previous = Version.Parse(existing);
+            }
+        }
+
+        int previousPatch = previous.Build < 0 ? 0 : previous.Build;
+        NextVersion = $"{previous.Major}.{previous.Minor}.{previousPatch + 1}";
+        File.WriteAllText(VersionFile, NextVersion);
+
+        string codeDirectory = Path.GetDirectoryName(CodeFile) ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(codeDirectory))
+        {
+            Directory.CreateDirectory(codeDirectory);
+        }
+
+        string buildDateTime = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture);
+        string source = string.Join(
+            Environment.NewLine,
+            "using System.Reflection;",
+            string.Empty,
+            $"[assembly: AssemblyMetadata(\"RimBobBuildNumber\", \"{NextVersion}\")]",
+            $"[assembly: AssemblyMetadata(\"RimBobBuildDateTime\", \"{buildDateTime}\")]",
+            string.Empty);
+        File.WriteAllText(CodeFile, source);
+      ]]></Code>
+    </Task>
+  </UsingTask>
+
   <ItemGroup>
     <ProjectReference Include="..\Common\RimBob.Core.csproj" />
     <ProjectReference Include="..\GameStateSync\RimBob.Ingestion.csproj" />
@@ -21,6 +75,22 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <RimBobBuildVersionFile>$(BaseIntermediateOutputPath)rimbob-build-version.txt</RimBobBuildVersionFile>
+    <RimBobBuildInfoFile>$(BaseIntermediateOutputPath)$(Configuration)\$(TargetFramework)\RimBobBuildInfo.g.cs</RimBobBuildInfoFile>
+    <RimBobInitialPreviousBuildVersion>0.0.999</RimBobInitialPreviousBuildVersion>
   </PropertyGroup>
+
+  <Target Name="GenerateRimBobBuildVersion" BeforeTargets="CoreCompile">
+    <IncrementRimBobBuildVersion
+      VersionFile="$(RimBobBuildVersionFile)"
+      CodeFile="$(RimBobBuildInfoFile)"
+      InitialPreviousVersion="$(RimBobInitialPreviousBuildVersion)">
+      <Output TaskParameter="NextVersion" PropertyName="RimBobBuildNumber" />
+    </IncrementRimBobBuildVersion>
+
+    <ItemGroup>
+      <Compile Include="$(RimBobBuildInfoFile)" AutoGen="True" DesignTime="True" Visible="False" />
+    </ItemGroup>
+  </Target>
 
 </Project>

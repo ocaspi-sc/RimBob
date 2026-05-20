@@ -30,6 +30,7 @@ public static class AgendaStreamEndpoint
         MinisterOutputStore store,
         AdviceBus bus,
         SseDiagnostics diagnostics,
+        HostRuntimeIdentity hostIdentity,
         ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
@@ -55,6 +56,7 @@ public static class AgendaStreamEndpoint
 
         try
         {
+            await WriteHostReadyAsync(ctx, hostIdentity, diagnostics, ct);
             if (store.CurrentMayorAgenda is { } current)
                 await WriteAgendaAsync(ctx, current, diagnostics, ct);
             AdviceSnapshot activeSnapshot = bus.ActiveSnapshot();
@@ -114,6 +116,33 @@ public static class AgendaStreamEndpoint
         await ctx.Response.WriteAsync($"event: agenda_update\nid: {agenda.Version}\ndata: {payload}\n\n", ct);
         await ctx.Response.Body.FlushAsync(ct);
         diagnostics.EventSent("agenda_update", agenda.Version.ToString());
+    }
+
+    private static async Task WriteHostReadyAsync(
+        HttpContext ctx,
+        HostRuntimeIdentity hostIdentity,
+        SseDiagnostics diagnostics,
+        CancellationToken ct)
+    {
+        string payload = JsonSerializer.Serialize(new
+        {
+            product = "RimBob",
+            rim_bob_version = hostIdentity.RimBobVersion,
+            running_version = hostIdentity.RunningVersion,
+            build_number = hostIdentity.BuildNumber,
+            build_datetime = hostIdentity.BuildDateTime,
+            build_version = hostIdentity.BuildVersion,
+            build_informational_version = hostIdentity.BuildInformationalVersion,
+            build_revision = hostIdentity.BuildRevision,
+            build_revision_short = hostIdentity.BuildRevisionShort,
+            dashboard_asset_version = hostIdentity.DashboardAssetVersion,
+            reload_token = hostIdentity.ReloadToken,
+            host_started_at = hostIdentity.StartedAt,
+            host_instance_id = hostIdentity.InstanceId
+        }, Json);
+        await ctx.Response.WriteAsync($"event: host_ready\nid: {hostIdentity.InstanceId}\ndata: {payload}\n\n", ct);
+        await ctx.Response.Body.FlushAsync(ct);
+        diagnostics.EventSent("host_ready", hostIdentity.InstanceId);
     }
 
     private static async Task WriteAdviceAsync(

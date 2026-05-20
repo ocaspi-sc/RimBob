@@ -94,6 +94,7 @@ public static class SystemEndpoints
             RawLlmOutputStore rawOutputs,
             MayorStatus mayor,
             SseDiagnostics sse,
+            HostRuntimeIdentity hostIdentity,
             MinisterRegistry registry,
             EndpointCoverageCatalog endpointCoverage,
             MinisterTraceStore traces,
@@ -122,9 +123,34 @@ public static class SystemEndpoints
             return Results.Ok(new
             {
                 generated_at = DateTimeOffset.UtcNow,
+                version = new
+                {
+                    product = "RimBob",
+                    rim_bob_version = hostIdentity.RimBobVersion,
+                    running_version = hostIdentity.RunningVersion,
+                    build_number = hostIdentity.BuildNumber,
+                    build_datetime = hostIdentity.BuildDateTime,
+                    build_version = hostIdentity.BuildVersion,
+                    build_informational_version = hostIdentity.BuildInformationalVersion,
+                    build_revision = hostIdentity.BuildRevision,
+                    build_revision_short = hostIdentity.BuildRevisionShort,
+                    dashboard_asset_version = hostIdentity.DashboardAssetVersion,
+                    reload_token = hostIdentity.ReloadToken,
+                    host_started_at = hostIdentity.StartedAt,
+                    host_instance_id = hostIdentity.InstanceId,
+                },
                 runtime = new
                 {
                     server = "ok",
+                    host_started_at = hostIdentity.StartedAt,
+                    host_instance_id = hostIdentity.InstanceId,
+                    rim_bob_version = hostIdentity.RimBobVersion,
+                    running_version = hostIdentity.RunningVersion,
+                    build_number = hostIdentity.BuildNumber,
+                    build_datetime = hostIdentity.BuildDateTime,
+                    build_version = hostIdentity.BuildVersion,
+                    build_informational_version = hostIdentity.BuildInformationalVersion,
+                    dashboard_asset_version = hostIdentity.DashboardAssetVersion,
                     host_process_path = Environment.ProcessPath ?? "unknown",
                     content_root = env.ContentRootPath,
                     runtime_root = runtimeRoot,

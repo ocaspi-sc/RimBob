@@ -261,6 +261,14 @@ export function SystemOverview({
               <MetricCard label={<FieldLabel iconKey="mayor">Mayor</FieldLabel>} value={status?.mayor_running ? 'running' : 'idle'} tone={status?.mayor_last_error ? 'error' : status?.mayor_running ? 'ok' : 'neutral'} />
             </div>
             <div className="stacked-lines runtime-source-lines">
+              <InfoLine label="Running version" value={health?.version.running_version ?? health?.version.rim_bob_version ?? 'not exposed'} />
+              <InfoLine label="Build number" value={health?.version.build_number ?? 'not exposed'} />
+              <InfoLine label="Build datetime" value={formatMaybeDate(health?.version.build_datetime ?? null)} />
+              <InfoLine label="Build revision" value={health?.version.build_revision_short ?? health?.version.build_version ?? 'not exposed'} />
+              <InfoLine label="Dashboard assets" value={health?.version.dashboard_asset_version ?? 'not exposed'} />
+              <InfoLine label="Reload token" value={shorten(health?.version.reload_token ?? 'not exposed')} />
+              <InfoLine label="Host started" value={formatMaybeDate(health?.version.host_started_at ?? null)} />
+              <InfoLine label="Host instance" value={health?.version.host_instance_id ?? 'not exposed'} />
               <InfoLine label="Host path" value={health?.runtime.host_process_path ?? 'not exposed'} />
               <InfoLine label="Content root" value={health?.runtime.content_root ?? 'not exposed'} />
               <InfoLine label="Runtime root" value={health?.runtime.runtime_root ?? 'not exposed'} />

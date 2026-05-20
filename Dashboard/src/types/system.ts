@@ -24,6 +24,22 @@ export interface SseHealth {
   lastError: string | null;
 }
 
+export interface RimBobRunningVersion {
+  product: string;
+  rim_bob_version: string;
+  running_version: string;
+  build_number: string;
+  build_datetime: string;
+  build_version: string;
+  build_informational_version: string;
+  build_revision: string | null;
+  build_revision_short: string | null;
+  dashboard_asset_version: string;
+  reload_token: string;
+  host_started_at: string;
+  host_instance_id: string;
+}
+
 export interface ReplayCorpusFile {
   minister: string;
   name: string;
@@ -192,8 +208,18 @@ export interface AssistedApplyAttempt {
 
 export interface SystemHealth {
   generated_at: string;
+  version: RimBobRunningVersion;
   runtime: {
     server: string;
+    host_started_at: string;
+    host_instance_id: string;
+    rim_bob_version: string;
+    running_version: string;
+    build_number: string;
+    build_datetime: string;
+    build_version: string;
+    build_informational_version: string;
+    dashboard_asset_version: string;
     host_process_path: string;
     content_root: string;
     runtime_root: string;

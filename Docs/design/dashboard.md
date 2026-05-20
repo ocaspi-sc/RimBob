@@ -67,7 +67,11 @@ Dashboard v2 has four stable regions:
   minister inspector tabs.
 - Right sidebar: compact colony facts plus colonist cards.
 
-The header exposes `Run Cabinet Now`. Minister workspaces expose
+The header exposes the running RimBob version before transient status pills:
+monotonic running build version, build datetime, build revision, and dashboard
+asset fingerprint. This is the first stale-host/stale-asset check because it
+answers which code and UI bundle the player is actually reading. The header
+also exposes `Run Cabinet Now`. Minister workspaces expose
 `Run {Minister} Now` beside the selected minister's last-run time. The selected
 view is already visible in the tab bar and should not be repeated beside the run
 button. Planned ministers show disabled/not-wired controls.
@@ -374,6 +378,17 @@ repository or worktree; `RimBob:LogsRoot` may override it. Serilog logs,
 structured decision logs, replay corpus records, Mayor prompt dumps, and manual
 fallback files should stay under that same root.
 
+`/api/system/health` also owns the running RimBob version contract: monotonic
+running build version, build datetime, assembly build revision, dashboard asset
+fingerprint, reload token, process start time, and per-process instance id. The
+running build version is generated into Host assembly metadata during each Host
+build and increments its patch component locally from `0.0.1000`, so rebuilding
+the same commit still changes the visible running version. The dashboard treats
+the reload token as the hard-refresh key. A changed token means the served Host
+build or dashboard bundle changed and the browser tab should reload; a changed
+process instance alone is just a reconnect and must not trigger cabinet
+regeneration.
+
 The same payload owns persistent runtime data paths. It should expose the
 stable data root plus the resolved minister output root, latest ColonyState
 snapshot, and RAG embedding cache paths so SYSTEM can prove those artifacts are
@@ -496,6 +511,9 @@ diagnostics. INFO should only explain what SSE means and where to inspect it.
 
 Design event types:
 
+- Host ready: current running RimBob version plus Host instance identity,
+  emitted on SSE connect so an already-open dashboard can reload after the
+  served build or dashboard asset fingerprint changes.
 - Agenda update: full current Mayor agenda.
 - Advice snapshot: authoritative active advice set, either global or
   minister-scoped. Feeder snapshots may include whole-minister `state_summary`

@@ -89,6 +89,32 @@ code {
   font-size: 1.55rem;
 }
 
+.running-version {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.2;
+}
+
+.running-version span,
+.running-version code {
+  min-height: 22px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.035);
+  padding: 3px 7px;
+}
+
+.running-version code {
+  color: #c9f7ff;
+}
+
 .eyebrow {
   display: block;
   color: var(--muted);

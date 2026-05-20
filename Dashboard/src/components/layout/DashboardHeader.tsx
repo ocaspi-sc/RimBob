@@ -1,5 +1,5 @@
 import type { RimBobStatus } from '../../types/status';
-import type { StreamDiagnostics } from '../../types/system';
+import type { RimBobRunningVersion, StreamDiagnostics } from '../../types/system';
 import { StatusPill } from '../shared/StatusPill';
 
 export function DashboardHeader({
@@ -9,6 +9,7 @@ export function DashboardHeader({
   triggerDisabled,
   triggerError,
   triggerPending,
+  version,
 }: {
   onTriggerCabinet: () => void;
   status: RimBobStatus | null;
@@ -16,6 +17,7 @@ export function DashboardHeader({
   triggerDisabled: boolean;
   triggerError: string | null;
   triggerPending: boolean;
+  version: RimBobRunningVersion | null;
 }) {
   const llmStatus = status?.llm_status ?? (status?.llm_configured ? 'ready' : 'missing_key');
   const llmTone = llmToneFor(llmStatus);
@@ -33,6 +35,12 @@ export function DashboardHeader({
       <div className="brand-block">
         <span className="eyebrow">RimWorld Advisory Cabinet</span>
         <h1>RimBob Dashboard v2</h1>
+        <div className="running-version" aria-label="Running RimBob version">
+          <span>{version ? `RimBob ${version.running_version}` : 'RimBob checking'}</span>
+          <code>{version ? `rev ${version.build_revision_short ?? version.build_version}` : 'rev checking'}</code>
+          <span>{version ? `built ${formatBuildDateTime(version.build_datetime)}` : 'built checking'}</span>
+          <span>{version ? `UI ${dashboardAssetLabel(version.dashboard_asset_version)}` : 'UI checking'}</span>
+        </div>
       </div>
       <div className="header-controls">
         <div className="header-status">
@@ -68,4 +76,22 @@ function llmToneFor(status: string): 'ok' | 'warn' | 'error' | 'idle' {
 function llmLabelFor(status: string): string {
   if (status === 'missing_key') return 'missing key';
   return status.replace(/_/g, ' ');
+}
+
+function formatBuildDateTime(value: string): string {
+  if (value === 'unknown') return value;
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleString();
+}
+
+function dashboardAssetLabel(assetVersion: string): string {
+  if (assetVersion === 'missing' || assetVersion === 'unknown') return assetVersion;
+
+  return assetVersion
+    .split('|')
+    .map(asset => asset.replace(/^index-/, '').replace(/\.(js|css)$/i, ''))
+    .join(' / ');
 }

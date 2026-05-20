@@ -15,6 +15,7 @@ import { MinisterWorkspace } from './components/minister/MinisterWorkspace';
 import { SystemOverview } from './components/system/SystemOverview';
 import { useAdviceFeed } from './hooks/useAdviceFeed';
 import { useDashboardSelection } from './hooks/useDashboardSelection';
+import { useDashboardReloadOnVersionChange } from './hooks/useDashboardReloadOnVersionChange';
 import { useManualTriggers } from './hooks/useManualTriggers';
 import { usePollingResource } from './hooks/usePollingResource';
 
@@ -29,6 +30,7 @@ export default function App() {
   const snapshot = usePollingResource(fetchColonySnapshot, SnapshotPollMs);
   const systemHealth = usePollingResource(fetchSystemHealth, SystemHealthPollMs);
   const feed = useAdviceFeed();
+  useDashboardReloadOnVersionChange(systemHealth.data, feed.runningVersion);
 
   const activeScope = findScope(selection.selectedScope);
   const activeView = viewForScope(activeScope, selection.selectedView);
@@ -48,6 +50,7 @@ export default function App() {
   return (
     <main className="dashboard-v2-shell">
       <DashboardHeader
+        version={systemHealth.data?.version ?? null}
         status={status.data}
         stream={feed.stream}
         triggerError={triggers.triggerState.error}

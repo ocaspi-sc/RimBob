@@ -101,6 +101,7 @@ try
     builder.Services.AddSingleton<FlagChannel>();
     builder.Services.AddSingleton<MinisterRegistry>();
     builder.Services.AddSingleton<EndpointCoverageCatalog>();
+    builder.Services.AddSingleton(new HostRuntimeIdentity(builder.Environment.ContentRootPath));
     builder.Services.AddSingleton<MinisterTraceStore>();
     builder.Services.AddSingleton<AssistedApplyService>();
     builder.Services.AddSingleton<IReplayCorpusWriter>(sp =>

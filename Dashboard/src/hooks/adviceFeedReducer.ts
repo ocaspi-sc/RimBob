@@ -1,6 +1,6 @@
 import type { AdviceChainModel, AdviceItem, AdviceSnapshot } from '../types/advice';
 import type { MayorAgenda } from '../types/agenda';
-import type { DashboardEvent, FeedState, StreamDiagnostics } from '../types/system';
+import type { DashboardEvent, FeedState, RimBobRunningVersion, StreamDiagnostics } from '../types/system';
 
 const initialDiagnostics: StreamDiagnostics = {
   state: 'connecting',
@@ -17,6 +17,7 @@ export interface AdviceFeedState {
   agenda: MayorAgenda | null;
   previousAgenda: MayorAgenda | null;
   feed: FeedState;
+  runningVersion: RimBobRunningVersion | null;
   stream: StreamDiagnostics;
   events: DashboardEvent[];
   initialAgendaError: string | null;
@@ -27,6 +28,7 @@ export type AdviceFeedAction =
   | { type: 'initialAgendaFailed'; error: string }
   | { type: 'streamConnecting'; readyState: number }
   | { type: 'streamOpened'; readyState: number }
+  | { type: 'hostReadyReceived'; version: RimBobRunningVersion; eventId: string | null; readyState: number }
   | { type: 'agendaReceived'; agenda: MayorAgenda; eventId: string | null; readyState: number }
   | { type: 'adviceReceived'; advice: AdviceItem; eventId: string | null; readyState: number }
   | { type: 'adviceSnapshotReceived'; snapshot: AdviceSnapshot; eventId: string | null; readyState: number }
@@ -45,6 +47,7 @@ export const initialAdviceFeedState: AdviceFeedState = {
     chains: {},
     stateSummaries: {},
   },
+  runningVersion: null,
   stream: initialDiagnostics,
   events: [],
   initialAgendaError: null,
@@ -85,6 +88,19 @@ export function adviceFeedReducer(
           readyState: action.readyState,
         },
         events: pushEvent(state.events, 'SSE', 'open', 'info', 'Advice stream connected'),
+      };
+    case 'hostReadyReceived':
+      return {
+        ...state,
+        runningVersion: action.version,
+        stream: recordStreamEvent(state.stream, action.readyState, 'host_ready', action.eventId),
+        events: pushEvent(
+          state.events,
+          'Host',
+          'host_ready',
+          'info',
+          `Host ready ${versionSummary(action.version)}`,
+        ),
       };
     case 'agendaReceived': {
       const agendaChanged = state.agenda?.version !== action.agenda.version;
@@ -311,4 +327,9 @@ function pushEvent(
   };
 
   return [event, ...events].slice(0, 80);
+}
+
+function versionSummary(version: RimBobRunningVersion): string {
+  const revision = version.build_revision_short ?? version.build_version;
+  return `RimBob ${version.running_version} ${revision}`;
 }
