@@ -289,13 +289,15 @@ DEV BLOG owns:
   sections or nested tabs. Cross-cutting concepts such as Visualization,
   Refactor, Agents, RAG, Rules, RIMAPI, Persistence, and Icon Gateway are also
   tags. Use longer human-readable feature names with semantic icons and tag
-  emojis. The same tag chips control both the visible feature list and the
-  feature-tag timeline chart in this tab. Multiple selected tags mean "show
-  features matching any selected tag" while drawing one chart series per
-  selected tag; when no tag is selected, the chart may show the highest-scoring
-  tags as an overview. Show each feature's estimated score as raw deterministic
-  commit scope plus a visible commit-count effort bonus, so a feature spread
-  across many commits ranks heavier than the same raw scope in one commit. The
+  emojis. The feature-tag timeline is the first reading surface in this tab,
+  followed by a left-side vertical tag rail and the filtered feature list. The
+  same tag chips control both the visible feature list and the feature-tag
+  timeline chart in this tab. Multiple selected tags mean "show features
+  matching any selected tag" while drawing one chart series per selected tag;
+  when no tag is selected, the chart may show the highest-scoring tags as an
+  overview. Show each feature's estimated score as raw deterministic commit
+  scope plus a visible commit-count effort bonus, so a feature spread across
+  many commits ranks heavier than the same raw scope in one commit. The
   tab itself is the feature inventory, so avoid redundant wrapper panels or
   repeated "Feature inventory" headings. Tooltips can keep raw score math,
   source commit count, file count, material areas, and supporting areas for

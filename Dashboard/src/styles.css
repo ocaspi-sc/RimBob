@@ -999,7 +999,56 @@ code {
 
 .feature-index {
   display: grid;
+  gap: 12px;
+}
+
+.feature-index-layout {
+  display: grid;
+  grid-template-columns: minmax(160px, 210px) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.feature-index-results {
+  display: grid;
   gap: 10px;
+  min-width: 0;
+}
+
+.feature-filter-sidebar {
+  position: sticky;
+  top: 0;
+  display: grid;
+  gap: 9px;
+  max-height: min(680px, calc(100vh - 190px));
+  min-width: 0;
+  overflow: auto;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.024);
+}
+
+.feature-filter-sidebar-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.feature-filter-sidebar-heading strong {
+  color: var(--text);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.feature-filter-sidebar-heading small {
+  color: var(--muted);
+  font-size: 0.69rem;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .feature-section-item {
@@ -1016,27 +1065,27 @@ code {
 }
 
 .feature-filter-bar {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
+  display: grid;
+  align-items: stretch;
   gap: 6px;
-  padding: 2px 0 4px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.065);
+  min-width: 0;
 }
 
 .feature-filter-button {
-  display: inline-flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 7px;
-  min-height: 31px;
+  width: 100%;
+  min-height: 34px;
   border: 1px solid rgba(255, 255, 255, 0.075);
-  border-radius: 999px;
-  padding: 5px 9px;
+  border-radius: 7px;
+  padding: 7px 8px;
   color: var(--text);
   background: rgba(255, 255, 255, 0.025);
   cursor: pointer;
   text-align: left;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .feature-filter-button:hover {
@@ -1061,6 +1110,12 @@ code {
 
 .feature-filter-button strong {
   font-size: 0.76rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.feature-filter-button small {
+  white-space: nowrap;
 }
 
 .feature-filter-summary {
@@ -3723,6 +3778,7 @@ code {
   .sse-info-grid,
   .dev-blog-chart-grid,
   .dev-blog-pie-grid,
+  .feature-index-layout,
   .glossary-row,
   .analytics-idea,
   .donut-layout,
@@ -3812,6 +3868,15 @@ code {
 
   .endpoint-timing-error {
     grid-column: 1;
+  }
+
+  .feature-filter-sidebar {
+    position: static;
+    max-height: none;
+  }
+
+  .feature-filter-bar {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   }
 }
 

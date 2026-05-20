@@ -684,32 +684,6 @@ function FeatureIndex({ rows }: { rows: DevBlogDailyAreaRow[] }) {
 
   return (
     <div className="feature-index" aria-label="Feature index filtered by tags">
-      <div className="feature-filter-bar" aria-label="Feature tag filters">
-        <button
-          type="button"
-          aria-pressed={activeTags.length === 0}
-          className={`feature-filter-button ${activeTags.length === 0 ? 'active' : ''}`}
-          onClick={clearTags}
-        >
-          <strong>All features</strong>
-          <small>{features.length} / {formatNumber(features.reduce((total, feature) => total + feature.scopePoints, 0))}</small>
-        </button>
-        {tagSummaries.map(summary => {
-          const active = activeTags.includes(summary.tag);
-          return (
-            <button
-              key={summary.tag}
-              type="button"
-              aria-pressed={active}
-              className={`feature-filter-button ${active ? 'active' : ''}`}
-              onClick={() => toggleTag(summary.tag)}
-            >
-              <strong>{featureTagLabel(summary.tag)}</strong>
-              <small>{summary.featureCount} / {formatNumber(summary.scopePoints)}</small>
-            </button>
-          );
-        })}
-      </div>
       <DisclosureSection
         title={<SemanticLabel icon={iconForField('timeline')}><span>Feature tag timeline</span></SemanticLabel>}
         defaultOpen
@@ -721,40 +695,76 @@ function FeatureIndex({ rows }: { rows: DevBlogDailyAreaRow[] }) {
           tagOrder={tagSummaries.map(summary => summary.tag)}
         />
       </DisclosureSection>
-      <div className="feature-filter-summary">
-        <strong>{activeTags.length === 0 ? 'All features' : `Any tag: ${activeTags.map(featureTagLabel).join(' / ')}`}</strong>
-        <small>{visibleFeatures.length} features / {formatNumber(visibleScopePoints)} score</small>
-      </div>
-      {visibleFeatures.length === 0 ? (
-        <EmptyState code="NO MATCHING FEATURES">No features match any selected tag.</EmptyState>
-      ) : (
-        <div className="feature-section-list">
-          {visibleFeatures.map(feature => (
-            <article
-              key={feature.key}
-              className="feature-section-item"
-              title={featureTooltip(feature)}
-              aria-label={featureTooltip(feature)}
+      <div className="feature-index-layout">
+        <aside className="feature-filter-sidebar" aria-label="Feature tag filters">
+          <div className="feature-filter-sidebar-heading">
+            <strong>Tags</strong>
+            <small>{activeTags.length === 0 ? 'overview' : `${activeTags.length} active`}</small>
+          </div>
+          <div className="feature-filter-bar">
+            <button
+              type="button"
+              aria-pressed={activeTags.length === 0}
+              className={`feature-filter-button ${activeTags.length === 0 ? 'active' : ''}`}
+              onClick={clearTags}
             >
-              <div className="feature-rollup-copy">
-                <SemanticIconCue className="feature-rollup-icon" icon={feature.icon} size="md" />
-                <div>
-                  <h5>{feature.title}</h5>
-                  <p>{feature.description}</p>
-                  <div className="feature-tag-list" aria-label={`Tags for ${feature.title}`}>
-                    {feature.tags.map(tag => <span key={`${feature.key}-${tag}`}>{featureTagLabel(tag)}</span>)}
+              <strong>All features</strong>
+              <small>{features.length} / {formatNumber(features.reduce((total, feature) => total + feature.scopePoints, 0))}</small>
+            </button>
+            {tagSummaries.map(summary => {
+              const active = activeTags.includes(summary.tag);
+              return (
+                <button
+                  key={summary.tag}
+                  type="button"
+                  aria-pressed={active}
+                  className={`feature-filter-button ${active ? 'active' : ''}`}
+                  onClick={() => toggleTag(summary.tag)}
+                >
+                  <strong>{featureTagLabel(summary.tag)}</strong>
+                  <small>{summary.featureCount} / {formatNumber(summary.scopePoints)}</small>
+                </button>
+              );
+            })}
+          </div>
+        </aside>
+        <div className="feature-index-results">
+          <div className="feature-filter-summary">
+            <strong>{activeTags.length === 0 ? 'All features' : `Any tag: ${activeTags.map(featureTagLabel).join(' / ')}`}</strong>
+            <small>{visibleFeatures.length} features / {formatNumber(visibleScopePoints)} score</small>
+          </div>
+          {visibleFeatures.length === 0 ? (
+            <EmptyState code="NO MATCHING FEATURES">No features match any selected tag.</EmptyState>
+          ) : (
+            <div className="feature-section-list">
+              {visibleFeatures.map(feature => (
+                <article
+                  key={feature.key}
+                  className="feature-section-item"
+                  title={featureTooltip(feature)}
+                  aria-label={featureTooltip(feature)}
+                >
+                  <div className="feature-rollup-copy">
+                    <SemanticIconCue className="feature-rollup-icon" icon={feature.icon} size="md" />
+                    <div>
+                      <h5>{feature.title}</h5>
+                      <p>{feature.description}</p>
+                      <div className="feature-tag-list" aria-label={`Tags for ${feature.title}`}>
+                        {feature.tags.map(tag => <span key={`${feature.key}-${tag}`}>{featureTagLabel(tag)}</span>)}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-              <div className="feature-rollup-size">
-                <span>Feature score</span>
-                <strong>{formatNumber(feature.scopePoints)}</strong>
-                <small>{feature.sizeLabel} scope</small>
-              </div>
-            </article>
-          ))}
+                  <div className="feature-rollup-size">
+                    <span>Feature score</span>
+                    <strong>{formatNumber(feature.scopePoints)}</strong>
+                    <small>{feature.sizeLabel} scope</small>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
