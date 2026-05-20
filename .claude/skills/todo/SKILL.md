@@ -1,6 +1,6 @@
 ---
 name: todo
-description: Invoked when the user types exactly "/todo". Appends one short identified, tagged entry to the "Captured by /todo" section in HumanTodo.md, then opportunistically commits it to master only when Git looks idle. It never creates plan files.
+description: Invoked when the user types exactly "/todo". Appends one short identified, tagged entry to the "Captured by /todo" section in HumanTodo.md. Plain captures stay line-only; discussion-backed captures may create and link a `.plans/` plan.
 ---
 
 # todo
