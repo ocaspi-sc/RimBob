@@ -31,7 +31,24 @@ public sealed class FoodStateSummaryTests
                 CoolerAdjacentFoodUnits = 7
             },
             WildAnimalCount = 2,
-            WildHuntTargets = [new WildHuntTarget("Hare", 2, "nearby to kitchen", "kitchen")]
+            WildHuntTargets =
+            [
+                new WildHuntTarget("Hare", 2, "nearby to kitchen", "kitchen")
+                {
+                    EstimatedNutrition = 1.2f,
+                    ScoreReason = "low-risk metadata"
+                }
+            ],
+            HuntTargets =
+            [
+                new FoodHuntTarget("Hare", 2, new(40, 50, 41, 50), ["hare-1", "hare-2"], "nearby to kitchen", "kitchen")
+            ],
+            HuntRiskSummaries =
+            [
+                new FoodHuntRiskSummary("Hare", 2, "low", 1.2f, "low-risk metadata"),
+                new FoodHuntRiskSummary("Ibex", 4, "caution", 3.6f, "herd animal revenge chance"),
+                new FoodHuntRiskSummary("Bear_Grizzly", 1, "dangerous", 5.0f, "dangerous body size")
+            ]
         };
 
         string summary = FoodStateSummary.Build(briefing);
@@ -49,6 +66,11 @@ public sealed class FoodStateSummaryTests
         summary.Should().Contain("\n- Acquisition:");
         summary.Should().Contain("0 forage candidates");
         summary.Should().Contain("2 hares hunt targets");
+        summary.Should().Contain("\n- Hunt risk:");
+        summary.Should().Contain("1 low-risk type surfaced");
+        summary.Should().Contain("best 2 hares, 1.2 nutrition, low-risk metadata");
+        summary.Should().Contain("1 bounded apply target ready");
+        summary.Should().Contain("1 caution type and 1 dangerous type held for escalation");
         summary.Should().Contain("\n- Kitchen/storage:");
         summary.Should().Contain("1 cooking station");
         summary.Should().Contain("1 cooler");
@@ -117,6 +139,47 @@ public sealed class FoodStateSummaryTests
         summary.Should().Contain("7 forbidden packaged survival meals at (62,0,219)");
         summary.Should().Contain("1 forbidden squirrel (dead) at (83,0,38)");
         summary.Should().NotContain("food_unit_classification");
+    }
+
+    [Fact]
+    public void Build_HuntRiskLineShowsThreatGateWhenTargetsAreBlocked()
+    {
+        FoodBriefing briefing = FoodRulesTests.Briefing(6.1f) with
+        {
+            ActiveThreat = true,
+            WildAnimalCount = 3,
+            WildHuntTargets =
+            [
+                new WildHuntTarget("Rat", 3, "nearby to kitchen", "kitchen")
+                {
+                    EstimatedNutrition = 0.7f,
+                    ScoreReason = "safe by fallback def-name check"
+                }
+            ],
+            HuntRiskSummaries =
+            [
+                new FoodHuntRiskSummary("Rat", 3, "low", 0.7f, "safe by fallback def-name check")
+            ]
+        };
+
+        string summary = FoodStateSummary.Build(briefing);
+
+        summary.Should().Contain("Hunt risk: 1 low-risk type surfaced; best 3 rats, 0.7 nutrition, safe by fallback def-name check; active threat blocks mark_hunt.");
+    }
+
+    [Fact]
+    public void Build_HuntRiskLineExplainsWhenVisibleAnimalsFailSafetyPrefilter()
+    {
+        FoodBriefing briefing = FoodRulesTests.Briefing(6.1f) with
+        {
+            WildAnimalCount = 3,
+            WildHuntTargets = [],
+            HuntRiskSummaries = []
+        };
+
+        string summary = FoodStateSummary.Build(briefing);
+
+        summary.Should().Contain("Hunt risk: no healthy wild animal type passed the safety prefilter.");
     }
 
     [Fact]
