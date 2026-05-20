@@ -339,6 +339,109 @@ code {
   overflow: auto;
 }
 
+.endpoint-timing-footer {
+  margin-top: 14px;
+  border: 1px solid rgba(98, 216, 230, 0.22);
+  border-radius: var(--radius);
+  background: rgba(8, 11, 13, 0.58);
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.endpoint-timing-footer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.endpoint-timing-footer-header strong {
+  color: var(--cyan);
+}
+
+.endpoint-timing-empty {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.endpoint-timing-list {
+  display: grid;
+  gap: 6px;
+}
+
+.endpoint-timing-row {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) 58px 86px 58px;
+  gap: 8px;
+  align-items: center;
+  min-height: 30px;
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 6px 8px;
+}
+
+.endpoint-timing-row code {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.endpoint-timing-row small {
+  color: var(--dim);
+  text-align: right;
+}
+
+.endpoint-timing-method,
+.endpoint-timing-state,
+.endpoint-timing-ms {
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.endpoint-timing-method {
+  color: var(--muted);
+}
+
+.endpoint-timing-state {
+  color: var(--cyan);
+  text-align: right;
+}
+
+.endpoint-timing-state.error {
+  color: var(--error);
+}
+
+.endpoint-timing-state.stream {
+  color: var(--ok);
+}
+
+.endpoint-timing-ms {
+  color: var(--text);
+  text-align: right;
+}
+
+.endpoint-timing-row.slow {
+  border-color: rgba(240, 189, 95, 0.66);
+  background: rgba(240, 189, 95, 0.1);
+}
+
+.endpoint-timing-row.slow code,
+.endpoint-timing-row.slow .endpoint-timing-ms {
+  color: var(--warn);
+  font-size: 1.03rem;
+  font-weight: 900;
+}
+
+.endpoint-timing-error {
+  grid-column: 2 / -1;
+  color: var(--error) !important;
+  overflow-wrap: anywhere;
+  text-align: left !important;
+}
+
 .workspace-title {
   display: flex;
   align-items: center;
@@ -3360,6 +3463,7 @@ code {
   }
 
   .dense-row,
+  .endpoint-timing-row,
   .coverage-table .dense-row,
   .timeline-row,
   .priority-card,
@@ -3390,6 +3494,10 @@ code {
 
   .action-apply-result {
     width: 100%;
+  }
+
+  .endpoint-timing-error {
+    grid-column: 1;
   }
 }
 

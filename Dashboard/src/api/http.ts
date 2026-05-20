@@ -1,5 +1,7 @@
+import { recordEndpointQueryTiming } from './requestTelemetry';
+
 export async function readJson<T>(url: string, signal?: AbortSignal): Promise<T> {
-  const response = await fetch(url, { signal });
+  const response = await timedFetch(url, { signal });
   if (!response.ok) {
     throw new Error(await readErrorMessage(response, url));
   }
@@ -8,12 +10,44 @@ export async function readJson<T>(url: string, signal?: AbortSignal): Promise<T>
 }
 
 export async function postJson<T>(url: string, signal?: AbortSignal): Promise<T> {
-  const response = await fetch(url, { method: 'POST', signal });
+  const response = await timedFetch(url, { method: 'POST', signal });
   if (!response.ok) {
     throw new Error(await readErrorMessage(response, url));
   }
 
   return await response.json() as T;
+}
+
+export async function timedFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  const startedAt = Date.now();
+  const startedAtPerf = performance.now();
+  const method = init.method ?? 'GET';
+
+  try {
+    const response = await fetch(url, init);
+    recordEndpointQueryTiming({
+      method,
+      url,
+      state: response.ok ? 'ok' : 'error',
+      statusCode: response.status,
+      startedAt,
+      durationMs: performance.now() - startedAtPerf,
+      error: response.ok ? null : response.statusText || 'Request failed',
+    });
+    return response;
+  } catch (error) {
+    const aborted = error instanceof DOMException && error.name === 'AbortError';
+    recordEndpointQueryTiming({
+      method,
+      url,
+      state: aborted ? 'aborted' : 'error',
+      statusCode: null,
+      startedAt,
+      durationMs: performance.now() - startedAtPerf,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
 }
 
 async function readErrorMessage(response: Response, url: string): Promise<string> {

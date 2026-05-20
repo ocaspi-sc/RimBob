@@ -322,6 +322,12 @@ All observability endpoints are read-only unless explicitly named as a manual
 RimBob re-evaluation trigger. They never mutate game state. Assisted Apply is a
 separate action endpoint family, not an observability endpoint.
 
+Each dashboard page renders a compact endpoint footer at the bottom of the main
+workspace. It lists the Host HTTP endpoints and live stream endpoints observed
+while that page is active, including method, status, and latest query duration;
+slow requests are visually promoted so stale or heavy pages are obvious during
+play.
+
 Prompt inspector endpoints should preserve the exact `{ system, user }` payload
 shape for dashboard consumers, but may cache the rebuilt prompt briefly by
 minister and source-state version. An explicit refresh parameter should force a

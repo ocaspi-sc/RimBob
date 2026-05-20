@@ -1,6 +1,7 @@
 import { useEffect, useReducer } from 'react';
 import { parseAdviceEvent, parseAdviceSnapshotEvent } from '../api/adviceStream';
 import { fetchLatestAgenda, parseAgendaEvent } from '../api/agenda';
+import { recordEndpointQueryTiming } from '../api/requestTelemetry';
 import { adviceFeedReducer, initialAdviceFeedState, type AdviceFeedState } from './adviceFeedReducer';
 
 export function useAdviceFeed(): AdviceFeedState {
@@ -22,10 +23,25 @@ export function useAdviceFeed(): AdviceFeedState {
         }
       });
 
-    const source = new EventSource('/api/advice/stream');
+    const streamUrl = '/api/advice/stream';
+    const streamStartedAt = Date.now();
+    const streamStartedAtPerf = performance.now();
+    const source = new EventSource(streamUrl);
+    let streamRecorded = false;
     dispatch({ type: 'streamConnecting', readyState: source.readyState });
 
     source.onopen = () => {
+      if (!streamRecorded) {
+        streamRecorded = true;
+        recordEndpointQueryTiming({
+          method: 'SSE',
+          url: streamUrl,
+          state: 'stream',
+          statusCode: null,
+          startedAt: streamStartedAt,
+          durationMs: performance.now() - streamStartedAtPerf,
+        });
+      }
       dispatch({ type: 'streamOpened', readyState: source.readyState });
     };
 
@@ -79,6 +95,18 @@ export function useAdviceFeed(): AdviceFeedState {
     });
 
     source.onerror = () => {
+      if (!streamRecorded) {
+        streamRecorded = true;
+        recordEndpointQueryTiming({
+          method: 'SSE',
+          url: streamUrl,
+          state: 'error',
+          statusCode: null,
+          startedAt: streamStartedAt,
+          durationMs: performance.now() - streamStartedAtPerf,
+          error: 'Advice stream failed to open.',
+        });
+      }
       dispatch({ type: 'streamErrored', readyState: source.readyState });
     };
 

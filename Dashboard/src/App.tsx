@@ -6,6 +6,7 @@ import { AnalyticsOverview } from './components/analytics/AnalyticsOverview';
 import { DevBlogOverview } from './components/devBlog/DevBlogOverview';
 import { DashboardHeader } from './components/layout/DashboardHeader';
 import { ColonySidebar } from './components/layout/ColonySidebar';
+import { EndpointTimingFooter } from './components/layout/EndpointTimingFooter';
 import { InfoOverview } from './components/info/InfoOverview';
 import { ScopeRail } from './components/layout/ScopeRail';
 import { ViewTabs } from './components/layout/ViewTabs';
@@ -31,6 +32,7 @@ export default function App() {
 
   const activeScope = findScope(selection.selectedScope);
   const activeView = viewForScope(activeScope, selection.selectedView);
+  const activePageKey = `${activeScope.key}:${activeView}`;
   const activeViews = viewsForScope(activeScope);
   const activeMinisterView = isMinisterViewKey(activeView) ? activeView : 'advice';
   const isSystem = activeScope.kind === 'system';
@@ -125,6 +127,7 @@ export default function App() {
               />
             </>
           )}
+          <EndpointTimingFooter pageKey={activePageKey} />
         </section>
 
         <ColonySidebar
