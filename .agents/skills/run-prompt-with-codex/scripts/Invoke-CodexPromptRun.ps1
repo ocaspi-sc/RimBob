@@ -12,6 +12,8 @@ param(
     [string]$RunRoot = (Join-Path $env:USERPROFILE ".codex\prompt-runs"),
     [string]$WorktreeRoot = (Join-Path $env:USERPROFILE ".codex\worktrees\prompt-runs"),
     [string]$Branch,
+    [string]$Model = "gpt-5.5",
+    [string]$ReasoningEffort = "xhigh",
 
     [switch]$LandAndClose,
     [switch]$Verified
@@ -134,6 +136,11 @@ function Get-CleanStatus {
     return Invoke-Git -Cwd $Cwd -Args @("status", "--porcelain", "--untracked-files=all")
 }
 
+function Get-ReasoningConfigArg {
+    param([string]$Effort)
+    return "model_reasoning_effort=`"$Effort`""
+}
+
 if ($Mode -eq "Start") {
     if ([string]::IsNullOrWhiteSpace($Prompt)) {
         throw "-Prompt is required for -Mode Start."
@@ -176,6 +183,8 @@ if ($Mode -eq "Start") {
         base_commit = $baseCommit
         branch = $Branch
         worktree = $worktreePath
+        model = $Model
+        model_reasoning_effort = $ReasoningEffort
         session_id = $null
         prompt_file = $promptPath
         event_files = @($eventsPath)
@@ -186,7 +195,8 @@ if ($Mode -eq "Start") {
     }
     Write-RunMetadata -Id $RunId -Metadata $metadata
 
-    $exitCode = Invoke-CodexExec -Arguments @("exec", "-C", $worktreePath, "--json", "-o", $lastMessagePath, $Prompt) -EventsPath $eventsPath
+    $reasoningConfigArg = Get-ReasoningConfigArg -Effort $ReasoningEffort
+    $exitCode = Invoke-CodexExec -Arguments @("exec", "-C", $worktreePath, "--json", "-m", $Model, "-c", $reasoningConfigArg, "-o", $lastMessagePath, $Prompt) -EventsPath $eventsPath
     $session = Find-SessionId -EventsPath $eventsPath
 
     $metadata.status = $(if ($exitCode -eq 0) { "completed" } else { "codex_failed" })
@@ -218,6 +228,12 @@ if ($Mode -eq "Resume") {
     }
 
     $metadata = Read-RunMetadata -Id $RunId
+    if (($metadata.PSObject.Properties.Name -contains "model") -and -not [string]::IsNullOrWhiteSpace([string]$metadata.model)) {
+        $Model = [string]$metadata.model
+    }
+    if (($metadata.PSObject.Properties.Name -contains "model_reasoning_effort") -and -not [string]::IsNullOrWhiteSpace([string]$metadata.model_reasoning_effort)) {
+        $ReasoningEffort = [string]$metadata.model_reasoning_effort
+    }
     if ([string]::IsNullOrWhiteSpace($SessionId)) {
         $SessionId = [string]$metadata.session_id
     }
@@ -235,7 +251,8 @@ if ($Mode -eq "Resume") {
     $lastMessagePath = Join-Path $runDir "final-message-resume-$stamp.md"
     $Prompt | Set-Content -LiteralPath $resumePromptPath -Encoding UTF8
 
-    $exitCode = Invoke-CodexExec -Arguments @("exec", "resume", "--json", "-o", $lastMessagePath, $SessionId, $Prompt) -EventsPath $eventsPath
+    $reasoningConfigArg = Get-ReasoningConfigArg -Effort $ReasoningEffort
+    $exitCode = Invoke-CodexExec -Arguments @("exec", "resume", "--json", "-m", $Model, "-c", $reasoningConfigArg, "-o", $lastMessagePath, $SessionId, $Prompt) -EventsPath $eventsPath
 
     $metadata.status = $(if ($exitCode -eq 0) { "resumed_completed" } else { "resume_failed" })
     $metadata.updated_at = (Get-Date).ToString("o")
@@ -272,6 +289,8 @@ if ($Mode -eq "Show") {
         run_id = $metadata.run_id
         status = $metadata.status
         session_id = $metadata.session_id
+        model = $(if ($metadata.PSObject.Properties.Name -contains "model") { $metadata.model } else { $null })
+        model_reasoning_effort = $(if ($metadata.PSObject.Properties.Name -contains "model_reasoning_effort") { $metadata.model_reasoning_effort } else { $null })
         branch = $metadata.branch
         worktree = $metadata.worktree
         metadata = (Join-Path (Get-RunDirectory $RunId) "metadata.json")

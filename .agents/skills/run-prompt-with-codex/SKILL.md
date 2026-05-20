@@ -12,6 +12,7 @@ Default posture: create a feature branch + worktree, run `codex.cmd exec`, recor
 ## Key rules
 
 - Use `codex.cmd`, not `codex` or `codex.ps1`, on this Windows machine.
+- Use the strongest available Codex model by default. Current default is `gpt-5.5` with `model_reasoning_effort="xhigh"`; do not use fast mode for delegated runs unless the user explicitly asks.
 - Base RimBob runs from the real checkout at `C:\dev\RimBob` unless the user names another repo.
 - Do not use `C:\dev\RimBob` itself as the child agent's working directory.
 - Do not land or delete the worktree by default. Resumability matters more than tidiness until the user asks to close out.
@@ -55,6 +56,7 @@ Each run record contains the prompt, JSONL event stream, final message, metadata
      -Name "short-task-name" `
      -Prompt "Do the requested task. Commit nothing unless explicitly instructed by the parent agent."
    ```
+   The helper passes `-m gpt-5.5 -c model_reasoning_effort="xhigh"` to `codex.cmd exec` by default.
 4. Read the printed run id, session id, branch, worktree, final message path, and event log path.
 5. Report the run id to the user if they may want to resume it later.
 
@@ -72,7 +74,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\.agents\skills\run-pro
 If the user wants to resume interactively in the CLI, use the recorded `session_id` from `metadata.json`:
 
 ```powershell
-codex.cmd resume --include-non-interactive <session-id>
+codex.cmd resume --include-non-interactive -m gpt-5.5 -c 'model_reasoning_effort="xhigh"' <session-id>
 ```
 
 If the worktree was already deleted, say that repository-local continuation is no longer available. The CLI conversation may still be viewable/resumable, but the original cwd and files are gone.
@@ -139,6 +141,7 @@ For delegated implementation prompts, include:
 - which docs/plans to read first
 - whether commits are allowed
 - verification expectations
+- strongest-model expectation: `gpt-5.5` with extra-high reasoning unless the user explicitly requested otherwise
 - a requirement to leave a concise final message with changed files, tests, commit hashes, and blockers
 
 For exploratory prompts, tell the child not to edit files unless explicitly asked.
