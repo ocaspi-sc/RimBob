@@ -42,12 +42,12 @@ function New-Slug {
 function Invoke-Git {
     param(
         [string]$Cwd,
-        [string[]]$Args
+        [string[]]$GitArgs
     )
 
-    $output = & git -C $Cwd @Args 2>&1
+    $output = & git -C $Cwd @GitArgs 2>&1
     if ($LASTEXITCODE -ne 0) {
-        throw "git $($Args -join ' ') failed in $Cwd`n$($output -join [Environment]::NewLine)"
+        throw "git $($GitArgs -join ' ') failed in $Cwd`n$($output -join [Environment]::NewLine)"
     }
     return ($output -join [Environment]::NewLine)
 }
@@ -139,7 +139,7 @@ function Invoke-CodexExec {
 
 function Get-CleanStatus {
     param([string]$Cwd)
-    return Invoke-Git -Cwd $Cwd -Args @("status", "--porcelain", "--untracked-files=all")
+    return Invoke-Git -Cwd $Cwd -GitArgs @("status", "--porcelain", "--untracked-files=all")
 }
 
 function Get-ReasoningConfigArg {
@@ -170,9 +170,9 @@ if ($Mode -eq "Start") {
         $Branch = "codex/prompt-$RunId"
     }
 
-    $repoTop = Invoke-Git -Cwd $RepoRoot -Args @("rev-parse", "--show-toplevel")
-    $baseCommit = Invoke-Git -Cwd $RepoRoot -Args @("rev-parse", $BaseRef)
-    Invoke-Git -Cwd $RepoRoot -Args @("worktree", "add", "-b", $Branch, $worktreePath, $BaseRef) | Out-Null
+    $repoTop = Invoke-Git -Cwd $RepoRoot -GitArgs @("rev-parse", "--show-toplevel")
+    $baseCommit = Invoke-Git -Cwd $RepoRoot -GitArgs @("rev-parse", $BaseRef)
+    Invoke-Git -Cwd $RepoRoot -GitArgs @("worktree", "add", "-b", $Branch, $worktreePath, $BaseRef) | Out-Null
 
     $promptPath = Join-Path $runDir "prompt.md"
     $eventsPath = Join-Path $runDir "events-start.jsonl"
@@ -296,7 +296,7 @@ if ($Mode -eq "Show") {
     $metadata = Read-RunMetadata -Id $RunId
     $gitStatus = $null
     if (Test-Path -LiteralPath ([string]$metadata.worktree)) {
-        $gitStatus = Invoke-Git -Cwd ([string]$metadata.worktree) -Args @("status", "--short", "--branch", "--untracked-files=all")
+        $gitStatus = Invoke-Git -Cwd ([string]$metadata.worktree) -GitArgs @("status", "--short", "--branch", "--untracked-files=all")
     }
 
     [pscustomobject]@{
@@ -349,7 +349,7 @@ if ($Mode -eq "CloseOut") {
         throw "-Verified is required with -LandAndClose. Run the relevant build/tests or runtime checks first."
     }
 
-    $counts = Invoke-Git -Cwd $worktree -Args @("rev-list", "--left-right", "--count", "$BaseRef...HEAD")
+    $counts = Invoke-Git -Cwd $worktree -GitArgs @("rev-list", "--left-right", "--count", "$BaseRef...HEAD")
     $parts = $counts -split "\s+"
     $behind = [int]$parts[0]
     $ahead = [int]$parts[1]
@@ -360,7 +360,7 @@ if ($Mode -eq "CloseOut") {
         throw "Branch $childBranch has no commits ahead of $BaseRef."
     }
 
-    $currentBranch = Invoke-Git -Cwd $RepoRoot -Args @("branch", "--show-current")
+    $currentBranch = Invoke-Git -Cwd $RepoRoot -GitArgs @("branch", "--show-current")
     if ($currentBranch -ne "master") {
         throw "Refusing to land: $RepoRoot is on '$currentBranch', not 'master'."
     }
@@ -370,7 +370,7 @@ if ($Mode -eq "CloseOut") {
         throw "Refusing to land: $RepoRoot has local changes.`n$masterStatus"
     }
 
-    Invoke-Git -Cwd $RepoRoot -Args @("merge", "--squash", $childBranch) | Out-Null
+    Invoke-Git -Cwd $RepoRoot -GitArgs @("merge", "--squash", $childBranch) | Out-Null
     $cachedDiff = & git -C $RepoRoot diff --cached --quiet
     if ($LASTEXITCODE -eq 0) {
         throw "Squash merge produced no staged changes."
@@ -378,11 +378,11 @@ if ($Mode -eq "CloseOut") {
 
     $subject = "[codex] Land prompt run $RunId"
     $body = "Squash-merged delegated Codex prompt run.`n`nRun: $RunId`nBranch: $childBranch`nWorktree: $worktree`nSession: $($metadata.session_id)"
-    Invoke-Git -Cwd $RepoRoot -Args @("commit", "-m", $subject, "-m", $body) | Out-Null
-    $landedCommit = Invoke-Git -Cwd $RepoRoot -Args @("rev-parse", "HEAD")
+    Invoke-Git -Cwd $RepoRoot -GitArgs @("commit", "-m", $subject, "-m", $body) | Out-Null
+    $landedCommit = Invoke-Git -Cwd $RepoRoot -GitArgs @("rev-parse", "HEAD")
 
-    Invoke-Git -Cwd $RepoRoot -Args @("worktree", "remove", $worktree) | Out-Null
-    Invoke-Git -Cwd $RepoRoot -Args @("branch", "-d", $childBranch) | Out-Null
+    Invoke-Git -Cwd $RepoRoot -GitArgs @("worktree", "remove", $worktree) | Out-Null
+    Invoke-Git -Cwd $RepoRoot -GitArgs @("branch", "-d", $childBranch) | Out-Null
 
     $metadata.status = "landed_and_closed"
     $metadata.updated_at = (Get-Date).ToString("o")

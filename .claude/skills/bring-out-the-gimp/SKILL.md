@@ -39,12 +39,19 @@ Implication: do not "upgrade" any of the cheaper tiers without a real reason. If
 
 Reused as-is from the prior `run-prompt-with-codex` skill; filename unchanged:
 
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-  -File C:\dev\RimBob\.claude\skills\bring-out-the-gimp\scripts\Invoke-CodexPromptRun.ps1
+```
+C:\dev\RimBob\.claude\skills\bring-out-the-gimp\scripts\Invoke-CodexPromptRun.ps1
 ```
 
 Modes: `Start`, `Resume`, `Show`, `CloseOut`. Records live under `%USERPROFILE%\.codex\prompt-runs\<run-id>\` (prompt, JSONL events, final-message files, `metadata.json` with branch/worktree/session_id).
+
+**Invoke via the PowerShell tool, never via Bash.** Bash strips backslashes from Windows paths before they reach `powershell.exe`, turning `C:\dev\RimBob\...` into `C:devRimBob...` and the script fails with "the argument ... does not exist". The PowerShell tool runs the script natively without the mangling. Use the call form below; do *not* prefix with `powershell.exe -File` — that's an extra layer that re-introduces escaping issues.
+
+```powershell
+& 'C:\dev\RimBob\.claude\skills\bring-out-the-gimp\scripts\Invoke-CodexPromptRun.ps1' -Mode <Start|Resume|Show|CloseOut> ...
+```
+
+Long runs (Start / Resume on real implementation work) take many minutes — pass `run_in_background: true` to the PowerShell tool and the harness will notify on completion. Do not poll.
 
 ## Full flow
 
@@ -74,8 +81,7 @@ If master is dirty with foreign changes, stop and report — do not start a Code
 ### 3. Start the Codex run
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-  -File C:\dev\RimBob\.claude\skills\bring-out-the-gimp\scripts\Invoke-CodexPromptRun.ps1 `
+& 'C:\dev\RimBob\.claude\skills\bring-out-the-gimp\scripts\Invoke-CodexPromptRun.ps1' `
   -Mode Start `
   -Name "<slug>" `
   -Prompt @'
@@ -100,8 +106,7 @@ Capture the printed `run_id`, `session_id`, `branch`, `worktree`. Report them to
 ### 4. Inspect what Codex did
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-  -File C:\dev\RimBob\.claude\skills\bring-out-the-gimp\scripts\Invoke-CodexPromptRun.ps1 `
+& 'C:\dev\RimBob\.claude\skills\bring-out-the-gimp\scripts\Invoke-CodexPromptRun.ps1' `
   -Mode Show `
   -RunId "<run-id>"
 ```
@@ -129,8 +134,7 @@ Anything outside plan-vs-diff is Codex's job, not the verifier's.
 If the verifier reports gaps or out-of-scope changes:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-  -File C:\dev\RimBob\.claude\skills\bring-out-the-gimp\scripts\Invoke-CodexPromptRun.ps1 `
+& 'C:\dev\RimBob\.claude\skills\bring-out-the-gimp\scripts\Invoke-CodexPromptRun.ps1' `
   -Mode Resume `
   -RunId "<run-id>" `
   -Prompt @'
@@ -178,8 +182,7 @@ This is the durable handoff. The plan file ends up as both the intent and the ch
 Resume Codex one more time with the land prompt:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-  -File C:\dev\RimBob\.claude\skills\bring-out-the-gimp\scripts\Invoke-CodexPromptRun.ps1 `
+& 'C:\dev\RimBob\.claude\skills\bring-out-the-gimp\scripts\Invoke-CodexPromptRun.ps1' `
   -Mode Resume `
   -RunId "<run-id>" `
   -Prompt @'
