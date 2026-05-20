@@ -10,7 +10,6 @@
 ## Captured by /todo
 
 <!-- entries go here -->
-- [ ] [2026-05-20] #ops #cleanup Reconcile `Docs/plans/rimapi-blueprint-placement-endpoint.md` (untracked, divergent: 187 ins / 224 del vs the canonical `.plans/` copy). Diff the two, fold any still-relevant content into `.plans/rimapi-blueprint-placement-endpoint.md`, then delete the `Docs/plans/` stray and the empty directory.
 - [ ] [2026-05-19] #git #ops #multiagent Fix cross-agent staged-commit contamination on master. [plan](.plans/multi-agent-git-race.md)
 - [ ] [2026-05-19] #design #briefing #advice **`set_priority` advice — briefing read (near-term, Suggest-only).** Read current work priorities into Food's briefing so `set_priority` advice is accurate against live state. Action vocabulary already exists; gap is the input. Gated on a RIMAPI Pawn Edit Controller GET. [plan](.plans/set-priority-advice-briefing.md)
 - [ ] [2026-05-19] #design #auto #labor **Auto knob-write shim (deferred, M7+).** At Auto graduation: validate → one declarative policy write → readback; Labor recommends the knob, RimWorld's job-giver allocates. Depends on the briefing-read plan landing first; design at re-engagement. [plan](.plans/auto-knob-write-shim.md)
