@@ -84,6 +84,35 @@ public static class MapAggregateMapper
                 },
                 StringComparer.OrdinalIgnoreCase));
 
+    public static AnimalDefRegistry FromAnimalDefs(IReadOnlyList<AnimalDefDto> defs) =>
+        new(defs
+            .Where(def => !string.IsNullOrWhiteSpace(def.DefName))
+            .GroupBy(def => def.DefName, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group =>
+                {
+                    AnimalDefDto def = group.First();
+                    return new AnimalDefRecord(
+                        Def: def.DefName,
+                        Label: def.Label,
+                        BodySize: def.BaseBodySize,
+                        HealthScale: def.BaseHealthScale,
+                        Predator: def.Predator,
+                        HerdAnimal: def.HerdAnimal,
+                        PackAnimal: def.PackAnimal,
+                        IsInsect: def.IsInsect,
+                        Explosive: def.Explosive,
+                        ManhunterOnDamageChance: def.ManhunterOnDamageChance,
+                        Wildness: def.Wildness,
+                        MeatAmount: def.MeatAmount,
+                        EstimatedMeatNutrition: def.EstimatedMeatNutrition,
+                        LeatherAmount: def.LeatherAmount,
+                        LeatherDef: def.LeatherDef,
+                        Petness: def.Petness);
+                },
+                StringComparer.OrdinalIgnoreCase));
+
     public static TerrainSnapshot FromTerrain(
         TerrainGridDto terrain,
         IReadOnlyList<TerrainDefDto> defs)

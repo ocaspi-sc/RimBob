@@ -50,6 +50,8 @@ public sealed record FoodBriefing(
 
     public IReadOnlyList<FoodHuntTarget> HuntTargets { get; init; } = [];
 
+    public IReadOnlyList<FoodHuntRiskSummary> HuntRiskSummaries { get; init; } = [];
+
     public int ExcludedFoodUnits =>
         Math.Min(UnclassifiedFoodUnits, UnclassifiedFoodItems.Sum(item => Math.Max(0, item.Count)));
 
@@ -132,7 +134,14 @@ public sealed record FoodHuntTarget(
     IReadOnlyList<string> AnimalIds,
     string? Proximity,
     string? Reference
-);
+)
+{
+    public string Risk { get; init; } = "low";
+
+    public float? EstimatedNutrition { get; init; }
+
+    public string? ScoreReason { get; init; }
+}
 
 public sealed record FoodCropSummary(string Def, int Count, float AverageGrowth);
 
@@ -176,6 +185,21 @@ public sealed record WildHuntTarget(
     int Count,
     string? Proximity,
     string? Reference
+)
+{
+    public string Risk { get; init; } = "low";
+
+    public float? EstimatedNutrition { get; init; }
+
+    public string? ScoreReason { get; init; }
+}
+
+public sealed record FoodHuntRiskSummary(
+    string Def,
+    int Count,
+    string Risk,
+    float? EstimatedNutrition,
+    string? Reason
 );
 
 public sealed record FoodSkillSnapshot(

@@ -514,6 +514,59 @@ public sealed class FoodBriefingDerivationTests
             .Which.AnimalIds.Should().Equal("a2");
     }
 
+    [Fact]
+    public void Compute_HuntingTargetsPreferHigherValueLowRiskGroups()
+    {
+        ColonyState s = StateWithColonists(1);
+        s.AnimalDefs.Update(new AnimalDefRegistry(new Dictionary<string, AnimalDefRecord>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Hare"] = AnimalDef("Hare", bodySize: 0.2f, nutrition: 1.4f),
+            ["Ibex"] = AnimalDef("Ibex", bodySize: 0.45f, nutrition: 3.5f)
+        }));
+        s.Animals.Update(new AnimalRegistry([
+            new AnimalRecord("hare-1", "Hare", false, 1f, new MapPosition(10, 0, 10)),
+            new AnimalRecord("ibex-1", "Ibex", false, 1f, new MapPosition(12, 0, 10)),
+            new AnimalRecord("ibex-2", "Ibex", false, 1f, new MapPosition(13, 0, 10)),
+            new AnimalRecord("ibex-3", "Ibex", false, 1f, new MapPosition(14, 0, 10)),
+            new AnimalRecord("ibex-4", "Ibex", false, 1f, new MapPosition(15, 0, 10))
+        ]));
+
+        FoodBriefing b = FoodBriefingDerivation.Compute(s);
+
+        b.WildHuntTargets.Should().NotBeEmpty();
+        WildHuntTarget summary = b.WildHuntTargets[0];
+        summary.Def.Should().Be("Ibex");
+        summary.EstimatedNutrition.Should().BeApproximately(14f, 0.001f);
+        summary.ScoreReason.Should().Contain("about 14 nutrition");
+        b.HuntTargets.Should().NotBeEmpty();
+        FoodHuntTarget applyTarget = b.HuntTargets[0];
+        applyTarget.Def.Should().Be("Ibex");
+        applyTarget.Count.Should().Be(2);
+        applyTarget.EstimatedNutrition.Should().BeApproximately(7f, 0.001f);
+    }
+
+    [Fact]
+    public void Compute_HuntingRiskSummariesExposeDangerousMetadata()
+    {
+        ColonyState s = StateWithColonists(1);
+        s.AnimalDefs.Update(new AnimalDefRegistry(new Dictionary<string, AnimalDefRecord>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["CuteFox"] = AnimalDef("CuteFox", bodySize: 0.45f, nutrition: 2.0f, predator: true)
+        }));
+        s.Animals.Update(new AnimalRegistry([
+            new AnimalRecord("fox-1", "CuteFox", false, 1f, new MapPosition(10, 0, 10))
+        ]));
+
+        FoodBriefing b = FoodBriefingDerivation.Compute(s);
+
+        b.WildAnimalCount.Should().Be(1);
+        b.WildHuntTargets.Should().BeEmpty();
+        FoodHuntRiskSummary risk = b.HuntRiskSummaries.Should().ContainSingle().Subject;
+        risk.Def.Should().Be("CuteFox");
+        risk.Risk.Should().Be("dangerous");
+        risk.Reason.Should().Contain("predator");
+    }
+
     private static ColonyState StateWithColonists(int count)
     {
         ColonyState s = new();
@@ -538,4 +591,27 @@ public sealed class FoodBriefingDerivationTests
             .ToList()));
         return s;
     }
+
+    private static AnimalDefRecord AnimalDef(
+        string def,
+        float bodySize,
+        float nutrition,
+        bool predator = false) =>
+        new(
+            Def: def,
+            Label: def,
+            BodySize: bodySize,
+            HealthScale: 1f,
+            Predator: predator,
+            HerdAnimal: false,
+            PackAnimal: false,
+            IsInsect: false,
+            Explosive: false,
+            ManhunterOnDamageChance: 0f,
+            Wildness: 0.5f,
+            MeatAmount: nutrition / 0.05f,
+            EstimatedMeatNutrition: nutrition,
+            LeatherAmount: 0f,
+            LeatherDef: null,
+            Petness: 0f);
 }

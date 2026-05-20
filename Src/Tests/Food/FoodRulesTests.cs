@@ -578,6 +578,34 @@ public sealed class FoodRulesTests
     }
 
     [Fact]
+    public void LowBufferWithScoredHuntTarget_ExplainsNutritionValue()
+    {
+        FoodBriefing briefing = Briefing(days: 12f) with
+        {
+            MealsCount = 20,
+            RawFoodCount = 0,
+            ReadyToHarvest = 0,
+            WildHarvestCandidates = 0,
+            WildAnimalCount = 4,
+            WildHuntTargets =
+            [
+                new WildHuntTarget("Ibex", 4, "nearby to kitchen", "kitchen")
+                {
+                    EstimatedNutrition = 14f,
+                    ScoreReason = "about 14 nutrition; about 3.5 nutrition each"
+                }
+            ]
+        };
+
+        Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
+            .Should().BeOfType<Decision>().Subject;
+
+        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        advice.Body.Should().Contain("about 14 nutrition");
+        advice.Actions.Should().ContainSingle().Which.Reason.Should().Contain("about 14 nutrition");
+    }
+
+    [Fact]
     public void NutritionGapWithUnknownFoodUnits_RequestsStockpileVisibility()
     {
         FoodBriefing briefing = Briefing(days: null) with

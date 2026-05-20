@@ -357,9 +357,29 @@ public sealed record TerrainDefDto(
     [property: JsonPropertyName("affordances")] IReadOnlyList<string>? Affordances = null
 );
 
+public sealed record AnimalDefDto(
+    [property: JsonPropertyName("def_name")] string DefName,
+    [property: JsonPropertyName("label")] string? Label,
+    [property: JsonPropertyName("base_body_size")] float BaseBodySize = 0f,
+    [property: JsonPropertyName("base_health_scale")] float BaseHealthScale = 0f,
+    [property: JsonPropertyName("predator")] bool Predator = false,
+    [property: JsonPropertyName("herd_animal")] bool HerdAnimal = false,
+    [property: JsonPropertyName("pack_animal")] bool PackAnimal = false,
+    [property: JsonPropertyName("is_insect")] bool IsInsect = false,
+    [property: JsonPropertyName("explosive")] bool Explosive = false,
+    [property: JsonPropertyName("manhunter_on_damage_chance")] float ManhunterOnDamageChance = 0f,
+    [property: JsonPropertyName("wildness")] float Wildness = 0f,
+    [property: JsonPropertyName("meat_amount")] float MeatAmount = 0f,
+    [property: JsonPropertyName("estimated_meat_nutrition")] float EstimatedMeatNutrition = 0f,
+    [property: JsonPropertyName("leather_amount")] float LeatherAmount = 0f,
+    [property: JsonPropertyName("leather_def")] string? LeatherDef = null,
+    [property: JsonPropertyName("petness")] float Petness = 0f
+);
+
 public sealed record DefCatalogDto(
     [property: JsonPropertyName("things_defs")]  IReadOnlyList<ThingDefDto>? ThingsDefs,
-    [property: JsonPropertyName("terrain_defs")] IReadOnlyList<TerrainDefDto>? TerrainDefs
+    [property: JsonPropertyName("terrain_defs")] IReadOnlyList<TerrainDefDto>? TerrainDefs,
+    [property: JsonPropertyName("animal_defs")] IReadOnlyList<AnimalDefDto>? AnimalDefs = null
 );
 
 public sealed record TerrainGridDto(

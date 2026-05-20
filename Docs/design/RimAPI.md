@@ -65,7 +65,7 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 | GET | `/game/settings` + `/game/settings/run-in-background` (+ toggle) | settings |
 | POST | `/game/main-menu` / `/game/quit` | exit |
 
-> **Verified shape.** `/def/all` returns a non-empty object under `data`, with thing defs nested at `data.things_defs`. Food uses this catalog to read item nutrition; live `MealSurvivalPack` has `nutrition: 0.9`, `stack_limit: 10`, and item/category metadata.
+> **Verified shape.** `/def/all` returns a non-empty object under `data`, with thing defs nested at `data.things_defs`. Food uses this catalog to read item nutrition; live `MealSurvivalPack` has `nutrition: 0.9`, `stack_limit: 10`, and item/category metadata. The RimBob fork also exposes `animal_defs` so Food can score hunt risk/value from compact animal metadata instead of relying only on def-name deny lists.
 
 ### Game Events (incidents, quests, lords)
 | Method | Path | Purpose |
@@ -123,7 +123,7 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 
 > **Verified shape.** `/map/plants?map_id=...` currently returns broad thing-like plant rows with `thing_id`, `def_name`, `label`, `categories`, `position`, `stack_count`, and `is_forbidden`. It may not include growth, crop, or zone fields, so Food should not rely on this endpoint alone to know which crop is growing; combine it with `/map/farm/summary`.
 
-> **Verified shape.** `/map/animals?map_id=...` can omit health/tame fields on ordinary wild animals. Missing health means "not reported", not injured/dead; ingestion defaults it to healthy for Food's wild-animal opportunity count.
+> **Verified historical shape.** `/map/animals?map_id=...` could omit health/tame fields on ordinary wild animals. Missing health meant "not reported", not injured/dead; ingestion defaulted it to healthy for Food's wild-animal opportunity count. The RimBob fork now emits `tame` and `health` where RimWorld exposes them, which lets Food exclude tame or unhealthy animals before hunt scoring.
 
 ### Bill (work-table recipes)
 | Method | Path | Purpose |

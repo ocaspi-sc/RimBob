@@ -1,6 +1,7 @@
 using System.Text.Json;
 using RimBob.Coordination;
 using RimBob.Core.Advice;
+using RimBob.Core.Aggregates;
 using RimBob.Core.Briefings;
 using RimBob.Core.Ministers;
 using RimBob.Knowledge;
@@ -41,6 +42,10 @@ public static class MinisterEndpoints
             "/api/ministers/food/crop-math/latest",
             "available",
             "Read-only Food crop candidate diagnostics computed from the latest Food briefing.");
+        coverage.Register(
+            "/api/ministers/food/hunt-risk/latest",
+            "available",
+            "Read-only Food hunt risk diagnostics computed from current animal state and animal-def metadata.");
 
         app.MapGet("/api/ministers", (MinisterRegistry registry) =>
             Results.Ok(registry.Scopes.Select(MinisterScopeInfo.FromDescriptor)));
@@ -147,6 +152,58 @@ public static class MinisterEndpoints
                 GrowingTerrain: briefing.GrowingTerrain,
                 BestCandidate: recommendation.BestCandidate,
                 Candidates: recommendation.Candidates));
+        });
+
+        app.MapGet("/api/ministers/food/hunt-risk/latest", (BriefingCache briefings, ColonyState state) =>
+        {
+            FoodBriefing briefing = briefings.GetFoodBriefing();
+            IReadOnlyList<HuntRiskDiagnostic> animalDiagnostics = state.Animals.Value.Animals
+                .Select(animal => FoodHuntSafety.Diagnose(animal, state.AnimalDefs.Value))
+                .ToList();
+            IReadOnlyList<FoodHuntRiskSpeciesDiagnostic> species = animalDiagnostics
+                .GroupBy(diagnostic => diagnostic.Def, StringComparer.OrdinalIgnoreCase)
+                .Select(group => BuildHuntRiskSpeciesDiagnostic(group, state.AnimalDefs.Value))
+                .OrderBy(speciesDiagnostic => RiskSort(speciesDiagnostic.Risk))
+                .ThenByDescending(speciesDiagnostic => speciesDiagnostic.SortScore)
+                .ThenByDescending(speciesDiagnostic => speciesDiagnostic.EstimatedNutritionTotal ?? 0f)
+                .ThenBy(speciesDiagnostic => speciesDiagnostic.Def, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            IReadOnlyList<FoodHuntRiskCandidateDiagnostic> candidates = species
+                .Where(speciesDiagnostic => speciesDiagnostic.LowRiskCount > 0)
+                .OrderBy(speciesDiagnostic => speciesDiagnostic.RiskRank)
+                .ThenByDescending(speciesDiagnostic => speciesDiagnostic.EstimatedNutritionTotal ?? 0f)
+                .ThenByDescending(speciesDiagnostic => speciesDiagnostic.LowRiskCount)
+                .ThenBy(speciesDiagnostic => speciesDiagnostic.Def, StringComparer.OrdinalIgnoreCase)
+                .Select((speciesDiagnostic, index) => new FoodHuntRiskCandidateDiagnostic(
+                    Rank: index + 1,
+                    Def: speciesDiagnostic.Def,
+                    Label: speciesDiagnostic.Label,
+                    Count: speciesDiagnostic.LowRiskCount,
+                    RiskRank: speciesDiagnostic.RiskRank,
+                    EstimatedNutritionEach: speciesDiagnostic.EstimatedNutritionEach,
+                    EstimatedNutritionTotal: speciesDiagnostic.EstimatedNutritionTotal,
+                    Reason: speciesDiagnostic.Reason))
+                .Take(8)
+                .ToList();
+
+            return Results.Ok(new FoodHuntRiskDiagnosticsSnapshot(
+                BriefingVersion: briefing.BriefingVersion,
+                GameTick: briefing.GameTick,
+                Date: briefing.Date,
+                HasLiveState: state.LastRefreshSource == ColonyStateOrigin.Live,
+                StateSource: state.LastRefreshSource.ToString(),
+                AnimalDefCount: state.AnimalDefs.Value.DefsByName.Count,
+                TotalAnimals: animalDiagnostics.Count,
+                HealthyWildAnimals: animalDiagnostics.Count(diagnostic => diagnostic.IsHealthyWild),
+                LowRiskAnimals: animalDiagnostics.Count(diagnostic => diagnostic.Profile.Risk == "low"),
+                CautionAnimals: animalDiagnostics.Count(diagnostic => diagnostic.Profile.Risk == "caution"),
+                DangerousAnimals: animalDiagnostics.Count(diagnostic => diagnostic.Profile.Risk == "dangerous"),
+                BlockedAnimals: animalDiagnostics.Count(diagnostic => diagnostic.Profile.Risk == "blocked"),
+                MetadataBackedAnimals: animalDiagnostics.Count(diagnostic => diagnostic.MetadataAvailable),
+                FallbackAnimals: animalDiagnostics.Count(diagnostic => diagnostic.FallbackUsed),
+                Thresholds: FoodHuntRiskThresholds.Current,
+                Species: species,
+                Candidates: candidates));
         });
 
         app.MapGet("/api/ministers/{minister}/snapshot", (
@@ -391,6 +448,81 @@ public static class MinisterEndpoints
         return app;
     }
 
+    private static FoodHuntRiskSpeciesDiagnostic BuildHuntRiskSpeciesDiagnostic(
+        IGrouping<string, HuntRiskDiagnostic> group,
+        AnimalDefRegistry animalDefs)
+    {
+        IReadOnlyList<HuntRiskDiagnostic> diagnostics = group.ToList();
+        HuntRiskDiagnostic representative = diagnostics
+            .OrderBy(diagnostic => RiskSort(diagnostic.Profile.Risk))
+            .ThenByDescending(diagnostic => diagnostic.Profile.EstimatedNutrition ?? 0f)
+            .First();
+        int lowRiskCount = diagnostics.Count(diagnostic => diagnostic.Profile.Risk == "low");
+        float? nutritionEach = representative.Profile.EstimatedNutrition;
+        float? nutritionTotal = nutritionEach is null || lowRiskCount == 0
+            ? null
+            : nutritionEach.Value * lowRiskCount;
+        animalDefs.DefsByName.TryGetValue(group.Key, out AnimalDefRecord? animalDef);
+
+        return new FoodHuntRiskSpeciesDiagnostic(
+            Def: group.Key,
+            Label: animalDef?.Label,
+            Count: diagnostics.Count,
+            HealthyWildCount: diagnostics.Count(diagnostic => diagnostic.IsHealthyWild),
+            LowRiskCount: lowRiskCount,
+            CautionCount: diagnostics.Count(diagnostic => diagnostic.Profile.Risk == "caution"),
+            DangerousCount: diagnostics.Count(diagnostic => diagnostic.Profile.Risk == "dangerous"),
+            BlockedCount: diagnostics.Count(diagnostic => diagnostic.Profile.Risk == "blocked"),
+            MetadataAvailable: diagnostics.Any(diagnostic => diagnostic.MetadataAvailable),
+            FallbackUsed: diagnostics.Any(diagnostic => diagnostic.FallbackUsed),
+            Risk: representative.Profile.Risk,
+            RiskRank: representative.Profile.RiskRank,
+            SortScore: HuntTypeSortScore(representative.Profile, lowRiskCount, nutritionTotal),
+            IsLowRisk: representative.Profile.IsLowRisk,
+            EstimatedNutritionEach: nutritionEach,
+            EstimatedNutritionTotal: nutritionTotal,
+            Reason: representative.Profile.Reason,
+            Signals: diagnostics
+                .SelectMany(diagnostic => diagnostic.Signals)
+                .GroupBy(signal => signal.Key, StringComparer.OrdinalIgnoreCase)
+                .Select(signalGroup => signalGroup.First())
+                .ToList(),
+            SampleAnimalIds: diagnostics
+                .Select(diagnostic => diagnostic.AnimalId)
+                .Take(8)
+                .ToList());
+    }
+
+    private static int RiskSort(string risk) =>
+        risk switch
+        {
+            "low" => 0,
+            "caution" => 1,
+            "dangerous" => 2,
+            "blocked" => 3,
+            _ => 4
+        };
+
+    private static float HuntSortScore(HuntRiskProfile profile)
+    {
+        int safetyScore = profile.Risk switch
+        {
+            "low" => 3000,
+            "caution" => 2000,
+            "dangerous" => 1000,
+            "blocked" => 0,
+            _ => 0
+        };
+        int riskRankScore = Math.Max(0, 4 - profile.RiskRank) * 50;
+        float nutritionScore = profile.EstimatedNutrition ?? 0f;
+        return safetyScore + riskRankScore + nutritionScore;
+    }
+
+    private static float HuntTypeSortScore(HuntRiskProfile profile, int lowRiskCount, float? nutritionTotal)
+    {
+        return HuntSortScore(profile) + (lowRiskCount * 10) + (nutritionTotal ?? 0f);
+    }
+
     private static string ReadPromptOrPlaceholder(Func<string> read)
     {
         try
@@ -475,4 +607,71 @@ public static class MinisterEndpoints
         FoodGrowingTerrainSummary GrowingTerrain,
         FoodCropCandidate? BestCandidate,
         IReadOnlyList<FoodCropCandidate> Candidates);
+
+    private sealed record FoodHuntRiskDiagnosticsSnapshot(
+        long BriefingVersion,
+        long GameTick,
+        DateStamp Date,
+        bool HasLiveState,
+        string StateSource,
+        int AnimalDefCount,
+        int TotalAnimals,
+        int HealthyWildAnimals,
+        int LowRiskAnimals,
+        int CautionAnimals,
+        int DangerousAnimals,
+        int BlockedAnimals,
+        int MetadataBackedAnimals,
+        int FallbackAnimals,
+        FoodHuntRiskThresholds Thresholds,
+        IReadOnlyList<FoodHuntRiskSpeciesDiagnostic> Species,
+        IReadOnlyList<FoodHuntRiskCandidateDiagnostic> Candidates);
+
+    private sealed record FoodHuntRiskThresholds(
+        float MinimumHealthyWildHealth,
+        float DangerousManhunterChance,
+        float CautionManhunterChance,
+        float HerdPackCautionManhunterChance,
+        float DangerousBodySize,
+        float CautionBodySize)
+    {
+        public static FoodHuntRiskThresholds Current { get; } = new(
+            FoodHuntSafety.MinimumHealthyWildHealth,
+            FoodHuntSafety.DangerousManhunterChance,
+            FoodHuntSafety.CautionManhunterChance,
+            FoodHuntSafety.HerdPackCautionManhunterChance,
+            FoodHuntSafety.DangerousBodySize,
+            FoodHuntSafety.CautionBodySize);
+    }
+
+    private sealed record FoodHuntRiskSpeciesDiagnostic(
+        string Def,
+        string? Label,
+        int Count,
+        int HealthyWildCount,
+        int LowRiskCount,
+        int CautionCount,
+        int DangerousCount,
+        int BlockedCount,
+        bool MetadataAvailable,
+        bool FallbackUsed,
+        string Risk,
+        int RiskRank,
+        float SortScore,
+        bool IsLowRisk,
+        float? EstimatedNutritionEach,
+        float? EstimatedNutritionTotal,
+        string? Reason,
+        IReadOnlyList<HuntRiskSignal> Signals,
+        IReadOnlyList<string> SampleAnimalIds);
+
+    private sealed record FoodHuntRiskCandidateDiagnostic(
+        int Rank,
+        string Def,
+        string? Label,
+        int Count,
+        int RiskRank,
+        float? EstimatedNutritionEach,
+        float? EstimatedNutritionTotal,
+        string? Reason);
 }

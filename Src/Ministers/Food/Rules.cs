@@ -135,7 +135,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         if (days < 20f && briefing.WildAnimalCount > 0 && briefing.ReadyToHarvest == 0)
             return new Escalate(
                 "Food below 20 days with possible hunting path; target risk/value needs judgment.",
-                new { briefing.WildAnimalCount, briefing.ActiveThreat, briefing.Skills.BestCooking },
+                new { briefing.WildAnimalCount, briefing.ActiveThreat, briefing.Skills.BestCooking, briefing.HuntRiskSummaries },
                 DiagnosticsFor(briefing, "hunting_ambiguity"));
 
         if (briefing.Season.DaysToWinter is < 20 && days < 30f)
@@ -636,7 +636,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             Owner: "Labor",
             WorkType: WorkType.Hunt,
             Skill: "Shooting",
-            Reason: "low-risk wild animals are the best visible local food-acquisition path",
+            Reason: HuntingReason(briefing),
             Icon: HuntingIcon(briefing),
             Apply: HuntApply(briefing));
 
@@ -886,7 +886,17 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         string location = string.IsNullOrWhiteSpace(target.Proximity)
             ? "with no location summary available"
             : target.Proximity;
-        return $"Food covers about {days:F1} days and {target.Count} {LabelDef(target.Def)} are visible {location}. Mark a small, low-risk hunting batch and avoid predators, bonded animals, or anything the colony cannot cover safely.";
+        string score = string.IsNullOrWhiteSpace(target.ScoreReason) ? "" : $" {target.ScoreReason}.";
+        return $"Food covers about {days:F1} days and {target.Count} {LabelDef(target.Def)} are visible {location}.{score} Mark a small, low-risk hunting batch and avoid predators, bonded animals, or anything the colony cannot cover safely.";
+    }
+
+    private static string HuntingReason(FoodBriefing briefing)
+    {
+        WildHuntTarget target = briefing.WildHuntTargets[0];
+        if (!string.IsNullOrWhiteSpace(target.ScoreReason))
+            return $"low-risk wild animals are the best visible local food-acquisition path; {target.ScoreReason}";
+
+        return "low-risk wild animals are the best visible local food-acquisition path";
     }
 
     private static string HuntingActionText(FoodBriefing briefing)

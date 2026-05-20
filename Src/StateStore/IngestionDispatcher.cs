@@ -60,6 +60,7 @@ public sealed class IngestionDispatcher(
         state.Things.Update(MapAggregateMapper.FromThings(thingsTask.Result));
         DefCatalogDto defCatalog = defCatalogTask.Result;
         state.ThingDefs.Update(MapAggregateMapper.FromThingDefs(defCatalog.ThingsDefs ?? []));
+        state.AnimalDefs.Update(MapAggregateMapper.FromAnimalDefs(defCatalog.AnimalDefs ?? []));
         state.Terrain.Update(MapAggregateMapper.FromTerrain(terrainTask.Result, defCatalog.TerrainDefs ?? []));
         StoredResourceRegistry storedResources = MapAggregateMapper.FromStoredResources(storedTask.Result);
         state.StoredResources.Update(storedResources);

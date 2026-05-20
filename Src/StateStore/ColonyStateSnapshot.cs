@@ -74,6 +74,9 @@ public sealed record ColonyStateSnapshot
     [JsonPropertyName("thing_defs")]
     public required ThingDefRegistry ThingDefs { get; init; }
 
+    [JsonPropertyName("animal_defs")]
+    public AnimalDefRegistry AnimalDefs { get; init; } = AggregateDefaults.AnimalDefs;
+
     [JsonPropertyName("terrain")]
     public required TerrainSnapshot Terrain { get; init; }
 

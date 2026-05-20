@@ -31,6 +31,13 @@ coordination, that may mean the boundary is wrong.
 Flags are how ministers signal needs upward and sideways. They are not player
 advice by themselves; they are routing and arbitration inputs.
 
+Design direction: the durable parent concept is an **issue report**. A minister
+issue can project into player-facing `actions[]`, flag-carried requests, and CoS
+solver inputs. Current runtime still uses `AgentFlag` as the cross-minister
+bridge, but future CoS work should treat flags as a transport/projection of an
+issue rather than the whole issue model. See
+[`deterministic-cos-cabinet-issue-solver.md`](../../.plans/deterministic-cos-cabinet-issue-solver.md).
+
 M3 runtime bridge: before a separate CoS loop exists, Food publishes active
 flags and the Mayor reads active Medium+ flags during the same cabinet cycle.
 This is a Mayor-side bridge, not direct minister communication.
@@ -48,6 +55,23 @@ Exact shape lives in `Src/Common/Ministers/AgentFlag.cs`.
 
 Flag resource requests use the same semantics as advice resource requests:
 advisory needs, not allocation authority.
+
+Ministers may output structured requests for CoS by attaching
+`ResourceRequest`s to flags. A request describes the dependency that blocks or
+sharpens the source minister's issue, such as `requested_from: Construction`
+for a freezer/cooler dependency or `requested_from: Labor` for a work-type
+qualified labor need. It is not an imperative task for CoS and it is not a
+player-facing action.
+
+Request discipline:
+
+- Put requests on flags when another subsystem must notice the dependency.
+- Keep player-facing actions on advice `actions[]`; do not duplicate them as
+  CoS requests unless they also need cross-minister routing.
+- Fill `requested_from` when the owner is known from the ownership map.
+- Use `Attention` only when the dependency is real but no more specific request
+  kind fits yet.
+- Keep `request` and `reason` compact enough to render in a trace table.
 
 ### Severity Tiers
 
@@ -90,6 +114,17 @@ ministers.
 
 CoS is the arbitration layer for conflicts and duplicate framing.
 
+The first CoS implementation should be a deterministic solver over active
+flags, structured flag requests, and the latest Mayor posture /
+`cabinet_direction`. It should produce structured routing decisions: deduped
+issue groups, lead framing, tactical-alert versus digest routing, and logged
+downgrade/suppression reasons.
+
+CoS solver output is a routing artifact, not a new advice source. The Mayor can
+consume digest inputs and strategic tensions; the dashboard can render the
+routing trace; tactical-alert rendering can use the selected lead group. CoS
+itself still does not write the Agenda or produce routine advice cards.
+
 CoS can:
 
 - Dedupe overlapping flags.
@@ -128,6 +163,7 @@ See [`agenda.md`](agenda.md).
 - Shared mutable minister-owned data structures.
 - A pub/sub chat bus between ministers.
 - A ministry chat room.
+- Imperative `CoSRequest` tasks separate from flags.
 
 These create hidden coupling. Flags, briefings, and Agenda broadcast are enough
 for the current `Suggest`-mode design.

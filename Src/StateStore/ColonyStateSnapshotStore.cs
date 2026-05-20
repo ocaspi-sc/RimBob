@@ -149,6 +149,7 @@ public sealed class ColonyStateSnapshotStore
         state.Plants.Update(snapshot.Plants);
         state.Things.Update(snapshot.Things);
         state.ThingDefs.Update(snapshot.ThingDefs);
+        state.AnimalDefs.Update(snapshot.AnimalDefs);
         state.Terrain.Update(snapshot.Terrain);
         state.StoredResources.Update(snapshot.StoredResources);
         state.Animals.Update(snapshot.Animals);
@@ -249,6 +250,7 @@ public sealed class ColonyStateSnapshotStore
             Plants = state.Plants.Value,
             Things = state.Things.Value,
             ThingDefs = state.ThingDefs.Value,
+            AnimalDefs = state.AnimalDefs.Value,
             Terrain = state.Terrain.Value,
             StoredResources = state.StoredResources.Value,
             Animals = state.Animals.Value,
@@ -273,6 +275,7 @@ public sealed class ColonyStateSnapshotStore
             ["Plants"] = state.Plants.Version,
             ["Things"] = state.Things.Version,
             ["ThingDefs"] = state.ThingDefs.Version,
+            ["AnimalDefs"] = state.AnimalDefs.Version,
             ["Terrain"] = state.Terrain.Version,
             ["StoredResources"] = state.StoredResources.Version,
             ["Animals"] = state.Animals.Version,

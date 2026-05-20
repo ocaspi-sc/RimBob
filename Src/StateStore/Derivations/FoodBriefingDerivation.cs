@@ -82,7 +82,8 @@ public static class FoodBriefingDerivation
             UnclassifiedFoodItems = food.UnclassifiedFoodItems,
             UnforbidTargets = DeriveUnforbidTargets(s),
             HarvestTargets = DeriveHarvestTargets(s, reference, foragePlants),
-            HuntTargets = DeriveHuntTargets(s, reference, Math.Max(1, Math.Min(pawns.Count * 2, AssistedApplyLimits.MaxHuntTargets)))
+            HuntTargets = DeriveHuntTargets(s, reference, Math.Max(1, Math.Min(pawns.Count * 2, AssistedApplyLimits.MaxHuntTargets))),
+            HuntRiskSummaries = DeriveHuntRiskSummaries(s)
         };
     }
 
@@ -501,15 +502,25 @@ public static class FoodBriefingDerivation
             .Select(group =>
             {
                 int? distance = MapDistance.Nearest(group.Select(animal => animal.Position), reference?.Position);
+                HuntRiskProfile profile = FoodHuntSafety.Assess(group.First(), s.AnimalDefs.Value);
+                float? nutrition = TotalNutrition(profile, group.Count());
                 return new HuntCandidateSummary(
                     new WildHuntTarget(
                         Def: group.Key,
                         Count: group.Count(),
                         Proximity: MapDistance.ProximityLabel(distance, reference?.Name),
-                        Reference: reference?.Name),
-                    distance);
+                        Reference: reference?.Name)
+                    {
+                        Risk = profile.Risk,
+                        EstimatedNutrition = nutrition,
+                        ScoreReason = ScoreReason(profile, nutrition)
+                    },
+                    distance,
+                    profile,
+                    nutrition ?? 0f);
             })
-            .OrderBy(candidate => FoodHuntSafety.RiskRank(candidate.Target.Def))
+            .OrderBy(candidate => candidate.Profile.RiskRank)
+            .ThenByDescending(candidate => candidate.EstimatedNutrition)
             .ThenBy(candidate => candidate.Distance ?? int.MaxValue)
             .ThenByDescending(candidate => candidate.Target.Count)
             .Select(candidate => candidate.Target)
@@ -528,10 +539,11 @@ public static class FoodBriefingDerivation
 
         return candidates
             .GroupBy(animal => animal.Def, StringComparer.OrdinalIgnoreCase)
-            .Select(group => BuildHuntTarget(group.Key, group, reference, targetLimit))
+            .Select(group => BuildHuntTarget(group.Key, group, s.AnimalDefs.Value, reference, targetLimit))
             .Where(candidate => candidate is not null)
             .Cast<HuntTargetCandidate>()
-            .OrderBy(candidate => FoodHuntSafety.RiskRank(candidate.Target.Def))
+            .OrderBy(candidate => candidate.Profile.RiskRank)
+            .ThenByDescending(candidate => candidate.EstimatedNutrition)
             .ThenBy(candidate => candidate.Distance ?? int.MaxValue)
             .ThenByDescending(candidate => candidate.Target.Count)
             .Select(candidate => candidate.Target)
@@ -542,6 +554,7 @@ public static class FoodBriefingDerivation
     private static HuntTargetCandidate? BuildHuntTarget(
         string def,
         IEnumerable<AnimalRecord> animals,
+        AnimalDefRegistry animalDefs,
         FoodReferencePoint? reference,
         int targetLimit)
     {
@@ -554,6 +567,8 @@ public static class FoodBriefingDerivation
 
         MapRect rect = RectFor(selected.Select(animal => animal.Position!));
         int? distance = MapDistance.Nearest(selected.Select(animal => animal.Position), reference?.Position);
+        HuntRiskProfile profile = FoodHuntSafety.Assess(selected[0], animalDefs);
+        float? nutrition = TotalNutrition(profile, selected.Count);
         return new HuntTargetCandidate(
             new FoodHuntTarget(
                 Def: def,
@@ -561,8 +576,15 @@ public static class FoodBriefingDerivation
                 Rect: rect,
                 AnimalIds: selected.Select(animal => animal.Id).ToList(),
                 Proximity: MapDistance.ProximityLabel(distance, reference?.Name),
-                Reference: reference?.Name),
-            distance);
+                Reference: reference?.Name)
+            {
+                Risk = profile.Risk,
+                EstimatedNutrition = nutrition,
+                ScoreReason = ScoreReason(profile, nutrition)
+            },
+            distance,
+            profile,
+            nutrition ?? 0f);
     }
 
     private static IReadOnlyList<AnimalRecord> SelectBoundedHuntAnimals(
@@ -615,7 +637,28 @@ public static class FoodBriefingDerivation
 
     private static IReadOnlyList<AnimalRecord> LowRiskHuntCandidates(ColonyState s) =>
         s.Animals.Value.Animals
-            .Where(FoodHuntSafety.IsLowRiskTarget)
+            .Where(animal => FoodHuntSafety.IsLowRiskTarget(animal, s.AnimalDefs.Value))
+            .ToList();
+
+    private static IReadOnlyList<FoodHuntRiskSummary> DeriveHuntRiskSummaries(ColonyState s) =>
+        s.Animals.Value.Animals
+            .Where(FoodHuntSafety.IsHealthyWildAnimal)
+            .GroupBy(animal => animal.Def, StringComparer.OrdinalIgnoreCase)
+            .Select(group =>
+            {
+                HuntRiskProfile profile = FoodHuntSafety.Assess(group.First(), s.AnimalDefs.Value);
+                float? nutrition = TotalNutrition(profile, group.Count());
+                return new FoodHuntRiskSummary(
+                    Def: group.Key,
+                    Count: group.Count(),
+                    Risk: profile.Risk,
+                    EstimatedNutrition: nutrition,
+                    Reason: ScoreReason(profile, nutrition));
+            })
+            .OrderBy(summary => summary.Risk == "dangerous" ? 3 : summary.Risk == "caution" ? 2 : 0)
+            .ThenByDescending(summary => summary.EstimatedNutrition ?? 0f)
+            .ThenBy(summary => summary.Def, StringComparer.OrdinalIgnoreCase)
+            .Take(6)
             .ToList();
 
     private static FoodGrowingTerrainSummary DeriveGrowingTerrain(TerrainSnapshot terrain)
@@ -710,9 +753,33 @@ public static class FoodBriefingDerivation
         text.Contains("Poison", StringComparison.OrdinalIgnoreCase) ||
         text.Contains("ToxicFallout", StringComparison.OrdinalIgnoreCase);
 
-    private sealed record HuntCandidateSummary(WildHuntTarget Target, int? Distance);
+    private static float? TotalNutrition(HuntRiskProfile profile, int count) =>
+        profile.EstimatedNutrition is > 0f ? profile.EstimatedNutrition.Value * count : null;
 
-    private sealed record HuntTargetCandidate(FoodHuntTarget Target, int? Distance);
+    private static string? ScoreReason(HuntRiskProfile profile, float? totalNutrition)
+    {
+        if (profile.Reason is null && totalNutrition is null)
+            return null;
+
+        string? nutrition = totalNutrition is > 0f
+            ? $"about {totalNutrition.Value:0.#} nutrition"
+            : null;
+
+        return string.Join("; ", new[] { nutrition, profile.Reason }
+            .Where(part => !string.IsNullOrWhiteSpace(part)));
+    }
+
+    private sealed record HuntCandidateSummary(
+        WildHuntTarget Target,
+        int? Distance,
+        HuntRiskProfile Profile,
+        float EstimatedNutrition);
+
+    private sealed record HuntTargetCandidate(
+        FoodHuntTarget Target,
+        int? Distance,
+        HuntRiskProfile Profile,
+        float EstimatedNutrition);
 
     private sealed record HarvestTargetCandidate(IReadOnlyList<PlantRecord> Plants, int Area, int Distance);
 
