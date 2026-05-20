@@ -15,7 +15,9 @@ Default posture: create a feature branch + worktree, run `codex.cmd exec`, recor
 - Use the strongest available Codex model by default. Current default is `gpt-5.5` with `model_reasoning_effort="xhigh"`; do not use fast mode for delegated runs unless the user explicitly asks.
 - Base RimBob runs from the real checkout at `C:\dev\RimBob` unless the user names another repo.
 - Do not use `C:\dev\RimBob` itself as the child agent's working directory.
+- The child agent may do branch-local git work: inspect status, stage its own files, and commit coherent implementation slices on the delegated branch.
 - Do not land or delete the worktree by default. Resumability matters more than tidiness until the user asks to close out.
+- The child agent must not land to `master`, delete worktrees, or touch other branches unless the prompt explicitly asks for closeout or landing.
 - Do not assume a run is safe to land because Codex exited successfully. Inspect the diff, verify behavior, and preserve unrelated work.
 - If closeout is requested, prefer the repo's normal closeout discipline: narrow commits, sync with `master`, verify, land on the real `C:\dev\RimBob` `master`, then remove the worktree and branch only after the work is durable.
 
@@ -54,7 +56,7 @@ Each run record contains the prompt, JSONL event stream, final message, metadata
    powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\.agents\skills\run-prompt-with-codex\scripts\Invoke-CodexPromptRun.ps1 `
      -Mode Start `
      -Name "short-task-name" `
-     -Prompt "Do the requested task. Commit nothing unless explicitly instructed by the parent agent."
+     -Prompt "Do the requested task. You may make branch-local commits for coherent implementation slices. Do not land to master, delete worktrees, or touch other branches unless explicitly requested."
    ```
    The helper passes `-m gpt-5.5 -c model_reasoning_effort="xhigh"` to `codex.cmd exec` by default.
 4. Read the printed run id, session id, branch, worktree, final message path, and event log path.
@@ -139,7 +141,7 @@ For delegated implementation prompts, include:
 - the exact user request
 - repo root and branch/worktree expectations
 - which docs/plans to read first
-- whether commits are allowed
+- commit/closeout boundaries: branch-local commits are allowed for implementation; master landing and worktree deletion require explicit closeout/landing permission
 - verification expectations
 - strongest-model expectation: `gpt-5.5` with extra-high reasoning unless the user explicitly requested otherwise
 - a requirement to leave a concise final message with changed files, tests, commit hashes, and blockers

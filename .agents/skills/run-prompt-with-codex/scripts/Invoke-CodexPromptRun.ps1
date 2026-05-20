@@ -123,11 +123,17 @@ function Find-SessionId {
 function Invoke-CodexExec {
     param(
         [string[]]$Arguments,
-        [string]$EventsPath
+        [string]$EventsPath,
+        [string]$InputPath
     )
 
     $codex = Resolve-CodexCmd
-    & $codex @Arguments 2>&1 | Tee-Object -FilePath $EventsPath
+    if ([string]::IsNullOrWhiteSpace($InputPath)) {
+        & $codex @Arguments 2>&1 | Tee-Object -FilePath $EventsPath
+    }
+    else {
+        Get-Content -LiteralPath $InputPath -Raw | & $codex @Arguments 2>&1 | Tee-Object -FilePath $EventsPath
+    }
     return $LASTEXITCODE
 }
 
@@ -196,10 +202,17 @@ if ($Mode -eq "Start") {
     Write-RunMetadata -Id $RunId -Metadata $metadata
 
     $reasoningConfigArg = Get-ReasoningConfigArg -Effort $ReasoningEffort
-    $exitCode = Invoke-CodexExec -Arguments @("exec", "-C", $worktreePath, "--json", "-m", $Model, "-c", $reasoningConfigArg, "-o", $lastMessagePath, $Prompt) -EventsPath $eventsPath
+    $exitCode = Invoke-CodexExec -Arguments @("exec", "-C", $worktreePath, "--json", "-m", $Model, "-c", $reasoningConfigArg, "-o", $lastMessagePath, "-") -EventsPath $eventsPath -InputPath $promptPath
     $session = Find-SessionId -EventsPath $eventsPath
 
-    $metadata.status = $(if ($exitCode -eq 0) { "completed" } else { "codex_failed" })
+    $scriptExitCode = $exitCode
+    if (($exitCode -eq 0) -and [string]::IsNullOrWhiteSpace($session)) {
+        $metadata.status = "completed_unresumable"
+        $scriptExitCode = 2
+    }
+    else {
+        $metadata.status = $(if ($exitCode -eq 0) { "completed" } else { "codex_failed" })
+    }
     $metadata.updated_at = (Get-Date).ToString("o")
     $metadata.session_id = $session
     $metadata.codex_exit_codes = @($exitCode)
@@ -209,6 +222,7 @@ if ($Mode -eq "Start") {
         run_id = $RunId
         status = $metadata.status
         codex_exit_code = $exitCode
+        script_exit_code = $scriptExitCode
         session_id = $session
         branch = $Branch
         worktree = $worktreePath
@@ -216,7 +230,7 @@ if ($Mode -eq "Start") {
         events = $eventsPath
         final_message = $lastMessagePath
     } | Format-List
-    exit $exitCode
+    exit $scriptExitCode
 }
 
 if ($Mode -eq "Resume") {
@@ -252,7 +266,7 @@ if ($Mode -eq "Resume") {
     $Prompt | Set-Content -LiteralPath $resumePromptPath -Encoding UTF8
 
     $reasoningConfigArg = Get-ReasoningConfigArg -Effort $ReasoningEffort
-    $exitCode = Invoke-CodexExec -Arguments @("exec", "resume", "--json", "-m", $Model, "-c", $reasoningConfigArg, "-o", $lastMessagePath, $SessionId, $Prompt) -EventsPath $eventsPath
+    $exitCode = Invoke-CodexExec -Arguments @("exec", "resume", "--json", "-m", $Model, "-c", $reasoningConfigArg, "-o", $lastMessagePath, $SessionId, "-") -EventsPath $eventsPath -InputPath $resumePromptPath
 
     $metadata.status = $(if ($exitCode -eq 0) { "resumed_completed" } else { "resume_failed" })
     $metadata.updated_at = (Get-Date).ToString("o")
