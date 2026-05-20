@@ -51,8 +51,13 @@ For the MVP, output is advice by default. Narrow player-confirmed Assisted Apply
 └──────────────────────────────────────────────┘
 ```
 
-> **Deferred (Auto epic):** HTN planner, bulletin board, Labor solver, broad RIMAPI write coverage, and autonomous execution.
-> Designed but not built in MVP; re-engaged when the first minister graduates from `Suggest` to `Auto`.
+> **Deferred (Auto epic):** a small Auto execution shim that writes the game's
+> declarative automation knobs (work priorities, zones, bills, policies,
+> schedules), a thin Labor policy recommender, the bulletin board, and the
+> matching RIMAPI write coverage. The earlier framing of a custom HTN planner +
+> assignment solver issuing per-pawn writes is superseded — see the decision
+> log. Designed but not built in MVP; re-engaged when the first minister
+> graduates from `Suggest` to `Auto`.
 
 Two operational modes run in parallel:
 
@@ -121,7 +126,11 @@ Every in-game action should eventually map to one primary owning minister. The f
 
 **Rules first, LLM second.** The rules layer handles the majority of decisions cheaply. The LLM earns its cost on genuine judgment calls. → [`design/ministers.md`](design/ministers.md)
 
-> **Deferred principle (Auto epic):** *Only Labor touches pawn allocation.* Re-engaged when the first minister graduates to `Auto` and needs to issue RIMAPI pawn writes. Until then, no minister touches pawn allocation. → [`design/ministers/labor.md`](design/ministers/labor.md), [`design/planning.md`](design/planning.md)
+> **Deferred principle (Auto epic):** *The game allocates pawns; Labor only
+> recommends work-system policy.* RimWorld's work-priority grid + job-givers are
+> the assignment solver. Labor never issues per-pawn job writes; at Auto it sets
+> declarative policy knobs and the game executes. Until Auto graduation, no
+> minister writes pawn policy at all. → [`design/ministers/labor.md`](design/ministers/labor.md), [`design/planning.md`](design/planning.md)
 
 ---
 
@@ -210,8 +219,8 @@ Decisions made and the reasoning behind them. Append; do not delete.
 | Unified minister output persistence replaces Agenda-specific durability | The Mayor Agenda is now one typed producer in the latest-only minister output store, alongside feeder `AdviceSnapshot`s. The store writes per-minister files under the stable data root, reloads before endpoints/SSE, and keeps history in the replay corpus rather than an Agenda ring. This supersedes the older AgendaStore current/history decision and keeps `cabinet_direction` as the sanctioned Mayor-to-feeder channel. See [`design/agenda.md`](design/agenda.md), [`design/advice.md`](design/advice.md), [`design/state-store.md`](design/state-store.md), and [`design/dashboard.md`](design/dashboard.md). |
 | Host rebuilds do not trigger cabinet regeneration | Startup now reloads persisted minister output snapshots and only creates a labeled bootstrap Agenda when no persisted minister output exists at all. The day tick orchestrator records the first observed day and waits for day rollover or manual trigger instead of firing Mayor/cabinet on Host start. This supersedes the earlier startup-wake and missing-agenda-bootstrap decisions. See [`design/agenda.md`](design/agenda.md), [`design/dashboard.md`](design/dashboard.md), and [`design/state-store.md`](design/state-store.md). |
 | Agenda routes retired in favor of minister snapshot routes | `/api/agenda/latest`, `/api/agenda/history`, and `/api/agenda/manual` are removed with no aliases. Dashboard clients use `/api/ministers/{minister}/snapshot`, manual Mayor fallback uses `/api/ministers/mayor/snapshot/manual`, and status/system payloads report `mayor_snapshot_version` plus minister-output metadata instead of `agenda_version` / agenda-store metadata. See [`design/RimAPI.md`](design/RimAPI.md) and [`design/dashboard.md`](design/dashboard.md). |
-| Advice freshness uses game time and latest snapshots stay visible | Gameplay advice should expire by game tick or resolved state, not real-world clock time. The dashboard renders the latest persisted minister advice even when expired and labels it stale; Assisted Apply remains blocked unless the advice is current and live validation succeeds. See [`design/advice.md`](design/advice.md), [`design/dashboard.md`](design/dashboard.md), and [`design/ministers/food.md`](design/ministers/food.md). |
 | Design docs should not mirror code | Design docs should preserve durable decisions, ownership boundaries, runtime contracts, and open questions. Avoid duplicating exact C# signatures, enum inventories, DTO fields, endpoint payload details, fixture schemas, or current rule lists that source and tests document better. Link to code/tests when exact implementation shape matters. |
+| Auto execution delegates to the game's native automation; ministers tune policy, RimWorld allocates pawns | RimWorld already ships a battle-tested colony automation engine — the work-priority grid, job-givers, zones, bills, drug/food/apparel policies, and schedules. The deferred Auto epic originally specified rebuilding that as a custom HTN planner plus a Labor assignment solver issuing per-pawn job writes. Delegating to the game's declarative knobs instead collapses Labor from a solver to a policy recommender, removes most HTN motivation, shrinks the Auto write surface to a few declarative endpoints, and is far more debuggable (a policy-config diff vs. an HTN + per-pawn job trace) — consistent with "debuggable over clever" and the "no MCP / deterministic execution" decisions. Limits: the work tab expresses colony-wide *policy*, not targeted spatial intent, so it complements (never replaces) targeted designations like `mark_harvest`/`mark_hunt`/`place_blueprint`; and persistent policy writes (priorities/zones/bills) overwrite hand-tuned player intent with high blast radius, so they stay out of the first Assisted Apply slice (additive/ephemeral designations do not). Near-term Suggest-mode effect: ministers may *recommend* knob changes (`set_priority` is already a named action kind) once current priorities/policies are read into briefings. Supersedes the "build a custom Labor assignment solver / HTN per-pawn primitive contract" framing in [`design/planning.md`](design/planning.md) and [`design/ministers/labor.md`](design/ministers/labor.md). |
 
 ---
 

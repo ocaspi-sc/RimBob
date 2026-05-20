@@ -185,7 +185,7 @@ Each minister owns either a production chain or a well-defined subsystem:
 | Economy | Wealth and trade chain: trade goods, caravans, buying scarce resources, selling surplus, wealth pressure |
 | Mayor | Colony-wide strategy and posture; owns no routine operational action |
 | Chief of Staff | Flag triage and conflict arbitration; owns no direct production chain |
-| Labor | Deferred Auto-epic assignment solver; owns pawn allocation only after Auto re-engages |
+| Labor | Deferred Auto-epic work-system **policy recommender** (priorities/zones/schedules/policies). Not an assignment solver — RimWorld's job system allocates pawns. Re-engages at Auto. |
 
 ### Resource Requests
 
@@ -199,6 +199,15 @@ Labor requests must be specific enough for a player or future Labor minister to
 act on. They should name the relevant RimWorld work-tab type when possible, and
 the skill signal when a skill threshold matters. Routine hauling and cleaning
 should not become labor requests unless they are urgently blocking the domain.
+
+The executor is the game, not RimBob. In MVP a labor request is player advice.
+At Auto it becomes an input to Labor, which recommends the smallest
+work-system *policy* change (a work-tab priority, zone membership, schedule
+block) and lets RimWorld's job system do the allocation. No minister — Labor
+included — ever writes per-pawn jobs. This is why requests name the work-tab
+type: that name *is* the knob. See [`DESIGN.md`](../DESIGN.md) decision "Auto
+execution delegates to the game's native automation" and
+[`ministers/labor.md`](ministers/labor.md).
 
 Canonical work-type names are a code contract. Do not maintain a duplicate enum
 list in this doc; use `Src/Common/Advice/WorkType.cs` and expand it from live

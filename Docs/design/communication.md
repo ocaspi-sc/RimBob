@@ -14,8 +14,11 @@ All coordination uses shared, observable channels:
 
 1. **Flag channel** - ministers publish needs, incidents, and escalations for
    CoS/Mayor synthesis.
-2. **Bulletin board** - deferred Auto-epic labor/request channel, re-engaged at
-   M7 with Labor.
+2. **Bulletin board** - deferred Auto-epic request channel, re-engaged at M7
+   with Labor. Reframed scope: it queues cross-minister labor *requests* that
+   Labor turns into work-system policy recommendations — not per-pawn execution
+   tickets. RimWorld's job system is the executor. See [`DESIGN.md`](../DESIGN.md)
+   decision "Auto execution delegates to the game's native automation."
 
 No bilateral messaging, no minister-to-minister method calls, and no shared
 mutable state between ministers. If two ministers need frequent direct

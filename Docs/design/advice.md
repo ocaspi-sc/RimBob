@@ -71,6 +71,29 @@ names such as `mark_harvest`, `mark_hunt`, `place_blueprint`,
 `production_bill`, `set_priority`, `designate_zone`, `set_stockpile_zone`, and
 `unforbid` over generic `note` output when the operation is known.
 
+#### Policy Knobs vs. Targeted Designations
+
+Two classes of action exist and they have different risk profiles:
+
+- **Targeted designation** — `mark_harvest`, `mark_hunt`, `place_blueprint`,
+  `unforbid`. One-off, spatially explicit, additive, and ephemeral; the game
+  clears it once done. Low blast radius.
+- **Policy knob** — `set_priority`, `designate_zone`, `set_stockpile_zone`,
+  broad `production_bill`. Colony-wide, persistent, and *overwrites hand-tuned
+  player intent* the briefing cannot see. High blast radius.
+
+This distinction is durable design, not just an Assisted Apply rule: knob
+actions express colony policy, designations express a specific next move. Per
+the [`DESIGN.md`](../DESIGN.md) decision "Auto execution delegates to the game's
+native automation," knob actions are how Auto eventually steers RimWorld's own
+job system — they complement, never replace, targeted designations.
+
+`set_priority` is a first-class Suggest-mode advice action **now** (e.g. "raise
+Bob's Cook priority — he is the only able cook and meals are backing up"). It
+requires current work priorities/policies to be read into the issuing minister's
+briefing; without that read the minister cannot tell whether the knob is already
+set. Emitting `set_priority` advice does not write anything in MVP.
+
 Each action carries one short imperative instruction. Optional quantity, owner,
 work type, skill, reason, and icon metadata should be used only when the emitter
 can state them cleanly. Explanation belongs in body/rationale/current-state
@@ -108,19 +131,10 @@ Advice should point back to the briefing snapshot or recoverable source data it
 was based on. The dashboard uses this for inspection; refinement uses it for
 replay.
 
-### Expiry, Freshness, And Supersession
+### Expiry And Supersession
 
-Advice freshness is primarily game-time based. Wall-clock issue times remain
-audit metadata, but gameplay advice should expire against the latest known game
-tick or by resolved game state, not because RimWorld was paused, closed, or
-RIMAPI was unreachable while real time passed. Stale cards are harmful when
-treated as current, especially for threat or emergency advice, but they are
-still useful inspection evidence.
-
-Expired advice should not disappear from the latest minister snapshot. The
-dashboard should keep showing the last persisted advice and clearly mark it as
-expired/stale. Assisted Apply may only execute after fresh live validation and
-must reject expired game-tick advice.
+Advice can expire by time or by resolved game state. Stale active cards are
+harmful to trust, especially for threat or emergency advice.
 
 When new advice replaces an older unresolved item, use supersession or a stable
 same-issue id so the active dashboard view updates instead of stacking duplicate
@@ -129,10 +143,10 @@ active cards.
 
 ### Active Advice Snapshots
 
-The advice surface is the issuing minister's latest successful view, not an
-append-only feed and not a wall-clock TTL cache. Each minister play cycle should
-publish its current set as a minister-scoped snapshot. A successful empty
-snapshot means the minister currently has no advice items.
+The active advice surface is the issuing minister's latest successful view, not
+an append-only feed. Each minister play cycle should publish its current active
+set as a minister-scoped snapshot. A successful empty snapshot means the
+minister currently has no active advice.
 
 Active feeder snapshots are durable across Host restarts through the unified
 minister output store. The dashboard should reload the last good advice,
@@ -292,6 +306,14 @@ animal ids and a bounded rectangle, and fresh validation proves no unsafe or
 off-target animals are inside that rectangle. Work priorities, broad bill
 editing, zones, pawn assignment, equipment, medical, prisoner, and combat
 controls stay outside the first Assisted Apply slice.
+
+The exclusion of policy knobs (priorities/zones/broad bills) is a deliberate
+trust call, not a plumbing gap — the RIMAPI write is usually trivial. They are
+persistent and overwrite player intent (high blast radius), whereas the
+allowlisted designations are additive and ephemeral. Every allowlist candidate
+is a targeted designation by that test; policy knobs return only with the Auto
+dial, where Labor recommends them and the player has explicitly consented per
+minister.
 
 Apply attempts must be logged with enough context to inspect the advice, target,
 validation decision, RIMAPI result, and read-back state in dashboard/system

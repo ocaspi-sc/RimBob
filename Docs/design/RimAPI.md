@@ -269,7 +269,7 @@ overrides resolve under the same stable machine-local RimBob root.
 Live docs name these controllers; their endpoint shapes are not in this file. **Fetch live docs before relying on them:**
 
 - **Pawn Info Controller** — read pawn fields not covered by `/api/v2/colonists/detailed`
-- **Pawn Edit Controller** — likely target for work priorities, schedules, drug/food policies, apparel/equipment changes (writes Labor/Welfare own — see [ministers/labor.md](ministers/labor.md), [ministers/welfare.md](ministers/welfare.md))
+- **Pawn Edit Controller** — likely target for work priorities, schedules, drug/food policies, apparel/equipment changes. Split by direction: the near-term need is a **read** of current work priorities/policies so ministers can emit accurate Suggest-mode `set_priority` advice (a minister cannot tell if a knob is already set without it). The matching **writes** are deferred Auto-epic policy knobs Labor recommends — see [`DESIGN.md`](DESIGN.md) decision "Auto execution delegates to the game's native automation," [ministers/labor.md](ministers/labor.md), [ministers/welfare.md](ministers/welfare.md). Fetch and cache the GET shape here when the first `set_priority`-emitting minister wires it.
 - **Pawn Job Controller** — direct job/forced-work assignment
 - **Pawn Spawn Controller** — create/remove pawns
 
