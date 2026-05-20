@@ -146,8 +146,8 @@ serializer options → `chain` / `chains`).
   field.
 - `Docs/design/dashboard.md` — new "Food Routes" panel above the
   advice cards; new `chain`/`chains` SSE snapshot fields.
-- Copy this approved plan to `Docs/plans/advice-chain-visualization.md` as the
-  first implementation step (AGENTS.md: agent plans live in `Docs/plans/`; plan
+- Copy this approved plan to `.plans/advice-chain-visualization.md` as the
+  first implementation step (AGENTS.md: agent plans live in `.plans/`; plan
   mode only permitted me to write the harness plan file).
 
 ## Critical Files

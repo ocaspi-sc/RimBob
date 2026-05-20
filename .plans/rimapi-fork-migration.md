@@ -30,7 +30,7 @@ repositories. RimBob continues to integrate over HTTP at
 - Update RimBob docs/runtime notes:
   - `Docs/design/RimAPI.md` should name `C:\dev\RIMAPI-for-RimBob` /
     `ocaspi-sc/RIMAPI-for-RimBob` as the active fork.
-  - `Docs/plans/mark-harvest-unforbid.md` should point endpoint work at the
+  - `.plans/mark-harvest-unforbid.md` should point endpoint work at the
     sibling fork repo.
   - leave `unforbid` and plant-growth endpoint implementation todos open until
     actually implemented.

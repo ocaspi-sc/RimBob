@@ -60,7 +60,7 @@ When the user asks to capture findings in `HumanTodo.md`:
 6. Split broad ideas into multiple todos when they target different ministers, endpoints, or implementation seams.
 7. Keep each line short enough to scan. Do not write paragraphs into `HumanTodo.md`.
 8. Verify every new local file link exists before committing.
-9. Do not generate `Docs/plans/` artifacts unless the user explicitly asks for a plan.
+9. Do not generate `.plans/` artifacts unless the user explicitly asks for a plan.
 
 ## Closeout
 

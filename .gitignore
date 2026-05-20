@@ -37,9 +37,6 @@ Thumbs.db
 .claude/settings.local.json
 .claude/worktrees/
 
-# Codex/agent local scratch
-.plans/
-
 # PowerShell module analysis cache can appear when tools run with HOME in repo
 Microsoft/
 
