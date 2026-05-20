@@ -11,6 +11,7 @@
 ## Captured by /todo
 
 <!-- entries go here -->
+- [ ] base-layout-construction-tips [2026-05-21] #research #construction #layout Base Layout / Construction tips: fold community base-building heuristics into Construction minister spatial lint and dashboard evidence. [plan](.plans/base-layout-construction-tips.md)
 - [ ] food-audit-f1-f2-f3 [2026-05-21] #llm #test #rules Food audit F1+F2+F3: seed replay corpus; drop state_summary from prompt; add freezer_missing test. [plan](.plans/food-audit-f1-f2-f3.md)
 - [ ] deterministic-cos-cabinet-issue-solver [2026-05-20] #design #cos #cabinet **Deterministic CoS Cabinet Issue Solver.** Implement the issue-report parent model and CoS routing plan. [plan](.plans/deterministic-cos-cabinet-issue-solver.md)
 - [ ] fix-cross-agent-staged-commit [2026-05-19] #git #ops #multiagent Fix cross-agent staged-commit contamination on master. [plan](.plans/multi-agent-git-race.md)
