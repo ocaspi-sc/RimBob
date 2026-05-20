@@ -1,4 +1,0 @@
-interface:
-  display_name: "Run Prompt With Codex"
-  short_description: "Delegate prompts to Codex CLI worktrees"
-  default_prompt: "Use $run-prompt-with-codex to run this prompt through codex.cmd with gpt-5.5 extra-high reasoning in a resumable branch/worktree; allow branch-local commits but do not land or delete the worktree."
