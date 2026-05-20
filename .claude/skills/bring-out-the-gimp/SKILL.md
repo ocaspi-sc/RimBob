@@ -9,6 +9,16 @@ Claude-only skill. Claude is the principal: it plans, delegates, verifies, summa
 
 Use this whenever the user wants real code shipped. The default Claude-on-master rule ("Claude only writes plans") is satisfied because Claude still does not touch source on master — Codex does, inside a worktree, and lands a squash on master at the end.
 
+## Why this exists
+
+**Token cost.** That's the entire motivation. There is no capability story here, no trust story, no architectural story.
+
+- Codex CLI is very cheap per token compared to Claude Opus. Implementation work is token-heavy (long files, long diffs, repeated reads). Letting Codex do it saves real money.
+- Sonnet 4.6 is slightly cheaper than Opus 4.7. Verification is bounded and well-scoped — perfect for the cheaper tier — so the verifier sub-agent runs on Sonnet, not Opus.
+- The principal Claude session (Opus) stays focused on the small expensive things only Opus should be doing: writing the plan, judging verifier output, deciding when to iterate, writing the human-facing summary, and deciding when to land.
+
+Implication: do not "upgrade" any of the cheaper tiers without a real reason. If you find yourself doing the verifier's job from Opus, or doing Codex's job from Opus, you've defeated the point. If the gimp run feels expensive, the question is "did we route the right token-heavy work to the cheap models", not "should we add more steps".
+
 ## Roles
 
 - **Claude (this session)** — writes the plan to `.plans/<slug>.md` (uncommitted on master), spawns Codex, drives iterations, runs the Sonnet verifier sub-agent, writes the human-facing summary back into the plan file, and tells Codex when to land.
@@ -98,16 +108,21 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 
 Read the latest `final-message-*.md` and `git -C <worktree> diff --stat`. If Codex bailed (non-zero exit, blocker reported, plan declared wrong), surface that to the user — do not paper over it with a verifier run.
 
-### 5. Verify plan adherence (Sonnet 4.6 sub-agent)
+### 5. Verify plan adherence (custom Sonnet verifier)
 
-Spawn a single Agent with `model: "sonnet"` (cheap), `subagent_type: "general-purpose"`. Brief it like a fresh reviewer:
+Spawn the dedicated verifier agent (cheap on purpose):
 
-- The absolute path to `.plans/<slug>.md`.
-- The worktree path.
-- The exact question: "Does the diff at `<worktree>` implement the Scope in `<plan>` — nothing more, nothing less? List adherence gaps and out-of-scope changes only. Do not opine on style, do not run builds, do not check tests — Codex already ran the plan's verification."
-- Ask for a short structured report: `Adherent: yes/no`, `Gaps:` (bulleted), `Out-of-scope changes:` (bulleted), `Notes:` (one paragraph max).
+```
+Agent({
+  subagent_type: "gimp-verifier",
+  description: "Plan-adherence check for <slug>",
+  prompt: "Plan: C:\\dev\\RimBob\\.plans\\<slug>.md\nWorktree: <worktree>\nRun id: <run-id>\nLatest Codex final message: <final-message path>\n\nReport plan adherence per your standard format."
+})
+```
 
-The sub-agent is intentionally narrow. Anything outside plan-vs-diff is Codex's job, not the verifier's.
+The agent definition lives at `.claude/agents/gimp-verifier.md`. It pins `model: sonnet`, restricts tools to read-only (Read/Glob/Grep/Bash for `git diff`), and bakes the "Scope is the contract" framing + the exact report format. Don't repeat that briefing here — just hand it the inputs.
+
+Anything outside plan-vs-diff is Codex's job, not the verifier's.
 
 ### 6. Iterate (Resume the same Codex session)
 
