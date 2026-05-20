@@ -165,6 +165,27 @@ public sealed record ThingDefRecord(
     int? StackLimit
 );
 
+public sealed record AnimalDefRegistry(IReadOnlyDictionary<string, AnimalDefRecord> DefsByName);
+
+public sealed record AnimalDefRecord(
+    string Def,
+    string? Label,
+    float BodySize,
+    float HealthScale,
+    bool Predator,
+    bool HerdAnimal,
+    bool PackAnimal,
+    bool IsInsect,
+    bool Explosive,
+    float ManhunterOnDamageChance,
+    float Wildness,
+    float MeatAmount,
+    float EstimatedMeatNutrition,
+    float LeatherAmount,
+    string? LeatherDef,
+    float Petness
+);
+
 public sealed record TerrainSnapshot(
     int Width,
     int Height,
@@ -208,7 +229,8 @@ public sealed record AnimalRecord(
     string Def,
     bool Tame,
     float Health,
-    MapPosition? Position = null
+    MapPosition? Position = null,
+    bool Bonded = false
 );
 
 /// <summary>
@@ -254,6 +276,7 @@ public static class AggregateDefaults
     public static readonly PlantRegistry     Plants      = new([]);
     public static readonly ThingRegistry     Things      = new([]);
     public static readonly ThingDefRegistry  ThingDefs   = new(new Dictionary<string, ThingDefRecord>());
+    public static readonly AnimalDefRegistry AnimalDefs  = new(new Dictionary<string, AnimalDefRecord>());
     public static readonly TerrainSnapshot   Terrain     = new(0, 0, new Dictionary<string, int>(), new Dictionary<string, TerrainDefRecord>());
     public static readonly StoredResourceRegistry StoredResources = new([], new Dictionary<string, int>(), new Dictionary<string, int>());
     public static readonly AnimalRegistry    Animals     = new([]);

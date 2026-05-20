@@ -33,6 +33,7 @@ public sealed class ColonyStateSnapshotStoreTests
             snapshot.SnapshotId.Should().NotBeNullOrWhiteSpace();
             snapshot.CapturedAt.Should().Be(original.LastLiveRefreshAt!.Value);
             snapshot.AggregateVersions.Should().ContainKey("Terrain").WhoseValue.Should().Be(1);
+            snapshot.AggregateVersions.Should().ContainKey("AnimalDefs").WhoseValue.Should().Be(1);
             snapshot.AggregateVersions.Should().ContainKey("Research").WhoseValue.Should().Be(1);
 
             ColonyState restored = new();
@@ -41,6 +42,7 @@ public sealed class ColonyStateSnapshotStoreTests
             restored.LastRefreshSource.Should().Be(ColonyStateOrigin.Snapshot);
             restored.LastLiveRefreshAt.Should().BeNull();
             restored.Terrain.Value.Should().BeEquivalentTo(original.Terrain.Value);
+            restored.AnimalDefs.Value.Should().BeEquivalentTo(original.AnimalDefs.Value);
             restored.Stockpiles.Value.Should().BeEquivalentTo(original.Stockpiles.Value);
             restored.Colonists.Value.Should().BeEquivalentTo(original.Colonists.Value);
             restored.Terrain.Version.Should().Be(1);
@@ -180,6 +182,10 @@ public sealed class ColonyStateSnapshotStoreTests
         {
             ["MealSurvivalPack"] = new("MealSurvivalPack", "packaged survival meal", "Item", "ThingWithComps", true, false, false, false, 0.9f, 10),
             ["RawBerries"] = new("RawBerries", "berries", "Item", "ThingWithComps", true, false, false, false, 0.05f, 75)
+        }));
+        state.AnimalDefs.Update(new AnimalDefRegistry(new Dictionary<string, AnimalDefRecord>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Hare"] = new("Hare", "hare", 0.2f, 1f, false, false, false, false, false, 0f, 0.6f, 28f, 1.4f, 7f, "Leather_Plain", 0.1f)
         }));
         state.Terrain.Update(new TerrainSnapshot(
             Width: 3,

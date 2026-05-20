@@ -293,7 +293,7 @@ public sealed class RimApiClientTests
     }
 
     [Fact]
-    public async Task GetDefCatalog_WhenApiReturnsThingAndTerrainDefs_ReturnsFullCatalog()
+    public async Task GetDefCatalog_WhenApiReturnsThingTerrainAndAnimalDefs_ReturnsFullCatalog()
     {
         using HttpClient http = MakeClient(new PathRouter()
             .Add("def/all", Json("""
@@ -321,6 +321,26 @@ public sealed class RimApiClientTests
                         "fertility": 1.0,
                         "affordances": ["Walkable", "GrowSoil"]
                       }
+                    ],
+                    "animal_defs": [
+                      {
+                        "def_name": "Ibex",
+                        "label": "ibex",
+                        "base_body_size": 0.45,
+                        "base_health_scale": 1.0,
+                        "predator": false,
+                        "herd_animal": true,
+                        "pack_animal": false,
+                        "is_insect": false,
+                        "explosive": false,
+                        "manhunter_on_damage_chance": 0.02,
+                        "wildness": 0.75,
+                        "meat_amount": 70,
+                        "estimated_meat_nutrition": 3.5,
+                        "leather_amount": 20,
+                        "leather_def": "Leather_Plain",
+                        "petness": 0.1
+                      }
                     ]
                   },
                   "errors": null,
@@ -336,6 +356,11 @@ public sealed class RimApiClientTests
         terrain.DefName.Should().Be("Soil");
         terrain.Fertility.Should().Be(1.0f);
         terrain.Affordances.Should().Contain("GrowSoil");
+        result.AnimalDefs.Should().NotBeNull();
+        AnimalDefDto animal = result.AnimalDefs!.Should().ContainSingle().Subject;
+        animal.DefName.Should().Be("Ibex");
+        animal.EstimatedMeatNutrition.Should().Be(3.5f);
+        animal.HerdAnimal.Should().BeTrue();
     }
 
     [Fact]

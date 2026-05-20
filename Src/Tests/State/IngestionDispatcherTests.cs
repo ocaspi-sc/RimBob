@@ -38,6 +38,7 @@ public sealed class IngestionDispatcherTests
         s.Plants.Version.Should().Be(1);
         s.Things.Version.Should().Be(1);
         s.ThingDefs.Version.Should().Be(1);
+        s.AnimalDefs.Version.Should().Be(1);
         s.Terrain.Version.Should().Be(1);
         s.StoredResources.Version.Should().Be(1);
         s.Animals.Version.Should().Be(1);
@@ -133,6 +134,7 @@ public sealed class IngestionDispatcherTests
         s.Things.Value.Things.Should().ContainSingle()
             .Which.Def.Should().Be("MealSurvivalPack");
         s.ThingDefs.Value.DefsByName.Should().ContainKey("MealSurvivalPack");
+        s.AnimalDefs.Value.DefsByName.Should().ContainKey("Hare");
         s.Terrain.Value.CellCountsByDef.Should().ContainKey("Soil").WhoseValue.Should().Be(4);
         s.Terrain.Value.DefsByName.Should().ContainKey("Soil").WhoseValue.Fertility.Should().Be(1f);
         s.StoredResources.Value.CountByDef.Should().ContainKey("MealSurvivalPack").WhoseValue.Should().Be(9);
@@ -583,6 +585,26 @@ public sealed class IngestionDispatcherTests
                     "label": "soil",
                     "fertility": 1.0,
                     "affordances": ["Walkable", "GrowSoil"]
+                  }
+                ],
+                "animal_defs": [
+                  {
+                    "def_name": "Hare",
+                    "label": "hare",
+                    "base_body_size": 0.2,
+                    "base_health_scale": 1.0,
+                    "predator": false,
+                    "herd_animal": false,
+                    "pack_animal": false,
+                    "is_insect": false,
+                    "explosive": false,
+                    "manhunter_on_damage_chance": 0.0,
+                    "wildness": 0.6,
+                    "meat_amount": 28,
+                    "estimated_meat_nutrition": 1.4,
+                    "leather_amount": 7,
+                    "leather_def": "Leather_Plain",
+                    "petness": 0.1
                   }
                 ],
                 "incidents_defs": []

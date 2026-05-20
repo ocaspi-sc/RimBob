@@ -77,9 +77,11 @@ Spatial and operational data stays aggregated. Food should receive counts,
 proximity strings, nearest clusters, distances, and coverage flags rather than
 raw plant/tile/building lists.
 
-Hunting input should stay compact: counts and nearest low-risk target summaries
-are enough for Suggest-mode mark-hunt advice; exact risk/value scoring remains a
-future refinement.
+Hunting input should stay compact: counts, nearest low-risk target summaries,
+and short risk/value reasons are enough for Suggest-mode mark-hunt advice. The
+state store may combine live animals with static animal-def metadata to rank
+safe targets and explain why risky visible animals were skipped, but Food should
+not receive raw animal lists.
 
 When upstream food totals cannot be classified into meals or raw food, the
 briefing should expose the unclassified count directly. It should also name
@@ -119,9 +121,9 @@ The implemented briefing can be narrower than the target. Use
 `FoodBriefing`, `FoodBriefingDerivation`, and Food briefing tests for current
 fields.
 
-Deferred richer signals include exact zone yield/location, hunting risk scoring,
-freezer room temperature, spoilage timers, work-priority state, and
-caravan/trade availability.
+Deferred richer signals include exact zone yield/location, freezer room
+temperature, spoilage timers, work-priority state, and caravan/trade
+availability.
 
 ---
 
@@ -190,20 +192,14 @@ meals/raw/unclassified food, days-of-food, growing areas and crop progress,
 acquisition opportunities, kitchen/storage/freezer signals, and confidence data
 gaps; individual advice items expose one concrete `actions[]` list for the player.
 
-Food also publishes a deterministic planning/production chain model on its
-active-advice snapshot. The model is derived from `FoodBriefing` plus the
-emitted active advice, not from an LLM diagram request. It groups the current
-food response into grow, hunt, and forage paths, then marks each path step as
-the current trigger, an action the advice is driving, a capability the colony
-already has, an idle available path, or a blocked prerequisite. The dashboard
-renders the model in the minister Infographics view as one merged work-order
-diagram. Grow, Hunt, and Forage use separate colored routes, then join through
-shared Harvest/Butcher, Storage, Cook, and Fridge nodes. Shared whole-colony
-facts such as the low-food trigger and final meal target stay in the structured
-model but are not repeated as visible route nodes. The diagram uses icon-led
-nodes and terse labels such as Zone, Crops, Harvest, Cook, and Store. Green
-marks covered/current-good steps, blue marks emitted action, gray marks
-future/idle capacity, and red marks blocked prerequisites.
+Food exposes deterministic hunt-risk diagnostics for the dashboard
+Infographics view. The Host derives this model from live `ColonyState` animal
+rows, `FoodHuntSafety`, and animal-def metadata, then emits animal-type
+diagnostics plus candidate summaries. The dashboard groups animal types by
+safety bucket and sorts them by the Host-emitted hunt score so the player can
+inspect exactly why each type can or cannot flow into `mark_hunt` advice and
+Assisted Apply. The briefing stays compact: Food advice gets low-risk target
+summaries and reasons, not raw animal lists.
 
 Crop selection should be grounded in deterministic yield math exposed through
 briefing context and rule decisions. The LLM may use guides to explain or adjust
@@ -298,7 +294,7 @@ locations, work capacity, or yield calculations absent from briefing/code.
 
 - [ ] Define exact food-buffer thresholds from play data.
 - [x] Add deterministic crop-yield math and computed crop candidates.
-- [ ] Improve hunting value/risk scoring.
+- [x] Improve baseline hunting value/risk scoring from animal-def metadata.
 - [ ] Account for caravan provisioning and food removed from the home map.
 - [ ] Decide ownership for drug/textile crops once Economy/Industry/Welfare are
       live.

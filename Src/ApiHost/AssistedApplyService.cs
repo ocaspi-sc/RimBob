@@ -344,11 +344,11 @@ public sealed class AssistedApplyService(
         IReadOnlyList<AnimalRecord> animalsInRect = state.Animals.Value.Animals
             .Where(animal => IsInside(apply.Rect, animal.Position))
             .ToList();
-        if (animalsInRect.Any(animal => !FoodHuntSafety.IsLowRiskTarget(animal)))
+        if (animalsInRect.Any(animal => !FoodHuntSafety.IsLowRiskTarget(animal, state.AnimalDefs.Value)))
             return Response("stale_advice", "Hunt area now contains unsafe or non-wild animals.", apply.Kind, adviceId, actionIndex);
 
         IReadOnlyList<AnimalRecord> eligibleInRect = animalsInRect
-            .Where(FoodHuntSafety.IsLowRiskTarget)
+            .Where(animal => FoodHuntSafety.IsLowRiskTarget(animal, state.AnimalDefs.Value))
             .ToList();
         if (eligibleInRect.Any(animal => !targetIds.Contains(animal.Id)))
             return Response("stale_advice", "Hunt area now contains extra animals not covered by this advice.", apply.Kind, adviceId, actionIndex);

@@ -24,8 +24,8 @@ RIMAPI       what is              what it means
 
 The state store keeps the current colony snapshot in a single visible root. The
 root contains domain aggregates for people, stockpiles, stored items, item defs,
-buildings, work-table bill state, power, map context, threats, research,
-factions, economy, and other live state as slices need them.
+animal defs, buildings, work-table bill state, power, map context, threats,
+research, factions, economy, and other live state as slices need them.
 
 Design rules:
 
@@ -151,8 +151,8 @@ Food's briefing should answer the nutrition-chain questions:
 - Which part of the chain is limiting: acquisition, cooking, storage, freezer,
   labor, season, threat, or data coverage?
 - What concrete opportunity is available now: harvest, forage plants, low-risk
-  hunt targets, sowing, cooking, storage visibility, freezer/building request,
-  or escalation?
+  hunt targets with compact risk/value reasons, sowing, cooking, storage
+  visibility, freezer/building request, or escalation?
 
 Food should classify stored food from item stacks plus definition metadata when
 that data is available. Summary rollups are still useful, but they do not win
