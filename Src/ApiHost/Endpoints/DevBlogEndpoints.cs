@@ -49,6 +49,11 @@ public sealed class DevBlogHistoryCache(
         string? observedHead = null;
         if (entry is not null && SameRepository(entry, repositoryRoot))
         {
+            if (IsFresh(entry, repositoryRoot, now))
+            {
+                return new DevBlogHistoryReadResult(entry.Report, null, entry.MasterHead);
+            }
+
             DevBlogHeadReadResult head = await reader.ReadMasterHeadAsync(repositoryRoot, ct);
             if (head.HeadHash is null)
             {
@@ -70,6 +75,11 @@ public sealed class DevBlogHistoryCache(
             entry = _entry;
             if (entry is not null && SameRepository(entry, repositoryRoot))
             {
+                if (IsFresh(entry, repositoryRoot, now))
+                {
+                    return new DevBlogHistoryReadResult(entry.Report, null, entry.MasterHead);
+                }
+
                 if (observedHead is null)
                 {
                     DevBlogHeadReadResult head = await reader.ReadMasterHeadAsync(repositoryRoot, ct);

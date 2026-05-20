@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { fetchDevBlogHistory } from '../../api/devBlog';
 import type {
   DevBlogDailyAreaRow,
@@ -421,27 +421,49 @@ function DevBlogContent({
 
 function FeatureIndex({ rows }: { rows: DevBlogDailyAreaRow[] }) {
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const featureModel = useMemo(() => {
+    const features = buildFeatureInventory(rows);
+    const tagSummaries = buildFeatureTagSummaries(features);
+    const tagTimeline = buildFeatureTagTimeline(rows);
+    const availableTags = new Set(tagSummaries.map(tag => tag.tag));
+    const totalScopePoints = features.reduce((total, feature) => total + feature.scopePoints, 0);
+
+    return {
+      availableTags,
+      features,
+      tagSummaries,
+      tagTimeline,
+      totalScopePoints,
+    };
+  }, [rows]);
+  const features = featureModel.features;
+  const tagSummaries = featureModel.tagSummaries;
+  const activeTag = selectedTag && featureModel.availableTags.has(selectedTag) ? selectedTag : null;
+  const chartTags = useMemo(
+    () => activeTag
+      ? [activeTag]
+      : tagSummaries.slice(0, Math.min(8, tagSummaries.length)).map(summary => summary.tag),
+    [activeTag, tagSummaries],
+  );
+  const tagOrder = useMemo(() => tagSummaries.map(summary => summary.tag), [tagSummaries]);
+  const visibleModel = useMemo(() => {
+    const visibleFeatures = activeTag === null
+      ? features
+      : features.filter(feature => feature.tags.includes(activeTag));
+    const visibleScopePoints = visibleFeatures.reduce((total, feature) => total + feature.scopePoints, 0);
+
+    return { visibleFeatures, visibleScopePoints };
+  }, [activeTag, features]);
+  const visibleFeatures = visibleModel.visibleFeatures;
+  const visibleScopePoints = visibleModel.visibleScopePoints;
 
   if (rows.length === 0) {
     return <EmptyState code="NO FEATURE WORK">No feature activity was generated.</EmptyState>;
   }
 
-  const features = buildFeatureInventory(rows);
   if (features.length === 0) {
     return <EmptyState code="NO FEATURES">No feature buckets were generated for this range.</EmptyState>;
   }
-
-  const tagSummaries = buildFeatureTagSummaries(features);
-  const tagTimeline = buildFeatureTagTimeline(rows);
-  const availableTags = new Set(tagSummaries.map(tag => tag.tag));
-  const activeTag = selectedTag && availableTags.has(selectedTag) ? selectedTag : null;
-  const chartTags = activeTag
-    ? [activeTag]
-    : tagSummaries.slice(0, Math.min(8, tagSummaries.length)).map(summary => summary.tag);
-  const visibleFeatures = activeTag === null
-    ? features
-    : features.filter(feature => feature.tags.includes(activeTag));
-  const visibleScopePoints = visibleFeatures.reduce((total, feature) => total + feature.scopePoints, 0);
 
   function selectTag(tag: string) {
     setSelectedTag(tag);
@@ -459,9 +481,9 @@ function FeatureIndex({ rows }: { rows: DevBlogDailyAreaRow[] }) {
         meta={activeTag === null ? `${chartTags.length} top tags` : featureTagLabel(activeTag)}
       >
         <FeatureTagTimelineChart
-          points={tagTimeline}
+          points={featureModel.tagTimeline}
           selectedTags={chartTags}
-          tagOrder={tagSummaries.map(summary => summary.tag)}
+          tagOrder={tagOrder}
         />
       </DisclosureSection>
       <div className="feature-index-layout">
@@ -478,7 +500,7 @@ function FeatureIndex({ rows }: { rows: DevBlogDailyAreaRow[] }) {
               onClick={clearTags}
             >
               <strong>All features</strong>
-              <small>{features.length} / {formatNumber(features.reduce((total, feature) => total + feature.scopePoints, 0))}</small>
+              <small>{features.length} / {formatNumber(featureModel.totalScopePoints)}</small>
             </button>
             {tagSummaries.map(summary => {
               const active = activeTag === summary.tag;

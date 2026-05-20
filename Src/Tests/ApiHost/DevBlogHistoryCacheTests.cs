@@ -6,13 +6,12 @@ namespace RimBob.Tests.ApiHost;
 public sealed class DevBlogHistoryCacheTests
 {
     [Fact]
-    public async Task ReadMasterHistoryAsync_WhenMasterHeadMatches_ReusesParsedReport()
+    public async Task ReadMasterHistoryAsync_WhenCacheIsFresh_ReusesParsedReportWithoutReadingGit()
     {
         DateTimeOffset now = new(2026, 5, 19, 12, 0, 0, TimeSpan.Zero);
         FakeDevBlogHistoryReader reader = new();
         DevBlogHistoryReport report = NewReport("C:\\repo", 1);
         reader.HistoryResults.Enqueue(new DevBlogHistoryReadResult(report, null, "head-1"));
-        reader.HeadResults.Enqueue(new DevBlogHeadReadResult("head-1", null));
         DevBlogHistoryCache sut = new(reader, TimeSpan.FromMinutes(1), () => now);
 
         DevBlogHistoryReadResult first = await sut.ReadMasterHistoryAsync("C:\\repo", CancellationToken.None);
@@ -21,7 +20,7 @@ public sealed class DevBlogHistoryCacheTests
         first.Report.Should().BeSameAs(report);
         second.Report.Should().BeSameAs(report);
         reader.HistoryCalls.Should().Be(1);
-        reader.HeadCalls.Should().Be(1);
+        reader.HeadCalls.Should().Be(0);
     }
 
     [Fact]

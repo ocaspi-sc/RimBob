@@ -310,9 +310,11 @@ DEV BLOG owns:
 
 The scope should stay bounded and local. It may shell out to Git from Host, but
 it must not mutate the repository, stage files, or inspect uncommitted worktree
-state. The Host may cache the parsed report and validate it against the current
-local `master` commit so normal dashboard polling does not rerun the full Git
-history scan.
+state. The Host caches the parsed report in process by repository root and
+`master` head: fresh requests return without shelling out, expired requests
+validate the current local `master` commit, and only a head change should rerun
+the full Git history scan. The frontend should also memoize derived feature
+rollups so tag changes do not rebuild the whole feature inventory.
 
 ### Right Sidebar
 
