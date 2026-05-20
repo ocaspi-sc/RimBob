@@ -50,7 +50,7 @@ $dashboardAnalyticsViews = @(
 )
 
 $dashboardDevBlogViews = @(
-    [pscustomobject]@{ Label = "Timeline"; View = "timeline" },
+    [pscustomobject]@{ Label = "Features"; View = "features" },
     [pscustomobject]@{ Label = "Churn"; View = "churn" },
     [pscustomobject]@{ Label = "Commits"; View = "commits" },
     [pscustomobject]@{ Label = "Topics"; View = "topics" },
