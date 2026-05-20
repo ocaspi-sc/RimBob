@@ -227,10 +227,11 @@ before promoting rule, prompt, briefing, or RAG changes.
 
 ## Deferred Auto Epic
 
-The HTN planner, bulletin board, Labor solver, broad RIMAPI write coverage, and
-per-advice-type `Auto` execution are deferred until M7+. Assisted Apply may map a
-small allowlist earlier, but it does not implement the Auto stack. These docs
-remain design sketches, not implementation promises.
+The Auto write shim, Labor policy recommender, bulletin board, broad RIMAPI
+write coverage, and per-advice-type `Auto` execution are deferred until the
+first Auto graduation. Assisted Apply may map a small allowlist earlier, but it
+does not implement the Auto stack. Detailed shape is designed at re-engagement;
+the current design sketches are intentionally thin.
 
 ---
 

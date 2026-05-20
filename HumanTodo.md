@@ -13,7 +13,7 @@
 - [ ] [2026-05-20] #ops #cleanup Reconcile `Docs/plans/rimapi-blueprint-placement-endpoint.md` (untracked, divergent: 187 ins / 224 del vs the canonical `.plans/` copy). Diff the two, fold any still-relevant content into `.plans/rimapi-blueprint-placement-endpoint.md`, then delete the `Docs/plans/` stray and the empty directory.
 - [ ] [2026-05-19] #git #ops #multiagent Fix cross-agent staged-commit contamination on master. [plan](.plans/multi-agent-git-race.md)
 - [ ] [2026-05-19] #design #briefing #advice **`set_priority` advice — briefing read (near-term, Suggest-only).** Read current work priorities into Food's briefing so `set_priority` advice is accurate against live state. Action vocabulary already exists; gap is the input. Gated on a RIMAPI Pawn Edit Controller GET. [plan](.plans/set-priority-advice-briefing.md)
-- [ ] [2026-05-19] #design #auto #labor **Auto knob-write shim (deferred, M7+).** At Auto graduation: validate → one declarative policy write → readback; Labor recommends the knob, RimWorld's job system allocates. No HTN/solver. Depends on the briefing-read plan landing first. [plan](.plans/auto-knob-write-shim.md)
+- [ ] [2026-05-19] #design #auto #labor **Auto knob-write shim (deferred, M7+).** At Auto graduation: validate → one declarative policy write → readback; Labor recommends the knob, RimWorld's job-giver allocates. Depends on the briefing-read plan landing first; design at re-engagement. [plan](.plans/auto-knob-write-shim.md)
 - [ ] [2026-05-19] #ops #host #dx Stop the Windows crash modal when `RimBob.Host` throws (escapes `Main`); make the host always exit cleanly + log Fatal so agent runs don't hang. [plan](.plans/host-crash-modal-suppression.md)
 - [ ] [2026-05-19] #rimmind #idea #defs **RimMind: Structured Def Knowledge Index.** Investigate a persistent RimWorld Def index for minister grounding; refs [index-defs.ts](<C:/dev/RimSage/src/scripts/index-defs.ts>), [db.ts](<C:/dev/RimSage/src/utils/db.ts>).
 - [ ] [2026-05-19] #rimmind #idea #defs **RimMind: Def Inheritance Resolver.** Investigate raw/merged XML Def handling for active/modded game truth; refs [def-resolver.ts](<C:/dev/RimSage/src/utils/def-resolver.ts>), [get-def-details.ts](<C:/dev/RimSage/src/tools/get-def-details.ts>).
@@ -112,9 +112,9 @@
 
 ### Auto epic (M7 - defer until then)
 
-- [ ] Auto write shim (one validated declarative knob write + readback; **not** an HTN engine) per [`Docs/design/planning.md`](Docs/design/planning.md).
+- [ ] Auto write shim (one validated declarative knob write + readback) per [`Docs/design/planning.md`](Docs/design/planning.md).
 - [ ] Bulletin board (`Coordination/BulletinBoard.cs`) — queues policy-change requests for Labor, not per-pawn tickets — per [`Docs/design/communication.md`](Docs/design/communication.md).
-- [ ] Labor policy recommender (**not** an assignment solver — the game allocates) per [`Docs/design/ministers/labor.md`](Docs/design/ministers/labor.md).
+- [ ] Labor policy recommender per [`Docs/design/ministers/labor.md`](Docs/design/ministers/labor.md).
 - [ ] RIMAPI policy-knob write-endpoint coverage map (Pawn Edit Controller etc.).
 - [ ] Per-(minister, advice_type) autonomy dial wired with real Auto execution.
 - [ ] Autonomy dial UI with confirmation step.

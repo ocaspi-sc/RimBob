@@ -185,7 +185,7 @@ Each minister owns either a production chain or a well-defined subsystem:
 | Economy | Wealth and trade chain: trade goods, caravans, buying scarce resources, selling surplus, wealth pressure |
 | Mayor | Colony-wide strategy and posture; owns no routine operational action |
 | Chief of Staff | Flag triage and conflict arbitration; owns no direct production chain |
-| Labor | Deferred Auto-epic work-system **policy recommender** (priorities/zones/schedules/policies). Not an assignment solver — RimWorld's job system allocates pawns. Re-engages at Auto. |
+| Labor | Deferred Auto-epic work-system **policy recommender** (priorities/zones/schedules/policies). RimWorld's job-giver allocates pawns. Re-engages at Auto. |
 
 ### Resource Requests
 

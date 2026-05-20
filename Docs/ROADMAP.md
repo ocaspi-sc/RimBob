@@ -17,7 +17,7 @@
 | M4.5 | Assisted Apply — player-confirmed execution for the safest allowlisted advice actions | Implemented |
 | M5 | Feedback loop — Accept / Dismiss / Pushback wired; each minister owns and persists its own pushback list | Not started |
 | M6 | Refinement loop closes — pushbacks drive the first promoted rule per minister | Not started |
-| M7 (post-MVP) | First Auto graduation — one minister's narrowest advice type (e.g. stockpile-zone suggestions) gains an `Auto` mode behind the dial. Re-engages a small Auto write shim + thin Labor policy recommender (not a custom HTN planner / assignment solver — see DESIGN.md decision) | Not started |
+| M7 (post-MVP) | First Auto graduation — one minister's narrowest advice type (e.g. stockpile-zone suggestions) gains an `Auto` mode behind the dial. Scope designed at re-engagement; see DESIGN.md decision "Auto execution delegates to the game's native automation." | Not started |
 
 > **Out of MVP scope:** the original "Year 1 survived, no human input" milestone is deprecated under the assisted-gameplay pivot. Equivalent autonomous play is now a long-tail goal reached by graduating multiple ministers to `Auto` over many cycles, not a single milestone.
 
@@ -191,14 +191,12 @@ payloads.
 
 **Done when:** the player can flip one narrow advice type from `Suggest` to `Auto`. When in `Auto`, the relevant `AdviceItem` is automatically applied without a per-step player click. Player can revert to `Suggest` at any time. Assisted Apply does not satisfy this milestone because it is manual, single-step, and allowlisted.
 
-**This re-engages the (reframed, shrunk) deferred design** — a small Auto shim
-that writes one validated declarative knob and observes the result, plus a thin
-Labor policy recommender. It is **not** a custom HTN planner or assignment
-solver; RimWorld's job system is the executor. See [`DESIGN.md`](DESIGN.md)
-decision "Auto execution delegates to the game's native automation,"
+**Execution model:** RimBob writes one validated declarative automation knob
+and RimWorld's job-giver allocates pawns. See [`DESIGN.md`](DESIGN.md) decision
+"Auto execution delegates to the game's native automation,"
 [`design/planning.md`](design/planning.md), and
-[`design/ministers/labor.md`](design/ministers/labor.md). Scope decided then,
-not now.
+[`design/ministers/labor.md`](design/ministers/labor.md). Shim/Labor/allowlist
+scope is designed at re-engagement, not now.
 
 **Demo:** zone change suggested by Food is created in-game without the player clicking Accept.
 
