@@ -43,7 +43,9 @@ This skill is intentionally low-context. For `/todo X`, use `X` directly, write 
    - Check `.git/index.lock`. If it exists, leave the entry uncommitted and report that Git is locked.
    - Check `git status --short` before staging. If there are staged changes, unrelated working-tree changes, or any other sign of an active working session writing files, leave the entry uncommitted and report that it can be committed later.
    - Check `git diff -- HumanTodo.md` before staging. If `HumanTodo.md` already has unrelated edits, leave the entry uncommitted and report that it can be committed later.
-   - Stage only `HumanTodo.md` changes that belong to this `/todo` entry. Do not stage unrelated files.
+   - Stage only this file with the literal command `git add -- HumanTodo.md`.
+   - Run `git diff --cached --name-only` before committing. It must output exactly `HumanTodo.md`.
+   - If the staged set is not exactly `HumanTodo.md`, do not commit. Unstage only this skill's staged path with `git restore --staged -- HumanTodo.md` if needed, leave the entry uncommitted, and report the unexpected staged paths. Do not blindly unstage files that may belong to another session.
    - Commit with message `Capture todo: <short description>`.
    - If `git add` or `git commit` fails for any reason, do not retry or request escalation; leave the entry uncommitted and report the failure briefly.
 
@@ -52,7 +54,7 @@ This skill is intentionally low-context. For `/todo X`, use `X` directly, write 
 ## Rules
 
 - Do not recreate `Docs/TODO.md` or root `todo.md`; `HumanTodo.md` is the single todo surface.
-- Do not create or update files under `Docs/plans/`. `/todo` is short-line capture only.
+- Do not create or update files under `.plans/`. `/todo` is short-line capture only.
 - Do not read or summarize the full `HumanTodo.md` unless a tool requires a narrow context snippet for insertion.
 - Do not quote existing todo contents in the reply.
 - Do not modify `Docs/ROADMAP.md` unless the user explicitly asks to change milestone order.

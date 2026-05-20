@@ -29,6 +29,8 @@ Close the session by turning the work into durable artifacts: a short recap, nar
    - If there are session-owned edits, group them into coherent commits. Prefer small commits by behavioral slice, not one giant mixed commit.
    - Stage exact paths or hunks. Never use broad staging when unrelated changes are present.
    - If a file contains mixed session-owned and user-owned edits, inspect the diff carefully and stage only safe hunks. If hunk staging is not practical, ask before touching the file.
+   - Before every commit, run `git diff --cached --name-only` and compare it with the intended file manifest for that commit. If unexpected paths are staged, do not commit; unstage only paths you just staged or stop and report.
+   - Never commit a staged superset of the intended slice, even if the extra paths look harmless.
    - Run the relevant verification before each commit or before the commit series when that is more appropriate.
    - After each commit, inspect the new commit's stat, changed paths, whitespace check, and diff summary. Confirm the commit matches the intended slice and the user's request.
 
