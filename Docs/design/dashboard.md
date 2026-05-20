@@ -615,8 +615,10 @@ briefing-derived labelled summary, not LLM prose. The Advice view may render it
 as a compact table with lightweight icon-database cues because it is
 player-facing; raw and debug views preserve the original `state_summary` text.
 It should name concrete food stores, growing areas/crop progress, acquisition
-opportunities, kitchen/storage/freezer signals, and confidence gaps before the
-action cards.
+opportunities, hunt-risk posture, kitchen/storage/freezer signals, and
+confidence gaps before the action cards. Hunt-risk posture in Current State is
+a compact briefing-derived line, not the full diagnostics payload; the full
+type-level breakdown remains under `/api/ministers/food/hunt-risk/latest`.
 Cards show rationale, concrete advice actions, citations, issue id or supersession
 when available, and coverage gaps. No feedback buttons are shown in v2.
 

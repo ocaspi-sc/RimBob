@@ -17,6 +17,7 @@ public static class FoodStateSummary
             BuildStoredFoodLine(briefing),
             BuildGrowingLine(briefing),
             BuildAcquisitionLine(briefing),
+            BuildHuntRiskLine(briefing),
             BuildKitchenStorageLine(briefing),
             BuildDataGapLine(briefing)
         }.Where(line => !string.IsNullOrWhiteSpace(line)));
@@ -91,6 +92,39 @@ public static class FoodStateSummary
         }
 
         return $"Acquisition: {string.Join("; ", parts)}.";
+    }
+
+    private static string BuildHuntRiskLine(FoodBriefing briefing)
+    {
+        if (briefing.WildAnimalCount <= 0)
+            return "";
+
+        if (briefing.HuntRiskSummaries.Count == 0)
+            return "Hunt risk: no healthy wild animal type passed the safety prefilter.";
+
+        IReadOnlyList<FoodHuntRiskSummary> lowRisk = RiskSummaries(briefing, "low");
+        int cautionTypes = RiskSummaries(briefing, "caution").Count;
+        int dangerousTypes = RiskSummaries(briefing, "dangerous").Count;
+        List<string> parts = [];
+
+        parts.Add(lowRisk.Count > 0
+            ? $"{Plural(lowRisk.Count, "low-risk type")} surfaced"
+            : "no low-risk hunt type surfaced");
+
+        WildHuntTarget? topTarget = briefing.WildHuntTargets.FirstOrDefault();
+        if (topTarget is not null)
+            parts.Add($"best {FormatHuntTarget(topTarget)}");
+
+        if (briefing.HuntTargets.Count > 0 && !briefing.ActiveThreat)
+            parts.Add($"{Plural(briefing.HuntTargets.Count, "bounded apply target")} ready");
+        else if (briefing.ActiveThreat && lowRisk.Count > 0)
+            parts.Add("active threat blocks mark_hunt");
+
+        string excluded = FormatRiskExclusions(cautionTypes, dangerousTypes);
+        if (!string.IsNullOrWhiteSpace(excluded))
+            parts.Add($"{excluded} held for escalation");
+
+        return $"Hunt risk: {string.Join("; ", parts)}.";
     }
 
     private static string BuildKitchenStorageLine(FoodBriefing briefing)
@@ -191,6 +225,31 @@ public static class FoodStateSummary
         string label = CountedLabel(item.Count, item.Label ?? item.Def);
         string position = string.IsNullOrWhiteSpace(item.Position) ? "" : $" at {item.Position}";
         return $"{item.Count} {forbidden}{label}{position}";
+    }
+
+    private static IReadOnlyList<FoodHuntRiskSummary> RiskSummaries(FoodBriefing briefing, string risk) =>
+        briefing.HuntRiskSummaries
+            .Where(summary => string.Equals(summary.Risk, risk, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+    private static string FormatHuntTarget(WildHuntTarget target)
+    {
+        List<string> parts = [Plural(target.Count, LabelAnimal(target.Def))];
+        if (target.EstimatedNutrition is not null)
+            parts.Add($"{target.EstimatedNutrition.Value:0.#} nutrition");
+        if (!string.IsNullOrWhiteSpace(target.ScoreReason))
+            parts.Add(target.ScoreReason);
+        return string.Join(", ", parts);
+    }
+
+    private static string FormatRiskExclusions(int cautionTypes, int dangerousTypes)
+    {
+        List<string> exclusions = [];
+        if (cautionTypes > 0)
+            exclusions.Add(Plural(cautionTypes, "caution type"));
+        if (dangerousTypes > 0)
+            exclusions.Add(Plural(dangerousTypes, "dangerous type"));
+        return JoinList(exclusions);
     }
 
     private static string CountedLabel(int count, string label)
