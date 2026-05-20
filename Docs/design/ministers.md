@@ -140,6 +140,11 @@ runtime accepts: advice type, priority, title/body/rationale, concrete actions,
 optional flags, optional scheduled wakeup, and trace notes.
 See [`advice.md`](advice.md) for the advice schema and feedback lifecycle.
 
+Future CoS work should treat each minister output as an issue-shaped record
+before it becomes advice or a flag: evidence, urgency, ownership, candidate
+actions, and cross-domain requests. The design-level catalogue lives in
+[`deterministic-cos-cabinet-issue-solver.md`](../../.plans/deterministic-cos-cabinet-issue-solver.md).
+
 LLM rules:
 
 - Advice types are closed per minister.
@@ -194,6 +199,11 @@ work-type-qualified labor, items, buildings, bills, stockpile space, or
 attention from another subsystem. In MVP those requests are advisory only and
 travel on flags. A request does not grant ownership of the target resource and
 does not execute anything.
+
+For CoS, these requests are solver inputs projected from an issue. They should
+describe cross-domain dependencies in a compact typed form, not imperative
+tasks. The source minister keeps ownership of the problem it is flagging;
+`requested_from` names the owner of the dependency when known.
 
 Labor requests must be specific enough for a player or future Labor minister to
 act on. They should name the relevant RimWorld work-tab type when possible, and
