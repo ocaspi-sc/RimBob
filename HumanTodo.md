@@ -10,9 +10,11 @@
 ## Captured by /todo
 
 <!-- entries go here -->
+- [ ] [2026-05-20] #ops #cleanup Reconcile `Docs/plans/rimapi-blueprint-placement-endpoint.md` (untracked, divergent: 187 ins / 224 del vs the canonical `.plans/` copy). Diff the two, fold any still-relevant content into `.plans/rimapi-blueprint-placement-endpoint.md`, then delete the `Docs/plans/` stray and the empty directory.
+- [ ] [2026-05-19] #git #ops #multiagent Fix cross-agent staged-commit contamination on master. [plan](.plans/multi-agent-git-race.md)
 - [ ] [2026-05-19] #design #briefing #advice **`set_priority` advice — briefing read (near-term, Suggest-only).** Read current work priorities into Food's briefing so `set_priority` advice is accurate against live state. Action vocabulary already exists; gap is the input. Gated on a RIMAPI Pawn Edit Controller GET. [plan](.plans/set-priority-advice-briefing.md)
 - [ ] [2026-05-19] #design #auto #labor **Auto knob-write shim (deferred, M7+).** At Auto graduation: validate → one declarative policy write → readback; Labor recommends the knob, RimWorld's job system allocates. No HTN/solver. Depends on the briefing-read plan landing first. [plan](.plans/auto-knob-write-shim.md)
-- [ ] [2026-05-19] #ops #host #dx Stop the Windows crash modal when `RimBob.Host` throws (escapes `Main`); make the host always exit cleanly + log Fatal so agent runs don't hang. [plan](Docs/plans/host-crash-modal-suppression.md)
+- [ ] [2026-05-19] #ops #host #dx Stop the Windows crash modal when `RimBob.Host` throws (escapes `Main`); make the host always exit cleanly + log Fatal so agent runs don't hang. [plan](.plans/host-crash-modal-suppression.md)
 - [ ] [2026-05-19] #rimmind #idea #defs **RimMind: Structured Def Knowledge Index.** Investigate a persistent RimWorld Def index for minister grounding; refs [index-defs.ts](<C:/dev/RimSage/src/scripts/index-defs.ts>), [db.ts](<C:/dev/RimSage/src/utils/db.ts>).
 - [ ] [2026-05-19] #rimmind #idea #defs **RimMind: Def Inheritance Resolver.** Investigate raw/merged XML Def handling for active/modded game truth; refs [def-resolver.ts](<C:/dev/RimSage/src/utils/def-resolver.ts>), [get-def-details.ts](<C:/dev/RimSage/src/tools/get-def-details.ts>).
 - [ ] [2026-05-19] #rimmind #idea #lookup **RimMind: Label-To-Def Resolution.** Investigate label and `defName` lookup for odd live labels, icons, and advice grounding; ref [search-defs.ts](<C:/dev/RimSage/src/tools/search-defs.ts>).
@@ -39,14 +41,14 @@
 - [ ] [2026-05-19] #rimmind #research #cos #alerts RimMind: Stage Cooldown And Ticket Kernel - inspect cooldowns, leases, coalescing, and idempotency for CoS alert suppression. [StageKernel](C:/dev/Rimworld_AI_Core/RimAI.Core/Source/Modules/Stage/Kernel/StageKernel.cs) [StageService](C:/dev/Rimworld_AI_Core/RimAI.Core/Source/Modules/Stage/StageService.cs)
 - [ ] [2026-05-19] #rimmind #research #prompts #ministers RimMind: Prompt Composer Blocks - inspect scoped prompt block composition if RimBob minister prompt builders become repetitive. [PromptService](C:/dev/Rimworld_AI_Core/RimAI.Core/Source/Modules/Prompting/PromptService.cs) [IPromptComposer](C:/dev/Rimworld_AI_Core/RimAI.Core/Source/Modules/Prompting/IPromptComposer.cs)
 - [ ] [2026-05-19] #rimmind #research #replay #feedback RimMind: History Recap Windows - inspect idempotent recap windows and stale-summary handling for replay and Pushback refinement. [HistoryService](C:/dev/Rimworld_AI_Core/RimAI.Core/Source/Modules/History/HistoryService.cs) [RecapService](C:/dev/Rimworld_AI_Core/RimAI.Core/Source/Modules/History/Recap/RecapService.cs)
-- [ ] [2026-05-19] #rimapi #construction #assisted Investigate safe RIMAPI blueprint placement endpoint(s) for Construction Assisted Apply. [plan](Docs/plans/rimapi-blueprint-placement-endpoint.md)
-- [ ] [2026-05-19] #dashboard #food #ux Advice chain route cards (Grow/Hunt/Forage) above the Food snapshot. [plan](Docs/plans/advice-chain-visualization.md)
-- [ ] [2026-05-18] #ops #cleanup Remove legacy repo-local icon/log artifacts after AppData cache/log paths stay verified. [plan](Docs/plans/icons-warm-fixes.md)
+- [ ] [2026-05-19] #rimapi #construction Add RIMAPI fork endpoints for blueprint validate/place/read (coordinates supplied by caller; minister wiring deferred). [plan](.plans/rimapi-blueprint-placement-endpoint.md)
+- [ ] [2026-05-19] #dashboard #food #ux Advice chain route cards (Grow/Hunt/Forage) above the Food snapshot. [plan](.plans/advice-chain-visualization.md)
+- [ ] [2026-05-18] #ops #cleanup Remove legacy repo-local icon/log artifacts after AppData cache/log paths stay verified. [plan](.plans/icons-warm-fixes.md)
 - [ ] [2026-05-17] #git #debt Migrate dirty legacy worktrees after their active slices land.
 - [ ] [2026-05-16] #skill #debt Fix local skill validator Python dependency.
 - [ ] [2026-05-16] #dashboard #markdown Add restricted player-facing Markdown rendering when advice bodies or guide snippets need rich formatting; keep raw/debug views unrendered.
 - [ ] [2026-05-15] #idea #llm #rag Provide ministers with more RAG knowledge.
-- [ ] [2026-05-09] #spike #llm #test Benchmark optional TOON prompt encoding. [plan](Docs/plans/toon-prompt-encoding-spike.md)
+- [ ] [2026-05-09] #spike #llm #test Benchmark optional TOON prompt encoding. [plan](.plans/toon-prompt-encoding-spike.md)
 - [ ] [2026-05-09] #dashboard #ux Add button to dashboard "what was sent" / prompt-introspection screen that copies the full system + user prompt to the clipboard. Pairs with the manual-fallback flow (`logs/mayor-prompt-latest.md`, `POST /api/ministers/mayor/snapshot/manual`) for when Gemini is rate-limited.
 
 ---
@@ -97,7 +99,7 @@
 - [ ] Add scope docs for Industry, Medical, Research, and Economy once their first slices are scheduled.
 - [ ] Per-minister `advice_type` enums - define in each minister's session.
 - [ ] Per-minister scope docs (`RimBob.Ministers/<name>/scope.md`) - write after first slice ships.
-- [ ] Construction: placement / layout strategy (Base Layout Minister candidate). [plan](Docs/plans/base-construction-layout-agent.md)
+- [ ] Construction: placement / layout strategy (Base Layout Minister candidate). [plan](.plans/base-construction-layout-agent.md)
 - [ ] Define the minimum viable CoS arbitration rule set for M4: dedupe same-issue flags, choose lead framing when multiple ministers point at the same problem, and decide when a flag becomes a tactical alert versus Mayor-digest input.
 - [ ] Decide whether Medical should stay coupled to Welfare in the rollout plan or become its own slice after Welfare.
 
@@ -164,7 +166,7 @@ Migrate from Codex Chrome plugin to Playwright for frontend.
 
 ### Dashboard v2
 
-Full redesign of the dashboard. First brainstorm; do not make changes yet. [plan](Docs/plans/dashboard_v2.md)
+Full redesign of the dashboard. First brainstorm; do not make changes yet. [plan](.plans/dashboard_v2.md)
 
 - Left side: tab for each minister, with emojis.
 - Add a SYSTEM tab for info about LLM usage, logs, etc.
