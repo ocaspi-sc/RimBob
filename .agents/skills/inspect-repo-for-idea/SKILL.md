@@ -50,17 +50,18 @@ Review another codebase as a source of design and implementation ideas for RimBo
 When the user asks to capture findings in `HumanTodo.md`:
 
 1. Add lines under `## Captured by /todo`, immediately after `<!-- entries go here -->`.
-2. Use this format:
+2. Give each line a unique, one-word, lowercase kebab-case identifier immediately after the checkbox.
+3. Use this format:
    ```md
-   - [ ] [YYYY-MM-DD] #rimmind #tag RimMind: IDEA_TITLE - short imperative investigation. [Source](C:/path/to/file.cs)
+   - [ ] unique-id [YYYY-MM-DD] #rimmind #tag RimMind: IDEA_TITLE - short imperative investigation. [Source](C:/path/to/file.cs)
    ```
-3. Use `RimMind: IDEA_TITLE` exactly for the todo title prefix.
-4. Include tags that make the future slice easy to find, such as `#food`, `#construction`, `#defense`, `#research`, `#welfare`, `#medical`, `#storage`, `#tooling`, `#cos`, `#dashboard`, `#rimapi`, `#replay`, or `#prompts`.
-5. Link to source files in the persistent clone when one exists. Use angle-bracket links for paths with spaces.
-6. Split broad ideas into multiple todos when they target different ministers, endpoints, or implementation seams.
-7. Keep each line short enough to scan. Do not write paragraphs into `HumanTodo.md`.
-8. Verify every new local file link exists before committing.
-9. Do not generate `.plans/` artifacts unless the user explicitly asks for a plan.
+4. Use `RimMind: IDEA_TITLE` exactly for the todo title prefix.
+5. Include tags that make the future slice easy to find, such as `#food`, `#construction`, `#defense`, `#research`, `#welfare`, `#medical`, `#storage`, `#tooling`, `#cos`, `#dashboard`, `#rimapi`, `#replay`, or `#prompts`.
+6. Link to source files in the persistent clone when one exists. Use angle-bracket links for paths with spaces.
+7. Split broad ideas into multiple todos when they target different ministers, endpoints, or implementation seams.
+8. Keep each line short enough to scan. Do not write paragraphs into `HumanTodo.md`.
+9. Verify every new local file link exists before committing.
+10. Do not generate `.plans/` artifacts unless the user explicitly asks for a plan.
 
 ## Closeout
 

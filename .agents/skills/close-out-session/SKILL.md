@@ -47,8 +47,9 @@ Close the session by turning the work into durable artifacts: a short recap, nar
    - Add only the best one to three follow-ups to `HumanTodo.md` under `## Captured by /todo`, immediately after `<!-- entries go here -->`.
    - Use the repo todo format:
      ```md
-     - [ ] [YYYY-MM-DD] #tag1 #tag2 Short imperative description.
+     - [ ] unique-id [YYYY-MM-DD] #tag1 #tag2 Short imperative description.
      ```
+   - Give each line a unique, one-word, lowercase kebab-case identifier immediately after the checkbox.
    - Keep each todo line short and actionable. Use tags from the `/todo` skill when possible.
    - Commit closeout todo entries as their own slice when they are session-owned and can be safely landed on `master`.
 

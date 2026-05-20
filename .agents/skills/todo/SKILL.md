@@ -1,11 +1,11 @@
 ---
 name: todo
-description: Invoked when the user types exactly "/todo". Appends one short tagged entry to the "Captured by /todo" section in HumanTodo.md, then opportunistically commits it to master only when Git looks idle. It never creates plan files.
+description: Invoked when the user types exactly "/todo". Appends one short identified, tagged entry to the "Captured by /todo" section in HumanTodo.md, then opportunistically commits it to master only when Git looks idle. It never creates plan files.
 ---
 
 # /todo Skill
 
-Appends one tagged line to the `## Captured by /todo` section in `HumanTodo.md`, then commits that line to `master` only when the repo looks idle and the commit is easy. If not, leave it uncommitted and report that it can be committed later.
+Appends one identified, tagged line to the `## Captured by /todo` section in `HumanTodo.md`, then commits that line to `master` only when the repo looks idle and the commit is easy. If not, leave it uncommitted and report that it can be committed later.
 
 This skill is intentionally low-context. For `/todo X`, use `X` directly, write one short line, and do not inspect the broader conversation for plans or extra detail.
 
@@ -32,13 +32,18 @@ This skill is intentionally low-context. For `/todo X`, use `X` directly, write 
    | `#question` | Open question, needs decision |
    Pick the two or three most relevant. Combine freely.
 
-3. **Append to `HumanTodo.md`** - insert the new line just after the `<!-- entries go here -->` comment in the `## Captured by /todo` section, with this format:
+3. **Pick an identifier** - choose one short, unique, one-word identifier for the line.
+   - Use lowercase kebab-case, e.g. `food-audit`, `dashboard-tabs`, or `rimapi-forage`.
+   - Put the identifier immediately after the checkbox.
+   - Check existing checkbox identifiers in `HumanTodo.md` before writing. If the obvious identifier already exists, add a short differentiator or number suffix.
+
+4. **Append to `HumanTodo.md`** - insert the new line just after the `<!-- entries go here -->` comment in the `## Captured by /todo` section, with this format:
    ```md
-   - [ ] [YYYY-MM-DD] #tag1 #tag2 Short imperative description.
+   - [ ] unique-id [YYYY-MM-DD] #tag1 #tag2 Short imperative description.
    ```
    Use today's date from the current date context if available.
 
-4. **Opportunistically commit only when it is easy**:
+5. **Opportunistically commit only when it is easy**:
    - Check `git branch --show-current`. If it is not `master`, do not switch branches silently; leave the entry uncommitted and report that `/todo` needs `master` before it can auto-commit.
    - Check `.git/index.lock`. If it exists, leave the entry uncommitted and report that Git is locked.
    - Check `git status --short` before staging. If there are staged changes, unrelated working-tree changes, or any other sign of an active working session writing files, leave the entry uncommitted and report that it can be committed later.
@@ -49,13 +54,13 @@ This skill is intentionally low-context. For `/todo X`, use `X` directly, write 
    - Commit with message `Capture todo: <short description>`.
    - If `git add` or `git commit` fails for any reason, do not retry or request escalation; leave the entry uncommitted and report the failure briefly.
 
-5. **Confirm** in one line what was added and either include the commit hash or say it was left uncommitted. No more than one sentence.
+6. **Confirm** in one line what was added and either include the commit hash or say it was left uncommitted. No more than one sentence.
 
 ## Rules
 
 - Do not recreate `Docs/TODO.md` or root `todo.md`; `HumanTodo.md` is the single todo surface.
 - Do not create or update files under `.plans/`. `/todo` is short-line capture only.
-- Do not read or summarize the full `HumanTodo.md` unless a tool requires a narrow context snippet for insertion.
+- Do not read or summarize the full `HumanTodo.md` except to check existing identifiers and the narrow insertion area.
 - Do not quote existing todo contents in the reply.
 - Do not modify `Docs/ROADMAP.md` unless the user explicitly asks to change milestone order.
 - Do not ask for confirmation before writing; just write and report.
