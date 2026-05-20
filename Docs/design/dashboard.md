@@ -104,12 +104,12 @@ Non-minister console scopes use a shallow local tab bar:
 - SYSTEM: Runtime, Connectivity, Storage, Coverage, Events.
 - INFO: Overview, Glossary, Contracts, Data Sources.
 - ANALYTICS: Session, Colony, Advice, SSE, Candidates.
-- DEV BLOG: Timeline, Churn, Commits, Topics, Suggestions.
+- DEV BLOG: Velocity, Features, Churn, Commits, Topics, Suggestions.
 
 Console tabs are first-class dashboard views for URL/storage validation and
-launcher deep links, but they do not change cabinet ownership. Keep the tab
-layer shallow: use collapsed disclosures inside each tab instead of nesting a
-second tab system.
+launcher deep links, but they do not change cabinet ownership. Keep the top
+tab layer shallow; nested tool navigation should use controls such as filters,
+not a second tab system.
 
 ### Minister Views
 
@@ -269,9 +269,41 @@ has changed over time.
 DEV BLOG owns:
 
 - Read-only analytics over every commit reachable from local Git `master`.
-- Topic-tag timelines derived from commit subjects and touched paths.
+- Feature-tag timelines derived from the Features taxonomy.
 - Commit-size histogram, cumulative net LOC growth, and pie/donut summaries by
   area and topic.
+- A Velocity tab: an interactive day-by-day scope chart using consolidated
+  material lanes such as Design/Docs, Food/Apply, Dashboard/Icons, Host/API,
+  State/Core, Tests/Replay, and Infra/Ops. It should offer line, stacked-line,
+  and stacked day-bar variations because each exposes a different read on
+  temporal velocity.
+- A Features tab: a long structured feature inventory that is not grouped by day
+  and does not focus on individual commits. It should dedupe commits across old
+  visible lanes, render one flat score-sorted list, and filter that list through
+  tag chips. Former subsystem names such as Food, Mayor, Dashboard, Icons,
+  Execution, Persistence, Infra, Design, Agent Ops, and Advice are tags, not
+  sections or nested tabs. Cross-cutting concepts such as Visualization,
+  Refactor, Agents, RAG, Rules, RIMAPI, Persistence, and Icon Gateway are also
+  tags. Use longer human-readable feature names with semantic icons and tag
+  emojis. The same tag chips control both the visible feature list and the
+  feature-tag timeline chart in this tab. Multiple selected tags mean "show
+  features matching any selected tag" while drawing one chart series per
+  selected tag; when no tag is selected, the chart may show the highest-scoring
+  tags as an overview. Show each feature's estimated score as raw deterministic
+  commit scope plus a visible commit-count effort bonus, so a feature spread
+  across many commits ranks heavier than the same raw scope in one commit. The
+  tab itself is the feature inventory, so avoid redundant wrapper panels or
+  repeated "Feature inventory" headings. Tooltips can keep raw score math,
+  source commit count, file count, material areas, and supporting areas for
+  audit. Prefer smaller, interesting feature rollups over broad buckets such as
+  "food chain modeling."
+- Commit size in DEV BLOG is a deterministic scope score, not raw LOC. Prefer
+  Git word-diff/token counts when available so a one-word change in a long line
+  stays small; then include bounded file/area weight and discount generated
+  artifacts and sync merges.
+- Dashboard velocity means dashboard-owned work. Dashboard files that only mirror
+  another area's contract change are supporting metadata (`reflected:
+  Dashboard`), not Dashboard lane velocity.
 - Creative suggestions for release-note lanes, follow-up checks, and future
   archaeology views.
 

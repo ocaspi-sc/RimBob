@@ -94,6 +94,7 @@ const viewIcons: Record<string, SemanticIconSpec> = {
   sse: common.logs,
   candidates: common.research,
   timeline: common.logs,
+  features: common.devBlog,
   churn: common.data,
   commits: common.devBlog,
   topics: common.analytics,

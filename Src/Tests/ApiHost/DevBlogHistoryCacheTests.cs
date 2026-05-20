@@ -87,6 +87,10 @@ public sealed class DevBlogHistoryCacheTests
             AreaSummaries: Array.Empty<DevBlogAreaSummary>(),
             AuthorSlices: Array.Empty<DevBlogSlice>(),
             TagSlices: Array.Empty<DevBlogSlice>(),
+            VelocityLanes: Array.Empty<string>(),
+            GridLanes: Array.Empty<string>(),
+            DailyVelocity: Array.Empty<DevBlogDailyVelocityPoint>(),
+            DailyAreaVelocity: Array.Empty<DevBlogDailyAreaVelocityRow>(),
             Suggestions: Array.Empty<string>());
 
     private sealed class FakeDevBlogHistoryReader : IDevBlogHistoryReader

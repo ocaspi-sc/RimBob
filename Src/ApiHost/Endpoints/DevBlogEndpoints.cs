@@ -133,6 +133,27 @@ public sealed class DevBlogHistoryAnalyzer : IDevBlogHistoryReader
 {
     private const char RecordSeparator = '\u001e';
     private const char FieldSeparator = '\u001f';
+    private const string MaterialRole = "material";
+    private const string SupportingRole = "supporting";
+
+    private static readonly string[] VelocityLaneOrder =
+    [
+        "Design/Docs",
+        "Food/Apply",
+        "Dashboard/Icons",
+        "Host/API",
+        "State/Core",
+        "Tests/Replay",
+        "Infra/Ops",
+    ];
+
+    private static readonly string[] GridLaneOrder =
+    [
+        "Design/Docs",
+        "Food/Apply",
+        "App/Runtime",
+        "Tests/Ops",
+    ];
 
     public async Task<DevBlogHistoryReadResult> ReadMasterHistoryAsync(string repositoryRoot, CancellationToken ct)
     {
@@ -167,6 +188,7 @@ public sealed class DevBlogHistoryAnalyzer : IDevBlogHistoryReader
     {
         List<GitCommitRecord> commits = [];
         GitCommitRecord? current = null;
+        string? currentPatchPath = null;
 
         using StringReader reader = new(text);
         while (reader.ReadLine() is { } line)
@@ -192,12 +214,34 @@ public sealed class DevBlogHistoryAnalyzer : IDevBlogHistoryReader
                     Subject: fields[3],
                     Refs: fields[4],
                     Files: []);
+                currentPatchPath = null;
                 continue;
             }
 
             if (current is null || string.IsNullOrWhiteSpace(line))
             {
                 continue;
+            }
+
+            if (TryParseDiffPath(line, out string? patchPath))
+            {
+                currentPatchPath = patchPath;
+                continue;
+            }
+
+            if (currentPatchPath is not null && line.Length > 1)
+            {
+                if (line[0] == '+' && !line.StartsWith("+++", StringComparison.Ordinal))
+                {
+                    AddWordDelta(current, currentPatchPath, CountScopeTokens(line[1..]), 0);
+                    continue;
+                }
+
+                if (line[0] == '-' && !line.StartsWith("---", StringComparison.Ordinal))
+                {
+                    AddWordDelta(current, currentPatchPath, 0, CountScopeTokens(line[1..]));
+                    continue;
+                }
             }
 
             string[] columns = line.Split('\t', 3);
@@ -209,7 +253,9 @@ public sealed class DevBlogHistoryAnalyzer : IDevBlogHistoryReader
             current.Files.Add(new GitFileChange(
                 Path: NormalizePath(columns[2]),
                 Additions: ParseNumstatCount(columns[0]),
-                Deletions: ParseNumstatCount(columns[1])));
+                Deletions: ParseNumstatCount(columns[1]),
+                WordAdditions: 0,
+                WordDeletions: 0));
         }
 
         if (current is not null)
@@ -245,6 +291,17 @@ public sealed class DevBlogHistoryAnalyzer : IDevBlogHistoryReader
             dayAggregate.CommitCount++;
             dayAggregate.Additions += additions;
             dayAggregate.Deletions += deletions;
+
+            IReadOnlyList<DevBlogCommitAreaHit> areaHits = AreaHitsForCommit(commit);
+            DevBlogCommitAreaHit[] materialHits = areaHits
+                .Where(hit => hit.Role == MaterialRole)
+                .ToArray();
+            int uniqueScopePoints = ComputeScopePoints(commit.Files, materialHits.Length, IsSyncMerge(commit.Subject));
+            dayAggregate.UniqueScopePoints += uniqueScopePoints;
+            foreach (IGrouping<string, DevBlogCommitAreaHit> laneGroup in materialHits.GroupBy(hit => VelocityLaneForArea(hit.Area), StringComparer.OrdinalIgnoreCase))
+            {
+                dayAggregate.AddLaneCommit(laneGroup.Key, LaneCommitFor(commit, laneGroup.ToArray(), areaHits));
+            }
 
             SliceAggregate author = GetSlice(authors, commit.Author);
             author.Count++;
@@ -310,12 +367,15 @@ public sealed class DevBlogHistoryAnalyzer : IDevBlogHistoryReader
         IReadOnlyList<DevBlogTimelinePoint> tagTimeline = BuildTagTimeline(days, tagSlices);
         IReadOnlyList<DevBlogLocPoint> locGrowth = BuildLocGrowth(days);
         IReadOnlyList<DevBlogHistogramBin> histogram = BuildHistogram(churnValues);
+        IReadOnlyList<string> velocityLanes = BuildLaneOrder(days, VelocityLaneOrder);
+        IReadOnlyList<DevBlogDailyVelocityPoint> dailyVelocity = BuildDailyVelocity(days, velocityLanes);
+        IReadOnlyList<DevBlogDailyAreaVelocityRow> dailyAreaVelocity = BuildDailyAreaVelocity(days, GridLaneOrder);
 
         return new DevBlogHistoryReport(
             GeneratedAt: DateTimeOffset.UtcNow,
             RepositoryRoot: repositoryRoot,
             ScannedRef: "master",
-            Source: "git log master --numstat --date=iso-strict",
+            Source: "git log master --numstat --patch --word-diff=porcelain --date=iso-strict",
             CommitCount: ordered.Length,
             FirstCommitAt: ordered.FirstOrDefault()?.At,
             LastCommitAt: ordered.LastOrDefault()?.At,
@@ -332,6 +392,10 @@ public sealed class DevBlogHistoryAnalyzer : IDevBlogHistoryReader
             AreaSummaries: areaSummaries,
             AuthorSlices: authorSlices,
             TagSlices: tagSlices,
+            VelocityLanes: velocityLanes,
+            GridLanes: GridLaneOrder,
+            DailyVelocity: dailyVelocity,
+            DailyAreaVelocity: dailyAreaVelocity,
             Suggestions: BuildSuggestions(ordered.Length, totalChurn, areaSummaries, tagSlices, histogram));
     }
 
@@ -342,10 +406,14 @@ public sealed class DevBlogHistoryAnalyzer : IDevBlogHistoryReader
             "log",
             "master",
             "--numstat",
+            "--patch",
+            "--word-diff=porcelain",
+            "--word-diff-regex=[^[:space:]]+",
+            "--no-renames",
             "--date=iso-strict",
             $"--pretty=format:%x1e%H%x1f%aI%x1f%an%x1f%s%x1f%D"
         ];
-        return await RunGitAsync(repositoryRoot, arguments, TimeSpan.FromSeconds(10), "git log master", ct);
+        return await RunGitAsync(repositoryRoot, arguments, TimeSpan.FromSeconds(20), "git log master", ct);
     }
 
     private static async Task<GitCommandResult> ReadGitHeadAsync(string repositoryRoot, CancellationToken ct)
@@ -414,6 +482,163 @@ public sealed class DevBlogHistoryAnalyzer : IDevBlogHistoryReader
 
             return new GitCommandResult(false, "", $"{commandDescription} timed out after {timeoutDuration.TotalSeconds:0} seconds.");
         }
+    }
+
+    private static IReadOnlyList<DevBlogDailyVelocityPoint> BuildDailyVelocity(Dictionary<DateTime, DayAggregate> days, IReadOnlyList<string> lanes)
+    {
+        if (days.Count == 0)
+        {
+            return [];
+        }
+
+        DateTime first = days.Keys.Min();
+        DateTime last = days.Keys.Max();
+        List<DevBlogDailyVelocityPoint> points = [];
+
+        for (DateTime day = first; day <= last; day = day.AddDays(1))
+        {
+            DayAggregate aggregate = days.TryGetValue(day, out DayAggregate? value)
+                ? value
+                : new DayAggregate();
+            Dictionary<string, int> scopePoints = new(StringComparer.OrdinalIgnoreCase);
+            Dictionary<string, int> commitCounts = new(StringComparer.OrdinalIgnoreCase);
+
+            foreach (string lane in lanes)
+            {
+                scopePoints[lane] = aggregate.LaneScopePoints.TryGetValue(lane, out int scope)
+                    ? scope
+                    : 0;
+                commitCounts[lane] = aggregate.LaneCommitCounts.TryGetValue(lane, out int count)
+                    ? count
+                    : 0;
+            }
+
+            points.Add(new DevBlogDailyVelocityPoint(
+                Date: day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                UniqueScopePoints: aggregate.UniqueScopePoints,
+                LaneScopePoints: scopePoints,
+                LaneCommitCounts: commitCounts));
+        }
+
+        return points;
+    }
+
+    private static IReadOnlyList<DevBlogDailyAreaVelocityRow> BuildDailyAreaVelocity(Dictionary<DateTime, DayAggregate> days, IReadOnlyList<string> gridLanes)
+    {
+        if (days.Count == 0)
+        {
+            return [];
+        }
+
+        DateTime first = days.Keys.Min();
+        DateTime last = days.Keys.Max();
+        List<DevBlogDailyAreaVelocityRow> rows = [];
+
+        for (DateTime day = last; day >= first; day = day.AddDays(-1))
+        {
+            DayAggregate aggregate = days.TryGetValue(day, out DayAggregate? value)
+                ? value
+                : new DayAggregate();
+            Dictionary<string, List<DevBlogLaneCommit>> visibleLaneCommits = new(StringComparer.OrdinalIgnoreCase);
+
+            foreach (string lane in gridLanes)
+            {
+                visibleLaneCommits[lane] = [];
+            }
+
+            foreach ((string lane, List<DevBlogLaneCommit> commits) in aggregate.LaneCommits)
+            {
+                string visibleLane = GridLaneForVelocityLane(lane);
+                visibleLaneCommits[visibleLane].AddRange(commits);
+            }
+
+            IReadOnlyList<DevBlogDailyAreaLane> lanes = gridLanes
+                .Select(lane =>
+                {
+                    DevBlogLaneCommit[] commits = ConsolidateVisibleLaneCommits(visibleLaneCommits[lane])
+                        .OrderByDescending(commit => commit.At)
+                        .ThenBy(commit => commit.ShortHash, StringComparer.Ordinal)
+                        .ToArray();
+                    return new DevBlogDailyAreaLane(
+                        Area: lane,
+                        ScopePoints: commits.Sum(commit => commit.ScopePoints),
+                        CommitCount: commits.Length,
+                        Commits: commits);
+                })
+                .ToArray();
+
+            rows.Add(new DevBlogDailyAreaVelocityRow(
+                Date: day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                UniqueScopePoints: aggregate.UniqueScopePoints,
+                Lanes: lanes));
+        }
+
+        return rows;
+    }
+
+    private static IReadOnlyList<string> BuildLaneOrder(Dictionary<DateTime, DayAggregate> days, IReadOnlyList<string> preferredOrder)
+    {
+        HashSet<string> seen = new(StringComparer.OrdinalIgnoreCase);
+        foreach (DayAggregate day in days.Values)
+        {
+            foreach (string lane in day.LaneScopePoints.Keys)
+            {
+                seen.Add(lane);
+            }
+        }
+
+        List<string> result = preferredOrder.Where(seen.Contains).ToList();
+        result.AddRange(seen
+            .Where(lane => !preferredOrder.Contains(lane, StringComparer.OrdinalIgnoreCase))
+            .OrderBy(lane => lane, StringComparer.OrdinalIgnoreCase));
+        return result;
+    }
+
+    private static string VelocityLaneForArea(string area) =>
+        area switch
+        {
+            "Food" or "Assisted Apply" => "Food/Apply",
+            "Dashboard" or "Icons" => "Dashboard/Icons",
+            "State/RIMAPI" or "Ministers/Core" or "LLM/RAG" => "State/Core",
+            "Tests" or "Replay" => "Tests/Replay",
+            "Infra/Ops" or "Repo/Git" or "Other" => "Infra/Ops",
+            _ => area,
+        };
+
+    private static string GridLaneForVelocityLane(string lane) =>
+        lane switch
+        {
+            "Design/Docs" => "Design/Docs",
+            "Food/Apply" => "Food/Apply",
+            "Tests/Replay" or "Infra/Ops" => "Tests/Ops",
+            _ => "App/Runtime",
+        };
+
+    private static IReadOnlyList<DevBlogLaneCommit> ConsolidateVisibleLaneCommits(IReadOnlyList<DevBlogLaneCommit> commits) =>
+        commits
+            .GroupBy(commit => commit.Hash, StringComparer.OrdinalIgnoreCase)
+            .Select(MergeVisibleLaneCommit)
+            .ToArray();
+
+    private static DevBlogLaneCommit MergeVisibleLaneCommit(IGrouping<string, DevBlogLaneCommit> commitGroup)
+    {
+        DevBlogLaneCommit[] commits = commitGroup.ToArray();
+        DevBlogLaneCommit primary = commits
+            .OrderByDescending(commit => commit.ScopePoints)
+            .ThenBy(commit => commit.Summary, StringComparer.Ordinal)
+            .First();
+
+        if (commits.Length == 1)
+        {
+            return primary;
+        }
+
+        int scopePoints = commits.Sum(commit => commit.ScopePoints);
+        return primary with
+        {
+            ScopePoints = scopePoints,
+            SizeLabel = SizeLabel(scopePoints),
+        };
     }
 
     private static IReadOnlyList<DevBlogTimelinePoint> BuildTagTimeline(Dictionary<DateTime, DayAggregate> days, IReadOnlyList<DevBlogSlice> tagSlices)
@@ -518,7 +743,7 @@ public sealed class DevBlogHistoryAnalyzer : IDevBlogHistoryReader
         IReadOnlyList<DevBlogHistogramBin> histogram)
     {
         List<string> suggestions = [];
-        DevBlogAreaSummary? docs = areas.FirstOrDefault(area => area.Area == "Docs");
+        DevBlogAreaSummary? docs = areas.FirstOrDefault(area => area.Area == "Design/Docs");
         DevBlogAreaSummary? dashboard = areas.FirstOrDefault(area => area.Area == "Dashboard");
         DevBlogAreaSummary? host = areas.FirstOrDefault(area => area.Area == "Host/API");
         DevBlogAreaSummary? tests = areas.FirstOrDefault(area => area.Area == "Tests");
@@ -572,6 +797,263 @@ public sealed class DevBlogHistoryAnalyzer : IDevBlogHistoryReader
             Tags: TagsForCommit(commit).OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase).ToArray());
     }
 
+    private static DevBlogLaneCommit LaneCommitFor(
+        GitCommitRecord commit,
+        IReadOnlyList<DevBlogCommitAreaHit> laneAreaHits,
+        IReadOnlyList<DevBlogCommitAreaHit> areaHits)
+    {
+        string shortHash = commit.Hash.Length <= 8 ? commit.Hash : commit.Hash[..8];
+        DevBlogCommitAreaHit primaryAreaHit = laneAreaHits
+            .OrderByDescending(hit => hit.ScopePoints)
+            .ThenBy(hit => hit.Area, StringComparer.OrdinalIgnoreCase)
+            .First();
+        int scopePoints = laneAreaHits.Sum(hit => hit.ScopePoints);
+        string[] materialAreas = areaHits
+            .Where(hit => hit.Role == MaterialRole)
+            .Select(hit => hit.Area)
+            .OrderBy(area => Array.IndexOf(VelocityLaneOrder, area) < 0 ? int.MaxValue : Array.IndexOf(VelocityLaneOrder, area))
+            .ThenBy(area => area, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        string[] supportingAreas = areaHits
+            .Where(hit => hit.Role == SupportingRole)
+            .Select(hit => hit.Area)
+            .OrderBy(area => area, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        return new DevBlogLaneCommit(
+            Hash: commit.Hash,
+            ShortHash: shortHash,
+            At: commit.At,
+            Subject: commit.Subject,
+            Summary: SummaryForCommit(commit, primaryAreaHit.Area),
+            SizeLabel: SizeLabel(scopePoints),
+            ScopePoints: scopePoints,
+            FilesChanged: commit.Files.Count,
+            MaterialAreas: materialAreas,
+            SupportingAreas: supportingAreas);
+    }
+
+    private static IReadOnlyList<DevBlogCommitAreaHit> AreaHitsForCommit(GitCommitRecord commit)
+    {
+        bool syncMerge = IsSyncMerge(commit.Subject);
+        Dictionary<string, FileAreaAggregate> fileAreas = new(StringComparer.OrdinalIgnoreCase);
+
+        foreach (GitFileChange file in commit.Files.Where(file => !IsGeneratedPath(file.Path)))
+        {
+            foreach (string area in AreasForPath(file.Path))
+            {
+                GetFileArea(fileAreas, area).Add(file);
+            }
+        }
+
+        foreach (string area in AreasForSubject(commit.Subject))
+        {
+            _ = GetFileArea(fileAreas, area);
+        }
+
+        if (syncMerge)
+        {
+            List<DevBlogCommitAreaHit> syncHits =
+            [
+                new("Repo/Git", MaterialRole, Math.Max(3, ComputeScopePoints(commit.Files, 1, syncMerge))),
+            ];
+            syncHits.AddRange(fileAreas.Keys
+                .Where(area => !area.Equals("Repo/Git", StringComparison.OrdinalIgnoreCase))
+                .OrderBy(area => area, StringComparer.OrdinalIgnoreCase)
+                .Select(area => new DevBlogCommitAreaHit(area, SupportingRole, 0)));
+            return syncHits;
+        }
+
+        List<DevBlogCommitAreaHit> hits = [];
+        foreach ((string area, FileAreaAggregate aggregate) in fileAreas)
+        {
+            string role = area.Equals("Dashboard", StringComparison.OrdinalIgnoreCase)
+                && !IsMaterialDashboardCommit(commit)
+                    ? SupportingRole
+                    : MaterialRole;
+            int scopePoints = role == MaterialRole
+                ? ComputeScopePoints(aggregate.Files, fileAreas.Count, syncMerge)
+                : 0;
+            hits.Add(new DevBlogCommitAreaHit(area, role, scopePoints));
+        }
+
+        if (hits.All(hit => hit.Role != MaterialRole))
+        {
+            hits.Add(new DevBlogCommitAreaHit("Other", MaterialRole, ComputeScopePoints(commit.Files, 1, syncMerge)));
+        }
+
+        return hits
+            .OrderBy(hit => hit.Role == MaterialRole ? 0 : 1)
+            .ThenBy(hit => Array.IndexOf(VelocityLaneOrder, hit.Area) < 0 ? int.MaxValue : Array.IndexOf(VelocityLaneOrder, hit.Area))
+            .ThenBy(hit => hit.Area, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<string> AreasForPath(string path)
+    {
+        HashSet<string> areas = new(StringComparer.OrdinalIgnoreCase)
+        {
+            AreaForPath(path),
+        };
+        string lower = path.ToLowerInvariant();
+
+        AddIf(lower, areas, "/food/", "Food");
+        AddIf(lower, areas, "food", "Food");
+        AddIf(lower, areas, "rimapi", "State/RIMAPI");
+        AddIf(lower, areas, "llm", "LLM/RAG");
+        AddIf(lower, areas, "rag", "LLM/RAG");
+        AddIf(lower, areas, "apply", "Assisted Apply");
+        AddIf(lower, areas, "unforbid", "Assisted Apply");
+        AddIf(lower, areas, "harvest", "Assisted Apply");
+        AddIf(lower, areas, "bill", "Assisted Apply");
+        AddIf(lower, areas, "icon", "Icons");
+        AddIf(lower, areas, "replay", "Replay");
+
+        return areas
+            .Where(area => !string.IsNullOrWhiteSpace(area))
+            .ToArray();
+    }
+
+    private static IReadOnlyList<string> AreasForSubject(string subject)
+    {
+        HashSet<string> areas = new(StringComparer.OrdinalIgnoreCase);
+        string lower = subject.ToLowerInvariant();
+
+        AddIf(lower, areas, "food", "Food");
+        AddIf(lower, areas, "dashboard", "Dashboard");
+        AddIf(lower, areas, "ui", "Dashboard");
+        AddIf(lower, areas, "panel", "Dashboard");
+        AddIf(lower, areas, "chart", "Dashboard");
+        AddIf(lower, areas, "diagram", "Dashboard");
+        AddIf(lower, areas, "docs", "Design/Docs");
+        AddIf(lower, areas, "design", "Design/Docs");
+        AddIf(lower, areas, "plan", "Design/Docs");
+        AddIf(lower, areas, "rimapi", "State/RIMAPI");
+        AddIf(lower, areas, "state", "State/RIMAPI");
+        AddIf(lower, areas, "llm", "LLM/RAG");
+        AddIf(lower, areas, "rag", "LLM/RAG");
+        AddIf(lower, areas, "prompt", "LLM/RAG");
+        AddIf(lower, areas, "apply", "Assisted Apply");
+        AddIf(lower, areas, "unforbid", "Assisted Apply");
+        AddIf(lower, areas, "harvest", "Assisted Apply");
+        AddIf(lower, areas, "bill", "Assisted Apply");
+        AddIf(lower, areas, "icon", "Icons");
+        AddIf(lower, areas, "replay", "Replay");
+        AddIf(lower, areas, "test", "Tests");
+        AddIf(lower, areas, "fixture", "Tests");
+        AddIf(lower, areas, "launcher", "Infra/Ops");
+        AddIf(lower, areas, "ops", "Infra/Ops");
+        AddIf(lower, areas, "skill", "Infra/Ops");
+        AddIf(lower, areas, "sync", "Repo/Git");
+        AddIf(lower, areas, "merge", "Repo/Git");
+
+        return areas.ToArray();
+    }
+
+    private static bool IsMaterialDashboardCommit(GitCommitRecord commit)
+    {
+        string subject = commit.Subject.ToLowerInvariant();
+        string[] materialNeedles =
+        [
+            "dashboard",
+            "ui",
+            "panel",
+            "chart",
+            "timeline",
+            "grid",
+            "scope",
+            "view",
+            "layout",
+            "diagram",
+            "infographic",
+            "skin",
+            "visual",
+            "column width",
+            "render",
+        ];
+
+        if (materialNeedles.Any(needle => subject.Contains(needle, StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        return commit.Files.Any(file =>
+            file.Path.StartsWith("Dashboard/src/components/devBlog/", StringComparison.OrdinalIgnoreCase)
+            || file.Path.StartsWith("Dashboard/src/components/analytics/", StringComparison.OrdinalIgnoreCase)
+            || file.Path.StartsWith("Dashboard/src/components/info/", StringComparison.OrdinalIgnoreCase)
+            || file.Path.StartsWith("Dashboard/src/styles.css", StringComparison.OrdinalIgnoreCase)
+                && (file.WordAdditions + file.WordDeletions) > 40);
+    }
+
+    private static bool IsSyncMerge(string subject) =>
+        subject.StartsWith("Merge branch ", StringComparison.OrdinalIgnoreCase)
+        || subject.StartsWith("Merge remote-tracking branch ", StringComparison.OrdinalIgnoreCase);
+
+    private static string SummaryForCommit(GitCommitRecord commit, string area)
+    {
+        if (IsSyncMerge(commit.Subject))
+        {
+            return "Syncs branch history; file changes are supporting context.";
+        }
+
+        string fileWord = commit.Files.Count == 1 ? "file" : "files";
+        return area switch
+        {
+            "Design/Docs" => $"Updates durable design or operator notes across {commit.Files.Count} {fileWord}.",
+            "Food" => $"Changes Food advice, rules, briefing, or visuals across {commit.Files.Count} {fileWord}.",
+            "Dashboard" => $"Changes a dashboard-owned view, chart, panel, or interaction.",
+            "Host/API" => $"Changes Host services, endpoints, payloads, or runtime wiring.",
+            "State/RIMAPI" => $"Changes state ingestion, RIMAPI contracts, or live data interpretation.",
+            "Ministers/Core" => $"Changes shared minister, coordination, or advice mechanics.",
+            "LLM/RAG" => $"Changes prompt, provider, retrieval, or knowledge behavior.",
+            "Assisted Apply" => $"Changes player-confirmed apply behavior or validation.",
+            "Icons" => $"Changes icon cache, gateway, or visual asset handling.",
+            "Replay" => $"Changes replay corpus or refinement evidence capture.",
+            "Tests" => $"Adds or updates regression coverage and fixtures.",
+            "Infra/Ops" => $"Changes local workflow, launcher, build, or agent operations.",
+            "Repo/Git" => $"Changes repository sync, branch, or landing mechanics.",
+            _ => $"Touches project maintenance across {commit.Files.Count} {fileWord}.",
+        };
+    }
+
+    private static int ComputeScopePoints(IReadOnlyList<GitFileChange> files, int materialAreaCount, bool syncMerge)
+    {
+        GitFileChange[] scopeFiles = files.Where(file => !IsGeneratedPath(file.Path)).ToArray();
+        int wordChurn = scopeFiles.Sum(file => file.WordAdditions + file.WordDeletions);
+        int lineChurn = scopeFiles.Sum(file => file.Additions + file.Deletions);
+        int contentPoints = wordChurn > 0 ? wordChurn : lineChurn;
+        int filePoints = scopeFiles.Length * 4;
+        int areaPoints = Math.Max(0, materialAreaCount - 1) * 8;
+        int points = Math.Max(1, contentPoints + filePoints + areaPoints);
+
+        if (syncMerge)
+        {
+            points = Math.Max(3, (int)Math.Ceiling(points * 0.25m));
+        }
+
+        return Math.Min(points, 9999);
+    }
+
+    private static string SizeLabel(int scopePoints) =>
+        scopePoints switch
+        {
+            <= 12 => "XS",
+            <= 35 => "S",
+            <= 110 => "M",
+            <= 280 => "L",
+            _ => "XL",
+        };
+
+    private static bool IsGeneratedPath(string path)
+    {
+        string lower = path.ToLowerInvariant();
+        return lower.Contains("/dist/", StringComparison.Ordinal)
+            || lower.Contains("/wwwroot/assets/", StringComparison.Ordinal)
+            || lower.EndsWith("package-lock.json", StringComparison.Ordinal)
+            || lower.EndsWith(".min.js", StringComparison.Ordinal)
+            || lower.EndsWith(".min.css", StringComparison.Ordinal);
+    }
+
     private static HashSet<string> TagsForCommit(GitCommitRecord commit)
     {
         HashSet<string> tags = new(StringComparer.OrdinalIgnoreCase);
@@ -588,8 +1070,8 @@ public sealed class DevBlogHistoryAnalyzer : IDevBlogHistoryReader
         AddIf(subject, tags, "dashboard", "Dashboard");
         AddIf(subject, tags, "ui", "Dashboard");
         AddIf(subject, tags, "scope", "Dashboard");
-        AddIf(subject, tags, "docs", "Docs");
-        AddIf(subject, tags, "design", "Docs");
+        AddIf(subject, tags, "docs", "Design/Docs");
+        AddIf(subject, tags, "design", "Design/Docs");
         AddIf(subject, tags, "rimapi", "State/RIMAPI");
         AddIf(subject, tags, "state", "State/RIMAPI");
         AddIf(subject, tags, "briefing", "State/RIMAPI");
@@ -605,9 +1087,9 @@ public sealed class DevBlogHistoryAnalyzer : IDevBlogHistoryReader
         AddIf(subject, tags, "bill", "Assisted Apply");
         AddIf(subject, tags, "icon", "Icons");
         AddIf(subject, tags, "replay", "Replay");
-        AddIf(subject, tags, "launcher", "Ops");
+        AddIf(subject, tags, "launcher", "Infra/Ops");
         AddIf(subject, tags, "host", "Host/API");
-        AddIf(subject, tags, "log", "Ops");
+        AddIf(subject, tags, "log", "Infra/Ops");
         AddIf(subject, tags, "rename", "Repo Rename");
         AddIf(subject, tags, "refactor", "Refactor");
         AddIf(subject, tags, "cleanup", "Refactor");
@@ -646,7 +1128,8 @@ public sealed class DevBlogHistoryAnalyzer : IDevBlogHistoryReader
     {
         if (path.StartsWith("Dashboard/", StringComparison.OrdinalIgnoreCase)) return "Dashboard";
         if (path.StartsWith("Src/ApiHost/", StringComparison.OrdinalIgnoreCase)) return "Host/API";
-        if (path.StartsWith("Src/Ministers/", StringComparison.OrdinalIgnoreCase)) return "Ministers";
+        if (path.StartsWith("Src/Ministers/Food/", StringComparison.OrdinalIgnoreCase)) return "Food";
+        if (path.StartsWith("Src/Ministers/", StringComparison.OrdinalIgnoreCase)) return "Ministers/Core";
         if (path.StartsWith("Src/Tests/", StringComparison.OrdinalIgnoreCase)) return "Tests";
         if (path.StartsWith("Src/GameStateSync/", StringComparison.OrdinalIgnoreCase)
             || path.StartsWith("Src/StateStore/", StringComparison.OrdinalIgnoreCase)
@@ -654,14 +1137,26 @@ public sealed class DevBlogHistoryAnalyzer : IDevBlogHistoryReader
         if (path.StartsWith("Src/LlmGateway/", StringComparison.OrdinalIgnoreCase)
             || path.StartsWith("Src/KnowledgeBase/", StringComparison.OrdinalIgnoreCase)) return "LLM/RAG";
         if (path.StartsWith("Src/Coordination/", StringComparison.OrdinalIgnoreCase)
-            || path.StartsWith("Src/Common/", StringComparison.OrdinalIgnoreCase)) return "Core";
+            || path.StartsWith("Src/Common/", StringComparison.OrdinalIgnoreCase)) return "Ministers/Core";
         if (path.StartsWith("Docs/", StringComparison.OrdinalIgnoreCase)
-            || path.StartsWith(".agents/", StringComparison.OrdinalIgnoreCase)
-            || path.Equals("AGENTS.md", StringComparison.OrdinalIgnoreCase)
             || path.Equals("HumanTodo.md", StringComparison.OrdinalIgnoreCase)
-            || path.Equals("README.md", StringComparison.OrdinalIgnoreCase)) return "Docs";
+            || path.Equals("README.md", StringComparison.OrdinalIgnoreCase)) return "Design/Docs";
+        if (path.StartsWith(".agents/", StringComparison.OrdinalIgnoreCase)
+            || path.Equals("AGENTS.md", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith(".github/", StringComparison.OrdinalIgnoreCase)) return "Infra/Ops";
 
-        return "Tooling/Infra";
+        return "Infra/Ops";
+    }
+
+    private static FileAreaAggregate GetFileArea(Dictionary<string, FileAreaAggregate> areas, string area)
+    {
+        if (!areas.TryGetValue(area, out FileAreaAggregate? aggregate))
+        {
+            aggregate = new FileAreaAggregate();
+            areas[area] = aggregate;
+        }
+
+        return aggregate;
     }
 
     private static AreaAggregate GetArea(Dictionary<string, AreaAggregate> areas, string area)
@@ -713,6 +1208,58 @@ public sealed class DevBlogHistoryAnalyzer : IDevBlogHistoryReader
     private static string NormalizePath(string path) =>
         path.Replace('\\', '/');
 
+    private static bool TryParseDiffPath(string line, out string? path)
+    {
+        path = null;
+        if (!line.StartsWith("diff --git ", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        string[] parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 4)
+        {
+            return false;
+        }
+
+        string candidate = parts[3];
+        path = NormalizePath(candidate.StartsWith("b/", StringComparison.Ordinal) ? candidate[2..] : candidate);
+        return true;
+    }
+
+    private static void AddWordDelta(GitCommitRecord commit, string path, int additions, int deletions)
+    {
+        if (additions == 0 && deletions == 0)
+        {
+            return;
+        }
+
+        string normalizedPath = NormalizePath(path);
+        int index = commit.Files.FindIndex(file => file.Path.Equals(normalizedPath, StringComparison.OrdinalIgnoreCase));
+        if (index < 0)
+        {
+            commit.Files.Add(new GitFileChange(normalizedPath, 0, 0, additions, deletions));
+            return;
+        }
+
+        GitFileChange current = commit.Files[index];
+        commit.Files[index] = current with
+        {
+            WordAdditions = current.WordAdditions + additions,
+            WordDeletions = current.WordDeletions + deletions,
+        };
+    }
+
+    private static int CountScopeTokens(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return 0;
+        }
+
+        return text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;
+    }
+
     private sealed record GitCommandResult(bool Success, string Stdout, string Error);
 
     private sealed record HistogramSpec(string Label, int Min, int Max);
@@ -732,12 +1279,47 @@ public sealed class DevBlogHistoryAnalyzer : IDevBlogHistoryReader
         public int Churn { get; set; }
     }
 
+    private sealed class FileAreaAggregate
+    {
+        public List<GitFileChange> Files { get; } = [];
+
+        public void Add(GitFileChange file)
+        {
+            Files.Add(file);
+        }
+    }
+
     private sealed class DayAggregate
     {
         public int CommitCount { get; set; }
         public int Additions { get; set; }
         public int Deletions { get; set; }
+        public int UniqueScopePoints { get; set; }
         public Dictionary<string, int> TagCounts { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public Dictionary<string, int> LaneScopePoints { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public Dictionary<string, int> LaneCommitCounts { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public Dictionary<string, List<DevBlogLaneCommit>> LaneCommits { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        public void AddLaneCommit(string lane, DevBlogLaneCommit commit)
+        {
+            if (!LaneScopePoints.TryAdd(lane, commit.ScopePoints))
+            {
+                LaneScopePoints[lane] += commit.ScopePoints;
+            }
+
+            if (!LaneCommitCounts.TryAdd(lane, 1))
+            {
+                LaneCommitCounts[lane]++;
+            }
+
+            if (!LaneCommits.TryGetValue(lane, out List<DevBlogLaneCommit>? commits))
+            {
+                commits = [];
+                LaneCommits[lane] = commits;
+            }
+
+            commits.Add(commit);
+        }
     }
 }
 
@@ -753,7 +1335,7 @@ public sealed record GitCommitRecord(
     string Refs,
     List<GitFileChange> Files);
 
-public sealed record GitFileChange(string Path, int Additions, int Deletions);
+public sealed record GitFileChange(string Path, int Additions, int Deletions, int WordAdditions, int WordDeletions);
 
 public sealed record DevBlogHistoryReport(
     DateTimeOffset GeneratedAt,
@@ -776,6 +1358,10 @@ public sealed record DevBlogHistoryReport(
     IReadOnlyList<DevBlogAreaSummary> AreaSummaries,
     IReadOnlyList<DevBlogSlice> AuthorSlices,
     IReadOnlyList<DevBlogSlice> TagSlices,
+    IReadOnlyList<string> VelocityLanes,
+    IReadOnlyList<string> GridLanes,
+    IReadOnlyList<DevBlogDailyVelocityPoint> DailyVelocity,
+    IReadOnlyList<DevBlogDailyAreaVelocityRow> DailyAreaVelocity,
     IReadOnlyList<string> Suggestions);
 
 public sealed record DevBlogCommitSummary(
@@ -819,3 +1405,37 @@ public sealed record DevBlogSlice(
     string Label,
     int Count,
     int Churn);
+
+public sealed record DevBlogDailyVelocityPoint(
+    string Date,
+    int UniqueScopePoints,
+    IReadOnlyDictionary<string, int> LaneScopePoints,
+    IReadOnlyDictionary<string, int> LaneCommitCounts);
+
+public sealed record DevBlogDailyAreaVelocityRow(
+    string Date,
+    int UniqueScopePoints,
+    IReadOnlyList<DevBlogDailyAreaLane> Lanes);
+
+public sealed record DevBlogDailyAreaLane(
+    string Area,
+    int ScopePoints,
+    int CommitCount,
+    IReadOnlyList<DevBlogLaneCommit> Commits);
+
+public sealed record DevBlogLaneCommit(
+    string Hash,
+    string ShortHash,
+    DateTimeOffset At,
+    string Subject,
+    string Summary,
+    string SizeLabel,
+    int ScopePoints,
+    int FilesChanged,
+    IReadOnlyList<string> MaterialAreas,
+    IReadOnlyList<string> SupportingAreas);
+
+public sealed record DevBlogCommitAreaHit(
+    string Area,
+    string Role,
+    int ScopePoints);

@@ -528,6 +528,7 @@ code {
 .minister-view {
   display: grid;
   gap: 12px;
+  min-width: 0;
 }
 
 .system-hero {
@@ -681,6 +682,7 @@ code {
 .advice-card,
 .priority-card,
 .metric-card {
+  min-width: 0;
   border: 1px solid var(--line-soft);
   border-radius: var(--radius);
   background: rgba(255, 255, 255, 0.035);
@@ -884,6 +886,46 @@ code {
   border-radius: 999px;
 }
 
+.velocity-control-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.velocity-control-bar .tag-toggle-row {
+  margin-bottom: 0;
+}
+
+.velocity-chart-mode {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.24);
+}
+
+.velocity-chart-mode button {
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  padding: 5px 10px;
+  cursor: pointer;
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.velocity-chart-mode button:hover,
+.velocity-chart-mode button.active {
+  background: rgba(240, 189, 95, 0.16);
+  color: var(--text);
+}
+
 .dev-chart {
   min-width: 0;
   overflow-x: auto;
@@ -899,6 +941,251 @@ code {
 .dev-chart text {
   fill: var(--muted);
   font-size: 11px;
+}
+
+.daily-velocity-chart {
+  margin-bottom: 12px;
+}
+
+.velocity-point {
+  cursor: pointer;
+  outline: none;
+}
+
+.velocity-point:focus-visible {
+  stroke: var(--text);
+  stroke-width: 2;
+}
+
+.velocity-bar rect {
+  cursor: pointer;
+  opacity: 0.72;
+  outline: none;
+}
+
+.velocity-bar rect:hover,
+.velocity-bar rect:focus-visible,
+.velocity-bar.active rect {
+  opacity: 0.96;
+  stroke: rgba(255, 255, 255, 0.42);
+  stroke-width: 1.2;
+}
+
+.feature-index {
+  display: grid;
+  gap: 10px;
+}
+
+.feature-section-item {
+  min-width: 0;
+}
+
+.feature-filter-button small,
+.feature-filter-summary small,
+.feature-rollup-size span,
+.feature-rollup-size small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.feature-filter-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 2px 0 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.065);
+}
+
+.feature-filter-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 31px;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 999px;
+  padding: 5px 9px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.025);
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.feature-filter-button:hover {
+  border-color: rgba(240, 189, 95, 0.18);
+  background: rgba(255, 255, 255, 0.038);
+}
+
+.feature-filter-button.active {
+  border-color: rgba(240, 189, 95, 0.32);
+  background: rgba(240, 189, 95, 0.072);
+}
+
+.feature-filter-button:focus-visible {
+  outline: 2px solid rgba(240, 189, 95, 0.45);
+  outline-offset: 3px;
+}
+
+.feature-filter-button strong,
+.feature-rollup-copy h5 {
+  margin: 0;
+}
+
+.feature-filter-button strong {
+  font-size: 0.76rem;
+}
+
+.feature-filter-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  padding: 2px 1px;
+}
+
+.feature-filter-summary strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--text);
+  font-size: 0.84rem;
+}
+
+.feature-section-list {
+  display: grid;
+  gap: 10px;
+}
+
+.feature-section-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(100px, auto);
+  gap: 12px;
+  align-items: start;
+  padding: 11px;
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.018);
+  cursor: help;
+}
+
+.feature-section-item:hover {
+  border-color: rgba(240, 189, 95, 0.18);
+  background: rgba(255, 255, 255, 0.028);
+}
+
+.feature-rollup-copy {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 9px;
+  align-items: start;
+  min-width: 0;
+}
+
+.feature-rollup-copy > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.feature-rollup-icon.game-icon {
+  border-color: rgba(240, 189, 95, 0.18);
+  background: rgba(240, 189, 95, 0.055);
+}
+
+.feature-rollup-copy h5 {
+  color: var(--text);
+  font-size: 0.92rem;
+  line-height: 1.2;
+}
+
+.feature-rollup-copy p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.36;
+}
+
+.feature-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 2px;
+}
+
+.feature-tag-list span {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-height: 18px;
+  padding: 2px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 999px;
+  color: rgba(234, 229, 214, 0.78);
+  background: rgba(255, 255, 255, 0.026);
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.feature-rollup-size {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.feature-rollup-size strong {
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.lane-design-docs {
+  --lane-tint: rgba(167, 139, 250, 0.042);
+  --lane-accent: rgba(167, 139, 250, 0.85);
+}
+
+.lane-food-apply {
+  --lane-tint: rgba(80, 211, 141, 0.036);
+  --lane-accent: rgba(80, 211, 141, 0.85);
+}
+
+.lane-app-runtime {
+  --lane-tint: rgba(98, 216, 230, 0.034);
+  --lane-accent: rgba(98, 216, 230, 0.85);
+}
+
+.lane-tests-ops {
+  --lane-tint: rgba(240, 189, 95, 0.036);
+  --lane-accent: rgba(240, 189, 95, 0.86);
+}
+
+.lane-dashboard-icons {
+  --lane-tint: rgba(255, 159, 122, 0.034);
+  --lane-accent: rgba(255, 159, 122, 0.86);
+}
+
+.lane-host-api {
+  --lane-tint: rgba(120, 168, 255, 0.034);
+  --lane-accent: rgba(120, 168, 255, 0.86);
+}
+
+.lane-state-core {
+  --lane-tint: rgba(210, 249, 112, 0.03);
+  --lane-accent: rgba(210, 249, 112, 0.78);
+}
+
+.lane-tests-replay {
+  --lane-tint: rgba(255, 159, 122, 0.032);
+  --lane-accent: rgba(255, 159, 122, 0.82);
+}
+
+.lane-infra-ops {
+  --lane-tint: rgba(255, 107, 107, 0.03);
+  --lane-accent: rgba(255, 107, 107, 0.78);
 }
 
 .chart-grid-line {
@@ -1156,6 +1443,7 @@ code {
 }
 
 .disclosure-panel {
+  min-width: 0;
   border-top: 1px solid var(--line-soft);
   padding: 12px;
 }

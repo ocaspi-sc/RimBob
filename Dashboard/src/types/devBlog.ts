@@ -46,6 +46,39 @@ export interface DevBlogSlice {
   churn: number;
 }
 
+export interface DevBlogDailyVelocityPoint {
+  date: string;
+  uniqueScopePoints: number;
+  laneScopePoints: Record<string, number>;
+  laneCommitCounts: Record<string, number>;
+}
+
+export interface DevBlogDailyAreaRow {
+  date: string;
+  uniqueScopePoints: number;
+  lanes: DevBlogDailyAreaLane[];
+}
+
+export interface DevBlogDailyAreaLane {
+  area: string;
+  scopePoints: number;
+  commitCount: number;
+  commits: DevBlogLaneCommit[];
+}
+
+export interface DevBlogLaneCommit {
+  hash: string;
+  shortHash: string;
+  at: string;
+  subject: string;
+  summary: string;
+  sizeLabel: string;
+  scopePoints: number;
+  filesChanged: number;
+  materialAreas: string[];
+  supportingAreas: string[];
+}
+
 export interface DevBlogHistory {
   generatedAt: string;
   repositoryRoot: string;
@@ -67,5 +100,9 @@ export interface DevBlogHistory {
   areaSummaries: DevBlogAreaSummary[];
   authorSlices: DevBlogSlice[];
   tagSlices: DevBlogSlice[];
+  velocityLanes: string[];
+  gridLanes: string[];
+  dailyVelocity: DevBlogDailyVelocityPoint[];
+  dailyAreaVelocity: DevBlogDailyAreaRow[];
   suggestions: string[];
 }
