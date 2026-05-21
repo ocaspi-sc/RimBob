@@ -23,6 +23,7 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 - After finishing a change, make sure I can see it. Rebuild if necessary, and include a clickable URL or file link to the result.
 - Use mermaid diagrams over prose
 - dont be vauge! Write specifics. no "Update file" but "file: Added X."
+- Show me pseudo code
 
 ## Coding
 
@@ -110,7 +111,7 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 
 - The active RIMAPI mod is a local fork at `C:\dev\RIMAPI-for-RimBob` (repo: `ocaspi-sc/RIMAPI-for-RimBob`), not the upstream `IlyaChichkov/RIMAPI`. RimBob still integrates over HTTP at `http://localhost:8765/`; nothing in this repo links against the mod.
 - RimBob is an assisted-gameplay advisor for RimWorld. The player keeps control.
-- MVP autonomy is suggest-only. Narrow player-confirmed Assisted Apply (M4.5) is a manual click path attached to `Suggest` advice, not `Auto`. Per-minister `Auto` graduation is deferred until M7+ and requires explicit player consent.
+- MVP posture is **suggest + player-confirmed apply** (not suggest-only). Ministers emit advice; the player applies a growing-but-partial allowlist of non-pawn RIMAPI writes by clicking Apply. Every write is player-click-gated — this is NOT `Auto`/autonomous, and coverage stays partial (far from full control). Per-minister `Auto` (no per-click execution) is deferred until M7+ and requires explicit player consent.
 - Mayor publishes the Agenda. Feeder ministers publish `AdviceItem`s. No minister autonomously writes to RIMAPI; the Host executes only allowlisted single-operation writes, and only on an explicit player Apply click.
 - No direct minister-to-minister communication. Coordination flows through flags; CoS arbitrates; Mayor synthesizes.
 - Rules handle common cases first. LLMs run only on escalation.
