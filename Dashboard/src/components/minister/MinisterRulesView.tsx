@@ -3,27 +3,30 @@ import type { ScopeConfig } from '../../dashboard/scopes';
 import { iconForRuleOutcome, iconForSection, iconForView } from '../../dashboard/semanticIcons';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
 import type { AdviceItem } from '../../types/advice';
-import type { DashboardEvent, RuleEvaluationTrace, RuleTraceDetails } from '../../types/system';
+import type { DashboardEvent, MinisterTrace, RuleEvaluationTrace, RuleTraceDetails } from '../../types/system';
 import { DisclosureSection } from '../shared/DisclosureSection';
 import { EmptyState } from '../shared/EmptyState';
-import { DynamicTable, InspectorSurface, type InspectorSurfaceConfig } from '../shared/Inspector';
+import { DynamicTable, InspectorSurface, UnknownValue, type InspectorSurfaceConfig } from '../shared/Inspector';
 import { SemanticLabel } from '../shared/SemanticIcon';
 import { Timeline } from '../shared/Timeline';
 
 const traceInspectorConfig: InspectorSurfaceConfig = {
-  summaryKeys: [
+  hiddenKeys: [
     'trigger',
     'status',
     'path',
+    'startedAt',
     'completedAt',
-    'completed_at',
     'ruleFired',
-    'rule_fired',
-    'ruleDiagnostics.selectedRule',
     'escalationReason',
-    'escalation_reason',
+    'errorType',
+    'errorMessage',
+    'adviceCount',
+    'flagCount',
+    'wakeupPayload',
+    'note',
+    'ruleDiagnostics',
   ],
-  hiddenKeys: ['ruleDiagnostics'],
   defaultOpenKeys: ['flag', 'flags', 'advice', 'emittedAdvice', 'emitted_advice'],
   preferredTables: [
     {
@@ -88,6 +91,7 @@ export function MinisterRulesView({
         <EmptyState code="TRACE NOT EXPOSED">{trace.error ?? 'No trace returned.'}</EmptyState>
       ) : (
         <>
+          <TraceSummaryPanel trace={trace.data} />
           {trace.data.ruleDiagnostics && (
             <RuleDiagnosticsPanel details={trace.data.ruleDiagnostics} />
           )}
@@ -114,6 +118,41 @@ export function MinisterRulesView({
         />
       </DisclosureSection>
     </div>
+  );
+}
+
+function TraceSummaryPanel({ trace }: { trace: MinisterTrace }) {
+  const candidateFields: Array<[string, unknown]> = [
+    ['trigger', trace.trigger],
+    ['status', trace.status],
+    ['path', trace.path],
+    ['ruleFired', trace.ruleFired],
+    ['escalationReason', trace.escalationReason],
+    ['errorType', trace.errorType],
+    ['errorMessage', trace.errorMessage],
+    ['adviceCount', trace.adviceCount],
+    ['flagCount', trace.flagCount],
+    ['startedAt', trace.startedAt],
+    ['completedAt', trace.completedAt],
+    ['note', trace.note],
+  ];
+  const fields = candidateFields.filter(([, value]) => value !== null && value !== '');
+
+  return (
+    <DisclosureSection
+      title={<SemanticLabel icon={iconForSection('trigger')}><span>Trigger summary</span></SemanticLabel>}
+      defaultOpen
+      meta={`${trace.status} / ${formatTracePath(trace.path)}`}
+    >
+      <div className="inspector-field-grid">
+        {fields.map(([key, value]) => (
+          <div className="inspector-field" key={key}>
+            <SemanticLabel className="inspector-field-name" icon={iconForSection(key)}><code>{key}</code></SemanticLabel>
+            <UnknownValue value={value} fieldKey={key} />
+          </div>
+        ))}
+      </div>
+    </DisclosureSection>
   );
 }
 
@@ -233,6 +272,10 @@ function RuleDiagnosticsPanel({ details }: { details: RuleTraceDetails }) {
 
 function sameMinister(a: string, b: string): boolean {
   return a.localeCompare(b, undefined, { sensitivity: 'accent' }) === 0;
+}
+
+function formatTracePath(path: string): string {
+  return path.replace(/_/g, ' ');
 }
 
 const ruleOutcomeOrder = ['selected', 'escalated', 'matched', 'suppressed', 'not_matched'];
