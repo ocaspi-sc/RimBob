@@ -26,17 +26,8 @@ Useful mostly as an inspiration source and a cautionary source. The visible comm
 
 ## Images
 
-The source did not expose individual room-layout image assets in the public page. The saved images are source-identification thumbnails, not authoritative layout diagrams.
-
-![Steam guide preview](images/steam-efficient-base-optimized-room-layouts-preview.jpg)
-
-Source image: https://images.steamusercontent.com/ugc/35566577718748844/AFE6FBCA475ABC09D712C9F0033CC47E46A20AA6/?imw=512&imh=288&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true
-
-![YouTube video thumbnail](images/youtube-HQi4i6zJ16o-hqdefault.jpg)
-
-Source image: https://i.ytimg.com/vi/HQi4i6zJ16o/hqdefault.jpg
+The source did not expose individual room-layout image assets in the public page. No local images are retained for this source.
 
 ## Caution
 
 Do not treat this as a primary mechanics source. Use it as a prompt for room-template ideas, then verify with game mechanics and stronger sources.
-

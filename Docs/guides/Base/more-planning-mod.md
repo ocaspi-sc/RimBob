@@ -35,12 +35,7 @@ Source image: https://rimworldbase.com/wp-content/uploads/2025/11/MorePlanning.p
 
 Source image: https://images.steamusercontent.com/ugc/14140525228906377775/3CA5C57A455FA37BFEC7DB314F82ED5E7AA1B1D2/?ima=fit&impolicy=Letterbox&imw=800
 
-![Architect planning menu](images/more-planning-architect-menu.png)
-
-Source image: https://images.steamusercontent.com/ugc/13879665377626047823/FE406D11256CB35A1C1D98A326D1BECAD60CF418/?ima=fit&impolicy=Letterbox&imw=800
-
 ## Dashboard/Agent Implications
 
 - If RimBob proposes layouts, keep them as colored layers the player can accept, ignore, or edit.
 - Do not jump from "planner can show this" to "Host can build this." In RimBob terms, these are Suggest-mode visual drafts unless a later Assisted Apply path explicitly supports blueprint placement.
-
