@@ -553,6 +553,93 @@ public sealed class FoodRulesTests
     }
 
     [Fact]
+    public void LowBufferWithActiveCropCoverage_DoesNotRequestDuplicateGrowingZone()
+    {
+        FoodBriefing briefing = Briefing(days: 16f) with
+        {
+            MealsCount = 20,
+            RawFoodCount = 0,
+            ReadyToHarvest = 0,
+            WildHarvestCandidates = 0,
+            WildAnimalCount = 0,
+            CropBreakdown = [new FoodCropSummary("Plant_Rice", 36, 0.05f)],
+            CropZoneSummaries = [new FoodCropZoneSummary("Plant_Rice", "2", 36, 0.05f, 0, "nearby to storage")]
+        };
+
+        Escalate escalation = new Rules().Evaluate(briefing, ColonyContext.Default)
+            .Should().BeOfType<Escalate>()
+            .Subject;
+
+        escalation.Diagnostics.Should().NotBeNull();
+        escalation.Diagnostics!.SelectedRule.Should().Be("unresolved_food_gap");
+        escalation.Diagnostics.MatchedSignals.Should().NotContain(signal =>
+            signal.Rule == "expand_growing_capacity");
+        escalation.Diagnostics.AllRules.Should().Contain(row =>
+            row.Rule == "expand_growing_capacity" &&
+            row.Outcome == "not_matched" &&
+            row.Conditions.Contains("active matching crop coverage is below candidate tile target"));
+    }
+
+    [Fact]
+    public void UrgentShortageWithActiveCropCoverage_DoesNotRepeatGrowingZone()
+    {
+        FoodBriefing briefing = Briefing(days: 6f) with
+        {
+            FoodUnits = 28,
+            MealsCount = 20,
+            RawFoodCount = 8,
+            ReadyToHarvest = 0,
+            WildHarvestCandidates = 111,
+            WildHarvestClusters = [new WildHarvestCluster("Plant_Berry", 111, 1f, "nearby to kitchen", "kitchen")],
+            HarvestTargets =
+            [
+                new FoodHarvestTarget(
+                    "wild",
+                    "Plant_Berry",
+                    40,
+                    new(10, 10, 19, 13),
+                    Enumerable.Range(0, 40).Select(i => $"berry-{i}").ToList(),
+                    null,
+                    "nearby to kitchen",
+                    "kitchen")
+            ],
+            WildAnimalCount = 53,
+            WildHuntTargets = [new WildHuntTarget("Hare", 1, "far from kitchen", "kitchen")],
+            HuntTargets =
+            [
+                new FoodHuntTarget("Hare", 1, new(40, 50, 40, 50), ["hare-1"], "far from kitchen", "kitchen")
+            ],
+            CropBreakdown = [new FoodCropSummary("Plant_Rice", 36, 0.05f)],
+            CropZoneSummaries = [new FoodCropZoneSummary("Plant_Rice", "2", 36, 0.05f, 0, "nearby to storage")],
+            Infrastructure = new FoodInfrastructureSnapshot(0, true, 500f, 0),
+            Kitchen = KitchenWithSimpleMealBill(targetCount: 12)
+        };
+
+        Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
+            .Should().BeOfType<Decision>().Subject;
+
+        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        advice.Actions.Should().HaveCount(4);
+        advice.Actions.Should().Contain(action => action.Kind == AdviceActionKind.MarkHarvest);
+        advice.Actions.Should().Contain(action => action.Kind == AdviceActionKind.MarkHunt);
+        advice.Actions.Should().Contain(action => action.Kind == AdviceActionKind.SetPriority);
+        advice.Actions.Should().Contain(action =>
+            action.Kind == AdviceActionKind.PlaceBlueprint &&
+            action.Owner == "Construction" &&
+            action.Instruction.Contains("foraged food"));
+        advice.Actions.Should().NotContain(action => action.Kind == AdviceActionKind.DesignateZone);
+
+        AgentFlag flag = decision.Flags.Should().ContainSingle().Subject;
+        flag.Requests.Should().NotBeNull();
+        flag.Requests!.Should().NotContain(request => request.Kind == ResourceRequestKind.Tile);
+        flag.Requests!.Should().NotContain(request => request.WorkType == WorkType.Grow);
+        flag.Requests!.Should().Contain(request =>
+            request.Kind == ResourceRequestKind.Building &&
+            request.RequestedFrom == "Construction" &&
+            request.What.Contains("surplus freezer"));
+    }
+
+    [Fact]
     public void LowBufferNearWinter_UsesFastCropWhenItStillFits()
     {
         FoodBriefing briefing = Briefing(days: 16f) with

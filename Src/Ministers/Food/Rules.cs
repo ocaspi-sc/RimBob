@@ -120,7 +120,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         }
 
         FoodCropCandidate? cropCandidate = FoodCropMath.Recommend(briefing).BestCandidate;
-        if (days < 20f && cropCandidate is not null)
+        if (days < 20f && cropCandidate is not null && ShouldRecommendNewGrowingZone(briefing, cropCandidate))
         {
             bool needsFreezerSupport = NeedsFreezerSupport(briefing, days, incomingPerishableFood: true);
             return DecisionFor(briefing, "expand_growing_capacity",
@@ -143,7 +143,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
 
         if (ShouldEscalateHuntTargetsBlockedByRisk(briefing, days))
             return new Escalate(
-                "Food below 20 days with visible animals, but hunting is blocked by the current safety/risk filters.",
+                "Food below 20 days with visible animals, but the hunting path is blocked by the current safety/risk filters.",
                 new { briefing.WildAnimalCount, briefing.ActiveThreat, LowRiskTargetCount = briefing.WildHuntTargets.Count, briefing.Skills.BestCooking, briefing.HuntRiskSummaries },
                 DiagnosticsFor(briefing, "hunt_targets_blocked_by_risk"));
 
@@ -301,6 +301,24 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         CanSuggestHunting(briefing) ||
         FoodCropMath.Recommend(briefing).BestCandidate is not null;
 
+    private static bool ShouldRecommendNewGrowingZone(FoodBriefing briefing, FoodCropCandidate candidate) =>
+        ActiveMatchingCropTiles(briefing, candidate.CropDef) < candidate.Tiles;
+
+    private static int ActiveMatchingCropTiles(FoodBriefing briefing, string cropDef)
+    {
+        int zoneTiles = briefing.CropZoneSummaries
+            .Where(zone => SameCropDef(zone.Def, cropDef))
+            .Sum(zone => Math.Max(0, zone.Count));
+        int cropBreakdownTiles = briefing.CropBreakdown
+            .Where(crop => SameCropDef(crop.Def, cropDef))
+            .Sum(crop => Math.Max(0, crop.Count));
+
+        return Math.Max(zoneTiles, cropBreakdownTiles);
+    }
+
+    private static bool SameCropDef(string actual, string expected) =>
+        string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase);
+
     private static AdvicePriority FreezerSupportPriority(FoodBriefing briefing) =>
         briefing.Season.DaysToWinter is < 20 ? AdvicePriority.High : AdvicePriority.Medium;
 
@@ -414,7 +432,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 "days < 20; low-risk hunt target visible; ReadyToHarvest == 0",
                 "HuntForFood advice; mark_hunt action; optional butcher/cooking/freezer support"),
             RuleEvaluation("expand_growing_capacity", outcomes,
-                "days < 20; FoodCropMath best candidate exists",
+                "days < 20; FoodCropMath best candidate exists; active matching crop coverage is below candidate tile target",
                 "ExpandGrowingCapacity advice; designate_zone action; Construction tile/freezer support"),
             RuleEvaluation("hunt_targets_blocked_by_risk", outcomes,
                 "days < 20; WildAnimalCount > 0; ReadyToHarvest == 0; hunt advice blocked by safety/risk gate",
@@ -507,7 +525,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         }
 
         FoodCropCandidate? cropCandidate = FoodCropMath.Recommend(briefing).BestCandidate;
-        if (days < 20f && cropCandidate is not null)
+        if (days < 20f && cropCandidate is not null && ShouldRecommendNewGrowingZone(briefing, cropCandidate))
         {
             matches.Add(Match(
                 "expand_growing_capacity",
@@ -610,7 +628,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                     RequestedFrom: "Construction"));
         }
         FoodCropCandidate? cropCandidate = FoodCropMath.Recommend(briefing).BestCandidate;
-        if (cropCandidate is not null)
+        if (cropCandidate is not null && ShouldRecommendNewGrowingZone(briefing, cropCandidate))
         {
             requests.Add(new ResourceRequest(ResourceRequestKind.Tile,
                 $"{cropCandidate.Tiles} emergency food growing tiles",
@@ -715,7 +733,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 Icon: SimpleMealIcon));
         }
         FoodCropCandidate? cropCandidate = FoodCropMath.Recommend(briefing).BestCandidate;
-        if (cropCandidate is not null)
+        if (cropCandidate is not null && ShouldRecommendNewGrowingZone(briefing, cropCandidate))
             actions.Add(GrowingZoneAction(
                 cropCandidate,
                 "food buffer is below 7 days and the growing window is still open",
