@@ -122,6 +122,7 @@ export default function App() {
                 agenda={feed.agenda}
                 chains={feed.feed.chains}
                 events={feed.events}
+                flags={feed.feed.flags}
                 previousAgenda={feed.previousAgenda}
                 scope={activeScope}
                 selectedView={activeMinisterView}

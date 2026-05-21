@@ -7,7 +7,7 @@ import { MinisterRagView } from '../components/minister/MinisterRagView';
 import { MinisterRawLlmView } from '../components/minister/MinisterRawLlmView';
 import { MinisterRulesView } from '../components/minister/MinisterRulesView';
 import { ministerViews, type MinisterViewKey, type ScopeConfig } from './scopes';
-import type { AdviceChainModel, AdviceItem } from '../types/advice';
+import type { AdviceChainModel, AdviceItem, AgentFlag } from '../types/advice';
 import type { MayorAgenda } from '../types/agenda';
 import type { DashboardEvent, SystemHealth } from '../types/system';
 
@@ -16,6 +16,7 @@ export interface MinisterViewContext {
   agenda: MayorAgenda | null;
   chains: Record<string, AdviceChainModel>;
   events: DashboardEvent[];
+  flags: Record<string, AgentFlag[]>;
   previousAgenda: MayorAgenda | null;
   scope: ScopeConfig;
   stateSummaries: Record<string, string>;
@@ -46,13 +47,14 @@ const ministerViewRenderers: Record<MinisterViewKey, MinisterViewRenderer> = {
       scope={scope}
     />
   ),
-  advice: ({ activeAdvice, agenda, previousAgenda, scope, stateSummaries, systemHealth }) => (
+  advice: ({ activeAdvice, agenda, flags, previousAgenda, scope, stateSummaries, systemHealth }) => (
     <MinisterAdviceView
       scope={scope}
       agenda={agenda}
       previousAgenda={previousAgenda}
       advice={activeAdvice}
       currentGameTick={systemHealth?.colony_snapshot.game_tick ?? null}
+      flags={flags[scope.label] ?? flags[scope.key] ?? []}
       stateSummary={stateSummaries[scope.label] ?? stateSummaries[scope.key] ?? null}
     />
   ),

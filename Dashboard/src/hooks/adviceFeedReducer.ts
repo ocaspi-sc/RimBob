@@ -1,4 +1,4 @@
-import type { AdviceChainModel, AdviceItem, AdviceSnapshot } from '../types/advice';
+import type { AdviceChainModel, AdviceItem, AdviceSnapshot, AgentFlag } from '../types/advice';
 import type { MayorAgenda } from '../types/agenda';
 import type { DashboardEvent, FeedState, RimBobRunningVersion, StreamDiagnostics } from '../types/system';
 
@@ -45,6 +45,7 @@ export const initialAdviceFeedState: AdviceFeedState = {
     adviceEvents: 0,
     activeAdvice: [],
     chains: {},
+    flags: {},
     stateSummaries: {},
   },
   runningVersion: null,
@@ -161,6 +162,11 @@ export function adviceFeedReducer(
         action.snapshot.chain,
         action.snapshot.chains,
       );
+      const flags = mergeFlags(
+        state.feed.flags,
+        snapshotMinister,
+        action.snapshot.flags,
+      );
 
       return {
         ...state,
@@ -169,6 +175,7 @@ export function adviceFeedReducer(
           adviceEvents: state.feed.adviceEvents + 1,
           activeAdvice,
           chains,
+          flags,
           stateSummaries,
         },
         stream: recordStreamEvent(state.stream, action.readyState, 'advice_snapshot', action.eventId),
@@ -275,6 +282,30 @@ function mergeChains(
   const next = { ...current };
   if (chain) {
     next[snapshotMinister] = chain;
+  } else {
+    delete next[snapshotMinister];
+  }
+  return next;
+}
+
+function mergeFlags(
+  current: Record<string, AgentFlag[]>,
+  snapshotMinister: string | null | undefined,
+  flags: AgentFlag[] | null | undefined,
+): Record<string, AgentFlag[]> {
+  if (!snapshotMinister) {
+    if (!flags) return current;
+
+    return flags.reduce<Record<string, AgentFlag[]>>((next, flag) => {
+      const minister = flag.source_minister;
+      next[minister] = [...(next[minister] ?? []), flag];
+      return next;
+    }, {});
+  }
+
+  const next = { ...current };
+  if (flags && flags.length > 0) {
+    next[snapshotMinister] = [...flags];
   } else {
     delete next[snapshotMinister];
   }

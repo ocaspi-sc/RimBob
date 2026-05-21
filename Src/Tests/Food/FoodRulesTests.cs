@@ -32,7 +32,7 @@ public sealed class FoodRulesTests
         advice.IssuedGameTick.Should().Be(briefing.GameTick);
         advice.ExpiresGameTick.Should().Be(briefing.GameTick + AdviceFreshness.TicksPerGameDay);
         advice.Actions.Should().Contain(s => s.Kind == AdviceActionKind.ProductionBill);
-        advice.Actions.Should().Contain(s => s.Kind == AdviceActionKind.SetPriority && s.WorkType == WorkType.Cook);
+        advice.Actions.Should().NotContain(s => s.Kind == AdviceActionKind.SetPriority);
         advice.Actions.Should().NotContain(s => s.Kind == AdviceActionKind.Trade);
         decision.Diagnostics.Should().NotBeNull();
         decision.Diagnostics!.SelectedRule.Should().Be("emergency_food_flag");
@@ -369,7 +369,7 @@ public sealed class FoodRulesTests
     }
 
     [Fact]
-    public void UrgentShortage_WithSatisfiedSimpleMealBill_KeepsCookLaborButDropsBillAction()
+    public void UrgentShortage_WithSatisfiedSimpleMealBill_KeepsCookLaborAsFlagRequest()
     {
         FoodBriefing briefing = Briefing(days: 4f) with
         {
@@ -381,7 +381,11 @@ public sealed class FoodRulesTests
 
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
         advice.Actions.Should().NotContain(action => action.Kind == AdviceActionKind.ProductionBill);
-        advice.Actions.Should().Contain(action => action.Kind == AdviceActionKind.SetPriority && action.WorkType == WorkType.Cook);
+        advice.Actions.Should().NotContain(action => action.Kind == AdviceActionKind.SetPriority);
+        decision.Flags.Should().ContainSingle().Which.Requests.Should().Contain(request =>
+            request.Kind == ResourceRequestKind.Labor &&
+            request.WorkType == WorkType.Cook &&
+            request.RequestedFrom == "Labor");
     }
 
     [Fact]
@@ -410,7 +414,7 @@ public sealed class FoodRulesTests
     }
 
     [Fact]
-    public void MealsUnderstocked_WithNoCookCoverage_RequestsCookWorkType()
+    public void MealsUnderstocked_WithNoCookCoverage_RequestsCookWorkTypeInFlag()
     {
         FoodBriefing briefing = Briefing(days: 12f) with
         {
@@ -424,10 +428,11 @@ public sealed class FoodRulesTests
             .Should().BeOfType<Decision>().Subject;
 
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
-        advice.Actions.Should().Contain(s =>
-            s.Kind == AdviceActionKind.SetPriority &&
-            s.WorkType == WorkType.Cook &&
-            s.Skill == "Cooking");
+        advice.Actions.Should().NotContain(action => action.Kind == AdviceActionKind.SetPriority);
+        decision.Flags.Should().ContainSingle().Which.Requests.Should().Contain(request =>
+            request.Kind == ResourceRequestKind.Labor &&
+            request.WorkType == WorkType.Cook &&
+            request.Skill == "Cooking");
     }
 
     [Fact]
@@ -619,20 +624,24 @@ public sealed class FoodRulesTests
             .Should().BeOfType<Decision>().Subject;
 
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
-        advice.Actions.Should().HaveCount(4);
+        advice.Actions.Should().HaveCount(3);
         advice.Actions.Should().Contain(action => action.Kind == AdviceActionKind.MarkHarvest);
         advice.Actions.Should().Contain(action => action.Kind == AdviceActionKind.MarkHunt);
-        advice.Actions.Should().Contain(action => action.Kind == AdviceActionKind.SetPriority);
         advice.Actions.Should().Contain(action =>
             action.Kind == AdviceActionKind.PlaceBlueprint &&
             action.Owner == "Construction" &&
             action.Instruction.Contains("foraged food"));
         advice.Actions.Should().NotContain(action => action.Kind == AdviceActionKind.DesignateZone);
+        advice.Actions.Should().NotContain(action => action.Kind == AdviceActionKind.SetPriority);
 
         AgentFlag flag = decision.Flags.Should().ContainSingle().Subject;
         flag.Requests.Should().NotBeNull();
         flag.Requests!.Should().NotContain(request => request.Kind == ResourceRequestKind.Tile);
         flag.Requests!.Should().NotContain(request => request.WorkType == WorkType.Grow);
+        flag.Requests!.Should().Contain(request =>
+            request.Kind == ResourceRequestKind.Labor &&
+            request.WorkType == WorkType.Cook &&
+            request.RequestedFrom == "Labor");
         flag.Requests!.Should().Contain(request =>
             request.Kind == ResourceRequestKind.Building &&
             request.RequestedFrom == "Construction" &&

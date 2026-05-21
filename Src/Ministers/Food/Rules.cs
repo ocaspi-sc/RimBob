@@ -79,6 +79,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             (ShouldSuggestCookBill(briefing) || ShouldRequestCookingLabor(briefing, days)))
         {
             bool needsFreezerSupport = NeedsFreezerSupport(briefing, days, incomingPerishableFood: true);
+            bool needsCookingLabor = ShouldRequestCookingLabor(briefing, days);
             return DecisionFor(briefing, "meals_understocked",
                 FoodAdviceType.ManageCookBills,
                 AdvicePriority.Medium,
@@ -86,8 +87,8 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 $"Only {briefing.MealsCount} meals are reported for {briefing.ColonistCount} colonists while raw food exists.",
                 "A raw-food buffer still needs cooking throughput to become safe daily nutrition.",
                 ActionsWithFreezerSupport(briefing, days, CookBillActions(briefing, days), incomingPerishableFood: true),
-                RequestsWithFreezerSupport(briefing, days, [], incomingPerishableFood: true),
-                needsFreezerSupport);
+                RequestsWithFreezerSupport(briefing, days, CookingLaborIfNeeded(briefing, days, AdvicePriority.Medium), incomingPerishableFood: true),
+                needsFreezerSupport || needsCookingLabor);
         }
 
         if (days < 20f && briefing.WildHarvestCandidates > 0 && briefing.ReadyToHarvest == 0)
@@ -424,7 +425,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 "HarvestNow advice; mark_harvest action; optional PlantCut labor/freezer support"),
             RuleEvaluation("meals_understocked", outcomes,
                 "MealsCount < ColonistCount * 2; days > 7; RawFoodCount > 0; cook bill or labor needed",
-                "ManageCookBills advice; production_bill and/or cook set_priority; optional freezer support"),
+                "ManageCookBills advice; production_bill action; optional Cook labor/freezer requests"),
             RuleEvaluation("wild_harvest_available", outcomes,
                 "days < 20; WildHarvestCandidates > 0; ReadyToHarvest == 0",
                 "WildHarvest advice; forage mark_harvest action; optional freezer support"),
@@ -723,14 +724,6 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                     Icon: SimpleMealIcon,
                     Apply: CookBillApply(briefing)));
             }
-            actions.Add(new AdviceAction(
-                AdviceActionKind.SetPriority,
-                "Put the best cook on Cook work until simple meals are stocked.",
-                Owner: "Labor",
-                WorkType: WorkType.Cook,
-                Skill: "Cooking",
-                Reason: "raw food must become meals during an urgent shortage",
-                Icon: SimpleMealIcon));
         }
         FoodCropCandidate? cropCandidate = FoodCropMath.Recommend(briefing).BestCandidate;
         if (cropCandidate is not null && ShouldRecommendNewGrowingZone(briefing, cropCandidate))
@@ -769,16 +762,29 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 Owner: "Construction",
                 Reason: "raw food cannot become meals without a cooking building",
                 Icon: CampfireIcon));
-        if (ShouldRequestCookingLabor(briefing, days))
-            actions.Add(new AdviceAction(
-                AdviceActionKind.SetPriority,
-                "Put the best cook on Cook work until simple meals are stocked.",
-                Owner: "Labor",
+        return actions;
+    }
+
+    private static IReadOnlyList<ResourceRequest> CookingLaborIfNeeded(
+        FoodBriefing briefing,
+        float days,
+        AdvicePriority priority)
+    {
+        if (!ShouldRequestCookingLabor(briefing, days))
+            return [];
+
+        return
+        [
+            new ResourceRequest(
+                ResourceRequestKind.Labor,
+                "Cook work today",
+                "raw food has to become meals and cook coverage is urgent or weak",
+                Priority: priority,
+                RequestedFrom: "Labor",
                 WorkType: WorkType.Cook,
                 Skill: "Cooking",
-                Reason: "raw food has to become meals and cook coverage is urgent or weak",
-                Icon: SimpleMealIcon));
-        return actions;
+                Icon: SimpleMealIcon)
+        ];
     }
 
     private static IReadOnlyList<ResourceRequest> HuntingRequests(FoodBriefing briefing, AdvicePriority priority)

@@ -2,6 +2,7 @@ using FluentAssertions;
 using RimBob.Coordination;
 using RimBob.Core.Advice;
 using RimBob.Core.Briefings;
+using RimBob.Core.Ministers;
 
 namespace RimBob.Tests.Coordination;
 
@@ -84,6 +85,22 @@ public sealed class AdviceBusTests
         snapshots[0].Chain.Should().BeSameAs(chain);
         AdviceSnapshot active = bus.ActiveSnapshot();
         active.Chains.Should().ContainKey("Food").WhoseValue.Should().BeSameAs(chain);
+    }
+
+    [Fact]
+    public void ReplaceMinisterAdvice_PublishesAndReplaysMinisterFlags()
+    {
+        AdviceBus bus = new();
+        AgentFlag flag = Flag("food:emergency", "Food");
+        List<AdviceSnapshot> snapshots = [];
+        bus.AdviceSnapshotPublished += snapshots.Add;
+
+        bus.ReplaceMinisterAdvice("Food", [Advice("new_food", "Food")], "Food is low.", flags: [flag]);
+
+        snapshots.Should().ContainSingle();
+        snapshots[0].Flags.Should().ContainSingle().Which.Id.Should().Be("food:emergency");
+        AdviceSnapshot active = bus.ActiveSnapshot();
+        active.Flags.Should().ContainSingle().Which.Requests.Should().ContainSingle().Which.WorkType.Should().Be(WorkType.Cook);
     }
 
     [Fact]
@@ -232,6 +249,24 @@ public sealed class AdviceBusTests
 
     private static AdviceAction Action(string instruction) =>
         new(AdviceActionKind.ProductionBill, instruction);
+
+    private static AgentFlag Flag(string id, string minister) => new(
+        Id: id,
+        SourceMinister: minister,
+        Severity: FlagSeverity.High,
+        Domain: "food",
+        Summary: "Food needs work",
+        Requests:
+        [
+            new ResourceRequest(
+                ResourceRequestKind.Labor,
+                "Cook work today",
+                "raw food has to become meals",
+                Priority: AdvicePriority.High,
+                RequestedFrom: "Labor",
+                WorkType: WorkType.Cook,
+                Skill: "Cooking")
+        ]);
 
     private static AdviceChainModel Chain() => new(
     [

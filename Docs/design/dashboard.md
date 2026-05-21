@@ -634,6 +634,12 @@ type-level breakdown remains under `/api/ministers/food/hunt-risk/latest`.
 Cards show rationale, concrete advice actions, citations, issue id or supersession
 when available, and coverage gaps. No feedback buttons are shown in v2.
 
+Feeder Advice views also render the latest `AgentFlag`s emitted with that
+minister snapshot. Flags are not action duplicates: they carry routing pressure
+and `requests[]` such as labor, building, bill, tile, or freezer needs that
+should remain visible even when the player-facing `actions[]` list avoids a
+high-blast-radius policy knob.
+
 If an action carries a backend-approved executable handle, the Advice view may show
 an Apply control on that action. Apply controls must be visually distinct from
 feedback, disabled when state is stale or validation fails, and followed by a

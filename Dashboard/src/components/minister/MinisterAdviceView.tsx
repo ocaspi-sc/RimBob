@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { MayorAgenda, AgendaPriority } from '../../types/agenda';
-import type { AdviceApplyResponse, AdviceItem } from '../../types/advice';
+import type { AdviceApplyResponse, AdviceItem, AgentFlag, ResourceRequest } from '../../types/advice';
 import type { ScopeConfig } from '../../dashboard/scopes';
 import { applyAdviceAction } from '../../api/advice';
 import { iconUrlFor } from '../../api/icons';
@@ -23,6 +23,7 @@ export function MinisterAdviceView({
   advice,
   agenda,
   currentGameTick,
+  flags,
   previousAgenda,
   scope,
   stateSummary,
@@ -30,6 +31,7 @@ export function MinisterAdviceView({
   advice: AdviceItem[];
   agenda: MayorAgenda | null;
   currentGameTick: number | null;
+  flags: AgentFlag[];
   previousAgenda: MayorAgenda | null;
   scope: ScopeConfig;
   stateSummary: string | null;
@@ -44,7 +46,7 @@ export function MinisterAdviceView({
     return <EmptyState code="ADVICE NOT WIRED">{scope.label} is planned and not emitting advice yet.</EmptyState>;
   }
 
-  if (ministerAdvice.length === 0 && !stateSummary) {
+  if (ministerAdvice.length === 0 && !stateSummary && flags.length === 0) {
     return <EmptyState code="NO ACTIVE ADVICE">{scope.label} has not emitted active advice in this session.</EmptyState>;
   }
 
@@ -83,6 +85,7 @@ export function MinisterAdviceView({
       {ministerAdvice.length === 0 && (
         <EmptyState code="NO ADVICE ITEMS">{scope.label} has no advice items in the latest snapshot.</EmptyState>
       )}
+      {flags.length > 0 && <AgentFlagsPanel flags={flags} />}
       <div className="advice-stack">
         {ministerAdvice.map(item => <AdviceCard currentGameTick={currentGameTick} key={item.id} item={item} />)}
       </div>
@@ -248,6 +251,85 @@ function MayorAdvice({
   );
 }
 
+function AgentFlagsPanel({ flags }: { flags: AgentFlag[] }) {
+  return (
+    <DisclosureSection
+      title={<SemanticLabel icon={iconForField('flags')}><span>Agent Flags</span></SemanticLabel>}
+      defaultOpen
+      meta={`${flags.length} flag${flags.length === 1 ? '' : 's'}`}
+    >
+      <div className="agent-flag-stack">
+        {flags.map(flag => (
+          <section className={`agent-flag-card ${flag.severity}`} key={flag.id}>
+            <header>
+              <div>
+                <span className="eyebrow">{flag.domain}</span>
+                <h3><IconizedText maxIcons={2} text={flag.summary} /></h3>
+              </div>
+              <div className="advice-badges">
+                <span>{flag.severity}</span>
+                {flag.detail && <span>{flag.detail}</span>}
+              </div>
+            </header>
+            {(flag.requests?.length ?? 0) > 0 ? (
+              <ResourceRequestTable idPrefix={`${flag.id}-request`} requests={flag.requests ?? []} />
+            ) : (
+              <p className="flag-empty">No explicit requests attached.</p>
+            )}
+          </section>
+        ))}
+      </div>
+    </DisclosureSection>
+  );
+}
+
+function ResourceRequestTable({
+  idPrefix,
+  requests,
+}: {
+  idPrefix: string;
+  requests: ResourceRequest[];
+}) {
+  return (
+    <div className="dense-table resource-table">
+      <div className="dense-row header">
+        <span>Icon</span>
+        <SemanticLabel icon={iconForField('kind')}><span>Kind</span></SemanticLabel>
+        <SemanticLabel icon={iconForField('request')}><span>Request</span></SemanticLabel>
+        <SemanticLabel icon={iconForField('reason')}><span>Reason</span></SemanticLabel>
+        <SemanticLabel icon={iconForField('quantity')}><span>Qty</span></SemanticLabel>
+        <SemanticLabel icon={iconForField('owner')}><span>Owner</span></SemanticLabel>
+        <SemanticLabel icon={iconForField('work_type')}><span>Work / Skill</span></SemanticLabel>
+        <SemanticLabel icon={iconForField('priority')}><span>Priority</span></SemanticLabel>
+      </div>
+      {requests.map((request, index) => {
+        const requestIcon = iconForActionKind(request.kind);
+        const fallbackIconUrl = request.icon ? iconUrlFor(requestIcon?.ref) : null;
+        return (
+          <div className="dense-row" key={`${idPrefix}-${index}`}>
+            <span className="icon-cell">
+              <GameIcon
+                fallbackSrc={fallbackIconUrl}
+                fallback={requestIcon?.fallback ?? '-'}
+                label={requestIcon?.label ?? `${formatLabel(request.kind)} icon`}
+                size="xs"
+                src={iconUrlFor(request.icon ?? requestIcon?.ref)}
+              />
+            </span>
+            <span>{formatLabel(request.kind)}</span>
+            <span><IconizedText maxIcons={2} text={request.request} /></span>
+            <span><IconizedText maxIcons={2} text={request.reason} /></span>
+            <span>{formatQuantity(request.quantity)}</span>
+            <span>{request.requested_from ?? '-'}</span>
+            <span>{formatWorkSkill(request.work_type, request.skill)}</span>
+            <span>{formatLabel(request.priority)}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function AdviceCard({
   currentGameTick,
   item,
@@ -355,42 +437,7 @@ function AdviceCard({
           defaultOpen
           meta={`${item.resource_requests?.length ?? 0} requests`}
         >
-          <div className="dense-table resource-table">
-            <div className="dense-row header">
-              <span>Icon</span>
-              <SemanticLabel icon={iconForField('kind')}><span>Kind</span></SemanticLabel>
-              <SemanticLabel icon={iconForField('request')}><span>Request</span></SemanticLabel>
-              <SemanticLabel icon={iconForField('reason')}><span>Reason</span></SemanticLabel>
-              <SemanticLabel icon={iconForField('quantity')}><span>Qty</span></SemanticLabel>
-              <SemanticLabel icon={iconForField('owner')}><span>Owner</span></SemanticLabel>
-              <SemanticLabel icon={iconForField('work_type')}><span>Work / Skill</span></SemanticLabel>
-              <SemanticLabel icon={iconForField('priority')}><span>Priority</span></SemanticLabel>
-            </div>
-            {item.resource_requests?.map((request, index) => {
-              const requestIcon = iconForActionKind(request.kind);
-              const fallbackIconUrl = request.icon ? iconUrlFor(requestIcon?.ref) : null;
-              return (
-                <div className="dense-row" key={`${item.id}-request-${index}`}>
-                  <span className="icon-cell">
-                    <GameIcon
-                      fallbackSrc={fallbackIconUrl}
-                      fallback={requestIcon?.fallback ?? '-'}
-                      label={requestIcon?.label ?? `${formatLabel(request.kind)} icon`}
-                      size="xs"
-                      src={iconUrlFor(request.icon ?? requestIcon?.ref)}
-                    />
-                  </span>
-                  <span>{formatLabel(request.kind)}</span>
-                  <span><IconizedText maxIcons={2} text={request.request} /></span>
-                  <span><IconizedText maxIcons={2} text={request.reason} /></span>
-                  <span>{formatQuantity(request.quantity)}</span>
-                  <span>{request.requested_from ?? '-'}</span>
-                  <span>{formatWorkSkill(request.work_type, request.skill)}</span>
-                  <span>{formatLabel(request.priority)}</span>
-                </div>
-              );
-            })}
-          </div>
+          <ResourceRequestTable idPrefix={`${item.id}-request`} requests={item.resource_requests ?? []} />
         </DisclosureSection>
       )}
       {(item.suggested_actions?.length ?? 0) > 0 && (

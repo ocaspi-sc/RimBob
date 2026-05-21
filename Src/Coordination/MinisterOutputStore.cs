@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using RimBob.Core.Advice;
 using RimBob.Core.Briefings;
+using RimBob.Core.Ministers;
 
 namespace RimBob.Coordination;
 
@@ -387,6 +388,9 @@ public sealed class MinisterOutputStore
         if (snapshot.Chains is not null)
             foreach (string minister in snapshot.Chains.Keys)
                 ministers.Add(minister);
+        if (snapshot.Flags is not null)
+            foreach (AgentFlag flag in snapshot.Flags)
+                ministers.Add(flag.SourceMinister);
 
         return ministers
             .Select(minister => new AdviceSnapshot(
@@ -403,7 +407,10 @@ public sealed class MinisterOutputStore
                        snapshot.Chains.TryGetValue(minister, out AdviceChainModel? chain)
                     ? chain
                     : null,
-                Chains: null))
+                Chains: null,
+                Flags: snapshot.Flags?
+                    .Where(flag => flag.SourceMinister.Equals(minister, StringComparison.OrdinalIgnoreCase))
+                    .ToArray()))
             .ToArray();
     }
 

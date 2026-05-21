@@ -356,7 +356,7 @@ public static class MinisterEndpoints
                     OutputKind: "advice_flags",
                     Output: new { advice = parseResult.Response.Advice, flags = parseResult.Response.Flags }), ct);
 
-                bus.ReplaceMinisterAdvice(scope.Label, parseResult.Response.Advice, stateSummary, chain);
+                bus.ReplaceMinisterAdvice(scope.Label, parseResult.Response.Advice, stateSummary, chain, parseResult.Response.Flags);
                 foreach (AgentFlag flag in parseResult.Response.Flags)
                     flags.Publish(flag);
 

@@ -71,6 +71,19 @@ export interface ResourceRequest {
   icon?: IconRef | null;
 }
 
+export type FlagSeverity = 'low' | 'medium' | 'high' | 'critical';
+
+export interface AgentFlag {
+  id: string;
+  source_minister: string;
+  severity: FlagSeverity;
+  domain: string;
+  summary: string;
+  requests?: ResourceRequest[] | null;
+  detail?: string | null;
+  expires_at?: string | null;
+}
+
 export interface SuggestedAction {
   kind: string;
   instruction: string;
@@ -121,4 +134,5 @@ export interface AdviceSnapshot {
   state_summaries?: Record<string, string> | null;
   chain?: AdviceChainModel | null;
   chains?: Record<string, AdviceChainModel> | null;
+  flags?: AgentFlag[] | null;
 }

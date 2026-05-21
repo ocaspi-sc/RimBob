@@ -1,4 +1,4 @@
-import type { AdviceChainModel, AdviceItem } from './advice';
+import type { AdviceChainModel, AdviceItem, AgentFlag } from './advice';
 import type { AdviceApplyKind } from './advice';
 import type { IconCacheStatus } from './icons';
 
@@ -316,5 +316,6 @@ export interface FeedState {
   adviceEvents: number;
   activeAdvice: AdviceItem[];
   chains: Record<string, AdviceChainModel>;
+  flags: Record<string, AgentFlag[]>;
   stateSummaries: Record<string, string>;
 }

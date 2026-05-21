@@ -166,7 +166,7 @@ public sealed class MinisterOfFood(
         string? stateSummary,
         AdviceChainModel? chain)
     {
-        bus.ReplaceMinisterAdvice(Name, advice, stateSummary, chain);
+        bus.ReplaceMinisterAdvice(Name, advice, stateSummary, chain, emittedFlags);
         foreach (AgentFlag flag in emittedFlags)
             flags.Publish(flag);
     }
