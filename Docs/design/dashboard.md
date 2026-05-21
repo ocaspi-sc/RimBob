@@ -54,6 +54,10 @@ treat the previous UI as reference only.
 - Dashboard consumes Host HTTP endpoints and the advice SSE stream.
 - Local state plus focused polling/SSE hooks is enough for v2; do not add broad
   state-management infrastructure without a concrete need.
+- When the Host/API is down, automatic HTTP polling and SSE reconnects back off
+  with capped quiet retries. The dashboard should preserve the last visible
+  state and recover when RimBob returns without spamming failed localhost
+  requests.
 
 ---
 
