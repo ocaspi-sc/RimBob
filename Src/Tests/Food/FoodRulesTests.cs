@@ -626,6 +626,9 @@ public sealed class FoodRulesTests
 
         decision.Trace.Should().Be("hunt_low_risk_animals");
         decision.Diagnostics.Should().NotBeNull();
+        decision.Diagnostics!.AllRules.Should().Contain(row =>
+            row.Rule == "hunt_targets_blocked_by_risk" &&
+            row.Outcome == "not_matched");
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
         advice.AdviceType.Should().Be("hunt_for_food");
         AdviceAction Action = advice.Actions.Should().ContainSingle().Subject;
@@ -639,7 +642,7 @@ public sealed class FoodRulesTests
         Action.Apply.Should().NotBeNull();
         Action.Apply!.Kind.Should().Be(AdviceApplyKind.MarkHuntArea);
         Action.Apply.TargetIds.Should().Equal("hare-1", "hare-2");
-        decision.Diagnostics!.EmittedActions.Should().ContainSingle(row =>
+        decision.Diagnostics.EmittedActions.Should().ContainSingle(row =>
             row.Source == "rules" &&
             row.Rule == "hunt_low_risk_animals" &&
             row.AdviceId == advice.Id &&
@@ -755,7 +758,7 @@ public sealed class FoodRulesTests
     }
 
     [Fact]
-    public void HuntingAmbiguity_Escalates()
+    public void HuntTargetsBlockedByRisk_Escalates()
     {
         FoodBriefing briefing = Briefing(days: 12f) with
         {
@@ -764,9 +767,17 @@ public sealed class FoodRulesTests
             ReadyToHarvest = 0
         };
 
-        new Rules().Evaluate(briefing, ColonyContext.Default)
+        Escalate escalation = new Rules().Evaluate(briefing, ColonyContext.Default)
             .Should().BeOfType<Escalate>()
-            .Which.Reason.Should().Contain("hunting");
+            .Subject;
+
+        escalation.Reason.Should().Contain("visible animals");
+        escalation.Diagnostics.Should().NotBeNull();
+        escalation.Diagnostics!.SelectedRule.Should().Be("hunt_targets_blocked_by_risk");
+        escalation.Diagnostics.AllRules.Should().Contain(row =>
+            row.Rule == "hunt_targets_blocked_by_risk" &&
+            row.Outcome == "escalated" &&
+            row.OutputAction.Contains("hunt safety/risk context"));
     }
 
     internal static FoodBriefing Briefing(float? days) => new(

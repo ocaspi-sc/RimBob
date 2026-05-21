@@ -141,11 +141,11 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 days < 12f || needsFreezerSupport);
         }
 
-        if (days < 20f && briefing.WildAnimalCount > 0 && briefing.ReadyToHarvest == 0)
+        if (ShouldEscalateHuntTargetsBlockedByRisk(briefing, days))
             return new Escalate(
-                "Food below 20 days with possible hunting path; target risk/value needs judgment.",
-                new { briefing.WildAnimalCount, briefing.ActiveThreat, briefing.Skills.BestCooking, briefing.HuntRiskSummaries },
-                DiagnosticsFor(briefing, "hunting_ambiguity"));
+                "Food below 20 days with visible animals, but hunting is blocked by the current safety/risk filters.",
+                new { briefing.WildAnimalCount, briefing.ActiveThreat, LowRiskTargetCount = briefing.WildHuntTargets.Count, briefing.Skills.BestCooking, briefing.HuntRiskSummaries },
+                DiagnosticsFor(briefing, "hunt_targets_blocked_by_risk"));
 
         if (briefing.Season.DaysToWinter is < 20 && days < 30f)
             return new Escalate(
@@ -416,9 +416,9 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             RuleEvaluation("expand_growing_capacity", outcomes,
                 "days < 20; FoodCropMath best candidate exists",
                 "ExpandGrowingCapacity advice; designate_zone action; Construction tile/freezer support"),
-            RuleEvaluation("hunting_ambiguity", outcomes,
-                "days < 20; WildAnimalCount > 0; ReadyToHarvest == 0",
-                "Escalate to LLM with hunt risk/value context"),
+            RuleEvaluation("hunt_targets_blocked_by_risk", outcomes,
+                "days < 20; WildAnimalCount > 0; ReadyToHarvest == 0; hunt advice blocked by safety/risk gate",
+                "Escalate to LLM with hunt safety/risk context"),
             RuleEvaluation("winter_food_tradeoff", outcomes,
                 "DaysToWinter < 20; days < 30",
                 "Escalate to LLM with crop/freezer/labor tradeoff context"),
@@ -514,11 +514,11 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 $"{cropCandidate.Label} can add about {cropCandidate.ProjectedDaysAdded:F1}d from {cropCandidate.Tiles} tiles"));
         }
 
-        if (days < 20f && briefing.WildAnimalCount > 0 && briefing.ReadyToHarvest == 0)
+        if (ShouldEscalateHuntTargetsBlockedByRisk(briefing, days))
         {
             matches.Add(Match(
-                "hunting_ambiguity",
-                $"{briefing.WildAnimalCount} wild animals exist but target risk/value needs judgment"));
+                "hunt_targets_blocked_by_risk",
+                HuntTargetsBlockedByRiskReason(briefing)));
         }
 
         if (briefing.Season.DaysToWinter is < 20 && days < 30f)
@@ -549,7 +549,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         new(rule, "matched", reason);
 
     private static string SelectedOutcome(string selectedRule) =>
-        selectedRule is "hunting_ambiguity" or "winter_food_tradeoff" or "unresolved_food_gap"
+        selectedRule is "hunt_targets_blocked_by_risk" or "winter_food_tradeoff" or "unresolved_food_gap"
             ? "escalated"
             : "selected";
 
@@ -1191,6 +1191,23 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
 
     private static bool CanSuggestHunting(FoodBriefing briefing) =>
         !briefing.ActiveThreat && briefing.WildHuntTargets.Count > 0;
+
+    private static bool ShouldEscalateHuntTargetsBlockedByRisk(FoodBriefing briefing, float days) =>
+        days < 20f &&
+        briefing.WildAnimalCount > 0 &&
+        briefing.ReadyToHarvest == 0 &&
+        !CanSuggestHunting(briefing);
+
+    private static string HuntTargetsBlockedByRiskReason(FoodBriefing briefing)
+    {
+        if (briefing.ActiveThreat)
+            return $"{briefing.WildAnimalCount} wild animals exist but an active threat blocks hunting advice";
+
+        if (briefing.WildHuntTargets.Count == 0)
+            return $"{briefing.WildAnimalCount} wild animals exist but the risk calculator found no low-risk hunt target";
+
+        return $"{briefing.WildAnimalCount} wild animals exist but hunting advice is blocked by the safety gate";
+    }
 
     private static string LabelDef(string def)
     {
