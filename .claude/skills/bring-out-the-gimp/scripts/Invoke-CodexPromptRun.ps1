@@ -270,7 +270,7 @@ if ($Mode -eq "Resume") {
     $Prompt | Set-Content -LiteralPath $resumePromptPath -Encoding UTF8
 
     $reasoningConfigArg = Get-ReasoningConfigArg -Effort $ReasoningEffort
-    $exitCode = Invoke-CodexExec -Arguments @("exec", "--skip-git-repo-check", "resume", "--json", "-o", $lastMessagePath, $SessionId, "-") -EventsPath $eventsPath -InputPath $resumePromptPath
+    $exitCode = Invoke-CodexExec -Arguments @("exec", "--skip-git-repo-check", "--sandbox", "danger-full-access", "resume", "--json", "-o", $lastMessagePath, $SessionId, "-") -EventsPath $eventsPath -InputPath $resumePromptPath
 
     $metadata.status = $(if ($exitCode -eq 0) { "resumed_completed" } else { "resume_failed" })
     $metadata.updated_at = (Get-Date).ToString("o")
