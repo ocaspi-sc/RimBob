@@ -150,8 +150,9 @@ function RuleDiagnosticsPanel({ details }: { details: RuleTraceDetails }) {
                 <div className="rule-all-rules-table rule-outcome-group-table">
                   <DynamicTable
                     rows={group.rows}
-                    preferredColumns={['rule', 'outcome', 'conditions', 'outputAction', 'reason']}
-                    maxColumns={5}
+                    preferredColumns={['rule', 'conditions', 'outputAction', 'reason']}
+                    hiddenColumns={['outcome']}
+                    maxColumns={4}
                   />
                 </div>
               </section>

@@ -1839,15 +1839,14 @@ code {
 }
 
 .rule-all-rules-table .dynamic-table {
-  min-width: 1120px;
+  min-width: 1040px;
 }
 
 .rule-all-rules-table .dynamic-row {
   grid-template-columns:
-    minmax(180px, 0.8fr)
-    minmax(104px, 0.45fr)
-    minmax(340px, 1.55fr)
-    minmax(340px, 1.55fr)
+    minmax(180px, 0.75fr)
+    minmax(320px, 1.5fr)
+    minmax(320px, 1.5fr)
     minmax(280px, 1.25fr);
 }
 
