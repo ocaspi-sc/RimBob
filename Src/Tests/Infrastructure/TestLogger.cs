@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
@@ -33,34 +34,73 @@ public sealed class TestLogger<T> : ILogger<T>
 internal static class TestLogFile
 {
     private static readonly Lazy<StreamWriter> Writer = new(Open);
-    // TODO: coarse lock serializes all test-thread writes; replace with a lock-free
-    // concurrent queue + dedicated writer thread if test-suite parallelism grows.
-    private static readonly object Lock = new();
+    private static readonly ConcurrentQueue<string> _queue = new();
+    private static volatile bool _closing;
 
     private static StreamWriter Open()
     {
-        var dir = Path.Combine(AppContext.BaseDirectory, "logs");
+        string dir = Path.Combine(AppContext.BaseDirectory, "logs");
         Directory.CreateDirectory(dir);
-        var path = Path.Combine(dir, $"test-{DateTime.Now:yyyyMMdd-HHmmss}.jsonl");
-        var w = new StreamWriter(path, append: false, System.Text.Encoding.UTF8) { AutoFlush = true };
-        AppDomain.CurrentDomain.ProcessExit += (_, _) => { try { lock (Lock) { w.Flush(); w.Close(); } } catch { /* best-effort */ } };
+        string path = Path.Combine(dir, $"test-{DateTime.Now:yyyyMMdd-HHmmss}.jsonl");
+        StreamWriter writer = new(path, append: false, System.Text.Encoding.UTF8) { AutoFlush = true };
+        Thread writerThread = new(() =>
+        {
+            while (true)
+            {
+                if (_queue.TryDequeue(out string? line))
+                {
+                    writer.WriteLine(line);
+                    writer.Flush();
+                    continue;
+                }
+
+                if (_closing)
+                {
+                    return;
+                }
+
+                Thread.Sleep(1);
+            }
+        })
+        {
+            IsBackground = true,
+            Name = "RimBob.TestLogFile.Writer"
+        };
+        writerThread.Start();
+        AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+        {
+            try
+            {
+                _closing = true;
+                while (!_queue.IsEmpty)
+                {
+                    Thread.Sleep(1);
+                }
+
+                writerThread.Join();
+                writer.Flush();
+                writer.Close();
+            }
+            catch
+            {
+                /* best-effort */
+            }
+        };
         Console.WriteLine($"[TestLog] → {path}");
-        return w;
+        return writer;
     }
 
     public static void Write(string category, LogLevel level, string message)
     {
-        var line = JsonSerializer.Serialize(new
+        string line = JsonSerializer.Serialize(new
         {
             ts       = DateTime.UtcNow.ToString("O"),
             level    = level.ToString(),
             category,
             message
         });
-        lock (Lock)
-        {
-            Writer.Value.WriteLine(line);
-        }
+        _ = Writer.Value;
+        _queue.Enqueue(line);
         Console.WriteLine($"[{level.ToString()[..3].ToUpper()}] [{category}] {message}");
     }
 }
