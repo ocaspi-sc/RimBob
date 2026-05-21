@@ -6,6 +6,37 @@
 
 ---
 
+## Research / Planning Links
+
+Use these as the current routing links before starting Construction work.
+
+Direct plans:
+
+- [Base / Construction / Layout Agent Plan](../../../.plans/base-construction-layout-agent.md) - implementation slice plan for the first Construction minister.
+- [Base Layout / Construction Tips](../../../.plans/base-layout-construction-tips.md) - community layout heuristics translated into Construction spatial lint.
+- [RIMAPI Blueprint Placement Endpoint](../../../.plans/rimapi-blueprint-placement-endpoint.md) - fork-side validate/place/read support for future `place_blueprint` actions.
+- [Deterministic CoS Cabinet Issue Solver](../../../.plans/deterministic-cos-cabinet-issue-solver.md) - issue-report routing, including Construction-owned issue classes and cross-minister requests.
+
+Direct todo entries in [HumanTodo.md](../../../HumanTodo.md):
+
+- `construction-minister` - add Construction after minimal CoS handling.
+- `construction-placement-layout-strategy-base` - decide placement/layout strategy and whether Base Layout ever splits out.
+- `base-layout-construction-tips` - fold community base-building heuristics into spatial lint and dashboard evidence.
+- `add-rimapi-fork-endpoints-blueprint` - add blueprint validate/place/read endpoints in the RIMAPI fork.
+
+Supporting research todo entries in [HumanTodo.md](../../../HumanTodo.md):
+
+- `investigate-player-approved-construction-proposal` - learn from RimMind proposal approval patterns.
+- `investigate-construction-minister-algorithms-rimmind` - mine RimMind construction/layout algorithms.
+- `rimmind-construction-backlog` - inspect blueprint/frame/material-gap grouping for the Construction briefing.
+- `rimmind-storage-saturation` - inspect stockpile/storage utilization as a Construction/Food/Mayor signal.
+- `investigate-spatial-evidence-tools-location` - inspect location-backed spatial evidence for actionable advice.
+- `rimmind-defense-posture-coverage` - preserve Defense posture context for fortification/build requests.
+- `food-freezer-briefing` - add freezer temperature/spoilage evidence that can drive Construction freezer requests.
+- `action-ownership-catalogue` - keep Construction ownership aligned with the broader action/endpoint catalogue.
+
+---
+
 ## Domain
 
 Construction owns built infrastructure:

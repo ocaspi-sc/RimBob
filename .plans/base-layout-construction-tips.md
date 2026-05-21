@@ -1,6 +1,9 @@
 # Base Layout / Construction Tips
 
-Source: [Reddit: "What's your number one tip for base building?"](https://www.reddit.com/r/RimWorld/comments/16xtj79/whats_your_number_one_tip_for_base_building/)
+Sources:
+
+- [Reddit: "What's your number one tip for base building?"](https://www.reddit.com/r/RimWorld/comments/16xtj79/whats_your_number_one_tip_for_base_building/)
+- [Steam Community: "Rimworld Flat Base"](https://steamcommunity.com/sharedfiles/filedetails/?id=2211480986)
 
 This note captures RimWorld community base-building heuristics from the linked
 thread and translates them into RimBob-facing ideas for the future Construction
@@ -21,11 +24,13 @@ flowchart LR
   C --> F["Storage adjacency"]
   C --> G["Expansion pressure"]
   C --> H["Defense dependencies"]
+  C --> K["Base topology"]
   D --> I["Construction advice"]
   E --> I
   F --> I
   G --> I
   H --> I
+  K --> I
   I --> J["Dashboard overlays and evidence panels"]
 ```
 
@@ -383,6 +388,53 @@ Candidate advice:
 - Avoid overproducing meals before refrigeration is stable.
 - Use small early farms until storage and labor can support more.
 
+### 11. Flat-base topology is useful spatial lint, not a blueprint
+
+The Steam flat-base guide is useful because it describes a repeatable base
+shape rather than a one-off room list: a central circulation cross, four-way
+access for logistics, expandable quadrants, layered perimeter walls/doors, and
+distributed defensive nodes tied to the main paths. Treat this as a pattern for
+detecting whether the current base has coherent topology, not as a template
+RimBob should force onto every colony.
+
+RimBob transfer:
+
+- Detect whether the base has named primary paths that connect major work loops
+  instead of relying only on one global compactness score.
+- Treat quadrants/modules as expansion capacity: bedrooms, storage, workshops,
+  hospital, and power can grow without breaking the main paths.
+- Measure critical-room depth: freezer, hospital, storage, and power should not
+  sit directly on the outer breach layer once materials allow.
+- Count defensive/build layers separately from Defense's combat judgment:
+  Construction can see walls, doors, and cover; Defense decides whether the
+  pattern is tactically sound.
+- Flag terrain/roof hazards before flat-base expansion touches hills or
+  mountain roof that could undermine the "flat base avoids infestations"
+  assumption.
+
+Candidate signals:
+
+- `primary_circulation_spine_present`
+- `main_path_branch_count`
+- `quadrant_expansion_capacity`
+- `critical_room_depth_from_perimeter`
+- `perimeter_layer_count`
+- `door_layer_count_to_critical_rooms`
+- `defensive_node_spacing`
+- `terrain_support_risk`
+- `mountain_roof_exposure`
+
+Candidate advice:
+
+- Preserve or create a clear main path before adding more disconnected rooms.
+- Keep expansion room around the four highest-pressure systems instead of
+  filling every interior gap.
+- Add an intermediate wall/door layer before critical storage or hospital space
+  becomes perimeter-adjacent.
+- Move flat-base expansion away from terrain that creates roof/infestation risk.
+- Surface bunker/cover feasibility as Construction evidence and let Defense own
+  the combat recommendation.
+
 ## Suggested Construction Minister Shape
 
 The thread supports the existing repo direction: keep the official minister as
@@ -399,6 +451,7 @@ First-slice rule groups:
 6. `layout_efficiency`
 7. `storage_adjacency`
 8. `build_queue_blocked`
+9. `base_topology`
 
 Rules-first examples:
 
@@ -408,6 +461,10 @@ Rules-first examples:
   emit `fire_risk`.
 - If workshops are far from their input storage, emit `storage_adjacency`.
 - If the food loop is long, emit `layout_efficiency`.
+- If the base has no coherent main circulation path and new rooms are being
+  added as disconnected pockets, emit `base_topology`.
+- If critical rooms are perimeter-adjacent despite available walls/doors, emit
+  `base_topology` or `fire_risk` depending on the dominant risk.
 - If beds are missing, emit `basic_shelter` before any aesthetic advice.
 - If components are too low for visible freezer/power/defense requests, emit
   `material_bottleneck`.
@@ -420,6 +477,8 @@ Escalate to LLM for:
 - power architecture choices
 - material substitution trade-offs
 - defensive layout when Defense context is incomplete
+- flat-base topology trade-offs when terrain, expansion room, and defense pull
+  in different directions
 
 Do not implement in the first slice:
 
@@ -439,6 +498,8 @@ evidence, not just prose.
 Recommended dashboard panels:
 
 - `Layout Loops`: named route chains with rough distance and issue severity.
+- `Base Topology`: main paths, quadrants/modules, critical-room depth, and
+  perimeter layers.
 - `Fire Risk`: critical rooms, flammable materials, and firebreak gaps.
 - `Storage Flow`: benches, input storage, output distance, and stockpile
   adjacency.
@@ -464,6 +525,8 @@ Likely live data needed before these ideas become strong rules:
 - map things/buildings with def, material, position, room, hitpoints, and power
   state where available
 - rooms or inferred enclosures with purpose/category
+- terrain support, natural roof/mountain roof, and passability around planned
+  expansion areas
 - zones and stockpiles with positions and allowed item classes
 - workbenches with bills and nearby input/output storage
 - power generation, consumption, batteries, conduits, coolers
@@ -482,6 +545,8 @@ coarse classifications. It does not need a full planner to be useful.
   RIMAPI responses.
 - Add Construction briefing groups for route loops, fire risk, material flow,
   freezer infrastructure, and build dependencies.
+- Decide whether `base_topology` is its own first-slice advice type or a
+  dashboard grouping under `layout_efficiency`.
 - Decide where bill-setting advice crosses from Construction evidence into
   Industry/Food ownership.
 - Decide how much Defense context Construction needs before surfacing
