@@ -162,6 +162,22 @@ public sealed class AdviceBusTests
     }
 
     [Fact]
+    public void Hydrate_MigratesObsoleteFoodCookPriorityActionIntoFlagRequest()
+    {
+        AdviceBus bus = new();
+        AdviceItem stale = Advice("old_food", "Food", [CookPriorityAction()]);
+
+        bus.Hydrate([new AdviceSnapshot("Food", [stale], "Stored Food state.")]);
+
+        AdviceItem active = bus.ActiveAdvice().Should().ContainSingle().Subject;
+        active.Actions.Should().NotContain(action => action.Kind == AdviceActionKind.SetPriority);
+        AdviceSnapshot snapshot = bus.ActiveSnapshot();
+        snapshot.Flags.Should().ContainSingle()
+            .Which.Requests.Should().ContainSingle()
+            .Which.WorkType.Should().Be(WorkType.Cook);
+    }
+
+    [Fact]
     public void ActiveSnapshot_ReplaysMinisterStateSummaries()
     {
         AdviceBus bus = new();
@@ -249,6 +265,16 @@ public sealed class AdviceBusTests
 
     private static AdviceAction Action(string instruction) =>
         new(AdviceActionKind.ProductionBill, instruction);
+
+    private static AdviceAction CookPriorityAction() =>
+        new(
+            AdviceActionKind.SetPriority,
+            "Put the best cook on Cook work until simple meals are stocked.",
+            Owner: "Labor",
+            WorkType: WorkType.Cook,
+            Skill: "Cooking",
+            Reason: "raw food must become meals during an urgent shortage",
+            Icon: new IconRef("item", "MealSimple"));
 
     private static AgentFlag Flag(string id, string minister) => new(
         Id: id,

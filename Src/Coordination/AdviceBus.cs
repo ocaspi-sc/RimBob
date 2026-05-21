@@ -34,14 +34,18 @@ public sealed class AdviceBus
     public void Publish(AgendaUpdated e) => AgendaUpdated?.Invoke(e);
     public void Publish(AdviceItem item)
     {
+        AdviceSnapshot normalizedSnapshot = AdviceSnapshotPolicy.Normalize(new AdviceSnapshot(item.Minister, [item]));
+        AdviceItem normalizedItem = normalizedSnapshot.Advice.Single();
         AdviceSnapshot snapshot;
         lock (_lock)
         {
-            _activeAdvice[item.Id] = item;
-            snapshot = BuildMinisterSnapshotLocked(item.Minister);
+            _activeAdvice[normalizedItem.Id] = normalizedItem;
+            if (normalizedSnapshot.Flags is { Count: > 0 })
+                _ministerFlags[normalizedItem.Minister] = normalizedSnapshot.Flags;
+            snapshot = BuildMinisterSnapshotLocked(normalizedItem.Minister);
         }
         _outputStore?.QueueAdviceSnapshot(snapshot);
-        AdvicePublished?.Invoke(item);
+        AdvicePublished?.Invoke(normalizedItem);
     }
 
     public void ReplaceMinisterAdvice(
@@ -54,7 +58,14 @@ public sealed class AdviceBus
         if (string.IsNullOrWhiteSpace(minister))
             throw new ArgumentException("Minister name is required.", nameof(minister));
 
-        foreach (AdviceItem item in advice)
+        AdviceSnapshot incoming = AdviceSnapshotPolicy.Normalize(new AdviceSnapshot(
+            minister,
+            advice,
+            NormalizeStateSummary(stateSummary),
+            Chain: chain,
+            Flags: flags));
+
+        foreach (AdviceItem item in incoming.Advice)
         {
             if (!string.Equals(item.Minister, minister, StringComparison.OrdinalIgnoreCase))
                 throw new ArgumentException(
@@ -73,30 +84,35 @@ public sealed class AdviceBus
             foreach (string id in existingIds)
                 _activeAdvice.Remove(id);
 
-            foreach (AdviceItem item in advice)
+            foreach (AdviceItem item in incoming.Advice)
                 _activeAdvice[item.Id] = item;
 
-            if (string.IsNullOrWhiteSpace(stateSummary))
+            if (string.IsNullOrWhiteSpace(incoming.StateSummary))
                 _ministerStateSummaries.Remove(minister);
             else
-                _ministerStateSummaries[minister] = stateSummary.Trim();
+                _ministerStateSummaries[minister] = incoming.StateSummary.Trim();
 
-            if (chain is null)
+            if (incoming.Chain is null)
                 _ministerChains.Remove(minister);
             else
-                _ministerChains[minister] = chain;
+                _ministerChains[minister] = incoming.Chain;
 
-            if (flags is null || flags.Count == 0)
+            if (incoming.Flags is null || incoming.Flags.Count == 0)
                 _ministerFlags.Remove(minister);
             else
-                _ministerFlags[minister] = flags;
+                _ministerFlags[minister] = incoming.Flags;
 
             currentMinisterAdvice = SortAdvice(_activeAdvice.Values
                 .Where(item => string.Equals(item.Minister, minister, StringComparison.OrdinalIgnoreCase)))
                 .ToList();
         }
 
-        AdviceSnapshot snapshot = new(minister, currentMinisterAdvice, NormalizeStateSummary(stateSummary), Chain: chain, Flags: flags);
+        AdviceSnapshot snapshot = new(
+            minister,
+            currentMinisterAdvice,
+            incoming.StateSummary,
+            Chain: incoming.Chain,
+            Flags: incoming.Flags);
         _outputStore?.QueueAdviceSnapshot(snapshot);
         AdviceSnapshotPublished?.Invoke(snapshot);
         foreach (AdviceItem item in currentMinisterAdvice)
@@ -175,8 +191,9 @@ public sealed class AdviceBus
             _ministerChains.Clear();
             _ministerFlags.Clear();
 
-            foreach (AdviceSnapshot snapshot in snapshots)
+            foreach (AdviceSnapshot originalSnapshot in snapshots)
             {
+                AdviceSnapshot snapshot = AdviceSnapshotPolicy.Normalize(originalSnapshot);
                 if (string.IsNullOrWhiteSpace(snapshot.Minister))
                     continue;
 

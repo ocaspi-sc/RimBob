@@ -51,7 +51,10 @@ public sealed class MinisterOutputStore
         foreach (AdviceSnapshot snapshot in adviceSnapshots)
         {
             if (!string.IsNullOrWhiteSpace(snapshot.Minister))
-                _adviceSnapshots[snapshot.Minister] = snapshot;
+            {
+                AdviceSnapshot normalized = AdviceSnapshotPolicy.Normalize(snapshot);
+                _adviceSnapshots[normalized.Minister!] = normalized;
+            }
         }
 
         foreach (MinisterOutputSnapshotStatus status in snapshotStatuses)
@@ -113,7 +116,7 @@ public sealed class MinisterOutputStore
                     if (string.IsNullOrWhiteSpace(adviceSnapshot.Minister))
                         throw new InvalidOperationException($"Advice output snapshot has no minister: {path}");
 
-                    adviceSnapshots.Add(adviceSnapshot);
+                    adviceSnapshots.Add(AdviceSnapshotPolicy.Normalize(adviceSnapshot));
                     statuses.Add(StatusFor(envelope, path, "available", null));
                     break;
 
@@ -200,7 +203,8 @@ public sealed class MinisterOutputStore
 
     public void QueueAdviceSnapshot(AdviceSnapshot snapshot)
     {
-        foreach (AdviceSnapshot ministerSnapshot in SplitAdviceSnapshot(snapshot))
+        AdviceSnapshot normalized = AdviceSnapshotPolicy.Normalize(snapshot);
+        foreach (AdviceSnapshot ministerSnapshot in SplitAdviceSnapshot(normalized))
             QueueSingleAdviceSnapshot(ministerSnapshot);
     }
 

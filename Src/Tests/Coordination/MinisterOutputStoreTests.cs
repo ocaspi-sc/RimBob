@@ -136,6 +136,70 @@ public sealed class MinisterOutputStoreTests
     }
 
     [Fact]
+    public async Task LoadAsync_MigratesObsoleteFoodCookPriorityActionIntoFlagRequest()
+    {
+        string root = NewSnapshotRoot();
+        try
+        {
+            Directory.CreateDirectory(root);
+            await File.WriteAllTextAsync(
+                Path.Combine(root, "food.json"),
+                """
+                {
+                  "schema_version": 1,
+                  "minister": "food",
+                  "output_kind": "advice_snapshot",
+                  "persisted_at": "2026-01-01T00:00:00+00:00",
+                  "generation": 1,
+                  "payload": {
+                    "minister": "Food",
+                    "advice": [
+                      {
+                        "id": "old_food",
+                        "minister": "Food",
+                        "advice_type": "food_security",
+                        "priority": "high",
+                        "title": "Food low",
+                        "body": "Body",
+                        "rationale": "Rationale",
+                        "actions": [
+                          {
+                            "kind": "set_priority",
+                            "instruction": "Put the best cook on Cook work until simple meals are stocked.",
+                            "owner": "Labor",
+                            "work_type": "cook",
+                            "skill": "Cooking",
+                            "reason": "raw food must become meals during an urgent shortage",
+                            "icon": { "kind": "item", "id": "MealSimple" }
+                          }
+                        ],
+                        "guide_citation_ids": [],
+                        "issued_at": "2026-01-01T00:00:00+00:00",
+                        "expires_at": "2026-01-01T04:00:00+00:00"
+                      }
+                    ],
+                    "state_summary": "Stored Food state."
+                  }
+                }
+                """);
+
+            MinisterOutputStore restored = await MinisterOutputStore.LoadAsync(root);
+
+            AdviceSnapshot? snapshot = restored.GetAdviceSnapshot("food");
+            snapshot.Should().NotBeNull();
+            AdviceItem advice = snapshot!.Advice.Should().ContainSingle().Subject;
+            advice.Actions.Should().NotContain(action => action.Kind == AdviceActionKind.SetPriority);
+            snapshot.Flags.Should().ContainSingle()
+                .Which.Requests.Should().ContainSingle()
+                .Which.WorkType.Should().Be(WorkType.Cook);
+        }
+        finally
+        {
+            CleanupSnapshot(root);
+        }
+    }
+
+    [Fact]
     public async Task CabinetDirection_ReloadsForFeederContext()
     {
         string root = NewSnapshotRoot();
