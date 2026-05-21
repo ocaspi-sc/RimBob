@@ -53,9 +53,9 @@ function Invoke-Git {
 }
 
 function Resolve-CodexCmd {
-    $command = Get-Command codex.cmd -ErrorAction SilentlyContinue
+    $command = Get-Command codex -ErrorAction SilentlyContinue
     if ($null -eq $command) {
-        throw "codex.cmd was not found on PATH. Install/repair the Codex CLI before using this skill."
+        throw "codex was not found on PATH. Install/repair the Codex CLI before using this skill."
     }
     return $command.Source
 }
@@ -202,7 +202,7 @@ if ($Mode -eq "Start") {
     Write-RunMetadata -Id $RunId -Metadata $metadata
 
     $reasoningConfigArg = Get-ReasoningConfigArg -Effort $ReasoningEffort
-    $exitCode = Invoke-CodexExec -Arguments @("exec", "-C", $worktreePath, "--json", "-m", $Model, "-c", $reasoningConfigArg, "-o", $lastMessagePath, "-") -EventsPath $eventsPath -InputPath $promptPath
+    $exitCode = Invoke-CodexExec -Arguments @("exec", "--skip-git-repo-check", "-C", $worktreePath, "--sandbox", "workspace-write", "--full-auto", "--json", "-m", $Model, "-c", $reasoningConfigArg, "-o", $lastMessagePath, "-") -EventsPath $eventsPath -InputPath $promptPath
     $session = Find-SessionId -EventsPath $eventsPath
 
     $scriptExitCode = $exitCode
@@ -266,7 +266,7 @@ if ($Mode -eq "Resume") {
     $Prompt | Set-Content -LiteralPath $resumePromptPath -Encoding UTF8
 
     $reasoningConfigArg = Get-ReasoningConfigArg -Effort $ReasoningEffort
-    $exitCode = Invoke-CodexExec -Arguments @("exec", "resume", "--json", "-m", $Model, "-c", $reasoningConfigArg, "-o", $lastMessagePath, $SessionId, "-") -EventsPath $eventsPath -InputPath $resumePromptPath
+    $exitCode = Invoke-CodexExec -Arguments @("exec", "--skip-git-repo-check", "resume", "--json", "-o", $lastMessagePath, $SessionId, "-") -EventsPath $eventsPath -InputPath $resumePromptPath
 
     $metadata.status = $(if ($exitCode -eq 0) { "resumed_completed" } else { "resume_failed" })
     $metadata.updated_at = (Get-Date).ToString("o")
