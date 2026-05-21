@@ -73,11 +73,11 @@ Link the plan from `HumanTodo.md` per the normal rule. Do not commit it yet — 
 ### 2. Pre-flight
 
 ```powershell
-git -C C:\dev\RimBob status --short --branch --untracked-files=all
+git -C C:\dev\RimBob status --short --branch --untracked-files=no
 git -C C:\dev\RimBob worktree list --porcelain
 ```
 
-If master is dirty with foreign changes, stop and report — do not start a Codex run on top of someone else's in-flight work.
+If master has **staged** changes (index dirty), stop and report — those would contaminate any future squash commit. Unstaged edits and untracked files are fine; the user's in-progress work on master is expected.
 
 ### 3. Start the Codex run
 
@@ -113,6 +113,8 @@ Capture the printed `run_id`, `session_id`, `branch`, `worktree`. Report them to
 ```
 
 Read the latest `final-message-*.md` and `git -C <worktree> diff --stat`. If Codex bailed (non-zero exit, blocker reported, plan declared wrong), surface that to the user — do not paper over it with a verifier run.
+
+**Note on `apply_patch` errors in the event log:** these are Codex's internal patch-application retries and are normal — Codex tries alternative strategies automatically. They appear as `ERROR codex_core::tools::router: error=apply_patch verification failed` in the run output. Only the final Codex exit code and `final-message-*.md` matter; ignore apply_patch noise in the event stream. Common trigger: non-ASCII characters (e.g. `→`) in the source file; Codex recovers by using a different patch form.
 
 ### 5. Verify plan adherence (custom Sonnet verifier)
 

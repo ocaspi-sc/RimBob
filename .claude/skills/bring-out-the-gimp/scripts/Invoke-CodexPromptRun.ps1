@@ -382,9 +382,11 @@ if ($Mode -eq "CloseOut") {
         throw "Refusing to land: $RepoRoot is on '$currentBranch', not 'master'."
     }
 
-    $masterStatus = Get-CleanStatus -Cwd $RepoRoot
-    if (-not [string]::IsNullOrWhiteSpace($masterStatus)) {
-        throw "Refusing to land: $RepoRoot has local changes.`n$masterStatus"
+    # Only block on staged changes — those would contaminate the squash commit.
+    # Unstaged modifications and untracked files to unrelated paths are safe.
+    $masterStagedFiles = Invoke-Git -Cwd $RepoRoot -GitArgs @("diff", "--cached", "--name-only")
+    if (-not [string]::IsNullOrWhiteSpace($masterStagedFiles)) {
+        throw "Refusing to land: $RepoRoot has staged changes that would contaminate the squash commit.`n$masterStagedFiles"
     }
 
     Invoke-Git -Cwd $RepoRoot -GitArgs @("merge", "--squash", $childBranch) | Out-Null
