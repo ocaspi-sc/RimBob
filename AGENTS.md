@@ -35,21 +35,43 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 
 ## GIT
 
+### Repository Shape
+
 - `var/` is gitignored (icons, embeddings, agenda, replay corpus). Never stage anything under `var/`.
-- C:\dev\RimBob should always stay on master branch.
-- The only unstaged changes on C:\dev\RimBob should be manual edits by the human.
-- When changing code, make sure it's in a worktree + feature branch that's correct for the current task. If not, create a worktree first based off current master and work there, using commits generously. When finished, the usual MO is to squash-merge the feature branch into master so it lands, then remove the worktree.
-- Sync before verifying: before any build that validates behavior or gates a land, run `git merge master` in the worktree so you build the integrated result, not a stale snapshot missing changes other agents already landed. Resolve conflicts before building; never skip the sync to dodge them. If `master` is being written by another session, apply the git wait-and-retry rule below.
-- Shrink the staleness window; do not sync across worktrees. Keep slices small and squash-merge to master as soon as a slice is green, so other worktrees are never far behind. Master is the only integration point — never merge or cherry-pick another agent's unlanded feature branch. If a task grows large, split it and land the independent parts early rather than letting one branch diverge.
+- `C:\dev\RimBob` should always stay on master branch.
+- The only unstaged changes on `C:\dev\RimBob` should be manual edits by the human.
+- Master is the only integration point. Never merge or cherry-pick another agent's unlanded feature branch.
+
+### Worktree Flow
+
+- When changing code, make sure it's in a worktree + feature branch that's correct for the current task. If not, create a worktree first based off current master and work there, using commits generously.
+- When finished, the usual MO is to squash-merge the feature branch into master so it lands, then remove the worktree.
+- Sync before verifying: before any build that validates behavior or gates a land, run `git merge master` in the worktree so you build the integrated result, not a stale snapshot missing changes other agents already landed.
+- Resolve conflicts before building; never skip the sync to dodge them. If `master` is being written by another session, apply the git wait-and-retry rule below.
+- Shrink the staleness window; do not sync across worktrees. Keep slices small and squash-merge to master as soon as a slice is green, so other worktrees are never far behind.
+- If a task grows large, split it and land the independent parts early rather than letting one branch diverge.
+
+### Main Checkout Safety
+
 - On entry to a session on `C:\dev\RimBob`, run `git status --short` before any staging. If the index is not clean and you did not stage it yourself, do not run `git add` or `git commit`; report the foreign staged paths and ask for human adjudication.
+- Use an advisory main-checkout write lock for index-mutating work on `master`: `C:\dev\RimBob\.git\rimbob-master.lock`, containing one JSON line with `pid`, `agent`, `started_at`, and `intent`.
+- Acquire the lock with `New-Item` only when the file is absent. Wait or report if it exists. Treat locks older than 10 minutes as stale only with a logged takeover.
+- Release the lock after the commit succeeds and `git status --short` is clean.
+- Multi-step git operations on the main checkout are forbidden. If a task needs more than one `git mv`, `git rm`, or staged edits across multiple files that are not all going into one immediate commit, do it in a worktree and land through `master` after the slice is green.
+
+### Staging And Commits
+
 - On `C:\dev\RimBob`, index-mutating commands (`git mv`, `git rm`, `git add`, and similar) must be followed in the same tool invocation by a staged-manifest check and a `git commit` that lands exactly the intended files. If you cannot commit immediately, do not stage.
 - Before every commit on `master`, run `git diff --cached --name-only` and confirm the output exactly matches the intended file set for that commit. If unexpected paths appear, do not commit a superset; unstage only paths you just staged or stop and report.
-- Banned on `C:\dev\RimBob`: `git add -A`, `git add .`, `git add --all`, `git add -u`, `git commit -a`, and `git commit -am ...`. Stage only by explicit path: `git add -- <path> [<path> ...]`. Worktrees may relax this only when the working tree is known to contain only session-owned files.
-- Use an advisory main-checkout write lock for index-mutating work on `master`: `C:\dev\RimBob\.git\rimbob-master.lock`, containing one JSON line with `pid`, `agent`, `started_at`, and `intent`. Acquire it with `New-Item` only when the file is absent, wait or report if it exists, treat locks older than 10 minutes as stale only with a logged takeover, and release it after the commit succeeds and `git status --short` is clean.
-- Multi-step git operations on the main checkout are forbidden. If a task needs more than one `git mv`, `git rm`, or staged edits across multiple files that are not all going into one immediate commit, do it in a worktree and land through `master` after the slice is green.
+- Banned on `C:\dev\RimBob`: `git add -A`, `git add .`, `git add --all`, `git add -u`, `git commit -a`, and `git commit -am ...`.
+- Stage only by explicit path: `git add -- <path> [<path> ...]`.
+- Worktrees may relax this only when the working tree is known to contain only session-owned files.
+- Commit messages should contain some tags, a title, and a summary of the changes. Write 1-5 lines depending on the size of the scope.
+
+### Contention And Special Cases
+
 - When doing git operations, if there's a lock file or another session appears to be writing or committing, wait briefly and retry the narrow operation; do not force broad Git actions.
-- Commit messages should contain some tags, a title, and a summary of the changes. write a 1-5 lines depending on the size of the scope.
-- If you encounter these dirty files in c:/Dev/Rimbob (on master branch): {AGENTS.md, CLAUDE.md, HumanTodo.md} with a couple of unrelated small human edits - please stack on a small commit just for those (on master)
+- If you encounter these dirty files in `C:\dev\RimBob` on master branch with a couple of unrelated small human edits, stack them in a small commit just for those files: `AGENTS.md`, `CLAUDE.md`, `HumanTodo.md`.
 
 ---
 
