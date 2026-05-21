@@ -66,9 +66,11 @@ export function MinisterRulesView({
   events: DashboardEvent[];
   scope: ScopeConfig;
 }) {
-  const trace = useAsyncResource(signal => fetchTrace(scope.key, signal), [scope.key]);
   const ministerAdvice = advice.filter(item => sameMinister(item.minister, scope.label));
   const ministerEvents = events.filter(event => sameMinister(event.source, scope.label));
+  const latestMinisterEventId = ministerEvents[0]?.id ?? 'none';
+  const latestAdviceIssuedAt = ministerAdvice[0]?.issued_at ?? 'none';
+  const trace = useAsyncResource(signal => fetchTrace(scope.key, signal), [scope.key, latestMinisterEventId, latestAdviceIssuedAt]);
 
   if (trace.loading) {
     return <EmptyState code="TRACE">Loading latest minister trace.</EmptyState>;
