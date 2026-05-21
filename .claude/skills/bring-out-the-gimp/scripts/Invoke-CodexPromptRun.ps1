@@ -53,6 +53,11 @@ function Invoke-Git {
 }
 
 function Resolve-CodexCmd {
+    # Prefer codex.cmd over codex.ps1: .cmd is a native process and correctly sets
+    # $LASTEXITCODE in the calling scope. .ps1 wrappers are PowerShell scripts and do NOT
+    # set $LASTEXITCODE when invoked with &, so exit-code capture silently fails.
+    $command = Get-Command codex.cmd -ErrorAction SilentlyContinue
+    if ($null -ne $command) { return $command.Source }
     $command = Get-Command codex -ErrorAction SilentlyContinue
     if ($null -eq $command) {
         throw "codex was not found on PATH. Install/repair the Codex CLI before using this skill."
