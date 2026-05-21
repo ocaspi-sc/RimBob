@@ -128,11 +128,15 @@ function Invoke-CodexExec {
     )
 
     $codex = Resolve-CodexCmd
+    # Do NOT use 2>&1 on native executables in PowerShell 5.1 — stderr lines become
+    # NativeCommandError objects in the pipeline, and with $ErrorActionPreference = "Stop"
+    # they terminate the script even when codex exits 0. Stdout carries the --json JSONL
+    # events; stderr carries codex log/warning lines that we don't need to capture.
     if ([string]::IsNullOrWhiteSpace($InputPath)) {
-        & $codex @Arguments 2>&1 | Tee-Object -FilePath $EventsPath
+        & $codex @Arguments | Tee-Object -FilePath $EventsPath
     }
     else {
-        Get-Content -LiteralPath $InputPath -Raw | & $codex @Arguments 2>&1 | Tee-Object -FilePath $EventsPath
+        Get-Content -LiteralPath $InputPath -Raw | & $codex @Arguments | Tee-Object -FilePath $EventsPath
     }
     return $LASTEXITCODE
 }
