@@ -1,0 +1,4 @@
+interface:
+  display_name: "Research External Guide"
+  short_description: "Convert web guides into RimBob corpus notes"
+  default_prompt: "Use $research-external-guide to research external guides, summarize them into RimBob guide Markdown, and save useful source-attributed images."
