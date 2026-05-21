@@ -19,6 +19,7 @@ Direct plans:
 
 Direct todo entries in [HumanTodo.md](../../../HumanTodo.md):
 
+- `source-todo-building-condition-read` - add building hitpoint/power/working-state reads before Construction relies on condition evidence.
 - `construction-minister` - add Construction after minimal CoS handling.
 - `construction-placement-layout-strategy-base` - decide placement/layout strategy and whether Base Layout ever splits out.
 - `base-layout-construction-tips` - fold community base-building heuristics into spatial lint and dashboard evidence.
@@ -33,6 +34,7 @@ Supporting research todo entries in [HumanTodo.md](../../../HumanTodo.md):
 - `investigate-spatial-evidence-tools-location` - inspect location-backed spatial evidence for actionable advice.
 - `rimmind-defense-posture-coverage` - preserve Defense posture context for fortification/build requests.
 - `food-freezer-briefing` - add freezer temperature/spoilage evidence that can drive Construction freezer requests.
+- `source-todo-room-quality-read` - adjacent Welfare room evidence that may also inform Construction room-program advice.
 - `action-ownership-catalogue` - keep Construction ownership aligned with the broader action/endpoint catalogue.
 
 ---
