@@ -29,7 +29,7 @@ Implication: do not "upgrade" any of the cheaper tiers without a real reason. If
 
 - The plan file lives at `C:\dev\RimBob\.plans\<slug>.md` and stays **uncommitted** on master during the run. The absolute path is passed into Codex's prompt. Claude appends the human-facing summary to the same file at the end.
 - Strongest Codex model by default: `gpt-5.5` with `model_reasoning_effort="xhigh"`. Do not switch to fast mode unless the user explicitly asks.
-- `--full-auto` is deprecated — `--sandbox workspace-write` alone is sufficient for edits.
+- Use `--sandbox danger-full-access` — gimp needs to run builds (`dotnet test` etc.) which Windows Sandbox (`workspace-write`) blocks.
 - Use bare `codex` (no `.cmd` suffix) — consistent with the `codex` skill.
 - Base RimBob runs from `C:\dev\RimBob`. Codex never works in `C:\dev\RimBob` itself — it gets a worktree under `%USERPROFILE%\.codex\worktrees\prompt-runs\<run-id>\RimBob`.
 - One run = one Codex session. Resume the same session for every iteration and for the final land. Do not start a fresh `Start` for fixups; that loses context.
