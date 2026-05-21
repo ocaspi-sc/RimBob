@@ -84,4 +84,4 @@ None. Change is mechanical and bounded to one file.
 - Commands: `dotnet build Src/RimBob.sln && dotnet test Src/RimBob.sln --no-build` — 302/302 pass.
 - Files to glance at: [`Src/Tests/Infrastructure/TestLogger.cs`](Src/Tests/Infrastructure/TestLogger.cs)
 
-**Codex run:** 20260521-172500-testlogger-concurrent-queue · branch `codex/prompt-20260521-172500-testlogger-concurrent-queue` · landed commit `<tbd>`
+**Codex run:** 20260521-172500-testlogger-concurrent-queue · branch `codex/prompt-20260521-172500-testlogger-concurrent-queue` · landed commit `7b8b04a`
