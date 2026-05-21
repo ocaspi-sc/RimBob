@@ -66,6 +66,7 @@ export function SystemOverview({
     : null;
   const warmJob = icons?.warmJob ?? null;
   const replay = health?.logs.replay_corpus;
+  const traces = health?.traces ?? [];
   const tests = health?.tests;
   const liveTestCount = tests?.categories.find(category => category.category.toLowerCase() === 'live')?.count ?? 0;
   const rimapi = health?.rimapi_coverage;
@@ -620,7 +621,7 @@ export function SystemOverview({
       )}
 
       {selectedView === 'events' && (
-      <DisclosureSection title={<SectionTitle iconKey="logs">Logs and traces</SectionTitle>} meta={health?.logs.directory ?? 'not exposed'}>
+      <DisclosureSection title={<SectionTitle iconKey="logs">Logs and replay</SectionTitle>} meta={health?.logs.directory ?? 'not exposed'}>
         <div className="stacked-lines">
           <InfoLine label="Log directory" value={health?.logs.directory ?? 'not exposed'} />
           <InfoLine label="Human log" value={health?.logs.human_log_pattern ?? 'not exposed'} />
@@ -648,7 +649,12 @@ export function SystemOverview({
             ))}
           </div>
         )}
-        {health && health.traces.length > 0 && (
+      </DisclosureSection>
+      )}
+
+      {selectedView === 'events' && (
+      <DisclosureSection title={<SectionTitle iconKey="trigger">Latest trigger traces</SectionTitle>} meta={`${traces.length} traces`}>
+        {traces.length > 0 ? (
           <div className="dense-table trace-table">
             <div className="dense-row header">
               <FieldLabel iconKey="minister">Minister</FieldLabel>
@@ -657,7 +663,7 @@ export function SystemOverview({
               <FieldLabel iconKey="path">Path</FieldLabel>
               <FieldLabel iconKey="note">Detail</FieldLabel>
             </div>
-            {health.traces.map(trace => (
+            {traces.map(trace => (
               <div className="dense-row" key={trace.minister}>
                 <span>{trace.minister}</span>
                 <span>{trace.trigger}</span>
@@ -667,6 +673,8 @@ export function SystemOverview({
               </div>
             ))}
           </div>
+        ) : (
+          <EmptyState code="NO TRIGGER TRACES">No minister trace has been recorded for this Host instance.</EmptyState>
         )}
       </DisclosureSection>
       )}
