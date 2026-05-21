@@ -328,7 +328,7 @@ public static class FoodChainModelBuilder
                     _steps.Add(canonicalAdviceType == "managebutcherbills" ? "hunt.butcher" : "cook");
                     break;
                 case AdviceActionKind.PlaceBlueprint:
-                    AddBlueprintTarget(canonicalAdviceType);
+                    AddBlueprintTarget(canonicalAdviceType, action);
                     break;
                 case AdviceActionKind.SetPriority:
                     AddWorkTarget(action.WorkType);
@@ -342,14 +342,23 @@ public static class FoodChainModelBuilder
             }
         }
 
-        private void AddBlueprintTarget(string canonicalAdviceType)
+        private void AddBlueprintTarget(string canonicalAdviceType, AdviceAction action)
         {
-            if (canonicalAdviceType == "managefreezer")
+            if (canonicalAdviceType == "managefreezer" || IsColdStorageBlueprint(action))
                 _steps.Add("store");
             else if (canonicalAdviceType == "managebutcherbills" || canonicalAdviceType == "huntforfood")
                 _steps.Add("hunt.butcher");
             else
                 _steps.Add("cook");
+        }
+
+        private static bool IsColdStorageBlueprint(AdviceAction action)
+        {
+            string text = $"{action.Instruction} {action.Reason}".ToLowerInvariant();
+            return text.Contains("freezer", StringComparison.Ordinal) ||
+                   text.Contains("cold storage", StringComparison.Ordinal) ||
+                   text.Contains("cold-room", StringComparison.Ordinal) ||
+                   text.Contains("cooler", StringComparison.Ordinal);
         }
 
         private void AddWorkTarget(WorkType? workType)

@@ -211,6 +211,38 @@ public sealed class FoodRulesTests
     }
 
     [Fact]
+    public void MatureCropsWithoutCooler_AsksForFreezerBeforeHarvestSpoils()
+    {
+        FoodBriefing briefing = Briefing(days: 18f) with
+        {
+            FoodUnits = 24,
+            Infrastructure = new FoodInfrastructureSnapshot(0, true, 500f, 1),
+            ReadyToHarvest = 9,
+            CropZoneSummaries = [new FoodCropZoneSummary("Plant_Rice", "growing:1", 12, 1f, 9, "nearby to kitchen")],
+            HarvestTargets =
+            [
+                new FoodHarvestTarget("crop", "Plant_Rice", 9, new(10, 20, 12, 22), ["rice-1"], "growing:1", "nearby to kitchen", "kitchen")
+            ]
+        };
+
+        Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
+            .Should().BeOfType<Decision>().Subject;
+
+        decision.Trace.Should().Be("harvest_mature_crops");
+        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        advice.Actions.Should().Contain(action => action.Kind == AdviceActionKind.MarkHarvest);
+        AdviceAction freezerAction = advice.Actions.Should().Contain(action =>
+            action.Kind == AdviceActionKind.PlaceBlueprint &&
+            action.Owner == "Construction").Subject;
+        freezerAction.Instruction.Should().Contain("starter freezer");
+        freezerAction.Instruction.Should().Contain("next harvest");
+        decision.Flags.Should().ContainSingle().Which.Requests.Should().Contain(request =>
+            request.Kind == ResourceRequestKind.Building &&
+            request.RequestedFrom == "Construction" &&
+            request.What.Contains("starter freezer"));
+    }
+
+    [Fact]
     public void MealsUnderstocked_EmitsCookBillStep()
     {
         FoodBriefing briefing = Briefing(days: 12f) with { MealsCount = 1, RawFoodCount = 40, ReadyToHarvest = 0 };
@@ -223,6 +255,33 @@ public sealed class FoodRulesTests
         advice.Actions.Should().Contain(s => s.Kind == AdviceActionKind.ProductionBill);
         advice.Actions.Should().NotContain(s => s.Kind == AdviceActionKind.RequestResource);
         decision.Flags.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void MealsUnderstockedWithoutCooler_AsksForFreezerForCookingPath()
+    {
+        FoodBriefing briefing = Briefing(days: 12f) with
+        {
+            FoodUnits = 40,
+            MealsCount = 1,
+            RawFoodCount = 40,
+            ReadyToHarvest = 0,
+            Infrastructure = new FoodInfrastructureSnapshot(0, true, 500f, 1)
+        };
+
+        Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
+            .Should().BeOfType<Decision>().Subject;
+
+        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        advice.AdviceType.Should().Be("manage_cook_bills");
+        advice.Actions.Should().Contain(action => action.Kind == AdviceActionKind.ProductionBill);
+        AdviceAction freezerAction = advice.Actions.Should().Contain(action =>
+            action.Kind == AdviceActionKind.PlaceBlueprint &&
+            action.Owner == "Construction").Subject;
+        freezerAction.Instruction.Should().Contain("raw food and cooked meals");
+        decision.Flags.Should().ContainSingle().Which.Requests.Should().Contain(request =>
+            request.Kind == ResourceRequestKind.Building &&
+            request.What.Contains("starter freezer"));
     }
 
     [Fact]
@@ -574,6 +633,40 @@ public sealed class FoodRulesTests
             row.Kind == AdviceActionKind.MarkHunt &&
             row.ApplyKind == AdviceApplyKind.MarkHuntArea &&
             row.ApplyLabel == "Mark hunt");
+    }
+
+    [Fact]
+    public void LowBufferHuntWithoutCooler_AsksForFreezerBeforeMeatSpoils()
+    {
+        FoodBriefing briefing = Briefing(days: 12f) with
+        {
+            FoodUnits = 20,
+            MealsCount = 20,
+            RawFoodCount = 0,
+            ReadyToHarvest = 0,
+            WildHarvestCandidates = 0,
+            WildAnimalCount = 2,
+            WildHuntTargets = [new WildHuntTarget("Hare", 2, "nearby to kitchen", "kitchen")],
+            HuntTargets =
+            [
+                new FoodHuntTarget("Hare", 2, new(40, 50, 41, 50), ["hare-1", "hare-2"], "nearby to kitchen", "kitchen")
+            ],
+            Infrastructure = new FoodInfrastructureSnapshot(0, true, 500f, 1)
+        };
+
+        Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
+            .Should().BeOfType<Decision>().Subject;
+
+        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        advice.AdviceType.Should().Be("hunt_for_food");
+        advice.Actions.Should().Contain(action => action.Kind == AdviceActionKind.MarkHunt);
+        AdviceAction freezerAction = advice.Actions.Should().Contain(action =>
+            action.Kind == AdviceActionKind.PlaceBlueprint &&
+            action.Owner == "Construction").Subject;
+        freezerAction.Instruction.Should().Contain("hunted meat");
+        decision.Flags.Should().ContainSingle().Which.Requests.Should().Contain(request =>
+            request.Kind == ResourceRequestKind.Building &&
+            request.What.Contains("starter freezer"));
     }
 
     [Fact]

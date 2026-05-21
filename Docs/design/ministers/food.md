@@ -132,7 +132,10 @@ availability.
 Rules should cover obvious food-chain states: safe buffer, unknown or unreliable
 nutrition signal, emergency shortage, mature harvest, understocked meals with raw
 food, forage availability, growing capacity, and missing freezer/storage
-support.
+support. Freezer posture is a standing chain dependency: when Food recommends
+harvest, forage, hunt, cooking, or growing work that will create or depend on
+perishable food, missing cooler/freezer support should be attached as a
+secondary Construction request rather than waiting until surplus already exists.
 
 Rules should compute priority from live state where possible: days of food,
 nutrition confidence, colonist count, season/growing window, active threat, and
@@ -173,6 +176,11 @@ should say that reachable stockpile visibility is needed. If no harvest/cook
 path is visible, it should still request or suggest concrete setup work when the
 briefing supports it: emergency growing tiles, relevant work-type labor, cooking
 building, or simple meal bill.
+
+Food should not let freezer advice displace starvation recovery, but it should
+ask for freezer capacity in advance when the active path is about to create
+perishable intake. Food owns the requirement and size class; Construction owns
+room layout, cooler count, power, materials, and placement.
 
 Food may request trade capacity only when no stored, harvestable, cookable, or
 sowable path is visible.
@@ -223,6 +231,11 @@ Food may use action or flag metadata for:
   support.
 - Bills/settings: cook bill targets, butcher bill state, stockpile filters,
   forbid/unforbid food.
+
+Freezer requests should carry a compact capacity class instead of a vague
+"build freezer" ask: starter, buffer, winter, or surplus. The target is cold
+storage capacity for a colony-days buffer or incoming harvest/hunt/cooking
+surplus; Construction turns that requirement into exact blueprints.
 
 In MVP advice actions and flag requests are rendered by default. Assisted Apply
 may later execute a narrow allowlist of Food actions after player confirmation,

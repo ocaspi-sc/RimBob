@@ -46,6 +46,26 @@ public sealed class FoodChainModelBuilderTests
     }
 
     [Fact]
+    public void Build_HarvestAdviceWithFreezerBlueprint_HighlightsStoreStep()
+    {
+        FoodBriefing briefing = FoodRulesTests.Briefing(18f) with
+        {
+            FoodUnits = 24,
+            Infrastructure = new FoodInfrastructureSnapshot(0, true, 500f, 1),
+            ReadyToHarvest = 9,
+            CropZoneSummaries = [new FoodCropZoneSummary("Plant_Rice", "growing:1", 12, 1f, 9, "nearby to kitchen")]
+        };
+        AdviceItem advice = DecisionAdvice(briefing);
+
+        AdviceChainModel model = FoodChainModelBuilder.Build(briefing, [advice]);
+
+        Step(model, "grow.harvest").Status.Should().Be(AdviceChainStepStatus.Action);
+        Step(model, "grow.store").Status.Should().Be(AdviceChainStepStatus.Action);
+        Step(model, "hunt.store").Status.Should().Be(AdviceChainStepStatus.Action);
+        Step(model, "forage.store").Status.Should().Be(AdviceChainStepStatus.Action);
+    }
+
+    [Fact]
     public void Build_HuntAdvice_HighlightsHuntAndBlocksMissingButcherTable()
     {
         FoodBriefing briefing = FoodRulesTests.Briefing(12f) with
