@@ -60,10 +60,10 @@ internal static class FoodItemClassifier
         float? fallbackNutrition = fallback > 0f ? fallback : null;
         float? nutrition = reportedNutrition ?? fallbackNutrition;
         string nutritionSource = reportedNutrition is not null
-            ? "reported"
+            ? FoodNutrition.NutritionSourceReported
             : fallbackNutrition is not null
-                ? "fallback_meal_raw_counts"
-                : "unknown";
+                ? FoodNutrition.NutritionSourceFallbackMealRawCounts
+                : FoodNutrition.NutritionSourceUnknown;
 
         return new FoodItemClassification(
             ReportedNutrition: reportedNutrition,

@@ -234,8 +234,8 @@ public sealed record AnimalRecord(
 
 /// <summary>
 /// Colony-wide stockpile rollup from /api/v1/resources/summary.
-/// FoodTotal / TotalNutrition come straight from RIMAPI; days-of-food is
-/// derived in MayorBriefingDerivation (null when nutrition is zero).
+/// FoodTotal / TotalNutrition come straight from RIMAPI; days-of-food stays a
+/// briefing derivation and may use a documented fallback when TotalNutrition is unusable.
 /// </summary>
 public sealed record ResourceSummary(
     int   TotalItems,

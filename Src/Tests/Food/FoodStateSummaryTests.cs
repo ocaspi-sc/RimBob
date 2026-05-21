@@ -79,6 +79,26 @@ public sealed class FoodStateSummaryTests
     }
 
     [Fact]
+    public void Build_FallbackNutritionQualifiesStoredFoodLineAndConfidenceGap()
+    {
+        FoodBriefing briefing = FoodRulesTests.Briefing(6.25f) with
+        {
+            ReportedNutrition = null,
+            FallbackNutrition = 10f,
+            NutritionSource = FoodNutrition.NutritionSourceFallbackMealRawCounts,
+            FoodUnits = 30,
+            MealsCount = 10,
+            RawFoodCount = 20
+        };
+
+        string summary = FoodStateSummary.Build(briefing);
+
+        summary.Should().Contain("about 6.2 days for 3 colonists");
+        summary.Should().Contain("buffer urgent (estimate; RIMAPI nutrition signal missing).");
+        summary.Should().Contain($"Confidence gaps: {FoodNutrition.MissingSignalRimApiTotalNutritionMissing}");
+    }
+
+    [Fact]
     public void Build_CallsOutPositionedStoredFoodWithoutCoolerCoverage()
     {
         FoodBriefing briefing = FoodRulesTests.Briefing(12f) with

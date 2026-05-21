@@ -50,8 +50,11 @@ public static class FoodStateSummary
             < 20f => "below the safety band",
             _ => "stable"
         };
+        string fallbackQualifier = briefing.UsesFallbackNutrition
+            ? " (estimate; RIMAPI nutrition signal missing)"
+            : "";
 
-        return $"Stores: {JoinList(stores)}{unclassifiedDetails}; about {days:F1} days for {Plural(briefing.ColonistCount, "colonist")}; buffer {posture}.";
+        return $"Stores: {JoinList(stores)}{unclassifiedDetails}; about {days:F1} days for {Plural(briefing.ColonistCount, "colonist")}; buffer {posture}{fallbackQualifier}.";
     }
 
     private static string BuildGrowingLine(FoodBriefing briefing)

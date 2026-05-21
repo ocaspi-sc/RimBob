@@ -19,7 +19,10 @@ public sealed class FoodBriefingDerivationTests
 
         b.NutritionSource.Should().Be("reported");
         b.ReportedNutrition.Should().Be(32f);
+        b.FallbackNutrition.Should().BeApproximately(10f, 0.001f);
+        b.UsesFallbackNutrition.Should().BeFalse();
         b.EstimatedDaysOfFood.Should().BeApproximately(10f, 0.001f);
+        b.MissingBriefingSignals.Should().NotContain(FoodNutrition.MissingSignalRimApiTotalNutritionMissing);
     }
 
     [Fact]
@@ -32,11 +35,29 @@ public sealed class FoodBriefingDerivationTests
 
         b.NutritionSource.Should().Be("fallback_meal_raw_counts");
         b.FallbackNutrition.Should().BeApproximately(10f, 0.001f);
+        b.UsesFallbackNutrition.Should().BeTrue();
         b.EstimatedDaysOfFood.Should().BeApproximately(6.25f, 0.001f);
         b.UnclassifiedFoodUnits.Should().Be(10);
         b.ExcludedFoodUnits.Should().Be(0);
         b.UnknownFoodUnits.Should().Be(10);
+        b.MissingBriefingSignals.Should().Contain(FoodNutrition.MissingSignalRimApiTotalNutritionMissing);
         b.MissingBriefingSignals.Should().Contain("food_unit_classification");
+    }
+
+    [Fact]
+    public void Compute_FallbackNutritionGapIsExplicitEvenWhenFoodUnitsAreClassified()
+    {
+        ColonyState s = StateWithColonists(1);
+        s.Resources.Update(new ResourceSummary(100, 0f, 30, 0f, 10, 20, 0, 0, 0f));
+
+        FoodBriefing b = FoodBriefingDerivation.Compute(s);
+
+        b.NutritionSource.Should().Be("fallback_meal_raw_counts");
+        b.FallbackNutrition.Should().BeApproximately(10f, 0.001f);
+        b.EstimatedDaysOfFood.Should().BeApproximately(6.25f, 0.001f);
+        b.UnclassifiedFoodUnits.Should().Be(0);
+        b.MissingBriefingSignals.Should().Contain(FoodNutrition.MissingSignalRimApiTotalNutritionMissing);
+        b.MissingBriefingSignals.Should().NotContain("food_unit_classification");
     }
 
     [Fact]
@@ -48,7 +69,9 @@ public sealed class FoodBriefingDerivationTests
         FoodBriefing b = FoodBriefingDerivation.Compute(s);
 
         b.NutritionSource.Should().Be("unknown");
+        b.UsesFallbackNutrition.Should().BeFalse();
         b.EstimatedDaysOfFood.Should().BeNull();
+        b.MissingBriefingSignals.Should().NotContain(FoodNutrition.MissingSignalRimApiTotalNutritionMissing);
     }
 
     [Fact]

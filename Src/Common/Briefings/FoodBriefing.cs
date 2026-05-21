@@ -57,6 +57,12 @@ public sealed record FoodBriefing(
 
     public int UnknownFoodUnits => Math.Max(0, UnclassifiedFoodUnits - ExcludedFoodUnits);
 
+    [JsonIgnore]
+    public bool UsesFallbackNutrition =>
+        ReportedNutrition is null &&
+        FallbackNutrition is > 0f &&
+        (MealsCount > 0 || RawFoodCount > 0);
+
     public IReadOnlyList<string> MissingBriefingSignals
     {
         get
@@ -64,6 +70,8 @@ public sealed record FoodBriefing(
             List<string> signals = [];
             if (!DataCoverage.HasLiveState)
                 signals.Add("live_state");
+            if (UsesFallbackNutrition)
+                signals.Add(FoodNutrition.MissingSignalRimApiTotalNutritionMissing);
             if (UnknownFoodUnits > 0)
                 signals.Add("food_unit_classification");
             if ((ReadyToHarvest > 0 || WildHarvestCandidates > 0 || CropBreakdown.Count > 0) &&
@@ -301,6 +309,12 @@ public static class FoodNutrition
     public const float NutritionPerColonistPerDay = 1.6f;
     public const float NutritionPerMeal = 0.9f;
     public const float NutritionPerRawFood = 0.05f;
+    public const string NutritionSourceReported = "reported";
+    public const string NutritionSourceFallbackMealRawCounts = "fallback_meal_raw_counts";
+    public const string NutritionSourceUnknown = "unknown";
+    // Stable confidence-gap key when RIMAPI total_nutrition is zero/missing and
+    // fallback nutrition supports food days.
+    public const string MissingSignalRimApiTotalNutritionMissing = "rimapi_total_nutrition_missing";
 
     public static float EstimateFallback(int mealsCount, int rawFoodCount) =>
         mealsCount * NutritionPerMeal + rawFoodCount * NutritionPerRawFood;
