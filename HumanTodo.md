@@ -11,7 +11,7 @@
 ## Captured by /todo
 
 <!-- entries go here -->
-- [ ] fix-gimp-codex-flags [2026-05-21] #skill #codex Fix bring-out-the-gimp PS1: add --skip-git-repo-check + --sandbox workspace-write + --full-auto to Start; strip model/reasoning flags from Resume. [plan](.plans/fix-gimp-codex-flags.md)
+- [x] fix-gimp-codex-flags [2026-05-21] #skill #codex Fix bring-out-the-gimp PS1: add --skip-git-repo-check + --sandbox workspace-write + --full-auto to Start; strip model/reasoning flags from Resume. [plan](.plans/fix-gimp-codex-flags.md)
 - [ ] base-layout-construction-tips [2026-05-21] #research #construction #layout Base Layout / Construction tips: fold community base-building heuristics into Construction minister spatial lint and dashboard evidence. [plan](.plans/base-layout-construction-tips.md)
 - [ ] food-audit-f1-f2-f3 [2026-05-21] #high-prio #llm #test #rules Food audit F1+F2+F3: seed replay corpus; drop state_summary from prompt; add freezer_missing test. [plan](.plans/food-audit-f1-f2-f3.md)
 - [ ] deterministic-cos-cabinet-issue-solver [2026-05-20] #design #cos #cabinet **Deterministic CoS Cabinet Issue Solver.** Implement the issue-report parent model and CoS routing plan. [plan](.plans/deterministic-cos-cabinet-issue-solver.md)
