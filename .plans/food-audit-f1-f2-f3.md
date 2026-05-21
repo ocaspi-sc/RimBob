@@ -113,7 +113,7 @@ Apply in any order; all three are independent. F3 is fastest. F2 is one-file pro
 - Files: `food.system.md`, `food-rules-history.jsonl`, `FoodRulesTests.cs`, `FoodPromptTests.cs`, `FoodReplayCorpusTests.cs`, `Rules.cs`
 - No dashboard surface for these changes (rules/test/prompt only)
 
-**Codex run:** 20260521-123056-food-audit-f1-f2-f3 · branch `codex/prompt-20260521-123056-food-audit-f1-f2-f3` · landed commit `<filled after land>`
+**Codex run:** 20260521-123056-food-audit-f1-f2-f3 · branch `codex/prompt-20260521-123056-food-audit-f1-f2-f3` · landed commit `068b44b9`
 
 ## Verification (full)
 
