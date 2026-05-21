@@ -202,7 +202,7 @@ if ($Mode -eq "Start") {
     Write-RunMetadata -Id $RunId -Metadata $metadata
 
     $reasoningConfigArg = Get-ReasoningConfigArg -Effort $ReasoningEffort
-    $exitCode = Invoke-CodexExec -Arguments @("exec", "--skip-git-repo-check", "-C", $worktreePath, "--sandbox", "workspace-write", "--full-auto", "--json", "-m", $Model, "-c", $reasoningConfigArg, "-o", $lastMessagePath, "-") -EventsPath $eventsPath -InputPath $promptPath
+    $exitCode = Invoke-CodexExec -Arguments @("exec", "--skip-git-repo-check", "-C", $worktreePath, "--sandbox", "workspace-write", "--json", "-m", $Model, "-c", $reasoningConfigArg, "-o", $lastMessagePath, "-") -EventsPath $eventsPath -InputPath $promptPath
     $session = Find-SessionId -EventsPath $eventsPath
 
     $scriptExitCode = $exitCode
