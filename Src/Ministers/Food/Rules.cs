@@ -53,8 +53,8 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 "Food crisis within a week",
                 EmergencyBody(briefing, days),
                 "Food below 7 days is an urgent survival risk. Food owns the next food-chain actions; cross-minister requests carry only the build, tile, and labor needs.",
-                EmergencyActions(briefing),
-                EmergencyRequests(briefing, priority),
+                EmergencyActions(briefing, days),
+                EmergencyRequests(briefing, days, priority),
                 true);
         }
 
@@ -502,7 +502,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         return days < 1f && noImmediateLocalFood ? AdvicePriority.Critical : AdvicePriority.High;
     }
 
-    private static IReadOnlyList<ResourceRequest> EmergencyRequests(FoodBriefing briefing, AdvicePriority priority)
+    private static IReadOnlyList<ResourceRequest> EmergencyRequests(FoodBriefing briefing, float days, AdvicePriority priority)
     {
         List<ResourceRequest> requests = [];
         int forbiddenMealCount = ForbiddenMealCount(briefing);
@@ -592,11 +592,11 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 "no stored, harvestable, cookable, or sowable food path is visible in the briefing",
                 Priority: priority,
                 RequestedFrom: "Mayor"));
-        requests.AddRange(FreezerSupportRequests(briefing, briefing.EstimatedDaysOfFood ?? 0f, HasPotentialPerishableFoodPath(briefing)));
+        requests.AddRange(FreezerSupportRequests(briefing, days, HasPotentialPerishableFoodPath(briefing)));
         return requests;
     }
 
-    private static IReadOnlyList<AdviceAction> EmergencyActions(FoodBriefing briefing)
+    private static IReadOnlyList<AdviceAction> EmergencyActions(FoodBriefing briefing, float days)
     {
         List<AdviceAction> actions = [];
         int forbiddenMealCount = ForbiddenMealCount(briefing);
@@ -616,9 +616,9 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 Reason: "unknown_food_units exists, but no meal or raw-food category is visible to Food",
                 Icon: SimpleMealIcon));
         if (briefing.ReadyToHarvest > 0)
-            actions.Add(HarvestAction(briefing, briefing.EstimatedDaysOfFood ?? 0f));
+            actions.Add(HarvestAction(briefing, days));
         if (briefing.WildHarvestCandidates > 0)
-            actions.Add(WildHarvestAction(briefing, briefing.EstimatedDaysOfFood ?? 0f));
+            actions.Add(WildHarvestAction(briefing, days));
         if (CanSuggestHunting(briefing))
             actions.Add(HuntingAction(briefing));
         if (!briefing.Kitchen.HasCookingBuilding)
@@ -661,7 +661,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 "Open an emergency food acquisition path because no stored, harvestable, cookable, or sowable food path is visible.",
                 Owner: "Mayor",
                 Reason: "no local food path is visible in the briefing"));
-        IReadOnlyList<AdviceAction> freezerActions = FreezerSupportActions(briefing, briefing.EstimatedDaysOfFood ?? 0f, HasPotentialPerishableFoodPath(briefing));
+        IReadOnlyList<AdviceAction> freezerActions = FreezerSupportActions(briefing, days, HasPotentialPerishableFoodPath(briefing));
         actions.AddRange(freezerActions);
         int limit = forbiddenMealCount > 0 ? 4 : 3;
         if (freezerActions.Count > 0)
