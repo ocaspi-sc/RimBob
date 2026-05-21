@@ -137,13 +137,21 @@ function Invoke-CodexExec {
     # NativeCommandError objects in the pipeline, and with $ErrorActionPreference = "Stop"
     # they terminate the script even when codex exits 0. Stdout carries the --json JSONL
     # events; stderr carries codex log/warning lines that we don't need to capture.
+    #
+    # PS 5.1 pipeline caveat: Tee-Object passes every JSONL line through to the function's
+    # output stream, which would make the return value an array of strings + exit-code int
+    # rather than a bare int. Pipe to Out-Null to prevent leakage. Capture $LASTEXITCODE in
+    # a named variable immediately after each pipeline branch — PS cmdlets do not set
+    # $LASTEXITCODE, so the value at that point is reliably the native exe's exit code.
     if ([string]::IsNullOrWhiteSpace($InputPath)) {
-        & $codex @Arguments | Tee-Object -FilePath $EventsPath
+        & $codex @Arguments | Tee-Object -FilePath $EventsPath | Out-Null
+        $codexExitCode = $LASTEXITCODE
     }
     else {
-        Get-Content -LiteralPath $InputPath -Raw | & $codex @Arguments | Tee-Object -FilePath $EventsPath
+        Get-Content -LiteralPath $InputPath -Raw | & $codex @Arguments | Tee-Object -FilePath $EventsPath | Out-Null
+        $codexExitCode = $LASTEXITCODE
     }
-    return $LASTEXITCODE
+    return $codexExitCode
 }
 
 function Get-CleanStatus {
@@ -391,7 +399,9 @@ if ($Mode -eq "CloseOut") {
     $landedCommit = Invoke-Git -Cwd $RepoRoot -GitArgs @("rev-parse", "HEAD")
 
     Invoke-Git -Cwd $RepoRoot -GitArgs @("worktree", "remove", $worktree) | Out-Null
-    Invoke-Git -Cwd $RepoRoot -GitArgs @("branch", "-d", $childBranch) | Out-Null
+    # Squash merges don't leave a reachable merge commit so git -d always refuses.
+    # Force-delete is safe here: the squash commit above durably contains the work.
+    Invoke-Git -Cwd $RepoRoot -GitArgs @("branch", "-D", $childBranch) | Out-Null
 
     $metadata.status = "landed_and_closed"
     $metadata.updated_at = (Get-Date).ToString("o")
