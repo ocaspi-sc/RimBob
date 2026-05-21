@@ -100,7 +100,7 @@ The "Confidence gaps" line should also surface the new signal entry when the fal
 - Commands: `dotnet test Src/Tests/RimBob.Tests.csproj` — 306/306 pass
 - Files: `FoodBriefing.cs`, `FoodStateSummary.cs`, `FoodBriefingDerivationTests.cs`, `FoodStateSummaryTests.cs`
 
-**Codex run:** 20260521-181911-total-nutrition-zero-fallback · branch `codex/prompt-20260521-181911-total-nutrition-zero-fallback` · landed commit `<filled after land>`
+**Codex run:** 20260521-181911-total-nutrition-zero-fallback · branch `codex/prompt-20260521-181911-total-nutrition-zero-fallback` · landed commit `3069908f`
 
 ## Open questions
 
