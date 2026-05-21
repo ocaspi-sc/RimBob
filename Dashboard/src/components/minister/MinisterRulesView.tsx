@@ -12,6 +12,7 @@ import { Timeline } from '../shared/Timeline';
 
 const traceInspectorConfig: InspectorSurfaceConfig = {
   hiddenKeys: [
+    'minister',
     'trigger',
     'status',
     'path',
@@ -25,6 +26,7 @@ const traceInspectorConfig: InspectorSurfaceConfig = {
     'flagCount',
     'wakeupPayload',
     'note',
+    'flag',
     'ruleDiagnostics',
   ],
   defaultOpenKeys: ['flag', 'flags', 'advice', 'emittedAdvice', 'emitted_advice'],
@@ -123,6 +125,7 @@ export function MinisterRulesView({
 
 function TraceSummaryPanel({ trace }: { trace: MinisterTrace }) {
   const candidateFields: Array<[string, unknown]> = [
+    ['minister', trace.minister],
     ['trigger', trace.trigger],
     ['status', trace.status],
     ['path', trace.path],
