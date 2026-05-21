@@ -49,6 +49,7 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 - Multi-step git operations on the main checkout are forbidden. If a task needs more than one `git mv`, `git rm`, or staged edits across multiple files that are not all going into one immediate commit, do it in a worktree and land through `master` after the slice is green.
 - When doing git operations, if there's a lock file or another session appears to be writing or committing, wait briefly and retry the narrow operation; do not force broad Git actions.
 - Commit messages should contain some tags, a title, and a summary of the changes. write a 1-5 lines depending on the size of the scope.
+- If you encounter these dirty files in c:/Dev/Rimbob (on master branch): {AGENTS.md, CLAUDE.md, HumanTodo.md} with a couple of unrelated small human edits - please stack on a small commit just for those (on master)
 
 ---
 
