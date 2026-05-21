@@ -22,11 +22,14 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 - This project is maintained simultaneously by multiple AI agents from different companies.
 - After finishing a change, make sure I can see it. Rebuild if necessary, and include a clickable URL or file link to the result.
 - Use mermaid diagrams over prose
-
+- dont be vauge! Write specifics. no "Update file" but "file: Added X."
 
 ## Coding
 
 - We don't care about legacy or breaking changes or compatibility. be brave.
+- Be generous with adding //todo comments
+- Write self documenting code. Descriptive Names are very important.
+- Write short WHY comments to provide context for future readers.
 
 ---
 
@@ -45,7 +48,7 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 - Use an advisory main-checkout write lock for index-mutating work on `master`: `C:\dev\RimBob\.git\rimbob-master.lock`, containing one JSON line with `pid`, `agent`, `started_at`, and `intent`. Acquire it with `New-Item` only when the file is absent, wait or report if it exists, treat locks older than 10 minutes as stale only with a logged takeover, and release it after the commit succeeds and `git status --short` is clean.
 - Multi-step git operations on the main checkout are forbidden. If a task needs more than one `git mv`, `git rm`, or staged edits across multiple files that are not all going into one immediate commit, do it in a worktree and land through `master` after the slice is green.
 - When doing git operations, if there's a lock file or another session appears to be writing or committing, wait briefly and retry the narrow operation; do not force broad Git actions.
-- Commit messages should contain some tags, a title, and a summary of the changes.
+- Commit messages should contain some tags, a title, and a summary of the changes. write a 1-5 lines depending on the size of the scope.
 
 ---
 
