@@ -190,6 +190,27 @@ public sealed class FoodRulesTests
     }
 
     [Fact]
+    public void NoCoolerWithStableBuffer_EmitsFreezerMissingAdvice()
+    {
+        FoodBriefing briefing = Briefing(days: 25f) with
+        {
+            Infrastructure = new FoodInfrastructureSnapshot(0, true, 500f, 1)
+        };
+
+        Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
+            .Should().BeOfType<Decision>().Subject;
+
+        decision.Trace.Should().Be("freezer_missing");
+        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        advice.AdviceType.Should().Be("manage_freezer");
+        advice.Priority.Should().Be(AdvicePriority.Medium);
+        advice.Actions.Should().ContainSingle().Which.Kind.Should().Be(AdviceActionKind.PlaceBlueprint);
+        advice.Actions.Single().Owner.Should().Be("Construction");
+        decision.Flags.Should().ContainSingle().Which.Requests.Should()
+            .Contain(r => r.Kind == ResourceRequestKind.Building && r.RequestedFrom == "Construction");
+    }
+
+    [Fact]
     public void MealsUnderstocked_EmitsCookBillStep()
     {
         FoodBriefing briefing = Briefing(days: 12f) with { MealsCount = 1, RawFoodCount = 40, ReadyToHarvest = 0 };

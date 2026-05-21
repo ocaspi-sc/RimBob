@@ -153,7 +153,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 "The Food minister owns freezer need; Construction owns the actual build work.",
                 [new(AdviceActionKind.PlaceBlueprint, "Plan a freezer/cold-room upgrade near food storage.", Owner: "Construction", Reason: "stored food can spoil without temperature control", Icon: CoolerIcon)],
                 [new(ResourceRequestKind.Building, "cooler-backed freezer or cold room", "stored food can spoil without temperature control", RequestedFrom: "Construction", Icon: CoolerIcon)],
-                false);
+                true);
 
         if (days >= 30f)
             return new Decision([], [], "maintain_security_threshold", DiagnosticsFor(briefing, "maintain_security_threshold"));
