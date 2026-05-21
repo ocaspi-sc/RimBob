@@ -174,6 +174,7 @@ const fieldIcons: Record<string, SemanticIconSpec> = {
   connections: common.data,
   confidence: common.data,
   construction: common.construction,
+  conditions: common.data,
   crop_breakdown: item('Plant_Rice', 'Crop breakdown icon', 'CB'),
   crop_candidates: item('Plant_Rice', 'Crop candidates icon', 'CC'),
   crop_def: item('Plant_Rice', 'Crop definition icon', 'CD'),
@@ -236,7 +237,9 @@ const fieldIcons: Record<string, SemanticIconSpec> = {
   mood: common.welfare,
   note: common.logs,
   nutrition_source: common.food,
+  outcome: common.rules,
   owner: common.mayor,
+  output_action: common.advice,
   path: common.rules,
   power: common.power,
   power_net: common.power,
@@ -257,6 +260,7 @@ const fieldIcons: Record<string, SemanticIconSpec> = {
   research: common.research,
   resources: common.storage,
   rimapi: common.data,
+  rule: common.rules,
   rule_fired: common.rules,
   rules: common.rules,
   season: common.season,
@@ -270,6 +274,7 @@ const fieldIcons: Record<string, SemanticIconSpec> = {
   status: common.component,
   actions: common.advice,
   set_stockpile_zone: common.food,
+  selected_rule: common.rules,
   stockpile_cells: common.storage,
   storage: common.storage,
   summary: common.advice,
@@ -292,6 +297,14 @@ const fieldIcons: Record<string, SemanticIconSpec> = {
   wild_harvest_clusters: common.harvest,
   winter_window: common.season,
   work_type: common.labor,
+};
+
+const ruleOutcomeIcons: Record<string, SemanticIconSpec> = {
+  escalated: common.prompt,
+  matched: common.rules,
+  not_matched: common.data,
+  selected: common.advice,
+  suppressed: common.threat,
 };
 
 const agendaCategoryIcons: Record<string, SemanticIconSpec> = {
@@ -390,6 +403,10 @@ export function iconForActionKind(kind: string): SemanticIconSpec | undefined {
   return fieldIcons[normalizeKey(kind)] ?? iconForField(kind);
 }
 
+export function iconForRuleOutcome(outcome: string): SemanticIconSpec | undefined {
+  return ruleOutcomeIcons[normalizeKey(outcome)] ?? iconForField(outcome);
+}
+
 export function iconForInfoTerm(term: string, tag: string): SemanticIconSpec | undefined {
   const termIcon = iconForField(term);
   if (termIcon) return termIcon;
@@ -401,6 +418,11 @@ export function iconForFieldValue(fieldKey: string | undefined, value: JsonValue
 
   const normalized = normalizeKey(fieldKey);
   const id = value.trim();
+
+  if (normalized === 'outcome' || normalized.endsWith('_outcome')) {
+    return iconForRuleOutcome(id);
+  }
+
   if (normalized.endsWith('terrain') || normalized.endsWith('terraindef') || normalized.endsWith('terrain_def')) {
     return terrain(id, `${id} terrain icon`, id.slice(0, 2).toUpperCase());
   }

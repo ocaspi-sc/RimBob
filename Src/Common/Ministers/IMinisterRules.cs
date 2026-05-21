@@ -60,6 +60,7 @@ public sealed record RuleTraceDetails
     public string? SelectedRule { get; init; }
     public IReadOnlyList<RuleTraceEntry> MatchedSignals { get; init; }
     public IReadOnlyList<RuleTraceEntry> SuppressedCandidates { get; init; }
+    public IReadOnlyList<RuleEvaluationTrace> AllRules { get; init; } = [];
     public IReadOnlyList<RuleEmittedAdviceTrace> EmittedAdvice { get; init; }
     public IReadOnlyList<RuleEmittedActionTrace> EmittedActions { get; init; }
     public IReadOnlyList<RuleEmittedFlagTrace> EmittedFlags { get; init; }
@@ -130,6 +131,13 @@ public sealed record RuleTraceEntry(
     string Rule,
     string Outcome,
     string Reason);
+
+public sealed record RuleEvaluationTrace(
+    string Rule,
+    string Outcome,
+    string Conditions,
+    string OutputAction,
+    string? Reason);
 
 public sealed record RuleEmittedAdviceTrace(
     string Source,

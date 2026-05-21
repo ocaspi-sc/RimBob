@@ -154,6 +154,7 @@ export interface RuleTraceDetails {
   selectedRule: string | null;
   matchedSignals: RuleTraceEntry[];
   suppressedCandidates: RuleTraceEntry[];
+  allRules?: RuleEvaluationTrace[];
   emittedAdvice?: RuleEmittedAdviceTrace[];
   emittedActions?: RuleEmittedActionTrace[];
   emittedFlags?: RuleEmittedFlagTrace[];
@@ -163,6 +164,14 @@ export interface RuleTraceEntry {
   rule: string;
   outcome: string;
   reason: string;
+}
+
+export interface RuleEvaluationTrace {
+  rule: string;
+  outcome: string;
+  conditions: string;
+  outputAction: string;
+  reason: string | null;
 }
 
 export interface RuleEmittedAdviceTrace {

@@ -378,7 +378,72 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             .Where(match => string.Equals(match.Outcome, "suppressed", StringComparison.OrdinalIgnoreCase))
             .ToList();
 
-        return new RuleTraceDetails(selectedRule, annotated, suppressed);
+        return new RuleTraceDetails(selectedRule, annotated, suppressed)
+        {
+            AllRules = AllRuleEvaluations(annotated)
+        };
+    }
+
+    private static IReadOnlyList<RuleEvaluationTrace> AllRuleEvaluations(IReadOnlyList<RuleTraceEntry> annotated)
+    {
+        Dictionary<string, RuleTraceEntry> outcomes = annotated.ToDictionary(
+            entry => entry.Rule,
+            StringComparer.OrdinalIgnoreCase);
+
+        return
+        [
+            RuleEvaluation("nutrition_signal_gap", outcomes,
+                "EstimatedDaysOfFood is null; UnclassifiedFoodUnits > 0",
+                "ManageFoodStockpile advice; stockpile visibility action/request"),
+            RuleEvaluation("unknown_food_state", outcomes,
+                "EstimatedDaysOfFood is null; UnclassifiedFoodUnits == 0",
+                "FoodSecurity advice; visible reachable stockpile action/request"),
+            RuleEvaluation("emergency_food_flag", outcomes,
+                "EstimatedDaysOfFood < 7",
+                "FoodSecurity advice; immediate food-chain actions; high/critical flag"),
+            RuleEvaluation("harvest_mature_crops", outcomes,
+                "ReadyToHarvest > 0",
+                "HarvestNow advice; mark_harvest action; optional PlantCut labor/freezer support"),
+            RuleEvaluation("meals_understocked", outcomes,
+                "MealsCount < ColonistCount * 2; days > 7; RawFoodCount > 0; cook bill or labor needed",
+                "ManageCookBills advice; production_bill and/or cook set_priority; optional freezer support"),
+            RuleEvaluation("wild_harvest_available", outcomes,
+                "days < 20; WildHarvestCandidates > 0; ReadyToHarvest == 0",
+                "WildHarvest advice; forage mark_harvest action; optional freezer support"),
+            RuleEvaluation("hunt_low_risk_animals", outcomes,
+                "days < 20; low-risk hunt target visible; ReadyToHarvest == 0",
+                "HuntForFood advice; mark_hunt action; optional butcher/cooking/freezer support"),
+            RuleEvaluation("expand_growing_capacity", outcomes,
+                "days < 20; FoodCropMath best candidate exists",
+                "ExpandGrowingCapacity advice; designate_zone action; Construction tile/freezer support"),
+            RuleEvaluation("hunting_ambiguity", outcomes,
+                "days < 20; WildAnimalCount > 0; ReadyToHarvest == 0",
+                "Escalate to LLM with hunt risk/value context"),
+            RuleEvaluation("winter_food_tradeoff", outcomes,
+                "DaysToWinter < 20; days < 30",
+                "Escalate to LLM with crop/freezer/labor tradeoff context"),
+            RuleEvaluation("freezer_missing", outcomes,
+                "Coolers == 0; days >= 20; FoodUnits > 0",
+                "ManageFreezer advice; Construction freezer/cooler request"),
+            RuleEvaluation("maintain_security_threshold", outcomes,
+                "days >= 30",
+                "No advice; food security threshold is maintained"),
+            RuleEvaluation("unresolved_food_gap", outcomes,
+                "days < 30; no deterministic action predicate selected",
+                "Escalate to LLM for unresolved Food gap")
+        ];
+    }
+
+    private static RuleEvaluationTrace RuleEvaluation(
+        string rule,
+        IReadOnlyDictionary<string, RuleTraceEntry> outcomes,
+        string conditions,
+        string outputAction)
+    {
+        if (outcomes.TryGetValue(rule, out RuleTraceEntry? trace))
+            return new RuleEvaluationTrace(rule, trace.Outcome, conditions, outputAction, trace.Reason);
+
+        return new RuleEvaluationTrace(rule, "not_matched", conditions, outputAction, null);
     }
 
     private static List<RuleTraceEntry> RuleMatches(FoodBriefing briefing)

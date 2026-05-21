@@ -1,9 +1,9 @@
 import { fetchTrace } from '../../api/ministers';
 import type { ScopeConfig } from '../../dashboard/scopes';
-import { iconForSection, iconForView } from '../../dashboard/semanticIcons';
+import { iconForRuleOutcome, iconForSection, iconForView } from '../../dashboard/semanticIcons';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
 import type { AdviceItem } from '../../types/advice';
-import type { DashboardEvent, RuleTraceDetails } from '../../types/system';
+import type { DashboardEvent, RuleEvaluationTrace, RuleTraceDetails } from '../../types/system';
 import { DisclosureSection } from '../shared/DisclosureSection';
 import { EmptyState } from '../shared/EmptyState';
 import { DynamicTable, InspectorSurface, type InspectorSurfaceConfig } from '../shared/Inspector';
@@ -116,6 +116,8 @@ export function MinisterRulesView({
 }
 
 function RuleDiagnosticsPanel({ details }: { details: RuleTraceDetails }) {
+  const allRules = details.allRules ?? [];
+  const allRuleGroups = groupRuleCatalogByOutcome(allRules);
   const emittedAdvice = details.emittedAdvice ?? [];
   const emittedActions = details.emittedActions ?? [];
   const emittedFlags = details.emittedFlags ?? [];
@@ -132,6 +134,33 @@ function RuleDiagnosticsPanel({ details }: { details: RuleTraceDetails }) {
           <span>{details.selectedRule ?? 'none'}</span>
         </div>
       </div>
+      <DisclosureSection
+        title={<SemanticLabel icon={iconForView('rules')}><span>All rules</span></SemanticLabel>}
+        defaultOpen
+        meta={formatRuleGroupMeta(allRuleGroups, allRules.length)}
+      >
+        {allRuleGroups.length > 0 ? (
+          <div className="rule-outcome-groups">
+            {allRuleGroups.map(group => (
+              <section className="rule-outcome-group" key={group.outcome}>
+                <header className="rule-outcome-group-header">
+                  <h4><SemanticLabel icon={iconForRuleOutcome(group.outcome)}><span>{formatRuleOutcome(group.outcome)}</span></SemanticLabel></h4>
+                  <small>{group.rows.length} {formatRuleCount(group.rows.length)}</small>
+                </header>
+                <div className="rule-all-rules-table rule-outcome-group-table">
+                  <DynamicTable
+                    rows={group.rows}
+                    preferredColumns={['rule', 'outcome', 'conditions', 'outputAction', 'reason']}
+                    maxColumns={5}
+                  />
+                </div>
+              </section>
+            ))}
+          </div>
+        ) : (
+          <EmptyState code="NO RULE CATALOG">No rule catalog was emitted by this run.</EmptyState>
+        )}
+      </DisclosureSection>
       <DisclosureSection
         title={<SemanticLabel icon={iconForView('advice')}><span>Emitted actions by rule</span></SemanticLabel>}
         defaultOpen
@@ -197,4 +226,53 @@ function RuleDiagnosticsPanel({ details }: { details: RuleTraceDetails }) {
 
 function sameMinister(a: string, b: string): boolean {
   return a.localeCompare(b, undefined, { sensitivity: 'accent' }) === 0;
+}
+
+const ruleOutcomeOrder = ['selected', 'escalated', 'matched', 'suppressed', 'not_matched'];
+
+interface RuleOutcomeGroup {
+  outcome: string;
+  rows: RuleEvaluationTrace[];
+}
+
+function groupRuleCatalogByOutcome(rows: RuleEvaluationTrace[]): RuleOutcomeGroup[] {
+  const groups = new Map<string, RuleEvaluationTrace[]>();
+
+  for (const row of rows) {
+    const outcome = row.outcome.trim() === '' ? 'unknown' : row.outcome;
+    groups.set(outcome, [...(groups.get(outcome) ?? []), row]);
+  }
+
+  return [...groups.entries()]
+    .sort(([left], [right]) => compareRuleOutcomes(left, right))
+    .map(([outcome, groupRows]) => ({ outcome, rows: groupRows }));
+}
+
+function compareRuleOutcomes(left: string, right: string): number {
+  const leftIndex = ruleOutcomeSortIndex(left);
+  const rightIndex = ruleOutcomeSortIndex(right);
+  if (leftIndex !== rightIndex) return leftIndex - rightIndex;
+  return left.localeCompare(right);
+}
+
+function ruleOutcomeSortIndex(outcome: string): number {
+  const index = ruleOutcomeOrder.indexOf(outcome);
+  return index >= 0 ? index : ruleOutcomeOrder.length;
+}
+
+function formatRuleGroupMeta(groups: RuleOutcomeGroup[], total: number): string {
+  if (groups.length === 0) return `${total} rules`;
+  return groups
+    .map(group => `${formatRuleOutcome(group.outcome)} ${group.rows.length}`)
+    .join(' / ');
+}
+
+function formatRuleOutcome(outcome: string): string {
+  return outcome
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, letter => letter.toUpperCase());
+}
+
+function formatRuleCount(count: number): string {
+  return count === 1 ? 'rule' : 'rules';
 }

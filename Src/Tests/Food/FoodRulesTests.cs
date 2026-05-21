@@ -42,6 +42,16 @@ public sealed class FoodRulesTests
         decision.Diagnostics.SuppressedCandidates.Should().Contain(signal =>
             signal.Rule == "expand_growing_capacity" &&
             signal.Outcome == "suppressed");
+        decision.Diagnostics.AllRules.Should().HaveCount(13);
+        decision.Diagnostics.AllRules.Should().Contain(row =>
+            row.Rule == "emergency_food_flag" &&
+            row.Outcome == "selected" &&
+            row.Conditions.Contains("EstimatedDaysOfFood < 7") &&
+            row.OutputAction.Contains("immediate food-chain actions"));
+        decision.Diagnostics.AllRules.Should().Contain(row =>
+            row.Rule == "nutrition_signal_gap" &&
+            row.Outcome == "not_matched" &&
+            row.Conditions.Contains("UnclassifiedFoodUnits > 0"));
         decision.Diagnostics.EmittedAdvice.Should().ContainSingle(row =>
             row.Source == "rules" &&
             row.Rule == "emergency_food_flag" &&
@@ -588,6 +598,10 @@ public sealed class FoodRulesTests
         escalation.Diagnostics.MatchedSignals.Should().Contain(signal =>
             signal.Rule == "winter_food_tradeoff" &&
             signal.Outcome == "escalated");
+        escalation.Diagnostics.AllRules.Should().Contain(row =>
+            row.Rule == "winter_food_tradeoff" &&
+            row.Outcome == "escalated" &&
+            row.OutputAction.Contains("Escalate to LLM"));
     }
 
     [Fact]

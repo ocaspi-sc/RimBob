@@ -1802,6 +1802,56 @@ code {
     minmax(360px, 2fr);
 }
 
+.rule-outcome-groups {
+  display: grid;
+  gap: 10px;
+}
+
+.rule-outcome-group {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.rule-outcome-group-header {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 2px 2px 0;
+}
+
+.rule-outcome-group-header h4 {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.82rem;
+  letter-spacing: 0;
+}
+
+.rule-outcome-group-header small {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.rule-all-rules-table {
+  margin-bottom: 10px;
+}
+
+.rule-all-rules-table .dynamic-table {
+  min-width: 1120px;
+}
+
+.rule-all-rules-table .dynamic-row {
+  grid-template-columns:
+    minmax(180px, 0.8fr)
+    minmax(104px, 0.45fr)
+    minmax(340px, 1.55fr)
+    minmax(340px, 1.55fr)
+    minmax(280px, 1.25fr);
+}
+
 .rule-emissions-table {
   margin-bottom: 10px;
 }

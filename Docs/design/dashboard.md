@@ -170,6 +170,12 @@ tables for uniform arrays, object sections, and YAML-like source trees backed by
 the original JSON payload. Field labels may include semantic icon cues before or
 after the contract name, but raw/debug data keeps the original field names.
 
+The minister Rules view should expose a compact all-rules table when the backend
+trace provides one. Group the catalog by outcome with semantic rule/outcome icon
+cues, and keep each row showing the rule name, outcome, condition summary,
+output action, and live evidence/reason so non-selected rules are inspectable
+without reading source.
+
 Player-facing views stay curated. Advice, Mayor Agenda, and the colony sidebar
 may keep hand-shaped layouts because they are read during play.
 
