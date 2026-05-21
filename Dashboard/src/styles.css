@@ -1792,14 +1792,13 @@ code {
 }
 
 .rule-diagnostics-table .dynamic-table {
-  min-width: 760px;
+  min-width: 640px;
 }
 
 .rule-diagnostics-table .dynamic-row {
   grid-template-columns:
-    minmax(190px, 0.9fr)
-    minmax(92px, 0.45fr)
-    minmax(360px, 2fr);
+    minmax(190px, 0.85fr)
+    minmax(420px, 2.15fr);
 }
 
 .rule-outcome-groups {

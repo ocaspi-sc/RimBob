@@ -114,11 +114,13 @@ export function FieldGrid({
 
 export function DynamicTable({
   emptyMessage = 'No rows.',
+  hiddenColumns = [],
   maxColumns = 8,
   preferredColumns = [],
   rows,
 }: {
   emptyMessage?: string;
+  hiddenColumns?: string[];
   maxColumns?: number;
   preferredColumns?: string[];
   rows: unknown[];
@@ -131,7 +133,7 @@ export function DynamicTable({
     return <EmptyState code="NO TABLE ROWS">{emptyMessage}</EmptyState>;
   }
 
-  const columns = inferColumns(records, preferredColumns, maxColumns);
+  const columns = inferColumns(records, preferredColumns, hiddenColumns, maxColumns);
 
   return (
     <div className="dynamic-table-wrap">
@@ -259,15 +261,18 @@ function readPath(record: JsonRecord, path: string): JsonValue | undefined {
   return current;
 }
 
-function inferColumns(records: JsonRecord[], preferredColumns: string[], maxColumns: number): string[] {
+function inferColumns(records: JsonRecord[], preferredColumns: string[], hiddenColumns: string[], maxColumns: number): string[] {
+  const hidden = new Set(hiddenColumns);
   const counts = new Map<string, number>();
   for (const record of records) {
     for (const key of Object.keys(record)) {
-      counts.set(key, (counts.get(key) ?? 0) + 1);
+      if (!hidden.has(key)) {
+        counts.set(key, (counts.get(key) ?? 0) + 1);
+      }
     }
   }
 
-  const preferred = preferredColumns.filter(column => counts.has(column));
+  const preferred = preferredColumns.filter(column => !hidden.has(column) && counts.has(column));
   const inferred = [...counts.entries()]
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .map(([key]) => key)

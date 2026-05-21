@@ -203,7 +203,9 @@ function RuleDiagnosticsPanel({ details }: { details: RuleTraceDetails }) {
       <div className="rule-diagnostics-table">
         <DynamicTable
           rows={details.matchedSignals}
-          preferredColumns={['rule', 'outcome', 'reason']}
+          preferredColumns={['rule', 'reason']}
+          hiddenColumns={['outcome']}
+          maxColumns={2}
           emptyMessage="No rules matched."
         />
       </div>
@@ -215,7 +217,9 @@ function RuleDiagnosticsPanel({ details }: { details: RuleTraceDetails }) {
           <div className="rule-diagnostics-table">
             <DynamicTable
               rows={details.suppressedCandidates}
-              preferredColumns={['rule', 'outcome', 'reason']}
+              preferredColumns={['rule', 'reason']}
+              hiddenColumns={['outcome']}
+              maxColumns={2}
             />
           </div>
         </DisclosureSection>
