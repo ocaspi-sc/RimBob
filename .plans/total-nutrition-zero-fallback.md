@@ -80,6 +80,28 @@ Food panel → snapshot section → "Stores" line. With this slice landed:
 
 The "Confidence gaps" line should also surface the new signal entry when the fallback fires.
 
+---
+
+## Summary (landed 2026-05-21)
+
+**Motivation.** RIMAPI sometimes returns `total_nutrition == 0` with food present, collapsing Food advice. This adds a documented RimBob-side fallback so the briefing degrades gracefully.
+
+**Context.** Fallback formula (`meals * 0.9 + raw * 0.05`) and `EstimatedDaysOfFood` wiring were pre-existing on master. This slice adds: the signal entry, the summary qualifier, and full test coverage.
+
+**Scope.**
+- `UsesFallbackNutrition` computed property on `FoodBriefing`
+- `rimapi_total_nutrition_missing` signal in `MissingBriefingSignals` when fallback fires
+- `"(estimate; RIMAPI nutrition signal missing)"` qualifier in `FoodStateSummary.BuildStoredFoodLine`
+- 4 new test cases in `FoodBriefingDerivationTests` + `FoodStateSummaryTests`
+- Doc-comment update on `Snapshots.cs`; string constant refactor in `FoodBriefing.cs`
+
+**How to verify (human).**
+- Dashboard: Food panel → Stores line shows qualifier when RIMAPI nutrition is 0 but food items exist
+- Commands: `dotnet test Src/Tests/RimBob.Tests.csproj` — 306/306 pass
+- Files: `FoodBriefing.cs`, `FoodStateSummary.cs`, `FoodBriefingDerivationTests.cs`, `FoodStateSummaryTests.cs`
+
+**Codex run:** 20260521-181911-total-nutrition-zero-fallback · branch `codex/prompt-20260521-181911-total-nutrition-zero-fallback` · landed commit `<filled after land>`
+
 ## Open questions
 
 Codex should escalate, not guess at:
