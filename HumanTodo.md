@@ -11,6 +11,13 @@
 ## Captured by /todo
 
 <!-- entries go here -->
+- [ ] source-todo-mayor-briefing-context [2026-05-21] #mayor #briefing #state Cover remaining MayorBriefing source TODOs: TrendWindows, CoS digest, recent feedback, AgendaPosture, ScheduleSnapshot, and cold-snap forecast signals.
+- [ ] source-todo-prisoner-surgery-signals [2026-05-21] #welfare #medical #rimapi Add prisoner count and pending surgery operation signals before filling the kept briefing derivation TODOs.
+- [ ] source-todo-lord-hostility-signal [2026-05-21] #defense #rimapi #state Replace the Lord job-name raid heuristic with a live faction-hostility signal when RIMAPI exposes one.
+- [ ] source-todo-pawn-edit-job-cache [2026-05-21] #labor #auto #rimapi Cache Pawn Edit and Pawn Job Controller field shapes before wiring policy/job advice beyond Suggest-only reads.
+- [ ] source-todo-building-condition-read [2026-05-21] #construction #rimapi #state Add building hp/power/working-state reads before Construction relies on building condition evidence.
+- [ ] source-todo-room-quality-read [2026-05-21] #welfare #rimapi #state Add room impressiveness/quality read support before Welfare consumes room evidence.
+- [ ] source-todo-quest-awareness [2026-05-21] #cos #mayor #rimapi Wire quest fields into state and briefings once CoS/Mayor need quest pressure.
 - [ ] testlogger-concurrent-queue [2026-05-21] #ops #test Replace coarse lock in TestLogFile with ConcurrentQueue + background writer. [plan](.plans/testlogger-concurrent-queue.md)
 - [ ] base-layout-construction-tips [2026-05-21] #research #construction #layout Base Layout / Construction tips: fold community base-building heuristics into Construction minister spatial lint and dashboard evidence. [plan](.plans/base-layout-construction-tips.md)
 - [ ] deterministic-cos-cabinet-issue-solver [2026-05-20] #design #cos #cabinet **Deterministic CoS Cabinet Issue Solver.** Implement the issue-report parent model and CoS routing plan. [plan](.plans/deterministic-cos-cabinet-issue-solver.md)
