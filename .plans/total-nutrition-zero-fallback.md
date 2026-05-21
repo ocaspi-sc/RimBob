@@ -64,7 +64,7 @@ dotnet test C:\<worktree>\Src\Tests\RimBob.Tests.csproj --no-restore --no-build
 Pass criteria:
 
 - Build is green.
-- All existing tests pass (120/120 baseline per [.plans/recommended-refactorings.md](.plans/recommended-refactorings.md); count may have moved — pass means no regressions).
+- All existing tests pass; 120/120 was the May 15 refactor-baseline count, but the count may have moved, so pass means no regressions.
 - New tests for the three fallback cases pass.
 - The existing `nutrition-signal-gap.json` fixture-driven test still passes with its current expected advice.
 

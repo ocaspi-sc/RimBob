@@ -11,6 +11,15 @@
 ## Captured by /todo
 
 <!-- entries go here -->
+- [x] refactor-baseline-scope-lock [2026-05-15] #refactor #ops Captured the baseline build/test state, searched old advice schema names, and scoped the first refactor slice to schema repair.
+- [x] refactor-advice-priority-schema [2026-05-15] #refactor #advice Replaced severity/priority-score behavior with `AdvicePriority`, priority sorting, and tolerant legacy input parsing.
+- [x] refactor-llm-advice-normalizer [2026-05-15] #refactor #food #llm Split Food LLM advice normalization into orchestration, compatibility parsing, resource requests, suggested actions, and work-type inference.
+- [x] refactor-minister-registry [2026-05-15] #refactor #cabinet Added the minister registry/descriptors for scope metadata, cabinet order, dashboard readiness, manual triggers, prompts, raw output, and manual LLM ingestion.
+- [x] refactor-endpoint-coverage-catalog [2026-05-15] #refactor #system Centralized endpoint coverage metadata beside endpoint mapping instead of hand-maintaining `/api/system/health` rows in `SystemEndpoints`.
+- [x] refactor-rag-retrieval [2026-05-15] #refactor #rag Generalized Mayor/Food RAG retrieval with retrieval profiles, shared retrieval flow, and per-minister query builders.
+- [x] refactor-ingestion-mappers [2026-05-15] #refactor #state Split ingestion aggregate mapping into pure pawn, map, resource, and threat mappers while leaving `IngestionDispatcher` as orchestration.
+- [x] refactor-common-derivations [2026-05-15] #refactor #state Extracted shared season, pawn, threat, building, and map-distance derivation helpers used by Mayor and Food.
+- [x] refactor-briefing-cache [2026-05-15] #refactor #briefing Generalized briefing cache entries with `CachedBriefing<TBriefing>` while preserving Mayor/Food public cache methods.
 - [ ] source-todo-mayor-briefing-context [2026-05-21] #mayor #briefing #state Cover remaining MayorBriefing source TODOs: TrendWindows, CoS digest, recent feedback, AgendaPosture, ScheduleSnapshot, and cold-snap forecast signals.
 - [ ] source-todo-prisoner-surgery-signals [2026-05-21] #welfare #medical #rimapi Add prisoner count and pending surgery operation signals before filling the kept briefing derivation TODOs.
 - [ ] source-todo-lord-hostility-signal [2026-05-21] #defense #rimapi #state Replace the Lord job-name raid heuristic with a live faction-hostility signal when RIMAPI exposes one.
