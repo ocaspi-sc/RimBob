@@ -180,7 +180,6 @@ public sealed record PlantDto
 }
 
 // ── GET /map/animals?map_id ───────────────────────────────────────────────────
-// TODO: confirm exact field names against live RIMAPI for tame vs wild flag.
 public record AnimalDto(
     [property: JsonPropertyName("id")]
     [property: JsonConverter(typeof(FlexibleStringIdJsonConverter))] string Id,
@@ -192,8 +191,7 @@ public record AnimalDto(
 );
 
 // ── GET /map/zones?map_id ─────────────────────────────────────────────────────
-// TODO: zone response shape not fully verified — check live RIMAPI for stockpile
-//       content fields (item list, nutrition totals) vs. needing /map/things instead.
+// Zone rows expose labels, types, and cell counts; stockpile contents come from stored resources.
 public record ZoneDto(
     [property: JsonPropertyName("id")]
     [property: JsonConverter(typeof(FlexibleStringIdJsonConverter))] string Id,

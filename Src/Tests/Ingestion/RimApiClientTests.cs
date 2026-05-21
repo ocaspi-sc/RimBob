@@ -675,6 +675,67 @@ public sealed class RimApiClientTests
     }
 
     [Fact]
+    public async Task CreateGrowZone_PostsPointPayload()
+    {
+        CaptureHandler handler = new(Envelope(new { zone_id = 12 }));
+        using HttpClient http = MakeClient(handler);
+
+        await new RimApiClient(http).CreateGrowZoneAsync(7, "Plant_Rice", 10, 20, 12, 22);
+
+        handler.Path.Should().Be("/api/v1/map/zone/growing");
+        JsonDocument body = JsonDocument.Parse(handler.Body);
+        body.RootElement.GetProperty("map_id").GetInt32().Should().Be(7);
+        body.RootElement.GetProperty("plant_def").GetString().Should().Be("Plant_Rice");
+        body.RootElement.GetProperty("point_a").GetProperty("x").GetInt32().Should().Be(10);
+        body.RootElement.GetProperty("point_a").GetProperty("y").GetInt32().Should().Be(0);
+        body.RootElement.GetProperty("point_a").GetProperty("z").GetInt32().Should().Be(20);
+        body.RootElement.GetProperty("point_b").GetProperty("x").GetInt32().Should().Be(12);
+        body.RootElement.GetProperty("point_b").GetProperty("y").GetInt32().Should().Be(0);
+        body.RootElement.GetProperty("point_b").GetProperty("z").GetInt32().Should().Be(22);
+        body.RootElement.TryGetProperty("rect", out JsonElement _).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task GetLords_WhenApiReturnsForkPayload_MapsCurrentFields()
+    {
+        using HttpClient http = MakeClient(new PathRouter()
+            .Add("lords", Json("""
+                {
+                  "success": true,
+                  "data": [
+                    {
+                      "load_id": 402,
+                      "faction_name": "Pirate Band",
+                      "faction_def_name": "Pirate",
+                      "lord_job_type": "LordJob_AssaultColony",
+                      "current_toil_name": "LordToil_AssaultColony",
+                      "ticks_in_toil": 100,
+                      "num_pawns_lost_violently": 0,
+                      "num_pawns_ever_gained": 2,
+                      "owned_pawn_ids": ["p1", "p2"],
+                      "owned_building_ids": [],
+                      "quest_tags": [],
+                      "in_signal_leave": null,
+                      "any_active_pawn": true
+                    }
+                  ],
+                  "errors": null,
+                  "warnings": null,
+                  "timestamp": null
+                }
+                """)));
+
+        IReadOnlyList<LordDto> result = await new RimApiClient(http).GetLordsAsync(0);
+
+        LordDto lord = result.Should().ContainSingle().Subject;
+        lord.Id.Should().Be("402");
+        lord.JobType.Should().Be("LordJob_AssaultColony");
+        lord.FactionId.Should().Be("Pirate");
+        lord.PawnIds.Should().Equal("p1", "p2");
+        lord.ThreatPoints.Should().BeNull();
+    }
+
+    [Fact]
     public async Task UnforbidThings_PostsSafeEndpointPayload()
     {
         var handler = new CaptureHandler(Envelope(new { changed = 2 }));

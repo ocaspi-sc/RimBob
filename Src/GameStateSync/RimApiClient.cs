@@ -223,7 +223,6 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
     /// <summary>
     /// GET api/v2/colonists/detailed?map_id — full bio + needs + skills + health.
     /// Primary source for ColonistRegistry and LaborBriefing skill data.
-    /// TODO: confirm response is a list; the v2 controller shape is not fully cached in rimapi.md.
     /// </summary>
     public Task<IReadOnlyList<ColonistDetailedDto>> GetColonistsDetailedAsync(
         int mapId, CancellationToken ct = default) =>
@@ -391,22 +390,26 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
     /// <summary>
     /// POST api/v1/map/zone/growing — create a grow zone over a rect with a crop def.
     /// Owned by Food minister. Only call via the HTN planner primitive.
-    /// TODO: confirm request body shape { "map_id", "plant_def", "rect": {x1,y1,x2,y2} }.
     /// </summary>
     public async Task CreateGrowZoneAsync(
         int mapId, string plantDef, int x1, int z1, int x2, int z2,
         CancellationToken ct = default)
     {
-        var body = new { map_id = mapId, plant_def = plantDef,
-                         rect = new { x1, z1, x2, z2 } };
-        var response = await http.PostAsJsonAsync("api/v1/map/zone/growing", body, ct);
+        object body = new
+        {
+            map_id = mapId,
+            plant_def = plantDef,
+            point_a = new { x = x1, y = 0, z = z1 },
+            point_b = new { x = x2, y = 0, z = z2 }
+        };
+        HttpResponseMessage response = await http.PostAsJsonAsync("api/v1/map/zone/growing", body, ct);
         await EnsureWriteAcceptedAsync(response, "api/v1/map/zone/growing", ct);
     }
 
     /// <summary>
     /// POST api/v1/order/designate/area — designate Hunt / Harvest / Mine / Deconstruct
     /// over a rect. Used by Food (harvest, hunt) and Construction (mine, decon).
-    /// TODO: confirm request body shape { "map_id", "designation", "rect" }.
+    /// RIMAPI accepts designation/type and either point_a/point_b or rect.
     /// </summary>
     public async Task DesignateAreaAsync(
         int mapId, string designation, int x1, int z1, int x2, int z2,

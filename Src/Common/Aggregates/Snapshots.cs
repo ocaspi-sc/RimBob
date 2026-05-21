@@ -54,8 +54,7 @@ public sealed record ColonistSkill(string Def, int Level, string Passion);
 
 public sealed record StockpileLedger(
     IReadOnlyList<StockpileZone>     Zones,
-    // Per-def counts aggregated across all stockpile zones. Empty if RIMAPI's zone
-    // shape doesn't carry item lists — see TODO at MapDto.cs.
+    // Per-def counts aggregated from stored resources when available.
     IReadOnlyDictionary<string, int> ItemsByDef
 );
 
