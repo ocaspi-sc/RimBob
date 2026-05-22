@@ -17,6 +17,10 @@ Direct plans:
 - [RIMAPI Blueprint Placement Endpoint](../../../.plans/rimapi-blueprint-placement-endpoint.md) - fork-side validate/place/read support for future `place_blueprint` actions.
 - [Deterministic CoS Cabinet Issue Solver](../../../.plans/deterministic-cos-cabinet-issue-solver.md) - issue-report routing, including Construction-owned issue classes and cross-minister requests.
 
+Reference corpora:
+
+- [Placement Algorithm References](../../placement_algorithms/README.md) - algorithmic building blocks for efficient Construction candidate generation, pruning, scoring, and validation.
+
 Direct todo entries in [HumanTodo.md](../../../HumanTodo.md):
 
 - `source-todo-building-condition-read` - add building hitpoint/power/working-state reads before Construction relies on condition evidence.
