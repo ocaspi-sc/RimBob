@@ -36,7 +36,7 @@ public sealed class AdviceNormalizationTests
     }
 
     [Fact]
-    public void ResourceRequestNormalizer_RepairsLegacyAliasesAndWorkType()
+    public void ResourceRequestNormalizer_MapsLegacyRequestsIntoTypedArrays()
     {
         JsonNode? root = JsonNode.Parse("""
         [
@@ -48,14 +48,13 @@ public sealed class AdviceNormalizationTests
         ]
         """);
 
-        IReadOnlyList<ResourceRequest> requests = ResourceRequestNormalizer.Normalize(
+        NormalizedFlagRequests requests = ResourceRequestNormalizer.NormalizeLegacyRequests(
             root,
             AdvicePriority.High,
             Context(),
             Json);
 
-        ResourceRequest request = requests.Should().ContainSingle().Subject;
-        request.Kind.Should().Be(ResourceRequestKind.Labor);
+        LaborRequest request = requests.LaborRequests.Should().ContainSingle().Subject;
         request.WorkType.Should().Be(WorkType.Cook);
         request.Skill.Should().Be("Cooking");
         request.Priority.Should().Be(AdvicePriority.High);

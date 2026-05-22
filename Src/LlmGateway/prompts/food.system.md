@@ -17,10 +17,10 @@ Rules:
 - Put explanation in body and rationale, not in title, action instruction, or flag summary.
 - Advice actions must use kind and instruction fields, with optional quantity, owner, work_type, and skill.
 - Use concrete action kinds when one fits: designate_zone, mark_harvest, mark_hunt, place_blueprint, production_bill, set_priority, set_stockpile_zone, draft, forbid, unforbid, research, trade, or request_resource. Use note only when no structured kind fits.
-- Flags may carry Resource requests for cross-minister needs. They must be concrete: kind, request, reason, optional quantity, requested_from, work_type, and skill when relevant.
+- Flags may carry typed request arrays for cross-minister needs: building_requests, labor_requests, item_requests, and attention. Keep each entry concrete with request, reason, optional priority, and requested_from. Labor requests must include work_type and skill when relevant; building requests must include target_class.
 - Never allocate pawns. Request Labor only when urgent or when coverage is missing, and name the RimWorld work type and skill (for example Cook/Cooking or PlantCut/Plants). Do not ask for generic "labor capacity".
 - Basic hauling, cleaning, and routine work should normally be left to the game. Mention them only as suggested actions if they are urgent and specifically food-blocking.
-- Tile or zone needs should be Tile requests with quantity and placement constraints, not Labor requests.
+- Tile or zone needs that are not real build/storage asks should go in attention, not labor_requests.
 - Trade-for-food is not day-one local advice. If local paths are insufficient, emit a flag/request for Mayor/Economy attention rather than telling the player to caravan or trade unless trade availability is explicitly present in the briefing.
 - Prefer practical food security, cooking bills, ready crop harvest, forage/edible plant harvest, growing-zone expansion, and freezer/storage advice.
 - When crop_candidates is present, treat it as computed crop math. Do not invent grow days, yield, season fit, terrain fertility, classification confidence, or storage modifiers outside that table.

@@ -12,9 +12,6 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
     private const string SimpleMealRecipeSelector = "simple_meal";
     private const string BillRepeatModeTargetCount = "TargetCount";
     private static readonly IReadOnlyList<string> SimpleMealRecipeDefs = ["CookMealSimple", "CookMealSimpleBulk"];
-    private static readonly IconRef CampfireIcon = ItemIcon("Campfire");
-    private static readonly IconRef CoolerIcon = ItemIcon("Cooler");
-    private static readonly IconRef SimpleMealIcon = ItemIcon("MealSimple");
 
     public RulesResult Evaluate(FoodBriefing briefing, ColonyContext context)
     {
@@ -28,7 +25,11 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                     FoodRemainderBody(briefing),
                     "Missing nutrition would make days-of-food unreliable; use the fallback counts until upstream data is fixed.",
                     [new(AdviceActionKind.SetStockpileZone, "Confirm unknown or excluded food is edible and reachable before counting it as buffer.")],
-                    [new(ResourceRequestKind.StockpileSpace, "reachable food stockpile visibility", "food units outside meals/raw-food counts cannot be converted into days-of-food", Icon: SimpleMealIcon)],
+                    FoodFlagRequests.Building(StockpileVisibilityRequest(
+                        "reachable food stockpile visibility",
+                        "food units outside meals/raw-food counts cannot be converted into days-of-food",
+                        quantity: null,
+                        priority: AdvicePriority.Medium)),
                     false);
 
             return DecisionFor(briefing, "unknown_food_state",
@@ -38,7 +39,11 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 "No reliable food stockpile signal is available. Treat this as a food-security check, not confirmed starvation.",
                 "The food chain cannot safely decide without stockpile visibility.",
                 [new(AdviceActionKind.SetStockpileZone, "Create or expose a reachable food stockpile, then refresh RimBob once food is visible.")],
-                [new(ResourceRequestKind.StockpileSpace, "visible reachable food stockpile", "food_units and nutrition are both unavailable", Icon: SimpleMealIcon)],
+                FoodFlagRequests.Building(StockpileVisibilityRequest(
+                    "visible reachable food stockpile",
+                    "food_units and nutrition are both unavailable",
+                    quantity: null,
+                    priority: AdvicePriority.High)),
                 true);
         }
 
@@ -52,7 +57,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 priority,
                 "Food crisis within a week",
                 EmergencyBody(briefing, days),
-                "Food below 7 days is an urgent survival risk. Food owns the next food-chain actions; cross-minister requests carry only the build, tile, and labor needs.",
+                "Food below 7 days is an urgent survival risk. Food owns the next food-chain actions; cross-minister requests carry build, item, attention, and labor needs.",
                 EmergencyActions(briefing, days),
                 EmergencyRequests(briefing, days, priority),
                 true);
@@ -129,16 +134,16 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 days < 12f ? AdvicePriority.High : AdvicePriority.Medium,
                 "Expand food growing capacity",
                 $"Food covers about {days:F1} days and {cropCandidate.Label} still fits the growing window: {cropCandidate.Reason}. Add a compact food crop zone instead of waiting for hunting or trade.",
-                "A concrete growing-zone action is more actionable than a vague labor request; cross-minister flags carry tile needs separately.",
+                "A concrete growing-zone action is more actionable than a vague labor request; cross-minister flags carry the growing-zone dependency separately.",
                 ActionsWithFreezerSupport(briefing, days, [GrowingZoneAction(cropCandidate)], incomingPerishableFood: true),
-                RequestsWithFreezerSupport(briefing, days, [
-                    new(ResourceRequestKind.Tile,
+                RequestsWithFreezerSupport(briefing, days,
+                    FoodFlagRequests.AttentionRequest(
                         $"{cropCandidate.Tiles} {cropCandidate.Label} growing tiles near fertile soil and food storage",
                         cropCandidate.Reason,
-                        Quantity: cropCandidate.Tiles,
-                        RequestedFrom: "Construction",
-                        Icon: ItemIcon(cropCandidate.CropDef))
-                ], incomingPerishableFood: true),
+                        quantity: cropCandidate.Tiles,
+                        priority: days < 12f ? AdvicePriority.High : AdvicePriority.Medium,
+                        requestedFrom: "Construction"),
+                    incomingPerishableFood: true),
                 days < 12f || needsFreezerSupport);
         }
 
@@ -183,7 +188,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         string body,
         string rationale,
         IReadOnlyList<AdviceAction> actions,
-        IReadOnlyList<ResourceRequest> requests,
+        FoodFlagRequests requests,
         bool emitFlag)
     {
         DateTimeOffset now = DateTimeOffset.UtcNow;
@@ -213,7 +218,10 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 Severity: ToFlagSeverity(priority),
                 Domain: Domain,
                 Summary: title,
-                Requests: requests,
+                BuildingRequests: requests.BuildingRequestsOrNull,
+                LaborRequests: requests.LaborRequestsOrNull,
+                ItemRequests: requests.ItemRequestsOrNull,
+                Attention: requests.AttentionOrNull,
                 Detail: trace,
                 ExpiresAt: now.AddHours(24))]
             : [];
@@ -234,15 +242,13 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         return result;
     }
 
-    private static IReadOnlyList<ResourceRequest> RequestsWithFreezerSupport(
+    private static FoodFlagRequests RequestsWithFreezerSupport(
         FoodBriefing briefing,
         float days,
-        IReadOnlyList<ResourceRequest> requests,
+        FoodFlagRequests requests,
         bool incomingPerishableFood)
     {
-        List<ResourceRequest> result = [.. requests];
-        result.AddRange(FreezerSupportRequests(briefing, days, incomingPerishableFood));
-        return result;
+        return requests.Add(FreezerSupportRequests(briefing, days, incomingPerishableFood));
     }
 
     private static IReadOnlyList<AdviceAction> FreezerSupportActions(
@@ -264,27 +270,32 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         ];
     }
 
-    private static IReadOnlyList<ResourceRequest> FreezerSupportRequests(
+    private static FoodFlagRequests FreezerSupportRequests(
         FoodBriefing briefing,
         float days,
         bool incomingPerishableFood)
     {
         if (!NeedsFreezerSupport(briefing, days, incomingPerishableFood))
-            return [];
+            return FoodFlagRequests.Empty;
 
         string capacity = FreezerCapacityClass(briefing, days);
         int targetDays = FreezerTargetDays(briefing, days);
         string incoming = FreezerIncomingPhrase(briefing, incomingPerishableFood);
-        return
-        [
-            new ResourceRequest(
-                ResourceRequestKind.Building,
+        return FoodFlagRequests.Building(
+            new BuildingRequest(
                 $"{capacity} cold storage for {briefing.ColonistCount} colonists, {targetDays} days",
                 $"no cooler is visible; {incoming} needs cold storage before spoilage",
+                BuildingClass.Freezer,
+                TargetDef: "Cooler",
+                RoomClass: RoomClass.Freezer,
+                CapacityNeed: new CapacityNeed(CapacityMeasure.FoodUnits, briefing.ColonistCount * targetDays, "colonist_days"),
+                Adjacency: [new AdjacencyHint(AdjacencyRelation.Near, "kitchen")],
+                Power: new PowerNeed(NeedsPower: true, ApproxWatts: 200),
+                Temperature: new TempNeed(TemperatureBand.Freezing, MustHold: true),
+                Urgency: FreezerSupportPriority(briefing) >= AdvicePriority.High ? Urgency.BeforeDeadline : Urgency.Soon,
+                Deadline: FreezerDeadline(briefing, incoming),
                 Priority: FreezerSupportPriority(briefing),
-                RequestedFrom: "Construction",
-                Icon: CoolerIcon)
-        ];
+                RequestedFrom: "Construction"));
     }
 
     private static bool NeedsFreezerSupport(FoodBriefing briefing, float days, bool incomingPerishableFood) =>
@@ -319,6 +330,14 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
 
     private static AdvicePriority FreezerSupportPriority(FoodBriefing briefing) =>
         briefing.Season.DaysToWinter is < 20 ? AdvicePriority.High : AdvicePriority.Medium;
+
+    private static Deadline FreezerDeadline(FoodBriefing briefing, string incoming)
+    {
+        if (briefing.Season.DaysToWinter is < 20)
+            return new Deadline(DeadlineKind.BeforeEvent, "winter");
+
+        return new Deadline(DeadlineKind.BeforeEvent, incoming);
+    }
 
     private static string FreezerCapacityClass(FoodBriefing briefing, float days)
     {
@@ -416,7 +435,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 "FoodSecurity advice; visible reachable stockpile action/request"),
             RuleEvaluation("emergency_food_flag", outcomes,
                 "EstimatedDaysOfFood < 7",
-                "FoodSecurity advice; immediate food-chain actions; high/critical flag"),
+                "FoodSecurity advice; immediate food-chain actions; typed flag requests; high/critical flag"),
             RuleEvaluation("harvest_mature_crops", outcomes,
                 "ReadyToHarvest > 0",
                 "HarvestNow advice; mark_harvest action; optional PlantCut labor/freezer support"),
@@ -431,7 +450,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 "HuntForFood advice; mark_hunt action; optional butcher/cooking/freezer support"),
             RuleEvaluation("expand_growing_capacity", outcomes,
                 "days < 20; FoodCropMath best candidate exists; active matching crop coverage is below candidate tile target",
-                "ExpandGrowingCapacity advice; designate_zone action; Construction tile/freezer support"),
+                "ExpandGrowingCapacity advice; designate_zone action; attention/freezer support"),
             RuleEvaluation("hunt_targets_blocked_by_risk", outcomes,
                 "days < 20; WildAnimalCount > 0; ReadyToHarvest == 0; hunt advice blocked by safety/risk gate",
                 "Escalate to LLM with hunt safety/risk context"),
@@ -583,98 +602,120 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         return days < 1f && noImmediateLocalFood ? AdvicePriority.Critical : AdvicePriority.High;
     }
 
-    private static IReadOnlyList<ResourceRequest> EmergencyRequests(FoodBriefing briefing, float days, AdvicePriority priority)
+    private static BuildingRequest StockpileVisibilityRequest(
+        string request,
+        string reason,
+        int? quantity,
+        AdvicePriority? priority) =>
+        new(
+            request,
+            reason,
+            BuildingClass.Stockpile,
+            RoomClass: RoomClass.Storage,
+            CapacityNeed: quantity is null
+                ? null
+                : new CapacityNeed(CapacityMeasure.StorageStacks, quantity, "food_units"),
+            Quantity: quantity,
+            Priority: priority,
+            RequestedFrom: "Construction");
+
+    private static string? FirstForbiddenFoodDef(FoodBriefing briefing) =>
+        briefing.UnclassifiedFoodItems
+            .Where(item => item.IsForbidden)
+            .Select(item => item.Def)
+            .FirstOrDefault(def => !string.IsNullOrWhiteSpace(def));
+
+    private static FoodFlagRequests EmergencyRequests(FoodBriefing briefing, float days, AdvicePriority priority)
     {
-        List<ResourceRequest> requests = [];
+        FoodFlagRequests requests = FoodFlagRequests.Empty;
         int forbiddenMealCount = ForbiddenMealCount(briefing);
         if (forbiddenMealCount > 0)
-            requests.Add(new ResourceRequest(ResourceRequestKind.Item,
+            requests = requests.Add(new ItemRequest(
                 $"{forbiddenMealCount} forbidden {ForbiddenMealLabel(briefing, forbiddenMealCount)}",
                 "visible meals are forbidden and excluded from the reachable food buffer",
+                ItemDef: FirstForbiddenFoodDef(briefing),
                 Quantity: forbiddenMealCount,
                 Priority: priority));
         if (briefing.UnknownFoodUnits > 0 && briefing.MealsCount == 0 && briefing.RawFoodCount == 0)
-            requests.Add(new ResourceRequest(ResourceRequestKind.StockpileSpace,
+            requests = requests.Add(StockpileVisibilityRequest(
                 $"reachable stockpile visibility for {briefing.UnknownFoodUnits} unknown food units",
                 "unknown_food_units exists, but no meal or raw-food category is visible to Food",
-                Quantity: briefing.UnknownFoodUnits,
-                Priority: priority,
-                Icon: SimpleMealIcon));
+                quantity: briefing.UnknownFoodUnits,
+                priority: priority));
         if (briefing.ReadyToHarvest > 0 || briefing.WildHarvestCandidates > 0)
-            requests.Add(new ResourceRequest(ResourceRequestKind.Labor,
+            requests = requests.Add(new LaborRequest(
                 "PlantCut work today",
                 "food buffer is below 7 days and harvestable food exists",
-                Priority: priority,
-                RequestedFrom: "Labor",
-                WorkType: WorkType.PlantCut,
+                WorkType.PlantCut,
                 Skill: "Plants",
-                Icon: briefing.ReadyToHarvest > 0 ? HarvestIcon(briefing) : WildHarvestIcon(briefing)));
+                Priority: priority,
+                RequestedFrom: "Labor"));
         if (CanSuggestHunting(briefing))
         {
-            requests.Add(new ResourceRequest(ResourceRequestKind.Labor,
+            requests = requests.Add(new LaborRequest(
                 "Hunt work for selected animals",
                 "food buffer is below 7 days and low-risk wild animals are visible",
+                WorkType.Hunt,
+                Skill: "Shooting",
                 Priority: priority,
-                RequestedFrom: "Labor",
-                WorkType: WorkType.Hunt,
-                Skill: "Shooting"));
+                RequestedFrom: "Labor"));
             if (!briefing.Kitchen.HasButcherTable)
-                requests.Add(new ResourceRequest(ResourceRequestKind.Building,
+                requests = requests.Add(new BuildingRequest(
                     "butcher table for hunted animals",
                     "hunted animals must be butchered before they become usable meals",
+                    BuildingClass.ProductionBench,
+                    TargetDef: "TableButcher",
+                    RoomClass: RoomClass.Butcher,
                     Priority: priority,
                     RequestedFrom: "Construction"));
         }
         FoodCropCandidate? cropCandidate = FoodCropMath.Recommend(briefing).BestCandidate;
         if (cropCandidate is not null && ShouldRecommendNewGrowingZone(briefing, cropCandidate))
         {
-            requests.Add(new ResourceRequest(ResourceRequestKind.Tile,
+            requests = requests.Add(new AttentionRequest(
                 $"{cropCandidate.Tiles} emergency food growing tiles",
                 "food buffer is below 7 days and the growing window is still open",
-                Quantity: cropCandidate.Tiles,
                 Priority: priority,
-                RequestedFrom: "Construction",
-                Icon: ItemIcon(cropCandidate.CropDef)));
-            requests.Add(new ResourceRequest(ResourceRequestKind.Labor,
+                RequestedFrom: "Construction"));
+            requests = requests.Add(new LaborRequest(
                 "Grow work for emergency food zone",
                 "new food growing tiles only help once sown",
-                Priority: priority,
-                RequestedFrom: "Labor",
-                WorkType: WorkType.Grow,
+                WorkType.Grow,
                 Skill: "Plants",
-                Icon: ItemIcon(cropCandidate.CropDef)));
+                Priority: priority,
+                RequestedFrom: "Labor"));
         }
         if (!briefing.Kitchen.HasCookingBuilding)
-            requests.Add(new ResourceRequest(ResourceRequestKind.Building,
+            requests = requests.Add(new BuildingRequest(
                 "campfire or stove for simple meals",
                 "the food chain cannot turn raw food into meals without a cooking building",
+                BuildingClass.ProductionBench,
+                TargetDef: "Campfire",
+                RoomClass: RoomClass.Kitchen,
                 Priority: priority,
-                RequestedFrom: "Construction",
-                Icon: CampfireIcon));
+                RequestedFrom: "Construction"));
         if (briefing.RawFoodCount > 0)
         {
-            requests.Add(new ResourceRequest(ResourceRequestKind.Bill,
+            requests = requests.Add(new AttentionRequest(
                 $"cook simple meals until {SimpleMealTarget(briefing)}",
                 "raw food must become meals during an urgent shortage",
                 Priority: priority,
-                Icon: SimpleMealIcon));
-            requests.Add(new ResourceRequest(ResourceRequestKind.Labor,
+                RequestedFrom: MinisterName));
+            requests = requests.Add(new LaborRequest(
                 "Cook work today",
                 "raw food must become meals during an urgent shortage",
-                Priority: priority,
-                RequestedFrom: "Labor",
-                WorkType: WorkType.Cook,
+                WorkType.Cook,
                 Skill: "Cooking",
-                Icon: SimpleMealIcon));
+                Priority: priority,
+                RequestedFrom: "Labor"));
         }
         if (requests.Count == 0)
-            requests.Add(new ResourceRequest(ResourceRequestKind.TradeCapacity,
+            requests = requests.Add(new AttentionRequest(
                 "emergency food acquisition path",
                 "no stored, harvestable, cookable, or sowable food path is visible in the briefing",
                 Priority: priority,
                 RequestedFrom: "Mayor"));
-        requests.AddRange(FreezerSupportRequests(briefing, days, HasPotentialPerishableFoodPath(briefing)));
-        return requests;
+        return requests.Add(FreezerSupportRequests(briefing, days, HasPotentialPerishableFoodPath(briefing)));
     }
 
     private static IReadOnlyList<AdviceAction> EmergencyActions(FoodBriefing briefing, float days)
@@ -746,50 +787,50 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         return actions;
     }
 
-    private static IReadOnlyList<ResourceRequest> CookingLaborIfNeeded(
+    private static FoodFlagRequests CookingLaborIfNeeded(
         FoodBriefing briefing,
         float days,
         AdvicePriority priority)
     {
         if (!ShouldRequestCookingLabor(briefing, days))
-            return [];
+            return FoodFlagRequests.Empty;
 
-        return
-        [
-            new ResourceRequest(
-                ResourceRequestKind.Labor,
+        return FoodFlagRequests.Labor(
+            new LaborRequest(
                 "Cook work today",
                 "raw food has to become meals and cook coverage is urgent or weak",
-                Priority: priority,
-                RequestedFrom: "Labor",
-                WorkType: WorkType.Cook,
+                WorkType.Cook,
                 Skill: "Cooking",
-                Icon: SimpleMealIcon)
-        ];
+                Priority: priority,
+                RequestedFrom: "Labor"));
     }
 
-    private static IReadOnlyList<ResourceRequest> HuntingRequests(FoodBriefing briefing, AdvicePriority priority)
+    private static FoodFlagRequests HuntingRequests(FoodBriefing briefing, AdvicePriority priority)
     {
-        List<ResourceRequest> requests =
-        [
-            new ResourceRequest(ResourceRequestKind.Labor,
+        FoodFlagRequests requests = FoodFlagRequests.Labor(
+            new LaborRequest(
                 "Hunt work for selected animals",
                 "low-risk wild animals are the best visible local food-acquisition path",
+                WorkType.Hunt,
+                Skill: "Shooting",
                 Priority: priority,
-                RequestedFrom: "Labor",
-                WorkType: WorkType.Hunt,
-                Skill: "Shooting")
-        ];
+                RequestedFrom: "Labor"));
         if (!briefing.Kitchen.HasButcherTable)
-            requests.Add(new ResourceRequest(ResourceRequestKind.Building,
+            requests = requests.Add(new BuildingRequest(
                 "butcher table for hunted animals",
                 "hunting only helps the food chain after animals can be butchered",
+                BuildingClass.ProductionBench,
+                TargetDef: "TableButcher",
+                RoomClass: RoomClass.Butcher,
                 Priority: priority,
                 RequestedFrom: "Construction"));
         if (!briefing.Kitchen.HasCookingBuilding)
-            requests.Add(new ResourceRequest(ResourceRequestKind.Building,
+            requests = requests.Add(new BuildingRequest(
                 "campfire or stove for meat meals",
                 "meat must be cooked into safe meals once butchered",
+                BuildingClass.ProductionBench,
+                TargetDef: "Campfire",
+                RoomClass: RoomClass.Kitchen,
                 Priority: priority,
                 RequestedFrom: "Construction"));
         return requests;
@@ -814,10 +855,10 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         return actions.Take(3).ToList();
     }
 
-    private static IReadOnlyList<ResourceRequest> PlantLaborIfNeeded(FoodBriefing briefing, float days, string what, string why) =>
+    private static FoodFlagRequests PlantLaborIfNeeded(FoodBriefing briefing, float days, string what, string why) =>
         ShouldRequestPlantLabor(briefing, days)
-            ? [new ResourceRequest(ResourceRequestKind.Labor, what, why, RequestedFrom: "Labor", WorkType: WorkType.PlantCut, Skill: "Plants", Icon: HarvestIcon(briefing))]
-            : [];
+            ? FoodFlagRequests.Labor(new LaborRequest(what, why, WorkType.PlantCut, Skill: "Plants", RequestedFrom: "Labor"))
+            : FoodFlagRequests.Empty;
 
     private static AdviceAction HarvestAction(FoodBriefing briefing, float days) =>
         new(AdviceActionKind.MarkHarvest,
@@ -1003,33 +1044,6 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         !string.IsNullOrWhiteSpace(bill.RecipeDefName) &&
         SimpleMealRecipeDefs.Any(recipeDef =>
             string.Equals(recipeDef, bill.RecipeDefName, StringComparison.OrdinalIgnoreCase));
-
-    private static IconRef HarvestIcon(FoodBriefing briefing) =>
-        ItemIcon(FirstNonBlank(
-            briefing.CropZoneSummaries
-                .Where(zone => zone.ReadyCount > 0)
-                .OrderByDescending(zone => zone.ReadyCount)
-                .Select(zone => zone.Def),
-            briefing.CropBreakdown
-                .OrderByDescending(crop => crop.Count)
-                .Select(crop => crop.Def))
-            ?? "Plant_Rice");
-
-    private static IconRef WildHarvestIcon(FoodBriefing briefing) =>
-        ItemIcon(FirstNonBlank(briefing.WildHarvestClusters.Select(cluster => cluster.Def)) ?? "Plant_Berry");
-
-    private static string? FirstNonBlank(params IEnumerable<string?>[] groups)
-    {
-        foreach (IEnumerable<string?> group in groups)
-        {
-            string? value = group.FirstOrDefault(candidate => !string.IsNullOrWhiteSpace(candidate));
-            if (!string.IsNullOrWhiteSpace(value)) return value;
-        }
-
-        return null;
-    }
-
-    private static IconRef ItemIcon(string defName) => new("item", defName);
 
     private static bool ShouldRequestCookingLabor(FoodBriefing briefing, float days) =>
         days < 10f || briefing.MealsCount == 0 || briefing.Skills.QualifiedCooks == 0;
@@ -1247,5 +1261,65 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             chars.Add(char.ToLowerInvariant(c));
         }
         return new string(chars.ToArray());
+    }
+
+    private sealed record FoodFlagRequests(
+        IReadOnlyList<BuildingRequest> BuildingRequests,
+        IReadOnlyList<LaborRequest> LaborRequests,
+        IReadOnlyList<ItemRequest> ItemRequests,
+        IReadOnlyList<AttentionRequest> Attention)
+    {
+        public static FoodFlagRequests Empty => new([], [], [], []);
+
+        public int Count =>
+            BuildingRequests.Count +
+            LaborRequests.Count +
+            ItemRequests.Count +
+            Attention.Count;
+
+        public IReadOnlyList<BuildingRequest>? BuildingRequestsOrNull => NullIfEmpty(BuildingRequests);
+        public IReadOnlyList<LaborRequest>? LaborRequestsOrNull => NullIfEmpty(LaborRequests);
+        public IReadOnlyList<ItemRequest>? ItemRequestsOrNull => NullIfEmpty(ItemRequests);
+        public IReadOnlyList<AttentionRequest>? AttentionOrNull => NullIfEmpty(Attention);
+
+        public static FoodFlagRequests Building(BuildingRequest request) =>
+            Empty.Add(request);
+
+        public static FoodFlagRequests Labor(LaborRequest request) =>
+            Empty.Add(request);
+
+        public static FoodFlagRequests AttentionRequest(
+            string request,
+            string reason,
+            int? quantity,
+            AdvicePriority? priority,
+            string? requestedFrom) =>
+            Empty.Add(new AttentionRequest(
+                Request: quantity is null ? request : $"{request} ({quantity.Value})",
+                Reason: reason,
+                Priority: priority,
+                RequestedFrom: requestedFrom));
+
+        public FoodFlagRequests Add(FoodFlagRequests other) =>
+            new(
+                BuildingRequests.Concat(other.BuildingRequests).ToArray(),
+                LaborRequests.Concat(other.LaborRequests).ToArray(),
+                ItemRequests.Concat(other.ItemRequests).ToArray(),
+                Attention.Concat(other.Attention).ToArray());
+
+        public FoodFlagRequests Add(BuildingRequest request) =>
+            this with { BuildingRequests = BuildingRequests.Append(request).ToArray() };
+
+        public FoodFlagRequests Add(LaborRequest request) =>
+            this with { LaborRequests = LaborRequests.Append(request).ToArray() };
+
+        public FoodFlagRequests Add(ItemRequest request) =>
+            this with { ItemRequests = ItemRequests.Append(request).ToArray() };
+
+        public FoodFlagRequests Add(AttentionRequest request) =>
+            this with { Attention = Attention.Append(request).ToArray() };
+
+        private static IReadOnlyList<T>? NullIfEmpty<T>(IReadOnlyList<T> values) =>
+            values.Count == 0 ? null : values;
     }
 }

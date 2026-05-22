@@ -100,7 +100,7 @@ public sealed class AdviceBusTests
         snapshots.Should().ContainSingle();
         snapshots[0].Flags.Should().ContainSingle().Which.Id.Should().Be("food:emergency");
         AdviceSnapshot active = bus.ActiveSnapshot();
-        active.Flags.Should().ContainSingle().Which.Requests.Should().ContainSingle().Which.WorkType.Should().Be(WorkType.Cook);
+        active.Flags.Should().ContainSingle().Which.LaborRequests.Should().ContainSingle().Which.WorkType.Should().Be(WorkType.Cook);
     }
 
     [Fact]
@@ -173,7 +173,7 @@ public sealed class AdviceBusTests
         active.Actions.Should().NotContain(action => action.Kind == AdviceActionKind.SetPriority);
         AdviceSnapshot snapshot = bus.ActiveSnapshot();
         snapshot.Flags.Should().ContainSingle()
-            .Which.Requests.Should().ContainSingle()
+            .Which.LaborRequests.Should().ContainSingle()
             .Which.WorkType.Should().Be(WorkType.Cook);
     }
 
@@ -280,16 +280,15 @@ public sealed class AdviceBusTests
         Severity: FlagSeverity.High,
         Domain: "food",
         Summary: "Food needs work",
-        Requests:
+        LaborRequests:
         [
-            new ResourceRequest(
-                ResourceRequestKind.Labor,
-                "Cook work today",
-                "raw food has to become meals",
-                Priority: AdvicePriority.High,
-                RequestedFrom: "Labor",
+            new LaborRequest(
+                Request: "Cook work today",
+                Reason: "raw food has to become meals",
                 WorkType: WorkType.Cook,
-                Skill: "Cooking")
+                Skill: "Cooking",
+                Priority: AdvicePriority.High,
+                RequestedFrom: "Labor")
         ]);
 
     private static AdviceChainModel Chain() => new(

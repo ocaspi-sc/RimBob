@@ -18,8 +18,14 @@ public record AgentFlag(
     string Domain,
     [property: JsonPropertyName("summary")]
     string Summary,
-    [property: JsonPropertyName("requests")]
-    IReadOnlyList<ResourceRequest>? Requests = null,
+    [property: JsonPropertyName("building_requests")]
+    IReadOnlyList<BuildingRequest>? BuildingRequests = null,
+    [property: JsonPropertyName("labor_requests")]
+    IReadOnlyList<LaborRequest>? LaborRequests = null,
+    [property: JsonPropertyName("item_requests")]
+    IReadOnlyList<ItemRequest>? ItemRequests = null,
+    [property: JsonPropertyName("attention")]
+    IReadOnlyList<AttentionRequest>? Attention = null,
     [property: JsonPropertyName("detail")]
     string? Detail = null,
     [property: JsonPropertyName("expires_at")]

@@ -56,16 +56,15 @@ internal static class AdviceSnapshotPolicy
             Severity: SeverityFor(sourceAdvice.Priority),
             Domain: FoodDomain,
             Summary: "Food needs Cook labor",
-            Requests:
+            LaborRequests:
             [
-                new ResourceRequest(
-                    ResourceRequestKind.Labor,
-                    "Cook work today",
-                    "raw food has to become meals before it solves food pressure",
-                    Priority: sourceAdvice.Priority,
-                    RequestedFrom: sourceAction.Owner ?? "Labor",
+                new LaborRequest(
+                    Request: "Cook work today",
+                    Reason: "raw food has to become meals before it solves food pressure",
                     WorkType: WorkType.Cook,
-                    Skill: sourceAction.Skill ?? "Cooking")
+                    Skill: sourceAction.Skill ?? "Cooking",
+                    Priority: sourceAdvice.Priority,
+                    RequestedFrom: sourceAction.Owner ?? "Labor")
             ],
             Detail: "Migrated from obsolete Food Cook priority advice action.",
             ExpiresAt: sourceAdvice.ExpiresAt));
@@ -89,10 +88,8 @@ internal static class AdviceSnapshotPolicy
     private static bool HasFoodCookLaborRequest(IReadOnlyList<AgentFlag> flags) =>
         flags.Any(flag =>
             string.Equals(flag.SourceMinister, FoodMinister, StringComparison.OrdinalIgnoreCase) &&
-            flag.Requests is not null &&
-            flag.Requests.Any(request =>
-                request.Kind == ResourceRequestKind.Labor &&
-                request.WorkType == WorkType.Cook));
+            flag.LaborRequests is not null &&
+            flag.LaborRequests.Any(request => request.WorkType == WorkType.Cook));
 
     private static FlagSeverity SeverityFor(AdvicePriority priority) =>
         priority switch

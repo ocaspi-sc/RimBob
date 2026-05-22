@@ -76,15 +76,47 @@ internal static class AdviceActionNormalizer
     {
         List<AdviceAction> actions = [];
 
-        foreach (ResourceRequest request in ResourceRequestNormalizer.Normalize(resourceRequestsNode, priority, context, json))
+        NormalizedFlagRequests requests = ResourceRequestNormalizer.NormalizeLegacyRequests(
+            resourceRequestsNode,
+            priority,
+            context,
+            json);
+
+        foreach (BuildingRequest request in requests.BuildingRequests)
         {
             actions.Add(Normalize(new AdviceAction(
                 Kind: AdviceActionKind.RequestResource,
-                Instruction: request.What,
+                Instruction: request.Request,
+                Quantity: request.Quantity,
+                Owner: request.RequestedFrom)));
+        }
+
+        foreach (LaborRequest request in requests.LaborRequests)
+        {
+            actions.Add(Normalize(new AdviceAction(
+                Kind: AdviceActionKind.RequestResource,
+                Instruction: request.Request,
                 Quantity: request.Quantity,
                 Owner: request.RequestedFrom,
                 WorkType: request.WorkType,
                 Skill: request.Skill)));
+        }
+
+        foreach (ItemRequest request in requests.ItemRequests)
+        {
+            actions.Add(Normalize(new AdviceAction(
+                Kind: AdviceActionKind.RequestResource,
+                Instruction: request.Request,
+                Quantity: request.Quantity,
+                Owner: request.RequestedFrom)));
+        }
+
+        foreach (AttentionRequest request in requests.Attention)
+        {
+            actions.Add(Normalize(new AdviceAction(
+                Kind: AdviceActionKind.RequestResource,
+                Instruction: request.Request,
+                Owner: request.RequestedFrom)));
         }
 
         foreach (AdviceAction action in NormalizeLegacyActions(suggestedActionsNode, json))

@@ -76,7 +76,10 @@ public sealed class FoodPromptTests
         builder.FoodSystemPrompt.Should().NotContain("action reason");
         builder.FoodSystemPrompt.Should().Contain("mark_hunt");
         builder.FoodSystemPrompt.Should().Contain("unforbid");
-        builder.FoodSystemPrompt.Should().Contain("Flags may carry Resource requests");
+        builder.FoodSystemPrompt.Should().Contain("Flags may carry typed request arrays");
+        builder.FoodSystemPrompt.Should().Contain("building_requests");
+        builder.FoodSystemPrompt.Should().Contain("labor_requests");
+        builder.FoodSystemPrompt.Should().Contain("item_requests");
         builder.FoodSystemPrompt.Should().NotContain("kind, what, why");
         builder.FoodSystemPrompt.Should().Contain("Do not ask for generic \"labor capacity\"");
         builder.FoodSystemPrompt.Should().Contain("Trade-for-food is not day-one local advice");

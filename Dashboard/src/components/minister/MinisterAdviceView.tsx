@@ -1,6 +1,14 @@
 import { useState } from 'react';
 import type { MayorAgenda, AgendaPriority } from '../../types/agenda';
-import type { AdviceApplyResponse, AdviceItem, AgentFlag, ResourceRequest } from '../../types/advice';
+import type {
+  AdviceApplyResponse,
+  AdviceItem,
+  AgentFlag,
+  AttentionRequest,
+  BuildingRequest,
+  ItemRequest,
+  LaborRequest,
+} from '../../types/advice';
 import type { ScopeConfig } from '../../dashboard/scopes';
 import { applyAdviceAction } from '../../api/advice';
 import { iconUrlFor } from '../../api/icons';
@@ -271,8 +279,8 @@ function AgentFlagsPanel({ flags }: { flags: AgentFlag[] }) {
                 {flag.detail && <span>{flag.detail}</span>}
               </div>
             </header>
-            {(flag.requests?.length ?? 0) > 0 ? (
-              <ResourceRequestTable idPrefix={`${flag.id}-request`} requests={flag.requests ?? []} />
+            {countFlagRequests(flag) > 0 ? (
+              <FlagRequestGroups flag={flag} idPrefix={`${flag.id}-request`} />
             ) : (
               <p className="flag-empty">No explicit requests attached.</p>
             )}
@@ -283,51 +291,214 @@ function AgentFlagsPanel({ flags }: { flags: AgentFlag[] }) {
   );
 }
 
-function ResourceRequestTable({
+function FlagRequestGroups({
+  flag,
   idPrefix,
-  requests,
 }: {
+  flag: AgentFlag;
   idPrefix: string;
-  requests: ResourceRequest[];
 }) {
+  const groups = flagRequestGroups(flag);
+
   return (
-    <div className="dense-table resource-table">
-      <div className="dense-row header">
-        <span>Icon</span>
-        <SemanticLabel icon={iconForField('kind')}><span>Kind</span></SemanticLabel>
-        <SemanticLabel icon={iconForField('request')}><span>Request</span></SemanticLabel>
-        <SemanticLabel icon={iconForField('reason')}><span>Reason</span></SemanticLabel>
-        <SemanticLabel icon={iconForField('quantity')}><span>Qty</span></SemanticLabel>
-        <SemanticLabel icon={iconForField('owner')}><span>Owner</span></SemanticLabel>
-        <SemanticLabel icon={iconForField('work_type')}><span>Work / Skill</span></SemanticLabel>
-        <SemanticLabel icon={iconForField('priority')}><span>Priority</span></SemanticLabel>
-      </div>
-      {requests.map((request, index) => {
-        const requestIcon = iconForActionKind(request.kind);
-        const fallbackIconUrl = request.icon ? iconUrlFor(requestIcon?.ref) : null;
-        return (
-          <div className="dense-row" key={`${idPrefix}-${index}`}>
-            <span className="icon-cell">
-              <GameIcon
-                fallbackSrc={fallbackIconUrl}
-                fallback={requestIcon?.fallback ?? '-'}
-                label={requestIcon?.label ?? `${formatLabel(request.kind)} icon`}
-                size="xs"
-                src={iconUrlFor(request.icon ?? requestIcon?.ref)}
-              />
-            </span>
-            <span>{formatLabel(request.kind)}</span>
-            <span><IconizedText maxIcons={2} text={request.request} /></span>
-            <span><IconizedText maxIcons={2} text={request.reason} /></span>
-            <span>{formatQuantity(request.quantity)}</span>
-            <span>{request.requested_from ?? '-'}</span>
-            <span>{formatWorkSkill(request.work_type, request.skill)}</span>
-            <span>{formatLabel(request.priority)}</span>
+    <div className="typed-request-groups">
+      {groups.map(group => (
+        <section className="typed-request-group" key={`${idPrefix}-${group.key}`}>
+          <h4><SemanticLabel icon={iconForField(group.key)}><span>{group.label}</span></SemanticLabel></h4>
+          <div className="dense-table resource-table">
+            <div className="dense-row header">
+              <span>Icon</span>
+              <SemanticLabel icon={iconForField('kind')}><span>Array</span></SemanticLabel>
+              <SemanticLabel icon={iconForField('request')}><span>Request</span></SemanticLabel>
+              <SemanticLabel icon={iconForField('reason')}><span>Reason</span></SemanticLabel>
+              <SemanticLabel icon={iconForField('quantity')}><span>Detail</span></SemanticLabel>
+              <SemanticLabel icon={iconForField('owner')}><span>Owner</span></SemanticLabel>
+              <SemanticLabel icon={iconForField('work_type')}><span>Work / Skill</span></SemanticLabel>
+              <SemanticLabel icon={iconForField('priority')}><span>Priority</span></SemanticLabel>
+            </div>
+            {group.rows.map((row, index) => {
+              const requestIcon = iconForField(row.iconKey);
+              return (
+                <div className="dense-row" key={`${idPrefix}-${group.key}-${index}`}>
+                  <span className="icon-cell">
+                    <GameIcon
+                      fallback={requestIcon?.fallback ?? '-'}
+                      label={requestIcon?.label ?? `${group.label} icon`}
+                      size="xs"
+                      src={iconUrlFor(requestIcon?.ref)}
+                    />
+                  </span>
+                  <span>{group.label}</span>
+                  <span><IconizedText maxIcons={2} text={row.request} /></span>
+                  <span><IconizedText maxIcons={2} text={row.reason} /></span>
+                  <span>{row.detail}</span>
+                  <span>{row.owner ?? '-'}</span>
+                  <span>{row.workSkill ?? '-'}</span>
+                  <span>{formatLabel(row.priority)}</span>
+                </div>
+              );
+            })}
           </div>
-        );
-      })}
+        </section>
+      ))}
     </div>
   );
+}
+
+type FlagRequestGroup = {
+  key: 'building_requests' | 'labor_requests' | 'item_requests' | 'attention';
+  label: string;
+  rows: FlagRequestRow[];
+};
+
+type FlagRequestRow = {
+  detail: string;
+  iconKey: string;
+  owner?: string | null;
+  priority?: string | null;
+  reason: string;
+  request: string;
+  workSkill?: string | null;
+};
+
+function countFlagRequests(flag: AgentFlag): number {
+  return (flag.building_requests?.length ?? 0) +
+    (flag.labor_requests?.length ?? 0) +
+    (flag.item_requests?.length ?? 0) +
+    (flag.attention?.length ?? 0);
+}
+
+function flagRequestGroups(flag: AgentFlag): FlagRequestGroup[] {
+  const groups: FlagRequestGroup[] = [];
+  if ((flag.building_requests?.length ?? 0) > 0) {
+    groups.push({
+      key: 'building_requests',
+      label: 'Building',
+      rows: flag.building_requests!.map(buildingRequestRow),
+    });
+  }
+  if ((flag.labor_requests?.length ?? 0) > 0) {
+    groups.push({
+      key: 'labor_requests',
+      label: 'Labor',
+      rows: flag.labor_requests!.map(laborRequestRow),
+    });
+  }
+  if ((flag.item_requests?.length ?? 0) > 0) {
+    groups.push({
+      key: 'item_requests',
+      label: 'Item',
+      rows: flag.item_requests!.map(itemRequestRow),
+    });
+  }
+  if ((flag.attention?.length ?? 0) > 0) {
+    groups.push({
+      key: 'attention',
+      label: 'Attention',
+      rows: flag.attention!.map(attentionRequestRow),
+    });
+  }
+  return groups;
+}
+
+function buildingRequestRow(request: BuildingRequest): FlagRequestRow {
+  return {
+    detail: formatBuildingDetail(request),
+    iconKey: request.target_def ? request.target_def : request.target_class,
+    owner: request.requested_from,
+    priority: request.priority,
+    reason: request.reason,
+    request: request.request,
+    workSkill: null,
+  };
+}
+
+function laborRequestRow(request: LaborRequest): FlagRequestRow {
+  return {
+    detail: formatQuantity(request.quantity),
+    iconKey: 'labor_requests',
+    owner: request.requested_from,
+    priority: request.priority,
+    reason: request.reason,
+    request: request.request,
+    workSkill: formatWorkSkill(request.work_type, request.skill),
+  };
+}
+
+function itemRequestRow(request: ItemRequest): FlagRequestRow {
+  return {
+    detail: [request.item_def, formatQuantityDetail(request.quantity)]
+      .filter((value): value is string => Boolean(value))
+      .join(' / ') || '-',
+    iconKey: request.item_def ?? 'item_requests',
+    owner: request.requested_from,
+    priority: request.priority,
+    reason: request.reason,
+    request: request.request,
+    workSkill: null,
+  };
+}
+
+function attentionRequestRow(request: AttentionRequest): FlagRequestRow {
+  return {
+    detail: '-',
+    iconKey: 'attention',
+    owner: request.requested_from,
+    priority: request.priority,
+    reason: request.reason,
+    request: request.request,
+    workSkill: null,
+  };
+}
+
+function formatBuildingDetail(request: BuildingRequest): string {
+  const details = [
+    request.target_class ? `Class: ${formatLabel(request.target_class)}` : null,
+    request.target_def ? `Def: ${request.target_def}` : null,
+    request.room_class ? `Room: ${formatLabel(request.room_class)}` : null,
+    formatCapacityNeed(request.capacity_need),
+    formatAdjacency(request.adjacency),
+    request.power ? `Power: ${request.power.needs_power ? 'yes' : 'no'}${request.power.approx_watts ? `, ${request.power.approx_watts}W` : ''}` : null,
+    request.temperature ? `Temp: ${formatLabel(request.temperature.target_band)}${request.temperature.must_hold ? ', must hold' : ''}` : null,
+    formatMaterials(request.materials_on_hand),
+    request.urgency ? `Urgency: ${formatLabel(request.urgency)}` : null,
+    formatDeadline(request.deadline),
+    formatQuantityDetail(request.quantity),
+  ].filter((value): value is string => Boolean(value));
+
+  return details.length > 0 ? details.join(' | ') : '-';
+}
+
+function formatCapacityNeed(capacity: BuildingRequest['capacity_need']): string | null {
+  if (!capacity) return null;
+  const amount = capacity.amount === null || capacity.amount === undefined ? null : formatInteger(capacity.amount);
+  return `Capacity: ${formatLabel(capacity.measure)}${amount ? ` ${amount}` : ''}${capacity.unit ? ` ${capacity.unit}` : ''}`;
+}
+
+function formatAdjacency(adjacency: BuildingRequest['adjacency']): string | null {
+  if (!adjacency || adjacency.length === 0) return null;
+  return `Adjacency: ${adjacency.map(hint => `${formatLabel(hint.relation)} ${hint.target}`).join(', ')}`;
+}
+
+function formatMaterials(materials: BuildingRequest['materials_on_hand']): string | null {
+  if (!materials || materials.length === 0) return null;
+  return `Materials: ${materials
+    .map(material => `${material.material}${material.approx_qty ? ` ~${formatInteger(material.approx_qty)}` : ''}`)
+    .join(', ')}`;
+}
+
+function formatDeadline(deadline: BuildingRequest['deadline']): string | null {
+  if (!deadline) return null;
+  return `Deadline: ${formatLabel(deadline.kind)}${deadline.value === null || deadline.value === undefined ? '' : ` ${formatLooseValue(deadline.value)}`}`;
+}
+
+function formatLooseValue(value: unknown): string {
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
 }
 
 function AdviceCard({
@@ -426,15 +597,6 @@ function AdviceCard({
               );
             })}
           </div>
-        </DisclosureSection>
-      )}
-      {(item.resource_requests?.length ?? 0) > 0 && (
-        <DisclosureSection
-          title={<SemanticLabel icon={iconForField('resource_requests')}><span>Resource requests</span></SemanticLabel>}
-          defaultOpen
-          meta={`${item.resource_requests?.length ?? 0} requests`}
-        >
-          <ResourceRequestTable idPrefix={`${item.id}-request`} requests={item.resource_requests ?? []} />
         </DisclosureSection>
       )}
       {(item.suggested_actions?.length ?? 0) > 0 && (

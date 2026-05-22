@@ -90,16 +90,125 @@ export interface AdviceApplyResponse {
   readback?: unknown | null;
 }
 
-export interface ResourceRequest {
-  kind: string;
+export type BuildingClass =
+  | 'freezer'
+  | 'wall'
+  | 'door'
+  | 'barricade'
+  | 'embrasure'
+  | 'power_generation'
+  | 'battery'
+  | 'conduit'
+  | 'cooler'
+  | 'heater'
+  | 'vent'
+  | 'bed'
+  | 'production_bench'
+  | 'research_bench'
+  | 'multianalyzer'
+  | 'stockpile'
+  | 'shelf'
+  | 'dumping_zone'
+  | 'trade_beacon'
+  | 'floor'
+  | 'roof'
+  | 'turret_platform'
+  | string;
+
+export type RoomClass =
+  | 'freezer'
+  | 'hospital'
+  | 'kitchen'
+  | 'butcher'
+  | 'workshop'
+  | 'research'
+  | 'bedroom'
+  | 'barracks'
+  | 'prison'
+  | 'recreation'
+  | 'dining'
+  | 'storage'
+  | string;
+
+export type CapacityMeasure = 'beds' | 'food_units' | 'work_slots' | 'storage_stacks' | 'occupants' | string;
+export type AdjacencyRelation = 'near' | 'inside' | 'connected_to' | 'away_from' | string;
+export type TemperatureBand = 'freezing' | 'cold' | 'room' | 'sterile_warm' | string;
+export type Urgency = 'when_convenient' | 'soon' | 'before_deadline' | 'blocking_now' | string;
+export type DeadlineKind = 'by_day' | 'by_season' | 'before_event' | string;
+
+export interface CapacityNeed {
+  measure: CapacityMeasure;
+  amount?: number | null;
+  unit?: string | null;
+}
+
+export interface AdjacencyHint {
+  relation: AdjacencyRelation;
+  target: string;
+}
+
+export interface PowerNeed {
+  needs_power: boolean;
+  approx_watts?: number | null;
+}
+
+export interface TempNeed {
+  target_band: TemperatureBand;
+  must_hold: boolean;
+}
+
+export interface MaterialHint {
+  material: string;
+  approx_qty?: number | null;
+}
+
+export interface Deadline {
+  kind: DeadlineKind;
+  value?: unknown | null;
+}
+
+export interface BuildingRequest {
   request: string;
   reason: string;
+  target_class: BuildingClass;
+  target_def?: string | null;
+  room_class?: RoomClass | null;
+  capacity_need?: CapacityNeed | null;
+  adjacency?: AdjacencyHint[] | null;
+  power?: PowerNeed | null;
+  temperature?: TempNeed | null;
+  materials_on_hand?: MaterialHint[] | null;
+  urgency?: Urgency | null;
+  deadline?: Deadline | null;
   quantity?: number | null;
   priority?: AdvicePriority | null;
   requested_from?: string | null;
+}
+
+export interface LaborRequest {
+  request: string;
+  reason: string;
   work_type?: string | null;
   skill?: string | null;
-  icon?: IconRef | null;
+  quantity?: number | null;
+  priority?: AdvicePriority | null;
+  requested_from?: string | null;
+}
+
+export interface ItemRequest {
+  request: string;
+  reason: string;
+  item_def?: string | null;
+  quantity?: number | null;
+  priority?: AdvicePriority | null;
+  requested_from?: string | null;
+}
+
+export interface AttentionRequest {
+  request: string;
+  reason: string;
+  priority?: AdvicePriority | null;
+  requested_from?: string | null;
 }
 
 export type FlagSeverity = 'low' | 'medium' | 'high' | 'critical';
@@ -110,7 +219,10 @@ export interface AgentFlag {
   severity: FlagSeverity;
   domain: string;
   summary: string;
-  requests?: ResourceRequest[] | null;
+  building_requests?: BuildingRequest[] | null;
+  labor_requests?: LaborRequest[] | null;
+  item_requests?: ItemRequest[] | null;
+  attention?: AttentionRequest[] | null;
   detail?: string | null;
   expires_at?: string | null;
 }
@@ -149,7 +261,6 @@ export interface AdviceItem {
   rationale: string;
   actions: AdviceAction[];
   options?: AdviceOption[] | null;
-  resource_requests?: ResourceRequest[];
   suggested_actions?: SuggestedAction[];
   guide_citations: string[];
   issued_at: string;

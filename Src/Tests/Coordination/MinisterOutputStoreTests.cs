@@ -190,7 +190,7 @@ public sealed class MinisterOutputStoreTests
             AdviceItem advice = snapshot!.Advice.Should().ContainSingle().Subject;
             advice.Actions.Should().NotContain(action => action.Kind == AdviceActionKind.SetPriority);
             snapshot.Flags.Should().ContainSingle()
-                .Which.Requests.Should().ContainSingle()
+                .Which.LaborRequests.Should().ContainSingle()
                 .Which.WorkType.Should().Be(WorkType.Cook);
         }
         finally

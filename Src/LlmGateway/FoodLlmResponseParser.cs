@@ -161,7 +161,20 @@ public static class FoodLlmResponseParser
             advice.Actions.All(action =>
                 !string.IsNullOrWhiteSpace(action.Instruction)) &&
             response.Flags.All(flag =>
-                flag.Requests is null || flag.Requests.All(request =>
-                    !string.IsNullOrWhiteSpace(request.What) &&
-                    !string.IsNullOrWhiteSpace(request.Why))));
+                RequestsComplete(flag)));
+
+    private static bool RequestsComplete(RimBob.Core.Ministers.AgentFlag flag) =>
+        Complete(flag.BuildingRequests, request => request.Request, request => request.Reason) &&
+        Complete(flag.LaborRequests, request => request.Request, request => request.Reason) &&
+        Complete(flag.ItemRequests, request => request.Request, request => request.Reason) &&
+        Complete(flag.Attention, request => request.Request, request => request.Reason);
+
+    private static bool Complete<T>(
+        IReadOnlyList<T>? requests,
+        Func<T, string> request,
+        Func<T, string> reason) =>
+        requests is null ||
+        requests.All(item =>
+            !string.IsNullOrWhiteSpace(request(item)) &&
+            !string.IsNullOrWhiteSpace(reason(item)));
 }

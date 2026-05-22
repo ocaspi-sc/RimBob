@@ -64,9 +64,9 @@ public sealed class FoodRulesTests
             row.AdviceId == advice.Id);
         AgentFlag flag = decision.Flags.Should().ContainSingle().Subject;
         flag.Severity.Should().Be(FlagSeverity.High);
-        flag.Requests.Should().NotBeNull();
-        flag.Requests!.Should().Contain(r => r.Kind == ResourceRequestKind.Labor && r.WorkType == WorkType.Cook);
-        flag.Requests!.Should().NotContain(r => r.Kind == ResourceRequestKind.TradeCapacity);
+        flag.LaborRequests.Should().NotBeNull();
+        flag.LaborRequests!.Should().Contain(r => r.WorkType == WorkType.Cook);
+        flag.Attention.Should().NotContain(r => r.Request.Contains("emergency food acquisition", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -92,10 +92,9 @@ public sealed class FoodRulesTests
 
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
         advice.Body.Should().Contain("7 forbidden packaged survival meals");
-        decision.Flags.Should().ContainSingle().Which.Requests.Should().Contain(r =>
-            r.Kind == ResourceRequestKind.Item &&
+        decision.Flags.Should().ContainSingle().Which.ItemRequests.Should().Contain(r =>
             r.Quantity == 7 &&
-            r.What.Contains("forbidden packaged survival meals"));
+            r.Request.Contains("forbidden packaged survival meals"));
         AdviceAction unforbidStep = advice.Actions.Should().Contain(Action =>
             Action.Kind == AdviceActionKind.Unforbid &&
             Action.Instruction.Contains("Unforbid 7 packaged survival meals")).Subject;
@@ -131,11 +130,9 @@ public sealed class FoodRulesTests
         advice.Actions.Should().NotContain(s => s.Kind == AdviceActionKind.Note);
         AgentFlag flag = decision.Flags.Should().ContainSingle().Subject;
         flag.Severity.Should().Be(FlagSeverity.Critical);
-        flag.Requests.Should().NotBeNull();
-        flag.Requests!.Should().Contain(r => r.Kind == ResourceRequestKind.Tile);
-        flag.Requests!.Should().Contain(r => r.Kind == ResourceRequestKind.Building);
-        flag.Requests!.Should().Contain(r => r.Kind == ResourceRequestKind.Labor && r.WorkType == WorkType.Grow);
-        flag.Requests!.Should().NotContain(r => r.Kind == ResourceRequestKind.Attention);
+        flag.Attention.Should().Contain(r => r.Request.Contains("growing tiles", StringComparison.OrdinalIgnoreCase));
+        flag.BuildingRequests.Should().Contain(r => r.TargetClass == BuildingClass.ProductionBench);
+        flag.LaborRequests.Should().Contain(r => r.WorkType == WorkType.Grow);
     }
 
     [Fact]
@@ -164,13 +161,11 @@ public sealed class FoodRulesTests
         advice.Actions.Should().Contain(s => s.Kind == AdviceActionKind.DesignateZone);
         advice.Actions.Should().Contain(s => s.Kind == AdviceActionKind.PlaceBlueprint);
         AgentFlag flag = decision.Flags.Should().ContainSingle().Subject;
-        flag.Requests.Should().NotBeNull();
-        flag.Requests!.Should().Contain(r =>
-            r.Kind == ResourceRequestKind.StockpileSpace &&
+        flag.BuildingRequests.Should().Contain(r =>
+            r.TargetClass == BuildingClass.Stockpile &&
             r.Quantity == 46);
-        flag.Requests!.Should().Contain(r => r.Kind == ResourceRequestKind.Tile);
-        flag.Requests!.Should().Contain(r => r.Kind == ResourceRequestKind.Building);
-        flag.Requests!.Should().NotContain(r => r.Kind == ResourceRequestKind.Attention);
+        flag.Attention.Should().Contain(r => r.Request.Contains("growing tiles", StringComparison.OrdinalIgnoreCase));
+        flag.BuildingRequests.Should().Contain(r => r.TargetClass == BuildingClass.ProductionBench);
     }
 
     [Fact]
@@ -216,8 +211,8 @@ public sealed class FoodRulesTests
         advice.Priority.Should().Be(AdvicePriority.Medium);
         advice.Actions.Should().ContainSingle().Which.Kind.Should().Be(AdviceActionKind.PlaceBlueprint);
         advice.Actions.Single().Owner.Should().Be("Construction");
-        decision.Flags.Should().ContainSingle().Which.Requests.Should()
-            .Contain(r => r.Kind == ResourceRequestKind.Building && r.RequestedFrom == "Construction");
+        decision.Flags.Should().ContainSingle().Which.BuildingRequests.Should()
+            .Contain(r => r.TargetClass == BuildingClass.Freezer && r.RequestedFrom == "Construction");
     }
 
     [Fact]
@@ -246,10 +241,10 @@ public sealed class FoodRulesTests
             action.Owner == "Construction").Subject;
         freezerAction.Instruction.Should().Contain("starter freezer");
         freezerAction.Instruction.Should().Contain("next harvest");
-        decision.Flags.Should().ContainSingle().Which.Requests.Should().Contain(request =>
-            request.Kind == ResourceRequestKind.Building &&
+        decision.Flags.Should().ContainSingle().Which.BuildingRequests.Should().Contain(request =>
+            request.TargetClass == BuildingClass.Freezer &&
             request.RequestedFrom == "Construction" &&
-            request.What.Contains("starter freezer"));
+            request.Request.Contains("starter freezer"));
     }
 
     [Fact]
@@ -289,9 +284,9 @@ public sealed class FoodRulesTests
             action.Kind == AdviceActionKind.PlaceBlueprint &&
             action.Owner == "Construction").Subject;
         freezerAction.Instruction.Should().Contain("raw food and cooked meals");
-        decision.Flags.Should().ContainSingle().Which.Requests.Should().Contain(request =>
-            request.Kind == ResourceRequestKind.Building &&
-            request.What.Contains("starter freezer"));
+        decision.Flags.Should().ContainSingle().Which.BuildingRequests.Should().Contain(request =>
+            request.TargetClass == BuildingClass.Freezer &&
+            request.Request.Contains("starter freezer"));
     }
 
     [Fact]
@@ -382,8 +377,7 @@ public sealed class FoodRulesTests
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
         advice.Actions.Should().NotContain(action => action.Kind == AdviceActionKind.ProductionBill);
         advice.Actions.Should().NotContain(action => action.Kind == AdviceActionKind.SetPriority);
-        decision.Flags.Should().ContainSingle().Which.Requests.Should().Contain(request =>
-            request.Kind == ResourceRequestKind.Labor &&
+        decision.Flags.Should().ContainSingle().Which.LaborRequests.Should().Contain(request =>
             request.WorkType == WorkType.Cook &&
             request.RequestedFrom == "Labor");
     }
@@ -429,8 +423,7 @@ public sealed class FoodRulesTests
 
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
         advice.Actions.Should().NotContain(action => action.Kind == AdviceActionKind.SetPriority);
-        decision.Flags.Should().ContainSingle().Which.Requests.Should().Contain(request =>
-            request.Kind == ResourceRequestKind.Labor &&
+        decision.Flags.Should().ContainSingle().Which.LaborRequests.Should().Contain(request =>
             request.WorkType == WorkType.Cook &&
             request.Skill == "Cooking");
     }
@@ -634,17 +627,15 @@ public sealed class FoodRulesTests
         advice.Actions.Should().NotContain(action => action.Kind == AdviceActionKind.SetPriority);
 
         AgentFlag flag = decision.Flags.Should().ContainSingle().Subject;
-        flag.Requests.Should().NotBeNull();
-        flag.Requests!.Should().NotContain(request => request.Kind == ResourceRequestKind.Tile);
-        flag.Requests!.Should().NotContain(request => request.WorkType == WorkType.Grow);
-        flag.Requests!.Should().Contain(request =>
-            request.Kind == ResourceRequestKind.Labor &&
+        flag.Attention.Should().Contain(request => request.Request.Contains("cook simple meals", StringComparison.OrdinalIgnoreCase));
+        flag.LaborRequests.Should().NotContain(request => request.WorkType == WorkType.Grow);
+        flag.LaborRequests.Should().Contain(request =>
             request.WorkType == WorkType.Cook &&
             request.RequestedFrom == "Labor");
-        flag.Requests!.Should().Contain(request =>
-            request.Kind == ResourceRequestKind.Building &&
+        flag.BuildingRequests.Should().Contain(request =>
+            request.TargetClass == BuildingClass.Freezer &&
             request.RequestedFrom == "Construction" &&
-            request.What.Contains("surplus freezer"));
+            request.Request.Contains("surplus freezer"));
     }
 
     [Fact]
@@ -776,9 +767,9 @@ public sealed class FoodRulesTests
             action.Kind == AdviceActionKind.PlaceBlueprint &&
             action.Owner == "Construction").Subject;
         freezerAction.Instruction.Should().Contain("hunted meat");
-        decision.Flags.Should().ContainSingle().Which.Requests.Should().Contain(request =>
-            request.Kind == ResourceRequestKind.Building &&
-            request.What.Contains("starter freezer"));
+        decision.Flags.Should().ContainSingle().Which.BuildingRequests.Should().Contain(request =>
+            request.TargetClass == BuildingClass.Freezer &&
+            request.Request.Contains("starter freezer"));
     }
 
     [Fact]

@@ -1562,6 +1562,24 @@ code {
   min-width: 980px;
 }
 
+.typed-request-groups {
+  display: grid;
+  gap: 10px;
+}
+
+.typed-request-group {
+  display: grid;
+  gap: 6px;
+}
+
+.typed-request-group h4 {
+  color: var(--muted);
+  font-size: 0.76rem;
+  letter-spacing: 0;
+  margin: 0;
+  text-transform: uppercase;
+}
+
 .crop-math-panel {
   display: grid;
   gap: 12px;

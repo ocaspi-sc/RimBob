@@ -114,7 +114,11 @@ public sealed record RuleTraceDetails
                 FlagId: flag.Id,
                 Severity: flag.Severity,
                 Summary: flag.Summary,
-                RequestCount: flag.Requests?.Count ?? 0))
+                RequestCount:
+                    (flag.BuildingRequests?.Count ?? 0) +
+                    (flag.LaborRequests?.Count ?? 0) +
+                    (flag.ItemRequests?.Count ?? 0) +
+                    (flag.Attention?.Count ?? 0)))
             .ToList();
 
         return this with

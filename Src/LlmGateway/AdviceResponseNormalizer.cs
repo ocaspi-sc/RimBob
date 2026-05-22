@@ -125,20 +125,18 @@ internal static class AdviceResponseNormalizer
         AgentFlag? strict = LlmResponseParser.TryDeserialize<AgentFlag>(node, json);
         if (strict is not null && !string.IsNullOrWhiteSpace(strict.Id))
         {
-            bool requestsComplete = strict.Requests is null ||
-                                    strict.Requests.All(request =>
-                                        !string.IsNullOrWhiteSpace(request.What) &&
-                                        !string.IsNullOrWhiteSpace(request.Why));
-            return requestsComplete
-                ? strict
-                : strict with
-                {
-                    Requests = ResourceRequestNormalizer.Normalize(
-                        node["requests"],
-                        MapFlagSeverityToAdvicePriority(strict.Severity),
-                        context,
-                        json)
-                };
+            NormalizedFlagRequests requests = ResourceRequestNormalizer.NormalizeFlagRequests(
+                node,
+                MapFlagSeverityToAdvicePriority(strict.Severity),
+                context,
+                json);
+            return strict with
+            {
+                BuildingRequests = requests.BuildingRequestsOrNull,
+                LaborRequests = requests.LaborRequestsOrNull,
+                ItemRequests = requests.ItemRequestsOrNull,
+                Attention = requests.AttentionOrNull
+            };
         }
 
         string? raw = LlmResponseParser.ReadString(node);
@@ -168,10 +166,7 @@ internal static class AdviceResponseNormalizer
         };
 
     private static IReadOnlyList<AgentFlag> NormalizeStrictFlags(IReadOnlyList<AgentFlag> flags) =>
-        flags.Select(flag => flag with
-        {
-            Requests = flag.Requests?.Select(ResourceRequestNormalizer.Normalize).ToArray()
-        }).ToArray();
+        flags.Select(ResourceRequestNormalizer.Normalize).ToArray();
 
     private static bool IsCompleteStrictAdvice(AdviceItem advice) =>
         !string.IsNullOrWhiteSpace(advice.Id) &&
