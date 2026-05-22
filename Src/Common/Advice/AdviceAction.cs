@@ -20,10 +20,6 @@ public sealed record AdviceAction(
     WorkType? WorkType = null,
     [property: JsonPropertyName("skill")]
     string? Skill = null,
-    [property: JsonPropertyName("reason")]
-    string? Reason = null,
-    [property: JsonPropertyName("icon")]
-    IconRef? Icon = null,
     [property: JsonPropertyName("apply")]
     AdviceActionApply? Apply = null);
 

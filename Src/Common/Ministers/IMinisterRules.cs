@@ -101,7 +101,6 @@ public sealed record RuleTraceDetails
                     ActionIndex: i,
                     Kind: action.Kind,
                     Instruction: action.Instruction,
-                    Reason: action.Reason,
                     ApplyKind: action.Apply?.Kind,
                     ApplyLabel: action.Apply?.Label,
                     ApplyTargetSummary: action.Apply?.TargetSummary));
@@ -155,7 +154,6 @@ public sealed record RuleEmittedActionTrace(
     int ActionIndex,
     AdviceActionKind Kind,
     string Instruction,
-    string? Reason,
     AdviceApplyKind? ApplyKind,
     string? ApplyLabel,
     string? ApplyTargetSummary);

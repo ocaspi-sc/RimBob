@@ -38,7 +38,6 @@ public sealed class ReplayCorpusWriterTests
                     new AdviceAction(
                         AdviceActionKind.MarkHunt,
                         "Mark up to 2 hares for hunting.",
-                        Reason: "low-risk wild animals are the best visible local food-acquisition path",
                         Apply: new AdviceActionApply(
                             AdviceApplyKind.MarkHuntArea,
                             "Mark hunt",

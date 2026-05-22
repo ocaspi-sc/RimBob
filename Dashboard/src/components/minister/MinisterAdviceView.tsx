@@ -391,22 +391,19 @@ function AdviceCard({
               const success = state.response?.status === 'applied' || state.response?.status === 'already_satisfied';
               const disabled = state.status === 'pending' || success || expiry.expired;
               const actionIcon = iconForActionKind(action.kind);
-              const fallbackIconUrl = action.icon ? iconUrlFor(actionIcon?.ref) : null;
               return (
                 <div key={`${item.id}-action-${index}`}>
                   <GameIcon
-                    fallbackSrc={fallbackIconUrl}
                     fallback={actionIcon?.fallback ?? '-'}
                     label={actionIcon?.label ?? `${formatLabel(action.kind)} icon`}
                     size="xs"
-                    src={iconUrlFor(action.icon ?? actionIcon?.ref)}
+                    src={iconUrlFor(actionIcon?.ref)}
                   />
                   <strong>{formatLabel(action.kind)}</strong>
                   <span><IconizedText maxIcons={2} text={action.instruction} /></span>
                   <ActionDetailLine
                     owner={action.owner}
                     quantity={action.quantity}
-                    reason={action.reason}
                     skill={action.skill}
                     workType={action.work_type}
                   />
@@ -570,27 +567,24 @@ function PriorityCard({
 function ActionDetailLine({
   owner,
   quantity,
-  reason,
   skill,
   workType,
 }: {
   owner: string | null | undefined;
   quantity: number | null | undefined;
-  reason: string | null | undefined;
   skill: string | null | undefined;
   workType: string | null | undefined;
 }) {
   const quantityDetail = formatQuantityDetail(quantity);
   const workSkillDetail = formatWorkSkillDetail(workType, skill);
 
-  if (!quantityDetail && !owner && !workSkillDetail && !reason) return null;
+  if (!quantityDetail && !owner && !workSkillDetail) return null;
 
   return (
     <small>
       {quantityDetail && <span>{quantityDetail}</span>}
       {owner && <span>{`Owner: ${owner}`}</span>}
       {workSkillDetail && <span>{workSkillDetail}</span>}
-      {reason && <span><IconizedText maxIcons={2} text={reason} /></span>}
     </small>
   );
 }

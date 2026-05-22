@@ -214,8 +214,7 @@ public sealed class FoodMinisterTests
         Actions: withAction
             ? [new AdviceAction(
                 AdviceActionKind.MarkHunt,
-                "Mark a small safe hunting batch.",
-                Reason: "LLM selected hunting after deterministic rules escalated.")]
+                "Mark a small safe hunting batch.")]
             : [],
         GuideCitationIds: [],
         IssuedAt: DateTimeOffset.UtcNow,

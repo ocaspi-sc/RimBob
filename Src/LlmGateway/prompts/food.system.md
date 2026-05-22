@@ -13,9 +13,9 @@ Rules:
 - Keep MVP suggest-only: do not claim anything was executed, assigned, built, hunted, cooked, or changed.
 - Emit only near-term, actionable, currently possible advice. Prefer one or two high-signal items over a long list.
 - Every advice item must include priority: low, medium, high, or critical. Use this single field for urgency, routing, and display.
-- Keep structured leaf strings terse. Titles are 3-7 words. actions[].instruction is one short imperative sentence. actions[].reason is one short cause.
-- Put explanation in body and rationale, not in title, action instruction, action reason, or flag summary.
-- Advice actions must use kind and instruction fields, with optional quantity, owner, work_type, skill, reason, and icon.
+- Keep structured leaf strings terse. Titles are 3-7 words. actions[].instruction is one short imperative sentence.
+- Put explanation in body and rationale, not in title, action instruction, or flag summary.
+- Advice actions must use kind and instruction fields, with optional quantity, owner, work_type, and skill.
 - Use concrete action kinds when one fits: designate_zone, mark_harvest, mark_hunt, place_blueprint, production_bill, set_priority, set_stockpile_zone, draft, forbid, unforbid, research, trade, or request_resource. Use note only when no structured kind fits.
 - Flags may carry Resource requests for cross-minister needs. They must be concrete: kind, request, reason, optional quantity, requested_from, work_type, and skill when relevant.
 - Never allocate pawns. Request Labor only when urgent or when coverage is missing, and name the RimWorld work type and skill (for example Cook/Cooking or PlantCut/Plants). Do not ask for generic "labor capacity".

@@ -461,7 +461,6 @@ public sealed class FoodRulesTests
         AdviceAction action = advice.Actions.Single();
         action.Instruction.Should().Contain("nearest 6 Plant_Berry");
         action.Instruction.Should().NotContain("wild");
-        action.Reason.Should().Be("edible forage requires plant work");
         action.Apply.Should().NotBeNull();
         action.Apply!.Label.Should().Be("Mark forage");
         decision.Flags.Should().BeEmpty();
@@ -554,7 +553,7 @@ public sealed class FoodRulesTests
         Action.Kind.Should().Be(AdviceActionKind.DesignateZone);
         Action.Quantity.Should().Be(36);
         Action.Instruction.Should().Contain("rice");
-        Action.Reason.Should().Contain("winter margin");
+        advice.Body.Should().Contain("winter margin");
     }
 
     [Fact]
@@ -668,7 +667,7 @@ public sealed class FoodRulesTests
             .Actions.Should().ContainSingle().Subject;
         Action.Kind.Should().Be(AdviceActionKind.DesignateZone);
         Action.Instruction.Should().Contain("rice");
-        Action.Reason.Should().Contain("1 day of winter margin");
+        decision.Advice.Should().ContainSingle().Subject.Body.Should().Contain("1 day of winter margin");
     }
 
     [Fact]
@@ -829,7 +828,7 @@ public sealed class FoodRulesTests
 
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
         advice.Body.Should().Contain("about 14 nutrition");
-        advice.Actions.Should().ContainSingle().Which.Reason.Should().Contain("about 14 nutrition");
+        advice.Actions.Should().ContainSingle().Which.Instruction.Should().Contain("ibex");
     }
 
     [Fact]

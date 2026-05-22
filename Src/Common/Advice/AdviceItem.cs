@@ -40,7 +40,9 @@ public sealed record AdviceItem(
     [property: JsonPropertyName("supersedes")]
     string? Supersedes = null,
     [property: JsonPropertyName("autonomy_at_issue")]
-    AutonomyMode AutonomyAtIssue = AutonomyMode.Suggest);
+    AutonomyMode AutonomyAtIssue = AutonomyMode.Suggest,
+    [property: JsonPropertyName("options")]
+    IReadOnlyList<AdviceOption>? Options = null);
 
 public sealed record BriefingRef(
     [property: JsonPropertyName("minister")]

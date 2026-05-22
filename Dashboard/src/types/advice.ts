@@ -45,9 +45,40 @@ export interface AdviceAction {
   owner?: string | null;
   work_type?: string | null;
   skill?: string | null;
-  reason?: string | null;
-  icon?: IconRef | null;
   apply?: AdviceActionApply | null;
+}
+
+export interface MapCell {
+  x: number;
+  z: number;
+}
+
+export interface BlueprintAsset {
+  role: string;
+  def_name: string;
+  stuff_def_name?: string | null;
+  cell: MapCell;
+  rotation: number;
+}
+
+export interface BlueprintGroup {
+  label: string;
+  map_id: number;
+  assets: BlueprintAsset[];
+}
+
+export interface MaterialEstimate {
+  def_name: string;
+  count: number;
+}
+
+export interface AdviceOption {
+  id: string;
+  label: string;
+  summary: string;
+  blueprint_group: BlueprintGroup;
+  est_materials: MaterialEstimate[];
+  tradeoff_note?: string | null;
 }
 
 export interface AdviceApplyResponse {
@@ -117,6 +148,7 @@ export interface AdviceItem {
   body: string;
   rationale: string;
   actions: AdviceAction[];
+  options?: AdviceOption[] | null;
   resource_requests?: ResourceRequest[];
   suggested_actions?: SuggestedAction[];
   guide_citations: string[];

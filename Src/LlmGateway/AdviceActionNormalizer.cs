@@ -43,7 +43,7 @@ internal static class AdviceActionNormalizer
     {
         WorkType? workType = action.WorkType ??
                              (ShouldInferWorkType(action.Kind)
-                                 ? WorkTypeInference.Infer(action.Kind.ToString(), action.Instruction, action.Reason)
+                                 ? WorkTypeInference.Infer(action.Kind.ToString(), action.Instruction)
                                  : null);
         string? skill = string.IsNullOrWhiteSpace(action.Skill)
             ? WorkTypeInference.DefaultSkill(workType)
@@ -55,7 +55,6 @@ internal static class AdviceActionNormalizer
             Owner = string.IsNullOrWhiteSpace(action.Owner) ? null : action.Owner.Trim(),
             WorkType = workType,
             Skill = skill,
-            Reason = string.IsNullOrWhiteSpace(action.Reason) ? null : action.Reason.Trim(),
             Apply = null
         };
     }
@@ -85,9 +84,7 @@ internal static class AdviceActionNormalizer
                 Quantity: request.Quantity,
                 Owner: request.RequestedFrom,
                 WorkType: request.WorkType,
-                Skill: request.Skill,
-                Reason: request.Why,
-                Icon: request.Icon)));
+                Skill: request.Skill)));
         }
 
         foreach (AdviceAction action in NormalizeLegacyActions(suggestedActionsNode, json))
@@ -129,8 +126,7 @@ internal static class AdviceActionNormalizer
             {
                 actions.Add(Normalize(new AdviceAction(
                     ParseKind(LlmResponseParser.ReadString(item["kind"])),
-                    instruction,
-                    Icon: ParseIcon(item["icon"], json))));
+                    instruction)));
                 continue;
             }
 
@@ -169,15 +165,7 @@ internal static class AdviceActionNormalizer
             Quantity: LlmResponseParser.TryReadIntegerQuantity(item["quantity"] ?? item["amount"]),
             Owner: LlmResponseParser.ReadString(item["owner"]) ?? LlmResponseParser.ReadString(item["requested_from"]),
             WorkType: workType,
-            Skill: LlmResponseParser.ReadString(item["skill"]),
-            Reason: LlmResponseParser.ReadString(item["reason"]) ?? LlmResponseParser.ReadString(item["why"]),
-            Icon: ParseIcon(item["icon"], json)));
-    }
-
-    private static IconRef? ParseIcon(JsonNode? node, JsonSerializerOptions json)
-    {
-        if (node is null) return null;
-        return LlmResponseParser.TryDeserialize<IconRef>(node, json);
+            Skill: LlmResponseParser.ReadString(item["skill"])));
     }
 
     private static AdviceActionKind ParseKind(string? raw)

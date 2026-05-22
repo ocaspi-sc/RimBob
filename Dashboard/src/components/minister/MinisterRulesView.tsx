@@ -214,8 +214,8 @@ function RuleDiagnosticsPanel({ details }: { details: RuleTraceDetails }) {
         <div className="rule-emissions-table rule-emissions-action-table">
           <DynamicTable
             rows={emittedActions}
-            preferredColumns={['source', 'rule', 'adviceId', 'actionIndex', 'kind', 'instruction', 'reason', 'applyKind', 'applyLabel', 'applyTargetSummary']}
-            maxColumns={10}
+            preferredColumns={['source', 'rule', 'adviceId', 'actionIndex', 'kind', 'instruction', 'applyKind', 'applyLabel', 'applyTargetSummary']}
+            maxColumns={9}
             emptyMessage="No actions were emitted by this run."
           />
         </div>

@@ -174,6 +174,65 @@ public sealed class AdviceNormalizationTests
         action.Apply.Should().BeNull();
     }
 
+    [Fact]
+    public void AdviceActionNormalizer_IgnoresLegacyActionReasonAndIconKeys()
+    {
+        JsonNode? root = JsonNode.Parse("""
+        [
+          {
+            "kind": "mark_harvest",
+            "instruction": "mark mature rice",
+            "reason": "legacy action-level explanation",
+            "icon": { "kind": "item", "id": "Plant_Rice" }
+          }
+        ]
+        """);
+
+        IReadOnlyList<AdviceAction> actions = AdviceActionNormalizer.Normalize(root, Json);
+
+        AdviceAction action = actions.Should().ContainSingle().Subject;
+        action.Kind.Should().Be(AdviceActionKind.MarkHarvest);
+        action.Instruction.Should().Be("mark mature rice");
+        JsonSerializer.Serialize(action, Json).Should().NotContain("\"reason\"");
+        JsonSerializer.Serialize(action, Json).Should().NotContain("\"icon\"");
+    }
+
+    [Fact]
+    public void AdviceResponseNormalizer_ToleratesLegacyActionReasonAndIconKeys()
+    {
+        JsonNode root = JsonNode.Parse("""
+        {
+          "advice": [
+            {
+              "advice_type": "HarvestNow",
+              "priority": "medium",
+              "title": "Harvest rice",
+              "body": "Mature rice is ready.",
+              "rationale": "The crop is ready before the buffer drops.",
+              "actions": [
+                {
+                  "kind": "mark_harvest",
+                  "instruction": "mark mature rice",
+                  "reason": "legacy action-level explanation",
+                  "icon": { "kind": "item", "id": "Plant_Rice" }
+                }
+              ]
+            }
+          ],
+          "flags": []
+        }
+        """)!;
+
+        NormalizedAdviceResponse response = AdviceResponseNormalizer.Normalize(root, Context(), Json);
+
+        AdviceAction action = response.Advice.Should().ContainSingle().Subject.Actions.Should().ContainSingle().Subject;
+        action.Kind.Should().Be(AdviceActionKind.MarkHarvest);
+        action.Instruction.Should().Be("mark mature rice");
+        string serialized = JsonSerializer.Serialize(action, Json);
+        serialized.Should().NotContain("\"reason\"");
+        serialized.Should().NotContain("\"icon\"");
+    }
+
     private static LlmAdviceNormalizationContext Context() => new(
         Minister: "Food",
         Domain: "food",

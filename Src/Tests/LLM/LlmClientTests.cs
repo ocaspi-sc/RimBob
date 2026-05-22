@@ -183,12 +183,12 @@ public sealed class LlmClientTests
         advice.Priority.Should().Be(AdvicePriority.Critical);
         AdviceAction action = advice.Actions.Should().ContainSingle().Subject;
         action.Kind.Should().Be(AdviceActionKind.RequestResource);
+        action.Instruction.Should().Be("labor capacity");
         action.WorkType.Should().BeNull();
-        action.Reason.Should().Contain("did not name a RimWorld work type");
     }
 
     [Fact]
-    public void AdviceSchema_RoundTripsPriorityAndActionMetadata()
+    public void AdviceSchema_RoundTripsPriorityActionAndOptionMetadata()
     {
         JsonSerializerOptions json = new() { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
         AdviceItem item = new(
@@ -207,12 +207,32 @@ public sealed class LlmClientTests
                     Quantity: 1,
                     Owner: "Labor",
                     WorkType: WorkType.Cook,
-                    Skill: "Cooking",
-                    Reason: "meals are understocked")
+                    Skill: "Cooking")
             ],
             GuideCitationIds: [],
             IssuedAt: DateTimeOffset.UnixEpoch,
-            ExpiresAt: DateTimeOffset.UnixEpoch.AddHours(4));
+            ExpiresAt: DateTimeOffset.UnixEpoch.AddHours(4),
+            Options:
+            [
+                new AdviceOption(
+                    Id: "compact_freezer",
+                    Label: "Compact freezer",
+                    Summary: "Small freezer near the kitchen.",
+                    BlueprintGroup: new BlueprintGroup(
+                        Label: "Compact freezer",
+                        MapId: 1,
+                        Assets:
+                        [
+                            new BlueprintAsset(
+                                Role: "wall",
+                                DefName: "Wall",
+                                StuffDefName: "BlocksGranite",
+                                Cell: new MapCell(12, 34),
+                                Rotation: 0)
+                        ]),
+                    EstimatedMaterials: [new MaterialEstimate("BlocksGranite", 5)],
+                    TradeoffNote: "cheap but tight")
+            ]);
 
         string serialized = JsonSerializer.Serialize(item, json);
         AdviceItem? roundTripped = JsonSerializer.Deserialize<AdviceItem>(serialized, json);
@@ -222,19 +242,26 @@ public sealed class LlmClientTests
         serialized.Should().NotContain("\"severity\"");
         serialized.Should().Contain("\"actions\":[");
         serialized.Should().Contain("\"instruction\":\"Put the best cook on Cook work today\"");
-        serialized.Should().Contain("\"reason\":\"meals are understocked\"");
+        serialized.Should().NotContain("\"reason\"");
         serialized.Should().Contain("\"owner\":\"Labor\"");
         serialized.Should().NotContain("\"resource_requests\"");
         serialized.Should().NotContain("\"suggested_actions\"");
         serialized.Should().NotContain("\"what\":\"Put the best cook on Cook work today\"");
-        serialized.Should().NotContain("\"why\":\"meals are understocked\"");
+        serialized.Should().NotContain("\"why\"");
         serialized.Should().Contain("\"work_type\":\"cook\"");
+        serialized.Should().Contain("\"options\":[");
+        serialized.Should().Contain("\"blueprint_group\":");
+        serialized.Should().Contain("\"map_id\":1");
+        serialized.Should().Contain("\"stuff_def_name\":\"BlocksGranite\"");
+        serialized.Should().Contain("\"est_materials\":[");
         roundTripped.Should().NotBeNull();
         roundTripped!.Priority.Should().Be(AdvicePriority.High);
         roundTripped.Actions.Single().Instruction.Should().Be("Put the best cook on Cook work today");
-        roundTripped.Actions.Single().Reason.Should().Be("meals are understocked");
         roundTripped.Actions.Single().WorkType.Should().Be(WorkType.Cook);
         roundTripped.Actions.Single().Skill.Should().Be("Cooking");
+        AdviceOption option = roundTripped.Options.Should().ContainSingle().Subject;
+        option.BlueprintGroup.Assets.Should().ContainSingle().Which.Cell.Should().Be(new MapCell(12, 34));
+        option.EstimatedMaterials.Should().ContainSingle().Which.Count.Should().Be(5);
     }
 
     [Fact]

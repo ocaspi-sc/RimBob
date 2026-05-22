@@ -7,7 +7,6 @@ namespace RimBob.LLM;
 public static class AdviceTextStyleWarnings
 {
     private const int MaxTitleWords = 7;
-    private const int MaxReasonWords = 12;
     private const int MaxInstructionWords = 14;
     private const int MaxFlagSummaryWords = 14;
 
@@ -25,9 +24,6 @@ public static class AdviceTextStyleWarnings
                 AdviceAction action = advice.Actions[i];
                 string instructionField = $"{adviceId}.actions[{i}].instruction";
                 AddWordWarning(warnings, instructionField, action.Instruction, MaxInstructionWords, "use one short imperative sentence");
-
-                if (!string.IsNullOrWhiteSpace(action.Reason))
-                    AddWordWarning(warnings, $"{adviceId}.actions[{i}].reason", action.Reason, MaxReasonWords, "use one short cause");
 
                 if (SentenceCount(action.Instruction) > 1)
                     warnings.Add($"{instructionField} has multiple sentences; use one short imperative sentence.");

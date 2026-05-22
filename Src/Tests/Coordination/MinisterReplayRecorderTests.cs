@@ -108,8 +108,7 @@ public sealed class MinisterReplayRecorderTests
             [
                 new AdviceAction(
                     AdviceActionKind.ProductionBill,
-                    "Set/check simple meal bill.",
-                    Reason: "raw food must become meals during an urgent shortage")
+                    "Set/check simple meal bill.")
             ],
             GuideCitationIds: [],
             IssuedAt: DateTimeOffset.UtcNow,

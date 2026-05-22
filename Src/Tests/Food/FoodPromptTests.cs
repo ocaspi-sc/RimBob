@@ -69,10 +69,11 @@ public sealed class FoodPromptTests
         builder.FoodSystemPrompt.Should().Contain("Keep structured leaf strings terse");
         builder.FoodSystemPrompt.Should().Contain("Titles are 3-7 words");
         builder.FoodSystemPrompt.Should().Contain("actions[].instruction is one short imperative sentence");
-        builder.FoodSystemPrompt.Should().Contain("actions[].reason is one short cause");
         builder.FoodSystemPrompt.Should().Contain("instruction is one short imperative sentence");
         builder.FoodSystemPrompt.Should().Contain("Put explanation in body and rationale");
         builder.FoodSystemPrompt.Should().Contain("kind and instruction fields");
+        builder.FoodSystemPrompt.Should().NotContain("actions[].reason");
+        builder.FoodSystemPrompt.Should().NotContain("action reason");
         builder.FoodSystemPrompt.Should().Contain("mark_hunt");
         builder.FoodSystemPrompt.Should().Contain("unforbid");
         builder.FoodSystemPrompt.Should().Contain("Flags may carry Resource requests");

@@ -191,7 +191,6 @@ export interface RuleEmittedActionTrace {
   actionIndex: number;
   kind: string;
   instruction: string;
-  reason: string | null;
   applyKind: string | null;
   applyLabel: string | null;
   applyTargetSummary: string | null;

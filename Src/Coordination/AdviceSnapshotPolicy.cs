@@ -61,12 +61,11 @@ internal static class AdviceSnapshotPolicy
                 new ResourceRequest(
                     ResourceRequestKind.Labor,
                     "Cook work today",
-                    sourceAction.Reason ?? "raw food has to become meals before it solves food pressure",
+                    "raw food has to become meals before it solves food pressure",
                     Priority: sourceAdvice.Priority,
                     RequestedFrom: sourceAction.Owner ?? "Labor",
                     WorkType: WorkType.Cook,
-                    Skill: sourceAction.Skill ?? "Cooking",
-                    Icon: sourceAction.Icon)
+                    Skill: sourceAction.Skill ?? "Cooking")
             ],
             Detail: "Migrated from obsolete Food Cook priority advice action.",
             ExpiresAt: sourceAdvice.ExpiresAt));

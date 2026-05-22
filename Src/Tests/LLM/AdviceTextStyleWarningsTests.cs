@@ -27,8 +27,7 @@ public sealed class AdviceTextStyleWarningsTests
                     [
                         new AdviceAction(
                             AdviceActionKind.SetStockpileZone,
-                            "Set one reachable indoor stockpile to accept meals. Verify the stored food category.",
-                            Reason: "Food classification is missing and the buffer is below one day for the whole colony")
+                            "Set one reachable indoor stockpile to accept meals. Verify the stored food category.")
                     ],
                     GuideCitationIds: [],
                     IssuedAt: now,
@@ -48,7 +47,6 @@ public sealed class AdviceTextStyleWarningsTests
 
         warnings.Should().Contain(warning => warning.Contains("wordy_food.title"));
         warnings.Should().Contain(warning => warning.Contains("actions[0].instruction"));
-        warnings.Should().Contain(warning => warning.Contains("actions[0].reason"));
         warnings.Should().Contain(warning => warning.Contains("multiple sentences"));
         warnings.Should().Contain(warning => warning.Contains("wordy_flag.summary"));
     }
@@ -73,8 +71,7 @@ public sealed class AdviceTextStyleWarningsTests
                     [
                         new AdviceAction(
                             AdviceActionKind.SetStockpileZone,
-                            "Set one stockpile to accept food.",
-                            Reason: "Food classification is missing.")
+                            "Set one stockpile to accept food.")
                     ],
                     GuideCitationIds: [],
                     IssuedAt: now,

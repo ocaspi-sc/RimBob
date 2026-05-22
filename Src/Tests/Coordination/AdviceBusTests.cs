@@ -272,9 +272,7 @@ public sealed class AdviceBusTests
             "Put the best cook on Cook work until simple meals are stocked.",
             Owner: "Labor",
             WorkType: WorkType.Cook,
-            Skill: "Cooking",
-            Reason: "raw food must become meals during an urgent shortage",
-            Icon: new IconRef("item", "MealSimple"));
+            Skill: "Cooking");
 
     private static AgentFlag Flag(string id, string minister) => new(
         Id: id,

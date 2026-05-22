@@ -354,7 +354,7 @@ public static class FoodChainModelBuilder
 
         private static bool IsColdStorageBlueprint(AdviceAction action)
         {
-            string text = $"{action.Instruction} {action.Reason}".ToLowerInvariant();
+            string text = action.Instruction.ToLowerInvariant();
             return text.Contains("freezer", StringComparison.Ordinal) ||
                    text.Contains("cold storage", StringComparison.Ordinal) ||
                    text.Contains("cold-room", StringComparison.Ordinal) ||
