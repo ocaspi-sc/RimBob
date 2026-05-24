@@ -83,7 +83,7 @@ Every minister has the same shape: a rules layer that handles routine cases, esc
 | **Minister of Food** | Full food chain: harvesting, farming, hunting, cooking, storage, freezer |
 | **Defense Minister** | Raids, combat, fortifications |
 | **Minister of Construction** | Buildings, power, layout (placement deferred) |
-| **Minister of Welfare** | Mood, recreation, schedules, relationships |
+| **Minister of Welfare** | Mood & Needs: mood risk from needs, thoughts, recreation, schedules, relationships |
 | **Minister of Industry** | Non-food production: stonecutting, tailoring, smithing, machining, fabrication, drugs |
 | **Medical Minister** | Wounds, disease, surgery, medicine stock, hospital readiness |
 | **Research Minister** | Research queue, tech path, unlock dependencies |
@@ -98,13 +98,13 @@ Every minister has the same shape: a rules layer that handles routine cases, esc
 
 ### Candidate ministers (post-MVP)
 
-Spun out from a host minister when its rules and prompts can't keep up — e.g. medical reasoning leaving Welfare, base layout leaving Construction, trade strategy leaving Welfare. Promoted case-by-case; no pre-allocated roster.
+Spun out from a host minister when its rules and prompts can't keep up — e.g. ideology or prisoner-care reasoning leaving Welfare, base layout leaving Construction, animal handling leaving Food/Defense. Promoted case-by-case; no pre-allocated roster.
 
 ---
 
 ### Cabinet boundary rule
 
-Each minister owns either a production chain or a well-defined subsystem. Food owns the full nutrition chain from acquisition to cooked meals and freezer/storage integrity. Defense owns the threat-response subsystem. Construction owns built infrastructure, power, rooms, and material flow. Welfare owns pawn wellbeing, medical sub-blocks, schedules, and social/recreation systems.
+Each minister owns either a production chain or a well-defined subsystem. Food owns the full nutrition chain from acquisition to cooked meals and freezer/storage integrity. Defense owns the threat-response subsystem. Construction owns built infrastructure, power, rooms, and material flow. Welfare owns Mood & Needs: mood and break-risk pressure from needs, thoughts, recreation, comfort, beauty, sleep, schedules, relationships, and ideology. Food owns nutrition-chain fixes; Medical owns treatment; Welfare owns their mood impact.
 
 Every in-game action should eventually map to one primary owning minister. The first pass maps only clear-cut actions; contested cases are documented as open questions until their ownership is justified by actual advice/rule complexity.
 
@@ -225,6 +225,7 @@ Decisions made and the reasoning behind them. Append; do not delete.
 | Assisted Apply renders in the emitting minister's scope | An Apply control appears only in the dashboard scope of the minister that emitted the action. A requesting minister shows its outbound `requests[]` (on a flag), never another minister's executable handle — e.g. Food requests a freezer, but the `place_blueprint` Apply lives in Construction's (Willie's) scope. See [`design/dashboard.md`](design/dashboard.md). |
 | Advice 'type' concept renamed to 'concern' | `advice_type` was a generic CS word; the concept is the autonomy-dial graduation unit, dedup key, and category label per minister. "Concern" reads naturally in both Suggest mode (minister surfaces a concern) and Auto mode (player trusts minister with a concern). Design docs use "concern" now; code symbols (`AdviceItem.AdviceType`, `FoodAdviceType`, and per-minister `*AdviceType` enums) still carry the old name and are renamed in a separate code-landing slice. See [`design/advice.md`](design/advice.md) and the per-minister enum files. |
 | Blueprint lifecycle is fork-side pending-build support | Construction/Willie needs safe pending-build evidence and player-confirmed future apply hooks before any Host wiring. The RIMAPI fork owns blueprint/frame validation, placement, readback, allow/disallow, explicit-id cancel, and backlog summary; broader building, room, stockpile, power, and buildability evidence stay separate follow-up endpoints. See [`design/RimAPI.md`](design/RimAPI.md) and [`design/ministers/construction.md`](design/ministers/construction.md). |
+| Welfare keeps its minister name; domain label is Mood & Needs | Welfare is clearer and less cute than persona names for serious break-risk advice. The stable minister key remains `welfare`; no wire or persistence schema change is intended. Welfare reads needs and thoughts as they affect mood and break risk, then requests concrete fixes from Food, Medical, Construction, Industry, or player policy when another domain owns the actual intervention. See [`design/ministers.md`](design/ministers.md) and [`design/ministers/welfare.md`](design/ministers/welfare.md). |
 
 ---
 

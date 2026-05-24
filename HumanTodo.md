@@ -127,7 +127,7 @@
 #### Doc alignment
 
 - [ ] action-ownership-catalogue Extend the action ownership sketch into a full RIMAPI action/endpoint catalogue, preserving owner/requester/executor labels.
-- [ ] reconcile-medical-welfare-boundary-across Reconcile the Medical/Welfare boundary across docs (`Docs/DESIGN.md` still describes Welfare as owning medical sub-blocks, while `Docs/design/ministers.md` splits Medical into its own subsystem).
+- [x] reconcile-medical-welfare-boundary-across Reconciled the Medical/Welfare boundary across docs: Welfare owns Mood & Needs; Medical owns treatment.
 - [ ] expand-roadmap-beyond-first-cabinet Expand the roadmap beyond the first cabinet wave: explicitly schedule Industry, Medical, Research, and Economy instead of leaving them only in post-MVP notes.
 
 #### Cabinet rollout planning

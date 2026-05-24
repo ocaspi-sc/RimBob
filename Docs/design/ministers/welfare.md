@@ -8,16 +8,24 @@
 
 ## Domain
 
-Welfare owns pawn wellbeing:
+Welfare keeps the minister name and owns the **Mood & Needs** domain:
 
-- Mood, break risk, recreation, comfort, beauty, sleep, and schedules.
-- Relationship and social-conflict pressure.
+- Mood and break risk as explained by needs, thoughts, recreation, comfort,
+  beauty, sleep, and schedules.
+- Relationship and social-conflict pressure when it creates mood risk.
 - Ideology mood pressure until it justifies a split.
-- Apparel warmth/comfort as wellbeing pressure, with Industry owning production.
+- Apparel warmth/comfort as mood-and-needs pressure, with Industry owning
+  production.
 
 Medical is now treated as its own subsystem in the cabinet model, though Welfare
 and Medical will overlap on mood effects from pain, illness, hospital quality,
-and care access. Reconcile the final rollout order before implementation.
+and care access. Medical owns the treatment decision; Welfare owns the mood
+impact and break-risk framing. Reconcile the final rollout order before
+implementation.
+
+Food owns the nutrition chain. Welfare can flag hunger, bad meal mood, or
+nutrient-paste pressure as Mood & Needs evidence, but requests Food when the
+actual fix is meals, crops, hunting, cooking, or storage.
 
 Trade/Economy is no longer a Welfare sub-block in the target cabinet. Economy
 owns trade and wealth once scheduled.
@@ -31,6 +39,7 @@ Welfare should begin as rules-first `Suggest`-mode advice.
 Likely first advice areas:
 
 - Immediate or elevated mental-break risk.
+- The need or thought most responsible for the current mood risk.
 - Recreation coverage gaps.
 - Schedule problems that are visible and actionable.
 - Comfort/beauty/sleep issues that a concrete build or policy can address.
@@ -46,6 +55,8 @@ Exact concerns should be defined when Welfare implementation starts.
 Welfare briefing should answer:
 
 - Who is at break risk and why?
+- Which need, thought, schedule, room, relationship, or ideology pressure is
+  driving the risk?
 - Are recreation and sleep needs being met?
 - Are schedule settings creating avoidable mood loss?
 - Are comfort, beauty, room quality, or apparel causing clear pressure?
@@ -73,6 +84,8 @@ signals. Escalate for:
 
 Welfare may request:
 
+- Food: meals, meal quality, or nutrition-chain fixes when hunger or food mood
+  is the driver.
 - Construction: beds, recreation buildings, room improvements, comfort assets.
 - Industry: apparel or beauty/comfort goods.
 - Medical: pain, wounds, disease, or care issues affecting mood.
@@ -88,15 +101,18 @@ Requests remain advice in MVP; they do not issue RIMAPI writes by themselves.
 - Mood distribution stays mostly stable or improving.
 - Recreation and sleep gaps are surfaced before crises.
 - Welfare advice stays concrete rather than generic "improve mood" prose.
+- Advice names the current need/thought driver instead of hiding behind
+  generic wellbeing language.
 - Escalation rate falls as common mood patterns become rules.
 
 ---
 
 ## Open Questions / TODO
 
-- [ ] Reconcile Welfare/Medical implementation order and boundary.
+- [ ] Resolve Welfare/Medical rollout order before implementation.
 - [ ] Define first Welfare concerns.
 - [ ] Decide how schedule advice interacts with deferred Labor/Auto.
 - [ ] Define recreation/build priority from live data.
 - [ ] Add ideology-specific handling only when DLC scope requires it.
-- [ ] Decide whether prisoner wellbeing stays Welfare or moves later.
+- [ ] Decide whether prisoner living-conditions mood pressure stays Welfare or
+      moves later.

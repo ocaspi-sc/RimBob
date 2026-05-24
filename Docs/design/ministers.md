@@ -184,13 +184,19 @@ Each minister owns either a production chain or a well-defined subsystem:
 | Defense | Threat response: raids, drafted combat, fortifications as defensive intent, weapons/ammo readiness |
 | Construction | Built infrastructure: rooms, power, temperature systems, base layout, non-defense blueprints |
 | Industry | Non-food production chain: stonecutting, tailoring, smithing, machining, fabrication, drug production, production stockpiles |
-| Welfare | Pawn wellbeing: mood, recreation, schedules, relationships, comfort, beauty, ideology mood pressure |
+| Welfare | Mood & Needs: mood risk from pawn needs, thoughts, recreation, schedules, relationships, comfort, beauty, ideology pressure |
 | Medical | Health subsystem: wounds, disease, surgery, triage, medicine stock, hospital readiness |
 | Research | Technology path: research queue, unlock dependencies, capability planning |
 | Economy | Wealth and trade chain: trade goods, caravans, buying scarce resources, selling surplus, wealth pressure |
 | Mayor | Colony-wide strategy and posture; owns no routine operational action |
 | Chief of Staff | Flag triage and conflict arbitration; owns no direct production chain |
 | Labor | Deferred Auto-epic work-system **policy recommender** (priorities/zones/schedules/policies). RimWorld's job-giver allocates pawns. Re-engages at Auto. |
+
+Welfare's domain label is **Mood & Needs**. It watches needs and thoughts as
+they affect mood and break risk, then asks the owning domain for the smallest
+concrete fix. Hunger routes to Food when the fix is nutrition; pain, disease,
+and wounds route to Medical when the fix is treatment. Welfare keeps the mood
+impact and break-risk framing.
 
 ### Resource Requests
 
@@ -279,7 +285,7 @@ surface an apply handle for a narrow action.
 
 | Action family | Owner | Common requesters | Notes |
 |---|---|---|---|
-| Recreation, comfort, beauty, sleep quality, room impressiveness | Welfare | Construction, Industry | Welfare owns the pawn-need reason |
+| Recreation, comfort, beauty, sleep quality, room impressiveness | Welfare | Construction, Industry | Welfare owns the Mood & Needs reason |
 | Schedules, joy/work/sleep balance, mental-break prevention | Welfare | Medical, Defense | Suggest-only until Labor/Auto |
 | Relationships, social fights, ideology mood pressure | Welfare | Mayor | Split later only if complexity justifies it |
 | Triage, tending, disease monitoring, surgery, hospital readiness | Medical | Welfare, Construction, Industry | Split from Welfare because cadence/severity differ |
@@ -303,7 +309,7 @@ surface an apply handle for a narrow action.
 | Psychoid/smokeleaf/beer | Industry owns production; Welfare owns drug policy; Economy owns sale strategy |
 | Devilstrand | Food comments on growing opportunity cost; Industry owns textile use; Economy owns sale value |
 | Animals | Food owns slaughter pressure; Economy owns sale/trade; Defense owns combat animals; future Animals minister possible |
-| Prisoners | Welfare owns living conditions; Medical owns health; Economy owns ransom/slavery/trade; Defense owns escape/riot risk |
+| Prisoners | Welfare owns mood/needs pressure from living conditions; Medical owns health; Economy owns ransom/slavery/trade; Defense owns escape/riot risk |
 | Ideology/rituals | Welfare owns mood pressure until rules/prompts become noisy |
 | Multi-map/caravans | Economy owns purpose; Defense owns threat; Food/Medical own provisioning sufficiency; full multi-map support deferred |
 
