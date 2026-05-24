@@ -12,7 +12,13 @@
 
 <!-- entries go here -->
 - [ ] food-to-chef-rename [2026-05-24] #food #debt #doc Rename the Food minister to Chef.
+- [ ] concern-code-rename [2026-05-23] #refactor #advice #rename **Code rename `advice_type` → `concern`.** C# property + enum types (`FoodAdviceType` → `FoodConcern`), JSON wire field, prompts, fixtures, dashboard TS mirrors, tolerant inbound + replay reader. Gimping via Codex; doc rename runs in parallel. [plan](.plans/code-rename-to-concern.md)
+- [ ] willie-meta-plan [2026-05-22] #design #construction #index **Willie (Construction) meta-plan.** Master index for the Construction effort: artifact map, locked decisions, ordered remaining work, open decisions. [plan](.plans/willie-meta-plan.md)
 - [ ] wfc-variant-generator [2026-05-22] #idea #spike #construction Evaluate WFC as a bounded Construction variant generator. [plan](.plans/wfc-variant-generator.md)
+- [ ] assisted-apply-mine-cut [2026-05-22] #assisted #apply #construction #food Add `mark_mine` + `cut_plants`/chop **designations** to the Assisted Apply allowlist. Same low-blast class as the current 4 (additive, ephemeral, game clears once done). Willie: clear build site / get steel; Food: wood + clearing. Design: extend `AdviceApplyKind` + validator; advice.md allowlist.
+- [ ] assisted-apply-create-zone [2026-05-22] #assisted #apply #zones #construction #food Let a minister / Placement Solver suggest a **new** growing or material-stockpile zone as an Assisted Apply. Carve-out: CREATE-new-empty zone = additive/targeted (apply-eligible); EDITING an existing zone's filters/priority = policy knob (stays Suggest-only). Revisit advice.md "Policy Knobs vs Targeted Designations"; Solver emits the rectangle.
+- [ ] assisted-apply-deconstruct-eval [2026-05-22] #assisted #apply #construction Evaluate `mark_deconstruct` as an apply — it DESTROYS a building (higher blast than additive designations). Needs a confirm/undo story before allowlisting; not in the "easy" tier.
+- [ ] advice-action-vocab-expansion [2026-05-23] #design #advice #vocabulary Extend `AdviceActionKind` to cover common missing player designations: `mark_mine`, `cut_plants`/chop, `mark_deconstruct`, `smooth`, `claim`, `install`/`uninstall` (minified), `tame`, `slaughter`, `haul-to`. Prerequisite for the apply-expansion todos (`assisted-apply-mine-cut`, `assisted-apply-create-zone`). Equip/apparel/medical/prisoner/combat stay deferred per advice.md (pawn assignment → Auto).
 - [x] refactor-baseline-scope-lock [2026-05-15] #refactor #ops Captured the baseline build/test state, searched old advice schema names, and scoped the first refactor slice to schema repair.
 - [x] refactor-advice-priority-schema [2026-05-15] #refactor #advice Replaced severity/priority-score behavior with `AdvicePriority`, priority sorting, and tolerant legacy input parsing.
 - [x] refactor-llm-advice-normalizer [2026-05-15] #refactor #food #llm Split Food LLM advice normalization into orchestration, compatibility parsing, resource requests, suggested actions, and work-type inference.
@@ -62,6 +68,11 @@
 - [ ] rimmind-prompt-composer-blocks [2026-05-19] #rimmind #research #prompts #ministers RimMind: Prompt Composer Blocks - inspect scoped prompt block composition if RimBob minister prompt builders become repetitive. [PromptService](C:/dev/Rimworld_AI_Core/RimAI.Core/Source/Modules/Prompting/PromptService.cs) [IPromptComposer](C:/dev/Rimworld_AI_Core/RimAI.Core/Source/Modules/Prompting/IPromptComposer.cs)
 - [ ] rimmind-history-recap-windows [2026-05-19] #rimmind #research #replay #feedback RimMind: History Recap Windows - inspect idempotent recap windows and stale-summary handling for replay and Pushback refinement. [HistoryService](C:/dev/Rimworld_AI_Core/RimAI.Core/Source/Modules/History/HistoryService.cs) [RecapService](C:/dev/Rimworld_AI_Core/RimAI.Core/Source/Modules/History/Recap/RecapService.cs)
 - [ ] add-rimapi-fork-endpoints-blueprint [2026-05-19] #high-prio #rimapi #construction Add RIMAPI fork endpoints for blueprint validate/place/read (coordinates supplied by caller; minister wiring deferred). [plan](.plans/rimapi-blueprint-placement-endpoint.md)
+- [ ] rimapi-blueprint-groups-overlay [2026-05-21] #rimapi #construction Blueprint GROUP placement (room shell + contents) + planning overlay in the fork; builds on add-rimapi-fork-endpoints-blueprint. [plan](.plans/rimapi-blueprint-groups-and-planning-overlay.md)
+- [ ] basie-plan-new-base [2026-05-21] #construction #idea #future Willie plans a NEW base / major expansion: lay a planning overlay (vanilla Plan designator or forbidden blueprints), player commits region-by-region into real blueprint groups. Guides: more-planning-mod, rimworld-planner. See Capability B in [plan](.plans/rimapi-blueprint-groups-and-planning-overlay.md).
+- [ ] basie-construction-design [2026-05-21] #construction #design Willie (Construction) design anchors: canonical concerns (done), advice-output schema + request taxonomy (in flight). [concerns](.plans/basie-advice-types.md)
+- [ ] placement-solver [2026-05-21] #construction #design Placement Solver: deterministic engine turning building_requests/build_intent into validated layout options (no LLM); building_requests feed it directly. [plan](.plans/placement-solver.md)
+- [ ] schema-landing [2026-05-22] #refactor #advice #schema Land advice/flag schema: S1 additive types + AdviceAction icon/reason drop; S2 flag typed request arrays; S3 apply per-kind split. Gimp-able, slice-by-slice. [plan](.plans/schema-landing.md)
 - [ ] advice-chain-route-cards-grow [2026-05-19] #dashboard #food #ux Advice chain route cards (Grow/Hunt/Forage) above the Food snapshot. [plan](.plans/advice-chain-visualization.md)
 - [ ] remove-legacy-repo-local-icon [2026-05-18] #ops #cleanup Remove legacy repo-local icon/log artifacts after AppData cache/log paths stay verified. [plan](.plans/icons-warm-fixes.md)
 - [ ] legacy-worktree-migration [2026-05-17] #git #debt Migrate dirty legacy worktrees after their active slices land.
@@ -116,7 +127,7 @@
 #### Cabinet rollout planning
 
 - [ ] minister-scope-docs Add scope docs for Industry, Medical, Research, and Economy once their first slices are scheduled.
-- [ ] advice-type-enums Per-minister `advice_type` enums - define in each minister's session.
+- [ ] concern-enums Per-minister `concern` enums - define in each minister's session.
 - [ ] minister-code-scope-docs Per-minister scope docs (`RimBob.Ministers/<name>/scope.md`) - write after first slice ships.
 - [ ] construction-placement-layout-strategy-base Construction: placement / layout strategy (Base Layout Minister candidate). [plan](.plans/base-construction-layout-agent.md)
 - [ ] define-minimum-viable-cos-solver Define the minimum viable CoS solver rule set for M4: consume Mayor posture/`cabinet_direction`, issue reports or current-runtime flags, and structured requests; dedupe same-issue pressure, choose lead framing, and decide when an issue becomes a tactical alert versus Mayor-digest input. [plan](.plans/deterministic-cos-cabinet-issue-solver.md)
@@ -135,7 +146,7 @@
 - [ ] labor-bulletin-board Bulletin board (`Coordination/BulletinBoard.cs`) — queues policy-change requests for Labor, not per-pawn tickets — per [`Docs/design/communication.md`](Docs/design/communication.md).
 - [ ] labor-policy-recommender Labor policy recommender per [`Docs/design/ministers/labor.md`](Docs/design/ministers/labor.md).
 - [ ] rimapi-policy-knob-write-endpoint RIMAPI policy-knob write-endpoint coverage map (Pawn Edit Controller etc.).
-- [ ] minister-advice-type-autonomy-dial Per-(minister, advice_type) autonomy dial wired with real Auto execution.
+- [ ] minister-concern-autonomy-dial Per-(minister, concern) autonomy dial wired with real Auto execution.
 - [ ] autonomy-dial-ui Autonomy dial UI with confirmation step.
 
 ### Claude skills to build (see ROADMAP)
