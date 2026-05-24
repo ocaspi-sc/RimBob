@@ -24,6 +24,7 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 - Use mermaid diagrams over prose
 - dont be vauge! Write specifics. no "Update file" but "file: Added X."
 - Show me pseudo code
+- Use cheap subagents often
 
 ## Coding
 
