@@ -108,6 +108,19 @@ pickable `options[]`. Request-driven builds are deterministic: the Solver
 consumes `building_request`s directly (already structured), so no LLM step is
 needed. See [`placement-solver.md`](../../../.plans/placement-solver.md).
 
+Here, "1-3 candidate layouts" means the final emitted `options[]`, not the
+internal search space. The solver may run several bounded candidate generators
+(templates, empty rectangles, pattern matches, reuse-existing-footprint, and
+future WFC/CP-SAT experiments), but all drafts flow through one shared hard-gate,
+score, dedupe/diversity, and RIMAPI-validation pipeline. Generators propose;
+the solver decides.
+
+Candidate score traces should keep measured raw values with explicit units
+(`tiles`, `watts`, `celsius`, `nutrition`, `stacks`, `silver_value`, etc.) beside
+the normalized 0-1 values used for ranking. Status facts such as `draftable`,
+`placement_valid`, `materials_ready`, `apply_ready`, and RIMAPI validation state
+stay booleans/enums rather than fake unit-bearing metrics.
+
 The executable Apply (place a chosen layout) renders in **Construction's own
 dashboard scope** (Willie's tab), since Construction emits the placement action.
 A requesting minister (e.g. Chef asking for a freezer) shows only its outbound
