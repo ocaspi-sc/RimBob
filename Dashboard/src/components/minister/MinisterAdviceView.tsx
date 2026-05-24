@@ -11,6 +11,7 @@ import type {
   LaborRequest,
 } from '../../types/advice';
 import type { ScopeConfig } from '../../dashboard/scopes';
+import { isScopeMinister } from '../../dashboard/selectors';
 import { applyAdviceAction } from '../../api/advice';
 import { iconUrlFor } from '../../api/icons';
 import {
@@ -49,7 +50,7 @@ export function MinisterAdviceView({
     return <MayorAdvice agenda={agenda} previousAgenda={previousAgenda} />;
   }
 
-  const ministerAdvice = advice.filter(item => item.minister.toLowerCase() === scope.label.toLowerCase());
+  const ministerAdvice = advice.filter(item => isScopeMinister(item.minister, scope));
 
   if (scope.status !== 'live') {
     return <EmptyState code="ADVICE NOT WIRED">{scope.label} is planned and not emitting advice yet.</EmptyState>;

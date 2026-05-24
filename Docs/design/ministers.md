@@ -77,7 +77,7 @@ pushbacks, decision history, replay corpus, prompt traces, and fixtures; then it
 proposes changes for human approval.
 
 Each minister owns its own pushback list. Pushbacks are scoped: the Mayor does
-not see Food's pushbacks, and Food does not see Defense's. Pushbacks can inform
+not see Chef's pushbacks, and Chef does not see Defense's. Pushbacks can inform
 the issuing minister's next prompt and later provide the refinement corpus.
 Implicit state-diff feedback is not part of MVP; see [`advice.md`](advice.md).
 
@@ -180,7 +180,7 @@ Each minister owns either a production chain or a well-defined subsystem:
 
 | Minister | Boundary |
 |---|---|
-| Food | Nutrition chain: forage/edible plant harvest, crop production, hunting-for-food, butchering, cooking, meals, food stockpiles, freezer integrity |
+| Chef | Nutrition chain: forage/edible plant harvest, crop production, hunting-for-food, butchering, cooking, meals, food stockpiles, freezer integrity |
 | Defense | Threat response: raids, drafted combat, fortifications as defensive intent, weapons/ammo readiness |
 | Construction | Built infrastructure: rooms, power, temperature systems, base layout, non-defense blueprints |
 | Industry | Non-food production chain: stonecutting, tailoring, smithing, machining, fabrication, drug production, production stockpiles |
@@ -194,7 +194,7 @@ Each minister owns either a production chain or a well-defined subsystem:
 
 Welfare's domain label is **Mood & Needs**. It watches needs and thoughts as
 they affect mood and break risk, then asks the owning domain for the smallest
-concrete fix. Hunger routes to Food when the fix is nutrition; pain, disease,
+concrete fix. Hunger routes to Chef when the fix is nutrition; pain, disease,
 and wounds route to Medical when the fix is treatment. Welfare keeps the mood
 impact and break-risk framing.
 
@@ -239,25 +239,25 @@ is advisory by itself; it does not execute writes or allocate pawns. Assisted
 Apply may use the same ownership map to decide which minister is allowed to
 surface an apply handle for a narrow action.
 
-### Food And Survival
+### Chef And Survival
 
 | Action family | Owner | Common requesters | Notes |
 |---|---|---|---|
-| Sow food crops, choose food crop, expand food growing zone | Food | Mayor, Economy | Food owns nutrition timing and crop choice |
-| Harvest crops, wild berries/agave, ambrosia-for-food | Food | Welfare, Economy | Nutrition pressure belongs to Food |
-| Hunt for food | Food | Defense, Economy | Food owns need/target recommendation; Defense may veto dangerous hunts |
-| Butcher animals/corpses for meat | Food | Economy | Human/insect corpse policy may involve Welfare |
-| Cook meals, choose meal type, set cook/butcher bill targets | Food | Welfare, Medical | Welfare can request fine meals; Medical can request safe food |
-| Manage freezer, food stockpile, spoilage response | Food | Construction | Food owns the need; Construction owns requested assets |
+| Sow food crops, choose food crop, expand food growing zone | Chef | Mayor, Economy | Chef owns nutrition timing and crop choice |
+| Harvest crops, wild berries/agave, ambrosia-for-food | Chef | Welfare, Economy | Nutrition pressure belongs to Chef |
+| Hunt for food | Chef | Defense, Economy | Chef owns need/target recommendation; Defense may veto dangerous hunts |
+| Butcher animals/corpses for meat | Chef | Economy | Human/insect corpse policy may involve Welfare |
+| Cook meals, choose meal type, set cook/butcher bill targets | Chef | Welfare, Medical | Welfare can request fine meals; Medical can request safe food |
+| Manage freezer, food stockpile, spoilage response | Chef | Construction | Chef owns the need; Construction owns requested assets |
 
 ### Base And Infrastructure
 
 | Action family | Owner | Common requesters | Notes |
 |---|---|---|---|
 | Build rooms, walls, doors, floors, roofs, furniture | Construction | All ministers | Construction owns build feasibility, placement, materials, and layout cost |
-| Build power generation, batteries, conduits, switches | Construction | Food, Industry, Defense, Medical | Requester owns why power matters |
-| Build temperature systems | Construction | Food, Welfare, Medical, Industry | Freezer need is Food; asset build is Construction |
-| Build production benches | Construction | Industry, Food, Medical, Research | Requester owns production need |
+| Build power generation, batteries, conduits, switches | Construction | Chef, Industry, Defense, Medical | Requester owns why power matters |
+| Build temperature systems | Construction | Chef, Welfare, Medical, Industry | Freezer need is Chef; asset build is Construction |
+| Build production benches | Construction | Industry, Chef, Medical, Research | Requester owns production need |
 | Manage material/component stockpiles | Construction | Industry, Defense | Construction owns base material availability |
 | Dumping zones, stone chunk flow, cleanup infrastructure | Construction | Industry, Welfare | Infrastructure and zone purpose, not cleaning labor |
 
@@ -295,9 +295,9 @@ surface an apply handle for a narrow action.
 
 | Action family | Owner | Common requesters | Notes |
 |---|---|---|---|
-| Research queue and tech path | Research | Mayor, Defense, Food, Industry, Medical | Mayor sets posture; Research owns queue mechanics |
-| Trade offers, buying scarce resources, selling surplus | Economy | Food, Medical, Defense, Industry | Requester owns need; Economy owns trade decision |
-| Caravan formation/provisioning purpose | Economy | Food, Defense, Medical | Food/Defense/Medical own sufficiency and risk inputs |
+| Research queue and tech path | Research | Mayor, Defense, Chef, Industry, Medical | Mayor sets posture; Research owns queue mechanics |
+| Trade offers, buying scarce resources, selling surplus | Economy | Chef, Medical, Defense, Industry | Requester owns need; Economy owns trade decision |
+| Caravan formation/provisioning purpose | Economy | Chef, Defense, Medical | Chef/Defense/Medical own sufficiency and risk inputs |
 | Wealth pressure, stockpile liquidation, trade-good strategy | Economy | Mayor, Industry | Mayor sets posture; Economy manages wealth |
 | Colony-wide goals and priority ordering | Mayor | All ministers | Mayor owns strategy, not routine operation |
 | Conflicting flags and same-tick priority conflicts | Chief of Staff | All ministers | CoS arbitrates framing/priority |
@@ -307,11 +307,11 @@ surface an apply handle for a narrow action.
 | Hard case | Provisional handling |
 |---|---|
 | Psychoid/smokeleaf/beer | Industry owns production; Welfare owns drug policy; Economy owns sale strategy |
-| Devilstrand | Food comments on growing opportunity cost; Industry owns textile use; Economy owns sale value |
-| Animals | Food owns slaughter pressure; Economy owns sale/trade; Defense owns combat animals; future Animals minister possible |
+| Devilstrand | Chef comments on growing opportunity cost; Industry owns textile use; Economy owns sale value |
+| Animals | Chef owns slaughter pressure; Economy owns sale/trade; Defense owns combat animals; future Animals minister possible |
 | Prisoners | Welfare owns mood/needs pressure from living conditions; Medical owns health; Economy owns ransom/slavery/trade; Defense owns escape/riot risk |
 | Ideology/rituals | Welfare owns mood pressure until rules/prompts become noisy |
-| Multi-map/caravans | Economy owns purpose; Defense owns threat; Food/Medical own provisioning sufficiency; full multi-map support deferred |
+| Multi-map/caravans | Economy owns purpose; Defense owns threat; Chef/Medical own provisioning sufficiency; full multi-map support deferred |
 
 ---
 
@@ -351,11 +351,11 @@ Minister of Zoning because zones are means to other ministers' ends.
 
 | Zone type | Owning minister | Notes |
 |---|---|---|
-| Food stockpile | Food | Co-located with freezer; Food knows food quantities and spoilage risk |
+| Food stockpile | Chef | Co-located with freezer; Chef knows food quantities and spoilage risk |
 | Material / component stockpile | Construction | Co-located with workshops; Construction knows material flow and build queue |
 | Ammo / weapon stockpile | Defense | Near killbox or armoury |
 | Medicine stockpile | Medical | Near hospital; Medical tracks medical supply chain |
-| Growing zone | Food | Placement, size, crop assignment |
+| Growing zone | Chef | Placement, size, crop assignment |
 | Dumping zone | Construction | Rock chunks, corpses, waste; base hygiene |
 | Home zone | Mayor / CoS | Colony-wide; no minister claims it |
 | Allowed zone | Mayor / CoS | Colony-wide; no minister claims it |

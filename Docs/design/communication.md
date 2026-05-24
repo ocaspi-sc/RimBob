@@ -38,7 +38,7 @@ bridge, but future CoS work should treat flags as a transport/projection of an
 issue rather than the whole issue model. See
 [`deterministic-cos-cabinet-issue-solver.md`](../../.plans/deterministic-cos-cabinet-issue-solver.md).
 
-M3 runtime bridge: before a separate CoS loop exists, Food publishes active
+M3 runtime bridge: before a separate CoS loop exists, Chef publishes active
 flags and the Mayor reads active Medium+ flags during the same cabinet cycle.
 This is a Mayor-side bridge, not direct minister communication.
 
@@ -102,7 +102,7 @@ same-issue updates should replace or supersede rather than spam the active view.
 Ministers cannot read each other's briefings. A minister's own briefing may
 include summarized cross-domain facts that affect its decisions.
 
-Example: Food does not need raid details; it may only need an `active threat`
+Example: Chef does not need raid details; it may only need an `active threat`
 signal to avoid planting advice during combat.
 
 These facts are computed by the state store as derived views, not exchanged by

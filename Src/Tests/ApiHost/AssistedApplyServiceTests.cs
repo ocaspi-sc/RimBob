@@ -286,7 +286,7 @@ public sealed class AssistedApplyServiceTests
         DateTimeOffset now = DateTimeOffset.UtcNow;
         return new AdviceItem(
             Id: id,
-            Minister: "Food",
+            Minister: "Chef",
             Concern: "harvest_now",
             Priority: AdvicePriority.High,
             Title: "Mature crops are ready",

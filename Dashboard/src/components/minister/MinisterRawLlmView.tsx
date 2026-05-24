@@ -1,5 +1,6 @@
 import { fetchRawLlmOutput } from '../../api/ministers';
 import type { ScopeConfig } from '../../dashboard/scopes';
+import { isScopeMinister } from '../../dashboard/selectors';
 import { iconForField, iconForView } from '../../dashboard/semanticIcons';
 import type { MinisterTrace, SystemHealth } from '../../types/system';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
@@ -135,10 +136,7 @@ export function MinisterRawLlmView({
 }
 
 function findTrace(systemHealth: SystemHealth | null, scope: ScopeConfig): MinisterTrace | null {
-  return systemHealth?.traces.find(trace =>
-    trace.minister.toLowerCase() === scope.label.toLowerCase() ||
-    trace.minister.toLowerCase() === scope.key.toLowerCase()
-  ) ?? null;
+  return systemHealth?.traces.find(trace => isScopeMinister(trace.minister, scope)) ?? null;
 }
 
 function isOlderThanTrace(capturedAt: string, trace: MinisterTrace | null): boolean {

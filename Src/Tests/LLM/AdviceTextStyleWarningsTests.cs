@@ -17,7 +17,7 @@ public sealed class AdviceTextStyleWarningsTests
             [
                 new AdviceItem(
                     Id: "wordy_food",
-                    Minister: "Food",
+                    Minister: "Chef",
                     Concern: "food_security",
                     Priority: AdvicePriority.High,
                     Title: "Confirm the reachable indoor stockpile visibility before making meal decisions",
@@ -37,7 +37,7 @@ public sealed class AdviceTextStyleWarningsTests
             [
                 new AgentFlag(
                     "wordy_flag",
-                    "Food",
+                    "Chef",
                     FlagSeverity.High,
                     "food",
                     "Food buffer is below one day while storage visibility and emergency growing coverage both remain blocked")
@@ -61,7 +61,7 @@ public sealed class AdviceTextStyleWarningsTests
             [
                 new AdviceItem(
                     Id: "compact_food",
-                    Minister: "Food",
+                    Minister: "Chef",
                     Concern: "food_security",
                     Priority: AdvicePriority.High,
                     Title: "Expose food stockpile",
@@ -81,7 +81,7 @@ public sealed class AdviceTextStyleWarningsTests
             [
                 new AgentFlag(
                     "compact_flag",
-                    "Food",
+                    "Chef",
                     FlagSeverity.High,
                     "food",
                     "Food buffer below one day.")

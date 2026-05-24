@@ -101,7 +101,7 @@ derived live meaning, and DEV BLOG renders repository-history meaning. INFO
 stays static/reference-oriented so it does not become either a second SYSTEM
 page or a second ANALYTICS page.
 
-Live minister scopes are Mayor and Food. Future minister scopes remain visible
+Live minister scopes are Mayor and Chef (`food` key). Future minister scopes remain visible
 but disabled or marked not wired until backend data exists: Construction,
 Defense, Welfare, Medical, Research, Industry, Economy, and Chief of Staff.
 
@@ -580,7 +580,7 @@ Shows the latest minister briefing grouped into readable sections rather than
 dumping raw JSON as the only view. Include raw/source inspection where useful,
 but keep the primary view scannable.
 
-Food's Briefing view should also show deterministic crop-candidate math as a
+Chef's Briefing view should also show deterministic crop-candidate math as a
 compact inspector panel when the backend exposes it. The panel is read-only and
 exists to make crop choice, season fit, fertility, storage modifiers, and
 classification confidence inspectable without digging through prompt JSON.
@@ -609,7 +609,7 @@ Infographics renders visual, deterministic readouts derived from minister
 snapshot data. It is for whole-minister models that are easier to read as a
 diagram than as advice text or raw JSON.
 
-Food's Infographics view renders backend `chain` data as one merged work-order
+Chef's Infographics view renders backend `chain` data as one merged work-order
 diagram. Grow, forage, and hunt enter as separate colored routes, then merge
 into the shared Harvest/Butcher -> Storage -> Cook -> Fridge path. Every step
 is a small icon-led box with short factual subtext; crop waiting belongs under
@@ -622,7 +622,7 @@ prerequisite.
 
 Mayor Advice renders the Agenda as the Mayor's player-facing output. Feeder
 minister Advice renders the minister's current-state summary first, then active
-`AdviceItem`s sorted by priority. For Food, this summary is a deterministic
+`AdviceItem`s sorted by priority. For Chef, this summary is a deterministic
 briefing-derived labelled summary, not LLM prose. The Advice view may render it
 as a compact table with lightweight icon-database cues because it is
 player-facing; raw and debug views preserve the original `state_summary` text.
@@ -648,7 +648,7 @@ write and read-back.
 
 An Apply control renders only in the scope of the minister that **emitted** the
 action. A requesting minister shows its outbound `requests[]` but never another
-minister's executable handle — e.g. Food requests a freezer, but the
+minister's executable handle — e.g. Chef requests a freezer, but the
 `place_blueprint` Apply lives in Construction's (Willie's) scope, because
 Construction emits the placement action.
 
@@ -693,7 +693,7 @@ metrics, and endpoint coverage.
   scrolling on desktop.
 - Text wraps within panels.
 - Use compact tables for debug surfaces and explicitly curated player-facing
-  summaries, such as the Food current-state table.
+  summaries, such as the Chef current-state table.
 - Debug tables use contract names by default. Friendly aliases are allowed only
   when they clarify a stable contract and do not hide the backend field.
 - Advice action cards render `kind` plus `instruction`, with quantity, owner,

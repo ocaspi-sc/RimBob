@@ -167,14 +167,14 @@ records remain in the replay corpus.
 
 Feeder snapshots may carry one player-facing current-state summary above the
 advice items. That summary describes the whole minister read; it is not an
-`AdviceItem`, a resource request, or an executable action. For Food, this
+`AdviceItem`, a resource request, or an executable action. For Chef, this
 summary is a compact briefing-derived bullet list so it stays factual about
 stores, growing areas, acquisition, storage/kitchen state, and data gaps even
 when the LLM writes its own raw `state_summary`.
 
 Feeder snapshots may also carry a deterministic chain model for the whole
 minister read. This is not an `AdviceItem` field and is not authored by the
-LLM. For Food, backend code derives the model from `FoodBriefing` plus the
+LLM. For Chef, backend code derives the model from `FoodBriefing` plus the
 emitted active advice so the dashboard can show how the current food pressure
 connects to grow, hunt, forage, cook, storage, and meal outcomes.
 
@@ -236,7 +236,7 @@ RAG improvements.
 ## Minister-Owned Pushback Lists
 
 Each minister owns and persists its own pushback list. Pushbacks are scoped: the
-Mayor does not read Food's pushbacks, and Food does not read Defense's.
+Mayor does not read Chef's pushbacks, and Chef does not read Defense's.
 
 Design requirements:
 
@@ -307,12 +307,12 @@ The LLM never chooses raw endpoints, payloads, or arbitrary target ids. It may
 emit a structured action; deterministic code decides whether that action can expose
 Apply. Initial candidates should be conservative: `unforbid` for known item
 stacks, `mark_harvest` for validated safe plant clusters, `mark_hunt` for
-deterministic low-risk animal batches, and one Food-owned simple-meal cook-bill
+deterministic low-risk animal batches, and one Chef-owned simple-meal cook-bill
 upsert. The bill operation is intentionally narrow:
 exactly one current cooking workbench, backend-resolved simple-meal recipe,
 bounded do-until target, idempotent add-or-update, no delete/reorder/suspend
 changes, fresh-state revalidation, and RIMAPI read-back. `mark_hunt` is eligible
-only when Food has already excluded risky/tame/unhealthy animals, has exact
+only when Chef has already excluded risky/tame/unhealthy animals, has exact
 animal ids and a bounded rectangle, and fresh validation proves no unsafe or
 off-target animals are inside that rectangle. Work priorities, broad bill
 editing, zones, pawn assignment, equipment, medical, prisoner, and combat

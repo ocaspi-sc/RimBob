@@ -432,8 +432,11 @@ public sealed class MinisterOutputStore
             state,
             error);
 
-    private static string NormalizeMinisterName(string minister) =>
-        MinisterRegistry.NormalizeKey(minister);
+    private static string NormalizeMinisterName(string minister)
+    {
+        string normalized = MinisterRegistry.NormalizeKey(minister);
+        return normalized is "food" or "chef" ? "chef" : normalized;
+    }
 
     private sealed record PendingAdviceSnapshot(
         AdviceSnapshot Snapshot,

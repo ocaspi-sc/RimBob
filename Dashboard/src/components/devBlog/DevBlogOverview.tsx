@@ -947,7 +947,7 @@ function featureDisplayInfo(featureKey: string): { title: string; description: s
     case 'Food stock summaries':
       return {
         title: '🍱 Stockpile Truth Ledger',
-        description: 'Food-store totals that make meals, raw food, and gaps visible before the Food minister writes advice.',
+        description: 'Food-store totals that make meals, raw food, and gaps visible before Chef writes advice.',
         icon: iconForField('food'),
       };
     case 'Stored food classification':

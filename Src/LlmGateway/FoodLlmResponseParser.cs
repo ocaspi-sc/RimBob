@@ -38,13 +38,13 @@ public static class FoodLlmResponseParser
         }
 
         LlmAdviceNormalizationContext normalizeContext = new(
-            Minister: "Food",
+            Minister: "Chef",
             Domain: "food",
             BriefingVersion: briefing.BriefingVersion,
             GameTick: briefing.GameTick,
             Date: briefing.Date,
             DefaultConcern: nameof(FoodConcern.FoodSecurity),
-            DefaultRationale: "Food LLM escalation selected this recommendation.",
+            DefaultRationale: "Chef LLM escalation selected this recommendation.",
             GuideContext: guideContext);
 
         JsonNode root = JsonNode.Parse(text) ??
@@ -100,6 +100,7 @@ public static class FoodLlmResponseParser
 
                 return item with
                 {
+                    Minister = "Chef",
                     IssuedAt = issuedAt,
                     ExpiresAt = expiresAt,
                     IssuedInGameTick = string.IsNullOrWhiteSpace(item.IssuedInGameTick)
@@ -111,8 +112,9 @@ public static class FoodLlmResponseParser
                     ExpiresGameTick = IsUsefulGameExpiry(item.ExpiresGameTick, briefing.GameTick)
                         ? item.ExpiresGameTick
                         : AdviceFreshness.ExpiresGameTick(briefing.GameTick, item.Priority),
-                    BriefingRef = item.BriefingRef ??
-                        new BriefingRef("Food", briefing.BriefingVersion, $"food:{briefing.BriefingVersion}")
+                    BriefingRef = item.BriefingRef is null
+                        ? new BriefingRef("Chef", briefing.BriefingVersion, $"food:{briefing.BriefingVersion}")
+                        : item.BriefingRef with { Minister = "Chef" }
                 };
             })
             .ToArray();
@@ -120,6 +122,7 @@ public static class FoodLlmResponseParser
         IReadOnlyList<RimBob.Core.Ministers.AgentFlag> flags = response.Flags
             .Select(flag => flag with
             {
+                SourceMinister = "Chef",
                 ExpiresAt = flag.ExpiresAt is { } expiresAt && IsUsefulExpiry(expiresAt, now)
                     ? expiresAt
                     : now.AddHours(24)

@@ -7,7 +7,7 @@ namespace RimBob.Ministers.Food;
 
 public sealed class Rules : IMinisterRules<FoodBriefing>
 {
-    private const string MinisterName = "Food";
+    private const string MinisterName = "Chef";
     private const string Domain = "food";
     private const string SimpleMealRecipeSelector = "simple_meal";
     private const string BillRepeatModeTargetCount = "TargetCount";
@@ -57,7 +57,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 priority,
                 "Food crisis within a week",
                 EmergencyBody(briefing, days),
-                "Food below 7 days is an urgent survival risk. Food owns the next food-chain actions; cross-minister requests carry build, item, attention, and labor needs.",
+                "Food below 7 days is an urgent survival risk. Chef owns the next food-chain actions; cross-minister requests carry build, item, attention, and labor needs.",
                 EmergencyActions(briefing, days),
                 EmergencyRequests(briefing, days, priority),
                 true);
@@ -165,7 +165,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 AdvicePriority.Medium,
                 "Food storage needs freezer support",
                 "Food exists but no cooler is visible. Preserve surplus before warm weather or large harvests.",
-                "The Food minister owns freezer need; Construction owns the actual build work.",
+                "Chef owns freezer need; Construction owns the actual build work.",
                 FreezerSupportActions(briefing, days, incomingPerishableFood: false),
                 FreezerSupportRequests(briefing, days, incomingPerishableFood: false),
                 true);
@@ -888,7 +888,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         new(AdviceActionKind.DesignateZone,
             $"Create about {candidate.Tiles} emergency {candidate.Label} growing tiles; use fertile soil near storage when possible.",
             Quantity: candidate.Tiles,
-            Owner: "Food",
+            Owner: MinisterName,
             WorkType: WorkType.Grow,
             Skill: "Plants");
 

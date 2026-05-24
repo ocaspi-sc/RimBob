@@ -12,7 +12,7 @@
 | M1 | Mayor's Agenda spine — colony-wide briefing → Mayor LLM → versioned `MayorAgenda` rendered in the dashboard | Done |
 | M1.5 | Live operability — startup briefing, periodic ingestion, sidebar telemetry, manual re-evaluation, run-state + prompt-introspection endpoints | Done |
 | M2 | Grounded reasoning (RAG) — Mayor cites guide passages; measurable agenda-quality improvement before adding feeders | Done |
-| M3 | First feeder advisor (Food) — sub-briefing into the Mayor; first cross-minister flag | Implemented |
+| M3 | First feeder advisor (Chef food chain) — sub-briefing into the Mayor; first cross-minister flag | Implemented |
 | M4 | First cabinet wave — Construction, Defense, Welfare feeding the Mayor; flag-severity-gated tactical alerts surface independently of the daily digest | Not started |
 | M4.5 | Assisted Apply — player-confirmed execution for the safest allowlisted advice actions | Implemented |
 | M5 | Feedback loop — Accept / Dismiss / Pushback wired; each minister owns and persists its own pushback list | Not started |
@@ -101,20 +101,20 @@ longer fire a cabinet cycle just to repopulate the dashboard.
 
 ---
 
-## M3 — First feeder advisor (Food)
+## M3 — First feeder advisor (Chef)
 
-**Done when:** the Mayor's daily agenda visibly incorporates Food's sub-briefing; Food can emit a flag (e.g. "food crisis imminent") that the Mayor reflects in body or priority.
+**Done when:** the Mayor's daily agenda visibly incorporates Chef's food-chain sub-briefing; Chef can emit a flag (e.g. "food crisis imminent") that the Mayor reflects in body or priority.
 
-**Implementation:** M3 ships `FoodBriefing`, rules-first `MinisterOfFood`, Food Gemini escalation, Food RAG retrieval, active `FlagChannel`, `CabinetCycle` (Food before Mayor), SSE `advice` replay, Alerts rendering for Food `AdviceItem`s, and Mayor/Food briefing inspection.
+**Implementation:** M3 ships `FoodBriefing`, rules-first `Chef`, Chef Gemini escalation, Chef RAG retrieval, active `FlagChannel`, `CabinetCycle` (Chef before Mayor), SSE `advice` replay, Alerts rendering for Chef `AdviceItem`s, and Mayor/Chef briefing inspection.
 
-**Demo:** induce a food shortage; next daily agenda leads with food security and cites Food's flag in its rationale.
+**Demo:** induce a food shortage; next daily agenda leads with food security and cites Chef's flag in its rationale.
 
 **Scope:**
 - `IMinisterRules<FoodBriefing>` interface + Food rules layer.
 - Food briefing derivations (`DaysOfFoodRemaining`, etc).
 - Flag channel (in-process, severity-tiered) — Mayor consumes; no other consumer.
 - Mayor prompt includes flag digest section.
-- 5 Food scenario fixtures (memo-shape expectations, not goals).
+- 5 Chef food-chain scenario fixtures (memo-shape expectations, not goals).
 
 ---
 
@@ -125,7 +125,7 @@ longer fire a cabinet cycle just to repopulate the dashboard.
 **Demo:** raid scenario — Defense emits Critical flag → tactical alert appears in dashboard immediately; next daily Mayor agenda summarises the incident and proposes follow-up.
 
 **Scope:**
-- Construction, Defense, Welfare ministers + their rules layers, in that order. Construction lands before Defense because Food's first live dependencies are build/storage/power concerns, not hunt-risk arbitration.
+- Construction, Defense, Welfare ministers + their rules layers, in that order. Construction lands before Defense because Chef's first live dependencies are build/storage/power concerns, not hunt-risk arbitration.
 - Their briefings.
 - Mayor-side CoS helper for cross-minister flag arbitration into the Mayor's digest; split into a separate runtime role later only if flag volume justifies it.
 - Tactical-alert concern (`priority >= high`) bypasses the daily-tick cadence.
@@ -157,14 +157,14 @@ payloads.
 
 **Done when:** each memo / agenda item in the dashboard has working **Accept / Dismiss / Pushback** controls; each minister maintains its own persisted **pushback list** containing the player's natural-language explanations of why that minister was wrong; pushbacks for a given minister flow into that minister's next prompt as "recent player corrections."
 
-**Demo:** dismiss yesterday's `food_security` advice with a Pushback note ("we already built the freezer"); next day, the Mayor's prompt to Food includes that note in the corrections section, and the next agenda doesn't repeat the same suggestion.
+**Demo:** dismiss yesterday's `food_security` advice with a Pushback note ("we already built the freezer"); next day, the Mayor's prompt to Chef includes that note in the corrections section, and the next agenda doesn't repeat the same suggestion.
 
 **Why this is M5 (not M2):** feedback is only valuable once there are multiple ministers producing enough advice to find patterns in (M3, M4 first), and it's only consumed by M6. Landing it just before M6 keeps it fresh and avoids building UI on top of an output we hadn't yet lived with.
 
 **Scope:**
 - **Pushback** is the renamed Modify action. Semantics: the player explains in natural language why the minister is wrong, rather than editing advice step text.
 - `FeedbackEvent` schema (memo id, action, player note, timestamp, in-game tick).
-- Each minister owns and persists its own pushback list. Exact storage paths and payload shapes live in source and tests. Pushbacks are scoped — the Mayor doesn't see Food's pushbacks and vice versa.
+- Each minister owns and persists its own pushback list. Exact storage paths and payload shapes live in source and tests. Pushbacks are scoped — the Mayor doesn't see Chef's pushbacks and vice versa.
 - Dashboard buttons + Pushback modal (free-text textarea, prompt: *"Tell the minister why he's wrong."*).
 - Per-minister pushback view in the dashboard (replaces the old "decision log" tab idea — there's no global log, only per-minister lists).
 - Pushbacks injected into the issuing minister's next prompt as a "recent player corrections" section, capped to the last N entries by age and advice priority.
@@ -176,7 +176,7 @@ payloads.
 
 **Done when:** for one minister, the refinement loop reads its **own pushback list**, identifies a cluster of consistent corrections (e.g. 6 pushbacks all saying "no hunting in winter"), generates a candidate `Rules.cs` change, compares before/after outputs on a historic corpus of prior minister inputs, runs it against fixtures, and surfaces the diff for human approval. One rule is promoted end-to-end.
 
-**Demo:** run the `minister-refine` skill against Food's pushback list; see a proposed rule + fixture pass-rate diff; approve; observe rule appear in `Rules.cs`.
+**Demo:** run the `minister-refine` skill against Chef's pushback list; see a proposed rule + fixture pass-rate diff; approve; observe rule appear in `Rules.cs`.
 
 **Scope:**
 - Refinement-mode tooling for at least one minister.
@@ -198,7 +198,7 @@ and RimWorld's job-giver allocates pawns. See [`DESIGN.md`](DESIGN.md) decision
 [`design/ministers/labor.md`](design/ministers/labor.md). Shim/Labor/allowlist
 scope is designed at re-engagement, not now.
 
-**Demo:** zone change suggested by Food is created in-game without the player clicking Accept.
+**Demo:** zone change suggested by Chef is created in-game without the player clicking Accept.
 
 ---
 
@@ -210,7 +210,7 @@ scope is designed at re-engagement, not now.
 - Research minister.
 - Economy minister (trade, caravans, wealth pressure).
 - Base Layout Minister (spatial placement).
-- Animal management minister if Food/Economy/Defense sharing becomes noisy.
+- Animal management minister if Chef/Economy/Defense sharing becomes noisy.
 - Multi-map support.
 - Cross-session memory / colony history.
 - Auto-approve gate for rule promotion (once fixture suites are strong).

@@ -38,6 +38,7 @@ public sealed class MinisterRegistryTests
     [Theory]
     [InlineData("food", "food")]
     [InlineData("Food", "food")]
+    [InlineData("Chef", "food")]
     [InlineData("Chief of Staff", "chief_of_staff")]
     [InlineData("chief-of-staff", "chief_of_staff")]
     public void FindMinister_ResolvesKeysAndLabels(string input, string expectedKey)

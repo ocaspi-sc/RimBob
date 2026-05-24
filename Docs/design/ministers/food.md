@@ -1,7 +1,7 @@
-# Minister of Food - Minister Design
+# Chef - Food-Chain Minister Design
 
 > **Living document.** See `AGENTS.md` for update rules.
-> Food is the first feeder advisor. This doc records domain ownership and
+> Chef is the first feeder advisor. This doc records domain ownership and
 > design constraints; exact advice enum values, briefing fields, rule names,
 > parser behavior, and fixture expectations live in code/tests.
 
@@ -9,7 +9,7 @@
 
 ## Domain
 
-Food owns food security across the full nutrition chain:
+Chef owns food security across the full nutrition chain:
 
 - Acquisition: crops, forage/edible plant harvest, hunting-for-food, and emergency procurement
   pressure.
@@ -19,42 +19,42 @@ Food owns food security across the full nutrition chain:
 - Recovery: blight, cold snap, food poisoning, lost freezer, caravan drain, and
   post-raid interruptions.
 
-Food is broader than Agriculture. Farming is only one method inside the chain;
+Chef is broader than Agriculture. Farming is only one method inside the chain;
 the minister is accountable for whether the colony can keep eating.
 
-Food does not own pawn allocation. It may request work-type-qualified labor,
+Chef does not own pawn allocation. It may request work-type-qualified labor,
 but in Suggest mode that request is advice to the player. The deferred Labor
 minister owns actual pawn assignment once Auto exists.
 
-Food advice should be near-term and actionable. It should usually emit only the
+Chef advice should be near-term and actionable. It should usually emit only the
 most important food-chain interventions. If the right answer is strategic or
-cross-domain, Food should flag pressure upward rather than overreach.
+cross-domain, Chef should flag pressure upward rather than overreach.
 
 ---
 
 ## Runtime Role
 
-Food follows the universal minister shape:
+Chef follows the universal minister shape:
 
 - First live cycle may bootstrap through escalation for a grounded first read.
 - Normal cycles are rules-first.
-- Escalation uses the Food system prompt, Food briefing, current minister
+- Escalation uses the Chef system prompt, Food briefing, current minister
   context, and food-focused guide context when available.
-- Food publishes a complete active-advice snapshot on successful cycles.
-- Medium+ Food pressure can feed Mayor synthesis through flags.
+- Chef publishes a complete active-advice snapshot on successful cycles.
+- Medium+ Chef pressure can feed Mayor synthesis through flags.
 
-Food remains in `Suggest` mode in MVP. Any game-state mutation is limited to
-future Assisted Apply controls on allowlisted Food actions after a player click.
+Chef remains in `Suggest` mode in MVP. Any game-state mutation is limited to
+future Assisted Apply controls on allowlisted Chef actions after a player click.
 
 ---
 
 ## Concerns
 
-Food concerns are a closed code contract and future autonomy-dial units.
+Chef concerns are a closed code contract and future autonomy-dial units.
 Adding or removing one is a design decision, but the exact enum list belongs in
 `Src/Common/Advice/FoodAdviceType.cs`.
 
-Food concerns should cover food security, growing capacity, harvest,
+Chef concerns should cover food security, growing capacity, harvest,
 forage/edible-plant harvest, hunting, cooking, butchering, freezer/storage, trade/procurement
 pressure, and food-event recovery.
 
@@ -62,7 +62,7 @@ pressure, and food-event recovery.
 
 ## Briefing
 
-Food's briefing should answer:
+Chef's briefing should answer:
 
 - Is the current food buffer safe?
 - Is the nutrition signal trusted, fallback-derived, or missing?
@@ -73,22 +73,22 @@ Food's briefing should answer:
   escalation?
 - What facts are missing and therefore should temper advice confidence?
 
-Spatial and operational data stays aggregated. Food should receive counts,
+Spatial and operational data stays aggregated. Chef should receive counts,
 proximity strings, nearest clusters, distances, and coverage flags rather than
 raw plant/tile/building lists.
 
 Hunting input should stay compact: counts, nearest low-risk target summaries,
 and short risk/value reasons are enough for Suggest-mode mark-hunt advice. The
 state store may combine live animals with static animal-def metadata to rank
-safe targets and explain why risky visible animals were skipped, but Food should
+safe targets and explain why risky visible animals were skipped, but Chef should
 not receive raw animal lists.
 
 When upstream food totals cannot be classified into meals or raw food, the
 briefing should expose the unclassified count directly. It should also name
-missing or unimplemented signals so Food can temper confidence without inventing
+missing or unimplemented signals so Chef can temper confidence without inventing
 player chores from data gaps.
 
-When item stacks and item definitions are available, Food should classify stored
+When item stacks and item definitions are available, Chef should classify stored
 meals and raw food from those sources instead of trusting summary rollups. The
 raw item list remains an ingestion/debug input; the briefing receives compact
 counts, nutrition source, unclassified remainder, and coverage flags.
@@ -97,10 +97,10 @@ as forbidden meals or other visible food-like items excluded from the reachable
 stored-food count, the briefing should carry that explanation so advice can name
 the concrete player action instead of saying only "visibility."
 
-Food should carry compact current bill state for known cooking workbenches.
+Chef should carry compact current bill state for known cooking workbenches.
 Rules use it to avoid repeating a simple-meal bill suggestion once a matching
 do-until bill already satisfies the desired target.
-When a Food action targets one known cooking workbench, the player-facing
+When a Chef action targets one known cooking workbench, the player-facing
 instruction should name the station and position so the player can find the
 right kitchen in RimWorld.
 
@@ -113,7 +113,7 @@ candidate math accounts for crop grow time, yield, current food buffer,
 inventory classification confidence, freezer/storage posture, season window,
 compact terrain-fertility context, and def-backed harvest nutrition when the
 thing definition catalogue exposes it. Exact grow-zone placement and zone-yield
-optimization remain out of the current Suggest-mode scope. Food LLM escalation
+optimization remain out of the current Suggest-mode scope. Chef LLM escalation
 receives the compact computed candidate table and must treat it as the source of
 truth for crop math.
 
@@ -132,7 +132,7 @@ availability.
 Rules should cover obvious food-chain states: safe buffer, unknown or unreliable
 nutrition signal, emergency shortage, mature harvest, understocked meals with raw
 food, forage availability, growing capacity, and missing freezer/storage
-support. Freezer posture is a standing chain dependency: when Food recommends
+support. Freezer posture is a standing chain dependency: when Chef recommends
 harvest, forage, hunt, cooking, or growing work that will create or depend on
 perishable food, missing cooler/freezer support should be attached as a
 secondary Construction request rather than waiting until surplus already exists.
@@ -143,7 +143,7 @@ whether a concrete action can be taken now.
 
 Escalate when:
 
-- The first live Food cycle needs a concrete bootstrap memo.
+- The first live Chef cycle needs a concrete bootstrap memo.
 - Crop choice involves real trade-offs.
 - Hunting target value/risk is ambiguous.
 - Multiple bottlenecks compete.
@@ -154,13 +154,13 @@ Escalate when:
 
 `Critical` should mean immediate starvation evidence, not merely a low buffer.
 
-Food publishes active advice as a minister snapshot. Stable same-issue ids are
+Chef publishes active advice as a minister snapshot. Stable same-issue ids are
 preferred where possible so the dashboard updates the current card instead of
 accumulating duplicates.
 
-Food advice freshness is based on game ticks. Wall-clock issue timestamps remain
-audit metadata, but a paused or closed RimWorld session should not make Food
-advice disappear. The dashboard keeps showing the latest persisted Food
+Chef advice freshness is based on game ticks. Wall-clock issue timestamps remain
+audit metadata, but a paused or closed RimWorld session should not make Chef
+advice disappear. The dashboard keeps showing the latest persisted Chef
 snapshot and marks expired advice; Assisted Apply still requires live
 validation before executing any target.
 
@@ -168,31 +168,31 @@ validation before executing any target.
 
 ## Output Quality
 
-Emergency Food output should avoid vague catch-all wording such as "audit" or
+Emergency Chef output should avoid vague catch-all wording such as "audit" or
 generic `note` actions when the briefing supports a concrete next step.
 
-If reported food units exist but meal/raw-food classification is missing, Food
+If reported food units exist but meal/raw-food classification is missing, Chef
 should say that reachable stockpile visibility is needed. If no harvest/cook
 path is visible, it should still request or suggest concrete setup work when the
 briefing supports it: emergency growing tiles, relevant work-type labor, cooking
 building, or simple meal bill.
 
-Food should not let freezer advice displace starvation recovery, but it should
+Chef should not let freezer advice displace starvation recovery, but it should
 ask for freezer capacity in advance when the active path is about to create
-perishable intake. Food owns the requirement and size class; Construction owns
+perishable intake. Chef owns the requirement and size class; Construction owns
 room layout, cooler count, power, materials, and placement.
 
-Food may request trade capacity only when no stored, harvestable, cookable, or
+Chef may request trade capacity only when no stored, harvestable, cookable, or
 sowable path is visible.
 
-Food LLM notes are trace labels, not player advice. Keep them terse and aligned
+Chef LLM notes are trace labels, not player advice. Keep them terse and aligned
 with advice vocabulary.
 
-Food's player-facing output should use forage/edible-plant language for
+Chef's player-facing output should use forage/edible-plant language for
 natural map plants and reserve backend terms such as `wild_harvest` for raw
 debug contracts. It should name the actual edible plant when possible.
 
-Food's player-facing output starts with a short current-state summary before
+Chef's player-facing output starts with a short current-state summary before
 the advice list. This summary is derived from the briefing rather than trusted
 to LLM prose; the dashboard may render the labelled lines as a compact table. It
 should summarize concrete food situation facts such as stored
@@ -200,13 +200,13 @@ meals/raw/unclassified food, days-of-food, growing areas and crop progress,
 acquisition opportunities, kitchen/storage/freezer signals, and confidence data
 gaps; individual advice items expose one concrete `actions[]` list for the player.
 
-Food exposes deterministic hunt-risk diagnostics for the dashboard
+Chef exposes deterministic hunt-risk diagnostics for the dashboard
 Infographics view. The Host derives this model from live `ColonyState` animal
 rows, `FoodHuntSafety`, and animal-def metadata, then emits animal-type
 diagnostics plus candidate summaries. The dashboard groups animal types by
 safety bucket and sorts them by the Host-emitted hunt score so the player can
 inspect exactly why each type can or cannot flow into `mark_hunt` advice and
-Assisted Apply. The briefing stays compact: Food advice gets low-risk target
+Assisted Apply. The briefing stays compact: Chef advice gets low-risk target
 summaries and reasons, not raw animal lists.
 
 Crop selection should be grounded in deterministic yield math exposed through
@@ -217,12 +217,12 @@ a candidate, but it should not invent crop math.
 
 ## Advice Actions And Flag Requests
 
-Food advice actions should read as separate interventions that can each improve
+Chef advice actions should read as separate interventions that can each improve
 food security: stockpile visibility, harvest, cooking, growing, then
 trade/procurement only if local paths are missing. Crop choice appears directly
 in the relevant action instruction.
 
-Food may use action or flag metadata for:
+Chef may use action or flag metadata for:
 
 - Tiles: growing area, forage harvest area, freezer expansion, stockpile space.
 - Labor: specific RimWorld work types such as cooking, growing, plant cutting,
@@ -238,25 +238,25 @@ storage capacity for a colony-days buffer or incoming harvest/hunt/cooking
 surplus; Construction turns that requirement into exact blueprints.
 
 In MVP advice actions and flag requests are rendered by default. Assisted Apply
-may later execute a narrow allowlist of Food actions after player confirmation,
+may later execute a narrow allowlist of Chef actions after player confirmation,
 such as `unforbid` known food stacks, `mark_harvest` on validated safe plant
 clusters, or one idempotent simple-meal cook-bill upsert when exactly one
 cooking workbench is known. `mark_hunt` is eligible only for deterministic
 low-risk animal batches with exact ids, bounded area designation, and fresh
 validation that the rect contains no unsafe or off-target animals. Broad bill
 editing, zones, pawn work priorities, and pawn assignment remain outside the
-Food apply slice. In Auto, actions become inputs to the deferred
+Chef apply slice. In Auto, actions become inputs to the deferred
 planner/Labor/RIMAPI path, while flag requests remain the cross-minister
 coordination signal.
 
-Trade is not a normal Food action in M3. Food may flag procurement need when
+Trade is not a normal Chef action in M3. Chef may flag procurement need when
 local paths are insufficient, but Economy/Trade or Mayor owns trade framing.
 
 ---
 
 ## Owned Action Families
 
-| Action family | Food ownership |
+| Action family | Chef ownership |
 |---|---|
 | Growing zones for food crops | Size, crop, timing, urgency |
 | Forage harvest for nutrition | Target and timing |
@@ -268,13 +268,13 @@ local paths are insufficient, but Economy/Trade or Mayor owns trade framing.
 
 Hard cases:
 
-- Psychoid/smokeleaf/devilstrand: Food can comment on tile opportunity cost;
+- Psychoid/smokeleaf/devilstrand: Chef can comment on tile opportunity cost;
   Industry, Economy, or Welfare owns the strategic reason.
-- Animal breeding/culling/training: Food only owns slaughter-for-food pressure
+- Animal breeding/culling/training: Chef only owns slaughter-for-food pressure
   for now.
-- Nutrient paste: Food owns the food-chain recommendation; Welfare owns mood
+- Nutrient paste: Chef owns the food-chain recommendation; Welfare owns mood
   cost.
-- Caravan provisioning: Food owns nutrition sufficiency; future travel/trade
+- Caravan provisioning: Chef owns nutrition sufficiency; future travel/trade
   owner owns execution.
 
 ---
@@ -291,7 +291,7 @@ Hard cases:
 
 ## RAG Retrieval Profile
 
-Food retrieval topics include food, farming, crops, forage/edible plant harvest, hunting,
+Chef retrieval topics include food, farming, crops, forage/edible plant harvest, hunting,
 freezer, cooking, nutrition, and spoilage.
 
 Retrieval is useful for crop choice, seasonal timing, freezer/cooking policy,
@@ -311,6 +311,6 @@ locations, work capacity, or yield calculations absent from briefing/code.
 - [ ] Account for caravan provisioning and food removed from the home map.
 - [ ] Decide ownership for drug/textile crops once Economy/Industry/Welfare are
       live.
-- [ ] Decide whether animal economy deserves its own minister or stays a Food
+- [ ] Decide whether animal economy deserves its own minister or stays a Chef
       hard case.
 - [ ] Map Food-chain Assisted Apply candidates separately from full Auto writes.

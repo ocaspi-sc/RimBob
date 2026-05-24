@@ -22,10 +22,28 @@ function formatPersistedOutput(scope: ScopeConfig, health: SystemHealth): string
   return null;
 }
 
-function isScopeMinister(minister: string, scope: ScopeConfig): boolean {
-  const normalized = minister.trim().toLocaleLowerCase();
-  return normalized === scope.key.toLocaleLowerCase() ||
-    normalized === scope.label.toLocaleLowerCase();
+export function isScopeMinister(minister: string | null | undefined, scope: ScopeConfig): boolean {
+  if (!minister) return false;
+  const normalized = normalizeMinisterReference(minister);
+  return ministerAliases(scope).some(alias => normalizeMinisterReference(alias) === normalized);
+}
+
+export function valueForScope<T>(values: Record<string, T>, scope: ScopeConfig): T | undefined {
+  for (const alias of ministerAliases(scope)) {
+    const exact = values[alias];
+    if (exact !== undefined) return exact;
+  }
+
+  return Object.entries(values).find(([key]) => isScopeMinister(key, scope))?.[1];
+}
+
+function ministerAliases(scope: ScopeConfig): string[] {
+  if (scope.key === 'food') return [scope.key, scope.label, 'Food', 'Chef', 'chef'];
+  return [scope.key, scope.label];
+}
+
+function normalizeMinisterReference(value: string): string {
+  return value.trim().replace(/[\s-]+/g, '_').toLocaleLowerCase();
 }
 
 function formatTraceTime(iso: string): string {

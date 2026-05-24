@@ -145,7 +145,7 @@ Briefing design rules:
 
 ### Food Briefing
 
-Food's briefing should answer the nutrition-chain questions:
+Chef's briefing should answer the nutrition-chain questions:
 
 - Is the current food buffer safe?
 - Which part of the chain is limiting: acquisition, cooking, storage, freezer,

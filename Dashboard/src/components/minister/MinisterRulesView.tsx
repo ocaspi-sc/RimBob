@@ -1,5 +1,6 @@
 import { fetchTrace } from '../../api/ministers';
 import type { ScopeConfig } from '../../dashboard/scopes';
+import { isScopeMinister } from '../../dashboard/selectors';
 import { iconForRuleOutcome, iconForSection, iconForView } from '../../dashboard/semanticIcons';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
 import type { AdviceItem } from '../../types/advice';
@@ -71,8 +72,8 @@ export function MinisterRulesView({
   events: DashboardEvent[];
   scope: ScopeConfig;
 }) {
-  const ministerAdvice = advice.filter(item => sameMinister(item.minister, scope.label));
-  const ministerEvents = events.filter(event => sameMinister(event.source, scope.label));
+  const ministerAdvice = advice.filter(item => isScopeMinister(item.minister, scope));
+  const ministerEvents = events.filter(event => isScopeMinister(event.source, scope));
   const latestMinisterEventId = ministerEvents[0]?.id ?? 'none';
   const latestAdviceIssuedAt = ministerAdvice[0]?.issued_at ?? 'none';
   const trace = useAsyncResource(signal => fetchTrace(scope.key, signal), [scope.key, latestMinisterEventId, latestAdviceIssuedAt]);
@@ -271,10 +272,6 @@ function RuleDiagnosticsPanel({ details }: { details: RuleTraceDetails }) {
       )}
     </DisclosureSection>
   );
-}
-
-function sameMinister(a: string, b: string): boolean {
-  return a.localeCompare(b, undefined, { sensitivity: 'accent' }) === 0;
 }
 
 function formatTracePath(path: string): string {

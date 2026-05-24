@@ -386,10 +386,10 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
     //       and implement: SetWorkPriority, SetSchedule, ForceJob, SetZoneRestriction.
     //       Only MinisterOfLabor calls these writes.
 
-    // ── Grow zone write (Food-owned, deferred Auto path) ─────────────────────
+    // ── Grow zone write (Chef-owned, deferred Auto path) ─────────────────────
     /// <summary>
     /// POST api/v1/map/zone/growing — create a grow zone over a rect with a crop def.
-    /// Owned by Food minister. Only call via the HTN planner primitive.
+    /// Owned by Chef. Only call via the HTN planner primitive.
     /// </summary>
     public async Task CreateGrowZoneAsync(
         int mapId, string plantDef, int x1, int z1, int x2, int z2,
@@ -408,7 +408,7 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
 
     /// <summary>
     /// POST api/v1/order/designate/area — designate Hunt / Harvest / Mine / Deconstruct
-    /// over a rect. Used by Food (harvest, hunt) and Construction (mine, decon).
+    /// over a rect. Used by Chef (harvest, hunt) and Construction (mine, decon).
     /// RIMAPI accepts designation/type and either point_a/point_b or rect.
     /// </summary>
     public async Task DesignateAreaAsync(

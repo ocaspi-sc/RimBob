@@ -75,12 +75,12 @@ that created the cross-domain pressure.
 
 Examples:
 
-- Food flags low meals and requests `Labor` with `work_type: Cook`.
-- Food flags spoilage risk and requests `Construction` for a freezer/cooler
+- Chef flags low meals and requests `Labor` with `work_type: Cook`.
+- Chef flags spoilage risk and requests `Construction` for a freezer/cooler
   building dependency.
 - Defense flags raid danger and requests `Construction` attention for a weak
   wall/door bottleneck.
-- Welfare flags mood collapse and requests `Food` attention if meal quality is
+- Welfare flags mood collapse and requests `Chef` attention if meal quality is
   one of the concrete causes.
 
 Good requests are compact and typed:
@@ -141,39 +141,39 @@ Routing should be conservative early:
   that domain the current focus.
 
 Mayor posture does not override immediate danger, but it can break ties. If the
-Mayor posture is "survival food security", a Medium Food freezer/cooking issue
+Mayor posture is "survival food security", a Medium Chef freezer/cooking issue
 should lead over a Medium long-term research opportunity.
 
 ### Example Resolutions
 
 Food shortage plus no cook coverage:
 
-- Food emits a High food flag with requests for `Cook` labor and maybe a simple
+- Chef emits a High food flag with requests for `Cook` labor and maybe a simple
   meal bill.
-- CoS keeps Food as lead because the player-facing issue is starvation risk.
+- CoS keeps Chef as lead because the player-facing issue is starvation risk.
 - The Labor/Bill requests stay attached as dependencies.
 - Route is tactical alert if days of food are dangerously low; otherwise Mayor
-  digest with Food as lead.
+  digest with Chef as lead.
 
 Freezer risk:
 
-- Food emits a Medium spoilage/freezer flag requesting `Construction` for a
+- Chef emits a Medium spoilage/freezer flag requesting `Construction` for a
   cooler-backed room.
 - Construction later emits a power/material blocker for the same freezer work.
 - CoS groups them under one issue, chooses Construction as the execution owner
-  but Food as the reason if nutrition risk is the player-facing concern.
+  but Chef as the reason if nutrition risk is the player-facing concern.
 - Route is digest unless spoilage or heat makes it time-sensitive.
 
 Raid during routine food expansion:
 
 - Defense emits Critical raid danger.
-- Food emits Low/Medium crop expansion or hunting opportunity.
-- CoS routes Defense as tactical alert and defers/suppresses routine Food
+- Chef emits Low/Medium crop expansion or hunting opportunity.
+- CoS routes Defense as tactical alert and defers/suppresses routine Chef
   pressure with a reason such as "active threat preempts expansion advice".
 
 Three ministers point at the same root cause:
 
-- Food wants freezer space, Construction reports power shortage, Economy warns
+- Chef wants freezer space, Construction reports power shortage, Economy warns
   steel/components are scarce.
 - CoS groups the requests into one "freezer blocked by infrastructure/materials"
   issue instead of three separate alerts.

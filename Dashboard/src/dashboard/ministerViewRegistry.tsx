@@ -7,6 +7,7 @@ import { MinisterRagView } from '../components/minister/MinisterRagView';
 import { MinisterRawLlmView } from '../components/minister/MinisterRawLlmView';
 import { MinisterRulesView } from '../components/minister/MinisterRulesView';
 import { ministerViews, type MinisterViewKey, type ScopeConfig } from './scopes';
+import { valueForScope } from './selectors';
 import type { AdviceChainModel, AdviceItem, AgentFlag } from '../types/advice';
 import type { MayorAgenda } from '../types/agenda';
 import type { DashboardEvent, SystemHealth } from '../types/system';
@@ -43,7 +44,7 @@ const ministerViewRenderers: Record<MinisterViewKey, MinisterViewRenderer> = {
   ),
   infographics: ({ chains, scope }) => (
     <MinisterInfographicsView
-      chain={chains[scope.label] ?? chains[scope.key] ?? null}
+      chain={valueForScope(chains, scope) ?? null}
       scope={scope}
     />
   ),
@@ -54,8 +55,8 @@ const ministerViewRenderers: Record<MinisterViewKey, MinisterViewRenderer> = {
       previousAgenda={previousAgenda}
       advice={activeAdvice}
       currentGameTick={systemHealth?.colony_snapshot.game_tick ?? null}
-      flags={flags[scope.label] ?? flags[scope.key] ?? []}
-      stateSummary={stateSummaries[scope.label] ?? stateSummaries[scope.key] ?? null}
+      flags={valueForScope(flags, scope) ?? []}
+      stateSummary={valueForScope(stateSummaries, scope) ?? null}
     />
   ),
 };

@@ -10,7 +10,7 @@ public static class AdviceApplyEndpoints
         coverage.Register(
             "/api/advice/{adviceId}/actions/{actionIndex}/apply",
             "available",
-            "Player-confirmed Assisted Apply for allowlisted Food actions.");
+            "Player-confirmed Assisted Apply for allowlisted Chef actions.");
 
         app.MapPost("/api/advice/{adviceId}/actions/{actionIndex:int}/apply", async (
             string adviceId,

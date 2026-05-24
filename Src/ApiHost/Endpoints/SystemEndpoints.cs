@@ -23,21 +23,21 @@ public static class SystemEndpoints
         new("GET", "/api/v1/maps", "active_read", "State store", "Selects the player-home map and updates map context."),
         new("GET", "/api/v1/game/state", "active_read", "State store", "Ticks, wealth, colonist count, storyteller, pause state."),
         new("GET", "/api/v1/datetime", "active_read", "State store", "In-game date string parsed into briefing date fields."),
-        new("GET", "/api/v2/colonists/detailed?map_id", "active_read", "Mayor/Food", "Colonist bio, needs, skills, traits, jobs, and medical flags."),
-        new("GET", "/api/v1/map/farm/summary?map_id", "active_read", "Food", "Crop totals and average growth per crop type."),
-        new("GET", "/api/v1/map/plants?map_id", "active_read", "Food", "Plant and harvest opportunity source data."),
+        new("GET", "/api/v2/colonists/detailed?map_id", "active_read", "Mayor/Chef", "Colonist bio, needs, skills, traits, jobs, and medical flags."),
+        new("GET", "/api/v1/map/farm/summary?map_id", "active_read", "Chef", "Crop totals and average growth per crop type."),
+        new("GET", "/api/v1/map/plants?map_id", "active_read", "Chef", "Plant and harvest opportunity source data."),
         new("GET", "/api/v1/def/all", "active_read", "State store", "Thing definition catalog used to classify item nutrition and stack semantics."),
-        new("GET", "/api/v1/map/animals?map_id", "active_read", "Food", "Wild/tame animal source data for hunting assessment."),
-        new("GET", "/api/v1/map/zones?map_id", "active_read", "Food/State store", "Growing and stockpile zones with cell lists."),
-        new("GET", "/api/v1/map/buildings?map_id", "active_read", "Construction/Food", "Buildings, HP, power state, and working flags."),
-        new("GET", "/api/v1/buildings/bills?building_id", "active_read", "Food", "Current cooking work-table bills ingested after building refresh so Food can suppress already-satisfied bill advice."),
-        new("GET", "/api/v1/map/power/info?map_id", "active_read", "Construction/Food", "Power production, consumption, storage, and capacity."),
-        new("GET", "/api/v1/map/weather?map_id", "active_read", "Food/Defense", "Weather and outdoor temperature."),
-        new("GET", "/api/v1/map/things?map_id", "active_read", "Food/State store", "Broad item and thing list; used as fallback/debug source behind stored resources."),
+        new("GET", "/api/v1/map/animals?map_id", "active_read", "Chef", "Wild/tame animal source data for hunting assessment."),
+        new("GET", "/api/v1/map/zones?map_id", "active_read", "Chef/State store", "Growing and stockpile zones with cell lists."),
+        new("GET", "/api/v1/map/buildings?map_id", "active_read", "Construction/Chef", "Buildings, HP, power state, and working flags."),
+        new("GET", "/api/v1/buildings/bills?building_id", "active_read", "Chef", "Current cooking work-table bills ingested after building refresh so Chef can suppress already-satisfied bill advice."),
+        new("GET", "/api/v1/map/power/info?map_id", "active_read", "Construction/Chef", "Power production, consumption, storage, and capacity."),
+        new("GET", "/api/v1/map/weather?map_id", "active_read", "Chef/Defense", "Weather and outdoor temperature."),
+        new("GET", "/api/v1/map/things?map_id", "active_read", "Chef/State store", "Broad item and thing list; used as fallback/debug source behind stored resources."),
         new("GET", "/api/v1/lords?map_id", "active_read", "Defense", "Active AI lords such as raids, sieges, and caravans."),
-        new("GET", "/api/v1/incidents?map_id", "active_read", "Defense/Food", "Recent incidents used for threat and food-event context."),
-        new("GET", "/api/v1/resources/summary?map_id", "active_read", "Mayor/Food", "Food, nutrition, medicine, weapons, market-value rollups."),
-        new("GET", "/api/v1/resources/stored?map_id", "active_read", "Mayor/Food", "Stored item stacks grouped by category; primary source for meal/raw-food classification."),
+        new("GET", "/api/v1/incidents?map_id", "active_read", "Defense/Chef", "Recent incidents used for threat and food-event context."),
+        new("GET", "/api/v1/resources/summary?map_id", "active_read", "Mayor/Chef", "Food, nutrition, medicine, weapons, market-value rollups."),
+        new("GET", "/api/v1/resources/stored?map_id", "active_read", "Mayor/Chef", "Stored item stacks grouped by category; primary source for meal/raw-food classification."),
         new("GET", "/api/v1/research/progress", "active_read", "Mayor/Research", "Current research project and progress.")
     ];
 
@@ -52,22 +52,22 @@ public static class SystemEndpoints
         new("GET", "/api/v1/faction/icon?id", "icon_gateway", "Dashboard", "Read-only faction icon fetch through /api/icons/faction/{loadId}."),
         new("GET", "/api/v1/pawn/portrait/image", "icon_gateway", "Dashboard", "Read-only lazy pawn portrait fetch; not prewarmed."),
         new("GET", "/api/v1/colonist/body/image?id", "icon_gateway", "Dashboard", "Read-only colonist body/head fetch; not prewarmed."),
-        new("GET", "/api/v1/buildings/recipes?building_id", "assisted_read", "Food Assisted Apply", "On-demand recipe resolution for the simple-meal bill upsert; not cached in ColonyState.")
+        new("GET", "/api/v1/buildings/recipes?building_id", "assisted_read", "Chef Assisted Apply", "On-demand recipe resolution for the simple-meal bill upsert; not cached in ColonyState.")
     ];
 
     private static readonly RimApiCoverageRow[] DeferredWriteStubs =
     [
-        new("POST", "/api/v1/map/zone/growing", "deferred_write_stub", "Food Auto", "Stub exists; body shape unverified and not called in suggest-only MVP."),
-        new("POST", "/api/v1/order/designate/area", "assisted_write", "Food Assisted Apply", "Used for player-confirmed harvest and hunt designations over bounded rects."),
-        new("POST", "/api/v1/order/unforbid", "assisted_write", "Food Assisted Apply", "Used for player-confirmed safe item-id unforbid over explicit haulable thing ids; destructive forbidden endpoints are not used."),
-        new("POST", "/api/v1/buildings/bills/add", "assisted_write", "Food Assisted Apply", "Creates only an allowlisted simple-meal TargetCount bill after player click and fresh validation."),
-        new("PUT", "/api/v1/buildings/bill/update", "assisted_write", "Food Assisted Apply", "Updates only an existing simple-meal bill target; never deletes, reorders, or suspends bills.")
+        new("POST", "/api/v1/map/zone/growing", "deferred_write_stub", "Chef Auto", "Stub exists; body shape unverified and not called in suggest-only MVP."),
+        new("POST", "/api/v1/order/designate/area", "assisted_write", "Chef Assisted Apply", "Used for player-confirmed harvest and hunt designations over bounded rects."),
+        new("POST", "/api/v1/order/unforbid", "assisted_write", "Chef Assisted Apply", "Used for player-confirmed safe item-id unforbid over explicit haulable thing ids; destructive forbidden endpoints are not used."),
+        new("POST", "/api/v1/buildings/bills/add", "assisted_write", "Chef Assisted Apply", "Creates only an allowlisted simple-meal TargetCount bill after player click and fresh validation."),
+        new("PUT", "/api/v1/buildings/bill/update", "assisted_write", "Chef Assisted Apply", "Updates only an existing simple-meal bill target; never deletes, reorders, or suspends bills.")
     ];
 
     private static readonly RimApiCoverageRow[] MissingRimApiPriorities =
     [
-        new("GET", "/api/v1/resources/storages/summary?map_id", "missing", "Food/Construction", "Needed for stockpile utilization and storage pressure."),
-        new("GET", "/api/v1/map/work-tables?map_id", "missing", "Food/Industry", "Needed before Food can reason about cooking/butchering bench coverage."),
+        new("GET", "/api/v1/resources/storages/summary?map_id", "missing", "Chef/Construction", "Needed for stockpile utilization and storage pressure."),
+        new("GET", "/api/v1/map/work-tables?map_id", "missing", "Chef/Industry", "Needed before Chef can reason about cooking/butchering bench coverage."),
         new("GET", "/api/v1/research/finished|tree|summary", "missing", "Research", "Needed for tech-path reasoning beyond the current project."),
         new("GET", "/api/v1/factions", "missing", "Economy/Defense", "Needed for diplomacy, trade context, and faction threat posture."),
         new("GET", "/api/v1/world/caravans|settlements|sites", "missing", "Economy", "Needed for caravan, trade, and world-opportunity advice."),

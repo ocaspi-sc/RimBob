@@ -90,7 +90,7 @@ export const scopeConfigs: ScopeConfig[] = [
   { key: 'analytics', label: 'ANALYTICS', kind: 'analytics', status: 'live', enabledViews: analyticsViews.map(view => view.key) },
   { key: 'dev_blog', label: 'DEV BLOG', kind: 'dev_blog', status: 'live', enabledViews: devBlogViews.map(view => view.key) },
   { key: 'mayor', label: 'Mayor', kind: 'minister', status: 'live', enabledViews: allMinisterViews },
-  { key: 'food', label: 'Food', kind: 'minister', status: 'live', enabledViews: allMinisterViews },
+  { key: 'food', label: 'Chef', kind: 'minister', status: 'live', enabledViews: allMinisterViews },
   { key: 'construction', label: 'Construction', kind: 'minister', status: 'planned', enabledViews: allMinisterViews },
   { key: 'defense', label: 'Defense', kind: 'minister', status: 'planned', enabledViews: allMinisterViews },
   { key: 'welfare', label: 'Welfare', kind: 'minister', status: 'planned', enabledViews: allMinisterViews },

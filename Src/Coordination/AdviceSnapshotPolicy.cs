@@ -5,34 +5,45 @@ namespace RimBob.Coordination;
 
 internal static class AdviceSnapshotPolicy
 {
-    private const string FoodMinister = "Food";
+    private const string ChefMinister = "Chef";
+    private const string FoodLegacyMinister = "Food";
     private const string FoodDomain = "food";
     private const string MigratedCookLaborFlagId = "food:migrated_cook_labor_request";
 
     public static AdviceSnapshot Normalize(AdviceSnapshot snapshot)
     {
-        List<AdviceItem> originalAdvice = snapshot.Advice.ToList();
-        List<AdviceItem> normalizedAdvice = originalAdvice
+        List<AdviceItem> normalizedAdvice = snapshot.Advice
             .Select(NormalizeAdviceItem)
             .ToList();
-        IReadOnlyList<AgentFlag>? normalizedFlags = NormalizeFlags(snapshot.Flags, originalAdvice);
+        IReadOnlyList<AgentFlag>? normalizedFlags = NormalizeFlags(
+            snapshot.Flags?.Select(NormalizeFlag).ToList(),
+            snapshot.Advice);
 
         return snapshot with
         {
+            Minister = NormalizeMinisterName(snapshot.Minister),
             Advice = normalizedAdvice,
+            StateSummaries = NormalizeMinisterMap(snapshot.StateSummaries),
+            Chains = NormalizeMinisterMap(snapshot.Chains),
             Flags = normalizedFlags
         };
     }
 
     public static AdviceItem NormalizeAdviceItem(AdviceItem item)
     {
-        List<AdviceAction> actions = item.Actions
-            .Where(action => !IsObsoleteFoodCookPriorityAction(item, action))
+        AdviceItem normalized = item;
+        if (IsFoodMinisterAlias(item.Minister))
+            normalized = normalized with { Minister = ChefMinister };
+        if (normalized.BriefingRef is not null && IsFoodMinisterAlias(normalized.BriefingRef.Minister))
+            normalized = normalized with { BriefingRef = normalized.BriefingRef with { Minister = ChefMinister } };
+
+        List<AdviceAction> actions = normalized.Actions
+            .Where(action => !IsObsoleteFoodCookPriorityAction(normalized, action))
             .ToList();
 
-        return actions.Count == item.Actions.Count
-            ? item
-            : item with { Actions = actions };
+        return actions.Count == normalized.Actions.Count
+            ? normalized
+            : normalized with { Actions = actions };
     }
 
     private static IReadOnlyList<AgentFlag>? NormalizeFlags(
@@ -52,10 +63,10 @@ internal static class AdviceSnapshotPolicy
         // without reintroducing an ungrounded player-facing priority action.
         normalizedFlags.Add(new AgentFlag(
             Id: MigratedCookLaborFlagId,
-            SourceMinister: FoodMinister,
+            SourceMinister: ChefMinister,
             Severity: SeverityFor(sourceAdvice.Priority),
             Domain: FoodDomain,
-            Summary: "Food needs Cook labor",
+            Summary: "Chef needs Cook labor",
             LaborRequests:
             [
                 new LaborRequest(
@@ -66,7 +77,7 @@ internal static class AdviceSnapshotPolicy
                     Priority: sourceAdvice.Priority,
                     RequestedFrom: sourceAction.Owner ?? "Labor")
             ],
-            Detail: "Migrated from obsolete Food Cook priority advice action.",
+            Detail: "Migrated from obsolete Chef Cook priority advice action.",
             ExpiresAt: sourceAdvice.ExpiresAt));
 
         return normalizedFlags;
@@ -77,7 +88,7 @@ internal static class AdviceSnapshotPolicy
 
     private static bool IsObsoleteFoodCookPriorityAction(AdviceItem item, AdviceAction action)
     {
-        if (!string.Equals(item.Minister, FoodMinister, StringComparison.OrdinalIgnoreCase))
+        if (!IsFoodMinisterAlias(item.Minister))
             return false;
 
         return action.Kind == AdviceActionKind.SetPriority &&
@@ -87,9 +98,39 @@ internal static class AdviceSnapshotPolicy
 
     private static bool HasFoodCookLaborRequest(IReadOnlyList<AgentFlag> flags) =>
         flags.Any(flag =>
-            string.Equals(flag.SourceMinister, FoodMinister, StringComparison.OrdinalIgnoreCase) &&
+            IsFoodMinisterAlias(flag.SourceMinister) &&
             flag.LaborRequests is not null &&
             flag.LaborRequests.Any(request => request.WorkType == WorkType.Cook));
+
+    private static AgentFlag NormalizeFlag(AgentFlag flag) =>
+        IsFoodMinisterAlias(flag.SourceMinister)
+            ? flag with { SourceMinister = ChefMinister }
+            : flag;
+
+    private static IReadOnlyDictionary<string, T>? NormalizeMinisterMap<T>(IReadOnlyDictionary<string, T>? values)
+    {
+        if (values is null) return null;
+
+        Dictionary<string, T> normalized = new(StringComparer.OrdinalIgnoreCase);
+        foreach (KeyValuePair<string, T> pair in values)
+            normalized[NormalizeRequiredMinisterName(pair.Key)] = pair.Value;
+
+        return normalized;
+    }
+
+    private static string? NormalizeMinisterName(string? minister) =>
+        minister is null ? null : NormalizeRequiredMinisterName(minister);
+
+    private static string NormalizeRequiredMinisterName(string minister) =>
+        IsFoodMinisterAlias(minister) ? ChefMinister : minister;
+
+    private static bool IsFoodMinisterAlias(string minister)
+    {
+        string normalized = MinisterRegistry.NormalizeKey(minister);
+        return normalized.Equals(FoodDomain, StringComparison.OrdinalIgnoreCase) ||
+               normalized.Equals(MinisterRegistry.NormalizeKey(FoodLegacyMinister), StringComparison.OrdinalIgnoreCase) ||
+               normalized.Equals(MinisterRegistry.NormalizeKey(ChefMinister), StringComparison.OrdinalIgnoreCase);
+    }
 
     private static FlagSeverity SeverityFor(AdvicePriority priority) =>
         priority switch

@@ -73,7 +73,7 @@ public sealed class FoodMinisterTests
         await h.Minister.RunPlayCycle(PlayCycleContext.CabinetRefresh, CancellationToken.None);
 
         h.PublishedAdvice.Should().ContainSingle().Which.Concern.Should().Be("food_security");
-        h.Bus.ActiveSnapshot().StateSummaries.Should().ContainKey("Food");
+        h.Bus.ActiveSnapshot().StateSummaries.Should().ContainKey("Chef");
         h.Flags.Active(FlagSeverity.Medium).Should().ContainSingle().Which.Domain.Should().Be("food");
     }
 
@@ -97,7 +97,7 @@ public sealed class FoodMinisterTests
         replay.Records.Should().Contain(r => r.Path == "rules" && r.RuleTrace == "emergency_food_flag");
         MinisterReplayRecord record = replay.Records.Single(r => r.Path == "rules" && r.RuleTrace == "emergency_food_flag");
         record.SchemaVersion.Should().Be(2);
-        record.Minister.Should().Be("Food");
+        record.Minister.Should().Be("Chef");
         record.Trigger.Should().Be(nameof(PlayCycleTrigger.ManualTrigger));
         record.WakeupPayload.Should().Be("dashboard");
         record.Briefing.Should().BeOfType<FoodBriefing>();
@@ -122,7 +122,7 @@ public sealed class FoodMinisterTests
         h.SetFoodDays(4f);
         await h.Minister.RunPlayCycle(PlayCycleContext.CabinetRefresh, CancellationToken.None);
 
-        h.Bus.ActiveAdvice().Should().ContainSingle().Which.Id.Should().Be("food_emergency_food_flag");
+        h.Bus.ActiveAdvice().Should().ContainSingle().Which.Id.Should().Be("chef_emergency_food_flag");
     }
 
     [Fact]
@@ -140,7 +140,7 @@ public sealed class FoodMinisterTests
                 : new FoodLlmResponse(
                     "Food is below target and hunting may be viable.",
                     [FoodAdvice("llm_food", withAction: true)],
-                    [new AgentFlag("food:llm", "Food", FlagSeverity.Medium, "food", "LLM food flag")]));
+                    [new AgentFlag("food:llm", "Chef", FlagSeverity.Medium, "food", "LLM food flag")]));
         }, replay);
         h.SetFoodDays(35f);
 
@@ -153,11 +153,11 @@ public sealed class FoodMinisterTests
         candidateCalls[1].Should().Contain(candidate => candidate.CropDef == "Plant_Rice");
         candidateCalls[1].Should().Contain(candidate => candidate.CropDef == "Plant_Corn");
         IReadOnlyDictionary<string, string> stateSummaries = h.Bus.ActiveSnapshot().StateSummaries!;
-        stateSummaries.Should().ContainKey("Food")
+        stateSummaries.Should().ContainKey("Chef")
             .WhoseValue.Should().Contain("Stores:");
-        h.Bus.ActiveSnapshot().Chains.Should().ContainKey("Food");
-        stateSummaries["Food"].Should().Contain("25.0 days");
-        stateSummaries["Food"].Should().NotBe("Food is below target and hunting may be viable.");
+        h.Bus.ActiveSnapshot().Chains.Should().ContainKey("Chef");
+        stateSummaries["Chef"].Should().Contain("25.0 days");
+        stateSummaries["Chef"].Should().NotBe("Food is below target and hunting may be viable.");
         h.Flags.Active(FlagSeverity.Medium).Should().ContainSingle().Which.Summary.Should().Be("LLM food flag");
         MinisterReplayRecord llmRecord = replay.Records.Single(r =>
             r.Path == "llm" &&
@@ -205,7 +205,7 @@ public sealed class FoodMinisterTests
 
     private static AdviceItem FoodAdvice(string id, bool withAction = false) => new(
         Id: id,
-        Minister: "Food",
+        Minister: "Chef",
         Concern: "hunt_for_food",
         Priority: AdvicePriority.Medium,
         Title: "Hunt carefully",
@@ -226,7 +226,7 @@ public sealed class FoodMinisterTests
         public BriefingCache Cache { get; }
         public AdviceBus Bus { get; } = new();
         public FlagChannel Flags { get; } = new();
-        public MinisterOfFood Minister { get; }
+        public Chef Minister { get; }
         public List<AdviceItem> PublishedAdvice { get; } = [];
 
         public Harness(LlmClient.FoodCallExecutor executor, IReplayCorpusWriter? replay = null)
@@ -237,7 +237,7 @@ public sealed class FoodMinisterTests
             FoodRagRetriever retriever = new(new KnowledgeBase(), null, false, 0, NullLogger<FoodRagRetriever>.Instance);
             MinisterReplayRecorder? replayRecorder = replay is null ? null : new MinisterReplayRecorder(replay);
             Minister = new(Cache, new Rules(), new MinisterOutputStore(), Bus, Flags, llm, retriever,
-                NullLogger<MinisterOfFood>.Instance, replayRecorder);
+                NullLogger<Chef>.Instance, replayRecorder);
         }
 
         public void SetFoodDays(float days, int wildAnimals = 0, string dateTimeRaw = "5th of Aprimay, 5500, 14h", string animalDef = "Hare")

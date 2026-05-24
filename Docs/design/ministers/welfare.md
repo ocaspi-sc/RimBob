@@ -23,8 +23,8 @@ and care access. Medical owns the treatment decision; Welfare owns the mood
 impact and break-risk framing. Reconcile the final rollout order before
 implementation.
 
-Food owns the nutrition chain. Welfare can flag hunger, bad meal mood, or
-nutrient-paste pressure as Mood & Needs evidence, but requests Food when the
+Chef owns the nutrition chain. Welfare can flag hunger, bad meal mood, or
+nutrient-paste pressure as Mood & Needs evidence, but requests Chef when the
 actual fix is meals, crops, hunting, cooking, or storage.
 
 Trade/Economy is no longer a Welfare sub-block in the target cabinet. Economy
@@ -84,7 +84,7 @@ signals. Escalate for:
 
 Welfare may request:
 
-- Food: meals, meal quality, or nutrition-chain fixes when hunger or food mood
+- Chef: meals, meal quality, or nutrition-chain fixes when hunger or food mood
   is the driver.
 - Construction: beds, recreation buildings, room improvements, comfort assets.
 - Industry: apparel or beauty/comfort goods.

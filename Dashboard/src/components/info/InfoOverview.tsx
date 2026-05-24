@@ -22,7 +22,7 @@ const features: FeatureEntry[] = [
   {
     name: 'Minister pattern',
     tag: 'Architecture',
-    description: 'Colony decisions are split across independent advisors — Food and Mayor — each with its own briefing, rules, and LLM escalation path.',
+    description: 'Colony decisions are split across independent advisors — Chef and Mayor — each with its own briefing, rules, and LLM escalation path.',
   },
   {
     name: 'Rules-first path',
@@ -81,7 +81,7 @@ const projectStats: StatEntry[] = [
   { label: 'Backend projects', value: '9' },
   { label: 'State aggregates', value: '13+' },
   { label: 'API endpoints', value: '~14' },
-  { label: 'Ministers', value: '2 (Food, Mayor)' },
+  { label: 'Ministers', value: '2 (Chef, Mayor)' },
   { label: 'React components', value: '~40' },
   { label: 'Custom hooks', value: '6' },
   { label: 'Disk size', value: '~1.2 GB (incl. build artifacts)' },
@@ -233,7 +233,7 @@ const scopeGuide = [
     description: 'Git-derived master history analytics: topic timeline, commit-size spikes, LOC growth, pie charts, and editorial suggestions.',
   },
   {
-    name: 'Mayor / Food / Cabinet',
+    name: 'Mayor / Chef / Cabinet',
     tag: 'Inspection',
     description: 'Minister-specific prompt, briefing, RAG, rules, raw LLM output, infographics, and advice evidence.',
   },

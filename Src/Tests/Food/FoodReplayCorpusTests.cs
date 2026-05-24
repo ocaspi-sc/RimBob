@@ -51,7 +51,7 @@ public sealed class FoodReplayCorpusTests
                 ? source.GetString() ?? $"{path}:{lineNumber}"
                 : $"{path}:{lineNumber}";
 
-            root.GetProperty("minister").GetString().Should().Be("Food", sourceId);
+            root.GetProperty("minister").GetString().Should().Be("Chef", sourceId);
             root.GetProperty("path").GetString().Should().Be("rules", sourceId);
 
             cases.Add(new FoodRuleReplayCase(

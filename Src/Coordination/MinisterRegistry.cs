@@ -37,7 +37,7 @@ public sealed class MinisterRegistry
             HasRag: true),
         new(
             Key: "food",
-            Label: "Food",
+            Label: "Chef",
             Kind: "minister",
             Ready: true,
             EnabledViews: MinisterViews,

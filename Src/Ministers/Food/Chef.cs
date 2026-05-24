@@ -9,7 +9,7 @@ using RimBob.State;
 
 namespace RimBob.Ministers.Food;
 
-public sealed class MinisterOfFood(
+public sealed class Chef(
     BriefingCache briefings,
     Rules rules,
     MinisterOutputStore outputStore,
@@ -17,10 +17,10 @@ public sealed class MinisterOfFood(
     FlagChannel flags,
     LlmClient llm,
     FoodRagRetriever retriever,
-    ILogger<MinisterOfFood> log,
+    ILogger<Chef> log,
     MinisterReplayRecorder? replay = null) : IMinister
 {
-    public string Name => "Food";
+    public string Name => "Chef";
 
     public async Task RunPlayCycle(PlayCycleContext cycle, CancellationToken ct)
     {
@@ -29,7 +29,7 @@ public sealed class MinisterOfFood(
 
         if (cycle.IsBootstrap)
         {
-            log.LogInformation("Food bootstrap: forcing first live cycle escalation");
+            log.LogInformation("Chef bootstrap: forcing first live cycle escalation");
             bool bootstrapped = await RunEscalationAsync(
                 cycle,
                 briefing,
@@ -39,11 +39,11 @@ public sealed class MinisterOfFood(
                     new { briefing.BriefingVersion, briefing.GameTick },
                     RuleTraceDetails.Escalated(
                         "bootstrap_first_live_cycle",
-                        "first live Food cycle forces an LLM bootstrap memo")),
+                        "first live Chef cycle forces an LLM bootstrap memo")),
                 ct);
             if (bootstrapped) return;
 
-            log.LogWarning("Food bootstrap escalation failed; falling back to normal rules evaluation.");
+            log.LogWarning("Chef bootstrap escalation failed; falling back to normal rules evaluation.");
         }
 
         RulesResult result = rules.Evaluate(briefing, ColonyContext.Default);
@@ -70,7 +70,7 @@ public sealed class MinisterOfFood(
                     StateSummary: ruleStateSummary,
                     Chain: ruleChain), ct);
                 log.LogInformation(
-                    "Food rules decision trace={Trace} advice={AdviceCount} flags={FlagCount}",
+                    "Chef rules decision trace={Trace} advice={AdviceCount} flags={FlagCount}",
                     decision.Trace, decision.Advice.Count, decision.Flags.Count);
                 break;
 
@@ -120,7 +120,7 @@ public sealed class MinisterOfFood(
                 OutputKind: "advice_flags",
                 Output: new { advice = response.Advice, flags = response.Flags }), ct);
             log.LogInformation(
-                "Food escalation reason={Reason} advice={AdviceCount} flags={FlagCount}",
+                "Chef escalation reason={Reason} advice={AdviceCount} flags={FlagCount}",
                 escalate.Reason, response.Advice.Count, response.Flags.Count);
             return true;
         }
@@ -140,7 +140,7 @@ public sealed class MinisterOfFood(
                 GuideCitations: citations,
                 Error: new ReplayErrorSummary(ex.GetType().Name, ex.Message),
                 LlmAttemptStarted: llmAttemptStarted), ct);
-            log.LogWarning(ex, "Food escalation failed; no advice emitted this cycle. reason={Reason}", escalate.Reason);
+            log.LogWarning(ex, "Chef escalation failed; no advice emitted this cycle. reason={Reason}", escalate.Reason);
             return false;
         }
     }
@@ -203,9 +203,11 @@ public sealed class MinisterOfFood(
 
         string? direction = agenda.CabinetDirection.TryGetValue("food", out string? exact)
             ? exact
-            : agenda.CabinetDirection.TryGetValue("Food", out string? titleCase)
-                ? titleCase
-                : null;
+            : agenda.CabinetDirection.TryGetValue("Chef", out string? chef)
+                ? chef
+                : agenda.CabinetDirection.TryGetValue("Food", out string? titleCase)
+                    ? titleCase
+                    : null;
 
         IReadOnlyList<string> domains = agenda.ShortTerm
             .Where(p => p.Status == AgendaPriorityStatus.Active)

@@ -123,7 +123,7 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 
 > **Verified shape.** `/map/plants?map_id=...` currently returns broad thing-like plant rows with `thing_id`, `def_name`, `label`, `categories`, `position`, `stack_count`, and `is_forbidden`. It may not include growth, crop, or zone fields, so Food should not rely on this endpoint alone to know which crop is growing; combine it with `/map/farm/summary`.
 
-> **Verified historical shape.** `/map/animals?map_id=...` could omit health/tame fields on ordinary wild animals. Missing health meant "not reported", not injured/dead; ingestion defaulted it to healthy for Food's wild-animal opportunity count. The RimBob fork now emits `tame` and `health` where RimWorld exposes them, which lets Food exclude tame or unhealthy animals before hunt scoring.
+> **Verified historical shape.** `/map/animals?map_id=...` could omit health/tame fields on ordinary wild animals. Missing health meant "not reported", not injured/dead; ingestion defaulted it to healthy for Chef's wild-animal opportunity count. The RimBob fork now emits `tame` and `health` where RimWorld exposes them, which lets Chef exclude tame or unhealthy animals before hunt scoring.
 
 ### Bill (work-table recipes)
 | Method | Path | Purpose |

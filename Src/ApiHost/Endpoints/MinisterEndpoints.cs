@@ -41,11 +41,11 @@ public static class MinisterEndpoints
         coverage.Register(
             "/api/ministers/food/crop-math/latest",
             "available",
-            "Read-only Food crop candidate diagnostics computed from the latest Food briefing.");
+            "Read-only Chef crop candidate diagnostics computed from the latest food briefing.");
         coverage.Register(
             "/api/ministers/food/hunt-risk/latest",
             "available",
-            "Read-only Food hunt risk diagnostics computed from current animal state and animal-def metadata.");
+            "Read-only Chef hunt risk diagnostics computed from current animal state and animal-def metadata.");
 
         app.MapGet("/api/ministers", (MinisterRegistry registry) =>
             Results.Ok(registry.Scopes.Select(MinisterScopeInfo.FromDescriptor)));
@@ -119,9 +119,9 @@ public static class MinisterEndpoints
                     refresh == true,
                     async cancellationToken =>
                     {
-                        MinisterBriefingContext context = MinisterOfFood.BuildContext(outputStore.CurrentMayorAgenda);
+                        MinisterBriefingContext context = Chef.BuildContext(outputStore.CurrentMayorAgenda);
                         IReadOnlyList<GuideCitation> retrieved = await foodRetriever.RetrieveAsync(briefing, cancellationToken);
-                        IReadOnlyList<FoodPromptCropCandidate> cropCandidates = MinisterOfFood.BuildCropCandidates(briefing);
+                        IReadOnlyList<FoodPromptCropCandidate> cropCandidates = Chef.BuildCropCandidates(briefing);
                         string user = prompts.BuildFoodUserMessage(briefing, context, retrieved, cropCandidates);
                         return new PromptInspectorPayload(
                             ReadPromptOrPlaceholder(() => prompts.FoodSystemPrompt),
@@ -313,9 +313,9 @@ public static class MinisterEndpoints
                 return Results.BadRequest(new { error = "Manual LLM output text is required." });
 
             FoodBriefing briefing = briefings.GetFoodBriefing();
-            MinisterBriefingContext context = MinisterOfFood.BuildContext(outputStore.CurrentMayorAgenda);
+            MinisterBriefingContext context = Chef.BuildContext(outputStore.CurrentMayorAgenda);
             IReadOnlyList<GuideCitation> retrieved = await foodRetriever.RetrieveAsync(briefing, ct);
-            IReadOnlyList<FoodPromptCropCandidate> cropCandidates = MinisterOfFood.BuildCropCandidates(briefing);
+            IReadOnlyList<FoodPromptCropCandidate> cropCandidates = Chef.BuildCropCandidates(briefing);
             string user = prompts.BuildFoodUserMessage(briefing, context, retrieved, cropCandidates);
             string system = ReadPromptOrPlaceholder(() => prompts.FoodSystemPrompt);
             DateTimeOffset capturedAt = DateTimeOffset.UtcNow;
@@ -402,7 +402,7 @@ public static class MinisterEndpoints
                     LlmAttemptStarted: capturedAt), ct);
                 return Results.BadRequest(new
                 {
-                    error = "Manual LLM output could not be parsed as Food advice JSON.",
+                    error = "Manual LLM output could not be parsed as Chef advice JSON.",
                     detail = ex.Message
                 });
             }

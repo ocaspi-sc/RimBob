@@ -114,8 +114,8 @@ public sealed class MinisterOutputStoreTests
             MinisterOutputStore store = await MinisterOutputStore.LoadAsync(root);
             AdviceChainModel chain = Chain();
             AdviceSnapshot snapshot = new(
-                Minister: "Food",
-                Advice: [Advice("food", "Food")],
+                Minister: "Chef",
+                Advice: [Advice("food", "Chef")],
                 StateSummary: "Food is stable.",
                 Chain: chain);
 
@@ -123,11 +123,15 @@ public sealed class MinisterOutputStoreTests
             await store.FlushPendingAdviceAsync();
             MinisterOutputStore restored = await MinisterOutputStore.LoadAsync(root);
 
-            AdviceSnapshot? reloaded = restored.GetAdviceSnapshot("food");
+            File.Exists(Path.Combine(root, "chef.json")).Should().BeTrue();
+            AdviceSnapshot? reloaded = restored.GetAdviceSnapshot("chef");
             reloaded.Should().NotBeNull();
             reloaded!.Advice.Should().ContainSingle().Which.Id.Should().Be("food");
+            reloaded.Minister.Should().Be("Chef");
+            reloaded.Advice.Should().ContainSingle().Which.Minister.Should().Be("Chef");
             reloaded.StateSummary.Should().Be("Food is stable.");
             reloaded.Chain.Should().NotBeNull();
+            restored.GetAdviceSnapshot("food").Should().BeSameAs(reloaded);
         }
         finally
         {
@@ -185,10 +189,13 @@ public sealed class MinisterOutputStoreTests
 
             MinisterOutputStore restored = await MinisterOutputStore.LoadAsync(root);
 
-            AdviceSnapshot? snapshot = restored.GetAdviceSnapshot("food");
+            AdviceSnapshot? snapshot = restored.GetAdviceSnapshot("chef");
             snapshot.Should().NotBeNull();
             AdviceItem advice = snapshot!.Advice.Should().ContainSingle().Subject;
+            advice.Minister.Should().Be("Chef");
             advice.Actions.Should().NotContain(action => action.Kind == AdviceActionKind.SetPriority);
+            snapshot.Flags.Should().ContainSingle()
+                .Which.SourceMinister.Should().Be("Chef");
             snapshot.Flags.Should().ContainSingle()
                 .Which.LaborRequests.Should().ContainSingle()
                 .Which.WorkType.Should().Be(WorkType.Cook);
@@ -212,7 +219,7 @@ public sealed class MinisterOutputStoreTests
             }, "tick1");
 
             MinisterOutputStore restored = await MinisterOutputStore.LoadAsync(root);
-            MinisterBriefingContext context = MinisterOfFood.BuildContext(restored.CurrentMayorAgenda);
+            MinisterBriefingContext context = Chef.BuildContext(restored.CurrentMayorAgenda);
 
             context.AgendaDirection.Should().Be("Keep emergency meals covered.");
         }

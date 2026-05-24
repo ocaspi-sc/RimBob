@@ -105,13 +105,13 @@ public sealed class LlmClientTests
         FoodBriefing briefing = FoodBriefing(0.21f);
 
         LlmAdviceNormalizationContext context = new(
-            Minister: "Food",
+            Minister: "Chef",
             Domain: "food",
             BriefingVersion: briefing.BriefingVersion,
             GameTick: briefing.GameTick,
             Date: briefing.Date,
             DefaultConcern: nameof(FoodConcern.FoodSecurity),
-            DefaultRationale: "Food LLM escalation selected this recommendation.",
+            DefaultRationale: "Chef LLM escalation selected this recommendation.",
             GuideContext: []);
 
         NormalizedAdviceResponse response = LlmResponseParser.ParseOrNormalize(
@@ -123,7 +123,7 @@ public sealed class LlmClientTests
         response.Advice.Should().HaveCount(2);
         response.StateSummary.Should().Be("Food is critically low and cooking/freezer paths need attention.");
         response.Advice[0].Id.Should().StartWith("food_llm_manage_cook_bills_");
-        response.Advice[0].Minister.Should().Be("Food");
+        response.Advice[0].Minister.Should().Be("Chef");
         response.Advice[0].Concern.Should().Be("manage_cook_bills");
         response.Advice[0].Priority.Should().Be(AdvicePriority.High);
         response.Advice[0].Title.Should().Be("Manage Cook Bills");
@@ -164,13 +164,13 @@ public sealed class LlmClientTests
         JsonSerializerOptions json = new() { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
         FoodBriefing briefing = FoodBriefing(10f);
         LlmAdviceNormalizationContext context = new(
-            Minister: "Food",
+            Minister: "Chef",
             Domain: "food",
             BriefingVersion: briefing.BriefingVersion,
             GameTick: briefing.GameTick,
             Date: briefing.Date,
             DefaultConcern: nameof(FoodConcern.FoodSecurity),
-            DefaultRationale: "Food LLM escalation selected this recommendation.",
+            DefaultRationale: "Chef LLM escalation selected this recommendation.",
             GuideContext: []);
 
         NormalizedAdviceResponse response = LlmResponseParser.ParseOrNormalize(
@@ -193,7 +193,7 @@ public sealed class LlmClientTests
         JsonSerializerOptions json = new() { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
         AdviceItem item = new(
             Id: "a1",
-            Minister: "Food",
+            Minister: "Chef",
             Concern: "manage_cook_bills",
             Priority: AdvicePriority.High,
             Title: "Cook meals",
@@ -361,7 +361,9 @@ public sealed class LlmClientTests
         advice.IssuedInGameTick.Should().Be("Y5500AprimayD5");
         advice.IssuedGameTick.Should().Be(300_000);
         advice.ExpiresGameTick.Should().Be(360_000);
-        advice.BriefingRef.Should().Be(new BriefingRef("Food", 1, "food:1"));
+        advice.Minister.Should().Be("Chef");
+        advice.BriefingRef.Should().Be(new BriefingRef("Chef", 1, "food:1"));
+        result.Response.Flags.Should().ContainSingle().Which.SourceMinister.Should().Be("Chef");
         result.Response.Flags.Should().ContainSingle().Which.ExpiresAt.Should().BeAfter(DateTimeOffset.UtcNow);
     }
 

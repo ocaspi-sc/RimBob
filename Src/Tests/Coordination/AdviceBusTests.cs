@@ -43,7 +43,7 @@ public sealed class AdviceBusTests
     public void PublishAdvice_RetainsActiveAdviceForReplay()
     {
         AdviceBus bus = new();
-        AdviceItem item = Advice("a1", "Food");
+        AdviceItem item = Advice("a1", "Chef");
 
         bus.Publish(item);
 
@@ -54,18 +54,18 @@ public sealed class AdviceBusTests
     public void ReplaceMinisterAdvice_ReplacesOnlyThatMinistersActiveSet()
     {
         AdviceBus bus = new();
-        bus.Publish(Advice("old_food", "Food"));
+        bus.Publish(Advice("old_food", "Chef"));
         bus.Publish(Advice("old_defense", "Defense"));
         List<AdviceSnapshot> snapshots = [];
         List<AdviceItem> published = [];
         bus.AdviceSnapshotPublished += snapshots.Add;
         bus.AdvicePublished += published.Add;
 
-        bus.ReplaceMinisterAdvice("Food", [Advice("new_food", "Food")], "Food is low but actionable.");
+        bus.ReplaceMinisterAdvice("Chef", [Advice("new_food", "Chef")], "Food is low but actionable.");
 
         bus.ActiveAdvice().Select(a => a.Id).Should().BeEquivalentTo(["new_food", "old_defense"]);
         snapshots.Should().ContainSingle();
-        snapshots[0].Minister.Should().Be("Food");
+        snapshots[0].Minister.Should().Be("Chef");
         snapshots[0].StateSummary.Should().Be("Food is low but actionable.");
         snapshots[0].Advice.Should().ContainSingle().Which.Id.Should().Be("new_food");
         published.Should().ContainSingle().Which.Id.Should().Be("new_food");
@@ -79,23 +79,23 @@ public sealed class AdviceBusTests
         List<AdviceSnapshot> snapshots = [];
         bus.AdviceSnapshotPublished += snapshots.Add;
 
-        bus.ReplaceMinisterAdvice("Food", [Advice("new_food", "Food")], "Food is low.", chain);
+        bus.ReplaceMinisterAdvice("Chef", [Advice("new_food", "Chef")], "Food is low.", chain);
 
         snapshots.Should().ContainSingle();
         snapshots[0].Chain.Should().BeSameAs(chain);
         AdviceSnapshot active = bus.ActiveSnapshot();
-        active.Chains.Should().ContainKey("Food").WhoseValue.Should().BeSameAs(chain);
+        active.Chains.Should().ContainKey("Chef").WhoseValue.Should().BeSameAs(chain);
     }
 
     [Fact]
     public void ReplaceMinisterAdvice_PublishesAndReplaysMinisterFlags()
     {
         AdviceBus bus = new();
-        AgentFlag flag = Flag("food:emergency", "Food");
+        AgentFlag flag = Flag("food:emergency", "Chef");
         List<AdviceSnapshot> snapshots = [];
         bus.AdviceSnapshotPublished += snapshots.Add;
 
-        bus.ReplaceMinisterAdvice("Food", [Advice("new_food", "Food")], "Food is low.", flags: [flag]);
+        bus.ReplaceMinisterAdvice("Chef", [Advice("new_food", "Chef")], "Food is low.", flags: [flag]);
 
         snapshots.Should().ContainSingle();
         snapshots[0].Flags.Should().ContainSingle().Which.Id.Should().Be("food:emergency");
@@ -112,12 +112,12 @@ public sealed class AdviceBusTests
             MinisterOutputStore store = await MinisterOutputStore.LoadAsync(root);
             AdviceBus bus = new(store);
 
-            bus.ReplaceMinisterAdvice("Food", [Advice("old_food", "Food")], "Old summary.");
-            bus.ReplaceMinisterAdvice("Food", [Advice("new_food", "Food")], "New summary.");
+            bus.ReplaceMinisterAdvice("Chef", [Advice("old_food", "Chef")], "Old summary.");
+            bus.ReplaceMinisterAdvice("Chef", [Advice("new_food", "Chef")], "New summary.");
             await store.FlushPendingAdviceAsync();
 
             MinisterOutputStore restored = await MinisterOutputStore.LoadAsync(root);
-            AdviceSnapshot? snapshot = restored.GetAdviceSnapshot("food");
+            AdviceSnapshot? snapshot = restored.GetAdviceSnapshot("chef");
 
             snapshot.Should().NotBeNull();
             snapshot!.Advice.Should().ContainSingle().Which.Id.Should().Be("new_food");
@@ -133,17 +133,28 @@ public sealed class AdviceBusTests
     public void ReplaceMinisterAdvice_EmptySnapshotClearsMinisterAdvice()
     {
         AdviceBus bus = new();
-        bus.Publish(Advice("old_food", "Food"));
+        bus.Publish(Advice("old_food", "Chef"));
         bus.Publish(Advice("old_defense", "Defense"));
         List<AdviceSnapshot> snapshots = [];
         bus.AdviceSnapshotPublished += snapshots.Add;
 
-        bus.ReplaceMinisterAdvice("Food", []);
+        bus.ReplaceMinisterAdvice("Chef", []);
 
         bus.ActiveAdvice().Should().ContainSingle().Which.Id.Should().Be("old_defense");
         snapshots.Should().ContainSingle();
-        snapshots[0].Minister.Should().Be("Food");
+        snapshots[0].Minister.Should().Be("Chef");
         snapshots[0].Advice.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ReplaceMinisterAdvice_AcceptsFoodScopeKeyForChef()
+    {
+        AdviceBus bus = new();
+
+        bus.ReplaceMinisterAdvice("food", [Advice("new_food", "Chef")], "Food is stable.");
+
+        bus.ActiveAdvice().Should().ContainSingle().Which.Minister.Should().Be("Chef");
+        bus.ActiveSnapshot().StateSummaries.Should().ContainKey("Chef").WhoseValue.Should().Be("Food is stable.");
     }
 
     [Fact]
@@ -158,7 +169,7 @@ public sealed class AdviceBusTests
         bus.Hydrate([new AdviceSnapshot("Food", [expired], "Stored Food state.")]);
 
         bus.ActiveAdvice().Should().ContainSingle().Which.Id.Should().Be("old_food");
-        bus.ActiveSnapshot().StateSummaries.Should().ContainKey("Food").WhoseValue.Should().Be("Stored Food state.");
+        bus.ActiveSnapshot().StateSummaries.Should().ContainKey("Chef").WhoseValue.Should().Be("Stored Food state.");
     }
 
     [Fact]
@@ -182,20 +193,20 @@ public sealed class AdviceBusTests
     {
         AdviceBus bus = new();
 
-        bus.ReplaceMinisterAdvice("Food", [], "Food is stable.");
+        bus.ReplaceMinisterAdvice("Chef", [], "Food is stable.");
 
         AdviceSnapshot snapshot = bus.ActiveSnapshot();
 
         snapshot.Minister.Should().BeNull();
         snapshot.Advice.Should().BeEmpty();
-        snapshot.StateSummaries.Should().ContainKey("Food").WhoseValue.Should().Be("Food is stable.");
+        snapshot.StateSummaries.Should().ContainKey("Chef").WhoseValue.Should().Be("Food is stable.");
     }
 
     [Fact]
     public void RemoveAppliedAction_RemovesOnlyThatActionAndPublishesSnapshot()
     {
         AdviceBus bus = new();
-        bus.ReplaceMinisterAdvice("Food", [Advice("food", "Food", [Action("harvest"), Action("bill")])], "Food summary");
+        bus.ReplaceMinisterAdvice("Chef", [Advice("food", "Chef", [Action("harvest"), Action("bill")])], "Food summary");
         List<AdviceSnapshot> snapshots = [];
         bus.AdviceSnapshotPublished += snapshots.Add;
 
@@ -207,7 +218,7 @@ public sealed class AdviceBusTests
         snapshots.Should().ContainSingle();
         snapshots[0].Minister.Should().BeNull();
         snapshots[0].Advice.Should().ContainSingle().Which.Actions.Should().ContainSingle();
-        snapshots[0].StateSummaries.Should().ContainKey("Food").WhoseValue.Should().Be("Food summary");
+        snapshots[0].StateSummaries.Should().ContainKey("Chef").WhoseValue.Should().Be("Food summary");
     }
 
     [Fact]
@@ -215,21 +226,21 @@ public sealed class AdviceBusTests
     {
         AdviceBus bus = new();
         AdviceChainModel chain = Chain();
-        bus.ReplaceMinisterAdvice("Food", [Advice("food", "Food", [Action("harvest"), Action("bill")])], "Food summary", chain);
+        bus.ReplaceMinisterAdvice("Chef", [Advice("food", "Chef", [Action("harvest"), Action("bill")])], "Food summary", chain);
         List<AdviceSnapshot> snapshots = [];
         bus.AdviceSnapshotPublished += snapshots.Add;
 
         bus.RemoveAppliedAction("food", 1).Should().BeTrue();
 
         snapshots.Should().ContainSingle();
-        snapshots[0].Chains.Should().ContainKey("Food").WhoseValue.Should().BeSameAs(chain);
+        snapshots[0].Chains.Should().ContainKey("Chef").WhoseValue.Should().BeSameAs(chain);
     }
 
     [Fact]
     public void RemoveAppliedAction_RemovesAdviceWhenLastActionIsApplied()
     {
         AdviceBus bus = new();
-        bus.Publish(Advice("food", "Food", [Action("bill")]));
+        bus.Publish(Advice("food", "Chef", [Action("bill")]));
 
         bool removed = bus.RemoveAppliedAction("food", 0);
 

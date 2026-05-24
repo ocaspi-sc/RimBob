@@ -64,12 +64,13 @@ public sealed class AdviceBus
             NormalizeStateSummary(stateSummary),
             Chain: chain,
             Flags: flags));
+        string canonicalMinister = incoming.Minister ?? minister;
 
         foreach (AdviceItem item in incoming.Advice)
         {
-            if (!string.Equals(item.Minister, minister, StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(item.Minister, canonicalMinister, StringComparison.OrdinalIgnoreCase))
                 throw new ArgumentException(
-                    $"Advice item '{item.Id}' belongs to '{item.Minister}', not '{minister}'.",
+                    $"Advice item '{item.Id}' belongs to '{item.Minister}', not '{canonicalMinister}'.",
                     nameof(advice));
         }
 
@@ -78,7 +79,7 @@ public sealed class AdviceBus
         lock (_lock)
         {
             List<string> existingIds = _activeAdvice
-                .Where(kv => string.Equals(kv.Value.Minister, minister, StringComparison.OrdinalIgnoreCase))
+                .Where(kv => string.Equals(kv.Value.Minister, canonicalMinister, StringComparison.OrdinalIgnoreCase))
                 .Select(kv => kv.Key)
                 .ToList();
             foreach (string id in existingIds)
@@ -88,27 +89,27 @@ public sealed class AdviceBus
                 _activeAdvice[item.Id] = item;
 
             if (string.IsNullOrWhiteSpace(incoming.StateSummary))
-                _ministerStateSummaries.Remove(minister);
+                _ministerStateSummaries.Remove(canonicalMinister);
             else
-                _ministerStateSummaries[minister] = incoming.StateSummary.Trim();
+                _ministerStateSummaries[canonicalMinister] = incoming.StateSummary.Trim();
 
             if (incoming.Chain is null)
-                _ministerChains.Remove(minister);
+                _ministerChains.Remove(canonicalMinister);
             else
-                _ministerChains[minister] = incoming.Chain;
+                _ministerChains[canonicalMinister] = incoming.Chain;
 
             if (incoming.Flags is null || incoming.Flags.Count == 0)
-                _ministerFlags.Remove(minister);
+                _ministerFlags.Remove(canonicalMinister);
             else
-                _ministerFlags[minister] = incoming.Flags;
+                _ministerFlags[canonicalMinister] = incoming.Flags;
 
             currentMinisterAdvice = SortAdvice(_activeAdvice.Values
-                .Where(item => string.Equals(item.Minister, minister, StringComparison.OrdinalIgnoreCase)))
+                .Where(item => string.Equals(item.Minister, canonicalMinister, StringComparison.OrdinalIgnoreCase)))
                 .ToList();
         }
 
         AdviceSnapshot snapshot = new(
-            minister,
+            canonicalMinister,
             currentMinisterAdvice,
             incoming.StateSummary,
             Chain: incoming.Chain,

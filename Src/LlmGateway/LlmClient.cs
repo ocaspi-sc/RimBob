@@ -283,7 +283,7 @@ public sealed class LlmClient
             return await _foodExecutor(briefing, context, guideContext, cropCandidates, ct);
 
         if (_clients.Count == 0)
-            throw new InvalidOperationException("No Gemini API keys configured - cannot call Food LLM.");
+            throw new InvalidOperationException("No Gemini API keys configured - cannot call Chef LLM.");
 
         string userMessage = _prompts.BuildFoodUserMessage(briefing, context, guideContext, cropCandidates);
         GenerateContentConfig config = new()
@@ -298,7 +298,7 @@ public sealed class LlmClient
         try
         {
             result = await GenerateContentWithFallbackAsync(
-                "Food",
+                "Chef",
                 client => client.Models.GenerateContentAsync(
                     model:             DefaultModel,
                     contents:          userMessage,
@@ -310,7 +310,7 @@ public sealed class LlmClient
         {
             sw.Stop();
             RecordRawOutput(
-                minister: "Food",
+                minister: "Chef",
                 userMessage: userMessage,
                 systemPrompt: _prompts.FoodSystemPrompt,
                 latencyMs: sw.ElapsedMilliseconds,
@@ -323,7 +323,7 @@ public sealed class LlmClient
 
         string? text = result.Response.Candidates?.FirstOrDefault()?.Content?.Parts?.FirstOrDefault()?.Text;
         if (string.IsNullOrWhiteSpace(text))
-            throw new InvalidOperationException("Gemini returned empty response for Food call.");
+            throw new InvalidOperationException("Gemini returned empty response for Chef call.");
 
         FoodLlmResponse parsed;
         string parseMode = "strict_json";
@@ -338,7 +338,7 @@ public sealed class LlmClient
         catch (JsonException parseEx)
         {
             RecordRawOutput(
-                minister: "Food",
+                minister: "Chef",
                 userMessage: userMessage,
                 systemPrompt: _prompts.FoodSystemPrompt,
                 latencyMs: sw.ElapsedMilliseconds,
@@ -346,12 +346,12 @@ public sealed class LlmClient
                 parseMode: parseMode,
                 apiKeyIndex: result.ApiKeyIndex,
                 text: text);
-            _log.LogError(parseEx, "Failed to parse Food response as JSON. Raw text:\n{Text}", text);
+            _log.LogError(parseEx, "Failed to parse Chef response as JSON. Raw text:\n{Text}", text);
             throw;
         }
 
         RecordRawOutput(
-            minister: "Food",
+                minister: "Chef",
             userMessage: userMessage,
             systemPrompt: _prompts.FoodSystemPrompt,
             latencyMs: sw.ElapsedMilliseconds,
@@ -360,11 +360,11 @@ public sealed class LlmClient
             apiKeyIndex: result.ApiKeyIndex,
             text: text);
         _log.LogInformation(
-            "Food LLM call complete: latency={LatencyMs}ms advice={AdviceCount} flags={FlagCount}",
+            "Chef LLM call complete: latency={LatencyMs}ms advice={AdviceCount} flags={FlagCount}",
             sw.ElapsedMilliseconds, parsed.Advice.Count, parsed.Flags.Count);
         if (normalized)
             _log.LogWarning(
-                "Food response normalized from non-strict schema: advice={AdviceCount} flags={FlagCount}",
+                "Chef response normalized from non-strict schema: advice={AdviceCount} flags={FlagCount}",
                 parsed.Advice.Count, parsed.Flags.Count);
 
         return parsed;

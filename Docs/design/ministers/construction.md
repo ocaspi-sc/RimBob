@@ -40,7 +40,7 @@ Supporting research todo entries in [HumanTodo.md](../../../HumanTodo.md):
 - `investigate-player-approved-construction-proposal` - learn from RimMind proposal approval patterns.
 - `investigate-construction-minister-algorithms-rimmind` - mine RimMind construction/layout algorithms.
 - `rimmind-construction-backlog` - inspect blueprint/frame/material-gap grouping for the Construction briefing.
-- `rimmind-storage-saturation` - inspect stockpile/storage utilization as a Construction/Food/Mayor signal.
+- `rimmind-storage-saturation` - inspect stockpile/storage utilization as a Construction/Chef/Mayor signal.
 - `investigate-spatial-evidence-tools-location` - inspect location-backed spatial evidence for actionable advice.
 - `rimmind-defense-posture-coverage` - preserve Defense posture context for fortification/build requests.
 - `food-freezer-briefing` - add freezer temperature/spoilage evidence that can drive Construction freezer requests.
@@ -61,7 +61,7 @@ Construction owns built infrastructure:
 - Layout efficiency as an extension of room/base planning.
 
 Construction owns build feasibility and placement cost. Other ministers own why
-a build matters. For example, Food owns freezer need; Construction owns the
+a build matters. For example, Chef owns freezer need; Construction owns the
 cooler/wall/power work required to satisfy it.
 
 No separate Base Layout minister is planned for the first pass. Split only if
@@ -78,7 +78,7 @@ Likely first advice areas:
 - Repair breaches or damaged critical infrastructure.
 - Resolve power deficit or low backup.
 - Build missing beds/basic rooms.
-- Address missing freezer/power assets requested by Food.
+- Address missing freezer/power assets requested by Chef.
 - Warn about wood structures in critical rooms.
 - Surface material/component bottlenecks that block current plans.
 
@@ -110,7 +110,7 @@ needed. See [`placement-solver.md`](../../../.plans/placement-solver.md).
 
 The executable Apply (place a chosen layout) renders in **Construction's own
 dashboard scope** (Willie's tab), since Construction emits the placement action.
-A requesting minister (e.g. Food asking for a freezer) shows only its outbound
+A requesting minister (e.g. Chef asking for a freezer) shows only its outbound
 request — never another minister's build Apply.
 
 ---
@@ -160,7 +160,7 @@ In MVP these requests remain advice and flags; they never execute writes by them
 - Power deficit does not persist for long except during unavoidable events.
 - All colonists get beds promptly.
 - Critical rooms avoid high fire-risk construction once materials allow.
-- Food/freezer build requests are resolved or clearly blocked.
+- Chef/freezer build requests are resolved or clearly blocked.
 - Build queue blockers are visible and actionable.
 
 ---
@@ -169,6 +169,6 @@ In MVP these requests remain advice and flags; they never execute writes by them
 
 - [x] Construction concerns defined — see **Concerns (defined)** above and `.plans/willie-advice-types.md`.
 - [ ] Define room-program derivation in the state store.
-- [ ] Decide how Construction consumes Food/Defense/Medical build requests.
+- [ ] Decide how Construction consumes Chef/Defense/Medical build requests.
 - [ ] Decide when Research should split from Construction.
 - [ ] Define practical layout heuristics without overbuilding a planner.

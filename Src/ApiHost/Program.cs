@@ -218,9 +218,9 @@ try
 
     builder.Services.AddSingleton<Mayor>();
     builder.Services.AddSingleton<Rules>();
-    builder.Services.AddSingleton<MinisterOfFood>();
+    builder.Services.AddSingleton<Chef>();
     builder.Services.AddSingleton<IMinister>(sp => sp.GetRequiredService<Mayor>());
-    builder.Services.AddSingleton<IMinister>(sp => sp.GetRequiredService<MinisterOfFood>());
+    builder.Services.AddSingleton<IMinister>(sp => sp.GetRequiredService<Chef>());
     builder.Services.AddSingleton<CabinetCycle>();
     builder.Services.AddHostedService<ColonySnapshotRestoreHostedService>();
     builder.Services.AddHostedService<AgendaBootstrapHostedService>();

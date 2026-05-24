@@ -12,7 +12,7 @@
 
 <!-- entries go here -->
 - [ ] rimapi-blueprint-live-verify [2026-05-25] #rimapi #construction Verify the new blueprint lifecycle endpoints in live RimWorld: endpoint discovery, validate/place, allow/disallow, cancel blueprint/frame, and backlog grouping.
-- [ ] food-to-chef-rename [2026-05-24] #food #debt #doc Rename the Food minister to Chef.
+- [x] food-to-chef-rename [2026-05-24] #food #debt #doc Rename the Food minister to Chef.
 - [ ] concern-code-rename [2026-05-23] #refactor #advice #rename **Code rename `advice_type` → `concern`.** C# property + enum types (`FoodAdviceType` → `FoodConcern`), JSON wire field, prompts, fixtures, dashboard TS mirrors, tolerant inbound + replay reader. Gimping via Codex; doc rename runs in parallel. [plan](.plans/code-rename-to-concern.md)
 - [ ] willie-meta-plan [2026-05-22] #design #construction #index **Willie (Construction) meta-plan.** Master index for the Construction effort: artifact map, locked decisions, ordered remaining work, open decisions. [plan](.plans/willie-meta-plan.md)
 - [ ] wfc-variant-generator [2026-05-22] #idea #spike #construction Evaluate WFC as a bounded Construction variant generator. [plan](.plans/wfc-variant-generator.md)
@@ -189,7 +189,7 @@ Is the agenda saved to a file that the dashboard reads from? Is there history?
 
 Migrate from Codex Chrome plugin to Playwright for frontend.
 
-### About the Food minister's Advice / Alerts
+### About Chef's Advice / Alerts
 
 - The first alert "Resource requests attention food" - what does attention mean? Why not Trade?
 - It is bad day-one advice; do not suggest sending caravans to traders.
