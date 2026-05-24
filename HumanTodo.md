@@ -11,6 +11,7 @@
 ## Captured by /todo
 
 <!-- entries go here -->
+- [ ] food-to-chef-rename [2026-05-24] #food #debt #doc Rename the Food minister to Chef.
 - [ ] wfc-variant-generator [2026-05-22] #idea #spike #construction Evaluate WFC as a bounded Construction variant generator. [plan](.plans/wfc-variant-generator.md)
 - [x] refactor-baseline-scope-lock [2026-05-15] #refactor #ops Captured the baseline build/test state, searched old advice schema names, and scoped the first refactor slice to schema repair.
 - [x] refactor-advice-priority-schema [2026-05-15] #refactor #advice Replaced severity/priority-score behavior with `AdvicePriority`, priority sorting, and tolerant legacy input parsing.
