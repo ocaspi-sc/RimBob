@@ -25,10 +25,18 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 - dont be vauge! Write specifics. no "Update file" but "file: Added X."
 - Show me pseudo code
 - Use cheap subagents often
+- Show me your plan before doing any significant work
 
 ## Coding
 
-- We don't care about legacy or breaking changes or compatibility. be brave.
+- We don't care about legacy or breaking changes or compatibility. Be brave.
+  - **No legacy/compat code paths.** Concretely forbidden:
+    - tolerant parsers whose only job is to swallow a removed shape
+    - `if (legacy_format) ...` branches
+    - upgrade-migration code for persisted state — on schema/wire change, **wipe persisted state and regenerate**, do not maintain a read path for the old shape
+    - "soft-fail and null it" fallbacks targeted at a specific known-removed field
+  - **Robust error handling is fine; compat is not.** Robust = catches malformed input in general. Compat = handles a *specific known-removed* format. The first is engineering; the second is forbidden — do not let the first label disguise the second.
+  - When a plan changes a wire or persistence format, the plan must state explicitly: *"no compat code; wipe-and-regen on upgrade."* Verifier flags any such code as out-of-scope.
 - Be generous with adding //todo comments
 - Write self documenting code. Descriptive Names are very important.
 - Write short WHY comments to provide context for future readers.
