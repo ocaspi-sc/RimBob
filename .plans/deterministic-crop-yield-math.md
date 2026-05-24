@@ -106,7 +106,7 @@ the top crop candidate:
 - Step icon uses the chosen crop def.
 - Quantity uses the candidate tile count.
 - Reason uses the candidate reason.
-- Existing `expand_growing_capacity` advice id and advice type stay stable.
+- Existing `expand_growing_capacity` advice id and concern stay stable.
 
 Keep `CanSowBeforeWinter()` conservative, but make it candidate-aware:
 
@@ -160,7 +160,7 @@ Add focused unit coverage before broad integration:
    - `LowBufferDuringGrowingSeason_RequestsFoodGrowingTiles` should assert the
      chosen crop through the candidate, not a hardcoded "rice" assumption.
    - add a winter-near case where growing is not recommended if no crop fits.
-   - preserve stable `expand_growing_capacity` id/advice type.
+   - preserve stable `expand_growing_capacity` id/concern.
 
 3. `FoodPromptTests`
    - prompt payload includes `crop_candidates`.

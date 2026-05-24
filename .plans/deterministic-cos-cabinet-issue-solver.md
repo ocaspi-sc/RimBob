@@ -151,7 +151,7 @@ Labor/player attention, but it should not pretend to know which knob is wrong.
 ## Minister Issue Catalogue
 
 This catalogue is design-level. It names likely issue families and the data
-that should drive them. Exact advice types, enum members, thresholds, and helper
+that should drive them. Exact concerns, enum members, thresholds, and helper
 names live in minister code/tests when each slice ships.
 
 ### Mayor
