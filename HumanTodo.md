@@ -11,6 +11,7 @@
 ## Captured by /todo
 
 <!-- entries go here -->
+- [ ] rimapi-blueprint-live-verify [2026-05-25] #rimapi #construction Verify the new blueprint lifecycle endpoints in live RimWorld: endpoint discovery, validate/place, allow/disallow, cancel blueprint/frame, and backlog grouping.
 - [ ] food-to-chef-rename [2026-05-24] #food #debt #doc Rename the Food minister to Chef.
 - [ ] concern-code-rename [2026-05-23] #refactor #advice #rename **Code rename `advice_type` → `concern`.** C# property + enum types (`FoodAdviceType` → `FoodConcern`), JSON wire field, prompts, fixtures, dashboard TS mirrors, tolerant inbound + replay reader. Gimping via Codex; doc rename runs in parallel. [plan](.plans/code-rename-to-concern.md)
 - [ ] willie-meta-plan [2026-05-22] #design #construction #index **Willie (Construction) meta-plan.** Master index for the Construction effort: artifact map, locked decisions, ordered remaining work, open decisions. [plan](.plans/willie-meta-plan.md)
