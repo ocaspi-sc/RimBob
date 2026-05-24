@@ -1,8 +1,8 @@
 # Advice / Flag Schema Landing — Plan
 
 > Implementation plan. Lands **code** in RimBob. Implements the schema designed in
-> [`basie-advice-schema.md`](basie-advice-schema.md) (advice/output side) +
-> [`basie-request-taxonomy.md`](basie-request-taxonomy.md) (request/flag side).
+> [`willie-advice-schema.md`](willie-advice-schema.md) (advice/output side) +
+> [`willie-request-taxonomy.md`](willie-request-taxonomy.md) (request/flag side).
 > Sliced by risk — **gimp one slice at a time**, keep build/tests green between.
 
 ---
@@ -40,7 +40,7 @@ Risk: **low.**
 Replaces the generic `requests[]` with typed arrays; makes Food emit a typed
 `building_request` (the freezer ask Willie will later read).
 
-- New records (`Src/Common/Advice/`): `BuildingRequest`, `LaborRequest`, `ItemRequest`, `AttentionRequest`; enums `BuildingClass`, `RoomClass`; small value types (`CapacityNeed`, `AdjacencyHint`, `PowerNeed`, `TempNeed`, `Urgency`, `Deadline`). Per [`basie-request-taxonomy.md`](basie-request-taxonomy.md) §1.
+- New records (`Src/Common/Advice/`): `BuildingRequest`, `LaborRequest`, `ItemRequest`, `AttentionRequest`; enums `BuildingClass`, `RoomClass`; small value types (`CapacityNeed`, `AdjacencyHint`, `PowerNeed`, `TempNeed`, `Urgency`, `Deadline`). Per [`willie-request-taxonomy.md`](willie-request-taxonomy.md) §1.
 - `Src/Common/Ministers/AgentFlag.cs`: replace `Requests : IReadOnlyList<ResourceRequest>?` with four nullable arrays — `BuildingRequests`, `LaborRequests`, `ItemRequests`, `Attention`.
 - **Retire** `ResourceRequest`, `ResourceRequestKind`, `IconRef` (`Src/Common/Advice/ResourceRequest.cs`) from the flag path.
 - `Src/LlmGateway/ResourceRequestNormalizer.cs`: rewrite to emit the typed arrays (or split per-array); update `AdviceResponseNormalizer.cs` wiring.

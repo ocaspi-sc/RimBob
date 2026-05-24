@@ -1,7 +1,7 @@
 # Schema S3 — AdviceActionApply Per-Kind Split
 
 > Child slice of [`schema-landing.md`](schema-landing.md) (slice **S3**).
-> Design source: [`basie-advice-schema.md`](basie-advice-schema.md) §2 (refined to a
+> Design source: [`willie-advice-schema.md`](willie-advice-schema.md) §2 (refined to a
 > single polymorphic hierarchy). Builds on landed **S1** (`7d0818c` — dormant
 > `BlueprintGroup`/`BlueprintAsset`/`MapCell` records exist) and **S2** (`8676d59`).
 > **Highest-risk slice: touches the live M4.5 Assisted Apply path.**
@@ -127,7 +127,7 @@ base, per-kind fields on derived sealed records. Add the new
 `PlaceBlueprintGroupApply` inert (no executor until the RIMAPI fork
 blueprint-group endpoints land). Final schema slice.
 
-**Context.** Design source: [`basie-advice-schema.md`](basie-advice-schema.md)
+**Context.** Design source: [`willie-advice-schema.md`](willie-advice-schema.md)
 §2. Builds on landed **S1** (`7d0818c`) + **S2** (`8676d59`). Lands per the new
 AGENTS.md brave-no-compat expansion (just added): no tolerant-fallback parsers
 for the old flat payload — wipe-and-regen on upgrade.

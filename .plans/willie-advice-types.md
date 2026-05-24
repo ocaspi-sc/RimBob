@@ -220,7 +220,7 @@ only when the Solver produced a fork-validated `blueprint_group` (else prose-onl
 
 `place_blueprint` actions carry an Apply via the `place_blueprint_group` payload
 once the Placement Solver + fork endpoints exist (see
-[`placement-solver.md`](placement-solver.md), [`basie-advice-schema.md`](basie-advice-schema.md) §2).
+[`placement-solver.md`](placement-solver.md), [`willie-advice-schema.md`](willie-advice-schema.md) §2).
 `set_stockpile_zone` is a high-blast-radius policy knob → Suggest-only, no early Apply.
 `material_bottleneck` / `stalled_builds` are non-placement: a `note` plus a
 flag `RequestResource` (item/labor), no Apply.

@@ -2,9 +2,9 @@
 
 ## Suggested Name
 
-**The Architect**
+**Willie**
 
-The official cabinet label should remain **Construction** / **Minister of Construction**, while the prompt persona or UI flavor name can be **The Architect**.
+The official cabinet label should remain **Construction** / **Minister of Construction**, while the prompt persona or UI flavor name can be **Willie**.
 
 Rationale: the name covers base layout, rooms, power, material flow, and build feasibility without creating a separate Base Layout minister. Current design says layout belongs inside Construction unless it becomes noisy enough to split later.
 
@@ -35,7 +35,7 @@ Rationale: the name covers base layout, rooms, power, material flow, and build f
 
 ### Phase 0 - Keep Scope Tight
 
-Implement Construction as one feeder minister named/displayed as **Construction**, with prompt persona **The Architect**.
+Implement Construction as one feeder minister named/displayed as **Construction**, with prompt persona **Willie**.
 
 Do **not** implement:
 
@@ -61,7 +61,7 @@ Files to update during implementation:
 
 Doc changes should capture:
 
-- Persona/name: **The Architect**.
+- Persona/name: **Willie**.
 - First implementation slice focuses on:
   1. power deficit / fragile power margin
   2. missing freezer/cooler support requested by Food
@@ -235,7 +235,7 @@ Likely files:
   - maybe `ConstructionLlmResponseParser.cs`
   - or extract generic minister advice parsing first if low-risk
 
-Prompt should tell **The Architect**:
+Prompt should tell **Willie**:
 
 - You own build feasibility, room/base layout, power, materials, and non-defense infrastructure.
 - Other ministers own why they need a thing; you own how feasible the build is.
@@ -455,7 +455,7 @@ If fastest visible agent behavior is desired, combine A+B and defer C. If parity
 
 ## Recommendation
 
-Build **The Architect** as **Construction** in two steps:
+Build **Willie** as **Construction** in two steps:
 
 1. First implementation: rules-first, live dashboard, no LLM yet except maybe planned prompt docs.
 2. Second implementation: LLM/RAG escalation once the deterministic briefing and first rule set prove useful.

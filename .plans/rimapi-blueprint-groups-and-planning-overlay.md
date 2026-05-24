@@ -37,7 +37,7 @@ click — it is not `Auto`.
 A **group** = an ordered list of single-asset placements (the §3 primitive from
 the base plan) treated as one logical unit. Field names should align with the
 `AdviceOption.blueprint_group` schema from the Willie advice-schema step
-(`.plans/basie-advice-schema.md`, in flight) — confirm before coding.
+(`.plans/willie-advice-schema.md`, in flight) — confirm before coding.
 
 ### A.1 `POST /api/v1/builder/blueprint-group/validate` — dry-run
 

@@ -1,8 +1,7 @@
 # Willie (Minister of Construction) — Meta-Plan
 
 > **Master index + roadmap** for the Minister of Construction effort. Persona
-> **Willie**; cabinet label **Construction** (UI/prompt flavor only). Earlier
-> drafts used "Basie" / "The Architect" — same minister.
+> **Willie**; cabinet label **Construction** (UI/prompt flavor only).
 >
 > This doc ties together the design anchors, implementation plans, RIMAPI work,
 > locked decisions, remaining work, and open decisions. It is the single place to
@@ -13,11 +12,6 @@
 > (Food's first live dependencies are cooler/power/room/storage builds). Design
 > phase ~complete; **no Construction code landed yet.**
 >
-> **Naming note:** the design anchors still carry the `basie-*` filename prefix
-> (`basie-advice-types.md`, `basie-advice-schema.md`, `basie-request-taxonomy.md`).
-> Persona is now Willie. Renaming the files + fixing cross-links is an open
-> cleanup item (§5).
-
 ---
 
 ## 1. North-star chain (the vertical slice everything serves)
@@ -45,9 +39,9 @@ designed below.
 ### Design anchors — the "what" (settled this design session)
 | Plan | Holds |
 |---|---|
-| [`basie-advice-types.md`](basie-advice-types.md) | The 9 canonical Construction concerns + first-slice rules-vs-LLM split. |
-| [`basie-advice-schema.md`](basie-advice-schema.md) | Advice/output side: flatten (drop icon/reason), per-kind apply split, `options[]`, `blueprint_group`, `place_blueprint_group`. |
-| [`basie-request-taxonomy.md`](basie-request-taxonomy.md) | Request/input side: typed request arrays, rich `BuildingRequest`, inbound ask-map → concern. |
+| [`willie-advice-types.md`](willie-advice-types.md) | The 9 canonical Construction concerns + first-slice rules-vs-LLM split. |
+| [`willie-advice-schema.md`](willie-advice-schema.md) | Advice/output side: flatten (drop icon/reason), per-kind apply split, `options[]`, `blueprint_group`, `place_blueprint_group`. |
+| [`willie-request-taxonomy.md`](willie-request-taxonomy.md) | Request/input side: typed request arrays, rich `BuildingRequest`, inbound ask-map → concern. |
 
 ### Engine designs — the "how Willie decides where to build"
 | Plan | Holds |
@@ -83,9 +77,9 @@ designed below.
 ## 3. Locked decisions (this session)
 
 - **Persona Willie; cabinet label Construction.** No separate Base Layout minister; layout is a capability inside Construction.
-- **9 concerns** ([`basie-advice-types.md`](basie-advice-types.md)): `power_stability`, `thermal_control`, `basic_shelter`, `functional_rooms`, `storage_placement`, `material_bottleneck`, `fire_risk`, `stalled_builds`, `base_layout`. `base_topology` folded into `base_layout` (dashboard grouping only). `functional_rooms` and `storage_placement` both kept (orthogonal). No generic `build_structure` concern — that is the `place_blueprint` *action*, not a category.
+- **9 concerns** ([`willie-advice-types.md`](willie-advice-types.md)): `power_stability`, `thermal_control`, `basic_shelter`, `functional_rooms`, `storage_placement`, `material_bottleneck`, `fire_risk`, `stalled_builds`, `base_layout`. `base_topology` folded into `base_layout` (dashboard grouping only). `functional_rooms` and `storage_placement` both kept (orthogonal). No generic `build_structure` concern — that is the `place_blueprint` *action*, not a category.
 - **MVP posture = suggest + player-confirmed apply** (not suggest-only). Every write is player-click-gated; coverage partial; not `Auto`. (Landed in `DESIGN.md` + `AGENTS.md` this session.)
-- **Typed request arrays** ([`basie-request-taxonomy.md`](basie-request-taxonomy.md)): `building_requests[]` / `labor_requests[]` / `item_requests[]` / `attention[]` replace the generic `requests[]`. `BuildingRequest` is rich (`target_class`, `room_class`, `capacity_need`, `adjacency`, `power`, `temperature`, `deadline`…). `requested_from` stays a **string** (not an enum) for now.
+- **Typed request arrays** ([`willie-request-taxonomy.md`](willie-request-taxonomy.md)): `building_requests[]` / `labor_requests[]` / `item_requests[]` / `attention[]` replace the generic `requests[]`. `BuildingRequest` is rich (`target_class`, `room_class`, `capacity_need`, `adjacency`, `power`, `temperature`, `deadline`…). `requested_from` stays a **string** (not an enum) for now.
 - **Advice flatten:** drop `AdviceAction.icon` (dashboard derives) and `.reason` (redundant with advice-level rationale).
 - **`AdviceActionApply` per-kind split** (STJ polymorphic) + new `place_blueprint_group` kind. A single placement is a length-1 group (no separate single kind).
 - **`AdviceItem.options[]`** for multi-option advice; each `AdviceOption` carries a `blueprint_group`. Dashboard pick sends only advice-id + option-id; the Apply click stays the consent boundary.
@@ -145,7 +139,6 @@ flowchart TD
 | Solver run cadence (per cycle vs on-demand) | placement-solver Q4 | on-demand when a `building_request` appears; bound fork `validate` calls |
 | Picked-not-applied option survives a fresh snapshot? | advice-schema Q5, placement-solver Q5 | open |
 | Feedback records *which* option was picked | advice-schema Q6 | yes — high-value refinement signal |
-| Rename `basie-*.md` anchors → `willie-*` + fix cross-links | this doc | open cleanup |
 
 **Resolved this session:** `requested_from` = string; `base_topology` folded; `functional_rooms` + `storage_placement` both kept; `build_structure` dropped; suggest+apply posture; deterministic request→solver path.
 

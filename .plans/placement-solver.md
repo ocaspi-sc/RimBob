@@ -10,12 +10,12 @@
 
 The **Placement Solver** is the deterministic engine that computes *where and how*
 to build. It exists because the minister LLM must **not** author exact cells
-(see [`basie-advice-schema.md`](basie-advice-schema.md) §7.1: a simple LLM cannot
+(see [`willie-advice-schema.md`](willie-advice-schema.md) §7.1: a simple LLM cannot
 reliably emit per-cell placement, and `advice.md` forbids the LLM picking
 payloads/target ids).
 
 Key decision: **`building_request`s are processed directly by the Placement
-Solver.** They are already structured ([`basie-request-taxonomy.md`](basie-request-taxonomy.md)
+Solver.** They are already structured ([`willie-request-taxonomy.md`](willie-request-taxonomy.md)
 §1a carries `target_class`, `room_class`, `capacity_need`, `adjacency`, `power`,
 `temperature`, `materials_on_hand`, `deadline`…), so no LLM translation step is
 needed. Consequence: **request-driven build advice is a deterministic rules-path**
@@ -69,7 +69,7 @@ has a single entry contract:
 | `source` | `requested_from` + flag `source_minister` | requester (for cross-link + `concern` mapping) |
 
 `concern` of the emitted advice comes from the request→concern mapping already
-in [`basie-request-taxonomy.md`](basie-request-taxonomy.md) §3 (freezer →
+in [`willie-request-taxonomy.md`](willie-request-taxonomy.md) §3 (freezer →
 `thermal_control`, hospital → `functional_rooms`, …).
 
 ---

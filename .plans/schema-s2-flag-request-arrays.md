@@ -1,7 +1,7 @@
 # Schema S2 — Flag Typed Request Arrays
 
 > Child slice of [`schema-landing.md`](schema-landing.md) (slice **S2** only).
-> Design source of record: [`basie-request-taxonomy.md`](basie-request-taxonomy.md)
+> Design source of record: [`willie-request-taxonomy.md`](willie-request-taxonomy.md)
 > (§1 = record/array shapes + enums; §3 = requester→array mapping).
 > Builds on landed **S1** (commit `7d0818c`: dormant advice records added,
 > `AdviceAction.icon/reason` removed). **S3 (AdviceActionApply per-kind split) is
@@ -33,7 +33,7 @@ Lands the request contract Willie (Construction) will later consume.
   `Dashboard/src/components/minister/MinisterAdviceView.tsx` (flags render),
   `Dashboard/src/types/system.ts` / ANALYTICS "resource-request kinds" if it reads them.
 - Exact field lists + enum members + the requester→array mapping: follow
-  `basie-request-taxonomy.md` §1 and §3 verbatim as the design contract.
+  `willie-request-taxonomy.md` §1 and §3 verbatim as the design contract.
 - Repo conventions: .NET 9, `sealed record` + `[property: JsonPropertyName(...)]`,
   spell out types, snake_case JSON matching existing records.
 
@@ -124,7 +124,7 @@ arrays. The emitting LLM produces these reliably, and `building_request` can now
 express a rich ask ("freezer for ~200 food near kitchen by day 15"). Lands the
 cross-minister request contract Willie (Construction) will later consume.
 
-**Context.** Design source: [`basie-request-taxonomy.md`](basie-request-taxonomy.md)
+**Context.** Design source: [`willie-request-taxonomy.md`](willie-request-taxonomy.md)
 §1 (shapes) + §3 (requester→array mapping). Builds on landed S1 (`7d0818c`).
 `ResourceRequest` fully retired (its last user after S1).
 

@@ -83,7 +83,7 @@ Nine canonical concerns, kept granular so each is an independent autonomy-dial u
 `power_stability`, `freezer_infrastructure`, `basic_shelter`, `room_program`,
 `storage_adjacency`, `material_bottleneck`, `fire_risk`, `build_queue_blocked`,
 `layout_efficiency`. Definitions + the first-slice rules-vs-LLM split live in
-[`basie-advice-types.md`](../../../.plans/basie-advice-types.md).
+[`willie-advice-types.md`](../../../.plans/willie-advice-types.md).
 
 Decisions: `base_topology` is folded into `layout_efficiency` (a dashboard /
 briefing grouping, not its own type); `room_program` and `storage_adjacency`
@@ -162,7 +162,7 @@ In MVP these requests remain advice and flags; they never execute writes by them
 
 ## Open Questions / TODO
 
-- [x] Construction concerns defined — see **Concerns (defined)** above and `.plans/basie-advice-types.md`.
+- [x] Construction concerns defined — see **Concerns (defined)** above and `.plans/willie-advice-types.md`.
 - [ ] Define room-program derivation in the state store.
 - [ ] Decide how Construction consumes Food/Defense/Medical build requests.
 - [ ] Decide when Research should split from Construction.

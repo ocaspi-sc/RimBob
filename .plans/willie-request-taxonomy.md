@@ -9,9 +9,9 @@
 >
 > **Scope boundary (do not redesign here):** the advice/output side
 > (`AdviceItem`, `AdviceAction`, options, `blueprint_group`) is owned by the
-> parallel anchor [`basie-advice-schema.md`](basie-advice-schema.md). A request is
+> parallel anchor [`willie-advice-schema.md`](willie-advice-schema.md). A request is
 > the *trigger*; the advice is the *response*. This doc maps each request onto the
-> 9 canonical concerns from [`basie-advice-types.md`](basie-advice-types.md)
+> 9 canonical concerns from [`willie-advice-types.md`](willie-advice-types.md)
 > but stops at the boundary — it names *which* concern fires, not *how* the
 > advice is shaped.
 >
@@ -236,7 +236,7 @@ Notes:
 ## 3. Inbound ask-map → arrays/fields → triggered concern
 
 Each requester's asks, the array+fields they fill, and which canonical Willie
-concern ([`basie-advice-types.md`](basie-advice-types.md)) the request
+concern ([`willie-advice-types.md`](willie-advice-types.md)) the request
 triggers. **Food is the only LIVE requester this milestone; all others are
 design-forward.**
 

@@ -5,7 +5,7 @@
 > the per-kind apply payloads, a new multi-option concept, and a
 > `blueprint_group` placement payload. The **request / flag side**
 > (`AgentFlag`, `ResourceRequest`) is owned by the parallel
-> `.plans/basie-request-taxonomy.md` — referenced at the boundary here, not
+> `.plans/willie-request-taxonomy.md` — referenced at the boundary here, not
 > redesigned.
 >
 > Grounding contracts applied (do not relitigate):
@@ -264,15 +264,15 @@ Q1.
 
 ## 5. Which Willie concerns carry `options[]`
 
-From [`basie-advice-types.md`](basie-advice-types.md) (9 canonical concerns). Split
+From [`willie-advice-types.md`](willie-advice-types.md) (9 canonical concerns). Split
 by whether the advice is "build/move *this* specific thing" (single action) vs.
 "here are real spatial alternatives" (multi-option picker):
 
 | concern | options[]? | Why |
 |---|---|---|
 | `thermal_control` | **Yes** (typical) | Freezer placement has genuine alternatives (size, single vs. double-cooler, location vs. kitchen) — the canonical multi-option case. |
-| `functional_rooms` | **Yes** (typical) | "Where/how big a hospital/workshop" has competing footprints. (LLM-tier per basie §5.) |
-| `base_layout` | **Yes** (often) | Whole-base topology / route-chain fixes have competing rearrangements ("competing expansion directions / flat-base trade-offs", basie §2/§5). |
+| `functional_rooms` | **Yes** (typical) | "Where/how big a hospital/workshop" has competing footprints. (LLM-tier per [`willie-advice-types.md`](willie-advice-types.md) §5.) |
+| `base_layout` | **Yes** (often) | Whole-base topology / route-chain fixes have competing rearrangements ("competing expansion directions / flat-base trade-offs", [`willie-advice-types.md`](willie-advice-types.md) §2/§5). |
 | `storage_placement` | **Sometimes** | A shelf can have 2–3 candidate spots near the consuming bench; a single obvious spot is single-action. |
 | `basic_shelter` | **Sometimes** | Usually a single "add N beds / enclose this" action; could offer barracks-vs-cells when escalated. |
 | `fire_risk` | **Mostly single** | "Rebuild this wall in stone" / "add a firebreak gap" is a targeted single action; a spacing fix may rarely offer 2 options. |
@@ -284,7 +284,7 @@ Rule of thumb: **types that emit a room-shell-or-contents `blueprint_group`
 with real spatial freedom carry `options[]`; types whose fix is a request, a
 knob, a note, or one obvious placement do not.** This also tracks the Slice-A
 (rules-first, single-action) vs. Slice-C (LLM, judgment, multi-option) split in
-basie §5 — the LLM tiers are exactly the ones that produce alternatives.
+[`willie-advice-types.md`](willie-advice-types.md) §5 — the LLM tiers are exactly the ones that produce alternatives.
 
 ---
 
@@ -321,7 +321,7 @@ basie §5 — the LLM tiers are exactly the ones that produce alternatives.
       with the feedback design.
 - [ ] **Q7 — Request-side boundary.** `material_bottleneck` /
       `stalled_builds` resolve via a resource/flag request, not a
-      placement. Confirm with `.plans/basie-request-taxonomy.md` (not yet
+      placement. Confirm with `.plans/willie-request-taxonomy.md` (not yet
       written) that those land as `ResourceRequest`/`AgentFlag` and that no
       output-side field duplicates them.
 

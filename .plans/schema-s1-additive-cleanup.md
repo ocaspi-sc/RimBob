@@ -1,7 +1,7 @@
 # Schema S1 — Additive Types + AdviceAction Cleanup
 
 > Child slice of [`schema-landing.md`](schema-landing.md) (slice **S1** only).
-> Design source of record: [`basie-advice-schema.md`](basie-advice-schema.md).
+> Design source of record: [`willie-advice-schema.md`](willie-advice-schema.md).
 > This is the gimp-able implementation plan for S1. **S2 (flag typed request
 > arrays) and S3 (apply per-kind split) are explicitly out of scope.**
 
@@ -19,7 +19,7 @@ contract before more ministers depend on the old shape.
   (`AdviceAction` carries `icon: IconRef?` and `reason: string?`; `IconRef` is
   declared in `Src/Common/Advice/ResourceRequest.cs` and is still used by
   `ResourceRequest` — do NOT delete `IconRef`, only stop using it on `AdviceAction`).
-- Design shapes for the new records: `basie-advice-schema.md` §3 (`AdviceOption`),
+- Design shapes for the new records: `willie-advice-schema.md` §3 (`AdviceOption`),
   §4 (`BlueprintGroup`, `BlueprintAsset`, `MapCell`, `MaterialEstimate`).
 - Consumers that build/parse `AdviceAction`: `Src/LlmGateway/AdviceActionNormalizer.cs`,
   `Src/LlmGateway/AdviceResponseNormalizer.cs`, `Src/Ministers/Food/Rules.cs`.
@@ -106,7 +106,7 @@ first. S1 is the no-behavior-change slice: add the dormant multi-option +
 blueprint-group record types and remove the two dead `AdviceAction` fields
 (`icon`, `reason`). First gimp run of the schema work.
 
-**Context.** Design source: [`basie-advice-schema.md`](basie-advice-schema.md).
+**Context.** Design source: [`willie-advice-schema.md`](willie-advice-schema.md).
 Parent landing plan: [`schema-landing.md`](schema-landing.md) (S2 = flag typed
 request arrays, S3 = apply per-kind split — both deferred). The dormant
 `blueprint_group` / `options[]` exist for the future Placement Solver.
