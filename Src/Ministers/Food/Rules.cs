@@ -905,14 +905,13 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         string location = string.IsNullOrWhiteSpace(target.Proximity) ? "" : $" ({target.Proximity})";
         string summary = $"{target.Count} {target.Def} plants{zone}{location}";
 
-        return new AdviceActionApply(
-            Kind: AdviceApplyKind.MarkHarvestArea,
+        return new MarkHarvestAreaApply(
             Label: label,
             TargetSummary: summary,
             MapId: briefing.MapId,
-            TargetCount: target.Count,
             Rect: target.Rect,
-            TargetIds: target.PlantIds);
+            TargetIds: target.PlantIds,
+            TargetCount: target.Count);
     }
 
     private static AdviceActionApply? HuntApply(FoodBriefing briefing)
@@ -932,14 +931,13 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         string targetLabel = LabelDef(target.Def);
         string summary = $"{target.Count} {targetLabel} hunt target{(target.Count == 1 ? "" : "s")}{location}";
 
-        return new AdviceActionApply(
-            Kind: AdviceApplyKind.MarkHuntArea,
+        return new MarkHuntAreaApply(
             Label: "Mark hunt",
             TargetSummary: summary,
             MapId: briefing.MapId,
-            TargetCount: target.Count,
             Rect: target.Rect,
-            TargetIds: target.AnimalIds);
+            TargetIds: target.AnimalIds,
+            TargetCount: target.Count);
     }
 
     private static FoodHarvestTarget? SelectedCropHarvestTarget(FoodBriefing briefing)
@@ -990,19 +988,18 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         string label = count == 1 ? "Unforbid meal" : "Unforbid meals";
         string summary = $"{count} {ForbiddenMealLabel(briefing, count)} across {targets.Count} stack{(targets.Count == 1 ? "" : "s")}";
 
-        return new AdviceActionApply(
-            Kind: AdviceApplyKind.UnforbidThings,
+        return new UnforbidThingsApply(
             Label: label,
             TargetSummary: summary,
             MapId: briefing.MapId,
-            TargetCount: targets.Count,
             ThingIds: targets.Select(target => target.Id).ToList(),
             ThingTargets: targets.Select(target => new AdviceThingApplyTarget(
                 Id: target.Id,
                 Def: target.Def,
                 Kind: target.Kind,
                 Source: target.Source,
-                Position: target.Position)).ToList());
+                Position: target.Position)).ToList(),
+            TargetCount: targets.Count);
     }
 
     private static AdviceActionApply? CookBillApply(FoodBriefing briefing)
@@ -1015,15 +1012,14 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             return null;
 
         int target = Math.Min(SimpleMealTarget(briefing), AssistedApplyLimits.MaxProductionBillTarget);
-        return new AdviceActionApply(
-            Kind: AdviceApplyKind.UpsertProductionBill,
+        return new UpsertProductionBillApply(
             Label: "Set simple meal bill",
             TargetSummary: $"simple meal bill on {CookingStationTarget(briefing)} until {target} meals",
             MapId: briefing.MapId,
-            TargetCount: target,
             WorkbenchBuildingId: workbenchId,
             RecipeSelectorKey: SimpleMealRecipeSelector,
-            RepeatMode: BillRepeatModeTargetCount);
+            RepeatMode: BillRepeatModeTargetCount,
+            TargetCount: target);
     }
 
     private static bool ShouldSuggestCookBill(FoodBriefing briefing) =>

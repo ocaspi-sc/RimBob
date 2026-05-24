@@ -3,6 +3,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using RimBob.Coordination;
 using RimBob.Core.Advice;
+using RimBob.Core.Aggregates;
 using RimBob.Core.Briefings;
 using RimBob.Core.Ministers;
 using RimBob.Tests.Food;
@@ -38,11 +39,12 @@ public sealed class ReplayCorpusWriterTests
                     new AdviceAction(
                         AdviceActionKind.MarkHunt,
                         "Mark up to 2 hares for hunting.",
-                        Apply: new AdviceActionApply(
-                            AdviceApplyKind.MarkHuntArea,
+                        Apply: new MarkHuntAreaApply(
                             "Mark hunt",
                             "2 hare hunt targets",
                             1,
+                            new MapRect(40, 50, 41, 50),
+                            ["hare-1", "hare-2"],
                             2))
                 ],
                 GuideCitationIds: [],

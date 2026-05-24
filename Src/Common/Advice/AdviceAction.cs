@@ -23,31 +23,103 @@ public sealed record AdviceAction(
     [property: JsonPropertyName("apply")]
     AdviceActionApply? Apply = null);
 
-public sealed record AdviceActionApply(
-    [property: JsonPropertyName("kind")]
-    AdviceApplyKind Kind,
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]
+[JsonDerivedType(typeof(MarkHarvestAreaApply), "mark_harvest_area")]
+[JsonDerivedType(typeof(MarkHuntAreaApply), "mark_hunt_area")]
+[JsonDerivedType(typeof(UnforbidThingsApply), "unforbid_things")]
+[JsonDerivedType(typeof(UpsertProductionBillApply), "upsert_production_bill")]
+[JsonDerivedType(typeof(PlaceBlueprintGroupApply), "place_blueprint_group")]
+public abstract record AdviceActionApply(
     [property: JsonPropertyName("label")]
     string Label,
     [property: JsonPropertyName("target_summary")]
     string TargetSummary,
     [property: JsonPropertyName("map_id")]
+    int MapId)
+{
+    [JsonIgnore]
+    public abstract AdviceApplyKind Kind { get; }
+}
+
+public sealed record MarkHarvestAreaApply(
+    string Label,
+    string TargetSummary,
     int MapId,
-    [property: JsonPropertyName("target_count")]
-    int TargetCount,
     [property: JsonPropertyName("rect")]
-    MapRect? Rect = null,
+    MapRect Rect,
     [property: JsonPropertyName("target_ids")]
-    IReadOnlyList<string>? TargetIds = null,
+    IReadOnlyList<string> TargetIds,
+    [property: JsonPropertyName("target_count")]
+    int TargetCount)
+    : AdviceActionApply(Label, TargetSummary, MapId)
+{
+    [JsonIgnore]
+    public override AdviceApplyKind Kind => AdviceApplyKind.MarkHarvestArea;
+}
+
+public sealed record MarkHuntAreaApply(
+    string Label,
+    string TargetSummary,
+    int MapId,
+    [property: JsonPropertyName("rect")]
+    MapRect Rect,
+    [property: JsonPropertyName("target_ids")]
+    IReadOnlyList<string> TargetIds,
+    [property: JsonPropertyName("target_count")]
+    int TargetCount)
+    : AdviceActionApply(Label, TargetSummary, MapId)
+{
+    [JsonIgnore]
+    public override AdviceApplyKind Kind => AdviceApplyKind.MarkHuntArea;
+}
+
+public sealed record UnforbidThingsApply(
+    string Label,
+    string TargetSummary,
+    int MapId,
     [property: JsonPropertyName("thing_ids")]
-    IReadOnlyList<string>? ThingIds = null,
+    IReadOnlyList<string> ThingIds,
     [property: JsonPropertyName("thing_targets")]
-    IReadOnlyList<AdviceThingApplyTarget>? ThingTargets = null,
+    IReadOnlyList<AdviceThingApplyTarget> ThingTargets,
+    [property: JsonPropertyName("target_count")]
+    int TargetCount)
+    : AdviceActionApply(Label, TargetSummary, MapId)
+{
+    [JsonIgnore]
+    public override AdviceApplyKind Kind => AdviceApplyKind.UnforbidThings;
+}
+
+public sealed record UpsertProductionBillApply(
+    string Label,
+    string TargetSummary,
+    int MapId,
     [property: JsonPropertyName("workbench_building_id")]
-    string? WorkbenchBuildingId = null,
+    string WorkbenchBuildingId,
     [property: JsonPropertyName("recipe_selector_key")]
-    string? RecipeSelectorKey = null,
+    string RecipeSelectorKey,
     [property: JsonPropertyName("repeat_mode")]
-    string? RepeatMode = null);
+    string RepeatMode,
+    [property: JsonPropertyName("target_count")]
+    int TargetCount)
+    : AdviceActionApply(Label, TargetSummary, MapId)
+{
+    [JsonIgnore]
+    public override AdviceApplyKind Kind => AdviceApplyKind.UpsertProductionBill;
+}
+
+public sealed record PlaceBlueprintGroupApply(
+    string Label,
+    string TargetSummary,
+    int MapId,
+    [property: JsonPropertyName("blueprint_group")]
+    BlueprintGroup BlueprintGroup,
+    [property: JsonPropertyName("asset_count")]
+    int AssetCount)
+    : AdviceActionApply(Label, TargetSummary, MapId)
+{
+    [JsonIgnore]
+    public override AdviceApplyKind Kind => AdviceApplyKind.PlaceBlueprintGroup;
+}
 
 public sealed record AdviceThingApplyTarget(
     [property: JsonPropertyName("id")]
@@ -67,7 +139,8 @@ public enum AdviceApplyKind
     MarkHarvestArea,
     MarkHuntArea,
     UnforbidThings,
-    UpsertProductionBill
+    UpsertProductionBill,
+    PlaceBlueprintGroup
 }
 
 public static class AssistedApplyLimits

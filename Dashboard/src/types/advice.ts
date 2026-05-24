@@ -2,7 +2,12 @@ import type { IconRef } from './icons';
 
 export type AdvicePriority = 'low' | 'medium' | 'high' | 'critical';
 
-export type AdviceApplyKind = 'mark_harvest_area' | 'mark_hunt_area' | 'unforbid_things' | 'upsert_production_bill';
+export type AdviceApplyKind =
+  | 'mark_harvest_area'
+  | 'mark_hunt_area'
+  | 'unforbid_things'
+  | 'upsert_production_bill'
+  | 'place_blueprint_group';
 
 export interface AdviceApplyRect {
   x1: number;
@@ -23,29 +28,24 @@ export interface AdviceThingApplyTarget {
   };
 }
 
-export interface AdviceActionApply {
-  kind: AdviceApplyKind;
+interface AdviceActionApplyBase {
   label: string;
   target_summary: string;
   map_id: number;
-  target_count: number;
-  rect?: AdviceApplyRect | null;
-  target_ids?: string[] | null;
-  thing_ids?: string[] | null;
-  thing_targets?: AdviceThingApplyTarget[] | null;
-  workbench_building_id?: string | null;
-  recipe_selector_key?: string | null;
-  repeat_mode?: string | null;
 }
 
-export interface AdviceAction {
-  kind: string;
-  instruction: string;
-  quantity?: number | null;
-  owner?: string | null;
-  work_type?: string | null;
-  skill?: string | null;
-  apply?: AdviceActionApply | null;
+export interface MarkHarvestAreaApply extends AdviceActionApplyBase {
+  kind: 'mark_harvest_area';
+  rect: AdviceApplyRect;
+  target_ids: string[];
+  target_count: number;
+}
+
+export interface MarkHuntAreaApply extends AdviceActionApplyBase {
+  kind: 'mark_hunt_area';
+  rect: AdviceApplyRect;
+  target_ids: string[];
+  target_count: number;
 }
 
 export interface MapCell {
@@ -79,6 +79,44 @@ export interface AdviceOption {
   blueprint_group: BlueprintGroup;
   est_materials: MaterialEstimate[];
   tradeoff_note?: string | null;
+}
+
+export interface UnforbidThingsApply extends AdviceActionApplyBase {
+  kind: 'unforbid_things';
+  thing_ids: string[];
+  thing_targets: AdviceThingApplyTarget[];
+  target_count: number;
+}
+
+export interface UpsertProductionBillApply extends AdviceActionApplyBase {
+  kind: 'upsert_production_bill';
+  workbench_building_id: string;
+  recipe_selector_key: string;
+  repeat_mode: string;
+  target_count: number;
+}
+
+export interface PlaceBlueprintGroupApply extends AdviceActionApplyBase {
+  kind: 'place_blueprint_group';
+  blueprint_group: BlueprintGroup;
+  asset_count: number;
+}
+
+export type AdviceActionApply =
+  | MarkHarvestAreaApply
+  | MarkHuntAreaApply
+  | UnforbidThingsApply
+  | UpsertProductionBillApply
+  | PlaceBlueprintGroupApply;
+
+export interface AdviceAction {
+  kind: string;
+  instruction: string;
+  quantity?: number | null;
+  owner?: string | null;
+  work_type?: string | null;
+  skill?: string | null;
+  apply?: AdviceActionApply | null;
 }
 
 export interface AdviceApplyResponse {

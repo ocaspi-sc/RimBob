@@ -71,12 +71,13 @@ public sealed class AssistedApplyService(
             return result;
         }
 
-        result = apply.Kind switch
+        result = apply switch
         {
-            AdviceApplyKind.MarkHarvestArea => await ApplyHarvestAsync(advice, adviceId, actionIndex, apply, ct),
-            AdviceApplyKind.MarkHuntArea => await ApplyHuntAsync(advice, adviceId, actionIndex, apply, ct),
-            AdviceApplyKind.UnforbidThings => await ApplyUnforbidAsync(advice, adviceId, actionIndex, apply, ct),
-            AdviceApplyKind.UpsertProductionBill => await ApplyProductionBillAsync(advice, adviceId, actionIndex, apply, ct),
+            MarkHarvestAreaApply harvest => await ApplyHarvestAsync(advice, adviceId, actionIndex, harvest, ct),
+            MarkHuntAreaApply hunt => await ApplyHuntAsync(advice, adviceId, actionIndex, hunt, ct),
+            UnforbidThingsApply unforbid => await ApplyUnforbidAsync(advice, adviceId, actionIndex, unforbid, ct),
+            UpsertProductionBillApply bill => await ApplyProductionBillAsync(advice, adviceId, actionIndex, bill, ct),
+            PlaceBlueprintGroupApply blueprint => BlueprintGroupNotExecutable(adviceId, actionIndex, blueprint),
             _ => Response("validation_failed", "That apply kind is not allowlisted.", apply.Kind, adviceId, actionIndex)
         };
         if (ShouldClearAppliedAction(result))
@@ -89,7 +90,7 @@ public sealed class AssistedApplyService(
         AdviceItem advice,
         string adviceId,
         int actionIndex,
-        AdviceActionApply apply,
+        UpsertProductionBillApply apply,
         CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(apply.WorkbenchBuildingId))
@@ -238,10 +239,10 @@ public sealed class AssistedApplyService(
         AdviceItem advice,
         string adviceId,
         int actionIndex,
-        AdviceActionApply apply,
+        MarkHarvestAreaApply apply,
         CancellationToken ct)
     {
-        if (apply.Rect is null || apply.TargetIds is null || apply.TargetIds.Count == 0)
+        if (apply.TargetIds.Count == 0)
             return Response("validation_failed", "Harvest apply is missing exact target data.", apply.Kind, adviceId, actionIndex);
 
         if (apply.TargetIds.Count > AssistedApplyLimits.MaxHarvestTargets ||
@@ -317,10 +318,10 @@ public sealed class AssistedApplyService(
         AdviceItem advice,
         string adviceId,
         int actionIndex,
-        AdviceActionApply apply,
+        MarkHuntAreaApply apply,
         CancellationToken ct)
     {
-        if (apply.Rect is null || apply.TargetIds is null || apply.TargetIds.Count == 0)
+        if (apply.TargetIds.Count == 0)
             return Response("validation_failed", "Hunt apply is missing exact target data.", apply.Kind, adviceId, actionIndex);
 
         HashSet<string> targetIds = apply.TargetIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -402,10 +403,10 @@ public sealed class AssistedApplyService(
         AdviceItem advice,
         string adviceId,
         int actionIndex,
-        AdviceActionApply apply,
+        UnforbidThingsApply apply,
         CancellationToken ct)
     {
-        if (apply.ThingTargets is null || apply.ThingTargets.Count == 0)
+        if (apply.ThingTargets.Count == 0)
             return Response("validation_failed", "Unforbid apply is missing exact thing ids.", apply.Kind, adviceId, actionIndex);
 
         if (apply.ThingTargets.Count > AssistedApplyLimits.MaxUnforbidTargets)
@@ -469,6 +470,17 @@ public sealed class AssistedApplyService(
             actionIndex,
             new { requested = stillForbidden.Count, changed_or_missing = changed });
     }
+
+    private static AssistedApplyResponse BlueprintGroupNotExecutable(
+        string adviceId,
+        int actionIndex,
+        PlaceBlueprintGroupApply apply) =>
+        Response(
+            "validation_failed",
+            "Blueprint group apply is not executable until the RIMAPI blueprint endpoints land.",
+            apply.Kind,
+            adviceId,
+            actionIndex);
 
     private async Task<AssistedApplyResponse?> RefreshForValidationAsync(
         AdviceItem advice,

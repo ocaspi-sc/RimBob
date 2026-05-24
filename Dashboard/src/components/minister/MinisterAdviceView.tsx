@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { MayorAgenda, AgendaPriority } from '../../types/agenda';
 import type {
+  AdviceActionApply,
   AdviceApplyResponse,
   AdviceItem,
   AgentFlag,
@@ -578,7 +579,7 @@ function AdviceCard({
                     skill={action.skill}
                     workType={action.work_type}
                   />
-                  {action.apply && (
+                  {action.apply && isExecutableApply(action.apply) && (
                     <div className="action-apply">
                       <button
                         type="button"
@@ -693,9 +694,27 @@ function adviceExpiryState(item: AdviceItem, currentGameTick: number | null): Ad
 function actionKey(item: AdviceItem, actionIndex: number): string {
   const action = item.actions[actionIndex];
   const applyContext = action?.apply
-    ? `${action.apply.kind}:${action.apply.target_summary}:${action.apply.target_ids?.join(',') ?? ''}:${action.apply.thing_ids?.join(',') ?? ''}`
+    ? applyIdentity(action.apply)
     : 'text';
   return `${item.id}:${item.issued_at}:${actionIndex}:${applyContext}`;
+}
+
+function isExecutableApply(apply: AdviceActionApply): boolean {
+  return apply.kind !== 'place_blueprint_group';
+}
+
+function applyIdentity(apply: AdviceActionApply): string {
+  switch (apply.kind) {
+    case 'mark_harvest_area':
+    case 'mark_hunt_area':
+      return `${apply.kind}:${apply.target_summary}:${apply.target_ids.join(',')}`;
+    case 'unforbid_things':
+      return `${apply.kind}:${apply.target_summary}:${apply.thing_ids.join(',')}`;
+    case 'upsert_production_bill':
+      return `${apply.kind}:${apply.target_summary}:${apply.workbench_building_id}:${apply.target_count}`;
+    case 'place_blueprint_group':
+      return `${apply.kind}:${apply.target_summary}:${apply.blueprint_group.label}:${apply.asset_count}`;
+  }
 }
 
 function PriorityCard({

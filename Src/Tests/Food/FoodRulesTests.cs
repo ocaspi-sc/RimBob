@@ -100,7 +100,8 @@ public sealed class FoodRulesTests
             Action.Instruction.Contains("Unforbid 7 packaged survival meals")).Subject;
         unforbidStep.Apply.Should().NotBeNull();
         unforbidStep.Apply!.Kind.Should().Be(AdviceApplyKind.UnforbidThings);
-        unforbidStep.Apply.ThingTargets.Should().ContainSingle()
+        UnforbidThingsApply unforbidApply = unforbidStep.Apply.Should().BeOfType<UnforbidThingsApply>().Subject;
+        unforbidApply.ThingTargets.Should().ContainSingle()
             .Which.Def.Should().Be("MealSurvivalPack");
     }
 
@@ -316,10 +317,11 @@ public sealed class FoodRulesTests
         billAction.Apply.Should().NotBeNull();
         billAction.Apply!.Kind.Should().Be(AdviceApplyKind.UpsertProductionBill);
         billAction.Apply.TargetSummary.Should().Contain("fueled stove at (93, 0, 186)");
-        billAction.Apply.WorkbenchBuildingId.Should().Be("stove-1");
-        billAction.Apply.RecipeSelectorKey.Should().Be("simple_meal");
-        billAction.Apply.RepeatMode.Should().Be("TargetCount");
-        billAction.Apply.TargetCount.Should().Be(12);
+        UpsertProductionBillApply billApply = billAction.Apply.Should().BeOfType<UpsertProductionBillApply>().Subject;
+        billApply.WorkbenchBuildingId.Should().Be("stove-1");
+        billApply.RecipeSelectorKey.Should().Be("simple_meal");
+        billApply.RepeatMode.Should().Be("TargetCount");
+        billApply.TargetCount.Should().Be(12);
     }
 
     [Fact]
@@ -488,7 +490,8 @@ public sealed class FoodRulesTests
         Action.Instruction.Should().Contain("nearest 2 Plant_Berry");
         Action.Apply.Should().NotBeNull();
         Action.Apply!.TargetSummary.Should().Contain("Plant_Berry");
-        Action.Apply.TargetIds.Should().Equal("berry-1", "berry-2");
+        MarkHarvestAreaApply harvestApply = Action.Apply.Should().BeOfType<MarkHarvestAreaApply>().Subject;
+        harvestApply.TargetIds.Should().Equal("berry-1", "berry-2");
     }
 
     [Fact]
@@ -522,7 +525,7 @@ public sealed class FoodRulesTests
             .Actions.Should().ContainSingle().Subject;
         action.Instruction.Should().Contain("Mark 40 of 111 Plant_Berry");
         action.Apply.Should().NotBeNull();
-        action.Apply!.TargetCount.Should().Be(40);
+        action.Apply.Should().BeOfType<MarkHarvestAreaApply>().Subject.TargetCount.Should().Be(40);
     }
 
     [Fact]
@@ -727,7 +730,8 @@ public sealed class FoodRulesTests
         Action.Skill.Should().Be("Shooting");
         Action.Apply.Should().NotBeNull();
         Action.Apply!.Kind.Should().Be(AdviceApplyKind.MarkHuntArea);
-        Action.Apply.TargetIds.Should().Equal("hare-1", "hare-2");
+        MarkHuntAreaApply huntApply = Action.Apply.Should().BeOfType<MarkHuntAreaApply>().Subject;
+        huntApply.TargetIds.Should().Equal("hare-1", "hare-2");
         decision.Diagnostics.EmittedActions.Should().ContainSingle(row =>
             row.Source == "rules" &&
             row.Rule == "hunt_low_risk_animals" &&

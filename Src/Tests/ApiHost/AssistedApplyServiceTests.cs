@@ -34,14 +34,13 @@ public sealed class AssistedApplyServiceTests
         bus.Publish(Advice("food_harvest_mature_crops", new AdviceAction(
             AdviceActionKind.MarkHarvest,
             "Mark harvest.",
-            Apply: new AdviceActionApply(
-                AdviceApplyKind.MarkHarvestArea,
+            Apply: new MarkHarvestAreaApply(
                 "Mark harvest",
                 "4 rice plants",
                 MapId: 1,
-                TargetCount: 4,
                 Rect: new MapRect(10, 20, 13, 20),
-                TargetIds: ["plant-1", "plant-2", "plant-3", "plant-4"]))) with
+                TargetIds: ["plant-1", "plant-2", "plant-3", "plant-4"],
+                TargetCount: 4))) with
         {
             IssuedGameTick = 1_000,
             ExpiresGameTick = 2_000
@@ -63,14 +62,13 @@ public sealed class AssistedApplyServiceTests
         bus.Publish(Advice("food_harvest_mature_crops", new AdviceAction(
             AdviceActionKind.MarkHarvest,
             "Mark broad harvest.",
-            Apply: new AdviceActionApply(
-                AdviceApplyKind.MarkHarvestArea,
+            Apply: new MarkHarvestAreaApply(
                 "Mark harvest",
                 "too broad",
                 MapId: 1,
-                TargetCount: 1,
                 Rect: new MapRect(0, 0, 20, 20),
-                TargetIds: ["plant-1"]))));
+                TargetIds: ["plant-1"],
+                TargetCount: 1))));
         AssistedApplyService service = Service(bus, new ColonyState());
 
         AssistedApplyResponse response = await service.ApplyAsync("food_harvest_mature_crops", 0);
@@ -87,14 +85,13 @@ public sealed class AssistedApplyServiceTests
         bus.Publish(Advice("food_harvest_mature_crops", new AdviceAction(
             AdviceActionKind.MarkHarvest,
             "Mark harvest.",
-            Apply: new AdviceActionApply(
-                AdviceApplyKind.MarkHarvestArea,
+            Apply: new MarkHarvestAreaApply(
                 "Mark harvest",
                 "4 rice plants",
                 MapId: 1,
-                TargetCount: 4,
                 Rect: new MapRect(10, 20, 13, 20),
-                TargetIds: ["plant-1", "plant-2", "plant-3", "plant-4"]))));
+                TargetIds: ["plant-1", "plant-2", "plant-3", "plant-4"],
+                TargetCount: 4))));
         var handler = new MinimalRefreshHandler();
         AssistedApplyService service = Service(bus, new ColonyState(), handler);
 
@@ -255,6 +252,20 @@ public sealed class AssistedApplyServiceTests
         handler.AddBillPosted.Should().BeTrue();
     }
 
+    [Fact]
+    public async Task ApplyAsync_WhenBlueprintGroupApplyInvoked_ReturnsNotExecutableWithoutRimApi()
+    {
+        AdviceBus bus = new();
+        bus.Publish(Advice("food_freezer_missing", BlueprintGroupAction()));
+        AssistedApplyService service = Service(bus, new ColonyState());
+
+        AssistedApplyResponse response = await service.ApplyAsync("food_freezer_missing", 0);
+
+        response.Status.Should().Be("validation_failed");
+        response.Kind.Should().Be(AdviceApplyKind.PlaceBlueprintGroup);
+        response.Message.Should().Contain("not executable");
+    }
+
     private static AssistedApplyService Service(AdviceBus bus, ColonyState state)
     {
         return Service(bus, state, new ThrowingHandler());
@@ -291,28 +302,48 @@ public sealed class AssistedApplyServiceTests
         new(
             AdviceActionKind.ProductionBill,
             "Set/check simple meal bill.",
-            Apply: new AdviceActionApply(
-                AdviceApplyKind.UpsertProductionBill,
+            Apply: new UpsertProductionBillApply(
                 "Set simple meal bill",
                 "simple meal bill on one cooking station",
                 MapId: 1,
-                TargetCount: targetCount,
                 WorkbenchBuildingId: workbenchId,
                 RecipeSelectorKey: "simple_meal",
-                RepeatMode: "TargetCount"));
+                RepeatMode: "TargetCount",
+                TargetCount: targetCount));
 
     private static AdviceAction HuntAction() =>
         new(
             AdviceActionKind.MarkHunt,
             "Mark up to 2 hares for hunting.",
-            Apply: new AdviceActionApply(
-                AdviceApplyKind.MarkHuntArea,
+            Apply: new MarkHuntAreaApply(
                 "Mark hunt",
                 "2 hare hunt targets",
                 MapId: 1,
-                TargetCount: 2,
                 Rect: new MapRect(40, 50, 41, 50),
-                TargetIds: ["hare-1", "hare-2"]));
+                TargetIds: ["hare-1", "hare-2"],
+                TargetCount: 2));
+
+    private static AdviceAction BlueprintGroupAction() =>
+        new(
+            AdviceActionKind.PlaceBlueprint,
+            "Review compact freezer placement.",
+            Apply: new PlaceBlueprintGroupApply(
+                Label: "Place freezer shell",
+                TargetSummary: "Compact freezer shell with one cooler",
+                MapId: 1,
+                BlueprintGroup: new BlueprintGroup(
+                    Label: "Compact freezer",
+                    MapId: 1,
+                    Assets:
+                    [
+                        new BlueprintAsset(
+                            Role: "building",
+                            DefName: "Cooler",
+                            StuffDefName: "Steel",
+                            Cell: new MapCell(12, 34),
+                            Rotation: 2)
+                    ]),
+                AssetCount: 1));
 
     private static MinimalRefreshHandler HandlerWithSingleStove() =>
         new()
