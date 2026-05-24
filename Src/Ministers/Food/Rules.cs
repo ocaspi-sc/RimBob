@@ -19,7 +19,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         {
             if (briefing.UnclassifiedFoodUnits > 0)
                 return DecisionFor(briefing, "nutrition_signal_gap",
-                    FoodAdviceType.ManageFoodStockpile,
+                    FoodConcern.ManageFoodStockpile,
                     AdvicePriority.Medium,
                     "Food stockpile categories need verification",
                     FoodRemainderBody(briefing),
@@ -33,7 +33,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                     false);
 
             return DecisionFor(briefing, "unknown_food_state",
-                FoodAdviceType.FoodSecurity,
+                FoodConcern.FoodSecurity,
                 AdvicePriority.High,
                 "Food state unknown",
                 "No reliable food stockpile signal is available. Treat this as a food-security check, not confirmed starvation.",
@@ -53,7 +53,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         {
             AdvicePriority priority = FoodBufferPriority(briefing, days);
             return DecisionFor(briefing, "emergency_food_flag",
-                FoodAdviceType.FoodSecurity,
+                FoodConcern.FoodSecurity,
                 priority,
                 "Food crisis within a week",
                 EmergencyBody(briefing, days),
@@ -68,7 +68,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             AdvicePriority priority = days < 15f ? AdvicePriority.High : AdvicePriority.Medium;
             bool needsFreezerSupport = NeedsFreezerSupport(briefing, days, incomingPerishableFood: true);
             return DecisionFor(briefing, "harvest_mature_crops",
-                FoodAdviceType.HarvestNow,
+                FoodConcern.HarvestNow,
                 priority,
                 "Mature crops are ready",
                 $"{briefing.ReadyToHarvest} crop tiles are ready to harvest. Pull them in before weather, rot, or task drift wastes the buffer.",
@@ -86,7 +86,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             bool needsFreezerSupport = NeedsFreezerSupport(briefing, days, incomingPerishableFood: true);
             bool needsCookingLabor = ShouldRequestCookingLabor(briefing, days);
             return DecisionFor(briefing, "meals_understocked",
-                FoodAdviceType.ManageCookBills,
+                FoodConcern.ManageCookBills,
                 AdvicePriority.Medium,
                 "Cooked meals are understocked",
                 $"Only {briefing.MealsCount} meals are reported for {briefing.ColonistCount} colonists while raw food exists.",
@@ -100,7 +100,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         {
             bool needsFreezerSupport = NeedsFreezerSupport(briefing, days, incomingPerishableFood: true);
             return DecisionFor(briefing, "wild_harvest_available",
-                FoodAdviceType.WildHarvest,
+                FoodConcern.WildHarvest,
                 days < 10f ? AdvicePriority.High : AdvicePriority.Medium,
                 "Forage can extend the buffer",
                 WildHarvestBody(briefing, days),
@@ -115,7 +115,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             AdvicePriority priority = days < 10f ? AdvicePriority.High : AdvicePriority.Medium;
             bool needsFreezerSupport = NeedsFreezerSupport(briefing, days, incomingPerishableFood: true);
             return DecisionFor(briefing, "hunt_low_risk_animals",
-                FoodAdviceType.HuntForFood,
+                FoodConcern.HuntForFood,
                 priority,
                 "Mark low-risk animals for hunting",
                 HuntingBody(briefing, days),
@@ -130,7 +130,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         {
             bool needsFreezerSupport = NeedsFreezerSupport(briefing, days, incomingPerishableFood: true);
             return DecisionFor(briefing, "expand_growing_capacity",
-                FoodAdviceType.ExpandGrowingCapacity,
+                FoodConcern.ExpandGrowingCapacity,
                 days < 12f ? AdvicePriority.High : AdvicePriority.Medium,
                 "Expand food growing capacity",
                 $"Food covers about {days:F1} days and {cropCandidate.Label} still fits the growing window: {cropCandidate.Reason}. Add a compact food crop zone instead of waiting for hunting or trade.",
@@ -161,7 +161,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
 
         if (briefing.Infrastructure.Coolers == 0 && days >= 20f && briefing.FoodUnits > 0)
             return DecisionFor(briefing, "freezer_missing",
-                FoodAdviceType.ManageFreezer,
+                FoodConcern.ManageFreezer,
                 AdvicePriority.Medium,
                 "Food storage needs freezer support",
                 "Food exists but no cooler is visible. Preserve surplus before warm weather or large harvests.",
@@ -182,7 +182,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
     private static Decision DecisionFor(
         FoodBriefing briefing,
         string trace,
-        FoodAdviceType type,
+        FoodConcern type,
         AdvicePriority priority,
         string title,
         string body,
@@ -192,11 +192,11 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         bool emitFlag)
     {
         DateTimeOffset now = DateTimeOffset.UtcNow;
-        string adviceType = ToSnakeCase(type.ToString());
+        string concern = ToSnakeCase(type.ToString());
         AdviceItem advice = new(
             Id: $"{MinisterName.ToLowerInvariant()}_{trace}",
             Minister: MinisterName,
-            AdviceType: adviceType,
+            Concern: concern,
             Priority: priority,
             Title: title,
             Body: body,

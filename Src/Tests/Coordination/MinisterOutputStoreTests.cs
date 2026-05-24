@@ -157,7 +157,7 @@ public sealed class MinisterOutputStoreTests
                       {
                         "id": "old_food",
                         "minister": "Food",
-                        "advice_type": "food_security",
+                        "concern": "food_security",
                         "priority": "high",
                         "title": "Food low",
                         "body": "Body",
@@ -270,7 +270,7 @@ public sealed class MinisterOutputStoreTests
     private static AdviceItem Advice(string id, string minister) => new(
         Id: id,
         Minister: minister,
-        AdviceType: "food_security",
+        Concern: "food_security",
         Priority: AdvicePriority.High,
         Title: "Food low",
         Body: "Body",

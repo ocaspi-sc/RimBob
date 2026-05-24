@@ -86,7 +86,7 @@ public sealed record RuleTraceDetails
                 Source: source,
                 Rule: rule,
                 AdviceId: item.Id,
-                AdviceType: item.AdviceType,
+                Concern: item.Concern,
                 Priority: item.Priority,
                 Title: item.Title,
                 ActionCount: item.Actions.Count));
@@ -146,7 +146,7 @@ public sealed record RuleEmittedAdviceTrace(
     string Source,
     string Rule,
     string AdviceId,
-    string AdviceType,
+    string Concern,
     AdvicePriority Priority,
     string Title,
     int ActionCount);

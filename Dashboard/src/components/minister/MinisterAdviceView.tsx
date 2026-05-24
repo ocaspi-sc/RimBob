@@ -538,7 +538,7 @@ function AdviceCard({
       <header>
         <div>
           <span className="eyebrow">
-            <SemanticLabel icon={iconForField(item.advice_type)}><span>{item.advice_type}</span></SemanticLabel>
+            <SemanticLabel icon={iconForField(item.concern)}><span>{item.concern}</span></SemanticLabel>
           </span>
           <h3><IconizedText maxIcons={1} text={item.title} /></h3>
         </div>

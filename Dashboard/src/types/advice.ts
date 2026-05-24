@@ -292,7 +292,7 @@ export interface AdviceChainModel {
 export interface AdviceItem {
   id: string;
   minister: string;
-  advice_type: string;
+  concern: string;
   priority: AdvicePriority;
   title: string;
   body: string;

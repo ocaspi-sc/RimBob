@@ -99,7 +99,7 @@ public sealed class MinisterReplayRecorderTests
         AdviceItem advice = new(
             Id: "food_emergency_food_flag",
             Minister: "Food",
-            AdviceType: "food_security",
+            Concern: "food_security",
             Priority: AdvicePriority.High,
             Title: "Food crisis within a week",
             Body: "Food is low.",

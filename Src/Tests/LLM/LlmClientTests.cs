@@ -67,7 +67,7 @@ public sealed class LlmClientTests
           "summary": "Food is critically low and cooking/freezer paths need attention.",
           "advice": [
             {
-              "advice_type": "ManageCookBills",
+              "concern": "ManageCookBills",
               "severity": "High",
               "message": "Your colony has 0 meals and only 0.21 days of food remaining. Cook simple meals immediately.",
               "resource_requests": [
@@ -80,7 +80,7 @@ public sealed class LlmClientTests
               ]
             },
             {
-              "advice_type": "ManageFreezer",
+              "concern": "ManageFreezer",
               "severity": "High",
               "message": "Your colony has no coolers. Prioritize building at least one cooler.",
               "resource_requests": [
@@ -110,7 +110,7 @@ public sealed class LlmClientTests
             BriefingVersion: briefing.BriefingVersion,
             GameTick: briefing.GameTick,
             Date: briefing.Date,
-            DefaultAdviceType: nameof(FoodAdviceType.FoodSecurity),
+            DefaultConcern: nameof(FoodConcern.FoodSecurity),
             DefaultRationale: "Food LLM escalation selected this recommendation.",
             GuideContext: []);
 
@@ -124,7 +124,7 @@ public sealed class LlmClientTests
         response.StateSummary.Should().Be("Food is critically low and cooking/freezer paths need attention.");
         response.Advice[0].Id.Should().StartWith("food_llm_manage_cook_bills_");
         response.Advice[0].Minister.Should().Be("Food");
-        response.Advice[0].AdviceType.Should().Be("manage_cook_bills");
+        response.Advice[0].Concern.Should().Be("manage_cook_bills");
         response.Advice[0].Priority.Should().Be(AdvicePriority.High);
         response.Advice[0].Title.Should().Be("Manage Cook Bills");
         response.Advice[0].Body.Should().Contain("Cook simple meals");
@@ -145,7 +145,7 @@ public sealed class LlmClientTests
         {
           "advice": [
             {
-              "advice_type": "FoodSecurity",
+              "concern": "FoodSecurity",
               "priority_score": 99,
               "message": "Food needs attention.",
               "resource_requests": [
@@ -169,7 +169,7 @@ public sealed class LlmClientTests
             BriefingVersion: briefing.BriefingVersion,
             GameTick: briefing.GameTick,
             Date: briefing.Date,
-            DefaultAdviceType: nameof(FoodAdviceType.FoodSecurity),
+            DefaultConcern: nameof(FoodConcern.FoodSecurity),
             DefaultRationale: "Food LLM escalation selected this recommendation.",
             GuideContext: []);
 
@@ -194,7 +194,7 @@ public sealed class LlmClientTests
         AdviceItem item = new(
             Id: "a1",
             Minister: "Food",
-            AdviceType: "manage_cook_bills",
+            Concern: "manage_cook_bills",
             Priority: AdvicePriority.High,
             Title: "Cook meals",
             Body: "Body",
@@ -315,7 +315,7 @@ public sealed class LlmClientTests
             {
               "id": "manual_food",
               "minister": "Food",
-              "advice_type": "food_security",
+              "concern": "food_security",
               "priority": "high",
               "title": "Set up the food chain",
               "body": "Make storage visible, place cooking, and start growing.",

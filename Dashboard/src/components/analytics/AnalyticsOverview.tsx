@@ -25,7 +25,7 @@ interface CountRow {
 const analyticsIdeas: AnalyticsIdea[] = [
   {
     name: 'Advice pressure',
-    signal: 'Active critical/high advice by minister and advice_type',
+    signal: 'Active critical/high advice by minister and concern',
     value: 'Shows which subsystem is currently dominating the player attention budget.',
   },
   {

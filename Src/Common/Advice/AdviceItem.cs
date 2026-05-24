@@ -11,8 +11,8 @@ public sealed record AdviceItem(
     string Id,
     [property: JsonPropertyName("minister")]
     string Minister,
-    [property: JsonPropertyName("advice_type")]
-    string AdviceType,
+    [property: JsonPropertyName("concern")]
+    string Concern,
     [property: JsonPropertyName("priority")]
     AdvicePriority Priority,
     [property: JsonPropertyName("title")]

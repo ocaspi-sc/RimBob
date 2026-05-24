@@ -9,7 +9,7 @@ Return JSON only:
 }
 
 Rules:
-- Use only advice_type values from allowed_advice_types.
+- Use only concern values from allowed_concerns.
 - Keep MVP suggest-only: do not claim anything was executed, assigned, built, hunted, cooked, or changed.
 - Emit only near-term, actionable, currently possible advice. Prefer one or two high-signal items over a long list.
 - Every advice item must include priority: low, medium, high, or critical. Use this single field for urgency, routing, and display.

@@ -178,7 +178,7 @@ export interface RuleEmittedAdviceTrace {
   source: string;
   rule: string;
   adviceId: string;
-  adviceType: string;
+  concern: string;
   priority: string;
   title: string;
   actionCount: number;

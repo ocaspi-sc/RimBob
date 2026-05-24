@@ -43,7 +43,7 @@ public static class FoodLlmResponseParser
             BriefingVersion: briefing.BriefingVersion,
             GameTick: briefing.GameTick,
             Date: briefing.Date,
-            DefaultAdviceType: nameof(FoodAdviceType.FoodSecurity),
+            DefaultConcern: nameof(FoodConcern.FoodSecurity),
             DefaultRationale: "Food LLM escalation selected this recommendation.",
             GuideContext: guideContext);
 
@@ -154,7 +154,7 @@ public static class FoodLlmResponseParser
         response.Advice.All(advice =>
             !string.IsNullOrWhiteSpace(advice.Id) &&
             !string.IsNullOrWhiteSpace(advice.Minister) &&
-            !string.IsNullOrWhiteSpace(advice.AdviceType) &&
+            !string.IsNullOrWhiteSpace(advice.Concern) &&
             !string.IsNullOrWhiteSpace(advice.Title) &&
             !string.IsNullOrWhiteSpace(advice.Body) &&
             !string.IsNullOrWhiteSpace(advice.Rationale) &&

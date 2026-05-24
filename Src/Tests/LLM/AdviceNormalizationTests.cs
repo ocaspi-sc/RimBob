@@ -203,7 +203,7 @@ public sealed class AdviceNormalizationTests
         {
           "advice": [
             {
-              "advice_type": "HarvestNow",
+              "concern": "HarvestNow",
               "priority": "medium",
               "title": "Harvest rice",
               "body": "Mature rice is ready.",
@@ -238,7 +238,7 @@ public sealed class AdviceNormalizationTests
         BriefingVersion: 1,
         GameTick: 300_000,
         Date: new DateStamp("5th of Aprimay, 5500, 14h", 5500, "Aprimay", 5, 14),
-        DefaultAdviceType: "food_security",
+        DefaultConcern: "food_security",
         DefaultRationale: "Food LLM escalation selected this recommendation.",
         GuideContext: []);
 }

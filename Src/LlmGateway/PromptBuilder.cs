@@ -54,7 +54,7 @@ public sealed class PromptBuilder
         FoodPromptPayload payload = new(
             briefing,
             context,
-            Enum.GetNames<FoodAdviceType>(),
+            Enum.GetNames<FoodConcern>(),
             guides,
             candidates);
         return JsonSerializer.Serialize(payload, UserMessageJson);
@@ -81,7 +81,7 @@ internal sealed record MayorPromptPayload(
 internal sealed record FoodPromptPayload(
     [property: JsonPropertyName("briefing")] FoodBriefing Briefing,
     [property: JsonPropertyName("minister_context")] MinisterBriefingContext Context,
-    [property: JsonPropertyName("allowed_advice_types")] IReadOnlyList<string> AllowedAdviceTypes,
+    [property: JsonPropertyName("allowed_concerns")] IReadOnlyList<string> AllowedConcerns,
     [property: JsonPropertyName("guide_context")] IReadOnlyList<GuideContextEntry>? GuideContext,
     [property: JsonPropertyName("crop_candidates")] IReadOnlyList<FoodPromptCropCandidate>? CropCandidates
 );

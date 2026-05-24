@@ -2,8 +2,8 @@ using System.Text.Json.Serialization;
 
 namespace RimBob.Core.Advice;
 
-[JsonConverter(typeof(SnakeCaseLowerEnumConverter<FoodAdviceType>))]
-public enum FoodAdviceType
+[JsonConverter(typeof(SnakeCaseLowerEnumConverter<FoodConcern>))]
+public enum FoodConcern
 {
     FoodSecurity,
     ExpandGrowingCapacity,

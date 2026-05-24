@@ -283,9 +283,9 @@ public static class FoodChainModelBuilder
             FoodChainActionTargets targets = new();
             foreach (AdviceItem item in advice)
             {
-                targets.AddAdviceType(item.AdviceType);
+                targets.AddConcern(item.Concern);
                 foreach (AdviceAction action in item.Actions)
-                    targets.AddAction(item.AdviceType, action);
+                    targets.AddAction(item.Concern, action);
             }
 
             return targets;
@@ -293,9 +293,9 @@ public static class FoodChainModelBuilder
 
         public bool Has(string step) => _steps.Contains(step);
 
-        private void AddAdviceType(string adviceType)
+        private void AddConcern(string concern)
         {
-            string canonical = Canonical(adviceType);
+            string canonical = Canonical(concern);
             if (canonical == "harvestnow")
                 _steps.Add("grow.harvest");
             else if (canonical == "wildharvest")
@@ -310,13 +310,13 @@ public static class FoodChainModelBuilder
                 _steps.Add("store");
         }
 
-        private void AddAction(string adviceType, AdviceAction action)
+        private void AddAction(string concern, AdviceAction action)
         {
-            string canonicalAdviceType = Canonical(adviceType);
+            string canonicalConcern = Canonical(concern);
             switch (action.Kind)
             {
                 case AdviceActionKind.MarkHarvest:
-                    _steps.Add(canonicalAdviceType == "wildharvest" ? "forage.harvest" : "grow.harvest");
+                    _steps.Add(canonicalConcern == "wildharvest" ? "forage.harvest" : "grow.harvest");
                     break;
                 case AdviceActionKind.MarkHunt:
                     _steps.Add("hunt.hunt");
@@ -325,10 +325,10 @@ public static class FoodChainModelBuilder
                     _steps.Add("grow.zone");
                     break;
                 case AdviceActionKind.ProductionBill:
-                    _steps.Add(canonicalAdviceType == "managebutcherbills" ? "hunt.butcher" : "cook");
+                    _steps.Add(canonicalConcern == "managebutcherbills" ? "hunt.butcher" : "cook");
                     break;
                 case AdviceActionKind.PlaceBlueprint:
-                    AddBlueprintTarget(canonicalAdviceType, action);
+                    AddBlueprintTarget(canonicalConcern, action);
                     break;
                 case AdviceActionKind.SetPriority:
                     AddWorkTarget(action.WorkType);
@@ -342,11 +342,11 @@ public static class FoodChainModelBuilder
             }
         }
 
-        private void AddBlueprintTarget(string canonicalAdviceType, AdviceAction action)
+        private void AddBlueprintTarget(string canonicalConcern, AdviceAction action)
         {
-            if (canonicalAdviceType == "managefreezer" || IsColdStorageBlueprint(action))
+            if (canonicalConcern == "managefreezer" || IsColdStorageBlueprint(action))
                 _steps.Add("store");
-            else if (canonicalAdviceType == "managebutcherbills" || canonicalAdviceType == "huntforfood")
+            else if (canonicalConcern == "managebutcherbills" || canonicalConcern == "huntforfood")
                 _steps.Add("hunt.butcher");
             else
                 _steps.Add("cook");

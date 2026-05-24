@@ -27,7 +27,7 @@ public sealed class FoodRulesTests
 
         Decision decision = result.Should().BeOfType<Decision>().Subject;
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
-        advice.AdviceType.Should().Be("food_security");
+        advice.Concern.Should().Be("food_security");
         advice.Priority.Should().Be(AdvicePriority.High);
         advice.IssuedGameTick.Should().Be(briefing.GameTick);
         advice.ExpiresGameTick.Should().Be(briefing.GameTick + AdviceFreshness.TicksPerGameDay);
@@ -187,7 +187,7 @@ public sealed class FoodRulesTests
 
         decision.Trace.Should().Be("harvest_mature_crops");
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
-        advice.AdviceType.Should().Be("harvest_now");
+        advice.Concern.Should().Be("harvest_now");
         AdviceAction Action = advice.Actions.Single();
         Action.Instruction.Should().Contain("nearby to kitchen");
         Action.Apply.Should().NotBeNull();
@@ -208,7 +208,7 @@ public sealed class FoodRulesTests
 
         decision.Trace.Should().Be("freezer_missing");
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
-        advice.AdviceType.Should().Be("manage_freezer");
+        advice.Concern.Should().Be("manage_freezer");
         advice.Priority.Should().Be(AdvicePriority.Medium);
         advice.Actions.Should().ContainSingle().Which.Kind.Should().Be(AdviceActionKind.PlaceBlueprint);
         advice.Actions.Single().Owner.Should().Be("Construction");
@@ -257,7 +257,7 @@ public sealed class FoodRulesTests
             .Should().BeOfType<Decision>().Subject;
 
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
-        advice.AdviceType.Should().Be("manage_cook_bills");
+        advice.Concern.Should().Be("manage_cook_bills");
         advice.Actions.Should().Contain(s => s.Kind == AdviceActionKind.ProductionBill);
         advice.Actions.Should().NotContain(s => s.Kind == AdviceActionKind.RequestResource);
         decision.Flags.Should().BeEmpty();
@@ -279,7 +279,7 @@ public sealed class FoodRulesTests
             .Should().BeOfType<Decision>().Subject;
 
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
-        advice.AdviceType.Should().Be("manage_cook_bills");
+        advice.Concern.Should().Be("manage_cook_bills");
         advice.Actions.Should().Contain(action => action.Kind == AdviceActionKind.ProductionBill);
         AdviceAction freezerAction = advice.Actions.Should().Contain(action =>
             action.Kind == AdviceActionKind.PlaceBlueprint &&
@@ -450,7 +450,7 @@ public sealed class FoodRulesTests
             .Should().BeOfType<Decision>().Subject;
 
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
-        advice.AdviceType.Should().Be("wild_harvest");
+        advice.Concern.Should().Be("wild_harvest");
         advice.Title.Should().Be("Forage can extend the buffer");
         advice.Rationale.Should().Contain("Foraging edible plants");
         AdviceAction action = advice.Actions.Single();
@@ -544,7 +544,7 @@ public sealed class FoodRulesTests
             .Should().BeOfType<Decision>().Subject;
 
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
-        advice.AdviceType.Should().Be("expand_growing_capacity");
+        advice.Concern.Should().Be("expand_growing_capacity");
         AdviceAction Action = advice.Actions.Should().ContainSingle().Subject;
         Action.Kind.Should().Be(AdviceActionKind.DesignateZone);
         Action.Quantity.Should().Be(36);
@@ -719,7 +719,7 @@ public sealed class FoodRulesTests
             row.Rule == "hunt_targets_blocked_by_risk" &&
             row.Outcome == "not_matched");
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
-        advice.AdviceType.Should().Be("hunt_for_food");
+        advice.Concern.Should().Be("hunt_for_food");
         AdviceAction Action = advice.Actions.Should().ContainSingle().Subject;
         Action.Kind.Should().Be(AdviceActionKind.MarkHunt);
         Action.Instruction.Should().Be("Mark up to 2 hares for hunting (nearby to kitchen).");
@@ -765,7 +765,7 @@ public sealed class FoodRulesTests
             .Should().BeOfType<Decision>().Subject;
 
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
-        advice.AdviceType.Should().Be("hunt_for_food");
+        advice.Concern.Should().Be("hunt_for_food");
         advice.Actions.Should().Contain(action => action.Kind == AdviceActionKind.MarkHunt);
         AdviceAction freezerAction = advice.Actions.Should().Contain(action =>
             action.Kind == AdviceActionKind.PlaceBlueprint &&
@@ -842,7 +842,7 @@ public sealed class FoodRulesTests
 
         decision.Trace.Should().Be("nutrition_signal_gap");
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
-        advice.AdviceType.Should().Be("manage_food_stockpile");
+        advice.Concern.Should().Be("manage_food_stockpile");
         advice.Body.Should().Contain("25 unknown food units");
         advice.Body.Should().NotContain("audit");
     }

@@ -12,7 +12,7 @@ internal sealed record LlmAdviceNormalizationContext(
     long BriefingVersion,
     long GameTick,
     DateStamp Date,
-    string DefaultAdviceType,
+    string DefaultConcern,
     string DefaultRationale,
     IReadOnlyList<GuideCitation> GuideContext);
 
@@ -75,15 +75,15 @@ internal static class AdviceResponseNormalizer
         if (strict is not null && node["priority"] is not null && IsCompleteStrictAdvice(strict))
             return NormalizeStrictAdvice(strict);
 
-        string rawType = LlmResponseParser.ReadString(node["advice_type"]) ?? context.DefaultAdviceType;
+        string rawConcern = LlmResponseParser.ReadString(node["concern"]) ?? context.DefaultConcern;
         AdvicePriority priority = AdviceJsonCompatibility.ParseAdvicePriority(
             LlmResponseParser.ReadString(node["priority"]) ?? LlmResponseParser.ReadString(node["severity"]),
             node["priority_score"],
             AdvicePriority.Medium);
-        string adviceType = LlmResponseParser.ToSnakeCase(rawType);
-        if (string.IsNullOrWhiteSpace(adviceType))
-            adviceType = LlmResponseParser.ToSnakeCase(context.DefaultAdviceType);
-        string title = LlmResponseParser.ReadString(node["title"]) ?? LlmResponseParser.HumanizeIdentifier(rawType);
+        string concern = LlmResponseParser.ToSnakeCase(rawConcern);
+        if (string.IsNullOrWhiteSpace(concern))
+            concern = LlmResponseParser.ToSnakeCase(context.DefaultConcern);
+        string title = LlmResponseParser.ReadString(node["title"]) ?? LlmResponseParser.HumanizeIdentifier(rawConcern);
         string body = LlmResponseParser.ReadString(node["body"]) ?? LlmResponseParser.ReadString(node["message"]) ?? title;
         string rationale = LlmResponseParser.ReadString(node["rationale"]) ?? notes ?? context.DefaultRationale;
         IReadOnlyList<AdviceAction> actions = AdviceActionNormalizer.NormalizeOrConvertLegacy(
@@ -98,9 +98,9 @@ internal static class AdviceResponseNormalizer
         DateTimeOffset now = DateTimeOffset.UtcNow;
 
         return new AdviceItem(
-            Id: $"{context.Domain}_llm_{adviceType}_{context.GameTick}_{index + 1}",
+            Id: $"{context.Domain}_llm_{concern}_{context.GameTick}_{index + 1}",
             Minister: context.Minister,
-            AdviceType: adviceType,
+            Concern: concern,
             Priority: priority,
             Title: title,
             Body: body,
