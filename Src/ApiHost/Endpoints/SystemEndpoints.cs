@@ -29,6 +29,7 @@ public static class SystemEndpoints
         new("GET", "/api/v1/def/all", "active_read", "State store", "Thing definition catalog used to classify item nutrition and stack semantics."),
         new("GET", "/api/v1/map/animals?map_id", "active_read", "Chef", "Wild/tame animal source data for hunting assessment."),
         new("GET", "/api/v1/map/zones?map_id", "active_read", "Chef/State store", "Growing and stockpile zones with cell lists."),
+        new("GET", "/api/v1/map/rooms?map_id", "active_read", "Construction/Welfare", "Room role, temperature, bed ids, roof/open-room signals, and room quality stats."),
         new("GET", "/api/v1/map/buildings?map_id", "active_read", "Construction/Chef", "Buildings, HP, power state, and working flags."),
         new("GET", "/api/v1/buildings/bills?building_id", "active_read", "Chef", "Current cooking work-table bills ingested after building refresh so Chef can suppress already-satisfied bill advice."),
         new("GET", "/api/v1/map/power/info?map_id", "active_read", "Construction/Chef", "Power production, consumption, storage, and capacity."),
@@ -44,7 +45,6 @@ public static class SystemEndpoints
     private static readonly RimApiCoverageRow[] RepresentedButNotRefreshed =
     [
         new("GET", "/api/v1/map/pawns?map_id", "handshake_only", "Startup", "Used by RIMAPI handshake only; detailed colonists feed the state store."),
-        new("GET", "/api/v1/map/rooms?map_id", "client_only", "Construction/Welfare", "Client method exists, but RefreshAllAsync does not ingest it yet."),
         new("GET", "/api/v1/map/creatures/summary?map_id", "client_only", "Defense/Welfare", "Client method exists, but RefreshAllAsync does not ingest it yet."),
         new("GET", "/api/v1/item/image?name", "icon_gateway", "Dashboard", "Read-only item icon fetch through /api/icons/item/{defName}."),
         new("GET", "/api/v1/terrain/image?name", "icon_gateway", "Dashboard", "Read-only terrain icon fetch through /api/icons/terrain/{defName}."),
@@ -104,6 +104,7 @@ public static class SystemEndpoints
             RimBobOptions opts = options.Value;
             MayorBriefing mayorBriefing = briefings.GetMayorBriefing();
             FoodBriefing foodBriefing = briefings.GetFoodBriefing();
+            WelfareSourceBriefing welfareBriefing = briefings.GetWelfareBriefing();
             string logsDir = HostLogPaths.ResolveLogsDirectory(env.ContentRootPath, opts.LogsRoot);
             string dataRoot = HostLogPaths.ResolveDataRootDirectory(env.ContentRootPath, opts.DataRoot);
             string ministerOutputRoot = Path.Combine(dataRoot, "ministers");
@@ -159,6 +160,7 @@ public static class SystemEndpoints
                     last_live_refresh_at = colony.LastLiveRefreshAt,
                     briefing_version = mayorBriefing.BriefingVersion,
                     food_briefing_version = foodBriefing.BriefingVersion,
+                    welfare_briefing_version = welfareBriefing.BriefingVersion,
                     mayor_snapshot_version = outputStore.CurrentMayorAgenda?.Version,
                     active_advice_count = adviceBus.ActiveAdvice().Count,
                     active_flag_count = activeFlags.Count,

@@ -20,6 +20,7 @@ public sealed class ColonyState
     public Versioned<MapInfoSnapshot>  Map        { get; } = new(AggregateDefaults.Map);
     public Versioned<EconomyLedger>    Economy    { get; } = new(AggregateDefaults.Economy);
     public Versioned<ColonistRegistry> Colonists  { get; } = new(AggregateDefaults.Colonists);
+    public Versioned<RoomRegistry>     Rooms      { get; } = new(AggregateDefaults.Rooms);
     public Versioned<StockpileLedger>  Stockpiles { get; } = new(AggregateDefaults.Stockpiles);
     public Versioned<BuildingRegistry> Buildings  { get; } = new(AggregateDefaults.Buildings);
     public Versioned<WorkTableRegistry> WorkTables { get; } = new(AggregateDefaults.WorkTables);
@@ -51,6 +52,9 @@ public sealed class ColonyState
     public static readonly string[] FoodBriefingAggregateNames =
         ["Economy", "Colonists", "Stockpiles", "Buildings", "WorkTables", "Power", "Threats", "Weather", "Farm", "Plants", "Things", "ThingDefs", "AnimalDefs", "Terrain", "StoredResources", "Animals", "Resources"];
 
+    public static readonly string[] WelfareBriefingAggregateNames =
+        ["Economy", "Colonists", "Rooms"];
+
     /// <summary>
     /// Versions of every aggregate the MayorBriefing reads, in canonical order.
     /// Used by BriefingCache to detect input changes.
@@ -68,5 +72,10 @@ public sealed class ColonyState
         WorkTables.Version, Power.Version, Threats.Version, Weather.Version, Farm.Version, Plants.Version,
         Things.Version, ThingDefs.Version, AnimalDefs.Version, Terrain.Version, StoredResources.Version, Animals.Version,
         Resources.Version
+    ];
+
+    public long[] GetVersionsForWelfareBriefing() =>
+    [
+        Economy.Version, Colonists.Version, Rooms.Version
     ];
 }

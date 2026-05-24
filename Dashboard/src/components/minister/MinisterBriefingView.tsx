@@ -11,8 +11,9 @@ import { FoodCropMathPanel } from './FoodCropMathPanel';
 
 export function MinisterBriefingView({ scope }: { scope: ScopeConfig }) {
   const briefing = useAsyncResource(signal => fetchBriefing(scope.key, signal), [scope.key]);
+  const hasSourceBriefing = scope.key === 'welfare';
 
-  if (scope.status !== 'live') {
+  if (scope.status !== 'live' && !hasSourceBriefing) {
     return <EmptyState code="BRIEFING NOT WIRED">{scope.label} is planned but has no briefing endpoint yet.</EmptyState>;
   }
 
@@ -89,6 +90,19 @@ function groupBriefing(scope: string, briefing: unknown): BriefingGroup[] {
         'rawFoodCount', 'colonistCount', 'readyToHarvest', 'cropBreakdown', 'cropZoneSummaries',
         'wildHarvestCandidates', 'wildHarvestClusters', 'wildAnimalCount', 'skills', 'infrastructure',
         'storage', 'stockpileCells', 'kitchen', 'dataCoverage', 'recentFoodIncidents', 'activeThreat',
+      ]) },
+    ].filter(group => hasContent(group.value));
+  }
+
+  if (scope === 'welfare') {
+    return [
+      pickGroup('overview', 'Overview', briefing, ['briefingVersion', 'gameTick', 'colonistCount'], true),
+      pickGroup('mood', 'Mood', briefing, ['mood', 'worstPawns']),
+      pickGroup('need_lows', 'Need lows', briefing, ['needLows']),
+      pickGroup('rooms', 'Rooms', briefing, ['rooms']),
+      pickGroup('data_coverage', 'Data coverage', briefing, ['dataCoverage']),
+      { key: 'raw_remaining_fields', title: 'Raw remaining fields', value: omitKeys(briefing, [
+        'briefingVersion', 'gameTick', 'colonistCount', 'mood', 'worstPawns', 'needLows', 'rooms', 'dataCoverage',
       ]) },
     ].filter(group => hasContent(group.value));
   }

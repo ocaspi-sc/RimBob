@@ -45,4 +45,36 @@ public sealed class AggregateMapperTests
         info.Progress.Should().BeNull();
         info.IsFinished.Should().BeFalse();
     }
+
+    [Fact]
+    public void MapMapper_FromRooms_MapsQualityStatsAndBedIds()
+    {
+        RoomDto dto = new(
+            Id: "42",
+            RoleLabel: "bedroom",
+            Temperature: 21.5f,
+            CellsCount: 16,
+            TouchesMapEdge: false,
+            IsPrisonCell: false,
+            IsDoorway: false,
+            OpenRoofCount: 0,
+            ContainedBedsIds: [10, 11],
+            Impressiveness: 31f,
+            Beauty: -1.5f,
+            Cleanliness: -0.4f,
+            Space: 16f,
+            Wealth: 420f);
+
+        RoomRegistry registry = MapAggregateMapper.FromRooms([dto]);
+
+        RoomRecord room = registry.Rooms.Should().ContainSingle().Subject;
+        room.Id.Should().Be("42");
+        room.RoleLabel.Should().Be("bedroom");
+        room.ContainedBedIds.Should().Equal("10", "11");
+        room.Impressiveness.Should().Be(31f);
+        room.Beauty.Should().Be(-1.5f);
+        room.Cleanliness.Should().Be(-0.4f);
+        room.Space.Should().Be(16f);
+        room.Wealth.Should().Be(420f);
+    }
 }

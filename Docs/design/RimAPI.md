@@ -100,7 +100,7 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 | GET | `/map/plants?map_id` | plants w/ growth |
 | GET | `/map/animals?map_id` | wild + tame |
 | GET | `/map/zones?map_id` | zones + areas |
-| GET | `/map/rooms?map_id` | rooms w/ role, temp, beds |
+| GET | `/map/rooms?map_id` | rooms w/ role, temp, beds, roof/open signals, quality stats |
 | GET | `/map/buildings?map_id` | all buildings |
 | GET | `/map/building/info?id` | one building |
 | GET | `/map/weather?map_id` | weather + temp |
@@ -124,6 +124,8 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 > **Verified shape.** `/map/plants?map_id=...` currently returns broad thing-like plant rows with `thing_id`, `def_name`, `label`, `categories`, `position`, `stack_count`, and `is_forbidden`. It may not include growth, crop, or zone fields, so Food should not rely on this endpoint alone to know which crop is growing; combine it with `/map/farm/summary`.
 
 > **Verified historical shape.** `/map/animals?map_id=...` could omit health/tame fields on ordinary wild animals. Missing health meant "not reported", not injured/dead; ingestion defaulted it to healthy for Chef's wild-animal opportunity count. The RimBob fork now emits `tame` and `health` where RimWorld exposes them, which lets Chef exclude tame or unhealthy animals before hunt scoring.
+
+> **Verified shape (RimBob fork).** `/map/rooms?map_id=...` returns `data.rooms[]`. Room rows include `id`, `role_label`, `temperature`, `cells_count`, `touches_map_edge`, `is_prison_cell`, `is_doorway`, `open_roof_count`, `contained_beds_ids[]`, and room stats `impressiveness`, `beauty`, `cleanliness`, `space`, `wealth`. RimBob ingests this into `RoomRegistry` for read-only Welfare source briefings and Construction/Welfare evidence.
 
 ### Bill (work-table recipes)
 | Method | Path | Purpose |
@@ -234,7 +236,7 @@ overrides resolve under the same stable machine-local RimBob root.
 |---|---|---|
 | GET | `/api/v2/colonists/detailed?map_id` | full bio + needs + skills + health per colonist |
 
-> **Verified shape (M1.5).** `/api/v2/colonists/detailed` returns a list of objects with two fields: `pawn` (id, name, gender, age, health, mood, hunger, position) and `detailes` (yes, that spelling — `work_info.{skills, current_job, traits}`, `medical_info.{is_dead, is_downed, hediffs[]}`, `social_info`, `policies_info`). `skill.passion` is an int (0=None, 1=Minor, 2=Major), `skill.name` (not `def`) holds the skill key. Trait entries are objects (`{name, label}`), not bare strings.
+> **Verified shape (M1.5+).** `/api/v2/colonists/detailed` returns a list of objects with two fields: `pawn` (id, name, gender, age, health, mood, hunger, position) and `detailes` (yes, that spelling - `work_info.{skills, current_job, traits}`, `medical_info.{is_dead, is_downed, hediffs[]}`, `social_info`, `policies_info`). The RimBob fork also exposes wellbeing source fields under `detailes`: `sleep`, `comfort`, `beauty`, `joy`, `fresh_air`, `drugs_desire`, and `mood_thoughts[]` with `def_name`, `label`, `mood_offset`, `stage_index`. `skill.passion` is an int (0=None, 1=Minor, 2=Major), `skill.name` (not `def`) holds the skill key. Trait entries are objects (`{name, label}`), not bare strings.
 
 ### Resources (Thing controller)
 | Method | Path | Purpose |

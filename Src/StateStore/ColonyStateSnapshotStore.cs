@@ -73,8 +73,18 @@ public sealed class ColonyStateSnapshotStore
 
         try
         {
-            await using FileStream stream = File.OpenRead(path);
-            ColonyStateSnapshot? snapshot = await JsonSerializer.DeserializeAsync<ColonyStateSnapshot>(stream, SnapshotJson, ct);
+            string json = await File.ReadAllTextAsync(path, ct);
+            int? schemaVersion = ReadSchemaVersion(json);
+            if (schemaVersion is not null && schemaVersion != ColonyStateSnapshot.CurrentSchemaVersion)
+            {
+                DeleteUnsupportedSnapshot(path, logger);
+                string error =
+                    $"Unsupported colony state snapshot schema {schemaVersion} in {path}; deleted stale snapshot.";
+                logger.LogWarning("{SnapshotLoadError}", error);
+                return new ColonyStateSnapshotStore(path, logger, null, error);
+            }
+
+            ColonyStateSnapshot? snapshot = JsonSerializer.Deserialize<ColonyStateSnapshot>(json, SnapshotJson);
             if (snapshot is null)
             {
                 string error = $"Colony state snapshot is empty: {path}";
@@ -84,8 +94,9 @@ public sealed class ColonyStateSnapshotStore
 
             if (snapshot.SchemaVersion != ColonyStateSnapshot.CurrentSchemaVersion)
             {
+                DeleteUnsupportedSnapshot(path, logger);
                 string error =
-                    $"Unsupported colony state snapshot schema {snapshot.SchemaVersion} in {path}.";
+                    $"Unsupported colony state snapshot schema {snapshot.SchemaVersion} in {path}; deleted stale snapshot.";
                 logger.LogWarning("{SnapshotLoadError}", error);
                 return new ColonyStateSnapshotStore(path, logger, null, error);
             }
@@ -97,6 +108,39 @@ public sealed class ColonyStateSnapshotStore
             string error = $"Could not load colony state snapshot {path}: {ex.Message}";
             logger.LogWarning(ex, "Could not load colony state snapshot {SnapshotPath}", path);
             return new ColonyStateSnapshotStore(path, logger, null, error);
+        }
+    }
+
+    private static int? ReadSchemaVersion(string json)
+    {
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(json);
+            if (!document.RootElement.TryGetProperty("schema_version", out JsonElement schema))
+                return null;
+
+            return schema.ValueKind == JsonValueKind.Number && schema.TryGetInt32(out int version)
+                ? version
+                : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static void DeleteUnsupportedSnapshot(
+        string path,
+        ILogger<ColonyStateSnapshotStore> logger)
+    {
+        try
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "Could not delete unsupported colony state snapshot {SnapshotPath}", path);
         }
     }
 
@@ -139,6 +183,7 @@ public sealed class ColonyStateSnapshotStore
         state.Map.Update(snapshot.Map);
         state.Economy.Update(snapshot.Economy);
         state.Colonists.Update(snapshot.Colonists);
+        state.Rooms.Update(snapshot.Rooms);
         state.Stockpiles.Update(snapshot.Stockpiles);
         state.Buildings.Update(snapshot.Buildings);
         state.WorkTables.Update(snapshot.WorkTables);
@@ -240,6 +285,7 @@ public sealed class ColonyStateSnapshotStore
             Map = state.Map.Value,
             Economy = state.Economy.Value,
             Colonists = state.Colonists.Value,
+            Rooms = state.Rooms.Value,
             Stockpiles = state.Stockpiles.Value,
             Buildings = state.Buildings.Value,
             WorkTables = state.WorkTables.Value,
@@ -265,6 +311,7 @@ public sealed class ColonyStateSnapshotStore
             ["Map"] = state.Map.Version,
             ["Economy"] = state.Economy.Version,
             ["Colonists"] = state.Colonists.Version,
+            ["Rooms"] = state.Rooms.Version,
             ["Stockpiles"] = state.Stockpiles.Version,
             ["Buildings"] = state.Buildings.Version,
             ["WorkTables"] = state.WorkTables.Version,

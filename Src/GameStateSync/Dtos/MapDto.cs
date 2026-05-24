@@ -288,14 +288,23 @@ public record CreaturesSummaryDto(
 );
 
 // ── GET /map/rooms?map_id ─────────────────────────────────────────────────────
-// TODO: room fields not fully cached — needed for Welfare (bedroom impressiveness).
+// Live wire fields are nested under data.rooms.
 public record RoomDto(
     [property: JsonPropertyName("id")]
     [property: JsonConverter(typeof(FlexibleStringIdJsonConverter))] string Id,
-    [property: JsonPropertyName("role")]        string Role,
-    [property: JsonPropertyName("temperature")] float Temperature,
-    [property: JsonPropertyName("beds")]        int Beds,
-    [property: JsonPropertyName("impressiveness")] float? Impressiveness
+    [property: JsonPropertyName("role_label")]         string? RoleLabel,
+    [property: JsonPropertyName("temperature")]        float Temperature,
+    [property: JsonPropertyName("cells_count")]        int CellsCount,
+    [property: JsonPropertyName("touches_map_edge")]   bool TouchesMapEdge,
+    [property: JsonPropertyName("is_prison_cell")]     bool IsPrisonCell,
+    [property: JsonPropertyName("is_doorway")]         bool IsDoorway,
+    [property: JsonPropertyName("open_roof_count")]    int OpenRoofCount,
+    [property: JsonPropertyName("contained_beds_ids")] IReadOnlyList<int>? ContainedBedsIds,
+    [property: JsonPropertyName("impressiveness")]     float? Impressiveness,
+    [property: JsonPropertyName("beauty")]             float? Beauty,
+    [property: JsonPropertyName("cleanliness")]        float? Cleanliness,
+    [property: JsonPropertyName("space")]              float? Space,
+    [property: JsonPropertyName("wealth")]             float? Wealth
 );
 
 // ── GET /api/v1/resources/summary?map_id ──────────────────────────────────────

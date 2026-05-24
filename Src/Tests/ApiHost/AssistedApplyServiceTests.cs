@@ -458,6 +458,8 @@ public sealed class AssistedApplyServiceTests
                 return JsonResponse("""{"success":true,"data":{},"errors":null}""");
             if (path.Contains("map/animals", StringComparison.OrdinalIgnoreCase))
                 return JsonResponse(MapAnimalsJson);
+            if (path.Contains("map/rooms", StringComparison.OrdinalIgnoreCase))
+                return JsonResponse("""{"success":true,"data":{"rooms":[]},"errors":null}""");
             if (path.Contains("map/zones", StringComparison.OrdinalIgnoreCase))
                 return JsonResponse("""{"success":true,"data":{},"errors":null}""");
             if (path.Contains("map/terrain", StringComparison.OrdinalIgnoreCase))

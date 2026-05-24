@@ -99,6 +99,112 @@ public sealed class RimApiClientTests
     }
 
     [Fact]
+    public async Task GetRooms_WhenApiReturnsWrappedRoomsObject_ReturnsRooms()
+    {
+        using HttpClient http = MakeClient(new PathRouter()
+            .Add("map/rooms", Json("""
+                {
+                  "success": true,
+                  "data": {
+                    "rooms": [
+                      {
+                        "id": 42,
+                        "role_label": "bedroom",
+                        "temperature": 21.5,
+                        "cells_count": 16,
+                        "touches_map_edge": false,
+                        "is_prison_cell": false,
+                        "is_doorway": false,
+                        "open_roof_count": 0,
+                        "contained_beds_ids": [10],
+                        "impressiveness": 31.0,
+                        "beauty": -1.5,
+                        "cleanliness": -0.4,
+                        "space": 16.0,
+                        "wealth": 420.0
+                      }
+                    ]
+                  },
+                  "errors": null,
+                  "warnings": null,
+                  "timestamp": null
+                }
+                """)));
+
+        IReadOnlyList<RoomDto> result = await new RimApiClient(http).GetRoomsAsync(0);
+
+        RoomDto room = result.Should().ContainSingle().Subject;
+        room.Id.Should().Be("42");
+        room.RoleLabel.Should().Be("bedroom");
+        room.ContainedBedsIds.Should().Equal(10);
+        room.Impressiveness.Should().Be(31.0f);
+        room.Beauty.Should().Be(-1.5f);
+        room.Cleanliness.Should().Be(-0.4f);
+        room.Space.Should().Be(16.0f);
+        room.Wealth.Should().Be(420.0f);
+    }
+
+    [Fact]
+    public async Task GetColonistsDetailed_WhenApiReturnsMoodThoughts_ReturnsWellbeingRows()
+    {
+        using HttpClient http = MakeClient(new PathRouter()
+            .Add("colonists/detailed", Json("""
+                {
+                  "success": true,
+                  "data": [
+                    {
+                      "pawn": {
+                        "id": 7,
+                        "name": "Alice",
+                        "gender": "Female",
+                        "age": 28,
+                        "health": 1.0,
+                        "mood": 0.42,
+                        "hunger": 0.8,
+                        "position": { "x": 10, "y": 0, "z": 20 }
+                      },
+                      "detailes": {
+                        "sleep": 0.25,
+                        "comfort": 0.2,
+                        "beauty": 0.15,
+                        "joy": 0.3,
+                        "fresh_air": 0.7,
+                        "drugs_desire": 0.4,
+                        "mood_thoughts": [
+                          {
+                            "def_name": "SleptInCold",
+                            "label": "slept in the cold",
+                            "mood_offset": -4.0,
+                            "stage_index": 1
+                          }
+                        ],
+                        "work_info": null,
+                        "medical_info": null
+                      }
+                    }
+                  ],
+                  "errors": null,
+                  "warnings": null,
+                  "timestamp": null
+                }
+                """)));
+
+        IReadOnlyList<ColonistDetailedDto> result = await new RimApiClient(http).GetColonistsDetailedAsync(0);
+
+        ColonistDetailsDto details = result.Should().ContainSingle().Subject.Detailes!;
+        details.Sleep.Should().Be(0.25f);
+        details.Comfort.Should().Be(0.2f);
+        details.Beauty.Should().Be(0.15f);
+        details.Joy.Should().Be(0.3f);
+        details.FreshAir.Should().Be(0.7f);
+        details.DrugsDesire.Should().Be(0.4f);
+        MoodThoughtDto thought = details.MoodThoughts.Should().ContainSingle().Subject;
+        thought.DefName.Should().Be("SleptInCold");
+        thought.MoodOffset.Should().Be(-4f);
+        thought.StageIndex.Should().Be(1);
+    }
+
+    [Fact]
     public async Task GetFarmSummary_WhenApiReturnsLiveCropTypes_ReturnsMappedBreakdown()
     {
         using HttpClient http = MakeClient(new PathRouter()

@@ -50,6 +50,28 @@ Exact concerns should be defined when Welfare implementation starts.
 
 ---
 
+## Available Source Signals
+
+The current source-data slice does not implement Welfare advice, rules, LLM
+triggers, or Apply actions. It only makes source data visible through
+`GET /api/briefings/welfare/latest` and the dashboard's Welfare > Briefing view.
+
+Available signals:
+
+- Mood distribution from live colonist mood.
+- Per-pawn wellbeing need levels: sleep, comfort, beauty, joy, fresh air, and
+  drugs desire where the game exposes it.
+- Active mood thoughts from the RimBob RIMAPI fork:
+  `def_name`, `label`, `mood_offset`, `stage_index`.
+- Room evidence from `/api/v1/map/rooms`: role, temperature, cell count,
+  prison flag, doorway/open-roof/map-edge signals, contained bed ids, and
+  room stats for impressiveness, beauty, cleanliness, space, and wealth.
+
+Snapshot schema changes for these signals use no compat code; wipe-and-regen
+on upgrade.
+
+---
+
 ## Briefing Direction
 
 Welfare briefing should answer:

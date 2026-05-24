@@ -97,4 +97,35 @@ public sealed class BriefingCacheTests
         second.Should().NotBeSameAs(first);
         second.BriefingVersion.Should().Be(2);
     }
+
+    [Fact]
+    public void GetWelfareBriefing_AfterRoomUpdate_ReturnsNewInstance()
+    {
+        ColonyState state = new();
+        BriefingCache cache = new(state, new TestLogger<BriefingCache>());
+
+        WelfareSourceBriefing first = cache.GetWelfareBriefing();
+        state.Rooms.Update(new RoomRegistry([
+            new RoomRecord(
+                Id: "room-1",
+                RoleLabel: "bedroom",
+                Temperature: 21f,
+                CellsCount: 16,
+                TouchesMapEdge: false,
+                IsPrisonCell: false,
+                IsDoorway: false,
+                OpenRoofCount: 0,
+                ContainedBedIds: ["bed-1"],
+                Impressiveness: 31f,
+                Beauty: 1f,
+                Cleanliness: 0f,
+                Space: 16f,
+                Wealth: 400f)
+        ]));
+        WelfareSourceBriefing second = cache.GetWelfareBriefing();
+
+        second.Should().NotBeSameAs(first);
+        second.BriefingVersion.Should().Be(2);
+        second.Rooms.Count.Should().Be(1);
+    }
 }

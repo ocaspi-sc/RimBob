@@ -28,6 +28,7 @@ public sealed class IngestionDispatcherTests
         s.Map.Version.Should().Be(1);
         s.Economy.Version.Should().Be(1);
         s.Colonists.Version.Should().Be(1);
+        s.Rooms.Version.Should().Be(1);
         s.Stockpiles.Version.Should().Be(1);
         s.Buildings.Version.Should().Be(1);
         s.WorkTables.Version.Should().Be(1);
@@ -130,6 +131,11 @@ public sealed class IngestionDispatcherTests
         s.Colonists.Value.Colonists[0].Position.Should().BeEquivalentTo(new { X = 10, Y = 0, Z = 20 });
         s.Colonists.Value.Colonists[0].IsDowned.Should().BeFalse();
         s.Colonists.Value.Colonists[0].IsDead.Should().BeFalse();
+        s.Colonists.Value.Colonists[0].Sleep.Should().Be(0.8f);
+        s.Colonists.Value.Colonists[0].MoodThoughts.Should().ContainSingle()
+            .Which.DefName.Should().Be("AteWithoutTable");
+        s.Rooms.Value.Rooms.Should().ContainSingle()
+            .Which.Impressiveness.Should().Be(12.5f);
         s.Plants.Value.Plants.Single().Position.Should().BeEquivalentTo(new { X = 12, Y = 0, Z = 22 });
         s.Things.Value.Things.Should().ContainSingle()
             .Which.Def.Should().Be("MealSurvivalPack");
@@ -146,6 +152,57 @@ public sealed class IngestionDispatcherTests
         s.Power.Value.ProductionW.Should().Be(2000f);
         s.Threats.Value.Lords.Should().ContainSingle()
             .Which.JobType.Should().Be("Raid");
+    }
+
+    [Fact]
+    public async Task RefreshAllAsync_LiveRoomsWrapperShape_FlowsIntoRoomRegistry()
+    {
+        PathRouter router = StandardRouter()
+            .Add("api/v1/map/rooms?map_id", Json("""
+                {
+                  "success": true,
+                  "data": {
+                    "rooms": [
+                      {
+                        "id": 42,
+                        "role_label": "bedroom",
+                        "temperature": 21.5,
+                        "cells_count": 16,
+                        "touches_map_edge": false,
+                        "is_prison_cell": false,
+                        "is_doorway": false,
+                        "open_roof_count": 0,
+                        "contained_beds_ids": [10],
+                        "impressiveness": 31.0,
+                        "beauty": -1.5,
+                        "cleanliness": -0.4,
+                        "space": 16.0,
+                        "wealth": 420.0
+                      }
+                    ]
+                  },
+                  "errors": null,
+                  "warnings": null,
+                  "timestamp": null
+                }
+                """));
+        using HttpClient http = MakeClient(router);
+        ColonyState state = new();
+        IngestionDispatcher dispatcher = new(
+            new RimApiClient(http), state, new TestLogger<IngestionDispatcher>());
+
+        await dispatcher.RefreshAllAsync();
+
+        RoomRecord room = state.Rooms.Value.Rooms.Should().ContainSingle().Subject;
+        room.Id.Should().Be("42");
+        room.RoleLabel.Should().Be("bedroom");
+        room.CellsCount.Should().Be(16);
+        room.ContainedBedIds.Should().Equal("10");
+        room.Impressiveness.Should().Be(31.0f);
+        room.Beauty.Should().Be(-1.5f);
+        room.Cleanliness.Should().Be(-0.4f);
+        room.Space.Should().Be(16.0f);
+        room.Wealth.Should().Be(420.0f);
     }
 
     [Fact]
@@ -458,7 +515,18 @@ public sealed class IngestionDispatcherTests
             Pawn: new ColonistBasicDto(2, "Bob", "Male", 35, 0.9f, 0.6f, 1.0f, null),
             Detailes: new ColonistDetailsDto(
                 WorkInfo: null,
-                MedicalInfo: new PawnMedicalInfoDto(IsDead: false, IsDowned: true, Hediffs: [])));
+                MedicalInfo: new PawnMedicalInfoDto(IsDead: false, IsDowned: true, Hediffs: []),
+                Sleep: 0.25f,
+                Comfort: 0.2f,
+                Beauty: 0.15f,
+                Joy: 0.3f,
+                FreshAir: 0.7f,
+                DrugsDesire: 0.4f,
+                MoodThoughts:
+                [
+                    new MoodThoughtDto("SleptInCold", "slept in the cold", -4f, 1),
+                    new MoodThoughtDto("AteFineMeal", "ate fine meal", 5f, 0)
+                ]));
         var pawnNoMedical = new ColonistDetailedDto(
             Pawn: new ColonistBasicDto(3, "Carol", "Female", 22, 1.0f, 0.7f, 1.0f, null),
             Detailes: new ColonistDetailsDto(WorkInfo: null, MedicalInfo: null));
@@ -478,6 +546,14 @@ public sealed class IngestionDispatcherTests
 
         bob.IsDowned.Should().BeTrue();
         bob.IsDead.Should().BeFalse();
+        bob.Sleep.Should().Be(0.25f);
+        bob.Comfort.Should().Be(0.2f);
+        bob.Beauty.Should().Be(0.15f);
+        bob.Joy.Should().Be(0.3f);
+        bob.FreshAir.Should().Be(0.7f);
+        bob.DrugsDesire.Should().Be(0.4f);
+        bob.MoodThoughts.Should().HaveCount(2);
+        bob.MoodThoughts!.First().MoodOffset.Should().Be(-4f);
         carol.IsDowned.Should().BeFalse();   // null medical_info defaults to false
         carol.IsDead.Should().BeFalse();
     }
@@ -511,7 +587,17 @@ public sealed class IngestionDispatcherTests
                     CurrentJob: "Sowing",
                     Traits: [new TraitDto("Industrious", "industrious")]),
                 MedicalInfo: new PawnMedicalInfoDto(
-                    IsDead: false, IsDowned: false, Hediffs: [])));
+                    IsDead: false, IsDowned: false, Hediffs: []),
+                Sleep: 0.8f,
+                Comfort: 0.6f,
+                Beauty: 0.4f,
+                Joy: 0.5f,
+                FreshAir: 0.9f,
+                DrugsDesire: 0f,
+                MoodThoughts:
+                [
+                    new MoodThoughtDto("AteWithoutTable", "ate without table", -3f, 0)
+                ]));
 
         return StandardRouterWithoutColonists()
             .Add("api/v2/colonists/detailed", Envelope(new List<ColonistDetailedDto> { pawn }));
@@ -671,6 +757,34 @@ public sealed class IngestionDispatcherTests
             .Add("api/v1/def/all",                 Json(thingDefsJson))
             .Add("api/v1/resources/stored",        Json(storedResourcesJson))
             .Add("api/v1/map/animals",             Envelope(animals))
+            .Add("api/v1/map/rooms",               Json("""
+                {
+                  "success": true,
+                  "data": {
+                    "rooms": [
+                      {
+                        "id": 1,
+                        "role_label": "bedroom",
+                        "temperature": 21.0,
+                        "cells_count": 12,
+                        "touches_map_edge": false,
+                        "is_prison_cell": false,
+                        "is_doorway": false,
+                        "open_roof_count": 0,
+                        "contained_beds_ids": [1],
+                        "impressiveness": 12.5,
+                        "beauty": 0.2,
+                        "cleanliness": -0.1,
+                        "space": 12.0,
+                        "wealth": 250.0
+                      }
+                    ]
+                  },
+                  "errors": null,
+                  "warnings": null,
+                  "timestamp": null
+                }
+                """))
             .Add("api/v1/map/zones",               Json("""
                 {
                   "success": true,

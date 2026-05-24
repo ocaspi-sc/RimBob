@@ -47,10 +47,43 @@ public sealed record ColonistRecord(
     MapPosition? Position,
     string? CurrentJob,
     IReadOnlyList<ColonistSkill> Skills,
-    IReadOnlyList<string>        Traits
+    IReadOnlyList<string>        Traits,
+    float Sleep = 0f,
+    float Comfort = 0f,
+    float Beauty = 0f,
+    float Joy = 0f,
+    float FreshAir = 0f,
+    float DrugsDesire = 0f,
+    IReadOnlyList<MoodThoughtRecord>? MoodThoughts = null
 );
 
 public sealed record ColonistSkill(string Def, int Level, string Passion);
+
+public sealed record MoodThoughtRecord(
+    string DefName,
+    string? Label,
+    float MoodOffset,
+    int StageIndex
+);
+
+public sealed record RoomRegistry(IReadOnlyList<RoomRecord> Rooms);
+
+public sealed record RoomRecord(
+    string Id,
+    string RoleLabel,
+    float Temperature,
+    int CellsCount,
+    bool TouchesMapEdge,
+    bool IsPrisonCell,
+    bool IsDoorway,
+    int OpenRoofCount,
+    IReadOnlyList<string> ContainedBedIds,
+    float? Impressiveness,
+    float? Beauty,
+    float? Cleanliness,
+    float? Space,
+    float? Wealth
+);
 
 public sealed record StockpileLedger(
     IReadOnlyList<StockpileZone>     Zones,
@@ -265,6 +298,7 @@ public static class AggregateDefaults
     public static readonly MapInfoSnapshot   Map         = new(0, null);
     public static readonly EconomyLedger     Economy     = new(0, 0f, "", "", false, "");
     public static readonly ColonistRegistry  Colonists   = new([]);
+    public static readonly RoomRegistry      Rooms       = new([]);
     public static readonly StockpileLedger   Stockpiles  = new([], new Dictionary<string, int>());
     public static readonly BuildingRegistry  Buildings   = new([]);
     public static readonly WorkTableRegistry WorkTables  = new([]);

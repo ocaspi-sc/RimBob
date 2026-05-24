@@ -35,7 +35,7 @@
 - [ ] source-todo-lord-hostility-signal [2026-05-21] #defense #rimapi #state Replace the Lord job-name raid heuristic with a live faction-hostility signal when RIMAPI exposes one.
 - [ ] source-todo-pawn-edit-job-cache [2026-05-21] #labor #auto #rimapi Cache Pawn Edit and Pawn Job Controller field shapes before wiring policy/job advice beyond Suggest-only reads.
 - [ ] source-todo-building-condition-read [2026-05-21] #construction #rimapi #state Add building hp/power/working-state reads before Construction relies on building condition evidence.
-- [ ] source-todo-room-quality-read [2026-05-21] #welfare #rimapi #state Add room impressiveness/quality read support before Welfare consumes room evidence.
+- [x] source-todo-room-quality-read [2026-05-21] #welfare #rimapi #state Landed room quality read support for Welfare source evidence: RIMAPI room stats, RoomRegistry ingestion, snapshot persistence, and Welfare source briefing.
 - [ ] source-todo-quest-awareness [2026-05-21] #cos #mayor #rimapi Wire quest fields into state and briefings once CoS/Mayor need quest pressure.
 - [x] testlogger-concurrent-queue [2026-05-21] #ops #test Replace coarse lock in TestLogFile with ConcurrentQueue + background writer. [plan](.plans/testlogger-concurrent-queue.md)
 - [ ] base-layout-construction-tips [2026-05-21] #research #construction #layout Base Layout / Construction tips: fold community base-building heuristics into Construction minister spatial lint and dashboard evidence. [plan](.plans/base-layout-construction-tips.md)

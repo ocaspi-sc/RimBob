@@ -207,6 +207,25 @@ public static class MapAggregateMapper
                 MapPosition(animal.Position)))
             .ToList());
 
+    public static RoomRegistry FromRooms(IReadOnlyList<RoomDto> rooms) =>
+        new(rooms
+            .Select(room => new RoomRecord(
+                Id: room.Id,
+                RoleLabel: room.RoleLabel ?? "",
+                Temperature: room.Temperature,
+                CellsCount: room.CellsCount,
+                TouchesMapEdge: room.TouchesMapEdge,
+                IsPrisonCell: room.IsPrisonCell,
+                IsDoorway: room.IsDoorway,
+                OpenRoofCount: room.OpenRoofCount,
+                ContainedBedIds: (room.ContainedBedsIds ?? []).Select(id => id.ToString()).ToList(),
+                Impressiveness: room.Impressiveness,
+                Beauty: room.Beauty,
+                Cleanliness: room.Cleanliness,
+                Space: room.Space,
+                Wealth: room.Wealth))
+            .ToList());
+
     public static StockpileLedger FromStockpiles(
         IReadOnlyList<ZoneDto> zones,
         StoredResourceRegistry? storedResources = null)

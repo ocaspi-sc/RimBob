@@ -36,8 +36,22 @@ public record ColonistBasicDto(
 );
 
 public record ColonistDetailsDto(
-    [property: JsonPropertyName("work_info")]    PawnWorkInfoDto?    WorkInfo,
-    [property: JsonPropertyName("medical_info")] PawnMedicalInfoDto? MedicalInfo
+    [property: JsonPropertyName("work_info")]     PawnWorkInfoDto?    WorkInfo,
+    [property: JsonPropertyName("medical_info")]  PawnMedicalInfoDto? MedicalInfo,
+    [property: JsonPropertyName("sleep")]         float Sleep = 0f,
+    [property: JsonPropertyName("comfort")]       float Comfort = 0f,
+    [property: JsonPropertyName("beauty")]        float Beauty = 0f,
+    [property: JsonPropertyName("joy")]           float Joy = 0f,
+    [property: JsonPropertyName("fresh_air")]     float FreshAir = 0f,
+    [property: JsonPropertyName("drugs_desire")]  float DrugsDesire = 0f,
+    [property: JsonPropertyName("mood_thoughts")] IReadOnlyList<MoodThoughtDto>? MoodThoughts = null
+);
+
+public record MoodThoughtDto(
+    [property: JsonPropertyName("def_name")]     string DefName,
+    [property: JsonPropertyName("label")]        string? Label,
+    [property: JsonPropertyName("mood_offset")]  float MoodOffset,
+    [property: JsonPropertyName("stage_index")]  int StageIndex
 );
 
 public record PawnWorkInfoDto(

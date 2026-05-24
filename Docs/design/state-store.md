@@ -69,6 +69,10 @@ durable history. Timestamped state history and per-aggregate staleness remain
 future work. Assisted Apply still forces a fresh live refresh and must not
 execute from restored snapshot state.
 
+Snapshot schema changes do not carry compatibility readers. When the schema
+version changes, Host deletes the stale latest snapshot and regenerates it from
+the next successful live RIMAPI refresh.
+
 SYSTEM must expose the resolved snapshot path and current snapshot metadata so
 operators can distinguish real live state from restored stale state and verify
 the snapshot is not tied to the active checkout or worktree.

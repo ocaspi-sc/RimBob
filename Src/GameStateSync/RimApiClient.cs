@@ -280,10 +280,10 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
         GetEnvelopedAsync<CreaturesSummaryDto>(
             $"api/v1/map/creatures/summary?map_id={mapId}", ct);
 
-    /// <summary>GET api/v1/map/rooms?map_id — rooms with role, temperature, bed count, impressiveness.</summary>
+    /// <summary>GET api/v1/map/rooms?map_id — rooms with role, temperature, bed ids, roof/open signals, and quality stats.</summary>
     public Task<IReadOnlyList<RoomDto>> GetRoomsAsync(
         int mapId, CancellationToken ct = default) =>
-        GetEnvelopedListAsync<RoomDto>($"api/v1/map/rooms?map_id={mapId}", ct);
+        GetEnvelopedListAsync<RoomDto>($"api/v1/map/rooms?map_id={mapId}", ct, "rooms");
 
     // ── Threats / Events ──────────────────────────────────────────────────────
 

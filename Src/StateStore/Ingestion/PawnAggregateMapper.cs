@@ -14,10 +14,12 @@ public static class PawnAggregateMapper
     private static ColonistRecord MapColonist(ColonistDetailedDto pawn)
     {
         ColonistBasicDto basic = pawn.Pawn!;
+        ColonistDetailsDto? details = pawn.Detailes;
         PawnWorkInfoDto? work = pawn.Detailes?.WorkInfo;
         PawnMedicalInfoDto? medical = pawn.Detailes?.MedicalInfo;
         IReadOnlyList<SkillDto> skills = work?.Skills ?? [];
         IReadOnlyList<TraitDto> traits = work?.Traits ?? [];
+        IReadOnlyList<MoodThoughtDto> moodThoughts = details?.MoodThoughts ?? [];
 
         return new ColonistRecord(
             Id: basic.Id.ToString(),
@@ -32,7 +34,21 @@ public static class PawnAggregateMapper
             Position: MapAggregateMapper.MapPosition(basic.Position),
             CurrentJob: work?.CurrentJob,
             Skills: skills.Select(skill => new ColonistSkill(skill.Name, skill.Level, PassionName(skill.Passion))).ToList(),
-            Traits: traits.Select(trait => trait.Name).ToList());
+            Traits: traits.Select(trait => trait.Name).ToList(),
+            Sleep: details?.Sleep ?? 0f,
+            Comfort: details?.Comfort ?? 0f,
+            Beauty: details?.Beauty ?? 0f,
+            Joy: details?.Joy ?? 0f,
+            FreshAir: details?.FreshAir ?? 0f,
+            DrugsDesire: details?.DrugsDesire ?? 0f,
+            MoodThoughts: moodThoughts
+                .Where(thought => !string.IsNullOrWhiteSpace(thought.DefName))
+                .Select(thought => new MoodThoughtRecord(
+                    thought.DefName,
+                    thought.Label,
+                    thought.MoodOffset,
+                    thought.StageIndex))
+                .ToList());
     }
 
     private static string PassionName(int passion) => passion switch

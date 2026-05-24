@@ -35,6 +35,9 @@ public sealed class ColonyStateSnapshotStoreTests
             snapshot.AggregateVersions.Should().ContainKey("Terrain").WhoseValue.Should().Be(1);
             snapshot.AggregateVersions.Should().ContainKey("AnimalDefs").WhoseValue.Should().Be(1);
             snapshot.AggregateVersions.Should().ContainKey("Research").WhoseValue.Should().Be(1);
+            snapshot.AggregateVersions.Should().ContainKey("Rooms").WhoseValue.Should().Be(1);
+            snapshot.Rooms.Rooms.Should().ContainSingle()
+                .Which.Impressiveness.Should().Be(31f);
 
             ColonyState restored = new();
             loaded.RestoreInto(restored);
@@ -45,18 +48,24 @@ public sealed class ColonyStateSnapshotStoreTests
             restored.AnimalDefs.Value.Should().BeEquivalentTo(original.AnimalDefs.Value);
             restored.Stockpiles.Value.Should().BeEquivalentTo(original.Stockpiles.Value);
             restored.Colonists.Value.Should().BeEquivalentTo(original.Colonists.Value);
+            restored.Rooms.Value.Should().BeEquivalentTo(original.Rooms.Value);
             restored.Terrain.Version.Should().Be(1);
             restored.Stockpiles.Version.Should().Be(1);
             restored.Colonists.Version.Should().Be(1);
+            restored.Rooms.Version.Should().Be(1);
 
             BriefingCache cache = new(restored, new TestLogger<BriefingCache>());
             MayorBriefing mayor = cache.GetMayorBriefing();
             FoodBriefing food = cache.GetFoodBriefing();
+            WelfareSourceBriefing welfare = cache.GetWelfareBriefing();
             mayor.GameTick.Should().Be(98_765);
             mayor.Colonists.Count.Should().Be(2);
             food.MealsCount.Should().Be(12);
             food.RawFoodCount.Should().Be(24);
             food.DataCoverage.HasLiveState.Should().BeFalse();
+            welfare.Rooms.Count.Should().Be(1);
+            welfare.WorstPawns.SelectMany(pawn => pawn.TopNegativeThoughts).Should().ContainSingle()
+                .Which.DefName.Should().Be("SleptInCold");
         }
         finally
         {
@@ -92,7 +101,9 @@ public sealed class ColonyStateSnapshotStoreTests
             ColonyStateSnapshotStore seed = new(schemaPath, new TestLogger<ColonyStateSnapshotStore>());
             await seed.SaveAsync(PopulatedState());
             string validJson = await File.ReadAllTextAsync(schemaPath);
-            string invalidSchemaJson = validJson.Replace("\"schema_version\": 1", "\"schema_version\": 999");
+            string invalidSchemaJson = validJson.Replace(
+                $"\"schema_version\": {ColonyStateSnapshot.CurrentSchemaVersion}",
+                "\"schema_version\": 999");
             await File.WriteAllTextAsync(schemaPath, invalidSchemaJson);
 
             ColonyStateSnapshotStore schemaMismatch = await ColonyStateSnapshotStore.LoadAsync(
@@ -100,6 +111,7 @@ public sealed class ColonyStateSnapshotStoreTests
                 new TestLogger<ColonyStateSnapshotStore>());
             schemaMismatch.Latest.Should().BeNull();
             schemaMismatch.GetStatus().LoadError.Should().Contain("Unsupported colony state snapshot schema");
+            File.Exists(schemaPath).Should().BeFalse();
         }
         finally
         {
@@ -133,7 +145,16 @@ public sealed class ColonyStateSnapshotStoreTests
                 Position: new MapPosition(10, 0, 20),
                 CurrentJob: "Sowing",
                 Skills: [new ColonistSkill("Plants", 12, "Major")],
-                Traits: ["Industrious"]),
+                Traits: ["Industrious"],
+                Sleep: 0.2f,
+                Comfort: 0.3f,
+                Beauty: 0.4f,
+                Joy: 0.5f,
+                FreshAir: 0.6f,
+                MoodThoughts:
+                [
+                    new MoodThoughtRecord("SleptInCold", "slept in the cold", -4f, 1)
+                ]),
             new ColonistRecord(
                 Id: "p2",
                 Name: "Bob",
@@ -148,6 +169,23 @@ public sealed class ColonyStateSnapshotStoreTests
                 CurrentJob: "Cooking",
                 Skills: [new ColonistSkill("Cooking", 9, "Minor")],
                 Traits: ["Fast walker"])
+        ]));
+        state.Rooms.Update(new RoomRegistry([
+            new RoomRecord(
+                Id: "room-1",
+                RoleLabel: "bedroom",
+                Temperature: 21f,
+                CellsCount: 16,
+                TouchesMapEdge: false,
+                IsPrisonCell: false,
+                IsDoorway: false,
+                OpenRoofCount: 0,
+                ContainedBedIds: ["bed-1"],
+                Impressiveness: 31f,
+                Beauty: -1f,
+                Cleanliness: -0.2f,
+                Space: 16f,
+                Wealth: 420f)
         ]));
         state.Stockpiles.Update(new StockpileLedger(
             [new StockpileZone("z1", "StockpileZone", "main", 12, new MapPosition(12, 0, 20))],

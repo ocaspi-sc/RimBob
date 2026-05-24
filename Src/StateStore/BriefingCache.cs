@@ -29,7 +29,17 @@ public sealed class BriefingCache(ColonyState state, ILogger<BriefingCache> log)
         log,
         JsonOpts);
 
+    private readonly CachedBriefing<WelfareSourceBriefing> _welfare = new(
+        "WelfareSourceBriefing",
+        state.GetVersionsForWelfareBriefing,
+        ColonyState.WelfareBriefingAggregateNames,
+        version => WelfareBriefingDerivation.Compute(state, version),
+        log,
+        JsonOpts);
+
     public MayorBriefing GetMayorBriefing() => _mayor.Get();
 
     public FoodBriefing GetFoodBriefing() => _food.Get();
+
+    public WelfareSourceBriefing GetWelfareBriefing() => _welfare.Get();
 }

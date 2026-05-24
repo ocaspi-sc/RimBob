@@ -15,6 +15,7 @@ public static class ColonyEndpoints
         coverage.Register("/api/colony/snapshot", "available", "Latest Mayor briefing for sidebar telemetry.");
         coverage.Register("/api/briefings/mayor/latest", "available", "Mayor briefing inspector source.");
         coverage.Register("/api/briefings/food/latest", "available", "Food briefing inspector source.");
+        coverage.Register("/api/briefings/welfare/latest", "available", "Welfare source briefing for mood, need, and room-quality signals.");
 
         app.MapGet("/api/colony/snapshot", (BriefingCache cache) =>
             Results.Ok(cache.GetMayorBriefing()));
@@ -24,6 +25,9 @@ public static class ColonyEndpoints
 
         app.MapGet("/api/briefings/food/latest", (BriefingCache cache) =>
             Results.Ok(cache.GetFoodBriefing()));
+
+        app.MapGet("/api/briefings/welfare/latest", (BriefingCache cache) =>
+            Results.Ok(cache.GetWelfareBriefing()));
 
         return app;
     }
