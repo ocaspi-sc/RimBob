@@ -228,7 +228,7 @@ before promoting rule, prompt, briefing, or RAG changes.
 ## Deferred Auto Epic
 
 The Auto write shim, Labor policy recommender, bulletin board, broad RIMAPI
-write coverage, and per-advice-type `Auto` execution are deferred until the
+write coverage, and per-concern `Auto` execution are deferred until the
 first Auto graduation. Assisted Apply may map a small allowlist earlier, but it
 does not implement the Auto stack. Detailed shape is designed at re-engagement;
 the current design sketches are intentionally thin.
@@ -239,6 +239,6 @@ the current design sketches are intentionally thin.
 
 - [ ] RIMAPI read-endpoint inventory by minister.
 - [ ] Test project organization if the suite grows beyond the current shape.
-- [ ] Per-minister advice-type catalogues for future autonomy graduation.
+- [ ] Per-minister concern catalogues for future autonomy graduation.
 - [ ] When the guide corpus grows, whether the in-process vector store still
       meets latency and maintenance needs.

@@ -76,11 +76,11 @@ Candidate signals:
 - `hospital_to_defense_entry_distance`
 - `prison_to_secure_entry_distance`
 
-Candidate advice types:
+Candidate concerns:
 
-- `layout_efficiency`
-- `storage_adjacency`
-- `room_program`
+- `base_layout`
+- `storage_placement`
+- `functional_rooms`
 
 ### 2. Put storage where work actually happens
 
@@ -444,23 +444,23 @@ separate Base Layout minister is not justified yet.
 First-slice rule groups:
 
 1. `power_stability`
-2. `freezer_infrastructure`
+2. `thermal_control`
 3. `basic_shelter`
 4. `material_bottleneck`
 5. `fire_risk`
-6. `layout_efficiency`
-7. `storage_adjacency`
-8. `build_queue_blocked`
+6. `base_layout`
+7. `storage_placement`
+8. `stalled_builds`
 9. `base_topology`
 
 Rules-first examples:
 
 - If food is spoiling and no cooler-backed freezer exists, emit
-  `freezer_infrastructure`.
+  `thermal_control`.
 - If a critical room has mostly wooden walls and stone blocks are available,
   emit `fire_risk`.
-- If workshops are far from their input storage, emit `storage_adjacency`.
-- If the food loop is long, emit `layout_efficiency`.
+- If workshops are far from their input storage, emit `storage_placement`.
+- If the food loop is long, emit `base_layout`.
 - If the base has no coherent main circulation path and new rooms are being
   added as disconnected pockets, emit `base_topology`.
 - If critical rooms are perimeter-adjacent despite available walls/doors, emit
@@ -545,8 +545,8 @@ coarse classifications. It does not need a full planner to be useful.
   RIMAPI responses.
 - Add Construction briefing groups for route loops, fire risk, material flow,
   freezer infrastructure, and build dependencies.
-- Decide whether `base_topology` is its own first-slice advice type or a
-  dashboard grouping under `layout_efficiency`.
+- Decide whether `base_topology` is its own first-slice concern or a
+  dashboard grouping under `base_layout`.
 - Decide where bill-setting advice crosses from Construction evidence into
   Industry/Food ownership.
 - Decide how much Defense context Construction needs before surfacing

@@ -48,13 +48,13 @@ future Assisted Apply controls on allowlisted Food actions after a player click.
 
 ---
 
-## Advice Types
+## Concerns
 
-Food advice types are a closed code contract and future autonomy-dial units.
+Food concerns are a closed code contract and future autonomy-dial units.
 Adding or removing one is a design decision, but the exact enum list belongs in
 `Src/Common/Advice/FoodAdviceType.cs`.
 
-Food advice types should cover food security, growing capacity, harvest,
+Food concerns should cover food security, growing capacity, harvest,
 forage/edible-plant harvest, hunting, cooking, butchering, freezer/storage, trade/procurement
 pressure, and food-event recovery.
 

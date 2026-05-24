@@ -646,6 +646,12 @@ feedback, disabled when state is stale or validation fails, and followed by a
 compact result state that links to the SYSTEM/trace evidence for the attempted
 write and read-back.
 
+An Apply control renders only in the scope of the minister that **emitted** the
+action. A requesting minister shows its outbound `requests[]` but never another
+minister's executable handle — e.g. Food requests a freezer, but the
+`place_blueprint` Apply lives in Construction's (Willie's) scope, because
+Construction emits the placement action.
+
 The dashboard does not cache Agenda documents in browser storage. Stale agenda
 and feeder-advice recovery comes from the Host-owned unified minister output
 store. On a fresh runtime with no persisted minister output at all, Host

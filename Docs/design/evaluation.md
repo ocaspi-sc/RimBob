@@ -79,7 +79,7 @@ If a candidate cannot be replayed because fields are missing, the correct output
 is a logging/corpus gap, not a rule promotion.
 
 Before/after reports should include corpus size, target-cluster size, unchanged
-non-target count, path changes, advice type/priority changes,
+non-target count, path changes, concern/priority changes,
 resource/action/flag diffs, schema validity, and missing-field confidence gaps.
 
 ---

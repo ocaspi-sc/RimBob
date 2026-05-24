@@ -88,13 +88,13 @@ Likely files:
 Keep them stable and execution-facing:
 
 - `PowerStability`
-- `FreezerInfrastructure`
+- `ThermalControl`
 - `BasicShelter`
-- `RoomProgram`
+- `FunctionalRooms`
 - `MaterialBottleneck`
 - `FireRisk`
-- `BuildQueueBlocked`
-- `LayoutEfficiency`
+- `StalledBuilds`
+- `BaseLayout`
 
 Wire serialization like Food does, using snake-case output.
 
@@ -187,7 +187,7 @@ Priority order should be:
    - Flag if Food/freezer is affected.
 
 2. **Food freezer build request**
-   - If active Food flag requests cooler/freezer/building and Construction has enough rough materials, emit `freezer_infrastructure`.
+   - If active Food flag requests cooler/freezer/building and Construction has enough rough materials, emit `thermal_control`.
    - Steps:
      - `place_blueprint`: cooler-backed freezer/cold room near food storage
    - Request:
@@ -373,7 +373,7 @@ Test groups:
 
 1. **Rules tests**
    - negative power emits `power_stability`
-   - Food freezer request emits `freezer_infrastructure`
+   - Food freezer request emits `thermal_control`
    - missing beds emits `basic_shelter`
    - material deficit emits `material_bottleneck`
    - stable base emits no advice

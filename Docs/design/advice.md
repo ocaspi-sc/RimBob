@@ -32,7 +32,7 @@ part of MVP.
 `AdviceItem` is the stable player-facing unit. The code owns exact fields and
 serialization; the design-level contract is:
 
-- Identity and source: id, issuing minister, advice type.
+- Identity and source: id, issuing minister, concern.
 - Urgency: one `priority` enum.
 - Player content: title, body, rationale.
 - Player/future-execution operations: concrete `actions[]`.
@@ -51,11 +51,22 @@ knobs for advice.
 Flags still use severity because flags are inter-minister routing signals, not
 player-facing advice.
 
-### Advice Type
+### Concern
 
-`advice_type` is closed per minister. It is also the unit a future autonomy dial
-graduates one at a time. Adding an advice type is a design decision for that
+`concern` is closed per minister. It is also the unit a future autonomy dial
+graduates one at a time. Adding a concern is a design decision for that
 minister.
+
+It must stay **granular**: a generic catch-all concern (e.g. `build_structure`) is
+rejected, because the dial graduates one concern at a time and an over-broad concern
+would graduate too much at once. "Build" is an **action** (`place_blueprint`),
+not a concern.
+
+Authorship is split: the LLM emits the advice's judgment fields plus, when a
+build is involved, a compact semantic *intent* — it never authors exact
+placements, payloads, or target ids. Deterministic code computes those (for
+Construction, the **Placement Solver**). This is the same boundary the Assisted
+Apply section enforces. See [`ministers/construction.md`](ministers/construction.md).
 
 ### Actions
 
@@ -328,9 +339,9 @@ is already satisfied.
 
 ## Autonomy Dial
 
-The future autonomy dial is per minister and advice type:
+The future autonomy dial is per minister and concern:
 
-- **Off:** do not emit this advice type.
+- **Off:** do not emit this concern.
 - **Suggest:** emit advice; the player decides.
 - **Auto:** emit advice and execute through the re-engaged Auto stack.
 
@@ -347,7 +358,7 @@ coverage, and per-minister trust gates exist.
 - [ ] Do pushbacks ever expire, or are stale corrections handled by refinement?
 - [ ] How should tactical advice conflicts be surfaced before a full CoS loop
       exists?
-- [ ] Define exact per-minister advice type catalogues in the relevant minister
+- [ ] Define exact per-minister concern catalogues in the relevant minister
       docs.
 - [ ] Calibrate step-kind granularity as feeders and future Auto mapping
       mature.

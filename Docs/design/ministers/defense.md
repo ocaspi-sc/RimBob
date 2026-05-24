@@ -36,7 +36,7 @@ Likely first advice areas:
 - Weapon readiness below the current threat level.
 - Post-raid repair or medical pressure flagged to owners.
 
-Exact advice types should be defined when the Defense implementation slice
+Exact concerns should be defined when the Defense implementation slice
 starts.
 
 ---
@@ -108,7 +108,7 @@ Requests remain advice in MVP; they do not issue RIMAPI writes by themselves.
 
 ## Open Questions / TODO
 
-- [ ] Define first Defense advice types.
+- [ ] Define first Defense concerns.
 - [ ] Define weapon/readiness scoring from live data.
 - [ ] Define how Defense requests fortification work from Construction.
 - [ ] Decide retreat-vs-hold thresholds.

@@ -3,6 +3,7 @@
 > **Living document.** See `AGENTS.md` for update rules.
 > Construction is a future feeder advisor. This doc records domain boundaries
 > and first-slice intent, not a code-level rule catalogue.
+> Persona / UI name: **Willie**. Cabinet label stays **Construction** / **Minister of Construction**.
 
 ---
 
@@ -76,8 +77,36 @@ Likely first advice areas:
 - Warn about wood structures in critical rooms.
 - Surface material/component bottlenecks that block current plans.
 
-Advice types are future autonomy-dial units. Define exact enum values when the
-Construction implementation slice starts.
+### Concerns (defined)
+
+Nine canonical concerns, kept granular so each is an independent autonomy-dial unit:
+`power_stability`, `freezer_infrastructure`, `basic_shelter`, `room_program`,
+`storage_adjacency`, `material_bottleneck`, `fire_risk`, `build_queue_blocked`,
+`layout_efficiency`. Definitions + the first-slice rules-vs-LLM split live in
+[`basie-advice-types.md`](../../../.plans/basie-advice-types.md).
+
+Decisions: `base_topology` is folded into `layout_efficiency` (a dashboard /
+briefing grouping, not its own type); `room_program` and `storage_adjacency`
+stay separate (room existence/purpose vs material-flow placement — different
+blast radius, must graduate independently). No generic `build_structure` concern:
+"build" is an **action** (`place_blueprint`), not a category, because
+`concern` is the autonomy-dial unit and stays granular.
+
+### Placement & Authorship
+
+Build placement is computed by the **Placement Solver** — a deterministic
+component, not the LLM. The minister LLM (or rules) emits judgment plus, for
+build advice, a compact semantic intent (target class, room class, capacity,
+near-anchors, constraints) with **no coordinates**. The Placement Solver reads
+the live map, generates 1–3 candidate layouts, validates them, and assembles the
+pickable `options[]`. Request-driven builds are deterministic: the Solver
+consumes `building_request`s directly (already structured), so no LLM step is
+needed. See [`placement-solver.md`](../../../.plans/placement-solver.md).
+
+The executable Apply (place a chosen layout) renders in **Construction's own
+dashboard scope** (Willie's tab), since Construction emits the placement action.
+A requesting minister (e.g. Food asking for a freezer) shows only its outbound
+request — never another minister's build Apply.
 
 ---
 
@@ -133,7 +162,7 @@ In MVP these requests remain advice and flags; they never execute writes by them
 
 ## Open Questions / TODO
 
-- [ ] Define first Construction advice types when implementation starts.
+- [x] Construction concerns defined — see **Concerns (defined)** above and `.plans/basie-advice-types.md`.
 - [ ] Define room-program derivation in the state store.
 - [ ] Decide how Construction consumes Food/Defense/Medical build requests.
 - [ ] Decide when Research should split from Construction.

@@ -17,7 +17,7 @@ cabinet through read-only `cabinet_direction`, and synthesizes important flags.
 It issues advice, not actions.
 
 In MVP, the player reads the Agenda and decides what to do. Future `Auto`
-graduations are per feeder minister and advice type, not Mayor-wide autonomy.
+graduations are per feeder minister and concern, not Mayor-wide autonomy.
 
 See [`agenda.md`](../agenda.md).
 
@@ -167,7 +167,7 @@ full prompt here.
 
 ## Open Questions / TODO
 
-- [ ] Tactical-alert advice type granularity.
+- [ ] Tactical-alert concern granularity.
 - [ ] Tactical-alert cadence: per flag or batched.
 - [ ] DLC-specific Mayor advice boundaries.
 - [ ] Cross-session memory of past colonies.

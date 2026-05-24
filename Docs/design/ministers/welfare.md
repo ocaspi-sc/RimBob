@@ -37,7 +37,7 @@ Likely first advice areas:
 - Apparel warmth risk when live data supports it.
 - Social conflict or ideology pressure only when it creates clear advice.
 
-Exact advice types should be defined when Welfare implementation starts.
+Exact concerns should be defined when Welfare implementation starts.
 
 ---
 
@@ -95,7 +95,7 @@ Requests remain advice in MVP; they do not issue RIMAPI writes by themselves.
 ## Open Questions / TODO
 
 - [ ] Reconcile Welfare/Medical implementation order and boundary.
-- [ ] Define first Welfare advice types.
+- [ ] Define first Welfare concerns.
 - [ ] Decide how schedule advice interacts with deferred Labor/Auto.
 - [ ] Define recreation/build priority from live data.
 - [ ] Add ideology-specific handling only when DLC scope requires it.
