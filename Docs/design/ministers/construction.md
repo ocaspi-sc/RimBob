@@ -15,7 +15,7 @@ Direct plans:
 
 - [Base / Construction / Layout Agent Plan](../../../.plans/base-construction-layout-agent.md) - implementation slice plan for the first Construction minister.
 - [Base Layout / Construction Tips](../../../.plans/base-layout-construction-tips.md) - community layout heuristics translated into Construction spatial lint.
-- [RIMAPI Blueprint Placement Endpoint](../../../.plans/rimapi-blueprint-placement-endpoint.md) - fork-side validate/place/read support for future `place_blueprint` actions.
+- [RIMAPI Blueprint Placement Endpoint](../../../.plans/rimapi-blueprint-placement-endpoint.md) - fork-side pending blueprint/frame lifecycle for future Construction apply and backlog reads.
 - [Deterministic CoS Cabinet Issue Solver](../../../.plans/deterministic-cos-cabinet-issue-solver.md) - issue-report routing, including Construction-owned issue classes and cross-minister requests.
 
 Reference corpora:
@@ -28,7 +28,12 @@ Direct todo entries in [HumanTodo.md](../../../HumanTodo.md):
 - `construction-minister` - add Construction after minimal CoS handling.
 - `construction-placement-layout-strategy-base` - decide placement/layout strategy and whether Base Layout ever splits out.
 - `base-layout-construction-tips` - fold community base-building heuristics into spatial lint and dashboard evidence.
-- `add-rimapi-fork-endpoints-blueprint` - add blueprint validate/place/read endpoints in the RIMAPI fork.
+- `add-rimapi-fork-endpoints-blueprint` - add blueprint validate/place/read, allow/disallow, cancel, and backlog endpoints in the RIMAPI fork.
+- `rimapi-building-detail-read` - add detailed building condition, working-state, and flickable/fuel/power evidence.
+- `rimapi-stockpile-detail-read` - add stockpile detail reads for storage pressure and material flow.
+- `rimapi-room-detail-read` - add room detail reads for welfare-sensitive construction planning.
+- `rimapi-power-net-read` - add power-net detail reads for energy bottleneck and disconnected-asset evidence.
+- `rimapi-buildability-layers-read` - add bounded buildability-layer reads for placement scoring.
 
 Supporting research todo entries in [HumanTodo.md](../../../HumanTodo.md):
 

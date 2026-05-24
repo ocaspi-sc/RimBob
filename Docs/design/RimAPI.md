@@ -154,7 +154,19 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 |---|---|---|
 | POST | `/builder/copy` (rect) | copy area |
 | POST | `/builder/paste` | paste blueprint |
-| POST | `/builder/blueprint` | place blueprint at position |
+| POST | `/builder/blueprint` | legacy copied-area blueprint placement |
+| POST | `/builder/blueprint/validate` | fork-only dry-run for one caller-supplied blueprint |
+| POST | `/builder/blueprint/place` | fork-only safe placement for one validated blueprint |
+| POST | `/builder/blueprint/allowed-state` | fork-only allow/disallow for explicit pending blueprint/frame ids |
+| POST | `/builder/blueprint/cancel` | fork-only cancel for explicit pending blueprint/frame ids |
+| GET | `/map/blueprints?map_id` | fork-only pending `Blueprint_Build` and `Frame` read |
+| GET | `/map/construction/backlog?map_id` | fork-only grouped pending blueprint/frame backlog |
+
+> **Fork lifecycle shape.** The RimBob fork blueprint slice is strictly about
+> pending blueprint/frame lifecycle: validate, place, read, allow/disallow,
+> explicit-id cancel, and backlog summary. It does not cover general building
+> detail, room, stockpile, power-net, or buildability-layer evidence; those are
+> separate Construction/Willie follow-ups in `HumanTodo.md`.
 
 ### Order (designations)
 | Method | Path | Purpose |

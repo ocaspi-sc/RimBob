@@ -1,235 +1,278 @@
-# RIMAPI Blueprint Placement Endpoint(s) — Plan
+# Complete RIMAPI Blueprint Lifecycle Slice
 
-> Agent-created plan. **All work lands in the RIMAPI fork**
-> (`C:\dev\RIMAPI-for-RimBob`, repo `ocaspi-sc/RIMAPI-for-RimBob`), not this
-> repo. RimBob integrates over HTTP only (no linking; GPL-3.0 posture per
-> `AGENTS.md` / `RimApiClient` header).
+> Agent-created plan. Fork-side work lands in the local RIMAPI fork
+> (`C:\dev\RIMAPI-for-RimBob`, repo `ocaspi-sc/RIMAPI-for-RimBob`), not in the
+> RimBob Host. RimBob integrates over HTTP only.
 
----
+## Summary
 
-## 1. Scope
+Expand the RIMAPI fork blueprint support to cover the full pending-build
+lifecycle:
 
-Add three HTTP endpoints to the RIMAPI fork that let an external caller
-**validate**, **place**, and **read** construction blueprints, with the cell
-coordinates supplied by the caller. No `CanPlaceBlueprintAt`-skipping writes,
-no destructive obstacle clearing, no implicit area paste.
+- validate one caller-supplied blueprint placement
+- place one validated blueprint
+- read pending blueprints and frames
+- allow/disallow pending blueprints and frames
+- cancel/delete pending blueprints and frames by explicit id
+- summarize pending blueprint/frame backlog for Willie
 
-Out of scope (explicit, §8): RimBob-side `RimApiClient` methods, Assisted Apply
-integration, advice apply-handle wiring, dashboard cell-pick UI, server-side
-cell resolution, multi-asset / area placement. Those land in a separate slice
-once the endpoints exist.
+No RimBob Host, minister, dashboard, apply-handle, or cell-picker wiring in this
+slice. No room, stockpile, power-net, building-detail, or buildability-layer
+endpoints in this slice; those are separate Willie follow-ups in `HumanTodo.md`.
 
-## 2. Why these three (not just `place`)
+No compatibility code; this adds new fork-only endpoints and no persisted state.
+If a later wire/persistence format changes, wipe-and-regen on upgrade.
 
-`GenConstruct.PlaceBlueprintForBuild` silently no-ops on invalid placement, and
-the fork's existing `POST /api/v1/builder/blueprint`
-(`Source/RIMAPI/RimworldRestApi/Services/BuilderService.cs:169-235`) returns a
-bare `ApiResult.Ok()` regardless. Without a paired **validate** (dry-run via
-`CanPlaceBlueprintAt`) and **read** (pending blueprints/frames), a caller has
-no way to know whether a write took effect or to be idempotent across retries.
-The triplet is the minimum safe unit.
+## Endpoint Contract
 
-## 3. Endpoints
+### `POST /api/v1/builder/blueprint/validate`
 
-All three follow the fork's conventions:
-attribute-routed `*Controller` (`BaseControllers/BuilderController.cs:9-41`),
-`ReadBodyAsync<T>` snake_case DTO (`Core/HttpContext/HttpListenerRequestExtensions.cs`),
-`ApiResult<T>` envelope (`Core/HttpContext/ResponceBuilder.cs`),
-`MapHelper.GetMapByID`. Queued → main-thread execution by the existing
-`RIMAPI_GameComponent.ProcessServerQueues()` pump — service code may call Verse
-APIs directly with no extra marshaling.
+Dry-run one placement. No mutation.
 
-### 3.1 `POST /api/v1/builder/blueprint/validate` — dry-run
+Request:
 
-Request DTO (`BlueprintValidateRequestDto`):
+```json
+{
+  "map_id": 0,
+  "def_name": "Wall",
+  "stuff_def_name": "WoodLog",
+  "cell": { "x": 80, "z": 80 },
+  "rotation": 0
+}
+```
 
-| field | type | notes |
-|---|---|---|
-| `map_id` | int | required |
-| `def_name` | string | `ThingDef.defName` or `TerrainDef.defName` |
-| `stuff_def_name` | string? | null for stuffless defs and terrain |
-| `cell` | `{x:int, z:int}` | absolute map cell |
-| `rotation` | int | 0–3, `Rot4.AsInt` |
+Response data:
 
-Implementation (`BuilderService.ValidateBlueprint`):
-
-- Resolve `BuildableDef def` via `DefDatabase<ThingDef>.GetNamedSilentFail` and,
-  on null, `DefDatabase<TerrainDef>.GetNamedSilentFail`. 404 reason if neither
-  resolves.
-- Resolve `ThingDef stuff` only if `stuff_def_name` is non-empty.
-- Build `IntVec3 center = new IntVec3(cell.x, 0, cell.z)`; bounds-check via
-  `center.InBounds(map)`.
-- Call `AcceptanceReport report = GenConstruct.CanPlaceBlueprintAt(def, center,
-  new Rot4(rotation), map, godMode:false, thingToIgnore:null, thing:null,
-  stuffDef:stuff)`.
-- Compute occupied cells via `GenAdj.OccupiedRect(center, new Rot4(rotation),
-  def.Size)`.
-- Compute cost via `def.CostListAdjusted(stuff)` (each entry → `{def_name,
-  count}`).
-- Check existing things at `center` for already-blueprinted / already-built
-  same-def matches (see §3.2 idempotency rules).
-
-Response data (`BlueprintValidateResultDto`):
-
-```jsonc
+```json
 {
   "can_place": true,
-  "reason": "",                       // AcceptanceReport.Reason when !can_place
-  "occupies_cells": [{"x":12,"z":34}, ...],
-  "cost": [{"def_name":"Steel","count":35}, ...],
+  "reason": "",
+  "def_type": "thing",
+  "occupies_cells": [{ "x": 80, "z": 80 }],
+  "cost": [{ "def_name": "WoodLog", "count": 5 }],
+  "work_to_build": 135,
   "already_blueprinted": false,
   "already_built": false
 }
 ```
 
-**No mutation under any code path.**
+Implementation notes:
 
-### 3.2 `POST /api/v1/builder/blueprint/place` — single safe placement
+- Resolve `def_name` as `ThingDef` first, then `TerrainDef`.
+- Resolve `stuff_def_name` only for thing blueprints.
+- Reject missing map, missing def, invalid stuff, invalid rotation, and
+  out-of-bounds cell.
+- Use `GenConstruct.CanPlaceBlueprintAt(...)`.
+- Compute occupied cells with `GenAdj.OccupiedRect(...)`.
+- Compute cost with `BuildableDef.CostListAdjusted(stuff)`.
+- Compute work with `GetStatValueAbstract(StatDefOf.WorkToBuild, stuff)`.
 
-Request DTO (`BlueprintPlaceRequestDto`): same fields as §3.1. Critically a
-**dedicated DTO**, not the shared `PasteAreaRequestDto` (whose `ClearObstacles`
-default is destructive — see §4).
+### `POST /api/v1/builder/blueprint/place`
 
-Implementation (`BuilderService.PlaceBlueprint`):
+Place one safe blueprint after server-side validation.
 
-1. Resolve def/stuff/center exactly as §3.1.
-2. Re-run the validity check (do not trust the caller). On `!report.Accepted`
-   return `ApiResult<BlueprintPlaceResultDto>` with
-   `status:"rejected"`, `placed:false`, `reason:report.Reason`, and a populated
-   `validate` block — surface code maps non-`Ok` to `400 BadRequest`.
-3. Idempotency check at `center`:
-   - Pending `Blueprint_Build` of same `def` + `stuff` + `rotation` →
-     `status:"already_present"`, `placed:false`, `thing_id:<existing>`.
-   - In-progress `Frame` of same `def` + `stuff` → ditto.
-   - Completed building of same `def` → ditto.
-   - Otherwise: `Thing blueprint = GenConstruct.PlaceBlueprintForBuild(def,
-     center, map, new Rot4(rotation), Faction.OfPlayer, stuff);`
-     → `status:"placed"`, `placed:true`, `thing_id:blueprint.thingIDNumber`.
-4. **Never** call `Destroy` on cell contents. There is no obstacle-clearing
-   option.
+Request adds optional `allowed`:
 
-Response data (`BlueprintPlaceResultDto`):
-
-```jsonc
+```json
 {
-  "status": "placed",                  // "placed" | "already_present" | "rejected"
-  "placed": true,
-  "thing_id": 12345,                   // present when placed or already_present
-  "reason": "",                        // present when rejected
-  "validate": { /* §3.1 result */ }
-}
-```
-
-### 3.3 `GET /api/v1/map/blueprints?map_id=…` — pending build read
-
-Returns active `Blueprint_Build` + `Frame` things on the map. Enables
-idempotency checks above, downstream readback, and an honest
-"what is queued" signal for callers.
-
-Implementation: iterate
-`map.listerThings.ThingsInGroup(ThingRequestGroup.Blueprint)` and
-`ThingRequestGroup.BuildingFrame`. For each:
-
-- `Blueprint_Build`: `def_name = def.entityDefToBuild.defName`,
-  `stuff_def_name = EntityToBuildStuff()?.defName`, `kind:"blueprint"`.
-- `Frame`: `def_name = def.entityDefToBuild.defName`,
-  `stuff_def_name = Stuff?.defName`, `kind:"frame"`,
-  `work_left = frame.WorkLeft`, `hp = frame.HitPoints`.
-
-Response data: list of `PendingBuildDto`:
-
-```jsonc
-{
-  "id": 67890,
-  "kind": "blueprint",                 // "blueprint" | "frame"
-  "def_name": "Cooler",
-  "stuff_def_name": "Steel",
-  "cell": {"x":12,"z":34},
+  "map_id": 0,
+  "def_name": "Wall",
+  "stuff_def_name": "WoodLog",
+  "cell": { "x": 80, "z": 80 },
   "rotation": 0,
-  "work_left": 1200.0,                 // null for blueprints
-  "hp": 100                            // null for blueprints
+  "allowed": false
 }
 ```
 
-Place this in an appropriate reader controller (likely a new
-`BuildController` under `BaseControllers/`; defer the
-extend-vs-new-controller call to the implementer based on where map reads
-currently cluster — see §9).
+Response data:
 
-## 4. Existing code: refactor notes (suggested, not required)
+```json
+{
+  "status": "placed",
+  "placed": true,
+  "thing_id": 12345,
+  "reason": "",
+  "validate": { "can_place": true }
+}
+```
 
-While writing this plan I read the surrounding code; flagging tech debt per
-the CLAUDE.md "suggest refactoring" rule. None of these are blockers for the
-new endpoints — keep them as separate cleanup if desired.
+Rules:
 
-- **DTO sharing footgun.** `BuilderController.PlaceBlueprints` reuses
-  `PasteAreaRequestDto` (`Models/BuilderDtos.cs:14-20`), whose
-  `ClearObstacles=true` default destroys buildings/items/plants in
-  `BuilderService.PasteArea` (`Services/BuilderService.cs:90-167`).
-  `PlaceBlueprints` ignores the field, but the shared shape on a "safe" path
-  is dangerous. Recommend splitting into per-endpoint DTOs.
-- **`PlaceBlueprints` silent skips.** It computes `count` and never returns it;
-  it skips out-of-bounds cells and unresolved defs without reporting which.
-  Comment claims `GenConstruct` checks placement validity; it does not (it
-  silently no-ops on invalid cells). Recommend either (a) deprecating it
-  long-term in favor of repeated calls to the new §3.2 endpoint, or
-  (b) reshaping its response to `{placed, skipped, rejected, per_item:[...]}`.
-- **Bulk `BlueprintDto` couples floors + buildings.** §3.2 is intentionally
-  per-asset; the existing bulk shape stays unchanged for `paste`/`copy`/legacy
-  `blueprint` callers.
+- Re-run validation. Do not trust caller pre-validation.
+- Return `status:"rejected"` when invalid.
+- Return `status:"already_present"` when the same pending blueprint/frame or
+  completed building already exists.
+- If `allowed:false`, call `SetForbidden(true, false)` on the newly placed
+  blueprint.
+- Never destroy obstacles or expose a clear-obstacles option.
 
-## 5. Files touched in the fork
+Pseudo-code:
 
-| Area | File(s) |
+```csharp
+target = ResolveTarget(request);
+validation = BuildValidationResult(target);
+existing = FindExistingBuild(target);
+
+if (existing.IsPending || existing.IsBuilt)
+    return AlreadyPresent(existing, validation);
+
+if (!validation.CanPlace)
+    return Rejected(validation);
+
+Thing placed = GenConstruct.PlaceBlueprintForBuild(...);
+if (request.Allowed == false)
+    placed.SetForbidden(true, false);
+
+return Placed(placed, validation);
+```
+
+### `GET /api/v1/map/blueprints?map_id=...`
+
+Read all pending build work on the requested map.
+
+Rows include:
+
+- `id`
+- `kind:"blueprint"|"frame"`
+- `def_name`
+- `def_type`
+- `stuff_def_name`
+- `cell`
+- `rotation`
+- `allowed`
+- `is_forbidden`
+- `work_left`
+- `hp`
+- `cost[]`
+
+Rules:
+
+- Include `Blueprint_Build` and `Frame`.
+- Exclude completed buildings.
+- For blueprints, `work_left` is the full build work; for frames, it is
+  `Frame.WorkLeft`.
+
+### `POST /api/v1/builder/blueprint/allowed-state`
+
+Pause/resume pending blueprints and frames by explicit ids.
+
+Request:
+
+```json
+{
+  "map_id": 0,
+  "thing_ids": ["12345"],
+  "allowed": false
+}
+```
+
+Rules:
+
+- Only `Blueprint_Build` and `Frame`.
+- `allowed:false` -> `SetForbidden(true, false)`.
+- `allowed:true` -> `SetForbidden(false, false)`.
+- Reject completed buildings, items, pawns, wrong-map ids, malformed ids,
+  missing ids, and empty/oversized batches.
+- No rect-wide mode.
+
+Response data includes `requested`, `matched`, `changed`, `already_in_state`,
+`cancelled`, `already_gone`, `missing`, `non_map_targets`, and
+`non_pending_build_targets`.
+
+### `POST /api/v1/builder/blueprint/cancel`
+
+Cancel pending blueprints and frames by explicit ids.
+
+Request:
+
+```json
+{
+  "map_id": 0,
+  "thing_ids": ["12345"]
+}
+```
+
+Rules:
+
+- Only `Blueprint_Build` and `Frame`.
+- Use RimWorld-native pending-build cancel behavior.
+- Reject completed buildings, items, pawns, wrong-map ids, malformed ids,
+  missing ids, and empty/oversized batches.
+- No rect-wide cancel.
+- No "cancel all".
+
+Response data includes `requested`, `matched`, `cancelled`, `already_gone`,
+`missing`, `non_map_targets`, and `non_pending_build_targets`.
+
+### `GET /api/v1/map/construction/backlog?map_id=...`
+
+Blueprint/frame backlog summary for Willie.
+
+Group key:
+
+- `kind`
+- `def_name`
+- `stuff_def_name`
+- `allowed`
+
+Each group includes:
+
+- `count`
+- `thing_ids[]`
+- `sample_cells[]`
+- `total_work_left`
+- `cost[]`
+- `materials_available[]`
+- `materials_missing[]`
+- `blocked_count`
+- `disallowed_count`
+
+Material availability counts non-forbidden haulable items on the same map. This
+is a construction backlog signal, not a full stockpile/storage-flow model.
+
+## Files In The Fork
+
+| Area | File |
 |---|---|
-| Controller | `BaseControllers/BuilderController.cs` (validate + place), new `BaseControllers/BuildController.cs` or extend existing reads controller (pending list) |
-| Service | `Services/BuilderService.cs` + `Services/Interfaces/IBuilderService.cs` (validate + place); new/extended reads service for §3.3 |
-| DTOs | `Models/BuilderDtos.cs` — add `BlueprintValidateRequestDto`, `BlueprintValidateResultDto`, `BlueprintPlaceRequestDto`, `BlueprintPlaceResultDto`, `PendingBuildDto` |
-| Logging | reuse `LogApi.Error` on exception paths |
+| Builder routes | `Source/RIMAPI/RimworldRestApi/BaseControllers/BuilderController.cs` |
+| Map read routes | `Source/RIMAPI/RimworldRestApi/BaseControllers/MapController.cs` |
+| DTOs | `Source/RIMAPI/RimworldRestApi/Models/BuilderDtos.cs` |
+| Builder service | `Source/RIMAPI/RimworldRestApi/Services/BuilderService.cs` |
+| Map service glue | `Source/RIMAPI/RimworldRestApi/Services/MapService.cs` |
+| Interfaces | `Source/RIMAPI/RimworldRestApi/Services/Interfaces/IBuilderService.cs`, `Source/RIMAPI/RimworldRestApi/Services/Interfaces/IMapService.cs` |
+| API macro docs | `Docs/_api_macroses/controllers/BuilderController.yml`, `Docs/_api_macroses/controllers/MapController.yml` |
 
-No DI wiring changes — `AutoRouteRegistry` discovers `*Controller` methods by
-reflection at startup.
+## Verification
 
-## 6. Threading
+Build both fork configs:
 
-Already correct by the fork's queued-request model: HTTP requests enqueue on a
-background thread; `RIMAPI_GameComponent.ProcessServerQueues()` drains the
-queue on the main game thread each Unity frame, so service methods invoke
-`GenConstruct` / `DefDatabase` / `Map` directly. No `LongEventHandler` needed
-for these endpoints. Implication for callers: writes/reads land at frame
-cadence, not synchronously with HTTP send.
+```powershell
+dotnet build C:\dev\RIMAPI-for-RimBob\Source\RIMAPI\RimApi.csproj -c Release-1.5
+dotnet build C:\dev\RIMAPI-for-RimBob\Source\RIMAPI\RimApi.csproj -c Release-1.6
+```
 
-## 7. Verification
+Live RimWorld checks after installing/restarting the fork build:
 
-- **Manual in-game (primary).** Load a colony, exercise via `curl` / Postman:
-  - validate clear cell → `can_place:true`;
-  - validate blocked cell → `can_place:false` with `reason`;
-  - validate already-built cell → `already_built:true`;
-  - place once → `status:"placed"`, blueprint visible in-game;
-  - re-POST same → `status:"already_present"`, no duplicate;
-  - GET pending list → new blueprint present; construct it; GET → it leaves
-    pending list and reappears as a frame, then disappears when built.
-- **Both RimWorld refs.** Repeat on 1.5 and 1.6 builds (see §8). `GenConstruct.
-  CanPlaceBlueprintAt` and `PlaceBlueprintForBuild` signatures are stable across
-  these versions per the Krafs ref releases — confirm at implementation time.
+- `/api/v1/dev/endpoints` lists all new blueprint endpoints.
+- Validate a clear cell and a blocked cell.
+- Place one allowed blueprint.
+- Place one disallowed blueprint.
+- Read pending list and verify `allowed` / `is_forbidden`.
+- Flip allowed-state false/true and verify in-game.
+- Cancel an explicit blueprint id and verify it disappears.
+- Cancel an explicit frame id and verify it disappears.
+- Attempt cancel/allowed-state on a completed building and verify rejection.
+- Verify backlog groups pending blueprints/frames with cost and material gap info.
 
-## 8. Build / deploy
+## Follow-Up Boundaries
 
-`Source/RIMAPI/RimApi.csproj` is .NET Framework 4.7.2 with conditional
-`RIMWORLD_1_5` / `RIMWORLD_1_6` defines and per-version
-`Krafs.Rimworld.Ref` (1.5.4104 / 1.6.4518). Release builds drop into
-`1.5/Assemblies/` and `1.6/Assemblies/`. Build both configurations; RimWorld
-must restart (or mod-reload) to pick up the new assembly. RimBob has no
-compile-time dependency.
+Keep these outside this slice:
 
-## 9. Open questions
+- `rimapi-building-detail-read`
+- `rimapi-stockpile-detail-read`
+- `rimapi-room-detail-read`
+- `rimapi-power-net-read`
+- `rimapi-buildability-layers-read`
 
-- [ ] `GET /map/blueprints` — new `BuildController` or extend an existing reads
-      controller? Pick at implementation time based on where map reads cluster
-      in the fork today.
-- [ ] Confirm `Blueprint_Build`'s `entityDefToBuild` accessor name on both 1.5
-      and 1.6 refs (Krafs occasionally renames). Verify with a quick decompile
-      before coding.
-- [ ] Should the validate response include the **work amount** for the build
-      (cost in work-ticks)? Useful for downstream feasibility scoring; trivial
-      to add (`def.GetStatValueAbstract(StatDefOf.WorkToBuild, stuff)`).
+Those endpoints are general Construction/Willie evidence, not pending
+blueprint/frame lifecycle.
