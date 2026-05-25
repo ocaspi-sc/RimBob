@@ -512,6 +512,7 @@ function AdviceCard({
 }) {
   const [applyState, setApplyState] = useState<Record<string, ActionApplyState>>({});
   const expiry = adviceExpiryState(item, currentGameTick);
+  const concernLabel = formatLabel(item.concern);
 
   const onApply = async (actionIndex: number) => {
     const key = actionKey(item, actionIndex);
@@ -539,7 +540,7 @@ function AdviceCard({
       <header>
         <div>
           <span className="eyebrow">
-            <SemanticLabel icon={iconForField(item.concern)}><span>{item.concern}</span></SemanticLabel>
+            <SemanticLabel icon={iconForField(item.concern)}><span>{concernLabel}</span></SemanticLabel>
           </span>
           <h3><IconizedText maxIcons={1} text={item.title} /></h3>
         </div>

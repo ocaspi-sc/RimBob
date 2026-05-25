@@ -356,7 +356,9 @@ export function iconForSection(key: string): SemanticIconSpec | undefined {
   return sectionIcons[normalizeKey(key)] ?? iconForField(key);
 }
 
-export function iconForField(pathOrKey: string): SemanticIconSpec | undefined {
+export function iconForField(pathOrKey: string | null | undefined): SemanticIconSpec | undefined {
+  if (!pathOrKey) return undefined;
+
   const normalized = normalizeKey(pathOrKey);
   const segments = normalized.split('.').filter(Boolean);
 
@@ -402,7 +404,9 @@ export function iconForStateSummaryLine(label: string | null, detail: string): S
   return iconForField(labelKey || detail);
 }
 
-export function iconForActionKind(kind: string): SemanticIconSpec | undefined {
+export function iconForActionKind(kind: string | null | undefined): SemanticIconSpec | undefined {
+  if (!kind) return undefined;
+
   return fieldIcons[normalizeKey(kind)] ?? iconForField(kind);
 }
 
