@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Options;
 using Serilog;
 using Serilog.Formatting.Json;
@@ -241,7 +242,10 @@ try
 
     // ── Middleware ─────────────────────────────────────────────────────────────
     app.UseDefaultFiles();
-    app.UseStaticFiles();
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        OnPrepareResponse = ApplyDashboardStaticFileCacheHeaders
+    });
 
     // ── API endpoints ──────────────────────────────────────────────────────────
     app.MapGet("/api/health", () => Results.Ok(new { status = "ok", service = "RimBob" }));
@@ -358,6 +362,26 @@ catch (Exception ex)
 finally
 {
     Log.CloseAndFlush();
+}
+
+static void ApplyDashboardStaticFileCacheHeaders(StaticFileResponseContext context)
+{
+    string fileName = context.File.Name;
+    string requestPath = context.Context.Request.Path.Value ?? string.Empty;
+
+    if (fileName.Equals("index.html", StringComparison.OrdinalIgnoreCase))
+    {
+        // WHY: Vite emits hashed asset filenames; stale HTML can point browsers at deleted bundles.
+        context.Context.Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+        context.Context.Response.Headers["Pragma"] = "no-cache";
+        context.Context.Response.Headers["Expires"] = "0";
+        return;
+    }
+
+    if (requestPath.StartsWith("/assets/", StringComparison.OrdinalIgnoreCase))
+    {
+        context.Context.Response.Headers["Cache-Control"] = "public, max-age=31536000, immutable";
+    }
 }
 
 return exitCode;
