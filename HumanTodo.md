@@ -11,6 +11,7 @@
 ## Captured by /todo
 
 <!-- entries go here -->
+- [ ] rimapi-blueprint-placement-endpoint [2026-05-26] #rimapi #construction Expand RIMAPI fork blueprint endpoints: validate, place, read pending, allow/disallow, cancel by id, backlog summary. Fork-only; no RimBob Host wiring. [plan](.plans/rimapi-blueprint-placement-endpoint.md)
 - [ ] normalized-game-time [2026-05-26] #design #state #dashboard Normalize all game-date fields from `game_tick`: total days, completed days, colony day/year, day-of-year, parsed quadrum/hour, shared formatter; no compat code, wipe-and-regen persisted snapshots. [plan](.plans/normalized-game-time.md)
 - [ ] base-image-scoring [2026-05-25] #idea #spike #construction Evaluate base-image analysis for scoring metric calibration.
 - [ ] rimapi-blueprint-live-verify [2026-05-25] #rimapi #construction Verify the new blueprint lifecycle endpoints in live RimWorld: endpoint discovery, validate/place, allow/disallow, cancel blueprint/frame, and backlog grouping.

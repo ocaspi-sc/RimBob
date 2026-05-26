@@ -276,3 +276,58 @@ Keep these outside this slice:
 
 Those endpoints are general Construction/Willie evidence, not pending
 blueprint/frame lifecycle.
+
+---
+
+## Summary (landed 2026-05-27)
+
+**Motivation.** Willie (Construction) needs a complete fork-side blueprint
+lifecycle so the minister can validate, place, list, allow/disallow, cancel,
+and summarize pending pending-build work without ever touching the RimBob
+Host. This slice closes the last contract gap in that lifecycle.
+
+**Context.** Most of the six lifecycle endpoints already shipped in fork
+master commit `1a3126e [rimapi][construction] Add blueprint lifecycle
+endpoints` (validate, place, allowed-state, cancel, `/api/v1/map/blueprints`,
+`/api/v1/map/construction/backlog`). What was missing was the plan's
+"invalid stuff" rejection in `validate`: the prior code only rejected
+unknown stuff names, not stuff supplied for non-stuff buildables or stuff
+missing for must-stuff buildables.
+
+**Scope.** Tightened one-blueprint validation in
+`Source/RIMAPI/RimworldRestApi/Services/BuilderService.cs` so thing
+blueprints reject:
+
+- stuff supplied to a non-stuff buildable
+- stuff missing for a must-stuff buildable
+- a stuff name outside the buildable's allowed stuffs
+
+before placement is attempted. No changes to the other five endpoints; the
+existing implementations already satisfied the plan's contract.
+
+**How to verify (human).**
+
+- Dashboard: none in this slice — fork-only change, no Host wiring.
+- Live RimWorld checks against the rebuilt fork (still pending; tracked as
+  the `rimapi-blueprint-live-verify` capture in `HumanTodo.md`):
+  - `/api/v1/dev/endpoints` lists all blueprint lifecycle endpoints.
+  - Validate a clear cell and a blocked cell.
+  - Validate a stuff-required buildable (e.g. Wall) with and without
+    `stuff_def_name` and confirm the missing case is rejected with a clear
+    reason.
+  - Validate a non-stuff buildable with a `stuff_def_name` set and confirm
+    rejection.
+  - Place allowed and disallowed blueprints; flip allowed-state; cancel
+    blueprint and frame by id; pull the backlog summary and confirm
+    grouping/material gaps.
+- Commands the Codex worktree ran cleanly:
+  - `dotnet build .\Source\RIMAPI\RimApi.csproj -c Release-1.5`
+  - `dotnet build .\Source\RIMAPI\RimApi.csproj -c Release-1.6`
+- Files to glance at:
+  - `Source/RIMAPI/RimworldRestApi/Services/BuilderService.cs` (new
+    `ValidateThingStuff` and its call site).
+
+**Codex run:** `20260526-235714-rimapi-blueprint-placement-endpoint` ·
+branch `codex/prompt-20260526-235714-rimapi-blueprint-placement-endpoint` ·
+landed commit `3eb1d84` on `ocaspi-sc/RIMAPI-for-RimBob` master (not pushed
+to origin; fork master is now ahead 5)
