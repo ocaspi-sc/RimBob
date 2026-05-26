@@ -358,7 +358,7 @@ public sealed class LlmClientTests
         advice.Actions.Should().ContainSingle().Which.Instruction.Should().Be("Make the reported food units visible in a reachable stockpile.");
         advice.IssuedAt.Should().BeAfter(before);
         advice.ExpiresAt.Should().BeAfter(DateTimeOffset.UtcNow);
-        advice.IssuedInGameTick.Should().Be("Y5500AprimayD5");
+        advice.IssuedGameDate.Should().Be(FoodBriefing(0.21f).Date);
         advice.IssuedGameTick.Should().Be(300_000);
         advice.ExpiresGameTick.Should().Be(360_000);
         advice.Minister.Should().Be("Chef");
@@ -369,7 +369,7 @@ public sealed class LlmClientTests
 
     private static FoodBriefing FoodBriefing(float days) => new(
         BriefingVersion: 1,
-        Date: new DateStamp("5th of Aprimay, 5500, 14h", 5500, "Aprimay", 5, 14),
+        Date: GameTime.Create("5th of Aprimay, 5500, 14h", 300_000, 5500, "Aprimay", 5, 14),
         GameTick: 300_000,
         Season: new SeasonContext("Aprimay", 11, 50),
         ColonistCount: 3,

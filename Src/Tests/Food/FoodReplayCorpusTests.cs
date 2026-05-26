@@ -84,7 +84,7 @@ public sealed class FoodReplayCorpusTests
             actualItem.Rationale.Should().Be(expectedItem.Rationale, sourceId);
             actualItem.Actions.Should().BeEquivalentTo(expectedItem.Actions);
             actualItem.GuideCitationIds.Should().Equal(expectedItem.GuideCitationIds);
-            actualItem.IssuedInGameTick.Should().Be(expectedItem.IssuedInGameTick, sourceId);
+            actualItem.IssuedGameDate.Should().Be(expectedItem.IssuedGameDate, sourceId);
             actualItem.BriefingRef.Should().Be(expectedItem.BriefingRef, sourceId);
             actualItem.Supersedes.Should().Be(expectedItem.Supersedes, sourceId);
             actualItem.AutonomyAtIssue.Should().Be(expectedItem.AutonomyAtIssue, sourceId);

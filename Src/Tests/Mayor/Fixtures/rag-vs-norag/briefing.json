@@ -1,11 +1,18 @@
 {
   "briefing_version": 1,
   "date": {
-    "raw": "8th of Septober, 5500, 14h",
-    "year": 1,
+    "raw_rim_world_date": "8th of Septober, 5500, 14h",
+    "rim_world_year": 5500,
     "quadrum": "Septober",
-    "day": 8,
-    "hour": 14
+    "quadrum_day": 8,
+    "hour": 14,
+    "game_tick": 2820000,
+    "total_days": 47,
+    "completed_days": 47,
+    "colony_day": 48,
+    "colony_year": 1,
+    "day_of_year": 48,
+    "label": "Y1 D48, Septober 8, 14h"
   },
   "game_tick": 2820000,
   "season": {

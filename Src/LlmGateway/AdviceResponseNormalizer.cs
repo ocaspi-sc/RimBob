@@ -11,7 +11,7 @@ internal sealed record LlmAdviceNormalizationContext(
     string Domain,
     long BriefingVersion,
     long GameTick,
-    DateStamp Date,
+    GameDate Date,
     string DefaultConcern,
     string DefaultRationale,
     IReadOnlyList<GuideCitation> GuideContext);
@@ -109,7 +109,7 @@ internal static class AdviceResponseNormalizer
             GuideCitationIds: citationIds,
             IssuedAt: now,
             ExpiresAt: now.AddHours(priority >= AdvicePriority.High ? 4 : 24),
-            IssuedInGameTick: FormatTick(context.Date),
+            IssuedGameDate: context.Date,
             IssuedGameTick: context.GameTick,
             ExpiresGameTick: AdviceFreshness.ExpiresGameTick(context.GameTick, priority),
             BriefingRef: new BriefingRef(context.Minister, context.BriefingVersion, $"{context.Domain}:{context.BriefingVersion}")
@@ -212,6 +212,4 @@ internal static class AdviceResponseNormalizer
         _ => AdvicePriority.Low
     };
 
-    private static string FormatTick(DateStamp date) =>
-        $"Y{date.Year ?? 0}{date.Quadrum ?? "?"}D{date.Day ?? 0}";
 }

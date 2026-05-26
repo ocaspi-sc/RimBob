@@ -41,6 +41,19 @@ serialization; the design-level contract is:
 
 Exact field names live in `Src/Common/Advice/` and dashboard type mirrors.
 
+### Game-Time Metadata
+
+Advice lifecycle fields use normalized game time for in-game meaning:
+`issued_game_tick` and `expires_game_tick` remain the authoritative numeric
+values for expiry math, while `issued_game_date` carries the shared normalized
+date object (`colony_day`, `colony_year`, `total_days`, parsed quadrum/hour, and
+raw RIMAPI evidence). Keep UTC fields such as `issued_at` and `expires_at` only
+for operational/debug timelines.
+
+Mayor agenda updates use the same shape through `updated_game_date`. Advice,
+feedback, replay records, and minister snapshots share the formatter. This is a
+wire/persistence schema change: no compat code; wipe-and-regen on upgrade.
+
 ### Priority
 
 `priority` is the single urgency field on advice: `low`, `medium`, `high`, or

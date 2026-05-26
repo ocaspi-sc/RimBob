@@ -872,7 +872,7 @@ public sealed class FoodRulesTests
 
     internal static FoodBriefing Briefing(float? days) => new(
         BriefingVersion: 1,
-        Date: new DateStamp("5th of Aprimay, 5500, 14h", 1, "Aprimay", 5, 14),
+        Date: GameTime.Create("5th of Aprimay, 5500, 14h", 300_000, 5500, "Aprimay", 5, 14),
         GameTick: 300_000,
         Season: new SeasonContext("Aprimay", 11, 50),
         ColonistCount: 3,

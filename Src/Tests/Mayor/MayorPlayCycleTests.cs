@@ -3,6 +3,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using RimBob.Coordination;
 using RimBob.Core.Advice;
+using RimBob.Core.Briefings;
 using RimBob.Core.Ministers;
 using RimBob.Knowledge;
 using RimBob.LLM;
@@ -109,7 +110,9 @@ public sealed class MayorPlayCycleTests
     public async Task LlmAlwaysThrows_WithExistingAgenda_KeepsCurrentAgendaAndDoesNotPublish()
     {
         Harness h = new((_, _, _, _, _) => throw new InvalidOperationException("boom"));
-        await h.Store.UpdateMayorAsync(InputBuilder.Default with { UpdateNotes = "existing" }, "tick0");
+        await h.Store.UpdateMayorAsync(
+            InputBuilder.Default with { UpdateNotes = "existing" },
+            GameTime.Create("1st of Aprimay, 5500, 0h", 0, 5500, "Aprimay", 1, 0));
 
         await h.Mayor.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
 

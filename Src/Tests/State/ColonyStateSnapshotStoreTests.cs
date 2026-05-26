@@ -29,7 +29,10 @@ public sealed class ColonyStateSnapshotStoreTests
             snapshot.Source.Should().Be("live");
             snapshot.MapId.Should().Be(7);
             snapshot.GameTick.Should().Be(98_765);
-            snapshot.GameDateRaw.Should().Be("6th of Aprimay, 5500, 9h");
+            snapshot.GameDate.RawRimWorldDate.Should().Be("6th of Aprimay, 5500, 9h");
+            snapshot.GameDate.TotalDays.Should().BeApproximately(1.646, 0.001);
+            snapshot.GameDate.CompletedDays.Should().Be(1);
+            snapshot.GameDate.ColonyDay.Should().Be(2);
             snapshot.SnapshotId.Should().NotBeNullOrWhiteSpace();
             snapshot.CapturedAt.Should().Be(original.LastLiveRefreshAt!.Value);
             snapshot.AggregateVersions.Should().ContainKey("Terrain").WhoseValue.Should().Be(1);

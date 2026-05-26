@@ -1,5 +1,6 @@
 import type { AdviceChainModel, AdviceItem, AgentFlag } from './advice';
 import type { AdviceApplyKind } from './advice';
+import type { GameDate } from './colony';
 import type { IconCacheStatus } from './icons';
 
 export type CoverageState = 'available' | 'missing' | 'failed' | 'unsupported' | 'stale' | 'partial' | 'not_exposed_yet';
@@ -107,6 +108,7 @@ export interface ColonySnapshotMetadata {
   captured_at: string | null;
   age_seconds: number | null;
   game_tick: number | null;
+  game_date: GameDate | null;
   map_id: number | null;
   source: string | null;
   schema_version: number | null;

@@ -5,8 +5,8 @@ namespace RimBob.State.Parsing;
 
 /// <summary>
 /// Best-effort parser for RIMAPI's datetime string ("5th of Aprimay, 5500, 14h").
-/// Returns a DateStamp with structured fields populated when parseable, raw-only
-/// otherwise. The Mayor's prompt always gets at least the raw form.
+/// Returns normalized game time with parsed calendar fields when available.
+/// The Mayor's prompt always gets the raw form plus tick-derived colony time.
 /// </summary>
 public static class RimDateParser
 {
@@ -16,21 +16,22 @@ public static class RimDateParser
         @"^(?<day>\d{1,2})(?:st|nd|rd|th)?\s+of\s+(?<quadrum>\w+),\s*(?<year>\d+),\s*(?<hour>\d{1,2})h?\s*$",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-    public static DateStamp Parse(string raw)
+    public static GameDate Parse(string raw, long gameTick)
     {
         if (string.IsNullOrWhiteSpace(raw))
-            return new DateStamp(raw ?? "", null, null, null, null);
+            return GameTime.Create(raw ?? "", gameTick, null, null, null, null);
 
-        var m = Pattern.Match(raw.Trim());
-        if (!m.Success)
-            return new DateStamp(raw, null, null, null, null);
+        Match match = Pattern.Match(raw.Trim());
+        if (!match.Success)
+            return GameTime.Create(raw, gameTick, null, null, null, null);
 
-        return new DateStamp(
-            Raw:     raw,
-            Year:    int.Parse(m.Groups["year"].Value),
-            Quadrum: m.Groups["quadrum"].Value,
-            Day:     int.Parse(m.Groups["day"].Value),
-            Hour:    int.Parse(m.Groups["hour"].Value)
+        return GameTime.Create(
+            rawRimWorldDate: raw,
+            gameTick: gameTick,
+            rimWorldYear: int.Parse(match.Groups["year"].Value),
+            quadrum: match.Groups["quadrum"].Value,
+            quadrumDay: int.Parse(match.Groups["day"].Value),
+            hour: int.Parse(match.Groups["hour"].Value)
         );
     }
 }

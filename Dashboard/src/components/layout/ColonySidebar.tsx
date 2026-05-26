@@ -43,7 +43,7 @@ export function ColonySidebar({
           <span className="eyebrow">Colony</span>
           <h2>{formatDate(snapshot)}</h2>
         </div>
-        <small>tick {snapshot.gameTick.toLocaleString()}</small>
+        <small>day {formatTotalDays(snapshot.date.totalDays)} | tick {snapshot.gameTick.toLocaleString()}</small>
       </header>
 
       <div className="sidebar-metrics">
@@ -192,11 +192,12 @@ function formatDef(value: string): string {
 }
 
 function formatDate(snapshot: ColonySnapshot): string {
-  const date = snapshot.date;
-  if (date.year != null && date.quadrum && date.day != null) {
-    return `${date.quadrum} ${date.day}, Y${date.year}`;
-  }
-  return date.raw;
+  return snapshot.date.label || snapshot.date.rawRimWorldDate;
+}
+
+function formatTotalDays(value: number): string {
+  if (!Number.isFinite(value)) return '?';
+  return value.toFixed(value >= 10 ? 0 : 1);
 }
 
 function formatLoadedAt(iso: string): string {

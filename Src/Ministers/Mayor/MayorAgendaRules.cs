@@ -33,7 +33,7 @@ public sealed class MayorAgendaRules
 
         bool quietDay = mediumOrHigher.Count == 0;
 
-        bool yearTwoTransition = briefing.Date.Year == 2 && briefing.Date.Quadrum == "Q1";
+        bool yearTwoTransition = briefing.Date.ColonyYear == 2 && briefing.Date.DayOfYear <= 15;
         if (yearTwoTransition)
             directives.Add("Year-two transition directive: add an endgame-objective bullet to long_term (ship_launch | royal_favor | archonexus | maintenance).");
 

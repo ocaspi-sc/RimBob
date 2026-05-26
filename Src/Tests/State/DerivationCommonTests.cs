@@ -10,7 +10,7 @@ public sealed class DerivationCommonTests
     [Fact]
     public void SeasonDeriver_ComputesDaysToWinterForAprimay()
     {
-        SeasonContext season = SeasonDeriver.Derive(new DateStamp("5th of Aprimay", 5500, "Aprimay", 5, 14));
+        SeasonContext season = SeasonDeriver.Derive(GameTime.Create("5th of Aprimay", 300_000, 5500, "Aprimay", 5, 14));
 
         season.CurrentSeason.Should().Be("Aprimay");
         season.DaysToNextSeason.Should().Be(11);

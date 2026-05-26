@@ -237,7 +237,7 @@ public sealed class AdviceNormalizationTests
         Domain: "food",
         BriefingVersion: 1,
         GameTick: 300_000,
-        Date: new DateStamp("5th of Aprimay, 5500, 14h", 5500, "Aprimay", 5, 14),
+        Date: GameTime.Create("5th of Aprimay, 5500, 14h", 300_000, 5500, "Aprimay", 5, 14),
         DefaultConcern: "food_security",
         DefaultRationale: "Chef LLM escalation selected this recommendation.",
         GuideContext: []);

@@ -5,7 +5,7 @@ namespace RimBob.Core.Briefings;
 
 public sealed record FoodBriefing(
     long BriefingVersion,
-    DateStamp Date,
+    GameDate Date,
     long GameTick,
     SeasonContext Season,
     int ColonistCount,

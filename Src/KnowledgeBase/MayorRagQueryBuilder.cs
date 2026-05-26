@@ -11,8 +11,7 @@ public sealed class MayorRagQueryBuilder : IRagQueryBuilder<MayorBriefing>
     {
         List<string> parts = new(8);
 
-        if (briefing.Date.Quadrum is not null && briefing.Date.Day is not null)
-            parts.Add($"Y{briefing.Date.Year ?? 0} {briefing.Date.Quadrum} day {briefing.Date.Day}.");
+        parts.Add($"Date: {briefing.Date.Label}; total days {briefing.Date.TotalDays:F1}.");
         if (briefing.Season.CurrentSeason is not null)
             parts.Add($"Season: {briefing.Season.CurrentSeason}.");
         if (briefing.Season.DaysToWinter is { } daysToWinter)

@@ -38,7 +38,7 @@ public static class MayorBriefingDerivation
 
     public static MayorBriefing Compute(ColonyState s, long briefingVersion = 0)
     {
-        DateStamp date = RimDateParser.Parse(s.Economy.Value.DateTimeRaw);
+        GameDate date = RimDateParser.Parse(s.Economy.Value.DateTimeRaw, s.Economy.Value.Tick);
         SeasonContext season = SeasonDeriver.Derive(date);
         // Dead colonists stay in the registry until the next ingestion drops them,
         // but the briefing should reflect the living colony only.

@@ -1,8 +1,10 @@
+using RimBob.Core.Briefings;
+
 namespace RimBob.Core.Advice;
 
 public static class AdviceFreshness
 {
-    public const long TicksPerGameDay = 60_000;
+    public const long TicksPerGameDay = GameTime.TicksPerGameDay;
 
     public static long LifetimeTicks(AdvicePriority priority) =>
         priority >= AdvicePriority.High

@@ -1,4 +1,5 @@
 import type { ScopeKey } from '../dashboard/scopes';
+import type { GameDate } from '../types/colony';
 import type { MinisterTrace } from '../types/system';
 import { postJson, readJson } from './http';
 
@@ -53,13 +54,7 @@ export interface FoodCropCandidate {
 export interface FoodCropMathPayload {
   briefingVersion: number;
   gameTick: number;
-  date: {
-    raw: string;
-    year: number;
-    quadrum: string;
-    day: number;
-    hour: number;
-  };
+  date: GameDate;
   season: {
     currentSeason: string;
     daysToNextSeason: number | null;

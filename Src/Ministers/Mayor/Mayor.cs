@@ -106,7 +106,7 @@ public sealed class Mayor(
             Core.Advice.MayorAgenda stamped;
             try
             {
-                stamped = await outputStore.UpdateMayorAsync(input, FormatTick(briefing), ct);
+                stamped = await outputStore.UpdateMayorAsync(input, briefing.Date, ct);
             }
             catch (OperationCanceledException) { throw; }
             catch (Exception ex)
@@ -120,7 +120,7 @@ public sealed class Mayor(
 
             log.LogInformation(
                 "Mayor agenda v{Version} stored and published (tick={Tick} short_term={ShortCount})",
-                stamped.Version, stamped.UpdatedInGameTick, stamped.ShortTerm.Count);
+                stamped.Version, GameTime.FormatLabel(stamped.UpdatedGameDate), stamped.ShortTerm.Count);
         }
         finally
         {
@@ -428,9 +428,6 @@ public sealed class Mayor(
             log.LogWarning(ex, "Failed to dump Mayor prompt to {Path}", _filePaths.PromptDumpPath);
         }
     }
-
-    private static string FormatTick(MayorBriefing b) =>
-        $"Y{b.Date.Year ?? 0}{b.Date.Quadrum ?? "?"}D{b.Date.Day ?? 0}";
 
     private static string FormatDirectives(MayorDirectiveSet d)
     {

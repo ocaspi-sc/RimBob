@@ -13,7 +13,7 @@ namespace RimBob.Coordination;
 /// </summary>
 public sealed class MinisterOutputStore
 {
-    private const int SnapshotSchemaVersion = 1;
+    private const int SnapshotSchemaVersion = 2;
     private const string MayorMinister = "mayor";
     private const string MayorOutputKind = "mayor_agenda";
     private const string AdviceOutputKind = "advice_snapshot";
@@ -148,7 +148,7 @@ public sealed class MinisterOutputStore
 
     public async Task<MayorAgenda> UpdateMayorAsync(
         MayorAgendaInput proposed,
-        string updatedInGameTick,
+        GameDate updatedGameDate,
         CancellationToken ct = default)
     {
         await _mayorMutationGate.WaitAsync(ct);
@@ -161,7 +161,7 @@ public sealed class MinisterOutputStore
                 int version = (_currentMayorAgenda?.Version ?? 0) + 1;
                 next = new MayorAgenda(
                     Version: version,
-                    UpdatedInGameTick: updatedInGameTick,
+                    UpdatedGameDate: updatedGameDate,
                     GeneratedAt: now,
                     Posture: proposed.Posture,
                     StateOfTheUnion: proposed.StateOfTheUnion,

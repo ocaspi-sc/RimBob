@@ -205,7 +205,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             GuideCitationIds: [],
             IssuedAt: now,
             ExpiresAt: now.AddHours(priority >= AdvicePriority.High ? 4 : 24),
-            IssuedInGameTick: FormatTick(briefing),
+            IssuedGameDate: briefing.Date,
             IssuedGameTick: briefing.GameTick,
             ExpiresGameTick: AdviceFreshness.ExpiresGameTick(briefing.GameTick, priority),
             BriefingRef: new BriefingRef(MinisterName, briefing.BriefingVersion, $"food:{briefing.BriefingVersion}")
@@ -1243,9 +1243,6 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         AdvicePriority.Medium => FlagSeverity.Medium,
         _ => FlagSeverity.Low
     };
-
-    private static string FormatTick(FoodBriefing b) =>
-        $"Y{b.Date.Year ?? 0}{b.Date.Quadrum ?? "?"}D{b.Date.Day ?? 0}";
 
     private static string ToSnakeCase(string value)
     {

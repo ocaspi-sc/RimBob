@@ -235,8 +235,7 @@ public static class MinisterEndpoints
                 : input;
 
             MayorBriefing briefing = briefings.GetMayorBriefing();
-            string tick = $"Y{briefing.Date.Year ?? 0}{briefing.Date.Quadrum ?? "?"}D{briefing.Date.Day ?? 0}";
-            MayorAgenda stamped = await outputStore.UpdateMayorAsync(capped, tick, ct);
+            MayorAgenda stamped = await outputStore.UpdateMayorAsync(capped, briefing.Date, ct);
             bus.Publish(new AgendaUpdated(stamped));
             return Results.Ok(stamped);
         });
@@ -599,7 +598,7 @@ public static class MinisterEndpoints
     private sealed record FoodCropMathSnapshot(
         long BriefingVersion,
         long GameTick,
-        DateStamp Date,
+        GameDate Date,
         SeasonContext Season,
         int ColonistCount,
         float? EstimatedDaysOfFood,
@@ -611,7 +610,7 @@ public static class MinisterEndpoints
     private sealed record FoodHuntRiskDiagnosticsSnapshot(
         long BriefingVersion,
         long GameTick,
-        DateStamp Date,
+        GameDate Date,
         bool HasLiveState,
         string StateSource,
         int AnimalDefCount,

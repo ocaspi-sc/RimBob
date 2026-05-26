@@ -61,7 +61,7 @@ public sealed class MayorAgendaRulesTests
     {
         MayorBriefing briefing = BriefingBuilder.Default with
         {
-            Date = new DateStamp("2nd of Aprimay, 5501", 2, "Q1", 2, 6)
+            Date = GameTime.Create("2nd of Aprimay, 5501", GameTime.TicksPerGameDay * 60, 5501, "Aprimay", 2, 6)
         };
 
         MayorDirectiveSet directives = new MayorAgendaRules().Evaluate(briefing, ColonyContext.Default);
@@ -102,7 +102,7 @@ internal static class BriefingBuilder
 {
     public static MayorBriefing Default { get; } = new(
         BriefingVersion: 1,
-        Date:            new DateStamp("5th of Aprimay, 5500, 14h", 1, "Aprimay", 5, 14),
+        Date:            GameTime.Create("5th of Aprimay, 5500, 14h", 300_000, 5500, "Aprimay", 5, 14),
         GameTick:        300_000,
         Season:          new SeasonContext("Aprimay", 11, 50),
         Colonists:       new ColonistsSummary(0, 0, 0, [], null),

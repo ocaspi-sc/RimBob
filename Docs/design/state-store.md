@@ -39,6 +39,36 @@ The exact aggregate types and fields live in `Src/StateStore/` and
 
 ---
 
+## Normalized Game Time
+
+RIMAPI exposes `game_tick` plus a human-readable date string such as
+`5th of Aprimay, 5500, 14h`. RimBob should normalize all game dates around
+elapsed colony time from game start, using `game_tick` as the numeric source of
+truth and preserving the raw RIMAPI date only as source evidence.
+
+The normalized game-time model should distinguish:
+
+- `total_days`: fractional elapsed days since game start.
+- `completed_days`: integer elapsed full days since game start.
+- `colony_day`: one-based absolute colony day.
+- `colony_year`: one-based colony year, using RimWorld's 60-day years.
+- `day_of_year`: one-based day inside the current colony year.
+- `quadrum`, `quadrum_day`, and `hour`: parsed calendar display fields when
+  RIMAPI's date string is parseable.
+- `rimworld_year`: the raw RIMAPI calendar year, retained for diagnostics.
+
+Player-facing labels, briefing fields, advice freshness text, replay records,
+and dashboard colony context should read from this normalized model. The
+RIMAPI calendar year (`5500`, `5501`, etc.) should not appear as the main
+player-facing year. Wall-clock operational timestamps such as `generated_at`,
+`captured_at`, log times, and build datetimes remain UTC timestamps and are not
+normalized to game time.
+
+This is a wire/persistence schema boundary. When the code slice lands, bump the
+affected persisted schemas and use no compat code; wipe-and-regen on upgrade.
+
+---
+
 ## View Caching
 
 Briefings are cached derived views over aggregates. A cached view is valid only

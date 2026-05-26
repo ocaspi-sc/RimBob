@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using RimBob.Core.Briefings;
 
 namespace RimBob.Core.Advice;
 
@@ -29,8 +30,8 @@ public sealed record AdviceItem(
     DateTimeOffset IssuedAt,
     [property: JsonPropertyName("expires_at")]
     DateTimeOffset ExpiresAt,
-    [property: JsonPropertyName("issued_in_game_tick")]
-    string? IssuedInGameTick = null,
+    [property: JsonPropertyName("issued_game_date")]
+    GameDate? IssuedGameDate = null,
     [property: JsonPropertyName("issued_game_tick")]
     long? IssuedGameTick = null,
     [property: JsonPropertyName("expires_game_tick")]

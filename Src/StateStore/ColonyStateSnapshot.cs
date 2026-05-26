@@ -1,11 +1,12 @@
 using System.Text.Json.Serialization;
 using RimBob.Core.Aggregates;
+using GameDate = RimBob.Core.Briefings.GameDate;
 
 namespace RimBob.State;
 
 public sealed record ColonyStateSnapshot
 {
-    public const int CurrentSchemaVersion = 2;
+    public const int CurrentSchemaVersion = 3;
 
     [JsonPropertyName("schema_version")]
     public required int SchemaVersion { get; init; }
@@ -25,8 +26,8 @@ public sealed record ColonyStateSnapshot
     [JsonPropertyName("game_tick")]
     public required long GameTick { get; init; }
 
-    [JsonPropertyName("game_date_raw")]
-    public required string GameDateRaw { get; init; }
+    [JsonPropertyName("game_date")]
+    public required GameDate GameDate { get; init; }
 
     /// <summary>
     /// Informational only. RestoreInto uses Versioned.Update, so aggregate
@@ -103,6 +104,7 @@ public sealed record ColonySnapshotStatus(
     DateTimeOffset? CapturedAt,
     TimeSpan? Age,
     long? GameTick,
+    GameDate? GameDate,
     int? MapId,
     string? Source,
     int? SchemaVersion,

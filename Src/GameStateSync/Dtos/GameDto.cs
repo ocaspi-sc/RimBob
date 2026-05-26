@@ -28,7 +28,7 @@ public record MapInfoDto(
 
 // ── GET /api/v1/datetime ──────────────────────────────────────────────────────
 // Live RIMAPI returns a single human-readable string like "1st of Aprimay, 5500, 6h".
-// Structured DateStamp parsing lives in StateStore.Parsing.RimDateParser.
+// Structured GameDate parsing lives in StateStore.Parsing.RimDateParser.
 public record DateTimeDto(
     [property: JsonPropertyName("datetime")] string DateTime
 );

@@ -103,9 +103,7 @@ public static class FoodLlmResponseParser
                     Minister = "Chef",
                     IssuedAt = issuedAt,
                     ExpiresAt = expiresAt,
-                    IssuedInGameTick = string.IsNullOrWhiteSpace(item.IssuedInGameTick)
-                        ? FormatTick(briefing.Date)
-                        : item.IssuedInGameTick,
+                    IssuedGameDate = briefing.Date,
                     IssuedGameTick = item.IssuedGameTick is > 0
                         ? item.IssuedGameTick
                         : briefing.GameTick,
@@ -142,9 +140,6 @@ public static class FoodLlmResponseParser
         value is { } expiresGameTick &&
         expiresGameTick > gameTick &&
         expiresGameTick <= gameTick + AdviceFreshness.TicksPerGameDay * 7;
-
-    private static string FormatTick(DateStamp date) =>
-        $"Y{date.Year ?? 0}{date.Quadrum ?? "?"}D{date.Day ?? 0}";
 
     private static bool HasStrictAdviceShape(JsonNode root)
     {

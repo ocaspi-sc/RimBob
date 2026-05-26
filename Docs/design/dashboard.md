@@ -334,6 +334,17 @@ Render compact facts first, then one small panel per colonist: date/tick/season,
 colonist count, mood, medical/downed/dead signals, food days, wealth, power,
 threat, weather, research, and colonist cards where available.
 
+Date rendering should use the backend's normalized game-time model: show the
+colony-relative label (`Y1 D6, Aprimay 5, 14h` style), total elapsed days when
+useful, the current tick, and season/quadrum context. Do not promote RIMAPI's
+raw `5500` calendar year in player-facing sidebar or advice labels except in
+raw/debug inspectors.
+
+Mayor agenda stamps read `updated_game_date`; advice cards and inspector JSON
+read `issued_game_date` plus tick fields for expiry math. The dashboard should
+show normalized day deltas and total days, not raw tick arithmetic, wherever a
+player-facing freshness label is needed.
+
 If a sidebar poll fails after a successful snapshot, keep rendering the last
 snapshot and show a compact stale/error note. Do not replace the whole sidebar
 with a failure panel unless no snapshot has ever loaded in this page session.
@@ -413,9 +424,9 @@ feeder advice snapshots were reloaded rather than regenerated.
 
 Minister Advice views render the latest persisted feeder snapshot, including
 expired advice. Advice freshness labels should use game-tick expiry when the
-payload provides it. Older wall-clock-only snapshots may be labeled as legacy
-TTL output. Apply controls for expired advice should stay visible but disabled
-or fail with a stale-advice result after backend validation.
+payload provides it and should render normalized game-day deltas rather than
+raw tick math. Apply controls for expired advice should stay visible but
+disabled or fail with a stale-advice result after backend validation.
 
 Icon cache metadata follows the same rule. SYSTEM may show counts, byte totals,
 kind totals, warm job state (`idle`, `running`, `completed`, or `failed`), live

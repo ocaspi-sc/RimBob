@@ -910,7 +910,7 @@ public sealed class IconCacheServiceTests
         string root = NewTempRoot();
         try
         {
-            bool badThingResolved = false;
+            int badThingResolved = 0;
             int goodImageCalls = 0;
             int badImageCalls = 0;
             IconCacheService sut = NewService(root, request =>
@@ -930,7 +930,7 @@ public sealed class IconCacheServiceTests
                     path.Contains("BadThing", StringComparison.OrdinalIgnoreCase))
                 {
                     Interlocked.Increment(ref badImageCalls);
-                    if (!badThingResolved)
+                    if (Volatile.Read(ref badThingResolved) == 0)
                     {
                         return MissingImageEnvelope();
                     }
@@ -948,7 +948,7 @@ public sealed class IconCacheServiceTests
             });
 
             IconWarmSummary first = await sut.WarmStaticAsync();
-            badThingResolved = true;
+            Volatile.Write(ref badThingResolved, 1);
             IconWarmJobStatus started = sut.StartWarm("failed");
             IconWarmJobStatus completed = await WaitForWarmJobAsync(sut);
 

@@ -243,6 +243,7 @@ public static class SystemEndpoints
             captured_at = status.CapturedAt,
             age_seconds = status.Age is null ? (double?)null : Math.Round(status.Age.Value.TotalSeconds, 1),
             game_tick = status.GameTick,
+            game_date = status.GameDate,
             map_id = status.MapId,
             source = status.Source,
             schema_version = status.SchemaVersion,

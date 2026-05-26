@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using RimBob.State.Parsing;
 
 namespace RimBob.State;
 
@@ -222,6 +223,7 @@ public sealed class ColonyStateSnapshotStore
                 CapturedAt: _latest?.CapturedAt,
                 Age: age,
                 GameTick: _latest?.GameTick,
+                GameDate: _latest?.GameDate,
                 MapId: _latest?.MapId,
                 Source: _latest?.Source,
                 SchemaVersion: _latest?.SchemaVersion,
@@ -280,7 +282,7 @@ public sealed class ColonyStateSnapshotStore
             Source = "live",
             MapId = state.Map.Value.Id,
             GameTick = state.Economy.Value.Tick,
-            GameDateRaw = state.Economy.Value.DateTimeRaw,
+            GameDate = RimDateParser.Parse(state.Economy.Value.DateTimeRaw, state.Economy.Value.Tick),
             AggregateVersions = AggregateVersions(state),
             Map = state.Map.Value,
             Economy = state.Economy.Value,

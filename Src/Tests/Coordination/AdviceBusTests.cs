@@ -17,7 +17,7 @@ public sealed class AdviceBusTests
         bus.AgendaUpdated += e => received.Add(e.Agenda);
 
         MayorAgenda agenda = new(
-            Version: 1, UpdatedInGameTick: "Y1Q1D1",
+            Version: 1, UpdatedGameDate: TestDate(),
             GeneratedAt: DateTimeOffset.UnixEpoch,
             Posture: new MayorPosture("growth", "defensive", "go"),
             StateOfTheUnion: new Dictionary<string, string> { ["welfare"] = "All quiet." },
@@ -35,7 +35,7 @@ public sealed class AdviceBusTests
     public void Publish_NoSubscribers_DoesNotThrow()
     {
         AdviceBus bus = new();
-        Action act = () => bus.Publish(new AgendaUpdated(InputBuilder.Default.ToAgenda(7, "tick")));
+        Action act = () => bus.Publish(new AgendaUpdated(InputBuilder.Default.ToAgenda(7, TestDate())));
         act.Should().NotThrow();
     }
 
@@ -310,6 +310,9 @@ public sealed class AdviceBusTests
         ])
     ]);
 
+    private static GameDate TestDate() =>
+        GameTime.Create("1st of Aprimay, 5500, 0h", 0, 5500, "Aprimay", 1, 0);
+
     private static string NewSnapshotRoot() =>
         Path.Combine(
             Path.GetTempPath(),
@@ -327,11 +330,14 @@ public sealed class AdviceBusTests
 
 internal static class InputBuilderExtensions
 {
-    public static MayorAgenda ToAgenda(this MayorAgendaInput input, int version, string tick) => new(
-        Version: version, UpdatedInGameTick: tick,
+    public static MayorAgenda ToAgenda(this MayorAgendaInput input, int version, GameDate date) => new(
+        Version: version, UpdatedGameDate: date,
         GeneratedAt: DateTimeOffset.UnixEpoch,
         Posture: input.Posture, StateOfTheUnion: input.StateOfTheUnion,
         UpdateNotes: input.UpdateNotes, ShortTerm: input.ShortTerm, LongTerm: input.LongTerm,
         CabinetDirection: input.CabinetDirection,
         GuideCitations: input.GuideCitations ?? []);
+
+    private static GameDate TestDate() =>
+        GameTime.Create("1st of Aprimay, 5500, 0h", 0, 5500, "Aprimay", 1, 0);
 }

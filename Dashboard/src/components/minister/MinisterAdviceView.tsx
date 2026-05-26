@@ -167,7 +167,8 @@ function MayorAdvice({
         </div>
         <div className="agenda-stamps">
           <span>v{agenda.version}</span>
-          <span>{agenda.updated_in_game_tick}</span>
+          <span>{agenda.updated_game_date.label}</span>
+          <span>{agenda.updated_game_date.totalDays.toFixed(1)} total days</span>
           <span>{formatTime(agenda.generated_at)}</span>
         </div>
       </header>
@@ -692,7 +693,7 @@ function adviceExpiryState(item: AdviceItem, currentGameTick: number | null): Ad
         return {
           expired: true,
           label: 'expired',
-          message: `Expired at game tick ${formatInteger(item.expires_game_tick)}; latest known tick is ${formatInteger(currentGameTick)}. Latest persisted advice is shown for inspection.`,
+          message: `Expired ${formatGameTickDelta(Math.abs(remaining))} ago; latest persisted advice is shown for inspection.`,
         };
       }
 
@@ -706,7 +707,7 @@ function adviceExpiryState(item: AdviceItem, currentGameTick: number | null): Ad
     return {
       expired: false,
       label: 'game clock unknown',
-      message: `Expires at game tick ${formatInteger(item.expires_game_tick)}, but the current game tick is not available.`,
+      message: `Expires by game time, but the current game tick is not available.`,
     };
   }
 

@@ -7,7 +7,7 @@ namespace RimBob.Core.Briefings;
 /// </summary>
 public sealed record MayorBriefing(
     long             BriefingVersion, // monotonic counter from BriefingCache; used in decision log
-    DateStamp        Date,
+    GameDate         Date,
     long             GameTick,
     SeasonContext    Season,
     ColonistsSummary Colonists,
@@ -29,7 +29,68 @@ public sealed record MayorBriefing(
     // TODO: ScheduleSnapshot — no RIMAPI endpoint yet.
 ) : IBriefing;
 
-public sealed record DateStamp(string Raw, int? Year, string? Quadrum, int? Day, int? Hour);
+public sealed record GameDate(
+    string RawRimWorldDate,
+    int? RimWorldYear,
+    string? Quadrum,
+    int? QuadrumDay,
+    int? Hour,
+    long GameTick,
+    double TotalDays,
+    long CompletedDays,
+    long ColonyDay,
+    long ColonyYear,
+    int DayOfYear,
+    string Label);
+
+public static class GameTime
+{
+    public const long TicksPerGameDay = 60_000;
+    public const int DaysPerYear = 60;
+
+    public static GameDate Create(
+        string? rawRimWorldDate,
+        long gameTick,
+        int? rimWorldYear,
+        string? quadrum,
+        int? quadrumDay,
+        int? hour)
+    {
+        if (gameTick < 0)
+            throw new ArgumentOutOfRangeException(nameof(gameTick), gameTick, "Game tick must be non-negative.");
+
+        long completedDays = gameTick / TicksPerGameDay;
+        long colonyDay = completedDays + 1;
+        long colonyYear = completedDays / DaysPerYear + 1;
+        int dayOfYear = (int)(completedDays % DaysPerYear) + 1;
+
+        return new GameDate(
+            RawRimWorldDate: rawRimWorldDate ?? "",
+            RimWorldYear: rimWorldYear,
+            Quadrum: quadrum,
+            QuadrumDay: quadrumDay,
+            Hour: hour,
+            GameTick: gameTick,
+            TotalDays: gameTick / (double)TicksPerGameDay,
+            CompletedDays: completedDays,
+            ColonyDay: colonyDay,
+            ColonyYear: colonyYear,
+            DayOfYear: dayOfYear,
+            Label: FormatLabel(colonyYear, colonyDay, quadrum, quadrumDay, hour));
+    }
+
+    public static string FormatLabel(GameDate date) => date.Label;
+
+    private static string FormatLabel(long colonyYear, long colonyDay, string? quadrum, int? quadrumDay, int? hour)
+    {
+        string label = $"Y{colonyYear} D{colonyDay}";
+        if (!string.IsNullOrWhiteSpace(quadrum) && quadrumDay is not null)
+            label += $", {quadrum} {quadrumDay}";
+        if (hour is not null)
+            label += $", {hour}h";
+        return label;
+    }
+}
 
 public sealed record SeasonContext(
     string? CurrentSeason,

@@ -11,6 +11,7 @@
 ## Captured by /todo
 
 <!-- entries go here -->
+- [ ] normalized-game-time [2026-05-26] #design #state #dashboard Normalize all game-date fields from `game_tick`: total days, completed days, colony day/year, day-of-year, parsed quadrum/hour, shared formatter; no compat code, wipe-and-regen persisted snapshots. [plan](.plans/normalized-game-time.md)
 - [ ] base-image-scoring [2026-05-25] #idea #spike #construction Evaluate base-image analysis for scoring metric calibration.
 - [ ] rimapi-blueprint-live-verify [2026-05-25] #rimapi #construction Verify the new blueprint lifecycle endpoints in live RimWorld: endpoint discovery, validate/place, allow/disallow, cancel blueprint/frame, and backlog grouping.
 - [x] food-to-chef-rename [2026-05-24] #food #debt #doc Rename the Food minister to Chef.

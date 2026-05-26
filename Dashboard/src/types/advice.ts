@@ -1,5 +1,7 @@
 import type { IconRef } from './icons';
 
+import type { GameDate } from './colony';
+
 export type AdvicePriority = 'low' | 'medium' | 'high' | 'critical';
 
 export type AdviceApplyKind =
@@ -303,7 +305,7 @@ export interface AdviceItem {
   guide_citations: string[];
   issued_at: string;
   expires_at: string;
-  issued_in_game_tick?: string | null;
+  issued_game_date?: GameDate | null;
   issued_game_tick?: number | null;
   expires_game_tick?: number | null;
 }

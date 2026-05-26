@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using RimBob.Core.Briefings;
 
 namespace RimBob.Core.Advice;
 
@@ -9,7 +10,7 @@ namespace RimBob.Core.Advice;
 /// </summary>
 public sealed record MayorAgenda(
     [property: JsonPropertyName("version")]              int                                 Version,
-    [property: JsonPropertyName("updated_in_game_tick")] string                              UpdatedInGameTick,
+    [property: JsonPropertyName("updated_game_date")]    GameDate                            UpdatedGameDate,
     [property: JsonPropertyName("generated_at")]         DateTimeOffset                      GeneratedAt,
     [property: JsonPropertyName("posture")]              MayorPosture                        Posture,
     [property: JsonPropertyName("state_of_the_union")]   IReadOnlyDictionary<string, string> StateOfTheUnion,

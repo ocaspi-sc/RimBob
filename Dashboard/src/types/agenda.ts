@@ -1,6 +1,8 @@
 // TypeScript mirrors of the wire-shape MayorAgenda. Snake_case keys match
 // the JSON produced by RimBob.Core.Advice.* records.
 
+import type { GameDate } from './colony';
+
 export type AgendaPriorityStatus = 'active' | 'completed' | 'deferred';
 
 export interface AgendaPriority {
@@ -25,7 +27,7 @@ export interface MayorPosture {
 
 export interface MayorAgenda {
   version: number;
-  updated_in_game_tick: string;
+  updated_game_date: GameDate;
   generated_at: string;  // ISO 8601 UTC
   posture: MayorPosture;
   /** Map of category name → one-line interpretation. Keys: food, defense, welfare, construction, treasury, research. */

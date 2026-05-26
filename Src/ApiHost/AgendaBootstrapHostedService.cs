@@ -34,7 +34,7 @@ public sealed class AgendaBootstrapHostedService(
             activeFlags,
             "No persisted Mayor agenda existed at Host startup.");
 
-        MayorAgenda agenda = await outputStore.UpdateMayorAsync(input, FormatTick(briefing), cancellationToken);
+        MayorAgenda agenda = await outputStore.UpdateMayorAsync(input, briefing.Date, cancellationToken);
         bus.Publish(new AgendaUpdated(agenda));
 
         log.LogWarning(
@@ -44,6 +44,4 @@ public sealed class AgendaBootstrapHostedService(
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-    private static string FormatTick(MayorBriefing briefing) =>
-        $"Y{briefing.Date.Year ?? 0}{briefing.Date.Quadrum ?? "?"}D{briefing.Date.Day ?? 0}";
 }

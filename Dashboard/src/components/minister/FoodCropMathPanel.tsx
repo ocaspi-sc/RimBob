@@ -65,7 +65,8 @@ export function FoodCropMathPanel() {
         <div className="crop-math-context">
           <span>briefing v{data.briefingVersion}</span>
           <span>tick {data.gameTick.toLocaleString()}</span>
-          <span>{data.date.raw}</span>
+          <span>{data.date.label}</span>
+          <span>{data.date.totalDays.toFixed(1)} total days</span>
           <span>{data.nutritionSource}</span>
           <span>{fitCount}/{data.candidates.length} fit season</span>
         </div>

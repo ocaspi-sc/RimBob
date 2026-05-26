@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using RimBob.Core.Briefings;
 
 namespace RimBob.Core.Advice;
 
@@ -11,5 +12,5 @@ public sealed record FeedbackEvent(
     [property: JsonPropertyName("note")]                string?        Note,
     [property: JsonPropertyName("modified_text")]       string?        ModifiedText,
     [property: JsonPropertyName("issued_at")]           DateTimeOffset IssuedAt,
-    [property: JsonPropertyName("issued_in_game_tick")] string         IssuedInGameTick
+    [property: JsonPropertyName("issued_game_date")]    GameDate       IssuedGameDate
 );

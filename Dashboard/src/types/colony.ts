@@ -1,12 +1,19 @@
 // Mirror of RimBob.Core.Briefings.MayorBriefing — only the fields the sidebar uses.
 // ASP.NET Core's default JsonSerializer emits camelCase, so keys are camelCase here.
 
-export interface DateStamp {
-  raw: string;
-  year: number | null;
+export interface GameDate {
+  rawRimWorldDate: string;
+  rimWorldYear: number | null;
   quadrum: string | null;
-  day: number | null;
+  quadrumDay: number | null;
   hour: number | null;
+  gameTick: number;
+  totalDays: number;
+  completedDays: number;
+  colonyDay: number;
+  colonyYear: number;
+  dayOfYear: number;
+  label: string;
 }
 
 export interface SeasonContext {
@@ -101,7 +108,7 @@ export interface ResearchSnapshot {
 
 export interface ColonySnapshot {
   briefingVersion: number;
-  date: DateStamp;
+  date: GameDate;
   gameTick: number;
   season: SeasonContext;
   colonists: ColonistsSummary;
