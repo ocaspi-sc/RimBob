@@ -297,6 +297,41 @@ function Get-DashboardViewUrl {
     return "$baseUrl/?$query"
 }
 
+function Get-TrayEndpointLabel {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Url
+    )
+
+    $firstUrl = ($Url -split ";")[0].Trim()
+    $parsedUrl = $null
+    if ([System.Uri]::TryCreate($firstUrl, [System.UriKind]::Absolute, [ref]$parsedUrl) -and
+        -not [string]::IsNullOrWhiteSpace($parsedUrl.Authority)) {
+        return $parsedUrl.Authority
+    }
+
+    return $firstUrl
+}
+
+function Get-TrayTooltipText {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Endpoint
+    )
+
+    $tooltip = "RimBob Host - $Endpoint"
+    if ($tooltip.Length -le 63) {
+        return $tooltip
+    }
+
+    $shortTooltip = "RimBob - $Endpoint"
+    if ($shortTooltip.Length -le 63) {
+        return $shortTooltip
+    }
+
+    return $shortTooltip.Substring(0, 63)
+}
+
 function Add-DashboardMenuCommand {
     param(
         [Parameter(Mandatory = $true)]
@@ -386,17 +421,18 @@ function Start-HostNotificationIcon {
     $script:trayDashboardUrl = $dashboardUrl
     $script:trayContext = New-Object System.Windows.Forms.ApplicationContext
 
+    $trayEndpoint = Get-TrayEndpointLabel -Url $script:trayDashboardUrl
     $trayIconResources = New-RimBobTrayIcon
     $notifyIcon = New-Object System.Windows.Forms.NotifyIcon
     $notifyIcon.Icon = $trayIconResources.Icon
-    $notifyIcon.Text = "RimBob Host"
+    $notifyIcon.Text = Get-TrayTooltipText -Endpoint $trayEndpoint
     $notifyIcon.Visible = $true
     $notifyIcon.BalloonTipTitle = "RimBob Host"
     $notifyIcon.BalloonTipText = "RimBob is running. Right-click this icon to open dashboard views in Chrome or stop the host."
     $notifyIcon.BalloonTipIcon = [System.Windows.Forms.ToolTipIcon]::Info
 
     $menu = New-Object System.Windows.Forms.ContextMenuStrip
-    $statusItem = $menu.Items.Add("RimBob Host running")
+    $statusItem = $menu.Items.Add("RimBob Host running on $trayEndpoint")
     $statusItem.Enabled = $false
     [void]$menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
     $openItem = $menu.Items.Add("Open Dashboard in Chrome")
