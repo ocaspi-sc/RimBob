@@ -1,0 +1,17 @@
+name: Git Guards
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lfs-size-policy:
+    name: LFS size policy
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Reject non-LFS blobs over 100 KiB
+        shell: pwsh
+        run: ./.github/scripts/check-lfs-size-policy.ps1
