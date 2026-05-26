@@ -307,16 +307,13 @@ function FlagRequestGroups({
       {groups.map(group => (
         <section className="typed-request-group" key={`${idPrefix}-${group.key}`}>
           <h4><SemanticLabel icon={iconForField(group.key)}><span>{group.label}</span></SemanticLabel></h4>
-          <div className="dense-table resource-table">
+          <div className="dense-table flag-request-table">
             <div className="dense-row header">
               <span>Icon</span>
               <SemanticLabel icon={iconForField('kind')}><span>Array</span></SemanticLabel>
-              <SemanticLabel icon={iconForField('request')}><span>Request</span></SemanticLabel>
-              <SemanticLabel icon={iconForField('reason')}><span>Reason</span></SemanticLabel>
-              <SemanticLabel icon={iconForField('quantity')}><span>Detail</span></SemanticLabel>
-              <SemanticLabel icon={iconForField('owner')}><span>Owner</span></SemanticLabel>
-              <SemanticLabel icon={iconForField('work_type')}><span>Work / Skill</span></SemanticLabel>
-              <SemanticLabel icon={iconForField('priority')}><span>Priority</span></SemanticLabel>
+              <SemanticLabel icon={iconForField('request')}><span>Request / reason</span></SemanticLabel>
+              <SemanticLabel icon={iconForField('quantity')}><span>Details</span></SemanticLabel>
+              <SemanticLabel icon={iconForField('owner')}><span>Routing</span></SemanticLabel>
             </div>
             {group.rows.map((row, index) => {
               const requestIcon = iconForField(row.iconKey);
@@ -330,13 +327,16 @@ function FlagRequestGroups({
                       src={iconUrlFor(requestIcon?.ref)}
                     />
                   </span>
-                  <span>{group.label}</span>
-                  <span><IconizedText maxIcons={2} text={row.request} /></span>
-                  <span><IconizedText maxIcons={2} text={row.reason} /></span>
-                  <span>{row.detail}</span>
-                  <span>{row.owner ?? '-'}</span>
-                  <span>{row.workSkill ?? '-'}</span>
-                  <span>{formatLabel(row.priority)}</span>
+                  <span className="flag-request-kind">
+                    <strong>{group.label}</strong>
+                    <code>{group.key}</code>
+                  </span>
+                  <span className="flag-request-copy">
+                    <strong><IconizedText maxIcons={2} text={row.request} /></strong>
+                    <small><IconizedText maxIcons={2} text={row.reason} /></small>
+                  </span>
+                  <FlagRequestDetails detail={row.detail} />
+                  <FlagRequestRouting row={row} />
                 </div>
               );
             })}
@@ -362,6 +362,43 @@ type FlagRequestRow = {
   request: string;
   workSkill?: string | null;
 };
+
+function FlagRequestDetails({ detail }: { detail: string }) {
+  const details = splitFlagRequestDetail(detail);
+
+  if (details.length === 0) {
+    return <span className="flag-request-detail is-empty">-</span>;
+  }
+
+  return (
+    <span className="flag-request-detail">
+      {details.map(item => <small key={item}>{item}</small>)}
+    </span>
+  );
+}
+
+function FlagRequestRouting({ row }: { row: FlagRequestRow }) {
+  const chips = [
+    row.owner ? `Owner: ${row.owner}` : null,
+    row.workSkill && row.workSkill !== '-' ? `Work: ${row.workSkill}` : null,
+    row.priority ? `Priority: ${formatLabel(row.priority)}` : null,
+  ].filter((value): value is string => Boolean(value));
+
+  if (chips.length === 0) {
+    return <span className="flag-request-routing is-empty">-</span>;
+  }
+
+  return (
+    <span className="flag-request-routing">
+      {chips.map(chip => <small key={chip}>{chip}</small>)}
+    </span>
+  );
+}
+
+function splitFlagRequestDetail(detail: string): string[] {
+  if (!detail || detail === '-') return [];
+  return detail.split(' | ').map(part => part.trim()).filter(Boolean);
+}
 
 function countFlagRequests(flag: AgentFlag): number {
   return (flag.building_requests?.length ?? 0) +

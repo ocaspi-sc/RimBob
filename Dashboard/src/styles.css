@@ -1562,6 +1562,71 @@ code {
   min-width: 980px;
 }
 
+.flag-request-table {
+  overflow-x: visible;
+}
+
+.flag-request-table .dense-row {
+  grid-template-columns:
+    32px
+    minmax(72px, 0.48fr)
+    minmax(0, 1.25fr)
+    minmax(0, 1fr)
+    minmax(96px, 0.75fr);
+  align-items: start;
+  min-width: 0;
+}
+
+.flag-request-kind,
+.flag-request-copy,
+.flag-request-detail,
+.flag-request-routing {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.flag-request-kind strong,
+.flag-request-copy strong {
+  color: var(--text);
+  font-size: 0.82rem;
+  line-height: 1.25;
+}
+
+.flag-request-kind code,
+.flag-request-copy small,
+.flag-request-detail small,
+.flag-request-routing small {
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.28;
+  overflow-wrap: anywhere;
+}
+
+.flag-request-kind code {
+  color: var(--dim);
+}
+
+.flag-request-detail,
+.flag-request-routing {
+  align-content: start;
+}
+
+.flag-request-detail small,
+.flag-request-routing small {
+  width: fit-content;
+  max-width: 100%;
+  padding: 3px 6px;
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.flag-request-detail.is-empty,
+.flag-request-routing.is-empty {
+  color: var(--dim);
+}
+
 .typed-request-groups {
   display: grid;
   gap: 10px;
