@@ -17,6 +17,7 @@ public sealed class IconCacheService
     private const int TerrainIconMaxDimension = 128;
     private const int RedXPlaceholderPngLength = 1132;
     private const string RedXPlaceholderPngSha256 = "0D25BE2358B9CC93B0154E9BE5CE4769FBB30023C2D6CBC46E636798917DC13B";
+    private static readonly TimeSpan DefaultStatusCacheDuration = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan DefaultWarmRetryDelay = TimeSpan.FromMilliseconds(400);
     private static readonly TimeSpan DefaultWarmRequestInterval = TimeSpan.FromMilliseconds(100);
     private static readonly byte[] PngSignature = [137, 80, 78, 71, 13, 10, 26, 10];
@@ -38,12 +39,16 @@ public sealed class IconCacheService
     private readonly int warmCheckpointInterval;
     private readonly TimeSpan warmRetryDelay;
     private readonly TimeSpan warmRequestInterval;
+    private readonly TimeSpan statusCacheDuration;
     private readonly CancellationToken applicationStopping;
     private readonly SemaphoreSlim manifestLock = new(1, 1);
     private readonly SemaphoreSlim paceLock = new(1, 1);
     private readonly object warmJobLock = new();
+    private readonly object statusCacheLock = new();
     private DateTimeOffset nextWarmRequestAt = DateTimeOffset.MinValue;
     private IconWarmJobStatus? activeWarmJob;
+    private IconCacheStatus? cachedSummaryStatus;
+    private DateTimeOffset cachedSummaryStatusExpiresAt = DateTimeOffset.MinValue;
 
     public IconCacheService(
         string rootDirectory,
@@ -54,7 +59,8 @@ public sealed class IconCacheService
         int warmConcurrency = DefaultWarmConcurrency,
         TimeSpan? warmRequestInterval = null,
         int warmCheckpointInterval = DefaultWarmCheckpointInterval,
-        CancellationToken applicationStopping = default)
+        CancellationToken applicationStopping = default,
+        TimeSpan? statusCacheDuration = null)
     {
         this.rootDirectory = Path.GetFullPath(rootDirectory);
         manifestPath = Path.Combine(this.rootDirectory, "icon-cache-manifest.json");
@@ -65,6 +71,7 @@ public sealed class IconCacheService
         this.warmCheckpointInterval = Math.Max(1, warmCheckpointInterval);
         this.warmRetryDelay = warmRetryDelay ?? DefaultWarmRetryDelay;
         this.warmRequestInterval = warmRequestInterval ?? DefaultWarmRequestInterval;
+        this.statusCacheDuration = statusCacheDuration ?? DefaultStatusCacheDuration;
         this.applicationStopping = applicationStopping;
     }
 
@@ -188,6 +195,35 @@ public sealed class IconCacheService
 
     public IconCacheStatus GetStatus(bool includeFiles = false)
     {
+        if (includeFiles || statusCacheDuration <= TimeSpan.Zero)
+        {
+            return BuildStatus(includeFiles);
+        }
+
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        lock (statusCacheLock)
+        {
+            if (cachedSummaryStatus is not null && cachedSummaryStatusExpiresAt > now)
+            {
+                return cachedSummaryStatus with
+                {
+                    WarmJob = CurrentWarmJob(cachedSummaryStatus.WarmJob)
+                };
+            }
+        }
+
+        IconCacheStatus status = BuildStatus(includeFiles: false);
+        lock (statusCacheLock)
+        {
+            cachedSummaryStatus = status;
+            cachedSummaryStatusExpiresAt = DateTimeOffset.UtcNow + statusCacheDuration;
+        }
+
+        return status;
+    }
+
+    private IconCacheStatus BuildStatus(bool includeFiles)
+    {
         Directory.CreateDirectory(rootDirectory);
         IconCacheManifest? manifest = ReadManifest();
         FileInfo[] files = new DirectoryInfo(rootDirectory)
@@ -235,6 +271,7 @@ public sealed class IconCacheService
         string? jobId,
         CancellationToken ct)
     {
+        InvalidateStatusCache();
         DateTimeOffset started = DateTimeOffset.UtcNow;
         IconCacheManifest? existingManifest = ReadManifest();
         Dictionary<string, IconWarmEntry> entries = ManifestEntries(existingManifest);
@@ -339,6 +376,7 @@ public sealed class IconCacheService
                 };
             }
             await WriteManifestAsync(new IconCacheManifest(interrupted, entries, failedJob), CancellationToken.None);
+            InvalidateStatusCache();
             throw;
         }
 
@@ -360,6 +398,7 @@ public sealed class IconCacheService
                 Deferred: deferred,
                 Error: null);
         await WriteManifestAsync(new IconCacheManifest(summary, entries, completedJob), ct);
+        InvalidateStatusCache();
         return summary;
     }
 
@@ -588,6 +627,7 @@ public sealed class IconCacheService
         {
             await File.WriteAllBytesAsync(tempPath, bytes, ct);
             File.Move(tempPath, path, overwrite: true);
+            InvalidateStatusCache();
         }
         finally
         {
@@ -625,6 +665,7 @@ public sealed class IconCacheService
             {
                 await File.WriteAllBytesAsync(tempPath, normalized, ct);
                 File.Move(tempPath, path, overwrite: true);
+                InvalidateStatusCache();
                 log.LogDebug(
                     "Normalized terrain icon {IconId} from {OriginalBytes} bytes to {NormalizedBytes} bytes.",
                     id,
@@ -680,6 +721,7 @@ public sealed class IconCacheService
                     entries,
                     manifest.LastWarm.Skipped);
             await WriteManifestFileAsync(new IconCacheManifest(summary, entries, manifest?.LastJob), ct);
+            InvalidateStatusCache();
         }
         finally
         {
@@ -1138,6 +1180,17 @@ public sealed class IconCacheService
                 Deferred = summary?.Deferred ?? activeWarmJob.Deferred,
                 Error = error
             };
+        }
+
+        InvalidateStatusCache();
+    }
+
+    private void InvalidateStatusCache()
+    {
+        lock (statusCacheLock)
+        {
+            cachedSummaryStatus = null;
+            cachedSummaryStatusExpiresAt = DateTimeOffset.MinValue;
         }
     }
 

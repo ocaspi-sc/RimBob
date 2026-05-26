@@ -17,6 +17,11 @@ public static class SystemEndpoints
         RegexOptions.Compiled | RegexOptions.Multiline);
 
     private const int UpstreamRimApiEndpointTotal = 167;
+    private static readonly TimeSpan ReplayCorpusMetadataCacheDuration = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan TestInventoryMetadataCacheDuration = TimeSpan.FromMinutes(5);
+    private static readonly object MetadataCacheGate = new();
+    private static CachedHealthMetadata? replayCorpusMetadataCache;
+    private static CachedHealthMetadata? testInventoryMetadataCache;
 
     private static readonly RimApiCoverageRow[] ActiveRimApiReads =
     [
@@ -206,10 +211,10 @@ public static class SystemEndpoints
                     directory = logsDir,
                     human_log_pattern = Path.Combine(logsDir, "rimbob-*.log"),
                     decision_log_pattern = Path.Combine(logsDir, "decisions-*.jsonl"),
-                    replay_corpus = ReplayCorpusMetadata(logsDir),
+                    replay_corpus = CachedReplayCorpusMetadata(logsDir),
                     recent_endpoint = "not_exposed_yet",
                 },
-                tests = TestInventoryMetadata(env.ContentRootPath),
+                tests = CachedTestInventoryMetadata(env.ContentRootPath),
                 icons = iconCache.GetStatus(includeFiles: false),
                 traces = traces.LatestAll(),
                 assisted_apply = new
@@ -321,6 +326,49 @@ public static class SystemEndpoints
         latest?.Status is "request_failed" or "parse_failed"
             ? latest.Text
             : null;
+
+    private static object CachedReplayCorpusMetadata(string logsDir) =>
+        CachedMetadata(
+            ref replayCorpusMetadataCache,
+            logsDir,
+            ReplayCorpusMetadataCacheDuration,
+            () => ReplayCorpusMetadata(logsDir));
+
+    private static object CachedTestInventoryMetadata(string contentRoot) =>
+        CachedMetadata(
+            ref testInventoryMetadataCache,
+            HostLogPaths.ResolveRuntimeRoot(contentRoot),
+            TestInventoryMetadataCacheDuration,
+            () => TestInventoryMetadata(contentRoot));
+
+    private static object CachedMetadata(
+        ref CachedHealthMetadata? cache,
+        string key,
+        TimeSpan duration,
+        Func<object> create)
+    {
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        lock (MetadataCacheGate)
+        {
+            if (cache is not null &&
+                cache.ExpiresAt > now &&
+                cache.Key.Equals(key, StringComparison.OrdinalIgnoreCase))
+            {
+                return cache.Value;
+            }
+        }
+
+        object value = create();
+        lock (MetadataCacheGate)
+        {
+            cache = new CachedHealthMetadata(
+                key,
+                DateTimeOffset.UtcNow + duration,
+                value);
+        }
+
+        return value;
+    }
 
     private static object RimApiCoverageMetadata()
     {
@@ -464,4 +512,6 @@ public static class SystemEndpoints
         string State,
         string Owner,
         string Note);
+
+    private sealed record CachedHealthMetadata(string Key, DateTimeOffset ExpiresAt, object Value);
 }
