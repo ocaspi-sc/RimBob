@@ -45,7 +45,19 @@ function Invoke-Git {
         [string[]]$GitArgs
     )
 
-    $output = & git -C $Cwd @GitArgs 2>&1
+    # PS 5.1 caveat: `2>&1` on a native exe wraps each stderr line as a NativeCommandError
+    # ErrorRecord. With $ErrorActionPreference = "Stop" set at the top of the script, the
+    # first such record (e.g. git's `Updating files: 68% (441/642)` progress) terminates
+    # the script even when git exits 0. Temporarily downgrade EAP to "Continue" so the
+    # merged stream just yields strings; rely on $LASTEXITCODE for actual failure.
+    $previousEap = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        $output = & git -C $Cwd @GitArgs 2>&1 | ForEach-Object { $_.ToString() }
+    }
+    finally {
+        $ErrorActionPreference = $previousEap
+    }
     if ($LASTEXITCODE -ne 0) {
         throw "git $($GitArgs -join ' ') failed in $Cwd`n$($output -join [Environment]::NewLine)"
     }
