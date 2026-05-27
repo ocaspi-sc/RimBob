@@ -265,11 +265,12 @@ generation uses a bounded generator registry with one shared validator/scorer.
   [`willie-briefing-fields.md`](willie-briefing-fields.md). All five slices
   filled. `basic_shelter` reconciled into Welfare (`willie-advice-types.md`
   §4.5); canonical concern set is now 8.
-- **Next active work:** RimBob-side ingestion of FORK1
-  `/api/v1/map/construction/backlog` + FORK3 reach/path-cost endpoints into
-  the state store + the new `ConstructionBriefing` record; Placement Solver
-  PS1 skeleton; Willie Rules Slice A (first cut against the 3 top-priority
-  concerns named in S4).
+- **Next active work — Track A:**
+  [`willie-briefing-derivation.md`](willie-briefing-derivation.md). Lands
+  `WillieBriefing` record, `WillieConstructionBacklog` state-store
+  aggregate + ingestion, `WillieAnchorInventoryDerivation`, and FORK3
+  RimApiClient wrappers. Pure RimBob; no fork dependency. Unblocks Willie
+  Rules Slice A + Placement Solver PS1.
 - **RIMAPI track (parallel, separate repo):**
   - `FORK1` triplet ✓ landed.
   - `FORK2` blueprint groups Capability A — pending.
