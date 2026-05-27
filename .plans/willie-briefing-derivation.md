@@ -52,8 +52,26 @@ Per-slice motivation:
 
 Naming convention (per reviewer): every new public type uses the **Willie**
 persona name, not "Construction". `WillieBriefing`, `WillieAnchorInventory`,
-`WillieRoomAnchor`, etc. Existing project conventions (lowercase namespace
-`Src/Common/Briefings/`, `IBriefing` interface) are preserved.
+`WillieRoomAnchor`, etc. Types live under namespace `RimBob.Core.Briefings`
+(briefings) / `RimBob.Core.Aggregates` (state-store records); the `IBriefing`
+interface contract is unchanged.
+
+**Test directory.** New Willie test files live under `Src/Tests/Willie/`
+(matches the `Willie*` type prefix). State-store derivation tests stay under
+`Src/Tests/State/` per existing cross-cutting pattern (e.g. `Src/Tests/State/
+WelfareBriefingDerivationTests.cs`). Ingestion client tests stay under
+`Src/Tests/Ingestion/`.
+
+**No compat code; wipe-and-regen on upgrade** (AGENTS Coding rule). WB1, WB2
+add new persisted state-store aggregates + a new `IBriefing` shape. On any
+schema/wire change for these types during or after this plan, wipe persisted
+snapshots; do not maintain a read path for the old shape.
+
+**Worktree port.** Port 5000 is reserved for the main `C:\dev\RimBob`
+checkout (AGENTS Build rule). When running RimBob from the gimp worktree,
+use `.\run-rimbob.ps1 -ListenUrl http://127.0.0.1:5101` and verify
+`/api/system/health` + `RimBob.Host.exe` process path before treating the
+worktree build as live.
 
 ### WB1 — `WillieBriefing` record skeleton  *(SAFE — gimp first)*
 
@@ -99,17 +117,37 @@ Files (modified):
   `WillieBriefing` slots in.
 - `Src/StateStore/ColonyState.cs` — add `WillieBriefingAggregateNames`
   constant + matching `GetVersionsForWillieBriefing()` accessor (mirror
-  `Food` / `Mayor` / `Welfare` patterns at lines 49–56).
+  `Food` / `Mayor` / `Welfare` patterns at lines 49–56). Aggregate-name
+  set populated incrementally across WB2 (`WillieBacklog`) + WB3 (no new
+  aggregate, just derivation off `Rooms` + `Buildings`).
 
 Tests (new):
 
 - `Src/Tests/Willie/WillieBriefingShapeTests.cs`
-  - Willie briefing with all defaults round-trips through
+  - `WillieBriefing` constructed with all defaults round-trips through
     `System.Text.Json.JsonSerializer` (mirror
     `FoodBriefingSerializationTests` if one exists).
   - `WillieAnchorInventory.Anchors` defaults to empty list.
   - `WillieRoomAnchor.EntryCells` / `RegionId` are optional and serialize
     as empty list / null without throwing.
+
+Docs to touch (same commit, AGENTS Documentation Discipline):
+
+- `Docs/design/state-store.md` — add `WillieBriefing` to the briefing
+  inventory; note the new `IBriefing` impl and per-cycle cadence.
+- `Docs/design/ministers/construction.md` — replace the stale concern
+  list with a pointer to `willie-advice-types.md` (8 concerns; the
+  briefing record now exists). Promote when the minister wires
+  (phase 7); this slice only adds the record reference.
+
+`// TODO:` comments to land in source (AGENTS Coding rule):
+
+- `WillieRoomAnchor.EntryCells` default `[]` —
+  `// TODO: populate after rimapi-room-entry-cells lands`
+- `WillieRoomAnchor.RegionId` default `null` —
+  `// TODO: populate after rimapi-map-region-at lands`
+- `WillieDataCoverage.HasReachability` default `false` —
+  `// TODO: flip true once WB4 client method is wired into a consumer`
 
 Risk: **low.** Pure type addition. No service consumes it yet.
 
@@ -118,6 +156,12 @@ Risk: **low.** Pure type addition. No service consumes it yet.
 Adds the missing state-store aggregate + briefing wiring for
 `/api/v1/map/construction/backlog`. Unblocks `material_bottleneck` +
 `stalled_builds` rule families.
+
+**No compat code; wipe-and-regen on upgrade.** New persisted aggregate
+shape (`WillieConstructionBacklog`). On any subsequent schema change to
+this aggregate or its `WillieBriefing` consumer, wipe persisted
+snapshots and regenerate — do not maintain a read path for an older
+shape.
 
 Files (new):
 
@@ -129,8 +173,12 @@ Files (new):
     `disallowed_count`) — verify against
     `C:\dev\RIMAPI-for-RimBob\Source\RIMAPI\RimworldRestApi\Models\BuilderDtos.cs`
     at touch-time.
-  - Nested DTO records for `MaterialCount`, `SampleCell`, etc.
-- `Src/Common/Aggregates/WillieBacklog.cs` (or extend `Snapshots.cs`)
+  - Nested DTO records for `MaterialCountDto`, `SampleCellDto`. Use the
+    same `JsonNamingPolicy` (snake_case) as sibling DTOs in the folder;
+    add explicit `[JsonPropertyName]` only if the surrounding pattern
+    requires it.
+- `Src/Common/Aggregates/Snapshots.cs` — extend (do not split into a new
+  file; mirrors `StockpileLedger` / `BuildingRegistry` cohesion):
   - `WillieConstructionBacklog(IReadOnlyList<WillieBacklogGroup> Groups)`.
   - `WillieBacklogGroup(string Kind, string DefName, string?
     StuffDefName, bool Allowed, int Count, IReadOnlyList<string>
@@ -140,6 +188,15 @@ Files (new):
     IReadOnlyList<MaterialCount> MaterialsMissing, int BlockedCount,
     int DisallowedCount)`.
   - `MaterialCount(string DefName, int Count)`.
+- `Src/StateStore/Ingestion/WillieBacklogMapper.cs` — new file (mappers
+  are per-aggregate; mirror existing `MapAggregateMapper.cs` /
+  `PawnAggregateMapper.cs` split):
+  `FromConstructionBacklog(IReadOnlyList<ConstructionBacklogGroupDto>)
+  → WillieConstructionBacklog`.
+- `Src/StateStore/Derivations/WillieBriefingDerivation.cs` (new) —
+  start with a stub that copies `WillieConstructionBacklog` straight into
+  `WillieMaterialBottleneckSummary` / `WillieStalledBuildsSummary`.
+  No rules yet; just data plumbing. WB3 extends this same file.
 
 Files (modified):
 
@@ -150,29 +207,38 @@ Files (modified):
       GetEnvelopedAsync<IReadOnlyList<ConstructionBacklogGroupDto>>(
           $"api/v1/map/construction/backlog?map_id={mapId}", ct);
   ```
-- `Src/StateStore/Ingestion/MapAggregateMapper.cs` (or new
-  `WillieBacklogMapper.cs` if cleaner) — `FromConstructionBacklog(dto)
-  → WillieConstructionBacklog`.
-- `Src/StateStore/ColonyState.cs` — new `Versioned<WillieConstructionBacklog>
-  WillieBacklog` aggregate; default in `AggregateDefaults`.
+- `Src/StateStore/ColonyState.cs` — two edits in this slice (single
+  file, both edits same commit):
+  1. Add `Versioned<WillieConstructionBacklog> WillieBacklog` aggregate
+     + `AggregateDefaults.WillieBacklog = new([])` default.
+  2. Append `"WillieBacklog"` to the `WillieBriefingAggregateNames`
+     constant introduced in WB1.
 - `Src/StateStore/Ingestion/IngestionDispatcher.cs` — schedule the new
-  call on the live-refresh cycle.
-- `Src/StateStore/ColonyState.cs` `WillieBriefingAggregateNames` constant
-  picks up `"WillieBacklog"`.
-
-Briefing wiring:
-
-- `Src/StateStore/Derivations/WillieBriefingDerivation.cs` (new) —
-  start with a stub that copies `WillieConstructionBacklog` straight into
-  `WillieMaterialBottleneckSummary` / `WillieStalledBuildsSummary`.
-  No rules yet; just data plumbing.
+  call on the live-refresh cycle; per-aggregate exception isolation
+  must already swallow per-call failures so a backlog 500 cannot kill
+  the whole cycle (verify at touch-time; add try/catch if missing).
 
 Tests (new):
 
-- `Src/Tests/State/WillieBacklogMapperTests.cs` — DTO → aggregate mapping.
+- `Src/Tests/State/WillieBacklogMapperTests.cs` — DTO → aggregate mapping
+  (mirror `Src/Tests/State/AggregateMapperTests.cs` style).
 - `Src/Tests/State/WillieBriefingDerivationTests.cs` — given a
   fixture `ColonyState` with one backlog group, the briefing surfaces
   the group on both `MaterialBottleneck` and `StalledBuilds` summaries.
+
+Docs to touch (same commit):
+
+- `Docs/design/state-store.md` — register `WillieBacklog` aggregate +
+  its source endpoint.
+- `Docs/design/RimAPI.md` — note RimBob now consumes
+  `/api/v1/map/construction/backlog` (FORK1).
+
+`// TODO:` comments to land in source:
+
+- `WillieBacklogGroup` per-frame age fields — `// TODO: compute
+  frame_age_exceeded via state-store snapshot diff in a follow-on slice`
+- `IngestionDispatcher` schedule entry — `// TODO: revisit cadence if
+  the backlog grows past N groups (per-cycle cost watch)`
 
 Risk: **medium.** New state-store aggregate + new ingestion path.
 Mitigation: backlog endpoint has no writes; failure mode = empty list.
@@ -203,11 +269,13 @@ Files (new):
 Files (modified):
 
 - `Src/StateStore/Derivations/Common/BuildingClassifier.cs` — add
-  `IsKitchenLike(BuildingRecord)` / `IsHospitalLike(BuildingRecord)` /
-  `IsWorkshopLike(BuildingRecord)` predicates for the fallback room
-  inference. Mirror existing `IsCooker` / `IsCooler` style.
-- `Src/StateStore/Derivations/WillieBriefingDerivation.cs` — populate
-  `WillieBriefing.AnchorInventory` from the derivation.
+  `IsHospitalBed(BuildingRecord)` / `IsResearchBench(BuildingRecord)` /
+  `IsWorkshopBench(BuildingRecord)` predicates for fallback room
+  inference (drop "Like" suffix — matches existing `IsCooler` /
+  `IsCookingBuilding` / `IsButcherTable` style already in this file).
+- `Src/StateStore/Derivations/WillieBriefingDerivation.cs` — extend the
+  WB2 stub to populate `WillieBriefing.AnchorInventory` from the
+  derivation.
 
 Tests (new):
 
@@ -216,7 +284,25 @@ Tests (new):
     1 bedroom (via contained-bed-ids fallback).
   - Asserts: 2 anchors emitted (kitchen + bedroom), unmapped room
     skipped, `EntryCells = []`, `RegionId = null`, `Centroid` populated
-    for the bedroom, null for kitchen if no buildings inside.
+    for the bedroom, null for kitchen if no buildings inside, solver
+    fallback path tolerates null-centroid anchors without throwing.
+
+Docs to touch (same commit):
+
+- `Docs/design/state-store.md` — note `WillieAnchorInventoryDerivation`
+  as a per-cycle derivation alongside the food derivations.
+
+`// TODO:` comments to land in source:
+
+- `WillieAnchorInventoryDerivation` contained-buildings inference —
+  `// TODO: use rimapi-room-detail-read general contained-building
+  list once available; today limited to ContainedBedIds`
+- `RoomClassMapper` fallback miss path — `// TODO: re-evaluate
+  fallback BuildingClassifier coverage when functional_rooms rule
+  ships`
+- `WillieRoomAnchor.Centroid` null branch — `// TODO: solver Slice-A
+  fallback must skip null-centroid anchors until FORK3 client wires
+  EntryCells path`
 
 Risk: **low–medium.** Pure derivation; no live mutation; failure mode =
 empty anchor list (solver fallback per `placement-solver.md`).
@@ -235,7 +321,10 @@ Files (new):
     `MapPathCostBatchResponseDto` matching
     [`rimapi-map-reach-and-path-cost.md`](rimapi-map-reach-and-path-cost.md).
   - `MapCellDto(int X, int Z)` — note `{x, z}` shape (no `y`), per the
-    fork plan §"Endpoint Contract".
+    fork plan §"Endpoint Contract". Wire keys are lowercase `x` / `z`;
+    match the sibling DTO casing convention (`JsonNamingPolicy.SnakeCaseLower`
+    or `[JsonPropertyName]` per the surrounding files — verify at
+    touch-time and use whichever pattern already covers this folder).
 
 Files (modified):
 
@@ -252,18 +341,39 @@ Files (modified):
   public Task<MapPathCostBatchResponseDto> PostPathCostBatchAsync(
       MapPathCostBatchRequestDto request, CancellationToken ct = default);
   ```
-  All POST methods follow the existing `GetEnvelopedAsync` envelope
-  pattern (`api/v1/map/reach` is GET; the two `path-cost` variants are
-  POST per the fork plan).
+  GET via `GetEnvelopedAsync<T>`; POST methods follow the existing POST
+  envelope helper (`PostEnvelopedAsync<T>` or equivalent — verify at
+  touch-time; if absent, add a sibling helper in the same file rather
+  than duplicating envelope-unwrap logic per method).
+
+  **Client-side cap:** `PostPathCostBatchAsync` throws
+  `ArgumentException` when `request.Pairs.Count > 4096` before the
+  HTTP call, matching the fork plan §"Endpoint Contract" cap. This is
+  robust validation, not compat code.
 
 Tests (new):
 
 - `Src/Tests/Ingestion/RimApiClientFork3Tests.cs` — mock HTTP fixture
   per existing `RimApiClientTests` pattern. Covers:
   - `GetReachAsync` returns `MapReachResponseDto` for a happy-path 200.
-  - `PostPathCostBatchAsync` rejects > 4096 pairs (client-side guard
-    mirrors fork plan §"Endpoint Contract" cap).
+  - `PostPathCostBatchAsync` throws `ArgumentException` when
+    `Pairs.Count > 4096` (client-side guard mirrors fork plan cap).
   - Envelope `success: false` throws `RimApiException` (existing helper).
+
+Docs to touch (same commit):
+
+- `Docs/design/RimAPI.md` — register the three new RimBob-side wrappers
+  for the FORK3 endpoints if the doc catalogues client coverage; if it
+  only catalogues fork endpoints, no edit needed (verify section at
+  touch-time).
+
+`// TODO:` comments to land in source:
+
+- `RimApiClient.PostPathCostBatchAsync` cap constant —
+  `// TODO: source the 4096 cap from a shared constant once a second
+  consumer needs it; today only PS1 reads`
+- All three methods — `// TODO: first consumer is PS1
+  (placement-solver.md); methods unused until then`
 
 Risk: **low.** Pure additive HTTP wrappers. No state-store change.
 Mitigation: methods unused outside tests until PS1 ships.
@@ -301,12 +411,31 @@ WB2 + WB3 are independent and may be ordered either way.
 
 ## 4. Files touched (summary)
 
-| Slice | New | Modified |
-|---|---|---|
-| WB1 | `Src/Common/Briefings/WillieBriefing.cs`, `WillieRoomAnchor.cs`, `WillieConcernSummaries.cs`, `WillieDataCoverage.cs`, `Src/Tests/Willie/WillieBriefingShapeTests.cs` | `Src/StateStore/ColonyState.cs` (aggregate-name constant) |
-| WB2 | `Src/Ingestion/Dtos/ConstructionBacklogDto.cs`, `Src/Common/Aggregates/WillieBacklog.cs`, `Src/StateStore/Derivations/WillieBriefingDerivation.cs`, `Src/Tests/State/WillieBacklogMapperTests.cs`, `Src/Tests/State/WillieBriefingDerivationTests.cs` | `Src/GameStateSync/RimApiClient.cs`, `Src/StateStore/Ingestion/MapAggregateMapper.cs`, `Src/StateStore/Ingestion/IngestionDispatcher.cs`, `Src/StateStore/ColonyState.cs` |
-| WB3 | `Src/StateStore/Derivations/WillieAnchorInventoryDerivation.cs`, `Src/StateStore/Derivations/Common/RoomClassMapper.cs`, `Src/Tests/State/WillieAnchorInventoryDerivationTests.cs` | `Src/StateStore/Derivations/Common/BuildingClassifier.cs`, `Src/StateStore/Derivations/WillieBriefingDerivation.cs` |
-| WB4 | `Src/Ingestion/Dtos/MapReachDto.cs`, `Src/Tests/Ingestion/RimApiClientFork3Tests.cs` | `Src/GameStateSync/RimApiClient.cs` |
+| Slice | New | Modified | Docs |
+|---|---|---|---|
+| WB1 | `Src/Common/Briefings/WillieBriefing.cs`, `WillieRoomAnchor.cs`, `WillieConcernSummaries.cs`, `WillieDataCoverage.cs`, `Src/Tests/Willie/WillieBriefingShapeTests.cs` | `Src/StateStore/ColonyState.cs` (aggregate-name constant + accessor) | `Docs/design/state-store.md`, `Docs/design/ministers/construction.md` |
+| WB2 | `Src/Ingestion/Dtos/ConstructionBacklogDto.cs`, `Src/StateStore/Ingestion/WillieBacklogMapper.cs`, `Src/StateStore/Derivations/WillieBriefingDerivation.cs`, `Src/Tests/State/WillieBacklogMapperTests.cs`, `Src/Tests/State/WillieBriefingDerivationTests.cs` | `Src/Common/Aggregates/Snapshots.cs` (extend with `WillieConstructionBacklog` + `WillieBacklogGroup` + `MaterialCount`), `Src/GameStateSync/RimApiClient.cs`, `Src/StateStore/Ingestion/IngestionDispatcher.cs`, `Src/StateStore/ColonyState.cs` (aggregate slot + name-list append) | `Docs/design/state-store.md`, `Docs/design/RimAPI.md` |
+| WB3 | `Src/StateStore/Derivations/WillieAnchorInventoryDerivation.cs`, `Src/StateStore/Derivations/Common/RoomClassMapper.cs`, `Src/Tests/State/WillieAnchorInventoryDerivationTests.cs` | `Src/StateStore/Derivations/Common/BuildingClassifier.cs`, `Src/StateStore/Derivations/WillieBriefingDerivation.cs` | `Docs/design/state-store.md` |
+| WB4 | `Src/Ingestion/Dtos/MapReachDto.cs`, `Src/Tests/Ingestion/RimApiClientFork3Tests.cs` | `Src/GameStateSync/RimApiClient.cs` | `Docs/design/RimAPI.md` (verify scope) |
+
+### Dashboard implications (note for the follow-on minister slice)
+
+This plan does not wire the dashboard, but the `WillieBriefing` it lands
+should surface on a future **Willie > Briefing** tab once the
+`MinisterOfWillie` registers (separate slice). Likely panels:
+
+- `Anchor Inventory` — table of `WillieRoomAnchor` rows (class,
+  room id, cells count, centroid, entry-cell count, region id).
+  Useful for debugging `near:<class>` resolution.
+- `Construction Backlog` — table of `WillieBacklogGroup` rows
+  (def, count, allowed flag, total work left, missing materials,
+  blocked count). Mirrors RimMind's `ConstructionBacklogPart` view.
+- `Data Coverage` — boolean strip from `WillieDataCoverage` showing
+  which signals the current cycle has (rooms / backlog / anchors /
+  reachability). Lets the player see why a rule did not fire.
+
+No code in this plan; logged here so the follow-on slice can spec the
+panels against a stable briefing.
 
 ---
 
@@ -340,21 +469,29 @@ WB2 + WB3 are independent and may be ordered either way.
 
 ## 6. Verification (per slice, before commit)
 
-- Slice WB1: shape tests pass; JSON round-trip stable.
-- Slice WB2: live RIMAPI call returns a populated backlog; aggregate
-  version bumps once per ingest cycle; briefing surfaces the same data
-  back through `WillieMaterialBottleneckSummary`.
-- Slice WB3: derivation tests pass; cycle-cost stays below the
-  per-cycle ingest budget (mirror Food's derivation benchmark if one
-  exists; otherwise log timing and document).
-- Slice WB4: client unit tests pass; manual `curl` against a live
+- **Slice WB1.** Shape tests pass; JSON round-trip stable. Build green
+  on `dotnet build Src/RimBob.sln`; test green on
+  `dotnet test Src/Tests/RimBob.Tests.csproj`.
+- **Slice WB2.** Two smokes: (a) RimWorld stopped → ingest cycle emits
+  an empty `WillieConstructionBacklog` without throwing; (b) RimWorld
+  running with ≥1 placed blueprint → live RIMAPI call returns a
+  populated backlog; aggregate version bumps once per ingest cycle;
+  briefing surfaces the same data via `WillieMaterialBottleneckSummary`.
+  Use worktree port `http://127.0.0.1:5101` for the live run.
+- **Slice WB3.** Derivation tests pass (including the null-centroid
+  branch — anchor with `Centroid = null` must serialize and round-trip
+  without throwing; solver Slice-A fallback skips it). Cycle-cost stays
+  below the per-cycle ingest budget (mirror Food's derivation benchmark
+  if one exists; otherwise log timing in the commit summary).
+- **Slice WB4.** Client unit tests pass; manual `curl` against a live
   RIMAPI confirms wire shape matches DTO (cross-check against
   `rimapi-map-reach-and-path-cost.md` §"Verification" expected payloads).
+  Worktree port still `5101`; main checkout `5000` must not be touched.
 
 ---
 
-## 7. HumanTodo capture text (to append in same commit as this plan)
+## 7. HumanTodo capture
 
-```
-- [ ] willie-briefing-derivation [2026-05-28] #construction #briefing #willie #state Implementation plan for Willie briefing record + state-store derivation + FORK3 client (Track A of the willie-briefing-schema follow-on). Sliced WB1-WB4: WillieBriefing skeleton; construction-backlog ingestion; WillieAnchorInventoryDerivation; RimApiClient FORK3 wrappers. Unblocks Willie Rules Slice A + Placement Solver PS1. [plan](.plans/willie-briefing-derivation.md)
-```
+**Already landed** in commit `e0d4ebd` (2026-05-28). See the
+`willie-briefing-derivation` entry under `Captured by /todo` in
+[`HumanTodo.md`](../HumanTodo.md).
