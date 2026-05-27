@@ -53,7 +53,7 @@ Placement Solver, the fork group endpoints, and the dashboard pick UI.
 | [`willie-advice-types.md`](willie-advice-types.md) | The 9 canonical Construction concerns + first-slice rules-vs-LLM split. |
 | [`willie-advice-schema.md`](willie-advice-schema.md) | Advice/output side: flatten (drop icon/reason), per-kind apply split, `options[]`, `blueprint_group`, `place_blueprint_group`. |
 | [`willie-request-taxonomy.md`](willie-request-taxonomy.md) | Request/input side: typed request arrays, rich `BuildingRequest`, inbound ask-map -> concern. |
-| [`willie-briefing-schema.md`](willie-briefing-schema.md) + [`willie-briefing-fields.md`](willie-briefing-fields.md) | Willie Briefing Schema: per-field `signal/source/availability/consumers/notes` for 8 concerns (`basic_shelter` reconciliation open) + anchor inventory contract. **S1–S5 landed 2026-05-27.** |
+| [`willie-briefing-schema.md`](willie-briefing-schema.md) + [`willie-briefing-fields.md`](willie-briefing-fields.md) | Willie Briefing Schema: per-field `signal/source/availability/consumers/notes` for the 8 canonical concerns + anchor inventory contract. **S1–S5 landed 2026-05-27.** |
 
 ### Engine designs - the "how Willie decides where to build"
 
@@ -99,13 +99,16 @@ Placement Solver, the fork group endpoints, and the dashboard pick UI.
 
 - **Persona Willie; cabinet label Construction.** No separate Base Layout
   minister; layout is a capability inside Construction.
-- **9 concerns** ([`willie-advice-types.md`](willie-advice-types.md)):
-  `power_stability`, `thermal_control`, `basic_shelter`, `functional_rooms`,
+- **8 concerns** ([`willie-advice-types.md`](willie-advice-types.md)):
+  `power_stability`, `thermal_control`, `functional_rooms`,
   `storage_placement`, `material_bottleneck`, `fire_risk`, `stalled_builds`,
   `base_layout`. `base_topology` folded into `base_layout` (dashboard grouping
-  only). `functional_rooms` and `storage_placement` both kept (orthogonal). No
-  generic `build_structure` concern - that is the `place_blueprint` action, not a
-  category.
+  only). `basic_shelter` moved to Welfare 2026-05-27 — survival-floor bedrooms
+  reach Willie via `BuildingRequest{ room_class: bedroom | barracks }` under
+  `functional_rooms`, same shape as Food's freezer request (see
+  `willie-advice-types.md` §4.5). `functional_rooms` and `storage_placement`
+  both kept (orthogonal). No generic `build_structure` concern - that is the
+  `place_blueprint` action, not a category.
 - **MVP posture = suggest + player-confirmed apply** (not suggest-only). Every
   write is player-click-gated; coverage partial; not `Auto`.
 - **Typed request arrays** ([`willie-request-taxonomy.md`](willie-request-taxonomy.md)):
@@ -238,7 +241,6 @@ everything spatial waits on them.
 | Group atomicity on partial fresh-state failure + `MaxBlueprintGroupAssets` | advice-schema Q1 (see also rimapi-groups §4) | validate-all gate, then best-effort place + per-asset report; cap ~64 |
 | Anchor/room-purpose detection approach | placement-solver Q1 | the hard gate; templated room detection first; RIMAPI `/api/v1/map/rooms` available today |
 | Anchor scoring representation | placement-solver / willie-briefing-schema S3 | **resolved 2026-05-27:** `{room_id, entry_cells[], region_id}` + region-BFS scoring (FORK3); euclidean-from-centroid only as Slice-A fallback |
-| `basic_shelter` ownership (Willie vs Welfare) | willie-briefing-schema Open Questions / willie-advice-types §1 | **open:** lean Welfare — once Welfare exists, Willie sees this concern only via inbound `building_request{ target_class: bed }`, same shape as Food's freezer request. Briefing-schema doc excludes `basic_shelter` pending reconciliation. |
 | Generator budgets and diversity thresholds | placement-solver Q3 | start with tiny per-generator caps; validate only a diverse top survivor set |
 | Floor-fill representation (per-cell vs compressed rect) | advice-schema Q2 | per-cell now; cap room size; revisit if payloads bloat |
 | `ResourceRequest` vs `AdviceAction` shared-shape refactor | both anchors flagged | partly mooted - S2 retires `ResourceRequest` from the flag path |
@@ -247,9 +249,10 @@ everything spatial waits on them.
 | Feedback records *which* option was picked | advice-schema Q6 | yes - high-value refinement signal |
 
 **Resolved:** `requested_from` = string; `base_topology` folded; `functional_rooms`
-and `storage_placement` both kept; `build_structure` dropped; suggest+apply
-posture; deterministic request -> solver path; candidate generation uses a
-bounded generator registry with one shared validator/scorer.
+and `storage_placement` both kept; `build_structure` dropped; `basic_shelter`
+moved to Welfare (2026-05-27 — see `willie-advice-types.md` §4.5);
+suggest+apply posture; deterministic request -> solver path; candidate
+generation uses a bounded generator registry with one shared validator/scorer.
 
 ---
 
@@ -260,7 +263,8 @@ bounded generator registry with one shared validator/scorer.
 - **Willie Briefing Schema ✓ LANDED 2026-05-27** —
   [`willie-briefing-schema.md`](willie-briefing-schema.md) +
   [`willie-briefing-fields.md`](willie-briefing-fields.md). All five slices
-  filled; `basic_shelter` reconciliation open (see §5).
+  filled. `basic_shelter` reconciled into Welfare (`willie-advice-types.md`
+  §4.5); canonical concern set is now 8.
 - **Next active work:** RimBob-side ingestion of FORK1
   `/api/v1/map/construction/backlog` + FORK3 reach/path-cost endpoints into
   the state store + the new `ConstructionBriefing` record; Placement Solver

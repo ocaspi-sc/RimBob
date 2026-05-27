@@ -24,7 +24,7 @@
 
 ---
 
-## 1. Canonical Concern List (9 concerns)
+## 1. Canonical Concern List (8 concerns)
 
 Each entry: snake_case enum value + one-line definition + which inbound minister
 request(s) it serves. "LIVE" marks a request path that exists at this milestone;
@@ -34,8 +34,7 @@ all others are design-forward.
 |---|---|---|
 | `power_stability` | Net power deficit, no/low battery backup, or a fragile load margin that endangers critical consumers. | Food **(LIVE)** — coolers/freezer draw power; Defense (turrets), Medical (hospital), Industry (benches) when those scope live. |
 | `thermal_control` | Build/repair the buildable thermal envelope — cooler, walls, vents, power, and placement — behind a refrigeration need. Covers cooling assets generally (extends to hospital/heat shells as more ministers go live). | Food **(LIVE)** freezer/cooler/cold-room request; later Medical (sterile/temperature-controlled shell), Welfare (heat/cold safety). |
-| `basic_shelter` | Colonists lack beds or enclosed/roofed sleeping space for the current colony size. Survival-floor rooms only, not quality. | Self-derived from colony size; Welfare later for comfort/quality escalation (see `functional_rooms`). |
-| `functional_rooms` | A *named functional room* the colony is missing or that is undersized/wrong-purpose for its job (hospital, prison, workshop, research room, recreation), beyond the survival floor. | Medical (hospital/beds), Welfare (bedrooms/recreation/quality), Research (research room), Industry (workshop) — all design-forward. |
+| `functional_rooms` | A *named functional room* the colony is missing or that is undersized/wrong-purpose for its job (bedroom, hospital, prison, workshop, research room, recreation), beyond the survival floor. | Welfare (bedrooms / barracks / survival-floor enclosure; recreation; quality), Medical (hospital), Research (research room), Industry (workshop) — all design-forward. |
 | `storage_placement` | Stockpiles/shelves are mis-placed relative to the work that consumes or produces them — benches without input storage, materials far from the build queue, food storage split from kitchen/butcher. | Food **(LIVE)** food-storage-to-kitchen proximity; Industry (bench input/output flow) design-forward. Construction owns the physical placement; the requester owns *why* the throughput matters. |
 | `material_bottleneck` | Steel, wood, stone blocks, components, or stone chunks are too low to satisfy visible/queued build demand. | Food **(LIVE)** (materials gating a freezer/stove build); Defense, Medical, Industry, Research design-forward. Often pairs with an Industry/Economy flag request. |
 | `fire_risk` | Wood-heavy critical rooms where stone/material is available, or insufficient firebreak spacing between structures. Material risk **and** spacing risk. | Self-derived (freezer/kitchen/power/hospital/storage/bedroom rooms); Defense for active-threat/fire context design-forward. |
@@ -44,7 +43,8 @@ all others are design-forward.
 
 This is the smallest non-overlapping set that still covers every inbound need
 named in the CoS Construction catalogue while staying granular enough to be
-autonomy-dial units. Nine types.
+autonomy-dial units. Eight types (`basic_shelter` moved to Welfare 2026-05-27
+— see §4.5).
 
 ### Mapping to the CoS Construction issue catalogue
 
@@ -55,7 +55,7 @@ issue families group for routing, concerns graduate for autonomy:
 | CoS issue family | Canonical concern(s) |
 |---|---|
 | Power deficit | `power_stability` |
-| Missing basic rooms | `basic_shelter`, `functional_rooms` |
+| Missing basic rooms | `functional_rooms` (bedroom / barracks / survival-floor enclosure folded in; trigger lives in Welfare) |
 | Build queue blocked | `stalled_builds` |
 | Material bottleneck | `material_bottleneck` |
 | Temperature asset need | `thermal_control` |
@@ -105,9 +105,10 @@ evidence — exactly as `advice.md` prescribes for adding a concern.
 Rationale — they answer different questions and serve different requesters:
 - `functional_rooms` is about **room existence / purpose / sizing** — "you have no
   hospital," "your prison is also your barracks," "the workshop is too small for
-  its benches." Its requesters are Medical, Welfare, Research, Industry (rooms
-  with a *function*). It is the granular layer above `basic_shelter` (which is
-  only the survival floor: any bed, any roof).
+  its benches." Its requesters are Welfare, Medical, Research, Industry (rooms
+  with a *function*). Survival-floor bedrooms/barracks (the former
+  `basic_shelter`) fold in here: same `place_blueprint` action surface, same
+  room-class taxonomy, same `BuildingRequest` shape from Welfare.
 - `storage_placement` is about **material-flow placement** — stockpiles/shelves
   in the wrong *spot* relative to the work that uses them. It is a Food (LIVE)
   and Industry concern about travel/throughput, not about whether a room exists.
@@ -151,6 +152,54 @@ and breaks both the autonomy model and the action/concern separation. Dropped.
 
 ---
 
+## 4.5 `basic_shelter` moved to Welfare — why
+
+**Decision (2026-05-27): DROP `basic_shelter` from Willie's canonical concern set.
+The colonists-vs-beds and unenclosed-sleeping triggers belong to Welfare. Willie
+sees this concern only through an inbound `BuildingRequest { target_class: bed |
+room_class: bedroom/barracks }`, which routes through `functional_rooms` (same
+shape as every other "build me a room" request).**
+
+Rationale — the same ownership rule that places `thermal_control` (Food owns
+the cooler trigger; Willie places) places this concern in Welfare:
+
+- **Trigger = mood / survival floor.** "Colonists have no beds" or "colonists
+  sleep under open sky" is a needs / mood / safety state, not a placement
+  problem. Per [`Docs/design/ministers/welfare.md`](../Docs/design/ministers/welfare.md)
+  Welfare owns the **Mood & Needs** domain; sleep need and bed comfort live
+  there.
+- **Symmetry with the other 8 concerns.** Every concern in §1 is named by the
+  *category of reason* a build matters; the requester owns the *why*, Willie
+  owns the *where*. `basic_shelter` was the lone holdout that bundled both —
+  "self-derived from colony size" was Willie reading Welfare's domain.
+- **Granularity.** Once Welfare exists, the survival-floor bed ask and the
+  quality-bedroom ask are the same `BuildingRequest` from the same requester,
+  just at different `priority`/`urgency`. Splitting them across two Willie
+  concerns adds a thin enum value with no distinct execution surface — exactly
+  the smell §2 rejected for `base_topology`.
+- **Bootstrapping.** Welfare is design-forward; it does not LIVE-emit requests
+  yet. So is half the §1 table. `basic_shelter` joins the design-forward set;
+  no LIVE behavior is lost (no Construction-side `basic_shelter` rule had
+  shipped).
+
+Where the survival-floor signals go:
+
+- **Trigger signals** (`colonists > beds`, `unenclosed_sleeping`,
+  `missing_door` on a bedroom) → Welfare briefing, when Welfare scopes.
+- **Build resolution** → Willie's `functional_rooms` concern via
+  `BuildingRequest { room_class: bedroom | barracks }`. The `place_blueprint`
+  surface and `BlueprintGroup` payload are unchanged.
+- **Per-room boundary-cell / door reads** (the `rimapi-room-entry-cells`
+  HumanTodo) still serve Willie's `AnchorInventory.EntryCells[]`; the future
+  `missing_door` rule (if Welfare wants one) reads the same endpoint.
+
+If real-play evidence later shows survival-floor builds need a distinct
+autonomy graduation from quality-bedroom builds, promote it then — exactly as
+`advice.md` prescribes for adding a concern. Until then the absence of
+`basic_shelter` from the closed enum is the lighter choice.
+
+---
+
 ## 5. First-slice rules vs later
 
 Mirrors the layout-agent slicing (Slice A = rules-only skeleton; Slice C =
@@ -164,8 +213,6 @@ later" = needs escalation judgment or data not yet derivable from current RIMAPI
   threshold rule. Strongest day-one candidate.
 - `material_bottleneck` — resource counts vs visible/queued demand; threshold
   rule.
-- `basic_shelter` — `colonists > beds` (and roofed-enclosure signal if present);
-  simple count rule.
 - `thermal_control` — fires off a **live Food flag** requesting
   cooler/freezer when rough materials exist; the trigger is the inbound flag, so
   it is deterministic even before rich thermal data lands.
@@ -210,8 +257,7 @@ only when the Solver produced a fork-validated `blueprint_group` (else prose-onl
 |---|---|---|
 | `power_stability` | `place_blueprint` (generator/battery) | yes (1-asset group) |
 | `thermal_control` | `place_blueprint` (freezer group, `options[]`) | yes |
-| `basic_shelter` | `place_blueprint` (beds/barracks) | yes |
-| `functional_rooms` | `place_blueprint` (room, `options[]`) | yes |
+| `functional_rooms` | `place_blueprint` (room, `options[]`) — includes survival-floor bedrooms/barracks since `basic_shelter` folded here | yes |
 | `storage_placement` | `place_blueprint` (shelf) / `set_stockpile_zone` | blueprint yes; zone = Suggest-only knob |
 | `fire_risk` | `place_blueprint` (stone rebuild) + `note` (firebreak) | rebuild yes |
 | `material_bottleneck` | `note` + `RequestResource` (labor/item) | no — non-placement |

@@ -4,7 +4,7 @@
 >
 > Per-row contract: `signal | source | availability | consumers | notes`. Availability is `have` / `need-fork` / `defer`. `need-fork` rows name the missing endpoint (or sibling HumanTodo). Consumers reference Slice-A rule names (see schema doc S4) and Placement Solver pipeline stages ([`placement-solver.md`](placement-solver.md) §3 / §3.2).
 >
-> `basic_shelter` is **not** covered here — see [`willie-briefing-schema.md`](willie-briefing-schema.md) Open Questions for the Welfare-ownership dispute.
+> `basic_shelter` is **not** in the canonical concern set; it moved to Welfare 2026-05-27 (see [`willie-advice-types.md`](willie-advice-types.md) §4.5). Survival-floor bedroom/barracks asks reach Willie via `BuildingRequest{ room_class: bedroom | barracks }` under `functional_rooms`.
 
 ---
 

@@ -274,7 +274,6 @@ by whether the advice is "build/move *this* specific thing" (single action) vs.
 | `functional_rooms` | **Yes** (typical) | "Where/how big a hospital/workshop" has competing footprints. (LLM-tier per [`willie-advice-types.md`](willie-advice-types.md) §5.) |
 | `base_layout` | **Yes** (often) | Whole-base topology / route-chain fixes have competing rearrangements ("competing expansion directions / flat-base trade-offs", [`willie-advice-types.md`](willie-advice-types.md) §2/§5). |
 | `storage_placement` | **Sometimes** | A shelf can have 2–3 candidate spots near the consuming bench; a single obvious spot is single-action. |
-| `basic_shelter` | **Sometimes** | Usually a single "add N beds / enclose this" action; could offer barracks-vs-cells when escalated. |
 | `fire_risk` | **Mostly single** | "Rebuild this wall in stone" / "add a firebreak gap" is a targeted single action; a spacing fix may rarely offer 2 options. |
 | `stalled_builds` | **Single** | The fix is "supply material X" / "clear the unreachable tile" — a request/note, not a placement choice. |
 | `material_bottleneck` | **Single** | Resolution is a `RequestResource` flag / `note` (request side, other agent); no placement options. |

@@ -55,7 +55,7 @@ Per candidate field, decide:
 
 **Offloaded** to [`willie-briefing-fields.md`](willie-briefing-fields.md) to keep this doc readable. 8 concern tables + 2 cross-cutting tables. Per-row contract: `signal | source | availability | consumers | notes`.
 
-`basic_shelter` is **excluded** from the table set — see Open Questions for the ownership dispute (likely Welfare-owned).
+`basic_shelter` is **not** in the canonical concern set; it moved to Welfare 2026-05-27 (see [`willie-advice-types.md`](willie-advice-types.md) §4.5). Survival-floor bedroom/barracks asks reach Willie via inbound `BuildingRequest{ room_class: bedroom | barracks }` under `functional_rooms`.
 
 Concerns covered in the fields doc:
 
@@ -310,7 +310,7 @@ Every `need-fork` row in the field doc / S4 must trace to an explicit HumanTodo.
 Two `need-fork` rows have no existing HumanTodo and need fresh entries (appended to the `Captured by /todo` section of [`HumanTodo.md`](../HumanTodo.md) in the same commit as this fill):
 
 1. **`rimapi-map-region-at`** `[2026-05-27]` `#rimapi #construction #pathfinding #willie` — Add `/api/v1/map/region-at?map_id=…&x=…&z=…` returning the `Region.id` for the cell (deferred follow-up from [`rimapi-map-reach-and-path-cost.md`](rimapi-map-reach-and-path-cost.md) §"Follow-Up Boundaries"). Willie's `AnchorInventory.RegionId` (S3) is the first consumer; without it the solver still works via FORK3 batch path-cost (which uses regions internally) but cannot cluster candidates by region pre-validation. Cheap wrapper around `map.regionGrid.GetValidRegionAt_NoRebuild`.
-2. **`rimapi-room-entry-cells`** `[2026-05-27]` `#rimapi #construction #willie` — Extend `rimapi-room-detail-read` (or land as a sibling endpoint) to emit the cells on each room's boundary that are doors / door openings — the `AnchorInventory.EntryCells[]` source. Required for `near:<class>` walkable ranking and (if `basic_shelter` ever lands in Willie's scope) the `missing_door` rule.
+2. **`rimapi-room-entry-cells`** `[2026-05-27]` `#rimapi #construction #willie` — Extend `rimapi-room-detail-read` (or land as a sibling endpoint) to emit the cells on each room's boundary that are doors / door openings — the `AnchorInventory.EntryCells[]` source. Required for `near:<class>` walkable ranking; Welfare may also read it for a future `missing_door` rule (since `basic_shelter` moved to Welfare per `willie-advice-types.md` §4.5).
 
 Both captures point back to this design doc so the future implementer has the motivation in one place.
 
@@ -327,7 +327,6 @@ Both captures point back to this design doc so the future implementer has the mo
 
 ## Open questions / dependencies
 
-- **`basic_shelter` ownership.** Reviewer flagged that `basic_shelter` (colonists ↔ beds, enclosed sleeping, doors) reads as a **Welfare** concern, not Construction. Canonical concern list in [`willie-advice-types.md`](willie-advice-types.md) §1 currently assigns it to Willie. Either: (a) keep in Willie because the *resolution* is a build, not mood management; or (b) move to Welfare because the *trigger* (mood / survival floor) lives there and Willie merely receives a `building_request{ target_class: bed }`. Lean (b): once Welfare exists, Willie sees this concern only through inbound build requests, same shape as Food's freezer request. This doc excludes `basic_shelter` from the field/rule tables pending reconciliation. Open in `willie-advice-types.md` for the canonical decision.
 - **Backlog ingestion shape.** Should the state-store cache the full `ConstructionBacklogGroupDto` list, or pre-aggregate per-def for cheaper briefing computation? Lean: cache the full DTO (mirrors how `StockpileLedger` already carries raw `StockpileZone`s) and aggregate at derivation time.
 - **`stalled_builds` frame-age threshold.** What N (cycles) constitutes "stalled"? Calibrate against playtest data once PS1 is live; document the default in the rule itself.
 - **`functional_rooms` per-class minimum cell counts.** Need a defaults table (kitchen ≥ N₁, hospital ≥ N₂, …). Lean: import from the solver template sizing constants (PS1 will need the same numbers; single source of truth).
@@ -339,6 +338,7 @@ Already resolved (do not re-open — see meta-plan §3 / §5):
 - Top-3 easiest concerns for first Slice-A cut = `functional_rooms`, `thermal_control`, `storage_placement`.
 - Power-net aggregate = `have` via `/api/v1/map/power/info` (DTO fix landed); per-net + outage flag = `need-fork` via `rimapi-power-net-read`.
 - FORK3 endpoints landed; RimBob client wiring is the next slice (not a fork dependency).
+- `basic_shelter` ownership = Welfare (resolved 2026-05-27). See `willie-advice-types.md` §4.5. Survival-floor bedroom asks reach Willie via `BuildingRequest{ room_class: bedroom | barracks }` and fold into `functional_rooms`.
 
 ---
 
@@ -360,7 +360,7 @@ Already resolved (do not re-open — see meta-plan §3 / §5):
 
 **Scope.** Filled the five slices of `.plans/willie-briefing-schema.md`:
 
-- **S1** — Per-concern signal tables. **Offloaded to [`willie-briefing-fields.md`](willie-briefing-fields.md)** to keep this doc readable. 8 concern tables + 2 cross-cutting tables. `basic_shelter` excluded pending Welfare-ownership reconciliation (Open Questions). Every row carries `signal | source | availability | consumers | notes` and every `need-fork` row names a sibling HumanTodo.
+- **S1** — Per-concern signal tables. **Offloaded to [`willie-briefing-fields.md`](willie-briefing-fields.md)** to keep this doc readable. 8 concern tables + 2 cross-cutting tables. `basic_shelter` is not in the canonical set (moved to Welfare 2026-05-27 — see [`willie-advice-types.md`](willie-advice-types.md) §4.5). Every row carries `signal | source | availability | consumers | notes` and every `need-fork` row names a sibling HumanTodo.
 - **S2** — RimMind cross-walk for `ConstructionBacklogPart` (already duplicated by RIMAPI `/api/v1/map/construction/backlog` — ingest the endpoint, do not reimplement) and `StorageSaturationPart` (no RIMAPI equivalent yet — extend `rimapi-stockpile-detail-read`).
 - **S3** — `AnchorInventory` + `RoomAnchor` record, per-cycle construction steps, and an end-to-end `near:kitchen` walkthrough proving the contract covers the north-star freezer demo on both the Slice-A centroid path and the Slice-B FORK3 walkable path.
 - **S4** — Slice-A rule-vs-aspiration cut. **7 of 8 concerns** carry ≥1 `real-now` rule; the top-3 first-slice targets are `functional_rooms`, `thermal_control`, `storage_placement`. `fire_risk` is the lone concern with zero `real-now` rules (everything blocked on `rimapi-building-detail-read` / `rimapi-room-detail-read`).
@@ -372,7 +372,7 @@ Already resolved (do not re-open — see meta-plan §3 / §5):
 - S1 tables offloaded to companion doc `willie-briefing-fields.md`.
 - Prose unwrapped; hard line breaks collapsed.
 - `PowerInfoDto` row and FORK3 row promoted to `have` / landed (sibling plans closed).
-- `basic_shelter` removed from field/rule tables; reconciliation question raised in Open Questions.
+- `basic_shelter` removed from field/rule tables; reconciled into Welfare on 2026-05-27 via `willie-advice-types.md` §4.5 (concern set now 8). Survival-floor bedrooms reach Willie as `functional_rooms` `BuildingRequest`s.
 - Per-slice **Motivation** section added so each slice's purpose is explicit.
 
 **How to verify (human).**
