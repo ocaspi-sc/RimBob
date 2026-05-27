@@ -249,7 +249,7 @@ function llmLabelFor(status: string): string {
 function mayorLabel(status: RimBobStatus): string {
   if (status.mayor_last_error) return 'error';
   if (status.mayor_running) return 'running';
-  if (status.mayor_snapshot_version !== null) return 'idle';
+  if (status.mayor_snapshot_version !== null) return 'loaded';
   return 'no snapshot';
 }
 
