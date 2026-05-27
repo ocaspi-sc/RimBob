@@ -13,6 +13,8 @@ Welfare keeps the minister name and owns the **Mood & Needs** domain:
 - Mood and break risk as explained by needs, thoughts, recreation, comfort,
   beauty, sleep, and schedules.
 - Relationship and social-conflict pressure when it creates mood risk.
+- Guest/visitor comfort, lodging quality, and hospitality social pressure when
+  hosting affects mood, relationship pressure, or break risk.
 - Ideology mood pressure until it justifies a split.
 - Apparel warmth/comfort as mood-and-needs pressure, with Industry owning
   production.
@@ -29,6 +31,11 @@ actual fix is meals, crops, hunting, cooking, or storage.
 
 Trade/Economy is no longer a Welfare sub-block in the target cabinet. Economy
 owns trade and wealth once scheduled.
+
+Guest/visitor stewardship defaults to Welfare for comfort, lodging quality, and
+social pressure. Economy owns guests as trade, caravan, goodwill, or diplomacy
+opportunities; Construction owns the physical guest-room work; Defense owns
+active threat response.
 
 ---
 
@@ -83,6 +90,7 @@ Welfare briefing should answer:
 - Are schedule settings creating avoidable mood loss?
 - Are comfort, beauty, room quality, or apparel causing clear pressure?
 - Are relationships/social events creating a current risk?
+- Are guests/visitors creating hospitality, room-quality, or social pressure?
 - Which requests should go to Construction, Industry, Medical, or Economy?
 
 Exact fields belong in code/tests once Welfare ships.
@@ -109,6 +117,7 @@ Welfare may request:
 - Chef: meals, meal quality, or nutrition-chain fixes when hunger or food mood
   is the driver.
 - Construction: beds, recreation buildings, room improvements, comfort assets.
+- Economy: visitor trade, caravan, goodwill, or diplomacy opportunities.
 - Industry: apparel or beauty/comfort goods.
 - Medical: pain, wounds, disease, or care issues affecting mood.
 - Labor/player attention: schedule or policy changes in Suggest mode.
