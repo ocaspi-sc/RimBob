@@ -11,6 +11,10 @@
 ## Captured by /todo
 
 <!-- entries go here -->
+- [ ] rimworld-pathfinding-api-doc [2026-05-27] #spike #doc #construction #pathfinding Verify RimWorld native pathfinding/region/reachability API claims; add reference doc.
+- [ ] rimapi-map-reach-and-path-cost [2026-05-27] #rimapi #construction #pathfinding #willie Add RIMAPI in-map reachability + path-cost endpoints (`/api/v1/map/reach`, `/api/v1/map/path-cost`, `/api/v1/map/path-cost/batch`). Wraps `Map.reachability.CanReach`, region-BFS for coarse rank, A* for tiebreak. Unblocks Willie Placement Solver `near:<class>` scoring beyond euclidean-from-centroid. [plan](.plans/rimapi-map-reach-and-path-cost.md)
+- [ ] rimapi-power-info-dto [2026-05-27] #rimapi #state #bug **`PowerInfoDto` is broken.** RIMAPI returns 9 PascalCase fields (6 ints + 3 `List<int>`); RimBob's DTO expects 4 lowercase floats and silently binds to zero. Rewrite DTO, update `MapAggregateMapper.FromPower`, fix one test fixture. [plan](.plans/rimapi-power-info-dto.md)
+- [ ] willie-gate-design [2026-05-27] #design #construction #briefing #m4 Design Construction briefing + data-gap anchor (the GATE). [plan](.plans/willie-gate-design.md)
 - [ ] rimapi-blueprint-placement-endpoint [2026-05-26] #rimapi #construction Expand RIMAPI fork blueprint endpoints: validate, place, read pending, allow/disallow, cancel by id, backlog summary. Fork-only; no RimBob Host wiring. [plan](.plans/rimapi-blueprint-placement-endpoint.md)
 - [ ] normalized-game-time [2026-05-26] #design #state #dashboard Normalize all game-date fields from `game_tick`: total days, completed days, colony day/year, day-of-year, parsed quadrum/hour, shared formatter; no compat code, wipe-and-regen persisted snapshots. [plan](.plans/normalized-game-time.md)
 - [ ] base-image-scoring [2026-05-25] #idea #spike #construction Evaluate base-image analysis for scoring metric calibration.
