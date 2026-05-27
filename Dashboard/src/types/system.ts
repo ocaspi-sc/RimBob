@@ -2,6 +2,7 @@ import type { AdviceChainModel, AdviceItem, AgentFlag } from './advice';
 import type { AdviceApplyKind } from './advice';
 import type { GameDate } from './colony';
 import type { IconCacheStatus } from './icons';
+import type { RimWorldRuntimeStatus } from './status';
 
 export type CoverageState = 'available' | 'missing' | 'failed' | 'unsupported' | 'stale' | 'partial' | 'not_exposed_yet';
 
@@ -234,6 +235,8 @@ export interface SystemHealth {
     content_root: string;
     runtime_root: string;
     rimapi_reachable: boolean;
+    rimapi_last_error: string | null;
+    rimworld: RimWorldRuntimeStatus;
     colony_state_origin: string;
     last_live_refresh_at: string | null;
     briefing_version: number;

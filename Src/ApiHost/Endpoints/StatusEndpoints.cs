@@ -2,6 +2,7 @@ using RimBob.Coordination;
 using RimBob.Core.Advice;
 using RimBob.Core.Briefings;
 using RimBob.Core.Ministers;
+using RimBob.Host;
 using RimBob.Knowledge;
 using RimBob.LLM;
 using RimBob.State;
@@ -26,15 +27,42 @@ public static class StatusEndpoints
             BriefingCache   briefings,
             LlmClient       llm,
             RawLlmOutputStore rawOutputs,
-            MayorStatus     mayor) =>
+            MayorStatus     mayor,
+            RimApiRuntimeProbe rimApiRuntime,
+            CancellationToken ct) =>
         {
             MayorBriefing briefing = briefings.GetMayorBriefing();
             RawLlmOutputSnapshot? latestLlm = rawOutputs.LatestAny();
+            return StatusPayloadAsync(
+                colony,
+                outputStore,
+                llm,
+                latestLlm,
+                mayor,
+                briefing,
+                rimApiRuntime,
+                ct);
+        });
+
+        static async Task<IResult> StatusPayloadAsync(
+            ColonyState colony,
+            MinisterOutputStore outputStore,
+            LlmClient llm,
+            RawLlmOutputSnapshot? latestLlm,
+            MayorStatus mayor,
+            MayorBriefing briefing,
+            RimApiRuntimeProbe rimApiRuntime,
+            CancellationToken ct)
+        {
+            RimApiRuntimeSnapshot rimApi = await rimApiRuntime.ProbeAsync(ct);
             return Results.Ok(new
             {
                 server            = "ok",
-                rimapi_reachable  = colony.LastLiveRefreshAt is not null,
+                rimapi_reachable  = rimApi.Reachable,
+                rimapi_last_error = rimApi.LastError,
+                rimworld = RimWorldPayload(rimApi),
                 colony_state_origin = colony.LastRefreshSource.ToString().ToLowerInvariant(),
+                last_live_refresh_at = colony.LastLiveRefreshAt,
                 llm_configured    = llm.IsConfigured,
                 llm_key_count      = llm.ConfiguredKeyCount,
                 llm_status        = LlmStatus(llm.IsConfigured, latestLlm),
@@ -48,7 +76,7 @@ public static class StatusEndpoints
                 mayor_last_llm_success_at = mayor.LastLlmSuccessAt,
                 mayor_last_error  = mayor.LastError,
             });
-        });
+        }
 
         app.MapGet("/api/mayor/prompt", async (
             BriefingCache   briefings,
@@ -97,4 +125,14 @@ public static class StatusEndpoints
         latest?.Status is "request_failed" or "parse_failed"
             ? latest.Text
             : null;
+
+    private static object RimWorldPayload(RimApiRuntimeSnapshot runtime) => new
+    {
+        live = runtime.HasLoadedColony,
+        program_state = runtime.ProgramState,
+        map_count = runtime.MapCount,
+        colonist_count = runtime.ColonistCount,
+        game_tick = runtime.GameTick,
+        is_paused = runtime.Paused,
+    };
 }

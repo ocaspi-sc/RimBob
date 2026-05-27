@@ -44,7 +44,7 @@ export default function App() {
   const hostApiLive = status.data !== null && status.error === null;
   const systemHealthFresh = systemHealth.data !== null && systemHealth.error === null;
   const staleSnapshot = systemHealth.data &&
-    !systemHealth.data.runtime.rimapi_reachable &&
+    systemHealth.data.runtime.colony_state_origin !== 'live' &&
     systemHealth.data.colony_snapshot.has_snapshot
     ? systemHealth.data.colony_snapshot
     : null;

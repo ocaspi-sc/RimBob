@@ -74,6 +74,9 @@ export function SystemOverview({
   const storage = health?.storage;
   const ministerOutputs = health?.minister_outputs;
   const applyAttempts = health?.assisted_apply?.recent_attempts ?? [];
+  const rimApiReachable = status?.rimapi_reachable ?? health?.runtime.rimapi_reachable ?? false;
+  const rimWorldLive = status?.rimworld?.live ?? health?.runtime.rimworld?.live ?? false;
+  const colonyStateLive = (health?.runtime.colony_state_origin ?? status?.colony_state_origin) === 'live';
   const iconGroups = icons ? groupIconCacheFiles(icons.files) : [];
   const iconFailureState = icons ? summarizeIconWarmFailures(icons) : null;
   const warmRunning = warmJob?.state === 'running' || iconWarmAction.status === 'pending';
@@ -163,7 +166,7 @@ export function SystemOverview({
       <DisclosureSection
         title={<SectionTitle iconKey="sse">Connectivity and providers</SectionTitle>}
         defaultOpen
-        meta={(status?.rimapi_reachable ?? health?.runtime.rimapi_reachable) ? 'RIMAPI reachable' : 'RIMAPI waiting'}
+        meta={rimApiReachable ? 'RIMAPI reachable' : 'RIMAPI offline'}
       >
         <section className="system-grid">
           <div className="system-card">
@@ -172,7 +175,8 @@ export function SystemOverview({
               <h2><SectionTitle iconKey="rimapi">External links</SectionTitle></h2>
             </div>
             <div className="metric-grid compact">
-              <MetricCard label={<FieldLabel iconKey="rimapi">RIMAPI</FieldLabel>} value={(status?.rimapi_reachable ?? health?.runtime.rimapi_reachable) ? 'reachable' : 'waiting'} tone={(status?.rimapi_reachable ?? health?.runtime.rimapi_reachable) ? 'ok' : 'warn'} />
+              <MetricCard label={<FieldLabel iconKey="rimapi">RIMAPI</FieldLabel>} value={rimApiReachable ? 'reachable' : 'offline'} tone={rimApiReachable ? 'ok' : 'error'} />
+              <MetricCard label={<FieldLabel iconKey="game">RimWorld</FieldLabel>} value={rimWorldLive ? 'live' : rimApiReachable ? 'waiting' : 'unknown'} tone={rimWorldLive ? 'ok' : rimApiReachable ? 'warn' : 'neutral'} />
               <MetricCard label={<FieldLabel iconKey="llm">LLM</FieldLabel>} value={llmLabelFor(llmStatus)} tone={llmMetricTone} />
               <MetricCard label={<FieldLabel iconKey="keys">Configured keys</FieldLabel>} value={(status?.llm_configured ?? health?.llm.configured) ? 'present' : 'missing'} tone={(status?.llm_configured ?? health?.llm.configured) ? 'ok' : 'error'} />
               <MetricCard label={<FieldLabel iconKey="last_event">Last LLM event</FieldLabel>} value={formatMaybeDate(health?.llm.last_event_at ?? status?.llm_last_event_at ?? null)} />
@@ -245,7 +249,7 @@ export function SystemOverview({
       {selectedView === 'runtime' && (
       <DisclosureSection
         title={<SectionTitle iconKey="runtime">Runtime diagnostics</SectionTitle>}
-        meta={(status?.rimapi_reachable ?? health?.runtime.rimapi_reachable) ? 'RIMAPI reachable' : 'RIMAPI waiting'}
+        meta={rimApiReachable ? 'RIMAPI reachable' : 'RIMAPI offline'}
       >
         <section className="system-grid">
           <div className="system-card runtime-card">
@@ -255,7 +259,8 @@ export function SystemOverview({
             </div>
             <div className="metric-grid">
               <MetricCard label={<FieldLabel iconKey="host">Host</FieldLabel>} value={status?.server ?? health?.runtime.server ?? 'checking'} tone={status ? 'ok' : 'neutral'} />
-              <MetricCard label={<FieldLabel iconKey="rimapi">RIMAPI</FieldLabel>} value={(status?.rimapi_reachable ?? health?.runtime.rimapi_reachable) ? 'reachable' : 'waiting'} tone={(status?.rimapi_reachable ?? health?.runtime.rimapi_reachable) ? 'ok' : 'warn'} />
+              <MetricCard label={<FieldLabel iconKey="rimapi">RIMAPI</FieldLabel>} value={rimApiReachable ? 'reachable' : 'offline'} tone={rimApiReachable ? 'ok' : 'error'} />
+              <MetricCard label={<FieldLabel iconKey="game">RimWorld</FieldLabel>} value={rimWorldLive ? 'live' : rimApiReachable ? 'waiting' : 'unknown'} tone={rimWorldLive ? 'ok' : rimApiReachable ? 'warn' : 'neutral'} />
               <MetricCard label={<FieldLabel iconKey="agenda">Mayor snapshot</FieldLabel>} value={health?.runtime.mayor_snapshot_version ?? status?.mayor_snapshot_version ?? 'none'} />
               <MetricCard label={<FieldLabel iconKey="advice">Advice</FieldLabel>} value={health?.runtime.active_advice_count ?? 'n/a'} />
               <MetricCard label={<FieldLabel iconKey="flags">Flags</FieldLabel>} value={health?.runtime.active_flag_count ?? 'n/a'} />
@@ -375,7 +380,7 @@ export function SystemOverview({
       {selectedView === 'storage' && (
       <DisclosureSection
         title={<SectionTitle iconKey="snapshot">Colony snapshot</SectionTitle>}
-        meta={colonySnapshot ? snapshotMeta(colonySnapshot, health?.runtime.rimapi_reachable ?? false) : 'not exposed'}
+        meta={colonySnapshot ? snapshotMeta(colonySnapshot, colonyStateLive) : 'not exposed'}
       >
         {!colonySnapshot ? (
           <EmptyState code="COLONY SNAPSHOT MISSING">/api/system/health did not expose colony snapshot metadata.</EmptyState>
@@ -390,7 +395,7 @@ export function SystemOverview({
               <MetricCard
                 label={<FieldLabel iconKey="status">Current origin</FieldLabel>}
                 value={health?.runtime.colony_state_origin ?? status?.colony_state_origin ?? 'unknown'}
-                tone={health?.runtime.rimapi_reachable ? 'ok' : colonySnapshot.has_snapshot ? 'warn' : 'neutral'}
+                tone={colonyStateLive ? 'ok' : colonySnapshot.has_snapshot ? 'warn' : 'neutral'}
               />
               <MetricCard label={<FieldLabel iconKey="captured_at">Captured</FieldLabel>} value={formatMaybeDate(colonySnapshot.captured_at)} />
               <MetricCard label={<FieldLabel iconKey="age">Age</FieldLabel>} value={formatAgeSeconds(colonySnapshot.age_seconds)} />

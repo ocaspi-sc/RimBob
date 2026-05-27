@@ -85,7 +85,7 @@ public static class SystemEndpoints
         coverage.Register("/api/system/health", "available", "Runtime, LLM, RAG, logs, traces, tests, lightweight icon summary, Host endpoint coverage, and RIMAPI coverage metadata.");
         coverage.Register("/api/system/logs/recent", "not_exposed_yet", "Planned bounded log tail.");
 
-        app.MapGet("/api/system/health", (
+        app.MapGet("/api/system/health", async (
             IOptions<RimBobOptions> options,
             IWebHostEnvironment env,
             ColonyState colony,
@@ -104,9 +104,12 @@ public static class SystemEndpoints
             EndpointCoverageCatalog endpointCoverage,
             MinisterTraceStore traces,
             IconCacheService iconCache,
-            AssistedApplyService assistedApply) =>
+            AssistedApplyService assistedApply,
+            RimApiRuntimeProbe rimApiRuntime,
+            CancellationToken ct) =>
         {
             RimBobOptions opts = options.Value;
+            RimApiRuntimeSnapshot rimApi = await rimApiRuntime.ProbeAsync(ct);
             MayorBriefing mayorBriefing = briefings.GetMayorBriefing();
             FoodBriefing foodBriefing = briefings.GetFoodBriefing();
             WelfareSourceBriefing welfareBriefing = briefings.GetWelfareBriefing();
@@ -160,7 +163,9 @@ public static class SystemEndpoints
                     host_process_path = Environment.ProcessPath ?? "unknown",
                     content_root = env.ContentRootPath,
                     runtime_root = runtimeRoot,
-                    rimapi_reachable = colony.LastLiveRefreshAt is not null,
+                    rimapi_reachable = rimApi.Reachable,
+                    rimapi_last_error = rimApi.LastError,
+                    rimworld = RimWorldPayload(rimApi),
                     colony_state_origin = colony.LastRefreshSource.ToString().ToLowerInvariant(),
                     last_live_refresh_at = colony.LastLiveRefreshAt,
                     briefing_version = mayorBriefing.BriefingVersion,
@@ -251,6 +256,16 @@ public static class SystemEndpoints
             last_save_error = status.LastSaveError,
             load_error = status.LoadError,
         };
+
+    private static object RimWorldPayload(RimApiRuntimeSnapshot runtime) => new
+    {
+        live = runtime.HasLoadedColony,
+        program_state = runtime.ProgramState,
+        map_count = runtime.MapCount,
+        colonist_count = runtime.ColonistCount,
+        game_tick = runtime.GameTick,
+        is_paused = runtime.Paused,
+    };
 
     private static object ReplayCorpusMetadata(string logsDir)
     {

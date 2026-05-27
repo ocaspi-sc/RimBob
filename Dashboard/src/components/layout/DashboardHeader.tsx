@@ -145,25 +145,25 @@ function deriveRimApiState(status: RimBobStatus | null, host: HostApiState): Hea
     return {
       label: 'unknown',
       tone: 'idle',
-      title: `RIMAPI refresh status is unknown. Host API is ${host.kind}.`,
+      title: `RIMAPI status is unknown. Host API is ${host.kind}.`,
     };
   }
 
-  const liveLabel = status.rimapi_reachable ? 'live' : 'waiting';
+  const label = status.rimapi_reachable ? 'reachable' : 'offline';
   if (host.kind === 'stale') {
     return {
-      label: `last ${liveLabel}`,
+      label: `last ${label}`,
       tone: 'idle',
-      title: `RIMAPI refresh was last known ${liveLabel}. Host API is stale, so this is not current. Last colony state origin: ${colonyStateOrigin(status)}.`,
+      title: `RIMAPI was last known ${label}. Host API is stale, so this is not current. Latest colony refresh: ${formatMaybeDate(status.last_live_refresh_at ?? null)}. Last colony state origin: ${colonyStateOrigin(status)}.`,
     };
   }
 
   return {
-    label: liveLabel,
-    tone: status.rimapi_reachable ? 'ok' : 'warn',
+    label,
+    tone: status.rimapi_reachable ? 'ok' : 'error',
     title: status.rimapi_reachable
-      ? `RIMAPI refresh is live. Host has received live colony data from the loaded mod. Colony state origin: ${colonyStateOrigin(status)}.`
-      : `RIMAPI refresh is waiting. Host has not received live colony data from the loaded mod in this process. Colony state origin: ${colonyStateOrigin(status)}.`,
+      ? `RIMAPI is reachable. Host can read the loaded mod. Latest colony refresh: ${formatMaybeDate(status.last_live_refresh_at ?? null)}. Colony state origin: ${colonyStateOrigin(status)}.`
+      : `RIMAPI is offline. Host cannot read the loaded mod right now. Latest colony refresh: ${formatMaybeDate(status.last_live_refresh_at ?? null)}. Last error: ${rimApiError(status)}.`,
   };
 }
 
@@ -176,21 +176,29 @@ function deriveRimWorldState(status: RimBobStatus | null, host: HostApiState): H
     };
   }
 
-  const liveLabel = status.rimapi_reachable ? 'live' : 'waiting';
+  const label = rimWorldLabel(status);
   if (host.kind === 'stale') {
     return {
-      label: `last ${liveLabel}`,
+      label: `last ${label}`,
       tone: 'idle',
-      title: `RimWorld was last known ${liveLabel}. Host API is stale, so this is not current. Last colony state origin: ${colonyStateOrigin(status)}.`,
+      title: `RimWorld was last known ${label}. Host API is stale, so this is not current. ${rimWorldRuntimeDetails(status)}`,
+    };
+  }
+
+  if (!status.rimapi_reachable) {
+    return {
+      label,
+      tone: 'idle',
+      title: `RimWorld status is unknown because RIMAPI is offline. ${rimWorldRuntimeDetails(status)}`,
     };
   }
 
   return {
-    label: liveLabel,
-    tone: status.rimapi_reachable ? 'ok' : 'warn',
-    title: status.rimapi_reachable
-      ? `RimWorld is live. Live colony data is available through the loaded RIMAPI mod. Colony state origin: ${colonyStateOrigin(status)}.`
-      : `RimWorld is waiting. Start RimWorld with the RIMAPI mod loaded and a colony open. Colony state origin: ${colonyStateOrigin(status)}.`,
+    label,
+    tone: status.rimworld?.live ? 'ok' : 'warn',
+    title: status.rimworld?.live
+      ? `RimWorld is live. A colony map is loaded and the mod reports game state. ${rimWorldRuntimeDetails(status)}`
+      : `RimWorld is waiting for a loaded colony map. RIMAPI is reachable, but live colony play is not confirmed. ${rimWorldRuntimeDetails(status)}`,
   };
 }
 
@@ -255,6 +263,28 @@ function deriveStreamState(stream: StreamDiagnostics): HeaderState {
 
 function colonyStateOrigin(status: RimBobStatus): string {
   return status.colony_state_origin ?? 'unknown';
+}
+
+function rimApiError(status: RimBobStatus): string {
+  if (!status.rimapi_last_error) return 'none';
+  return status.rimapi_last_error.replace(/https?:\/\/\S+/g, 'local endpoint').replace(/\s+/g, ' ').slice(0, 160);
+}
+
+function rimWorldLabel(status: RimBobStatus): string {
+  if (!status.rimapi_reachable) return 'unknown';
+  if (status.rimworld?.live) return 'live';
+  return 'waiting';
+}
+
+function rimWorldRuntimeDetails(status: RimBobStatus): string {
+  const runtime = status.rimworld;
+  return [
+    `Program state: ${runtime?.program_state ?? 'unknown'}.`,
+    `Maps: ${runtime?.map_count ?? 'unknown'}.`,
+    `Colonists: ${runtime?.colonist_count ?? 'unknown'}.`,
+    `Game tick: ${runtime?.game_tick?.toLocaleString() ?? 'unknown'}.`,
+    `Paused: ${runtime?.is_paused === null || runtime?.is_paused === undefined ? 'unknown' : runtime.is_paused ? 'yes' : 'no'}.`,
+  ].join(' ');
 }
 
 function llmTitle(status: RimBobStatus, llmStatus: string, state: 'live' | 'stale', label: string): string {

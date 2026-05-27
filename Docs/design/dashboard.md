@@ -76,20 +76,21 @@ monotonic running build version, build datetime, build revision, dashboard
 asset fingerprint, and the served Host root/process tooltip. This is the first
 stale-host/stale-asset check because it answers which code and UI bundle the
 player is actually reading. The header status pills distinguish separate
-surfaces: `Host API` is the latest `/api/status` HTTP poll, `RimWorld` is live
-game data availability inferred from the current live-colony refresh, `RIMAPI`
-is the loaded mod refresh path, and `SSE` is the browser `EventSource` for
+surfaces: `Host API` is the latest `/api/status` HTTP poll, `RIMAPI` is whether
+Host can currently read the loaded mod, `RimWorld` is live colony-map state
+from the mod's game-state read, and `SSE` is the browser `EventSource` for
 `/api/advice/stream`. RimWorld/RIMAPI/LLM/Mayor are current only while
-`Host API` is live. If the Host API poll fails after a previous success, the
-header must show `stale` and render dependent RimWorld/RIMAPI/LLM/Mayor values
-as `last ...`; if no Host API response is reachable, those dependent values are
-`unknown`, not inferred from cached data. `LLM configured` means a Gemini key
-exists but no provider result has been recorded yet; it is an info/neutral
-state, not a warning. Provider success/failure comes from the latest raw-output
-status. Until Host exposes a game-only signal, the RimWorld and RIMAPI markers
-share the same live-refresh evidence but explain different operator questions:
-whether game data is available, and whether the mod refresh path is producing
-it. `Mayor loaded` means no Mayor run is active and a Mayor snapshot is
+`Host API` is live. A reachable RIMAPI mod is not the same as a fresh Host
+colony-state refresh: the compact RIMAPI marker should say `reachable` when the
+mod answers, while latest colony refresh time and `colony_state_origin` belong
+in the tooltip or SYSTEM details. If the Host API poll fails after a previous
+success, the header must show `stale` and render dependent
+RimWorld/RIMAPI/LLM/Mayor values as `last ...`; if no Host API response is
+reachable, those dependent values are `unknown`, not inferred from cached data.
+`LLM configured` means a Gemini key exists but no provider result has been
+recorded yet; it is an info/neutral state, not a warning. Provider
+success/failure comes from the latest raw-output status. `Mayor loaded` means
+no Mayor run is active and a Mayor snapshot is
 loaded; the snapshot version belongs in the tooltip or SYSTEM details, not the
 compact label. Header marker tone semantics are consistent:
 green means confirmed healthy/live, blue means configured/loaded/running but
