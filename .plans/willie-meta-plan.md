@@ -53,7 +53,7 @@ Placement Solver, the fork group endpoints, and the dashboard pick UI.
 | [`willie-advice-types.md`](willie-advice-types.md) | The 9 canonical Construction concerns + first-slice rules-vs-LLM split. |
 | [`willie-advice-schema.md`](willie-advice-schema.md) | Advice/output side: flatten (drop icon/reason), per-kind apply split, `options[]`, `blueprint_group`, `place_blueprint_group`. |
 | [`willie-request-taxonomy.md`](willie-request-taxonomy.md) | Request/input side: typed request arrays, rich `BuildingRequest`, inbound ask-map -> concern. |
-| [`willie-gate-design.md`](willie-gate-design.md) | Construction briefing + data-gap anchor (the GATE): per-field `signal/source/availability/consumers/notes` for all 9 concerns + anchor inventory contract. Slice scaffold drafted; S1-S5 fills pending. |
+| [`willie-briefing-schema.md`](willie-briefing-schema.md) + [`willie-briefing-fields.md`](willie-briefing-fields.md) | Willie Briefing Schema: per-field `signal/source/availability/consumers/notes` for 8 concerns (`basic_shelter` reconciliation open) + anchor inventory contract. **S1–S5 landed 2026-05-27.** |
 
 ### Engine designs - the "how Willie decides where to build"
 
@@ -152,14 +152,14 @@ Placement Solver, the fork group endpoints, and the dashboard pick UI.
 flowchart TD
   S1["Schema S1 ✓ LANDED 7d0818c<br/>(cleanup + dormant types)"] --> S2["Schema S2 ✓ LANDED 8676d59<br/>(typed request arrays;<br/>Food emits building_request)"]
   FORK1["RIMAPI single-asset triplet ✓ LANDED 3eb1d84<br/>(RIMAPI repo; RimBob meta 300f5ce)"] --> FORK2["RIMAPI blueprint groups (Cap A)"]
-  S2 --> GATE["Briefing + data-gap anchor<br/>(DRAFTED - willie-gate-design.md;<br/>S1-S5 fills pending)"]
-  FORK2 --> GATE
+  S2 --> SCHEMA["Willie Briefing Schema ✓ LANDED 2026-05-27<br/>(willie-briefing-schema.md +<br/>willie-briefing-fields.md)"]
+  FORK2 --> SCHEMA
   FORK2 --> ROOM["Room/anchor detection<br/>(room-purpose inference)"]
-  ROOM --> GATE
-  GATE --> PS1["Placement Solver PS1<br/>(template freezer skeleton + generator registry)"]
+  ROOM --> SCHEMA
+  SCHEMA --> PS1["Placement Solver PS1<br/>(template freezer skeleton + generator registry)"]
   S2 --> PS1
   FORK2 --> PS1
-  FORK3["RIMAPI map reach + path-cost<br/>(rimapi-map-reach-and-path-cost.md)"] -.solver scoring.-> PS1
+  FORK3["RIMAPI map reach + path-cost ✓ LANDED<br/>(rimapi-map-reach-and-path-cost.md)"] -.solver scoring.-> PS1
   PS1 --> WILLIE["Willie minister: contracts -> Rules.cs<br/>-> MinisterOfConstruction -> registry -> dashboard"]
   S1 --> S3["Schema S3 ✓ LANDED 4927741<br/>(apply per-kind split +<br/>place_blueprint_group)"]
   FORK2 --> S3
@@ -170,10 +170,10 @@ flowchart TD
   PS3 --> PSB["PS4 + planning overlay (Cap B)"]
 
   classDef done fill:#1f3a1f,stroke:#3fa83f,color:#cfe8cf;
-  class S1,S2,S3,FORK1 done;
+  class S1,S2,S3,FORK1,FORK3,SCHEMA done;
 ```
 
-Note: FORK3 is **not** a hard PS1 gate. PS1 can ship with euclidean-from-centroid scoring as Slice A; FORK3 swaps in walkable distance for Slice B without changing the solver contract. RIMAPI verified today exposes `/api/v1/map/rooms` but **no** in-map reachability or pathfinding endpoint — only worldmap caravan path.
+Note: FORK3 endpoints (`/api/v1/map/reach`, `/api/v1/map/path-cost`, batch) landed. RimBob client wiring is the remaining gap; PS1 can still ship Slice A with euclidean-from-centroid scoring, and Slice B swaps in walkable distance once the RimBob client method lands. RIMAPI also exposes `/api/v1/map/rooms` (read-side) plus the new pathfinding triplet.
 
 **Phase ordering:**
 
@@ -184,21 +184,23 @@ Note: FORK3 is **not** a hard PS1 gate. PS1 can ship with euclidean-from-centroi
 2. **RIMAPI** - single-asset triplet [✓ LANDED — RIMAPI `3eb1d84`, RimBob
    meta `300f5ce`] -> blueprint groups (Capability A, pending). Required before
    the Placement Solver can validate candidates.
-3. **Briefing + data-gap anchor** - **drafted** in
-   [`willie-gate-design.md`](willie-gate-design.md); S1-S5 fills pending. For
-   each `ConstructionBriefing` field: signal, RIMAPI/state-store source,
-   availability (`have` / `need-fork` / `defer`). Grounded by mining RimMind
-   (`ConstructionBacklogPart`, `StorageSaturationPart`) and the known gaps
-   (`source-todo-building-condition-read`). This gates which Slice-A rules are
-   real vs aspirational, and feeds the solver's anchor resolution.
+3. **Willie Briefing Schema** [✓ LANDED 2026-05-27 —
+   [`willie-briefing-schema.md`](willie-briefing-schema.md) +
+   [`willie-briefing-fields.md`](willie-briefing-fields.md)]. Per
+   `ConstructionBriefing` field: signal, RIMAPI/state-store source,
+   availability (`have` / `need-fork` / `defer`), consumers, notes. Grounded
+   by mining RimMind (`ConstructionBacklogPart`, `StorageSaturationPart`) and
+   the known gaps (`source-todo-building-condition-read`,
+   `rimapi-room-detail-read`, etc.). Gates which Slice-A rules are real vs
+   aspirational; feeds solver anchor resolution.
    - **Power-net availability resolved (2026-05-27):** `/api/v1/map/power/info`
      is aggregate-only (gen/draw/battery totals + building id lists); per-net
-     split + outage flag = `need-fork`. RimBob's `PowerInfoDto` is broken —
-     expects 4 floats, RIMAPI sends 9 fields (see `rimapi-power-info-dto.md`).
+     split + outage flag = `need-fork`. **`PowerInfoDto` fix landed** so
+     aggregate fields surface end-to-end.
    - **Anchor scoring resolved (2026-05-27):** drop centroid-as-primary;
      anchor = `{room_id, entry_cells[], region_id}`. Solver does region-tier
-     batch rank → A* top-K tiebreak. Both require **FORK3**
-     (`rimapi-map-reach-and-path-cost.md`); Slice A ships with
+     batch rank → A* top-K tiebreak. Both rely on **FORK3 endpoints (landed)**
+     plus a RimBob client method (pending); Slice A ships with
      euclidean-from-centroid approximation as fallback.
 4. **Room/anchor detection** - room-purpose inference from RIMAPI reads (resolve
    `near:kitchen` -> map location). The hard sub-problem; may gate PS1. Depends
@@ -235,7 +237,8 @@ everything spatial waits on them.
 |---|---|---|
 | Group atomicity on partial fresh-state failure + `MaxBlueprintGroupAssets` | advice-schema Q1 (see also rimapi-groups §4) | validate-all gate, then best-effort place + per-asset report; cap ~64 |
 | Anchor/room-purpose detection approach | placement-solver Q1 | the hard gate; templated room detection first; RIMAPI `/api/v1/map/rooms` available today |
-| Anchor scoring representation | placement-solver / willie-gate-design S3 | **resolved 2026-05-27:** `{room_id, entry_cells[], region_id}` + region-BFS scoring (FORK3); euclidean-from-centroid only as Slice-A fallback |
+| Anchor scoring representation | placement-solver / willie-briefing-schema S3 | **resolved 2026-05-27:** `{room_id, entry_cells[], region_id}` + region-BFS scoring (FORK3); euclidean-from-centroid only as Slice-A fallback |
+| `basic_shelter` ownership (Willie vs Welfare) | willie-briefing-schema Open Questions / willie-advice-types §1 | **open:** lean Welfare — once Welfare exists, Willie sees this concern only via inbound `building_request{ target_class: bed }`, same shape as Food's freezer request. Briefing-schema doc excludes `basic_shelter` pending reconciliation. |
 | Generator budgets and diversity thresholds | placement-solver Q3 | start with tiny per-generator caps; validate only a diverse top survivor set |
 | Floor-fill representation (per-cell vs compressed rect) | advice-schema Q2 | per-cell now; cap room size; revisit if payloads bloat |
 | `ResourceRequest` vs `AdviceAction` shared-shape refactor | both anchors flagged | partly mooted - S2 retires `ResourceRequest` from the flag path |
@@ -254,17 +257,24 @@ bounded generator registry with one shared validator/scorer.
 
 > Active items only — see §4 for the full phase graph.
 
-- **Unblock the spatial work:** fill GATE S1-S5 in
-  [`willie-gate-design.md`](willie-gate-design.md) (skeleton drafted; tables,
-  RimMind cross-walk, anchor inventory contract, rule-vs-aspiration cut still
-  empty).
+- **Willie Briefing Schema ✓ LANDED 2026-05-27** —
+  [`willie-briefing-schema.md`](willie-briefing-schema.md) +
+  [`willie-briefing-fields.md`](willie-briefing-fields.md). All five slices
+  filled; `basic_shelter` reconciliation open (see §5).
+- **Next active work:** RimBob-side ingestion of FORK1
+  `/api/v1/map/construction/backlog` + FORK3 reach/path-cost endpoints into
+  the state store + the new `ConstructionBriefing` record; Placement Solver
+  PS1 skeleton; Willie Rules Slice A (first cut against the 3 top-priority
+  concerns named in S4).
 - **RIMAPI track (parallel, separate repo):**
   - `FORK1` triplet ✓ landed.
   - `FORK2` blueprint groups Capability A — pending.
   - `FORK3` map reach + path-cost
     ([`rimapi-map-reach-and-path-cost.md`](rimapi-map-reach-and-path-cost.md))
-    — pending. Not a hard PS1 gate; Slice A can use euclidean fallback.
-  - `rimapi-power-info-dto` — DTO mismatch bug, plan landed.
-- **Deferred until `GATE` + `FORK2` land:** Willie minister wiring
-  (§4 `WILLIE`), Placement Solver PS1 (§4 `PS1`), `construction.md` promotion
-  (§4 `PROMOTE`).
+    ✓ endpoints landed; RimBob client method pending.
+  - `rimapi-power-info-dto` ✓ landed.
+  - New captures from briefing schema S5: `rimapi-map-region-at`,
+    `rimapi-room-entry-cells`.
+- **Deferred until `FORK2` lands:** Willie minister wiring
+  (§4 `WILLIE`), Placement Solver PS1 group-validate path (§4 `PS1`),
+  `construction.md` promotion (§4 `PROMOTE`).

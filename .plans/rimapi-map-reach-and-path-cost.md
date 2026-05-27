@@ -9,7 +9,7 @@
 > only the worldmap caravan path and a rooms dump; no in-map reachability or
 > pathfinding. Solver falls back to euclidean-from-centroid, which ranks through
 > walls and into sealed rooms. See
-> [`willie-gate-design.md`](willie-gate-design.md) S3.
+> [`willie-briefing-schema.md`](willie-briefing-schema.md) S3.
 
 ## Summary
 
@@ -241,7 +241,7 @@ Out of scope:
   the path for visualization, add `/api/v1/map/path` as a separate slice.
 - Region id exposure as a primitive (`GET /api/v1/map/region-at`). Useful but
   not required by Placement Solver; defer until a consumer asks.
-- `outage-prone net IDs` from `willie-gate-design.md` — separate
+- `outage-prone net IDs` from `willie-briefing-schema.md` — separate
   `rimapi-power-net-read` slice already in HumanTodo.
 - RimBob Host wiring (DTOs, client method, solver consumption) — separate
   follow-up after these endpoints land.
