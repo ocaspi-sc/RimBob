@@ -41,6 +41,8 @@ export default function App() {
   const isInfo = activeScope.kind === 'info';
   const isAnalytics = activeScope.kind === 'analytics';
   const isDevBlog = activeScope.kind === 'dev_blog';
+  const hostApiLive = status.data !== null && status.error === null;
+  const systemHealthFresh = systemHealth.data !== null && systemHealth.error === null;
   const staleSnapshot = systemHealth.data &&
     !systemHealth.data.runtime.rimapi_reachable &&
     systemHealth.data.colony_snapshot.has_snapshot
@@ -50,12 +52,16 @@ export default function App() {
   return (
     <main className="dashboard-v2-shell">
       <DashboardHeader
-        version={systemHealth.data?.version ?? null}
+        version={systemHealthFresh ? systemHealth.data?.version ?? null : null}
+        hostProcessPath={systemHealthFresh ? systemHealth.data?.runtime.host_process_path ?? null : null}
+        runtimeRoot={systemHealthFresh ? systemHealth.data?.runtime.runtime_root ?? null : null}
         status={status.data}
+        statusError={status.error}
+        statusLoadedAt={status.loadedAt}
         stream={feed.stream}
         triggerError={triggers.triggerState.error}
         triggerPending={triggers.triggerState.target === 'cabinet'}
-        triggerDisabled={triggers.triggerState.target !== null}
+        triggerDisabled={triggers.triggerState.target !== null || !hostApiLive}
         onTriggerCabinet={() => void triggers.triggerCabinetNow()}
       />
 
@@ -107,7 +113,7 @@ export default function App() {
               <WorkspaceTitle
                 scope={activeScope}
                 lastRunLabel={formatLastRun(activeScope, systemHealth.data)}
-                triggerDisabled={triggers.triggerState.target !== null}
+                triggerDisabled={triggers.triggerState.target !== null || !hostApiLive}
                 triggerPending={triggers.triggerState.target === activeScope.key}
                 onTrigger={() => void triggers.triggerMinisterNow(activeScope)}
               />

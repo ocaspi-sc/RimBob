@@ -72,10 +72,22 @@ Dashboard v2 has four stable regions:
 - Right sidebar: compact colony facts plus colonist cards.
 
 The header exposes the running RimBob version before transient status pills:
-monotonic running build version, build datetime, build revision, and dashboard
-asset fingerprint. This is the first stale-host/stale-asset check because it
-answers which code and UI bundle the player is actually reading. The header
-also exposes `Run Cabinet Now`. Minister workspaces expose
+monotonic running build version, build datetime, build revision, dashboard
+asset fingerprint, and the served Host root/process tooltip. This is the first
+stale-host/stale-asset check because it answers which code and UI bundle the
+player is actually reading. The header status pills distinguish separate
+surfaces: `Host API` is the latest `/api/status` HTTP poll, `SSE` is the
+browser `EventSource` for `/api/advice/stream`, and RIMAPI/LLM/Mayor are current
+only while `Host API` is live. If the Host API poll fails after a previous
+success, the header must show `stale` and render dependent RIMAPI/LLM/Mayor
+values as `last ...`; if no Host API response is reachable, those dependent
+values are `unknown`, not inferred from cached data. `LLM configured` means a
+Gemini key exists; provider success/failure comes from the latest raw-output
+status. `Mayor idle vN` means no Mayor run is active and the latest loaded
+Mayor snapshot is version `N`. Every header marker/chip should carry a tooltip
+with the exact source field or operational meaning so compact labels do not
+hide what is being measured.
+The header also exposes `Run Cabinet Now`. Minister workspaces expose
 `Run {Minister} Now` beside the selected minister's last-run time. The selected
 view is already visible in the tab bar and should not be repeated beside the run
 button. Planned ministers show disabled/not-wired controls.
