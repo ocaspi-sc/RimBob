@@ -107,7 +107,7 @@ function deriveHostApiState(
       kind: 'live',
       label: 'live',
       tone: 'ok',
-      title: `RimBob Host is reachable. Last successful status poll: ${formatMaybeDate(statusLoadedAt)}.`,
+      title: `Host API is live. Last successful status poll: ${formatMaybeDate(statusLoadedAt)}.`,
     };
   }
 
@@ -117,7 +117,7 @@ function deriveHostApiState(
       kind: 'stale',
       label: age ? `stale ${age}` : 'stale',
       tone: 'warn',
-      title: `RimBob Host status is stale. Last successful poll: ${formatMaybeDate(statusLoadedAt)}. Current error: ${statusError}`,
+      title: `Host API is stale. Last successful poll: ${formatMaybeDate(statusLoadedAt)}. Current error: ${statusError}`,
     };
   }
 
@@ -126,7 +126,7 @@ function deriveHostApiState(
       kind: 'offline',
       label: 'offline',
       tone: 'error',
-      title: `RimBob Host status is offline. Current error: ${statusError}`,
+      title: `Host API is offline. Current error: ${statusError}`,
     };
   }
 
@@ -134,7 +134,7 @@ function deriveHostApiState(
     kind: 'checking',
     label: 'checking',
     tone: 'idle',
-    title: 'Waiting for the first RimBob Host status poll.',
+    title: 'Host API is checking. Waiting for the first successful status poll.',
   };
 }
 
@@ -143,7 +143,7 @@ function deriveRimApiState(status: RimBobStatus | null, host: HostApiState): Hea
     return {
       label: 'unknown',
       tone: 'idle',
-      title: `RIMAPI state is unknown because Host status is ${host.kind}.`,
+      title: `RIMAPI status is unknown. Host API is ${host.kind}.`,
     };
   }
 
@@ -152,14 +152,16 @@ function deriveRimApiState(status: RimBobStatus | null, host: HostApiState): Hea
     return {
       label: `last ${liveLabel}`,
       tone: 'idle',
-      title: `Last known RIMAPI refresh state: ${status.rimapi_reachable ? 'live' : 'waiting'}. Host status is stale.`,
+      title: `RIMAPI was last known ${liveLabel}. Host API is stale, so this is not current.`,
     };
   }
 
   return {
     label: liveLabel,
     tone: status.rimapi_reachable ? 'ok' : 'warn',
-    title: `RimWorld/RIMAPI live refresh: ${status.rimapi_reachable ? 'yes' : 'no'}. Colony state origin: ${status.colony_state_origin ?? 'unknown'}.`,
+    title: status.rimapi_reachable
+      ? `RIMAPI is live. RimWorld produced a live refresh. Colony state origin: ${status.colony_state_origin ?? 'unknown'}.`
+      : `RIMAPI is waiting. RimWorld has not produced a live refresh. Colony state origin: ${status.colony_state_origin ?? 'unknown'}.`,
   };
 }
 
@@ -168,7 +170,7 @@ function deriveLlmState(status: RimBobStatus | null, host: HostApiState): Header
     return {
       label: 'unknown',
       tone: 'idle',
-      title: `LLM state is unknown because Host status is ${host.kind}.`,
+      title: `LLM status is unknown. Host API is ${host.kind}.`,
     };
   }
 
@@ -178,14 +180,14 @@ function deriveLlmState(status: RimBobStatus | null, host: HostApiState): Header
     return {
       label: `last ${label}`,
       tone: 'idle',
-      title: llmTitle(status, llmStatus, 'stale'),
+      title: llmTitle(status, llmStatus, 'stale', label),
     };
   }
 
   return {
     label,
     tone: llmToneFor(llmStatus),
-    title: llmTitle(status, llmStatus, 'live'),
+    title: llmTitle(status, llmStatus, 'live', label),
   };
 }
 
@@ -194,7 +196,7 @@ function deriveMayorState(status: RimBobStatus | null, host: HostApiState): Head
     return {
       label: 'unknown',
       tone: 'idle',
-      title: `Mayor state is unknown because Host status is ${host.kind}.`,
+      title: `Mayor status is unknown. Host API is ${host.kind}.`,
     };
   }
 
@@ -203,13 +205,13 @@ function deriveMayorState(status: RimBobStatus | null, host: HostApiState): Head
     return {
       label: `last ${label}`,
       tone: 'idle',
-      title: `Last known Mayor state: ${label}. Snapshot version: ${status.mayor_snapshot_version ?? 'none'}. Host status is stale.`,
+      title: `Mayor was last known ${label}. Snapshot version: ${status.mayor_snapshot_version ?? 'none'}. Host API is stale, so this is not current.`,
     };
   }
 
   return {
     label,
-    tone: status.mayor_last_error ? 'error' : status.mayor_running ? 'info' : 'idle',
+    tone: mayorTone(status),
     title: mayorTitle(status),
   };
 }
@@ -218,18 +220,33 @@ function deriveStreamState(stream: StreamDiagnostics): HeaderState {
   return {
     label: stream.state,
     tone: stream.state === 'open' ? 'ok' : stream.state === 'error' ? 'warn' : 'idle',
-    title: `Live advice stream is ${stream.state}. Events: ${stream.eventCount}; reconnects: ${stream.reconnectCount}; last event: ${stream.lastEventType ?? 'none'}.`,
+    title: `Server-Sent Events advice stream is ${stream.state}. Live advice events: ${stream.eventCount}. Reconnects: ${stream.reconnectCount}. Last event: ${stream.lastEventType ?? 'none'}.`,
   };
 }
 
-function llmTitle(status: RimBobStatus, llmStatus: string, state: 'live' | 'stale'): string {
-  const stalePrefix = state === 'stale' ? 'Last known ' : '';
-  return `${stalePrefix}LLM status: ${llmStatus}. Gemini key configured: ${status.llm_configured ? 'yes' : 'no'}. Last LLM event: ${formatMaybeDate(status.llm_last_event_at)}. Last error: ${status.llm_last_error ?? 'none'}.`;
+function llmTitle(status: RimBobStatus, llmStatus: string, state: 'live' | 'stale', label: string): string {
+  const prefix = state === 'stale'
+    ? `LLM was last known ${label}. Host API is stale, so this is not current.`
+    : `LLM is ${label}.`;
+  const explanation = llmStatus === 'ready' || llmStatus === 'not_seen_yet'
+    ? 'Gemini is configured, but no provider result has been recorded yet.'
+    : llmStatus === 'missing_key'
+      ? 'Gemini key is missing, so LLM calls need configuration before they can run.'
+      : llmStatus === 'request_failed'
+        ? 'The latest LLM request failed.'
+        : llmStatus === 'parse_failed'
+          ? 'The latest LLM response could not be parsed.'
+          : llmStatus === 'parsed' || llmStatus === 'normalized'
+            ? 'The latest LLM provider result was received and processed.'
+            : 'The latest LLM status is not recognized by the dashboard.';
+
+  return `${prefix} ${explanation} Key configured: ${status.llm_configured ? 'yes' : 'no'}. Last event: ${formatMaybeDate(status.llm_last_event_at)}. Last error: ${status.llm_last_error ?? 'none'}.`;
 }
 
 function llmToneFor(status: string): PillTone {
-  if (status === 'missing_key' || status === 'request_failed' || status === 'parse_failed') return 'error';
-  if (status === 'ready' || status === 'not_seen_yet') return 'warn';
+  if (status === 'request_failed' || status === 'parse_failed') return 'error';
+  if (status === 'missing_key') return 'warn';
+  if (status === 'ready' || status === 'not_seen_yet') return 'info';
   if (status === 'parsed' || status === 'normalized') return 'ok';
   return 'warn';
 }
@@ -237,6 +254,9 @@ function llmToneFor(status: string): PillTone {
 function llmLabelFor(status: string): string {
   if (status === 'missing_key') return 'missing key';
   if (status === 'ready') return 'configured';
+  if (status === 'not_seen_yet') return 'no result';
+  if (status === 'request_failed') return 'request failed';
+  if (status === 'parse_failed') return 'parse failed';
   return status.replace(/_/g, ' ');
 }
 
@@ -245,6 +265,12 @@ function mayorLabel(status: RimBobStatus): string {
   if (status.mayor_running) return 'running';
   if (status.mayor_snapshot_version !== null) return 'loaded';
   return 'no snapshot';
+}
+
+function mayorTone(status: RimBobStatus): PillTone {
+  if (status.mayor_last_error) return 'error';
+  if (status.mayor_running || status.mayor_snapshot_version !== null) return 'info';
+  return 'idle';
 }
 
 function mayorTitle(status: RimBobStatus): string {
@@ -257,7 +283,7 @@ function mayorTitle(status: RimBobStatus): string {
   }
 
   if (status.mayor_snapshot_version !== null) {
-    return `Mayor snapshot is loaded; no Mayor run is active. Snapshot version: ${status.mayor_snapshot_version}. Last completed: ${formatMaybeDate(status.mayor_completed_at)}.`;
+    return `Mayor snapshot is loaded. No Mayor run is active. Snapshot version: ${status.mayor_snapshot_version}. Last completed: ${formatMaybeDate(status.mayor_completed_at)}.`;
   }
 
   return 'No Mayor snapshot is loaded, and no Mayor run is active.';

@@ -173,7 +173,7 @@ export function SystemOverview({
             </div>
             <div className="metric-grid compact">
               <MetricCard label={<FieldLabel iconKey="rimapi">RIMAPI</FieldLabel>} value={(status?.rimapi_reachable ?? health?.runtime.rimapi_reachable) ? 'reachable' : 'waiting'} tone={(status?.rimapi_reachable ?? health?.runtime.rimapi_reachable) ? 'ok' : 'warn'} />
-              <MetricCard label={<FieldLabel iconKey="llm">LLM</FieldLabel>} value={llmStatus.replace(/_/g, ' ')} tone={llmMetricTone} />
+              <MetricCard label={<FieldLabel iconKey="llm">LLM</FieldLabel>} value={llmLabelFor(llmStatus)} tone={llmMetricTone} />
               <MetricCard label={<FieldLabel iconKey="keys">Configured keys</FieldLabel>} value={(status?.llm_configured ?? health?.llm.configured) ? 'present' : 'missing'} tone={(status?.llm_configured ?? health?.llm.configured) ? 'ok' : 'error'} />
               <MetricCard label={<FieldLabel iconKey="last_event">Last LLM event</FieldLabel>} value={formatMaybeDate(health?.llm.last_event_at ?? status?.llm_last_event_at ?? null)} />
             </div>
@@ -895,10 +895,20 @@ function formatAgeSeconds(seconds: number | null): string {
 }
 
 function llmToneFor(status: string): 'ok' | 'warn' | 'error' | 'idle' {
-  if (status === 'missing_key' || status === 'request_failed' || status === 'parse_failed') return 'error';
-  if (status === 'ready' || status === 'not_seen_yet') return 'warn';
+  if (status === 'request_failed' || status === 'parse_failed') return 'error';
+  if (status === 'missing_key') return 'warn';
+  if (status === 'ready' || status === 'not_seen_yet') return 'idle';
   if (status === 'parsed' || status === 'normalized') return 'ok';
   return 'warn';
+}
+
+function llmLabelFor(status: string): string {
+  if (status === 'missing_key') return 'missing key';
+  if (status === 'ready') return 'configured';
+  if (status === 'not_seen_yet') return 'no result';
+  if (status === 'request_failed') return 'request failed';
+  if (status === 'parse_failed') return 'parse failed';
+  return status.replace(/_/g, ' ');
 }
 
 function warmJobTone(status: string | null | undefined): 'neutral' | 'ok' | 'warn' | 'error' {
