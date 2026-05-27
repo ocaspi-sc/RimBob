@@ -499,6 +499,43 @@ public sealed class RimApiClientTests
     }
 
     [Fact]
+    public async Task GetPowerInfoAsync_PascalCaseRimApiPayload_BindsEveryField()
+    {
+        using HttpClient http = MakeClient(new PathRouter()
+            .Add("map/power/info", Json("""
+                {
+                  "success": true,
+                  "data": {
+                    "CurrentPower": 2100,
+                    "TotalPossiblePower": 3100,
+                    "CurrentlyStoredPower": 450,
+                    "TotalPowerStorage": 900,
+                    "TotalConsumption": 1700,
+                    "ConsumptionPowerOn": 1200,
+                    "ProducePowerBuildings": [11, 12],
+                    "ConsumePowerBuildings": [21, 22],
+                    "StorePowerBuildings": [31, 32]
+                  },
+                  "errors": null,
+                  "warnings": null,
+                  "timestamp": null
+                }
+                """)));
+
+        PowerInfoDto result = await new RimApiClient(http).GetPowerInfoAsync(0);
+
+        result.CurrentPower.Should().Be(2100);
+        result.TotalPossiblePower.Should().Be(3100);
+        result.CurrentlyStoredPower.Should().Be(450);
+        result.TotalPowerStorage.Should().Be(900);
+        result.TotalConsumption.Should().Be(1700);
+        result.ConsumptionPowerOn.Should().Be(1200);
+        result.ProducePowerBuildings.Should().Equal(11, 12);
+        result.ConsumePowerBuildings.Should().Equal(21, 22);
+        result.StorePowerBuildings.Should().Equal(31, 32);
+    }
+
+    [Fact]
     public async Task IconImageEndpoints_ParseKnownImageEnvelopeShapes()
     {
         using HttpClient http = MakeClient(new PathRouter()

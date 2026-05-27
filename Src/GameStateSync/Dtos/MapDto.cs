@@ -215,11 +215,17 @@ public record BuildingDto(
 );
 
 // ── GET /map/power/info?map_id ────────────────────────────────────────────────
+// RIMAPI serializes this DTO with PascalCase names; power flow is W, battery storage is Wd.
 public record PowerInfoDto(
-    [property: JsonPropertyName("production")]  float Production,  // W
-    [property: JsonPropertyName("consumption")] float Consumption, // W
-    [property: JsonPropertyName("stored")]      float Stored,      // Wd
-    [property: JsonPropertyName("capacity")]    float Capacity     // Wd
+    [property: JsonPropertyName("CurrentPower")]          int CurrentPower,          // W
+    [property: JsonPropertyName("TotalPossiblePower")]    int TotalPossiblePower,    // W
+    [property: JsonPropertyName("CurrentlyStoredPower")]  int CurrentlyStoredPower,  // Wd
+    [property: JsonPropertyName("TotalPowerStorage")]     int TotalPowerStorage,     // Wd
+    [property: JsonPropertyName("TotalConsumption")]      int TotalConsumption,      // W nameplate
+    [property: JsonPropertyName("ConsumptionPowerOn")]    int ConsumptionPowerOn,    // W live draw
+    [property: JsonPropertyName("ProducePowerBuildings")] IReadOnlyList<int> ProducePowerBuildings,
+    [property: JsonPropertyName("ConsumePowerBuildings")] IReadOnlyList<int> ConsumePowerBuildings,
+    [property: JsonPropertyName("StorePowerBuildings")]   IReadOnlyList<int> StorePowerBuildings
 );
 
 // ── GET /map/weather?map_id ───────────────────────────────────────────────────

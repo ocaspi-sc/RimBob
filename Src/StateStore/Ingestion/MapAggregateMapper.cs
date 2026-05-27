@@ -280,7 +280,11 @@ public static class MapAggregateMapper
                 .ToList());
 
     public static PowerNetwork FromPower(PowerInfoDto power) =>
-        new(power.Production, power.Consumption, power.Stored, power.Capacity);
+        new(
+            power.CurrentPower,
+            power.ConsumptionPowerOn,
+            power.CurrentlyStoredPower,
+            power.TotalPowerStorage);
 
     public static WeatherSnapshot FromWeather(WeatherDto weather) =>
         new(weather.Def, weather.Temperature, weather.RainRate);

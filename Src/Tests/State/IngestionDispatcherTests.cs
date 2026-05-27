@@ -150,6 +150,9 @@ public sealed class IngestionDispatcherTests
         s.Buildings.Value.Buildings.Single().Position.Should().BeEquivalentTo(new { X = 5, Y = 0, Z = 5 });
         s.Buildings.Value.Buildings.Single().Label.Should().Be("wooden bed");
         s.Power.Value.ProductionW.Should().Be(2000f);
+        s.Power.Value.ConsumptionW.Should().Be(1500f);
+        s.Power.Value.StoredWd.Should().Be(100f);
+        s.Power.Value.CapacityWd.Should().Be(500f);
         s.Threats.Value.Lords.Should().ContainSingle()
             .Which.JobType.Should().Be("Raid");
     }
@@ -729,7 +732,7 @@ public sealed class IngestionDispatcherTests
         {
             new(1, "Bed", "wooden bed", "Building_Bed", new PositionDto(5, 0, 5))
         };
-        var power = new PowerInfoDto(2000f, 1500f, 100f, 500f);
+        PowerInfoDto power = new(2000, 4000, 100, 500, 2200, 1500, [], [], []);
         var weather = new WeatherDto("Clear", 18f, 0f);
         var lords = new List<LordDto>
         {
