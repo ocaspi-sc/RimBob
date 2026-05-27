@@ -202,6 +202,21 @@ Rules:
 
 - `using` matters — `PawnPath` is pooled; not disposing leaks pool slots.
 
+> **Post-landing corrections (verified in `RIMAPI-for-RimBob` `dd0b71a`):**
+>
+> 1. **1.6 API rename.** `Map.pathFinder.FindPath(...)` was renamed to
+>    `Map.pathFinder.FindPathNow(...)` in RimWorld 1.6 with reordered params
+>    (`costTuning` moves before `peMode`). Landed code uses
+>    `#if RIMWORLD_1_6 / #else` guards — same pattern as `AllRooms` elsewhere
+>    in `MapHelper.cs`. Code sample above is 1.5 only.
+> 2. **Lambda var shadow fix.** The region-BFS sample above shadows the outer
+>    `IntVec3 from` with the inner `Region from` predicate arg. Landed code
+>    uses `(Region fromRegion, Region toRegion) => toRegion.Allows(...)` — no
+>    shadow. Use that form when reading this plan for any future endpoint.
+>
+> Verified by Sonnet sub-agent 2026-05-28 against
+> [`Docs/reference/rimworld-pathfinding-api.md`](../Docs/reference/rimworld-pathfinding-api.md).
+
 ## Verification
 
 Build both fork configs:
