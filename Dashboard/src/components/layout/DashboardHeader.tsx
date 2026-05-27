@@ -44,16 +44,16 @@ export function DashboardHeader({
         <span className="eyebrow">RimWorld Advisory Cabinet</span>
         <h1>RimBob Dashboard v2</h1>
         <div className="running-version" aria-label="Running RimBob version">
-          <span title={version ? `source=/api/system/health; version.running_version=${version.running_version}` : 'source=/api/system/health; version.running_version=checking'}>
+          <span title={version ? `Running Host version: ${version.running_version}.` : 'Waiting for the running Host version.'}>
             {versionMarker}
           </span>
-          <code title={version ? `source=/api/system/health; version.build_revision=${version.build_revision ?? version.build_version}` : 'source=/api/system/health; version.build_revision=checking'}>
+          <code title={version ? `Running Host build revision: ${version.build_revision ?? version.build_version}.` : 'Waiting for the running Host build revision.'}>
             {revisionMarker}
           </code>
-          <span title={version ? `source=/api/system/health; version.build_datetime=${formatBuildDateTime(version.build_datetime)}` : 'source=/api/system/health; version.build_datetime=checking'}>
+          <span title={version ? `Host build time: ${formatBuildDateTime(version.build_datetime)}.` : 'Waiting for the Host build time.'}>
             {buildMarker}
           </span>
-          <span title={version ? `source=/api/system/health; version.dashboard_asset_version=${version.dashboard_asset_version}` : 'source=/api/system/health; version.dashboard_asset_version=checking'}>
+          <span title={version ? dashboardAssetTooltip(version.dashboard_asset_version) : 'Waiting for the dashboard bundle fingerprint.'}>
             {assetMarker}
           </span>
           <span title={runtimeTooltip(runtimeRoot, hostProcessPath)}>
@@ -75,7 +75,7 @@ export function DashboardHeader({
           disabled={triggerDisabled}
           aria-busy={triggerPending}
           onClick={onTriggerCabinet}
-          title="Trigger all live ministers manually"
+          title="Run all currently wired live ministers now."
         >
           {triggerPending ? 'Running Cabinet...' : 'Run Cabinet Now'}
         </button>
@@ -107,7 +107,7 @@ function deriveHostApiState(
       kind: 'live',
       label: 'live',
       tone: 'ok',
-      title: `source=/api/status; state=live; last_ok=${formatMaybeDate(statusLoadedAt)}`,
+      title: `RimBob Host is reachable. Last successful status poll: ${formatMaybeDate(statusLoadedAt)}.`,
     };
   }
 
@@ -117,7 +117,7 @@ function deriveHostApiState(
       kind: 'stale',
       label: age ? `stale ${age}` : 'stale',
       tone: 'warn',
-      title: `source=/api/status; state=stale; last_ok=${formatMaybeDate(statusLoadedAt)}; error=${statusError}`,
+      title: `RimBob Host status is stale. Last successful poll: ${formatMaybeDate(statusLoadedAt)}. Current error: ${statusError}`,
     };
   }
 
@@ -126,7 +126,7 @@ function deriveHostApiState(
       kind: 'offline',
       label: 'offline',
       tone: 'error',
-      title: `source=/api/status; state=offline; error=${statusError}`,
+      title: `RimBob Host status is offline. Current error: ${statusError}`,
     };
   }
 
@@ -134,7 +134,7 @@ function deriveHostApiState(
     kind: 'checking',
     label: 'checking',
     tone: 'idle',
-    title: 'source=/api/status; state=checking',
+    title: 'Waiting for the first RimBob Host status poll.',
   };
 }
 
@@ -143,7 +143,7 @@ function deriveRimApiState(status: RimBobStatus | null, host: HostApiState): Hea
     return {
       label: 'unknown',
       tone: 'idle',
-      title: `source=/api/status.rimapi_reachable; state=unknown; host_api=${host.kind}`,
+      title: `RIMAPI state is unknown because Host status is ${host.kind}.`,
     };
   }
 
@@ -152,14 +152,14 @@ function deriveRimApiState(status: RimBobStatus | null, host: HostApiState): Hea
     return {
       label: `last ${liveLabel}`,
       tone: 'idle',
-      title: `source=/api/status.rimapi_reachable; state=stale; last=${status.rimapi_reachable}; host_api=stale`,
+      title: `Last known RIMAPI refresh state: ${status.rimapi_reachable ? 'live' : 'waiting'}. Host status is stale.`,
     };
   }
 
   return {
     label: liveLabel,
     tone: status.rimapi_reachable ? 'ok' : 'warn',
-    title: `source=/api/status.rimapi_reachable; value=${status.rimapi_reachable}; colony_state_origin=${status.colony_state_origin ?? 'unknown'}`,
+    title: `RimWorld/RIMAPI live refresh: ${status.rimapi_reachable ? 'yes' : 'no'}. Colony state origin: ${status.colony_state_origin ?? 'unknown'}.`,
   };
 }
 
@@ -168,7 +168,7 @@ function deriveLlmState(status: RimBobStatus | null, host: HostApiState): Header
     return {
       label: 'unknown',
       tone: 'idle',
-      title: `source=/api/status.llm_status; state=unknown; host_api=${host.kind}`,
+      title: `LLM state is unknown because Host status is ${host.kind}.`,
     };
   }
 
@@ -194,7 +194,7 @@ function deriveMayorState(status: RimBobStatus | null, host: HostApiState): Head
     return {
       label: 'unknown',
       tone: 'idle',
-      title: `source=/api/status.mayor_running; state=unknown; host_api=${host.kind}`,
+      title: `Mayor state is unknown because Host status is ${host.kind}.`,
     };
   }
 
@@ -203,7 +203,7 @@ function deriveMayorState(status: RimBobStatus | null, host: HostApiState): Head
     return {
       label: `last ${label}`,
       tone: 'idle',
-      title: `source=/api/status; state=stale; mayor_running=${status.mayor_running}; mayor_snapshot_version=${status.mayor_snapshot_version ?? 'null'}`,
+      title: `Last known Mayor state: ${label}. Snapshot version: ${status.mayor_snapshot_version ?? 'none'}. Host status is stale.`,
     };
   }
 
@@ -218,19 +218,13 @@ function deriveStreamState(stream: StreamDiagnostics): HeaderState {
   return {
     label: stream.state,
     tone: stream.state === 'open' ? 'ok' : stream.state === 'error' ? 'warn' : 'idle',
-    title: `source=/api/advice/stream; state=${stream.state}; ready_state=${stream.readyState}; events=${stream.eventCount}; reconnects=${stream.reconnectCount}; last_event=${stream.lastEventType ?? 'none'}`,
+    title: `Live advice stream is ${stream.state}. Events: ${stream.eventCount}; reconnects: ${stream.reconnectCount}; last event: ${stream.lastEventType ?? 'none'}.`,
   };
 }
 
 function llmTitle(status: RimBobStatus, llmStatus: string, state: 'live' | 'stale'): string {
-  return [
-    'source=/api/status',
-    `state=${state}`,
-    `llm_status=${llmStatus}`,
-    `llm_configured=${status.llm_configured}`,
-    `llm_last_event_at=${formatMaybeDate(status.llm_last_event_at)}`,
-    `llm_last_error=${status.llm_last_error ?? 'null'}`,
-  ].join('; ');
+  const stalePrefix = state === 'stale' ? 'Last known ' : '';
+  return `${stalePrefix}LLM status: ${llmStatus}. Gemini key configured: ${status.llm_configured ? 'yes' : 'no'}. Last LLM event: ${formatMaybeDate(status.llm_last_event_at)}. Last error: ${status.llm_last_error ?? 'none'}.`;
 }
 
 function llmToneFor(status: string): PillTone {
@@ -255,18 +249,18 @@ function mayorLabel(status: RimBobStatus): string {
 
 function mayorTitle(status: RimBobStatus): string {
   if (status.mayor_last_error) {
-    return `source=/api/status; mayor_last_error=${status.mayor_last_error}`;
+    return `Mayor last error: ${status.mayor_last_error}`;
   }
 
   if (status.mayor_running) {
-    return `source=/api/status; mayor_running=true; mayor_started_at=${formatMaybeDate(status.mayor_started_at)}`;
+    return `Mayor is running. Started: ${formatMaybeDate(status.mayor_started_at)}.`;
   }
 
   if (status.mayor_snapshot_version !== null) {
-    return `source=/api/status; mayor_running=false; mayor_snapshot_version=${status.mayor_snapshot_version}; mayor_completed_at=${formatMaybeDate(status.mayor_completed_at)}`;
+    return `Mayor snapshot is loaded; no Mayor run is active. Snapshot version: ${status.mayor_snapshot_version}. Last completed: ${formatMaybeDate(status.mayor_completed_at)}.`;
   }
 
-  return 'source=/api/status; mayor_running=false; mayor_snapshot_version=null';
+  return 'No Mayor snapshot is loaded, and no Mayor run is active.';
 }
 
 function formatBuildDateTime(value: string): string {
@@ -281,22 +275,28 @@ function formatBuildDateTime(value: string): string {
 function dashboardAssetLabel(assetVersion: string): string {
   if (assetVersion === 'missing' || assetVersion === 'unknown') return assetVersion;
 
-  return assetVersion
-    .split('|')
-    .map(asset => asset.replace(/^index-/, '').replace(/\.(js|css)$/i, ''))
-    .join(' / ');
+  return 'loaded';
+}
+
+function dashboardAssetTooltip(assetVersion: string): string {
+  if (assetVersion === 'missing') return 'Dashboard bundle fingerprint is missing.';
+  if (assetVersion === 'unknown') return 'Dashboard bundle fingerprint is unknown.';
+
+  const assets = assetVersion.split('|');
+  const jsAsset = assets.find(asset => asset.endsWith('.js')) ?? 'unknown';
+  const cssAsset = assets.find(asset => asset.endsWith('.css')) ?? 'unknown';
+  return `Dashboard UI bundle loaded. JS fingerprint: ${jsAsset}. CSS fingerprint: ${cssAsset}.`;
 }
 
 function runtimeTooltip(runtimeRoot: string | null, hostProcessPath: string | null): string {
   if (!runtimeRoot && !hostProcessPath) {
-    return 'source=/api/system/health; runtime.runtime_root=checking; runtime.host_process_path=checking';
+    return 'Waiting for Host runtime path metadata.';
   }
 
   return [
-    'source=/api/system/health',
-    `runtime.runtime_root=${runtimeRoot ?? 'unknown'}`,
-    `runtime.host_process_path=${hostProcessPath ?? 'unknown'}`,
-  ].join('; ');
+    `Dashboard is served from: ${runtimeRoot ?? 'unknown'}.`,
+    `Host process: ${hostProcessPath ?? 'unknown'}.`,
+  ].join(' ');
 }
 
 function formatMaybeDate(value: string | null): string {

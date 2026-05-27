@@ -85,8 +85,11 @@ values are `unknown`, not inferred from cached data. `LLM configured` means a
 Gemini key exists; provider success/failure comes from the latest raw-output
 status. `Mayor loaded` means no Mayor run is active and a Mayor snapshot is
 loaded; the snapshot version belongs in the tooltip or SYSTEM details, not the
-compact label. Every header marker/chip should carry a terse data tooltip with
-the source endpoint or field plus the current/last value, not explanatory prose.
+compact label. The dashboard asset marker should read as a state such as
+`UI loaded`; bundle hashes belong in the tooltip. Every header marker/chip
+should carry a terse explanatory tooltip with the current/last value. Avoid
+normal header tooltips that are just route names, implementation URLs, or raw
+field names; those details belong in SYSTEM/debug panels.
 The header also exposes `Run Cabinet Now`. Minister workspaces expose
 `Run {Minister} Now` beside the selected minister's last-run time. The selected
 view is already visible in the tab bar and should not be repeated beside the run
