@@ -6,31 +6,12 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 
 ## Agent Discipline
 
-- Read `Docs/DESIGN.md`, `HumanTodo.md`, and the relevant focus doc before changing files.
-- Prefer short concise answers, but never skip the important details!
-  - e.g. just say All tests passed instead of reporting commands used
-- Prefer concise bullets for operational summaries when they improve scan speed.
-- Offer pushback when a request seems risky, over-scoped, inconsistent with repo/design direction, or likely to have a simpler better path. Keep pushback concrete and concise; if the user clearly asked for implementation and the work is safe, state the concern and then proceed.
-- Design sessions are for exploration and docs. Do not write code unless asked.
-- Build sessions are for implementation. Do not redesign unless a blocker is found.
+- Read `soul.md` for interaction defaults, then read `Docs/DESIGN.md`, `HumanTodo.md`, and the relevant focus doc before changing files.
 - Store agent-created plans in `.plans/`. At session end, offer to update `HumanTodo.md` with new tasks uncovered.
-- For bug reports and user complaints, prefer the general correct fix over one-off workarounds.
-- Ask targeted questions with local context and tradeoffs before committing to a path. Don't ask when the direction is clear.
 - This project is maintained simultaneously by multiple AI agents from different companies.
 - After finishing a change, make sure I can see it. Rebuild if necessary, and include a clickable URL or file link to the result.
-- Use mermaid diagrams over prose
-- dont be vauge! Write specifics. no "Update file" but "file: Added X."
-- Show me pseudo code
 - Use cheap subagents often
 - Show me your plan before doing any significant work
-
-
-# Dictionary
-
-- AMA = you should ask me questions for every desicion.
-- WDYT = Don't implement it, but give me your honest opinion. offer pushback, rethink the design, think outside the box, maybe change the scope.
-- When the user asks conceptual, design, "should we", "why", or "what about" questions, answer/review first. Do not rush to implementation unless clearly asked.
-- If a prompt combines questions and actions, make sure to answer all questions first, then continue to actions (unless my questions undermine your confidence)
 
 ## Coding
 
