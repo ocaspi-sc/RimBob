@@ -39,7 +39,7 @@ Src/Tests/             Unit and integration-style tests
 
 - .NET 9 SDK
 - Node.js LTS
-- RimWorld with RIMAPI available at `http://localhost:8765/`
+- RimWorld 1.6 with RIMAPI available at `http://localhost:8765/`
 - A Gemini API key for LLM-backed Mayor calls (env var or `appsettings.Local.json` — see Setup)
 
 The host binds to localhost only. Do not expose it on `0.0.0.0`.

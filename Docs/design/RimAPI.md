@@ -8,6 +8,10 @@ RimBob's active runtime mod is the local fork at `C:\dev\RIMAPI-for-RimBob`
 needed by RimBob should land in that sibling fork, not in this repo and not in
 the upstream `IlyaChichkov/RIMAPI` checkout.
 
+The RimBob fork targets RimWorld 1.6 only. Build and install fork changes with
+`Release-1.6`; do not add `Release-1.5`, `RIMWORLD_1_5`, or other old-game
+compatibility paths.
+
 If you need an endpoint not listed here, fetch the live docs and append to this file.
 
 > **Verified vs. cached.** The catalogue below was distilled from upstream docs and is **not** all field-checked against the running mod. Verified shapes are called out inline as slices wire them into ingestion. Several DTO field names that previously diverged from the live API have been corrected against the running RIMAPI (e.g. `tick` → `game_tick`, `wealth` → `colony_wealth`, `paused` → `is_paused`, `mapId` → `map_id`); other endpoint DTOs remain speculative until a minister actually wires them.
