@@ -58,7 +58,7 @@ advisory needs, not allocation authority.
 
 Ministers may output structured requests for CoS by attaching
 `ResourceRequest`s to flags. A request describes the dependency that blocks or
-sharpens the source minister's issue, such as `requested_from: Construction`
+sharpens the source minister's issue, such as `requested_from: Willie`
 for a freezer/cooler dependency or `requested_from: Labor` for a work-type
 qualified labor need. It is not an imperative task for CoS and it is not a
 player-facing action.

@@ -103,8 +103,8 @@ Files (modified):
 
 Tests (new):
 
-- `Src/Tests/Construction/WillieBriefingShapeTests.cs`
-  - Construction with all defaults round-trips through
+- `Src/Tests/Willie/WillieBriefingShapeTests.cs`
+  - Willie briefing with all defaults round-trips through
     `System.Text.Json.JsonSerializer` (mirror
     `FoodBriefingSerializationTests` if one exists).
   - `WillieAnchorInventory.Anchors` defaults to empty list.
@@ -303,7 +303,7 @@ WB2 + WB3 are independent and may be ordered either way.
 
 | Slice | New | Modified |
 |---|---|---|
-| WB1 | `Src/Common/Briefings/WillieBriefing.cs`, `WillieRoomAnchor.cs`, `WillieConcernSummaries.cs`, `WillieDataCoverage.cs`, `Src/Tests/Construction/WillieBriefingShapeTests.cs` | `Src/StateStore/ColonyState.cs` (aggregate-name constant) |
+| WB1 | `Src/Common/Briefings/WillieBriefing.cs`, `WillieRoomAnchor.cs`, `WillieConcernSummaries.cs`, `WillieDataCoverage.cs`, `Src/Tests/Willie/WillieBriefingShapeTests.cs` | `Src/StateStore/ColonyState.cs` (aggregate-name constant) |
 | WB2 | `Src/Ingestion/Dtos/ConstructionBacklogDto.cs`, `Src/Common/Aggregates/WillieBacklog.cs`, `Src/StateStore/Derivations/WillieBriefingDerivation.cs`, `Src/Tests/State/WillieBacklogMapperTests.cs`, `Src/Tests/State/WillieBriefingDerivationTests.cs` | `Src/GameStateSync/RimApiClient.cs`, `Src/StateStore/Ingestion/MapAggregateMapper.cs`, `Src/StateStore/Ingestion/IngestionDispatcher.cs`, `Src/StateStore/ColonyState.cs` |
 | WB3 | `Src/StateStore/Derivations/WillieAnchorInventoryDerivation.cs`, `Src/StateStore/Derivations/Common/RoomClassMapper.cs`, `Src/Tests/State/WillieAnchorInventoryDerivationTests.cs` | `Src/StateStore/Derivations/Common/BuildingClassifier.cs`, `Src/StateStore/Derivations/WillieBriefingDerivation.cs` |
 | WB4 | `Src/Ingestion/Dtos/MapReachDto.cs`, `Src/Tests/Ingestion/RimApiClientFork3Tests.cs` | `Src/GameStateSync/RimApiClient.cs` |
@@ -312,7 +312,7 @@ WB2 + WB3 are independent and may be ordered either way.
 
 ## 5. Out of scope (separate plans)
 
-- **`MinisterOfConstruction` registry / DI wiring** — covered by
+- **`MinisterOfWillie` registry / DI wiring** — covered by
   `base-construction-layout-agent.md` Slices A/B/C.
 - **Willie Rules `Rules.cs`** — depends on this plan but lands in the
   follow-on Willie minister slice. The Slice-A rule cut is specified in

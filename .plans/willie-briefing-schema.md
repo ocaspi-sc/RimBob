@@ -8,7 +8,7 @@
 
 ## Motivation
 
-The Willie minister (Construction) cannot move past schema-landing until its **briefing record** is specified. Without a per-field map, two downstream tracks stall:
+The Willie minister cannot move past schema-landing until its **briefing record** is specified. Without a per-field map, two downstream tracks stall:
 
 - **Willie Rules Slice A** writes deterministic rules that read briefing fields. If a rule reads a field that turns out to be `need-fork` or `defer`, the rule ships dead. The cut between "rules I can ship now" and "rules that wait for the next fork slice" must be explicit before the first `Rules.cs` line is written.
 - **Placement Solver PS1** ([`placement-solver.md`](placement-solver.md)) resolves `near:<class>` against an anchor inventory the briefing publishes. If the anchor contract is wrong (e.g. centroid-only when the locked decision is `{room_id, entry_cells[], region_id}`), PS1 ships against a contract the rest of the solver pipeline can't honour.
@@ -16,7 +16,7 @@ The Willie minister (Construction) cannot move past schema-landing until its **b
 Each slice carries its own motivation:
 
 - **S1** — Per-concern signal tables. Without explicit `have / need-fork / defer` per row, every consumer guesses. The tables are the single source of truth for "is signal X readable today?"
-- **S2** — RimMind cross-walk. Two RimMind world-data parts (`ConstructionBacklogPart`, `StorageSaturationPart`) already compute Construction-relevant signals. Ingesting an existing implementation beats reinventing it; the cross-walk decides per-part whether to ingest, mirror in RIMAPI, or skip.
+- **S2** — RimMind cross-walk. Two RimMind world-data parts (`ConstructionBacklogPart`, `StorageSaturationPart`) already compute Willie-relevant signals. Ingesting an existing implementation beats reinventing it; the cross-walk decides per-part whether to ingest, mirror in RIMAPI, or skip.
 - **S3** — `AnchorInventory` contract. The 2026-05-27 locked decision changed anchor representation from centroid to `{room_id, entry_cells[], region_id}`. PS1 cannot start until the record shape and per-cycle construction are written down.
 - **S4** — Slice-A rule cut. Rules-vs-aspiration classification per concern is the actionable output. Willie Rules Slice A reads this list to scope its first PR.
 - **S5** — HumanTodo promotions. Every `need-fork` row must trace to a HumanTodo. Without that trace, the gap is invisible to future implementers and the meta-plan §4 graph rots.
@@ -25,7 +25,7 @@ Each slice carries its own motivation:
 
 ## Goal
 
-Produce a per-field map of the `ConstructionBriefing` (Willie minister briefing record) so every downstream consumer can tell **what's already readable, what needs RIMAPI work, and what to defer**.
+Produce a per-field map of the `WillieBriefing` record so every downstream consumer can tell **what's already readable, what needs RIMAPI work, and what to defer**.
 
 Per candidate field, decide:
 
@@ -77,7 +77,7 @@ Cross-cutting tables in the fields doc:
 
 ## S2 — RimMind cross-walk
 
-Two RimMind world-data parts overlap the Construction briefing. Both predate RIMAPI's matching endpoints; the question is whether to ingest the RimMind shape directly or to consume the RIMAPI fork endpoint and let RimMind keep its own snapshot.
+Two RimMind world-data parts overlap the Willie briefing. Both predate RIMAPI's matching endpoints; the question is whether to ingest the RimMind shape directly or to consume the RIMAPI fork endpoint and let RimMind keep its own snapshot.
 
 ### `ConstructionBacklogPart`
 
@@ -131,7 +131,7 @@ The `near:<class>` resolution step in the Placement Solver ([`placement-solver.m
 ### Record shape
 
 ```csharp
-// Src/Common/Briefings/ConstructionBriefing.cs (proposed)
+// Src/Common/Briefings/WillieBriefing.cs (proposed)
 public sealed record AnchorInventory(
     IReadOnlyList<RoomAnchor> Anchors);
 
@@ -149,7 +149,7 @@ public sealed record RoomAnchor(
 
 `RoomClass` reuses the enum proposed in [`willie-request-taxonomy.md`](willie-request-taxonomy.md) §1a so the solver's `near:kitchen` request and the briefing's anchor class are the same type — no string-matching fragility at the boundary.
 
-### Construction (per-cycle, mirrors Food)
+### Willie (per-cycle, mirrors Food)
 
 `AnchorInventoryDerivation.Compute(ColonyState s)` runs once per cycle in the state-store derivation pass:
 
@@ -157,7 +157,7 @@ public sealed record RoomAnchor(
 2. Compute `Centroid` from contained buildings' `Position` mean. When no building is known to belong to the room, leave `Centroid = null`; solver treats the anchor as `EntryCells`-only (Slice B) or skips it (Slice A).
 3. `EntryCells = []` until `rimapi-room-entry-cells` (S5) lands.
 4. `RegionId = null` until `rimapi-map-region-at` (S5) lands.
-5. Emit `AnchorInventory(Anchors: ...)` into `ConstructionBriefing`.
+5. Emit `AnchorInventory(Anchors: ...)` into `WillieBriefing`.
 
 ### `near:kitchen` end-to-end (north-star demo)
 
@@ -165,7 +165,7 @@ Tracing the [`willie-meta-plan.md`](willie-meta-plan.md) §1 chain through the a
 
 1. **Inbound request.** Food emits `building_request { target_class: freezer, adjacency: [{ relation: near, target: kitchen }], temperature: { freezing }, capacity_need: { food_units, 200 }, deadline: { by_day, 15 } }` on an `AgentFlag`.
 2. **Willie Rules.** Detects active `building_request`; constructs `PlacementSpec` (per [`placement-solver.md`](placement-solver.md) §2).
-3. **Anchor resolution.** Solver reads `ConstructionBriefing.AnchorInventory`, filters `Anchors.Where(a => a.Class == RoomClass.Kitchen)`. Result: 0..N `RoomAnchor`s, each with `RoomId`, `Centroid`, and (in Slice B) `EntryCells` + `RegionId`.
+3. **Anchor resolution.** Solver reads `WillieBriefing.AnchorInventory`, filters `Anchors.Where(a => a.Class == RoomClass.Kitchen)`. Result: 0..N `RoomAnchor`s, each with `RoomId`, `Centroid`, and (in Slice B) `EntryCells` + `RegionId`.
 4. **Sizing.** `capacity_need.food_units = 200` → 5×5 freezer template (per §3 step 2).
 5. **Candidate generation.** `TemplateAnchoredGenerator` (PS1) emits one freezer-shell-plus-cooler `BlueprintGroup` per kitchen anchor, anchored adjacent to the kitchen's `Centroid` (Slice A) or `EntryCells` (Slice B).
 6. **Scoring — Slice A.** `freezer_to_kitchen_distance` = `MapDistance.Manhattan(candidate_centroid, kitchen.Centroid)`. Rank ascending. No FORK3 read needed.
@@ -368,7 +368,7 @@ Already resolved (do not re-open — see meta-plan §3 / §5):
 
 **Revisions (post-review).**
 
-- Renamed from "Construction Briefing + Data-Gap Anchor (the GATE)" to "Willie Briefing Schema"; doc filename `willie-gate-design.md` → `willie-briefing-schema.md`.
+- Renamed from the old gate-design title to "Willie Briefing Schema"; doc filename `willie-gate-design.md` → `willie-briefing-schema.md`.
 - S1 tables offloaded to companion doc `willie-briefing-fields.md`.
 - Prose unwrapped; hard line breaks collapsed.
 - `PowerInfoDto` row and FORK3 row promoted to `have` / landed (sibling plans closed).

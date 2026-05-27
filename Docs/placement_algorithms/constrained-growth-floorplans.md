@@ -60,7 +60,7 @@ for layout in layouts:
 
 ## Fit / Limits
 
-This is more complex than RimBob needs for the first Construction slice. Do not
+This is more complex than RimBob needs for the first Willie slice. Do not
 make it the initial implementation. Use it as the upgrade path after the single
 placement solver can explain candidates, reject bad terrain, and validate with
 RIMAPI.

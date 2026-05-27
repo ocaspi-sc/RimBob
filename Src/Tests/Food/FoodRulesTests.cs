@@ -211,9 +211,9 @@ public sealed class FoodRulesTests
         advice.Concern.Should().Be("manage_freezer");
         advice.Priority.Should().Be(AdvicePriority.Medium);
         advice.Actions.Should().ContainSingle().Which.Kind.Should().Be(AdviceActionKind.PlaceBlueprint);
-        advice.Actions.Single().Owner.Should().Be("Construction");
+        advice.Actions.Single().Owner.Should().Be("Willie");
         decision.Flags.Should().ContainSingle().Which.BuildingRequests.Should()
-            .Contain(r => r.TargetClass == BuildingClass.Freezer && r.RequestedFrom == "Construction");
+            .Contain(r => r.TargetClass == BuildingClass.Freezer && r.RequestedFrom == "Willie");
     }
 
     [Fact]
@@ -239,12 +239,12 @@ public sealed class FoodRulesTests
         advice.Actions.Should().Contain(action => action.Kind == AdviceActionKind.MarkHarvest);
         AdviceAction freezerAction = advice.Actions.Should().Contain(action =>
             action.Kind == AdviceActionKind.PlaceBlueprint &&
-            action.Owner == "Construction").Subject;
+            action.Owner == "Willie").Subject;
         freezerAction.Instruction.Should().Contain("starter freezer");
         freezerAction.Instruction.Should().Contain("next harvest");
         decision.Flags.Should().ContainSingle().Which.BuildingRequests.Should().Contain(request =>
             request.TargetClass == BuildingClass.Freezer &&
-            request.RequestedFrom == "Construction" &&
+            request.RequestedFrom == "Willie" &&
             request.Request.Contains("starter freezer"));
     }
 
@@ -283,7 +283,7 @@ public sealed class FoodRulesTests
         advice.Actions.Should().Contain(action => action.Kind == AdviceActionKind.ProductionBill);
         AdviceAction freezerAction = advice.Actions.Should().Contain(action =>
             action.Kind == AdviceActionKind.PlaceBlueprint &&
-            action.Owner == "Construction").Subject;
+            action.Owner == "Willie").Subject;
         freezerAction.Instruction.Should().Contain("raw food and cooked meals");
         decision.Flags.Should().ContainSingle().Which.BuildingRequests.Should().Contain(request =>
             request.TargetClass == BuildingClass.Freezer &&
@@ -624,7 +624,7 @@ public sealed class FoodRulesTests
         advice.Actions.Should().Contain(action => action.Kind == AdviceActionKind.MarkHunt);
         advice.Actions.Should().Contain(action =>
             action.Kind == AdviceActionKind.PlaceBlueprint &&
-            action.Owner == "Construction" &&
+            action.Owner == "Willie" &&
             action.Instruction.Contains("foraged food"));
         advice.Actions.Should().NotContain(action => action.Kind == AdviceActionKind.DesignateZone);
         advice.Actions.Should().NotContain(action => action.Kind == AdviceActionKind.SetPriority);
@@ -637,7 +637,7 @@ public sealed class FoodRulesTests
             request.RequestedFrom == "Labor");
         flag.BuildingRequests.Should().Contain(request =>
             request.TargetClass == BuildingClass.Freezer &&
-            request.RequestedFrom == "Construction" &&
+            request.RequestedFrom == "Willie" &&
             request.Request.Contains("surplus freezer"));
     }
 
@@ -769,7 +769,7 @@ public sealed class FoodRulesTests
         advice.Actions.Should().Contain(action => action.Kind == AdviceActionKind.MarkHunt);
         AdviceAction freezerAction = advice.Actions.Should().Contain(action =>
             action.Kind == AdviceActionKind.PlaceBlueprint &&
-            action.Owner == "Construction").Subject;
+            action.Owner == "Willie").Subject;
         freezerAction.Instruction.Should().Contain("hunted meat");
         decision.Flags.Should().ContainSingle().Which.BuildingRequests.Should().Contain(request =>
             request.TargetClass == BuildingClass.Freezer &&

@@ -1,31 +1,31 @@
-# Minister of Construction - Minister Design
+# Willie - Minister Design
 
 > **Living document.** See `AGENTS.md` for update rules.
-> Construction is a future feeder advisor. This doc records domain boundaries
+> Willie is a future feeder advisor. This doc records domain boundaries
 > and first-slice intent, not a code-level rule catalogue.
-> Persona / UI name: **Willie**. Cabinet label stays **Construction** / **Minister of Construction**.
+> Willie owns the construction domain; schema/code names use `Willie*`, not `Construction*`.
 
 ---
 
 ## Research / Planning Links
 
-Use these as the current routing links before starting Construction work.
+Use these as the current routing links before starting Willie/construction-domain work.
 
 Direct plans:
 
-- [Base / Construction / Layout Agent Plan](../../../.plans/base-construction-layout-agent.md) - implementation slice plan for the first Construction minister.
-- [Base Layout / Construction Tips](../../../.plans/base-layout-construction-tips.md) - community layout heuristics translated into Construction spatial lint.
-- [RIMAPI Blueprint Placement Endpoint](../../../.plans/rimapi-blueprint-placement-endpoint.md) - fork-side pending blueprint/frame lifecycle for future Construction apply and backlog reads.
-- [Deterministic CoS Cabinet Issue Solver](../../../.plans/deterministic-cos-cabinet-issue-solver.md) - issue-report routing, including Construction-owned issue classes and cross-minister requests.
+- [Base / Willie / Layout Agent Plan](../../../.plans/base-construction-layout-agent.md) - implementation slice plan for the first Willie minister.
+- [Base Layout / Willie Tips](../../../.plans/base-layout-construction-tips.md) - community layout heuristics translated into Willie spatial lint.
+- [RIMAPI Blueprint Placement Endpoint](../../../.plans/rimapi-blueprint-placement-endpoint.md) - fork-side pending blueprint/frame lifecycle for future Willie apply and backlog reads.
+- [Deterministic CoS Cabinet Issue Solver](../../../.plans/deterministic-cos-cabinet-issue-solver.md) - issue-report routing, including Willie-owned issue classes and cross-minister requests.
 
 Reference corpora:
 
-- [Placement Algorithm References](../../placement_algorithms/README.md) - algorithmic building blocks for efficient Construction candidate generation, pruning, scoring, and validation.
+- [Placement Algorithm References](../../placement_algorithms/README.md) - algorithmic building blocks for efficient Willie candidate generation, pruning, scoring, and validation.
 
 Direct todo entries in [HumanTodo.md](../../../HumanTodo.md):
 
-- `source-todo-building-condition-read` - add building hitpoint/power/working-state reads before Construction relies on condition evidence.
-- `construction-minister` - add Construction after minimal CoS handling.
+- `source-todo-building-condition-read` - add building hitpoint/power/working-state reads before Willie relies on condition evidence.
+- `construction-minister` - add Willie after minimal CoS handling.
 - `construction-placement-layout-strategy-base` - decide placement/layout strategy and whether Base Layout ever splits out.
 - `base-layout-construction-tips` - fold community base-building heuristics into spatial lint and dashboard evidence.
 - `add-rimapi-fork-endpoints-blueprint` - add blueprint validate/place/read, allow/disallow, cancel, and backlog endpoints in the RIMAPI fork.
@@ -39,19 +39,19 @@ Supporting research todo entries in [HumanTodo.md](../../../HumanTodo.md):
 
 - `investigate-player-approved-construction-proposal` - learn from RimMind proposal approval patterns.
 - `investigate-construction-minister-algorithms-rimmind` - mine RimMind construction/layout algorithms.
-- `rimmind-construction-backlog` - inspect blueprint/frame/material-gap grouping for the Construction briefing.
-- `rimmind-storage-saturation` - inspect stockpile/storage utilization as a Construction/Chef/Mayor signal.
+- `rimmind-construction-backlog` - inspect blueprint/frame/material-gap grouping for the Willie briefing.
+- `rimmind-storage-saturation` - inspect stockpile/storage utilization as a Willie/Chef/Mayor signal.
 - `investigate-spatial-evidence-tools-location` - inspect location-backed spatial evidence for actionable advice.
 - `rimmind-defense-posture-coverage` - preserve Defense posture context for fortification/build requests.
-- `food-freezer-briefing` - add freezer temperature/spoilage evidence that can drive Construction freezer requests.
-- `source-todo-room-quality-read` - adjacent Welfare room evidence that may also inform Construction room-program advice.
-- `action-ownership-catalogue` - keep Construction ownership aligned with the broader action/endpoint catalogue.
+- `food-freezer-briefing` - add freezer temperature/spoilage evidence that can drive Willie freezer requests.
+- `source-todo-room-quality-read` - adjacent Welfare room evidence that may also inform Willie room-program advice.
+- `action-ownership-catalogue` - keep Willie ownership aligned with the broader action/endpoint catalogue.
 
 ---
 
 ## Domain
 
-Construction owns built infrastructure:
+Willie owns built infrastructure:
 
 - Rooms, walls, doors, floors, roofs, furniture, and base expansion.
 - Power generation, conduits, batteries, switches, and load margin.
@@ -60,18 +60,18 @@ Construction owns built infrastructure:
 - Material/component stockpile zones.
 - Layout efficiency as an extension of room/base planning.
 
-Construction owns build feasibility and placement cost. Other ministers own why
-a build matters. For example, Chef owns freezer need; Construction owns the
+Willie owns build feasibility and placement cost. Other ministers own why
+a build matters. For example, Chef owns freezer need; Willie owns the
 cooler/wall/power work required to satisfy it.
 
 No separate Base Layout minister is planned for the first pass. Split only if
-Construction's layout reasoning becomes noisy enough to justify it.
+Willie's layout reasoning becomes noisy enough to justify it.
 
 ---
 
 ## First Slice Shape
 
-Construction should begin as rules-first `Suggest`-mode advice.
+Willie should begin as rules-first `Suggest`-mode advice.
 
 Likely first advice areas:
 
@@ -121,8 +121,8 @@ the normalized 0-1 values used for ranking. Status facts such as `draftable`,
 `placement_valid`, `materials_ready`, `apply_ready`, and RIMAPI validation state
 stay booleans/enums rather than fake unit-bearing metrics.
 
-The executable Apply (place a chosen layout) renders in **Construction's own
-dashboard scope** (Willie's tab), since Construction emits the placement action.
+The executable Apply (place a chosen layout) renders in **Willie's own
+dashboard scope**, since Willie emits the placement action.
 A requesting minister (e.g. Chef asking for a freezer) shows only its outbound
 request — never another minister's build Apply.
 
@@ -130,7 +130,7 @@ request — never another minister's build Apply.
 
 ## Briefing Direction
 
-Construction briefing should answer:
+Willie briefing should answer:
 
 - What is currently queued or blocked?
 - Which materials/components are bottlenecks?
@@ -139,7 +139,7 @@ Construction briefing should answer:
 - Are there structural or fire risks?
 - Which requests from other ministers require build work?
 
-Exact briefing fields should be defined in code/tests when Construction ships.
+Exact briefing fields should be defined in code/tests when Willie ships.
 
 ---
 
@@ -157,7 +157,7 @@ Rules should handle obvious threshold and missing-asset cases. Escalate for:
 
 ## Resource Requests
 
-Construction may request:
+Willie may request:
 
 - Labor: Construct, Mine, Deconstruct, Haul when directly blocking build work.
 - Items: steel, wood, stone blocks, components, power materials.
@@ -180,8 +180,8 @@ In MVP these requests remain advice and flags; they never execute writes by them
 
 ## Open Questions / TODO
 
-- [x] Construction concerns defined — see **Concerns (defined)** above and `.plans/willie-advice-types.md`.
+- [x] Willie concerns defined — see **Concerns (defined)** above and `.plans/willie-advice-types.md`.
 - [ ] Define room-program derivation in the state store.
-- [ ] Decide how Construction consumes Chef/Defense/Medical build requests.
-- [ ] Decide when Research should split from Construction.
+- [ ] Decide how Willie consumes Chef/Defense/Medical build requests.
+- [ ] Decide when Research should split from Willie.
 - [ ] Define practical layout heuristics without overbuilding a planner.

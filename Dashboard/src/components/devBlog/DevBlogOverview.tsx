@@ -94,7 +94,7 @@ const manualCommitTitles: Record<string, string> = {
   '5a732206': 'Closeout skill',
   '5ab97da5': 'Roadmap pivot',
   '5c3bd31a': 'Food alerts',
-  '5c89f1a8': 'Construction plan',
+  '5c89f1a8': 'Willie plan',
   '5d05b9ba': 'Dashboard v2',
   '605b29eb': 'Todo workflow',
   '649b49df': 'Agenda naming',
@@ -1247,7 +1247,7 @@ function featureDisplayInfo(featureKey: string): { title: string; description: s
     case 'Design docs and roadmap':
       return {
         title: '🧭 Design Decision Log',
-        description: 'Durable design docs, roadmap pivots, construction plans, product framing, and verification writeups.',
+        description: 'Durable design docs, roadmap pivots, Willie plans, product framing, and verification writeups.',
         icon: iconForField('briefing_version'),
       };
     case 'Todo and idea triage':
@@ -1339,7 +1339,7 @@ function featureGroupTitle(title: string): string {
     case 'Refactoring plan':
     case 'Rollout docs':
     case 'Roadmap pivot':
-    case 'Construction plan':
+    case 'Willie plan':
     case 'Plan revert':
     case 'Result links':
     case 'Zone ownership':

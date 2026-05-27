@@ -8,7 +8,7 @@ Note: Original RimBob summary. This is not a verbatim copy of the source.
 
 ## RimBob Use
 
-Mechanics reference for Construction and Welfare layout checks. This source is less about example floor plans and more about how the game detects rooms, assigns room roles, and computes impressiveness.
+Mechanics reference for Willie and Welfare layout checks. This source is less about example floor plans and more about how the game detects rooms, assigns room roles, and computes impressiveness.
 
 ## Layout Heuristics
 
@@ -36,4 +36,3 @@ Source image: https://rimworldwiki.com/images/7/73/Quality_preview.png
 ## Caution
 
 The image is a RimWorld UI/game screenshot hosted by the wiki. Treat it as source-attributed reference material, not freely reusable original art.
-

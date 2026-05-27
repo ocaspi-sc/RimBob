@@ -1,8 +1,8 @@
-# Willie (Construction) — Inbound Request Taxonomy & Typed-Array Request Schema
+# Willie — Inbound Request Taxonomy & Typed-Array Request Schema
 
 > **Design synthesis, pending human review.** This anchor formalizes the
-> **inbound** request surface for the Construction minister (persona **Willie**,
-> cabinet label **Construction**) and fixes the **request schema** that travels on
+> **inbound** request surface for **Willie** (the construction-domain minister)
+> and fixes the **request schema** that travels on
 > `AgentFlag`. Willie is the build-feasibility owner: other ministers REQUEST builds
 > from it (freezer, walls, hospital, benches, storage, power). This file owns the
 > **REQUEST / INPUT** side only.
@@ -21,7 +21,7 @@
 >   ([`communication.md`](../Docs/design/communication.md) "Request discipline";
 >   [`ministers.md`](../Docs/design/ministers.md) "Resource Requests").
 > - `requested_from` names the **owner of the dependency** when known from the
->   ownership map (here, almost always `"Construction"` for inbound build asks).
+>   ownership map (here, almost always `"Willie"` for inbound build asks).
 > - Canonical labor work-types are a **code contract**:
 >   [`Src/Common/Advice/WorkType.cs`](../Src/Common/Advice/WorkType.cs). No
 >   duplicate enum is maintained in design docs.
@@ -86,7 +86,7 @@ migration is unambiguous):
 | `Building` | `building_requests[]` | The main Willie inbound channel; now far richer. |
 | `Labor` | `labor_requests[]` | Stays aligned to canonical `WorkType`. |
 | `Item` | `item_requests[]` | Materials/components/meds the build consumes. |
-| `StockpileSpace` | `building_requests[]` (`target_class: stockpile`/`shelf`) | Stockpile/shelf placement *is* a Construction build/zone ask; folded in, not its own array (see Open Questions). |
+| `StockpileSpace` | `building_requests[]` (`target_class: stockpile`/`shelf`) | Stockpile/shelf placement *is* a Willie build/zone ask; folded in, not its own array (see Open Questions). |
 | `Tile` | `attention[]` | Rare; advisory-only space hint, no allocation in MVP. |
 | `Bill` | `attention[]` | A bill is an **Industry/Food** production ask, not a Willie build; route as attention with `requested_from`. |
 | `TradeCapacity` | `attention[]` | An **Economy** ask, never inbound to Willie; catch-all. |
@@ -115,7 +115,7 @@ to guess the requester's intent.
 | `deadline` | `Deadline`? | – | Optional time pressure: `{ kind, value }` where `kind ∈ {by_day, by_season, before_event}` (e.g. `by_day 15`, `before_event winter`, `before_event next_raid`). The "by day X" half of the freezer example. |
 | `quantity` | int? | – | Count when the ask is N of a thing (e.g. 3 hospital beds) and `capacity_need` is not the better fit. |
 | `priority` | `AdvicePriority`? | – | Requester's self-rated priority (Willie may re-rate). |
-| `requested_from` | string? | – | Owner of the dependency; for inbound build asks this is `"Construction"`. (Enum-vs-string is an Open Question.) |
+| `requested_from` | string? | – | Owner of the dependency; for inbound build asks this is `"Willie"`. (Enum-vs-string is an Open Question.) |
 
 Supporting closed enums proposed for `BuildingRequest` (final membership is a
 code contract once promoted; this is the design-level set):
@@ -149,7 +149,7 @@ code contract once promoted; this is the design-level set):
   "urgency": "before_deadline",
   "deadline": { "kind": "by_day", "value": 15 },
   "priority": "high",
-  "requested_from": "Construction"
+  "requested_from": "Willie"
 }
 ```
 
@@ -272,7 +272,7 @@ design-forward.**
 
 This covers every inbound ask named in the milestone scope and the "Base And
 Infrastructure" rows of the [`ministers.md`](../Docs/design/ministers.md) Action
-Ownership Map. Construction always owns the *buildable feasibility/placement*; the
+Ownership Map. Willie always owns the *buildable feasibility/placement*; the
 requester always owns *why it matters* (`reason`).
 
 ---
@@ -303,7 +303,7 @@ should consider the same removal on its action record, but that is its call.)
       enum once the minister roster is frozen; string until then. Decide alongside
       `SourceMinister` on `AgentFlag` (same question, should match).
 - [ ] **Should `StockpileSpace` really fold into `building_requests`?** It is a
-      build/zone placement ask (Construction owns the zone per the Zone Ownership
+      build/zone placement ask (Willie owns the zone per the Zone Ownership
       table), so it fits — but a thin `stockpile_requests[]` could be cleaner if
       stockpile/shelf asks dominate volume. Folded for now; revisit with data.
 - [ ] **`capacity_need.measure` enum membership.** Proposed

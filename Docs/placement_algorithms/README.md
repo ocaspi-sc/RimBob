@@ -7,7 +7,7 @@ verbatim copies of the source material.
 
 ## RimBob Use
 
-These references support the future Construction placement solver. The practical
+These references support the future Willie placement solver. The practical
 shape is a staged solver: cheap grid precomputation first, bounded candidate
 generation second, expensive validation last. RimBob should keep this in
 `Suggest` mode until RIMAPI can validate/place/read back blueprints.

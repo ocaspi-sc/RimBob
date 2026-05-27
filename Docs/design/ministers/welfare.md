@@ -34,7 +34,7 @@ owns trade and wealth once scheduled.
 
 Guest/visitor stewardship defaults to Welfare for comfort, lodging quality, and
 social pressure. Economy owns guests as trade, caravan, goodwill, or diplomacy
-opportunities; Construction owns the physical guest-room work; Defense owns
+opportunities; Willie owns the physical guest-room work; Defense owns
 active threat response.
 
 ---
@@ -91,7 +91,7 @@ Welfare briefing should answer:
 - Are comfort, beauty, room quality, or apparel causing clear pressure?
 - Are relationships/social events creating a current risk?
 - Are guests/visitors creating hospitality, room-quality, or social pressure?
-- Which requests should go to Construction, Industry, Medical, or Economy?
+- Which requests should go to Willie, Industry, Medical, or Economy?
 
 Exact fields belong in code/tests once Welfare ships.
 
@@ -116,7 +116,7 @@ Welfare may request:
 
 - Chef: meals, meal quality, or nutrition-chain fixes when hunger or food mood
   is the driver.
-- Construction: beds, recreation buildings, room improvements, comfort assets.
+- Willie: beds, recreation buildings, room improvements, comfort assets.
 - Economy: visitor trade, caravan, goodwill, or diplomacy opportunities.
 - Industry: apparel or beauty/comfort goods.
 - Medical: pain, wounds, disease, or care issues affecting mood.

@@ -30,7 +30,7 @@ Examples:
 
 - Food: crop choice principles, seasonal priorities, food math.
 - Defense: raid benchmarks, killbox principles, weapon guidance.
-- Construction: build order, materials, power heuristics.
+- Willie: build order, materials, power heuristics.
 - Welfare: Mood & Needs principles, including mood modifiers, thoughts,
   recreation, schedules, and comfort.
 - Mayor: early colony strategic frame.
@@ -105,7 +105,7 @@ add them deliberately. Suggested areas:
 |---|---|
 | Food | crop tables, food math, freezer/cooking policy |
 | Defense | killboxes, raids, mechanoids, weapons |
-| Construction | power math, room stats, biome-specific build concerns |
+| Willie | power math, room stats, biome-specific build concerns |
 | Welfare | Mood & Needs: mood modifiers, thoughts, recreation, schedules, comfort |
 | Mayor | general strategy, wealth pressure, early-game pacing |
 

@@ -1,8 +1,8 @@
 # Placement Solver - Plan
 
-> Agent-created plan. Lands in **RimBob** (Construction minister side), not the
+> Agent-created plan. Lands in **RimBob** (Willie minister side), not the
 > RIMAPI fork. Deterministic component; **no LLM**. Turns a structured build spec
-> into validated, pickable layout options for Willie (Minister of Construction).
+> into validated, pickable layout options for Willie.
 
 ---
 
@@ -44,7 +44,7 @@ flowchart LR
 ## 1. Inputs / outputs
 
 - **Input:** a `PlacementSpec` (normalized). A `BuildingRequest` maps to it
-  ~1:1; a `ConstructionIntent.build_intent` (self-originated Willie advice) maps
+  ~1:1; a `WillieBuildIntent.build_intent` (self-originated Willie advice) maps
   to the same shape.
 - **Output:** 1-3 `AdviceOption`s (each = `blueprint_group` + `est_materials` +
   `tradeoff_note`) attached to a Willie `AdviceItem`, rendered in **Willie's
@@ -236,9 +236,9 @@ solve(spec, snapshot):
 - The solver does **I/O** (live map reads + fork validate calls), so it is **not
   pure domain** (repo rule: pure domain projects take no external deps). Pure
   packing/anchor math can be a testable helper; orchestration is service-side.
-- Likely: `Src/Ministers/Construction/PlacementSolver.cs` (orchestration via
+- Likely: `Src/Ministers/Willie/PlacementSolver.cs` (orchestration via
   `RimApiClient` + the fork blueprint-group client) + pure layout helpers. The
-  Construction `Rules.cs` calls it when an active `building_request` is present.
+  Willie `Rules.cs` calls it when an active `building_request` is present.
 - Candidate generators should be small pluggable services over the same
   `PlacementSpec` + precomputed evidence. They should be easy to fixture-test
   independently and cheap to disable when a generator produces noisy drafts.
@@ -268,7 +268,7 @@ solve(spec, snapshot):
 Pure packing/anchor math is unit-tested with **map-grid fixtures** (input spec +
 canned map -> expected footprints). The fork `validate` call is the only I/O -
 mock it in tests. Same fixture discipline as ministers
-(`Src/Tests/Construction/Fixtures/`).
+(`Src/Tests/Willie/Fixtures/`).
 
 Generator tests should cover:
 

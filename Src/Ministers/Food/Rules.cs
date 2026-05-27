@@ -142,7 +142,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                         cropCandidate.Reason,
                         quantity: cropCandidate.Tiles,
                         priority: days < 12f ? AdvicePriority.High : AdvicePriority.Medium,
-                        requestedFrom: "Construction"),
+                        requestedFrom: "Willie"),
                     incomingPerishableFood: true),
                 days < 12f || needsFreezerSupport);
         }
@@ -165,7 +165,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 AdvicePriority.Medium,
                 "Food storage needs freezer support",
                 "Food exists but no cooler is visible. Preserve surplus before warm weather or large harvests.",
-                "Chef owns freezer need; Construction owns the actual build work.",
+                "Chef owns freezer need; Willie owns the actual build work.",
                 FreezerSupportActions(briefing, days, incomingPerishableFood: false),
                 FreezerSupportRequests(briefing, days, incomingPerishableFood: false),
                 true);
@@ -266,7 +266,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             new AdviceAction(
                 AdviceActionKind.PlaceBlueprint,
                 $"Plan a {capacity} near food storage before {incoming} spoils.",
-                Owner: "Construction")
+                Owner: "Willie")
         ];
     }
 
@@ -295,7 +295,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 Urgency: FreezerSupportPriority(briefing) >= AdvicePriority.High ? Urgency.BeforeDeadline : Urgency.Soon,
                 Deadline: FreezerDeadline(briefing, incoming),
                 Priority: FreezerSupportPriority(briefing),
-                RequestedFrom: "Construction"));
+                RequestedFrom: "Willie"));
     }
 
     private static bool NeedsFreezerSupport(FoodBriefing briefing, float days, bool incomingPerishableFood) =>
@@ -459,7 +459,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 "Escalate to LLM with crop/freezer/labor tradeoff context"),
             RuleEvaluation("freezer_missing", outcomes,
                 "Coolers == 0; days >= 20; FoodUnits > 0",
-                "ManageFreezer advice; Construction freezer/cooler request"),
+                "ManageFreezer advice; Willie freezer/cooler request"),
             RuleEvaluation("maintain_security_threshold", outcomes,
                 "days >= 30",
                 "No advice; food security threshold is maintained"),
@@ -617,7 +617,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 : new CapacityNeed(CapacityMeasure.StorageStacks, quantity, "food_units"),
             Quantity: quantity,
             Priority: priority,
-            RequestedFrom: "Construction");
+            RequestedFrom: "Willie");
 
     private static string? FirstForbiddenFoodDef(FoodBriefing briefing) =>
         briefing.UnclassifiedFoodItems
@@ -667,7 +667,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                     TargetDef: "TableButcher",
                     RoomClass: RoomClass.Butcher,
                     Priority: priority,
-                    RequestedFrom: "Construction"));
+                    RequestedFrom: "Willie"));
         }
         FoodCropCandidate? cropCandidate = FoodCropMath.Recommend(briefing).BestCandidate;
         if (cropCandidate is not null && ShouldRecommendNewGrowingZone(briefing, cropCandidate))
@@ -676,7 +676,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 $"{cropCandidate.Tiles} emergency food growing tiles",
                 "food buffer is below 7 days and the growing window is still open",
                 Priority: priority,
-                RequestedFrom: "Construction"));
+                RequestedFrom: "Willie"));
             requests = requests.Add(new LaborRequest(
                 "Grow work for emergency food zone",
                 "new food growing tiles only help once sown",
@@ -693,7 +693,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 TargetDef: "Campfire",
                 RoomClass: RoomClass.Kitchen,
                 Priority: priority,
-                RequestedFrom: "Construction"));
+                RequestedFrom: "Willie"));
         if (briefing.RawFoodCount > 0)
         {
             requests = requests.Add(new AttentionRequest(
@@ -743,7 +743,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             actions.Add(new AdviceAction(
                 AdviceActionKind.PlaceBlueprint,
                 "Place a campfire or stove so raw food can become meals.",
-                Owner: "Construction"));
+                Owner: "Willie"));
         if (briefing.RawFoodCount > 0)
         {
             if (ShouldSuggestCookBill(briefing))
@@ -783,7 +783,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             actions.Add(new AdviceAction(
                 AdviceActionKind.PlaceBlueprint,
                 "Place a campfire or stove before relying on cooked-meal advice.",
-                Owner: "Construction"));
+                Owner: "Willie"));
         return actions;
     }
 
@@ -823,7 +823,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 TargetDef: "TableButcher",
                 RoomClass: RoomClass.Butcher,
                 Priority: priority,
-                RequestedFrom: "Construction"));
+                RequestedFrom: "Willie"));
         if (!briefing.Kitchen.HasCookingBuilding)
             requests = requests.Add(new BuildingRequest(
                 "campfire or stove for meat meals",
@@ -832,7 +832,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 TargetDef: "Campfire",
                 RoomClass: RoomClass.Kitchen,
                 Priority: priority,
-                RequestedFrom: "Construction"));
+                RequestedFrom: "Willie"));
         return requests;
     }
 
@@ -846,12 +846,12 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             actions.Add(new AdviceAction(
                 AdviceActionKind.PlaceBlueprint,
                 "Place a butcher table so hunted animals can become meat.",
-                Owner: "Construction"));
+                Owner: "Willie"));
         if (!briefing.Kitchen.HasCookingBuilding)
             actions.Add(new AdviceAction(
                 AdviceActionKind.PlaceBlueprint,
                 "Place a campfire or stove so butchered meat can become meals.",
-                Owner: "Construction"));
+                Owner: "Willie"));
         return actions.Take(3).ToList();
     }
 

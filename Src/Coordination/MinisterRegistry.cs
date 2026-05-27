@@ -47,7 +47,7 @@ public sealed class MinisterRegistry
             HasRawLlmOutput: true,
             HasManualLlmOutput: true,
             HasRag: true),
-        new("construction", "Construction", "minister", false, MinisterViews),
+        new("willie", "Willie", "minister", false, MinisterViews),
         new("defense", "Defense", "minister", false, MinisterViews),
         new("welfare", "Welfare", "minister", false, MinisterViews),
         new("medical", "Medical", "minister", false, MinisterViews),

@@ -62,6 +62,31 @@ public sealed class AdviceNormalizationTests
     }
 
     [Fact]
+    public void ResourceRequestNormalizer_DefaultsLegacyBuildingRequestsToWillie()
+    {
+        JsonNode? root = JsonNode.Parse("""
+        [
+          {
+            "kind": "building",
+            "what": "cooler-backed freezer",
+            "why": "food will spoil"
+          }
+        ]
+        """);
+
+        NormalizedFlagRequests requests = ResourceRequestNormalizer.NormalizeLegacyRequests(
+            root,
+            AdvicePriority.High,
+            Context(),
+            Json);
+
+        BuildingRequest request = requests.BuildingRequests.Should().ContainSingle().Subject;
+        request.TargetClass.Should().Be(BuildingClass.Freezer);
+        request.Priority.Should().Be(AdvicePriority.High);
+        request.RequestedFrom.Should().Be("Willie");
+    }
+
+    [Fact]
     public void AdviceActionNormalizer_ConvertsLegacyActionsAndTextFallback()
     {
         JsonNode? root = JsonNode.Parse("""

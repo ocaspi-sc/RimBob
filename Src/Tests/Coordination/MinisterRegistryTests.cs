@@ -14,7 +14,7 @@ public sealed class MinisterRegistryTests
             "system",
             "mayor",
             "food",
-            "construction",
+            "willie",
             "defense",
             "welfare",
             "medical",
@@ -24,7 +24,7 @@ public sealed class MinisterRegistryTests
             "chief_of_staff");
 
         sut.Find("mayor")!.Ready.Should().BeTrue();
-        sut.Find("construction")!.Ready.Should().BeFalse();
+        sut.Find("willie")!.Ready.Should().BeFalse();
     }
 
     [Fact]
@@ -39,6 +39,7 @@ public sealed class MinisterRegistryTests
     [InlineData("food", "food")]
     [InlineData("Food", "food")]
     [InlineData("Chef", "food")]
+    [InlineData("Willie", "willie")]
     [InlineData("Chief of Staff", "chief_of_staff")]
     [InlineData("chief-of-staff", "chief_of_staff")]
     public void FindMinister_ResolvesKeysAndLabels(string input, string expectedKey)
@@ -58,6 +59,6 @@ public sealed class MinisterRegistryTests
 
         sut.FindMinister("mayor")!.CanManualTrigger.Should().BeTrue();
         sut.FindMinister("food")!.CanManualTrigger.Should().BeTrue();
-        sut.FindMinister("construction")!.CanManualTrigger.Should().BeFalse();
+        sut.FindMinister("willie")!.CanManualTrigger.Should().BeFalse();
     }
 }

@@ -14,7 +14,7 @@
 ## 0. Why a second plan
 
 The single-asset plan deliberately scoped out "multi-asset / area placement."
-Willie's (Minister of Construction) target chain needs more:
+Willie's target chain needs more:
 
 - A freezer / functional room = **walls + door + floor + contained buildings**
   (cooler, shelves). In RimWorld both rooms and the buildings inside them are

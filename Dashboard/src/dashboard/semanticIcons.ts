@@ -62,6 +62,7 @@ const scopeIcons: Record<string, SemanticIconSpec> = {
   dev_blog: common.devBlog,
   mayor: common.mayor,
   food: common.food,
+  willie: common.construction,
   construction: common.construction,
   defense: item('Barricade', 'Defense icon', 'DE'),
   welfare: common.welfare,

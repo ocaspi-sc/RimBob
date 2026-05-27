@@ -128,7 +128,7 @@ stays static/reference-oriented so it does not become either a second SYSTEM
 page or a second ANALYTICS page.
 
 Live minister scopes are Mayor and Chef (`food` key). Future minister scopes remain visible
-but disabled or marked not wired until backend data exists: Construction,
+but disabled or marked not wired until backend data exists: Willie,
 Defense, Welfare, Medical, Research, Industry, Economy, and Chief of Staff.
 
 The left rail selects the inspected scope, not the view.
@@ -686,8 +686,8 @@ write and read-back.
 An Apply control renders only in the scope of the minister that **emitted** the
 action. A requesting minister shows its outbound `requests[]` but never another
 minister's executable handle — e.g. Chef requests a freezer, but the
-`place_blueprint` Apply lives in Construction's (Willie's) scope, because
-Construction emits the placement action.
+`place_blueprint` Apply lives in Willie's scope, because Willie emits the
+placement action.
 
 The dashboard does not cache Agenda documents in browser storage. Stale agenda
 and feeder-advice recovery comes from the Host-owned unified minister output

@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace RimBob.Core.Advice;
 
 /// <summary>
-/// A build dependency another minister needs Construction to notice.
+/// A build dependency another minister needs Willie to notice.
 /// Requests are advisory in MVP; they do not reserve tiles or write to RIMAPI.
 /// </summary>
 public sealed record BuildingRequest(

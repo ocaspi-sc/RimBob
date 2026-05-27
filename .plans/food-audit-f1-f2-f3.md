@@ -79,13 +79,13 @@ public void NoCoolerWithStableBuffer_EmitsFreezerMissingAdvice()
     advice.AdviceType.Should().Be("manage_freezer");
     advice.Priority.Should().Be(AdvicePriority.Medium);
     advice.Actions.Should().ContainSingle().Which.Kind.Should().Be(AdviceActionKind.PlaceBlueprint);
-    advice.Actions.Single().Owner.Should().Be("Construction");
+    advice.Actions.Single().Owner.Should().Be("Willie");
     decision.Flags.Should().ContainSingle().Which.Requests.Should()
-        .Contain(r => r.Kind == ResourceRequestKind.Building && r.RequestedFrom == "Construction");
+        .Contain(r => r.Kind == ResourceRequestKind.Building && r.RequestedFrom == "Willie");
 }
 ```
 
-**Also fix `Rules.cs` line 156:** change `false` → `true` (the `emitFlag` parameter) in the `freezer_missing` `DecisionFor` call. The rule already defines a `ResourceRequest` (Building → Construction) but `emitFlag = false` silently drops it — no flag is ever emitted. This is a bug: the request is defined but never sent. Flipping to `true` makes the rule emit the flag as intended. This is a runtime behavior change (flag now emitted where it wasn't), which is the one exception to the "no runtime behavior changes" constraint for this plan.
+**Also fix `Rules.cs` line 156:** change `false` → `true` (the `emitFlag` parameter) in the `freezer_missing` `DecisionFor` call. The rule already defines a `ResourceRequest` (Building → Willie) but `emitFlag = false` silently drops it — no flag is ever emitted. This is a bug: the request is defined but never sent. Flipping to `true` makes the rule emit the flag as intended. This is a runtime behavior change (flag now emitted where it wasn't), which is the one exception to the "no runtime behavior changes" constraint for this plan.
 
 **Verification:** `dotnet test --filter FoodRulesTests` passes including the new test.
 

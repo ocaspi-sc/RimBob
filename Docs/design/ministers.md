@@ -182,7 +182,7 @@ Each minister owns either a production chain or a well-defined subsystem:
 |---|---|
 | Chef | Nutrition chain: forage/edible plant harvest, crop production, hunting-for-food, butchering, cooking, meals, food stockpiles, freezer integrity |
 | Defense | Threat response: raids, drafted combat, fortifications as defensive intent, weapons/ammo readiness |
-| Construction | Built infrastructure: rooms, power, temperature systems, base layout, non-defense blueprints |
+| Willie | Built infrastructure: rooms, power, temperature systems, base layout, non-defense blueprints |
 | Industry | Non-food production chain: stonecutting, tailoring, smithing, machining, fabrication, drug production, production stockpiles |
 | Welfare | Mood & Needs: mood risk from pawn/guest needs, thoughts, recreation, schedules, relationships, comfort, beauty, ideology pressure |
 | Medical | Health subsystem: wounds, disease, surgery, triage, medicine stock, hospital readiness |
@@ -196,7 +196,7 @@ Welfare's domain label is **Mood & Needs**. It watches needs and thoughts as
 they affect mood and break risk, then asks the owning domain for the smallest
 concrete fix. Guest/visitor comfort, lodging quality, and hospitality social
 pressure default to Welfare; Economy owns trade, caravans, goodwill, and
-diplomacy purpose; Construction owns physical guest-room work; Defense owns
+diplomacy purpose; Willie owns physical guest-room work; Defense owns
 active threat response. Hunger routes to Chef when the fix is nutrition; pain,
 disease, and wounds route to Medical when the fix is treatment. Welfare keeps
 the mood impact and break-risk framing.
@@ -251,28 +251,28 @@ surface an apply handle for a narrow action.
 | Hunt for food | Chef | Defense, Economy | Chef owns need/target recommendation; Defense may veto dangerous hunts |
 | Butcher animals/corpses for meat | Chef | Economy | Human/insect corpse policy may involve Welfare |
 | Cook meals, choose meal type, set cook/butcher bill targets | Chef | Welfare, Medical | Welfare can request fine meals; Medical can request safe food |
-| Manage freezer, food stockpile, spoilage response | Chef | Construction | Chef owns the need; Construction owns requested assets |
+| Manage freezer, food stockpile, spoilage response | Chef | Willie | Chef owns the need; Willie owns requested assets |
 
 ### Base And Infrastructure
 
 | Action family | Owner | Common requesters | Notes |
 |---|---|---|---|
-| Build rooms, walls, doors, floors, roofs, furniture | Construction | All ministers | Construction owns build feasibility, placement, materials, and layout cost |
-| Build power generation, batteries, conduits, switches | Construction | Chef, Industry, Defense, Medical | Requester owns why power matters |
-| Build temperature systems | Construction | Chef, Welfare, Medical, Industry | Freezer need is Chef; asset build is Construction |
-| Build production benches | Construction | Industry, Chef, Medical, Research | Requester owns production need |
-| Manage material/component stockpiles | Construction | Industry, Defense | Construction owns base material availability |
-| Dumping zones, stone chunk flow, cleanup infrastructure | Construction | Industry, Welfare | Infrastructure and zone purpose, not cleaning labor |
+| Build rooms, walls, doors, floors, roofs, furniture | Willie | All ministers | Willie owns build feasibility, placement, materials, and layout cost |
+| Build power generation, batteries, conduits, switches | Willie | Chef, Industry, Defense, Medical | Requester owns why power matters |
+| Build temperature systems | Willie | Chef, Welfare, Medical, Industry | Freezer need is Chef; asset build is Willie |
+| Build production benches | Willie | Industry, Chef, Medical, Research | Requester owns production need |
+| Manage material/component stockpiles | Willie | Industry, Defense | Willie owns base material availability |
+| Dumping zones, stone chunk flow, cleanup infrastructure | Willie | Industry, Welfare | Infrastructure and zone purpose, not cleaning labor |
 
 ### Industry And Goods
 
 | Action family | Owner | Common requesters | Notes |
 |---|---|---|---|
-| Stonecutting, smelting, machining, fabrication | Industry | Construction, Defense, Economy | Requesters define need; Industry makes goods |
+| Stonecutting, smelting, machining, fabrication | Industry | Willie, Defense, Economy | Requesters define need; Industry makes goods |
 | Tailoring, apparel quality, textile processing | Industry | Welfare, Defense, Economy | Welfare requests clothing; Defense requests armor |
 | Smithing, weapons, armor, shield belts | Industry | Defense, Economy | Defense owns combat requirement |
 | Drug production, chemfuel, refinery outputs | Industry | Medical, Welfare, Economy, Defense | Policy can cross domains |
-| Art, statues, quality furniture production | Industry | Welfare, Economy, Construction | Welfare requests beauty; Economy requests sale value |
+| Art, statues, quality furniture production | Industry | Welfare, Economy, Willie | Welfare requests beauty; Economy requests sale value |
 
 ### Defense And Emergencies
 
@@ -280,20 +280,20 @@ surface an apply handle for a narrow action.
 |---|---|---|---|
 | Draft/undraft, combat positioning, retreat/hold advice | Defense | Mayor, Medical | Pawn allocation remains player/Labor in Suggest mode |
 | Weapon readiness, loadout recommendations, armor readiness | Defense | Industry | Defense owns what is needed |
-| Killbox, traps, turrets, defensive wall intent | Defense | Construction, Industry | Construction owns build feasibility |
-| Firefighting, breach response, infestation response | Defense | Construction, Medical | Treat as emergency response |
+| Killbox, traps, turrets, defensive wall intent | Defense | Willie, Industry | Willie owns build feasibility |
+| Firefighting, breach response, infestation response | Defense | Willie, Medical | Treat as emergency response |
 | Prisoner combat risk and escape response | Defense | Welfare, Economy | Care/trade is not Defense unless threat is active |
 
 ### Welfare And Health
 
 | Action family | Owner | Common requesters | Notes |
 |---|---|---|---|
-| Recreation, comfort, beauty, sleep quality, room impressiveness | Welfare | Construction, Industry | Welfare owns the Mood & Needs reason |
+| Recreation, comfort, beauty, sleep quality, room impressiveness | Welfare | Willie, Industry | Welfare owns the Mood & Needs reason |
 | Schedules, joy/work/sleep balance, mental-break prevention | Welfare | Medical, Defense | Suggest-only until Labor/Auto |
 | Relationships, social fights, ideology mood pressure | Welfare | Mayor | Split later only if complexity justifies it |
-| Guest lodging, comfort, and hospitality social pressure | Welfare | Economy, Construction | Economy owns visitor trade/diplomacy purpose; Construction owns room work; Defense owns threats |
-| Triage, tending, disease monitoring, surgery, hospital readiness | Medical | Welfare, Construction, Industry | Split from Welfare because cadence/severity differ |
-| Medicine stock, hospital beds, sterile room, vitals risk | Medical | Construction, Industry, Economy | Medical owns readiness |
+| Guest lodging, comfort, and hospitality social pressure | Welfare | Economy, Willie | Economy owns visitor trade/diplomacy purpose; Willie owns room work; Defense owns threats |
+| Triage, tending, disease monitoring, surgery, hospital readiness | Medical | Welfare, Willie, Industry | Split from Welfare because cadence/severity differ |
+| Medicine stock, hospital beds, sterile room, vitals risk | Medical | Willie, Industry, Economy | Medical owns readiness |
 
 ### Strategy, Research, And Economy
 
@@ -314,7 +314,7 @@ surface an apply handle for a narrow action.
 | Psychoid/smokeleaf/beer | Industry owns production; Welfare owns drug policy; Economy owns sale strategy |
 | Devilstrand | Chef comments on growing opportunity cost; Industry owns textile use; Economy owns sale value |
 | Animals | Chef owns slaughter pressure; Economy owns sale/trade; Defense owns combat animals; future Animals minister possible |
-| Guests/visitors | Welfare is default host for comfort, lodging, and social pressure; Economy owns trade/caravan/goodwill/diplomacy purpose; Construction owns guest-room builds; Defense owns active threat response |
+| Guests/visitors | Welfare is default host for comfort, lodging, and social pressure; Economy owns trade/caravan/goodwill/diplomacy purpose; Willie owns guest-room builds; Defense owns active threat response |
 | Prisoners | Welfare owns mood/needs pressure from living conditions; Medical owns health; Economy owns ransom/slavery/trade; Defense owns escape/riot risk |
 | Ideology/rituals | Welfare owns mood pressure until rules/prompts become noisy |
 | Multi-map/caravans | Economy owns purpose; Defense owns threat; Chef/Medical own provisioning sufficiency; full multi-map support deferred |
@@ -358,11 +358,11 @@ Minister of Zoning because zones are means to other ministers' ends.
 | Zone type | Owning minister | Notes |
 |---|---|---|
 | Food stockpile | Chef | Co-located with freezer; Chef knows food quantities and spoilage risk |
-| Material / component stockpile | Construction | Co-located with workshops; Construction knows material flow and build queue |
+| Material / component stockpile | Willie | Co-located with workshops; Willie knows material flow and build queue |
 | Ammo / weapon stockpile | Defense | Near killbox or armoury |
 | Medicine stockpile | Medical | Near hospital; Medical tracks medical supply chain |
 | Growing zone | Chef | Placement, size, crop assignment |
-| Dumping zone | Construction | Rock chunks, corpses, waste; base hygiene |
+| Dumping zone | Willie | Rock chunks, corpses, waste; base hygiene |
 | Home zone | Mayor / CoS | Colony-wide; no minister claims it |
 | Allowed zone | Mayor / CoS | Colony-wide; no minister claims it |
 
@@ -371,7 +371,7 @@ cards and the player resolves it. Assisted Apply should not apply contested zone
 writes. At Auto graduation, CoS must arbitrate contested writes before RIMAPI
 commands are issued.
 
-Layout efficiency belongs to Construction as an extension of its room/base
+Layout efficiency belongs to Willie as an extension of its room/base
 program, not a new minister.
 
 ---

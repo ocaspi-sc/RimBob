@@ -15,7 +15,7 @@ The emitting LLM produces these — "put building needs in `building_requests`" 
 far more reliable than a `kind` discriminator + remembering which nullable fields
 are legal. Also lets `building_request` get rich enough to express "a freezer for
 ~200 food near the kitchen by day 15" — which the shared record never could.
-Lands the request contract Willie (Construction) will later consume.
+Lands the request contract Willie will later consume.
 
 ## Context
 
@@ -122,7 +122,7 @@ Induce a Food freezer/cooler need to see a `building_request` populated.
 `ResourceRequest` discriminated by `kind`, mostly-null fields) with typed request
 arrays. The emitting LLM produces these reliably, and `building_request` can now
 express a rich ask ("freezer for ~200 food near kitchen by day 15"). Lands the
-cross-minister request contract Willie (Construction) will later consume.
+cross-minister request contract Willie will later consume.
 
 **Context.** Design source: [`willie-request-taxonomy.md`](willie-request-taxonomy.md)
 §1 (shapes) + §3 (requester→array mapping). Builds on landed S1 (`7d0818c`).

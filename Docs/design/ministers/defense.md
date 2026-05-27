@@ -17,7 +17,7 @@ Defense owns threat response:
 - Weapon and armor readiness as combat requirements.
 - Post-threat repair/triage pressure routed to the relevant owner.
 
-Construction owns building the fortifications. Industry owns producing weapons
+Willie owns building the fortifications. Industry owns producing weapons
 or armor. Medical owns casualty treatment. Defense owns why those assets matter
 for threat readiness.
 
@@ -51,7 +51,7 @@ Defense briefing should answer:
 - What weapons, armor, turrets, traps, or chokepoints exist?
 - Are walls/perimeter/killbox assets intact?
 - What recent threats changed readiness expectations?
-- What build or production requests should be sent to Construction/Industry?
+- What build or production requests should be sent to Willie/Industry?
 
 Exact briefing fields belong in code/tests once Defense ships.
 
@@ -87,7 +87,7 @@ states. Escalate for:
 
 Defense may request:
 
-- Construction: walls, doors, barricades, traps, turret infrastructure.
+- Willie: walls, doors, barricades, traps, turret infrastructure.
 - Industry: weapons, armor, ammo/modded combat supplies.
 - Medical: treatment capacity after combat.
 - Labor/player attention: urgent draft or positioning decisions in Suggest mode.
@@ -110,6 +110,6 @@ Requests remain advice in MVP; they do not issue RIMAPI writes by themselves.
 
 - [ ] Define first Defense concerns.
 - [ ] Define weapon/readiness scoring from live data.
-- [ ] Define how Defense requests fortification work from Construction.
+- [ ] Define how Defense requests fortification work from Willie.
 - [ ] Decide retreat-vs-hold thresholds.
 - [ ] Add DLC/modded threat handling only when scope requires it.

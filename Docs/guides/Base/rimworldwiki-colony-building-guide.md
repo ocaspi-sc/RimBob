@@ -8,7 +8,7 @@ Note: Original RimBob summary. This is not a verbatim copy of the source.
 
 ## RimBob Use
 
-Primary guide for Construction, Food, Defense, Medical, Welfare, Industry, and Mayor layout reasoning. The most valuable signals are adjacency, expansion space, traffic control, and the way early temporary rooms can evolve into permanent infrastructure.
+Primary guide for Willie, Food, Defense, Medical, Welfare, Industry, and Mayor layout reasoning. The most valuable signals are adjacency, expansion space, traffic control, and the way early temporary rooms can evolve into permanent infrastructure.
 
 ## Layout Heuristics
 
@@ -70,4 +70,3 @@ Source image: https://rimworldwiki.com/images/thumb/d/d3/SunlampHydroponics.png/
 ![Solar and wind packing layout](images/rimworldwiki-colony-building-solar-wind-setup.png)
 
 Source image: https://rimworldwiki.com/images/thumb/0/08/Solar_wind_setup.png/420px-Solar_wind_setup.png
-

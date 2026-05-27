@@ -9,7 +9,7 @@
 
 ## RimBob Relevance
 
-This guide is useful for Mayor, Construction, Food, Defense, Medical, Welfare, Industry, and Economy reasoning. It turns base-building advice into retrievable heuristics about layout, room placement, traffic, freezing, storage, production, power, defense, and temperature control.
+This guide is useful for Mayor, Willie, Food, Defense, Medical, Welfare, Industry, and Economy reasoning. It turns base-building advice into retrievable heuristics about layout, room placement, traffic, freezing, storage, production, power, defense, and temperature control.
 
 ## Core Rule: Always Have A Plan
 
@@ -616,7 +616,7 @@ Moisture pumps convert wet ground into buildable dry ground.
 
 ## Minister And Dashboard Hints
 
-- Construction should reason about bedroom edge placement, freezer expansion space, central hospital/prison placement, warehouse-workshop adjacency, and redundant power routing.
+- Willie should reason about bedroom edge placement, freezer expansion space, central hospital/prison placement, warehouse-workshop adjacency, and redundant power routing.
 - Food should reason about freezer access, kitchen cleanliness, crop protection, greenhouse power risk, nutrient paste emergency use, and meal shelf placement.
 - Defense should reason about controlled approaches, cover denial, protected coolers, prison escape direction, and remote generator exposure.
 - Medical should reason about triage proximity, hospital cleanliness, medicine shelves, operating theater traffic, and animal treatment areas.

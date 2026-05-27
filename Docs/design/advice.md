@@ -78,7 +78,7 @@ not a concern.
 Authorship is split: the LLM emits the advice's judgment fields plus, when a
 build is involved, a compact semantic *intent* — it never authors exact
 placements, payloads, or target ids. Deterministic code computes those (for
-Construction, the **Placement Solver**). This is the same boundary the Assisted
+Willie, the **Placement Solver**). This is the same boundary the Assisted
 Apply section enforces. See [`ministers/construction.md`](ministers/construction.md).
 
 ### Actions

@@ -8,7 +8,7 @@ Note: Original RimBob summary. This is not a verbatim copy of the source.
 
 ## RimBob Use
 
-Primary source for Defense and Construction interaction: natural chokepoints, wall topology, trap corridors, cover shaping, killbox entry geometry, and defensive infrastructure placement.
+Primary source for Defense and Willie interaction: natural chokepoints, wall topology, trap corridors, cover shaping, killbox entry geometry, and defensive infrastructure placement.
 
 ## Layout Heuristics
 
@@ -78,4 +78,3 @@ Source image: https://rimworldwiki.com/images/thumb/a/a9/Killhall.png/500px-Kill
 ## Caution
 
 The source page itself warns that parts need updates and some images reflect older game versions. Use these as topology examples and verify exact mechanics against current RimWorld behavior before turning them into rules.
-

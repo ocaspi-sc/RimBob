@@ -9,7 +9,7 @@
 
 ## 0. Goal / why landable now
 
-Core-contract cleanup, independent of the Willie (Construction) minister, the
+Core-contract cleanup, independent of the Willie minister, the
 Placement Solver, and the briefing. Touches `Src/Common/Advice`,
 `Src/Common/Ministers/AgentFlag.cs`, and downstream consumers (Food, LLM
 normalizers, Mayor flag digest, Assisted Apply, dashboard mirrors). Doing it
@@ -93,4 +93,4 @@ Risk: **higher** — live M4.5 feature. Bundle with the RIMAPI fork blueprint-gr
 
 Placement Solver ([`placement-solver.md`](placement-solver.md)), fork endpoints
 ([`rimapi-blueprint-groups-and-planning-overlay.md`](rimapi-blueprint-groups-and-planning-overlay.md)),
-Willie minister, Construction briefing.
+Willie minister, Willie briefing.

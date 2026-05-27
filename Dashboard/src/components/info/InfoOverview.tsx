@@ -211,7 +211,7 @@ const rimworldSignals: GlossaryEntry[] = [
   },
   {
     term: 'Power net',
-    tag: 'Construction',
+    tag: 'Willie',
     description: 'Production minus consumption. Negative net power means batteries drain and cold-chain advice changes.',
   },
 ];

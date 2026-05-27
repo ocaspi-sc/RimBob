@@ -95,7 +95,7 @@ Actions and requests are intentionally separate.
 | Surface | Owner | Audience | Can execute in MVP? | Example |
 |---|---|---|---|---|
 | `AdviceItem.actions[]` | Issuing minister | Player/dashboard | Only if a narrow Assisted Apply handle is validated | "Mark the nearby berry patch for harvest." |
-| `AgentFlag.Requests` | Source issue, target owner named when known | CoS/Mayor/routing trace | No | Food requests Construction for a cooler-backed freezer. |
+| `AgentFlag.Requests` | Source issue, target owner named when known | CoS/Mayor/routing trace | No | Food requests Willie for a cooler-backed freezer. |
 | Labor policy request | Source minister describes need; Labor owns policy decision | CoS/Labor/future Auto | No in MVP | Food needs `Cook` coverage until meals recover. |
 | Auto write | Labor or other authorized execution owner after graduation | RIMAPI via Host | Deferred | Labor validates and writes one work-priority knob, then reads back. |
 
@@ -119,7 +119,7 @@ Current direction from the work-priority/knob planning notes:
   when the minister has read-side evidence for current work priorities, the
   relevant RimWorld work type is known, and the recommendation is compact.
 - The source minister owns why the work matters. Food owns "we need cooking
-  coverage to recover meals"; Construction owns "we need Construct coverage to
+  coverage to recover meals"; Willie owns "we need Construct coverage to
   finish beds"; Medical owns "Doctor/Patient coverage is life-critical."
 - Labor owns pawn-policy resolution when Auto re-engages. Non-Labor ministers
   can request work-type-qualified labor, but they do not write pawn priorities.
@@ -183,17 +183,17 @@ Food owns the full nutrition chain.
 
 | Issue family | Evidence | Actions | Common requests |
 |---|---|---|---|
-| Food buffer low | Days of food, meal/raw counts, colonists, nutrition confidence | Harvest, cook, grow, unforbid, local acquisition | Labor `Cook`/`PlantCut`/`Grow`, Construction freezer/storage, Economy procurement |
+| Food buffer low | Days of food, meal/raw counts, colonists, nutrition confidence | Harvest, cook, grow, unforbid, local acquisition | Labor `Cook`/`PlantCut`/`Grow`, Willie freezer/storage, Economy procurement |
 | Harvest or forage opportunity | Mature crops, edible plant clusters, distance/proximity, season | `mark_harvest`, forage target advice | Labor `PlantCut`, Defense veto if unsafe |
-| Cooking backlog | Raw food available, meals low, bill/workbench state, cook coverage | Cook meals, add/update simple-meal bill, set cook priority | Labor `Cook`, Construction stove/campfire |
-| Freezer/storage risk | Spoilage, storage capacity, freezer signal, temperature coverage | Adjust food stockpile, preserve food, build dependency note | Construction cooler/power/room, Labor haul only when urgent |
-| Crop choice tradeoff | Season window, terrain/fertility, crop candidates, buffer, guide context | Sow/expand specific food crop | Labor `Grow`, Construction growing space if blocked |
+| Cooking backlog | Raw food available, meals low, bill/workbench state, cook coverage | Cook meals, add/update simple-meal bill, set cook priority | Labor `Cook`, Willie stove/campfire |
+| Freezer/storage risk | Spoilage, storage capacity, freezer signal, temperature coverage | Adjust food stockpile, preserve food, build dependency note | Willie cooler/power/room, Labor haul only when urgent |
+| Crop choice tradeoff | Season window, terrain/fertility, crop candidates, buffer, guide context | Sow/expand specific food crop | Labor `Grow`, Willie growing space if blocked |
 | Hunting ambiguity | Low-risk target summaries, animal health/tame/risk, active threat | Mark hunt only when deterministic | Defense veto/attention, Labor `Hunt` |
 | Procurement needed | No local stored/harvest/cook/sow path visible | State local gap; avoid day-one caravan spam | Economy trade/procurement |
 
-### Construction
+### Willie
 
-Construction owns built infrastructure.
+Willie owns built infrastructure.
 
 | Issue family | Evidence | Actions | Common requests |
 |---|---|---|---|
@@ -210,11 +210,11 @@ Defense owns threat response.
 
 | Issue family | Evidence | Actions | Common requests |
 |---|---|---|---|
-| Active threat | Raid, infestation, breach, spreading fire, hostile location | Draft/position/retreat advice, tactical alert | Medical triage, Construction emergency repair |
-| Readiness gap | Colony wealth/phase, combat pawns, weapons, armor, defenses | Prepare weapons/armor/defense posture | Industry weapons/armor, Construction fortifications |
-| Fortification gap | Perimeter, chokepoints, traps, turrets, breach history | Build/repair defensive intent | Construction build owner, Industry components |
+| Active threat | Raid, infestation, breach, spreading fire, hostile location | Draft/position/retreat advice, tactical alert | Medical triage, Willie emergency repair |
+| Readiness gap | Colony wealth/phase, combat pawns, weapons, armor, defenses | Prepare weapons/armor/defense posture | Industry weapons/armor, Willie fortifications |
+| Fortification gap | Perimeter, chokepoints, traps, turrets, breach history | Build/repair defensive intent | Willie build owner, Industry components |
 | Dangerous food/labor action | Hunt target risk, active threat, unsafe map area | Veto or downgrade risky routine advice | Food/Labor attention |
-| Post-threat recovery | Injuries, broken walls, damaged power, lost stock | Route recovery pressure | Medical/Construction/Food by root need |
+| Post-threat recovery | Injuries, broken walls, damaged power, lost stock | Route recovery pressure | Medical/Willie/Food by root need |
 
 ### Industry
 
@@ -222,8 +222,8 @@ Industry owns non-food production chains.
 
 | Issue family | Evidence | Actions | Common requests |
 |---|---|---|---|
-| Production bottleneck | Missing bench, bill gap, input shortage, output shortage | Add/change production focus in Suggest mode | Construction bench/power, Labor craft/smith/tailor |
-| Component or steel pressure | Stock, build queue demand, fabrication/machining capacity | Produce/buy/recover components | Economy purchase, Construction material flow |
+| Production bottleneck | Missing bench, bill gap, input shortage, output shortage | Add/change production focus in Suggest mode | Willie bench/power, Labor craft/smith/tailor |
+| Component or steel pressure | Stock, build queue demand, fabrication/machining capacity | Produce/buy/recover components | Economy purchase, Willie material flow |
 | Weapon/armor need | Defense readiness request, current equipment, tech/bench readiness | Produce weapon/armor/apparel | Defense requirement, Labor smith/tailor/craft |
 | Apparel/comfort goods | Welfare warmth/comfort request, textile availability | Tailor apparel or comfort goods | Welfare requirement, Labor tailor |
 | Drug/chemfuel policy | Medical/Welfare/Economy need, crop/input state, risk posture | Produce or pause policy goods | Food crop opportunity cost, Economy sale strategy |
@@ -235,10 +235,10 @@ Welfare owns pawn wellbeing outside direct medical care.
 
 | Issue family | Evidence | Actions | Common requests |
 |---|---|---|---|
-| Mental-break risk | Mood thresholds, top thoughts, recent events, schedule pressure | Immediate wellbeing advice | Construction rooms/recreation, Medical pain care |
-| Recreation gap | Recreation variety, boredom, recreation buildings, schedule | Build/use recreation options | Construction recreation assets, Labor schedule attention |
+| Mental-break risk | Mood thresholds, top thoughts, recent events, schedule pressure | Immediate wellbeing advice | Willie rooms/recreation, Medical pain care |
+| Recreation gap | Recreation variety, boredom, recreation buildings, schedule | Build/use recreation options | Willie recreation assets, Labor schedule attention |
 | Schedule policy problem | Sleep/joy/work balance, avoidable mood loss, current schedule evidence | Suggest schedule or priority review | Labor in future Auto |
-| Comfort/beauty/sleep gap | Room impressiveness, beds, comfort, beauty | Improve rooms/furniture/comfort | Construction/Industry |
+| Comfort/beauty/sleep gap | Room impressiveness, beds, comfort, beauty | Improve rooms/furniture/comfort | Willie/Industry |
 | Apparel warmth/comfort risk | Temperature exposure, apparel coverage, textiles | Produce/equip apparel advice | Industry apparel |
 | Social or ideology pressure | Relationship incidents, ideology mood causes, ritual pressure | Social/ideology recommendation | Mayor for strategic posture if broad |
 
@@ -250,9 +250,9 @@ Medical owns health, treatment, and hospital readiness.
 |---|---|---|---|
 | Urgent treatment | Bleeding, disease, infection, tending windows, pain severity | Tend/triage/player attention | Labor `Doctor`/`Patient`, Welfare mood impact |
 | Medicine stock risk | Medicine counts, disease season, surgery plans, biome/trade context | Acquire/conserve medicine | Economy purchase, Industry drug production |
-| Hospital readiness | Beds, sterile room, vitals, temperature, access | Build/improve hospital | Construction room/assets, Industry hospital goods |
+| Hospital readiness | Beds, sterile room, vitals, temperature, access | Build/improve hospital | Willie room/assets, Industry hospital goods |
 | Surgery/operation readiness | Operation queue, doctor skill, medicine, bed quality | Delay/perform prep recommendation | Labor doctor availability, Economy supplies |
-| Post-combat triage | Defense event, wounded count, bed/medicine pressure | Treat and route recovery needs | Defense/Construction follow-up |
+| Post-combat triage | Defense event, wounded count, bed/medicine pressure | Treat and route recovery needs | Defense/Willie follow-up |
 
 ### Research
 
@@ -260,9 +260,9 @@ Research owns the tech path.
 
 | Issue family | Evidence | Actions | Common requests |
 |---|---|---|---|
-| Queue empty or misaligned | Current research, Mayor posture, unmet domain requests | Set/adjust research target | Mayor strategy, Construction bench |
+| Queue empty or misaligned | Current research, Mayor posture, unmet domain requests | Set/adjust research target | Mayor strategy, Willie bench |
 | Unlock dependency | Food freezer, Defense weapons, Medical hospital, Industry fabrication need | Prioritize prerequisite tech | Requesting minister requirement |
-| Bench or capacity gap | Research bench, multi-analyzer, room/power, researcher availability | Build/improve research capacity | Construction bench/power, Labor research |
+| Bench or capacity gap | Research bench, multi-analyzer, room/power, researcher availability | Build/improve research capacity | Willie bench/power, Labor research |
 | Long-term tech fork | Multiple viable strategic paths, guide context, colony phase | Escalate for judgment | Mayor posture input |
 
 ### Economy
@@ -271,7 +271,7 @@ Economy owns trade, caravans, wealth pressure, and surplus liquidation.
 
 | Issue family | Evidence | Actions | Common requests |
 |---|---|---|---|
-| Scarce resource purchase | Food/Medical/Defense/Construction shortage, trader availability, silver | Buy or prioritize trade target | Source minister need |
+| Scarce resource purchase | Food/Medical/Defense/Willie shortage, trader availability, silver | Buy or prioritize trade target | Source minister need |
 | Surplus liquidation | Stockpile surplus, rot/decay, marketable goods, wealth pressure | Sell or repurpose surplus | Industry production, Mayor posture |
 | Wealth pressure | Wealth velocity, defense readiness, idle stockpiles | Reduce idle wealth or slow hoarding | Defense parity, Industry output |
 | Caravan readiness | Route purpose, food/medicine/defense provisioning, pawn availability | Prepare or delay caravan | Food/Medical/Defense inputs |
@@ -373,7 +373,7 @@ evidence that cooking coverage is adequate.
   the current state supports it.
 - If work-priority evidence exists: include a compact `set_priority` suggestion
   for `Cook`.
-- Flag request: Labor `Cook` coverage, and possibly Construction if no stove or
+- Flag request: Labor `Cook` coverage, and possibly Willie if no stove or
   campfire exists.
 - CoS route: tactical alert if starvation is near; otherwise Mayor digest with
   Food as lead and Labor as dependency.
@@ -382,15 +382,15 @@ evidence that cooking coverage is adequate.
 
 ### Freezer Risk Blocked By Infrastructure
 
-Food sees spoilage/freezer risk. Construction sees a power deficit or missing
+Food sees spoilage/freezer risk. Willie sees a power deficit or missing
 cooler.
 
 - Food issue: freezer/storage risk.
-- Food request: Construction for cooler-backed freezer/power support.
-- Construction issue: power or build queue blocker.
+- Food request: Willie for cooler-backed freezer/power support.
+- Willie issue: power or build queue blocker.
 - CoS groups the two under one root cause.
 - Lead framing: Food leads if the player-facing risk is nutrition loss;
-  Construction leads if the actual blocker is infrastructure readiness.
+  Willie leads if the actual blocker is infrastructure readiness.
 - Route: digest unless spoilage is urgent enough for a tactical alert.
 
 ### Raid During Routine Crop Expansion
@@ -406,11 +406,11 @@ Defense sees an active raid. Food sees a crop expansion opportunity.
 ### Mood Collapse From Pain And Room Quality
 
 Welfare sees break risk from pain, ugly bedrooms, and recreation gaps. Medical
-sees untreated injuries. Construction sees missing room improvements.
+sees untreated injuries. Willie sees missing room improvements.
 
 - Welfare issue: mental-break risk.
 - Medical issue: urgent treatment or pain care.
-- Construction issue/request: room or furniture improvement.
+- Willie issue/request: room or furniture improvement.
 - CoS groups by affected pawn group when possible.
 - Lead framing: Medical if treatment window is urgent; Welfare if mood risk is
   the broad player-facing concern.

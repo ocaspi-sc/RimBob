@@ -8,7 +8,7 @@ Note: Original RimBob summary. This is not a verbatim copy of the source.
 
 ## RimBob Use
 
-Binary hit-or-miss matching is useful when Construction needs to find exact
+Binary hit-or-miss matching is useful when Willie needs to find exact
 local tile patterns, not broad rectangular space. It is a reference for matching
 foreground and background requirements on a grid.
 

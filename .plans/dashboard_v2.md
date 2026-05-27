@@ -157,7 +157,7 @@ This gives modular panels while preserving a fixed, opinionated layout.
 ### State Model
 
 ```ts
-type ScopeKey = 'system' | 'mayor' | 'food' | 'construction' | 'defense' | 'welfare' | 'medical' | 'research' | 'industry' | 'economy' | 'chief_of_staff';
+type ScopeKey = 'system' | 'mayor' | 'food' | 'willie' | 'defense' | 'welfare' | 'medical' | 'research' | 'industry' | 'economy' | 'chief_of_staff';
 type MinisterViewKey = 'prompt' | 'briefing' | 'rag' | 'rules' | 'advice';
 
 const [selectedScope, setSelectedScope] = useState<ScopeKey>('system');

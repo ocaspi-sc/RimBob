@@ -77,7 +77,7 @@ internal static class ResourceRequestNormalizer
                 .Where(hint => !string.IsNullOrWhiteSpace(hint.Material))
                 .Select(hint => hint with { Material = hint.Material.Trim() })
                 .ToArray()),
-            RequestedFrom = CleanOptional(request.RequestedFrom) ?? "Construction"
+            RequestedFrom = CleanOptional(request.RequestedFrom) ?? "Willie"
         };
 
     public static LaborRequest Normalize(LaborRequest request)
@@ -265,7 +265,7 @@ internal static class ResourceRequestNormalizer
                     RoomClass: InferRoomClass(rawType, request, reason),
                     Quantity: quantity,
                     Priority: requestPriority,
-                    RequestedFrom: requestedFrom ?? "Construction"));
+                    RequestedFrom: requestedFrom ?? "Willie"));
                 return;
 
             case LegacyRequestKind.StockpileSpace:
@@ -279,7 +279,7 @@ internal static class ResourceRequestNormalizer
                         : new CapacityNeed(CapacityMeasure.StorageStacks, quantity, unit ?? "count"),
                     Quantity: quantity,
                     Priority: requestPriority,
-                    RequestedFrom: requestedFrom ?? "Construction"));
+                    RequestedFrom: requestedFrom ?? "Willie"));
                 return;
 
             case LegacyRequestKind.Item:

@@ -264,6 +264,6 @@ Out of scope:
 ## Consumers (post-land)
 
 - Willie Placement Solver `near:<class>` scoring (primary).
-- Willie Construction briefing for `stalled_builds` reachability checks
+- Willie briefing for `stalled_builds` reachability checks
   ("frame X is unreachable by colonists, no wonder it's stalled").
 - Future Defense minister for choke-point / corridor scoring.

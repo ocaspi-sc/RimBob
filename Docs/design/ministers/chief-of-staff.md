@@ -76,9 +76,9 @@ that created the cross-domain pressure.
 Examples:
 
 - Chef flags low meals and requests `Labor` with `work_type: Cook`.
-- Chef flags spoilage risk and requests `Construction` for a freezer/cooler
+- Chef flags spoilage risk and requests `Willie` for a freezer/cooler
   building dependency.
-- Defense flags raid danger and requests `Construction` attention for a weak
+- Defense flags raid danger and requests `Willie` attention for a weak
   wall/door bottleneck.
 - Welfare flags mood collapse and requests `Chef` attention if meal quality is
   one of the concrete causes.
@@ -157,10 +157,10 @@ Food shortage plus no cook coverage:
 
 Freezer risk:
 
-- Chef emits a Medium spoilage/freezer flag requesting `Construction` for a
+- Chef emits a Medium spoilage/freezer flag requesting `Willie` for a
   cooler-backed room.
-- Construction later emits a power/material blocker for the same freezer work.
-- CoS groups them under one issue, chooses Construction as the execution owner
+- Willie later emits a power/material blocker for the same freezer work.
+- CoS groups them under one issue, chooses Willie as the execution owner
   but Chef as the reason if nutrition risk is the player-facing concern.
 - Route is digest unless spoilage or heat makes it time-sensitive.
 
@@ -173,7 +173,7 @@ Raid during routine food expansion:
 
 Three ministers point at the same root cause:
 
-- Chef wants freezer space, Construction reports power shortage, Economy warns
+- Chef wants freezer space, Willie reports power shortage, Economy warns
   steel/components are scarce.
 - CoS groups the requests into one "freezer blocked by infrastructure/materials"
   issue instead of three separate alerts.

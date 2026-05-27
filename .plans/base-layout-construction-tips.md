@@ -1,4 +1,4 @@
-# Base Layout / Construction Tips
+# Base Layout / Willie Tips
 
 Sources:
 
@@ -6,7 +6,7 @@ Sources:
 - [Steam Community: "Rimworld Flat Base"](https://steamcommunity.com/sharedfiles/filedetails/?id=2211480986)
 
 This note captures RimWorld community base-building heuristics from the linked
-thread and translates them into RimBob-facing ideas for the future Construction
+thread and translates them into RimBob-facing ideas for the future Willie
 minister. Treat it as research input, not as a finalized implementation
 contract.
 
@@ -17,7 +17,7 @@ expansion pressure, and defensive infrastructure.
 
 ```mermaid
 flowchart LR
-  A["Live map and colony state"] --> B["Construction briefing"]
+  A["Live map and colony state"] --> B["Willie briefing"]
   B --> C["Spatial lint rules"]
   C --> D["Travel waste"]
   C --> E["Fire and heat risk"]
@@ -25,7 +25,7 @@ flowchart LR
   C --> G["Expansion pressure"]
   C --> H["Defense dependencies"]
   C --> K["Base topology"]
-  D --> I["Construction advice"]
+  D --> I["Willie advice"]
   E --> I
   F --> I
   G --> I
@@ -90,9 +90,9 @@ inputs or outputs. A common pattern is a central or adjacent storage area with
 workshops surrounding it.
 
 For RimBob, this is better treated as a material-flow issue than a pure zoning
-issue. Construction owns material/component stockpile placement because it
+issue. Willie owns material/component stockpile placement because it
 understands build flow and room layout. Industry or Food may own why a material
-or bill matters, but Construction can detect whether physical placement is
+or bill matters, but Willie can detect whether physical placement is
 wasting work time.
 
 RimBob transfer:
@@ -126,14 +126,14 @@ to stockpile can waste more expert labor than letting any hauler move the item
 later. In RimWorld terms, many production bills can be set to drop products on
 the floor.
 
-RimBob should not collapse this into Construction alone. Bill settings belong
-closer to the production-owning minister, but Construction can provide the
+RimBob should not collapse this into Willie alone. Bill settings belong
+closer to the production-owning minister, but Willie can provide the
 physical evidence: output stockpile distance, shelf placement, and whether the
 bench area is arranged so dropped items are harmless.
 
 RimBob transfer:
 
-- Construction identifies the layout cause.
+- Willie identifies the layout cause.
 - Industry/Food owns the bill-operation reason.
 - CoS groups them when both are part of the same production bottleneck.
 - Dashboard should preserve this split: "layout evidence" vs "bill setting
@@ -192,16 +192,16 @@ The thread included freezer and heat-management patterns: double-thick freezer
 walls, freezer placement near food production, and cooler exhaust rooms that can
 vent heat inside during winter or outside during summer.
 
-This is a strong Construction/Food boundary:
+This is a strong Willie/Food boundary:
 
 - Food owns the spoilage and meal-chain need.
-- Construction owns cooler, walls, vents, power, and room placement.
+- Willie owns cooler, walls, vents, power, and room placement.
 
 RimBob transfer:
 
-- Food should emit a Construction request when food is at risk from missing
+- Food should emit a Willie request when food is at risk from missing
   freezer/cooler infrastructure.
-- Construction should detect whether the freezer is fragile, badly placed, or
+- Willie should detect whether the freezer is fragile, badly placed, or
   power-starved.
 - Dashboard should show the thermal dependency chain rather than making Food's
   advice sound like it owns construction.
@@ -231,19 +231,19 @@ doors, walls, hospital placement, and prison placement all influence defense.
 It also suggested designing paths as funnels, using 3-wide roads that can pinch
 to a 1-wide fight point, and giving defenders good covered positions.
 
-RimBob should not make Construction a killbox planner in the first pass.
-Construction should expose build feasibility and layout evidence. Defense owns
+RimBob should not make Willie a killbox planner in the first pass.
+Willie should expose build feasibility and layout evidence. Defense owns
 whether the base needs a kill corridor, trap line, fallback point, or combat
 position.
 
 RimBob transfer:
 
-- Construction can flag missing buildable defensive infrastructure when Defense
+- Willie can flag missing buildable defensive infrastructure when Defense
   requests it.
-- Defense can request Construction for wall, barricade, trap, door, turret, or
+- Defense can request Willie for wall, barricade, trap, door, turret, or
   power work.
 - CoS should group "weak entrance" and "build wall/door/barricade" as one
-  issue, with Defense owning combat need and Construction owning build work.
+  issue, with Defense owning combat need and Willie owning build work.
 
 Candidate signals:
 
@@ -260,7 +260,7 @@ Candidate advice:
 - Build cover or walls only when Defense has identified the tactical need.
 - Keep hospital access close enough for recovery without making it exposed.
 - Keep prison access secure and separate from civilian traffic.
-- Do not treat "killbox optimization" as first-slice Construction scope.
+- Do not treat "killbox optimization" as first-slice Willie scope.
 
 ### 7. Expansion space matters earlier than it feels like it does
 
@@ -300,11 +300,11 @@ power, food, and hospital basics are stable.
 
 RimBob transfer:
 
-- Construction should understand build wealth pressure, but Economy and Defense
+- Willie should understand build wealth pressure, but Economy and Defense
   should contribute context.
 - A base improvement can be "good" locally and still wrong now because it
   increases raid pressure before the colony is ready.
-- The dashboard should show when a Construction recommendation is intentionally
+- The dashboard should show when a Willie recommendation is intentionally
   cheap or wealth-disciplined.
 
 Candidate signals:
@@ -331,7 +331,7 @@ complex layouts for when the colony has materials, labor, and security.
 
 RimBob transfer:
 
-- Construction should gate advice by colony phase.
+- Willie should gate advice by colony phase.
 - Day-one suggestions should be survival-oriented: beds, roof, table, freezer
   path, power, workbench access.
 - Mid-game suggestions can talk about stone replacement, dedicated rooms,
@@ -354,18 +354,18 @@ Candidate advice:
 - Do not recommend expensive layout rebuilds while basic survival gaps remain.
 - Prefer incremental upgrades that preserve future expansion.
 
-### 10. Food chain layout is a first-class Construction dependency
+### 10. Food chain layout is a first-class Willie dependency
 
 Multiple tips connect food and construction: freezer placement, crop proximity,
 butcher/kitchen adjacency, refrigeration timing, and early meal overproduction.
-This makes Food the first natural requester for Construction after the Food
+This makes Food the first natural requester for Willie after the Food
 minister exists.
 
 RimBob transfer:
 
 - Food can ask for a freezer, cooler, stockpile, campfire/stove, or power
   dependency.
-- Construction should answer whether the build side is feasible and where the
+- Willie should answer whether the build side is feasible and where the
   layout bottleneck is.
 - Food should not pretend it can solve cooler/wall/power problems directly.
 
@@ -406,7 +406,7 @@ RimBob transfer:
 - Measure critical-room depth: freezer, hospital, storage, and power should not
   sit directly on the outer breach layer once materials allow.
 - Count defensive/build layers separately from Defense's combat judgment:
-  Construction can see walls, doors, and cover; Defense decides whether the
+  Willie can see walls, doors, and cover; Defense decides whether the
   pattern is tactically sound.
 - Flag terrain/roof hazards before flat-base expansion touches hills or
   mountain roof that could undermine the "flat base avoids infestations"
@@ -432,13 +432,13 @@ Candidate advice:
 - Add an intermediate wall/door layer before critical storage or hospital space
   becomes perimeter-adjacent.
 - Move flat-base expansion away from terrain that creates roof/infestation risk.
-- Surface bunker/cover feasibility as Construction evidence and let Defense own
+- Surface bunker/cover feasibility as Willie evidence and let Defense own
   the combat recommendation.
 
-## Suggested Construction Minister Shape
+## Suggested Willie Minister Shape
 
 The thread supports the existing repo direction: keep the official minister as
-Construction, with Base Layout as one capability inside that minister. A
+Willie, with Base Layout as one capability inside that minister. A
 separate Base Layout minister is not justified yet.
 
 First-slice rule groups:
@@ -484,7 +484,7 @@ Do not implement in the first slice:
 
 - exact base blueprint generation
 - autonomous construction placement
-- killbox design as Construction-owned strategy
+- killbox design as Willie-owned strategy
 - broad zone writes
 - work-priority writes
 - pawn assignment
@@ -492,7 +492,7 @@ Do not implement in the first slice:
 
 ## Dashboard Implications
 
-Construction advice will be more useful if the dashboard can show spatial
+Willie advice will be more useful if the dashboard can show spatial
 evidence, not just prose.
 
 Recommended dashboard panels:
@@ -543,13 +543,13 @@ coarse classifications. It does not need a full planner to be useful.
 
 - Decide which of the candidate signals are already derivable from current
   RIMAPI responses.
-- Add Construction briefing groups for route loops, fire risk, material flow,
+- Add Willie briefing groups for route loops, fire risk, material flow,
   freezer infrastructure, and build dependencies.
 - Decide whether `base_topology` is its own first-slice concern or a
   dashboard grouping under `base_layout`.
-- Decide where bill-setting advice crosses from Construction evidence into
+- Decide where bill-setting advice crosses from Willie evidence into
   Industry/Food ownership.
-- Decide how much Defense context Construction needs before surfacing
+- Decide how much Defense context Willie needs before surfacing
   fortification/build feasibility advice.
-- Build a dashboard Construction `Infographics` or `Rules` panel that can show
+- Build a dashboard Willie `Infographics` or `Rules` panel that can show
   spatial lint output before exact map overlays exist.

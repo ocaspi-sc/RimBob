@@ -1,16 +1,16 @@
-# Willie (Minister of Construction) - Meta-Plan
+# Willie - Meta-Plan
 
-> **Master index + roadmap** for the Minister of Construction effort. Persona
-> **Willie**; cabinet label **Construction** (UI/prompt flavor only).
+> **Master index + roadmap** for the Willie minister effort. Willie owns the
+> construction domain; schema/code names use `Willie*` rather than `Construction*`.
 >
 > This doc ties together the design anchors, implementation plans, RIMAPI work,
 > locked decisions, remaining work, and open decisions. It is the single place to
-> see where the Construction effort stands. Detail lives in the linked plans;
+> see where the Willie effort stands. Detail lives in the linked plans;
 > exact C# lives in source after landing.
 >
-> **Milestone:** M4 (first cabinet wave); Construction lands **first** after Food
+> **Milestone:** M4 (first cabinet wave); Willie lands **first** after Food
 > (Food's first live dependencies are cooler/power/room/storage builds). Design
-> phase ~complete; **no Construction code landed yet.**
+> phase ~complete; **no Willie minister code landed yet.**
 
 ---
 
@@ -50,7 +50,7 @@ Placement Solver, the fork group endpoints, and the dashboard pick UI.
 
 | Plan | Holds |
 |---|---|
-| [`willie-advice-types.md`](willie-advice-types.md) | The 9 canonical Construction concerns + first-slice rules-vs-LLM split. |
+| [`willie-advice-types.md`](willie-advice-types.md) | The 9 canonical Willie concerns + first-slice rules-vs-LLM split. |
 | [`willie-advice-schema.md`](willie-advice-schema.md) | Advice/output side: flatten (drop icon/reason), per-kind apply split, `options[]`, `blueprint_group`, `place_blueprint_group`. |
 | [`willie-request-taxonomy.md`](willie-request-taxonomy.md) | Request/input side: typed request arrays, rich `BuildingRequest`, inbound ask-map -> concern. |
 | [`willie-briefing-schema.md`](willie-briefing-schema.md) + [`willie-briefing-fields.md`](willie-briefing-fields.md) | Willie Briefing Schema: per-field `signal/source/availability/consumers/notes` for the 8 canonical concerns + anchor inventory contract. **S1–S5 landed 2026-05-27.** |
@@ -80,9 +80,9 @@ Placement Solver, the fork group endpoints, and the dashboard pick UI.
 
 | Plan | Holds | Kind |
 |---|---|---|
-| [`base-construction-layout-agent.md`](base-construction-layout-agent.md) | Original 10-phase Construction implementation plan + Slices A/B/C (mirror-Food file list). | Primary source for the Willie-minister implementation phase. |
+| [`base-construction-layout-agent.md`](base-construction-layout-agent.md) | Original 10-phase Willie implementation plan + Slices A/B/C (mirror-Food file list). | Primary source for the Willie-minister implementation phase. |
 | [`base-layout-construction-tips.md`](base-layout-construction-tips.md) | Community base-building heuristics -> spatial-lint signals + dashboard panels. | Research input for solver heuristics. |
-| [`deterministic-cos-cabinet-issue-solver.md`](deterministic-cos-cabinet-issue-solver.md) | Issue-report model + CoS routing (Construction issue families map onto the 9 concerns). | Cross-minister design. |
+| [`deterministic-cos-cabinet-issue-solver.md`](deterministic-cos-cabinet-issue-solver.md) | Issue-report model + CoS routing (Willie issue families map onto the 9 concerns). | Cross-minister design. |
 
 ### Grounding
 
@@ -97,8 +97,9 @@ Placement Solver, the fork group endpoints, and the dashboard pick UI.
 
 ## 3. Locked decisions
 
-- **Persona Willie; cabinet label Construction.** No separate Base Layout
-  minister; layout is a capability inside Construction.
+- **Minister name Willie.** No separate Base Layout minister; layout is a
+  capability inside Willie's construction domain. Schema/code names use
+  `WillieBriefing`, `WillieAdvice`, and `MinisterOfWillie`.
 - **8 concerns** ([`willie-advice-types.md`](willie-advice-types.md)):
   `power_stability`, `thermal_control`, `functional_rooms`,
   `storage_placement`, `material_bottleneck`, `fire_risk`, `stalled_builds`,
@@ -163,7 +164,7 @@ flowchart TD
   S2 --> PS1
   FORK2 --> PS1
   FORK3["RIMAPI map reach + path-cost ✓ LANDED<br/>(rimapi-map-reach-and-path-cost.md)"] -.solver scoring.-> PS1
-  PS1 --> WILLIE["Willie minister: contracts -> Rules.cs<br/>-> MinisterOfConstruction -> registry -> dashboard"]
+  PS1 --> WILLIE["Willie minister: contracts -> Rules.cs<br/>-> MinisterOfWillie -> registry -> dashboard"]
   S1 --> S3["Schema S3 ✓ LANDED 4927741<br/>(apply per-kind split +<br/>place_blueprint_group)"]
   FORK2 --> S3
   S3 --> WILLIE
@@ -190,7 +191,7 @@ Note: FORK3 endpoints (`/api/v1/map/reach`, `/api/v1/map/path-cost`, batch) land
 3. **Willie Briefing Schema** [✓ LANDED 2026-05-27 —
    [`willie-briefing-schema.md`](willie-briefing-schema.md) +
    [`willie-briefing-fields.md`](willie-briefing-fields.md)]. Per
-   `ConstructionBriefing` field: signal, RIMAPI/state-store source,
+   `WillieBriefing` field: signal, RIMAPI/state-store source,
    availability (`have` / `need-fork` / `defer`), consumers, notes. Grounded
    by mining RimMind (`ConstructionBacklogPart`, `StorageSaturationPart`) and
    the known gaps (`source-todo-building-condition-read`,
@@ -216,7 +217,7 @@ Note: FORK3 endpoints (`/api/v1/map/reach`, `/api/v1/map/path-cost`, batch) land
    S2, groups, briefing, and room detection.
 6. **Willie minister** - mirror Food: contracts -> `Rules.cs` (rules-first;
    calls Placement Solver on an active `building_request`) ->
-   `MinisterOfConstruction` -> registry/DI/cabinet order -> dashboard scope.
+   `MinisterOfWillie` -> registry/DI/cabinet order -> dashboard scope.
    Slices A/B/C from `base-construction-layout-agent.md`.
 7. **Promote design -> `construction.md`** - keep canonical docs aligned once
    anchors settle.

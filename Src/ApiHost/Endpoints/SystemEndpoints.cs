@@ -34,10 +34,10 @@ public static class SystemEndpoints
         new("GET", "/api/v1/def/all", "active_read", "State store", "Thing definition catalog used to classify item nutrition and stack semantics."),
         new("GET", "/api/v1/map/animals?map_id", "active_read", "Chef", "Wild/tame animal source data for hunting assessment."),
         new("GET", "/api/v1/map/zones?map_id", "active_read", "Chef/State store", "Growing and stockpile zones with cell lists."),
-        new("GET", "/api/v1/map/rooms?map_id", "active_read", "Construction/Welfare", "Room role, temperature, bed ids, roof/open-room signals, and room quality stats."),
-        new("GET", "/api/v1/map/buildings?map_id", "active_read", "Construction/Chef", "Buildings, HP, power state, and working flags."),
+        new("GET", "/api/v1/map/rooms?map_id", "active_read", "Willie/Welfare", "Room role, temperature, bed ids, roof/open-room signals, and room quality stats."),
+        new("GET", "/api/v1/map/buildings?map_id", "active_read", "Willie/Chef", "Buildings, HP, power state, and working flags."),
         new("GET", "/api/v1/buildings/bills?building_id", "active_read", "Chef", "Current cooking work-table bills ingested after building refresh so Chef can suppress already-satisfied bill advice."),
-        new("GET", "/api/v1/map/power/info?map_id", "active_read", "Construction/Chef", "Power production, consumption, storage, and capacity."),
+        new("GET", "/api/v1/map/power/info?map_id", "active_read", "Willie/Chef", "Power production, consumption, storage, and capacity."),
         new("GET", "/api/v1/map/weather?map_id", "active_read", "Chef/Defense", "Weather and outdoor temperature."),
         new("GET", "/api/v1/map/things?map_id", "active_read", "Chef/State store", "Broad item and thing list; used as fallback/debug source behind stored resources."),
         new("GET", "/api/v1/lords?map_id", "active_read", "Defense", "Active AI lords such as raids, sieges, and caravans."),
@@ -71,7 +71,7 @@ public static class SystemEndpoints
 
     private static readonly RimApiCoverageRow[] MissingRimApiPriorities =
     [
-        new("GET", "/api/v1/resources/storages/summary?map_id", "missing", "Chef/Construction", "Needed for stockpile utilization and storage pressure."),
+        new("GET", "/api/v1/resources/storages/summary?map_id", "missing", "Chef/Willie", "Needed for stockpile utilization and storage pressure."),
         new("GET", "/api/v1/map/work-tables?map_id", "missing", "Chef/Industry", "Needed before Chef can reason about cooking/butchering bench coverage."),
         new("GET", "/api/v1/research/finished|tree|summary", "missing", "Research", "Needed for tech-path reasoning beyond the current project."),
         new("GET", "/api/v1/factions", "missing", "Economy/Defense", "Needed for diplomacy, trade context, and faction threat posture."),

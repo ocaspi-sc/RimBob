@@ -205,7 +205,7 @@ public record ZoneDto(
 // ── GET /map/buildings?map_id ─────────────────────────────────────────────────
 // Live wire fields (RIMAPI 1.9): id (int), def, label, position, rotation, size, type.
 // hp / power_on / is_working are NOT in the wire response — defaulted in MapBuildings.
-// TODO: expand when Construction minister begins or RIMAPI exposes hp/power state.
+// TODO: expand when Willie begins or RIMAPI exposes hp/power state.
 public record BuildingDto(
     [property: JsonPropertyName("id")]       int          Id,
     [property: JsonPropertyName("def")]      string       Def,

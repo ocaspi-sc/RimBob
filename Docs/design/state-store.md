@@ -201,7 +201,7 @@ fine. Use code/tests for current fields; use this doc for the design direction.
 Future minister briefings should follow the same pattern:
 
 - Defense: active threats, readiness, perimeter, weapons, casualty risk.
-- Construction: build queue, materials, power, room program, structural risks.
+- Willie: build queue, materials, power, room program, structural risks.
 - Welfare: Mood & Needs signals, including mood, needs, thoughts, recreation,
   schedules, comfort, beauty, room pressure, and relationship pressure.
 - Medical: health, wounds, disease, surgery, medicine stock, hospital

@@ -8,7 +8,7 @@ Note: Original RimBob summary. This is not a verbatim copy of the source.
 
 ## RimBob Use
 
-Good source for archetype vocabulary and visual examples: superstructure, mountain, town, circular, 11x11, layered, peninsula, and large community showcase bases. Useful for Construction minister classification and dashboard evidence.
+Good source for archetype vocabulary and visual examples: superstructure, mountain, town, circular, 11x11, layered, peninsula, and large community showcase bases. Useful for Willie classification and dashboard evidence.
 
 ## Layout Heuristics
 
@@ -76,4 +76,3 @@ Source image: https://indiegameculture.com/wp-content/uploads/2023/09/rimworld-i
 ![Sedes Aquaphorus base](images/indiegameculture-sedes-aquaphorus-maxmds.png)
 
 Source image: https://indiegameculture.com/wp-content/uploads/2023/09/rimworld-base-sedes.png
-

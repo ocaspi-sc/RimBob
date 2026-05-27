@@ -70,6 +70,7 @@ const textIconCues: TextIconCue[] = [
     'electricity',
   ]),
   cue(item('Wall', 'Construction icon', 'CO'), [
+    'willie',
     'construction',
     'building',
     'buildings',

@@ -86,7 +86,7 @@ The ints convert to floats implicitly. No new units, no new downstream changes.
 **Deferred (separate slice if needed):** expanding `PowerNetwork` to surface
 `TotalPossiblePowerW`, nameplate `ConsumptionW`, and building-id lists. None of
 the current consumers ([`MayorBriefingDerivation.cs:227`](Src/StateStore/Derivations/MayorBriefingDerivation.cs:227),
-the `PowerSnapshot` derivation) reads those fields, and Construction's
+the `PowerSnapshot` derivation) reads those fields, and Willie's
 building-condition work ([`source-todo-building-condition-read`](../HumanTodo.md))
 is the better home for per-building power state. Keep this slice focused on
 "stop returning zeros."
@@ -205,7 +205,7 @@ deliberate:
   power advice should reflect live grid draw, not the nameplate budget.
   `TotalConsumption` (nameplate) would over-count anything turned off and
   produce false deficits.
-- **Defer `TotalPossiblePower` and the three building-id lists.** Construction
+- **Defer `TotalPossiblePower` and the three building-id lists.** Willie
   is the natural consumer and that work is still scoped under the Willie
   meta-plan. Surfacing these now means touching `PowerNetwork`, `PowerSnapshot`,
   Mayor briefing, dashboard TS — all out of scope for "stop returning zeros".
@@ -225,7 +225,7 @@ been wrong since the RIMAPI swap. Goal: stop returning zeros.
 and [`MapHelper.GetMapPowerInfoInternal`](C:/dev/RIMAPI-for-RimBob/Source/RIMAPI/RimworldRestApi/Helpers/MapHelper.cs:119)
 confirmed field semantics + units (W vs Wd). `PowerNetwork`'s float shape kept
 intact because no consumer needed the new fields; expanding it would have
-touched Mayor briefing, dashboard TS, and the Willie Construction work.
+touched Mayor briefing, dashboard TS, and the Willie work.
 
 **Scope.**
 - Rewrote `PowerInfoDto` to the 9-field PascalCase record with explicit

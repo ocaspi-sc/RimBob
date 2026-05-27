@@ -15,7 +15,7 @@ RimWorld maps are dynamic: walls, blueprints, stockpiles, chunks, trees, and
 terrain prerequisites can change between ticks.
 
 This reference is especially useful for caching free-space regions between
-Construction evaluations.
+Willie evaluations.
 
 ## Placement Heuristics
 

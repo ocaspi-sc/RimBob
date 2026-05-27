@@ -1,25 +1,25 @@
-# Base / Construction / Layout Agent Plan
+# Base / Willie / Layout Agent Plan
 
 ## Suggested Name
 
 **Willie**
 
-The official cabinet label should remain **Construction** / **Minister of Construction**, while the prompt persona or UI flavor name can be **Willie**.
+The official minister name is **Willie**. Construction remains the domain/work category, not the schema or class-name prefix.
 
-Rationale: the name covers base layout, rooms, power, material flow, and build feasibility without creating a separate Base Layout minister. Current design says layout belongs inside Construction unless it becomes noisy enough to split later.
+Rationale: the name covers base layout, rooms, power, material flow, and build feasibility without creating a separate Base Layout minister. Current design says layout belongs inside Willie unless it becomes noisy enough to split later.
 
 ---
 
 ## Current Repo / Design Constraints
 
-- Construction is already planned in:
+- Willie construction-domain work is already planned in:
   - `Docs/design/ministers/construction.md`
   - `Docs/design/ministers.md`
   - `HumanTodo.md`
 - Existing design says:
-  - Construction owns built infrastructure, power, rooms, material/component flow, and layout efficiency.
+  - Willie owns built infrastructure, power, rooms, material/component flow, and layout efficiency.
   - No separate Base Layout minister for the first pass.
-  - Construction should ship before Defense because Food already emits freezer / cooler / power / storage requests that Construction should own.
+  - Willie should ship before Defense because Food already emits freezer / cooler / power / storage requests that Willie should own.
 - Implementation pattern to mirror:
   - `Src/Ministers/Food/Rules.cs`
   - `Src/Ministers/Food/MinisterOfFood.cs`
@@ -35,7 +35,7 @@ Rationale: the name covers base layout, rooms, power, material flow, and build f
 
 ### Phase 0 - Keep Scope Tight
 
-Implement Construction as one feeder minister named/displayed as **Construction**, with prompt persona **Willie**.
+Implement **Willie** as one feeder minister for the construction domain.
 
 Do **not** implement:
 
@@ -61,7 +61,7 @@ Files to update during implementation:
 
 Doc changes should capture:
 
-- Persona/name: **Willie**.
+- Minister/schema name: **Willie**.
 - First implementation slice focuses on:
   1. power deficit / fragile power margin
   2. missing freezer/cooler support requested by Food
@@ -70,20 +70,20 @@ Doc changes should capture:
   5. wood/fire-risk warnings for critical rooms
   6. layout hygiene signals: storage/workshop/freezer distance, if data supports it
 - Explicit limitation: no exact blueprint placement in MVP; advice can say "place a cooler-backed freezer near food storage," not compute perfect coordinates.
-- Dashboard expectation: Construction should become a live minister scope with Prompt, Briefing, RAG, Rules, Raw LLM Output, and Advice tabs.
+- Dashboard expectation: Willie should become a live minister scope with Prompt, Briefing, RAG, Rules, Raw LLM Output, and Advice tabs.
 
 ---
 
 ### Phase 2 - Core Contracts
 
-Add Construction-specific contracts under shared core.
+Add Willie-specific contracts under shared core.
 
 Likely files:
 
-- `Src/Common/Advice/ConstructionAdviceType.cs`
-- `Src/Common/Briefings/ConstructionBriefing.cs`
+- `Src/Common/Advice/WillieAdvice.cs`
+- `Src/Common/Briefings/WillieBriefing.cs`
 
-#### Proposed `ConstructionAdviceType` Values
+#### Proposed `WillieAdvice` Concern Values
 
 Keep them stable and execution-facing:
 
@@ -98,7 +98,7 @@ Keep them stable and execution-facing:
 
 Wire serialization like Food does, using snake-case output.
 
-#### Proposed `ConstructionBriefing` Shape
+#### Proposed `WillieBriefing` Shape
 
 Design-level groups:
 
@@ -145,13 +145,13 @@ Design-level groups:
 
 ### Phase 3 - State-Store Derivation
 
-Add Construction briefing derivation using existing aggregate patterns.
+Add Willie briefing derivation using existing aggregate patterns.
 
 Likely files:
 
-- `Src/StateStore/Derivations/ConstructionBriefingDerivation.cs`
+- `Src/StateStore/Derivations/WillieBriefingDerivation.cs`
 - update `Src/StateStore/BriefingCache.cs`
-- update `Src/StateStore/ColonyState.cs` if Construction needs its own aggregate dependency version list
+- update `Src/StateStore/ColonyState.cs` if Willie needs its own aggregate dependency version list
 
 Reuse existing derivation helpers where possible:
 
@@ -165,15 +165,15 @@ Important: keep the briefing compact. For layout, summarize distances and defici
 
 ---
 
-### Phase 4 - Rules-First Construction Minister
+### Phase 4 - Rules-First Willie Minister
 
 Add minister directory and start with `Rules.cs`, matching repo convention.
 
 Likely files:
 
-- `Src/Ministers/Construction/Rules.cs`
-- `Src/Ministers/Construction/MinisterOfConstruction.cs`
-- later: `Src/Ministers/Construction/scope.md`
+- `Src/Ministers/Willie/Rules.cs`
+- `Src/Ministers/Willie/MinisterOfWillie.cs`
+- later: `Src/Ministers/Willie/scope.md`
 
 #### Initial Deterministic Rules
 
@@ -187,7 +187,7 @@ Priority order should be:
    - Flag if Food/freezer is affected.
 
 2. **Food freezer build request**
-   - If active Food flag requests cooler/freezer/building and Construction has enough rough materials, emit `thermal_control`.
+   - If active Food flag requests cooler/freezer/building and Willie has enough rough materials, emit `thermal_control`.
    - Steps:
      - `place_blueprint`: cooler-backed freezer/cold room near food storage
    - Request:
@@ -224,7 +224,7 @@ Priority order should be:
 
 ### Phase 5 - LLM Prompt And Parsing
 
-To be a full agent like Food, add Construction LLM path.
+To be a full agent like Food, add Willie LLM path.
 
 Likely files:
 
@@ -232,7 +232,7 @@ Likely files:
 - update `Src/LlmGateway/PromptBuilder.cs`
 - update `Src/LlmGateway/LlmClient.cs`
 - add parser/normalizer if Food parser is too Food-specific:
-  - maybe `ConstructionLlmResponseParser.cs`
+- maybe `WillieLlmResponseParser.cs`
   - or extract generic minister advice parsing first if low-risk
 
 Prompt should tell **Willie**:
@@ -250,12 +250,12 @@ Prompt should tell **Willie**:
 
 ### Phase 6 - RAG Retrieval
 
-Construction should eventually get guide context, but this can be a second slice if needed.
+Willie should eventually get guide context, but this can be a second slice if needed.
 
 Likely files:
 
-- `Src/KnowledgeBase/ConstructionRagQueryBuilder.cs`
-- `Src/KnowledgeBase/ConstructionRagRetriever.cs`
+- `Src/KnowledgeBase/WillieRagQueryBuilder.cs`
+- `Src/KnowledgeBase/WillieRagRetriever.cs`
 
 Useful query topics:
 
@@ -272,7 +272,7 @@ The existing guide corpus already has relevant beginner and strategic-plan conte
 
 ### Phase 7 - Runtime Registration
 
-Wire Construction into the cabinet.
+Wire Willie into the cabinet.
 
 Likely files:
 
@@ -282,10 +282,10 @@ Likely files:
 
 Changes:
 
-- Mark Construction `Ready = true`.
+- Mark Willie `Ready = true`.
 - `CabinetOrder` should probably be:
   - Food first
-  - Construction second
+  - Willie second
   - Mayor after feeder ministers
 - Enable:
   - manual trigger
@@ -297,14 +297,14 @@ Changes:
 Potential order:
 
 1. Food emits freezer/power/storage flags.
-2. Construction reads active flags and emits build feasibility advice.
+2. Willie reads active flags and emits build feasibility advice.
 3. Mayor reads active flags/advice context.
 
 ---
 
 ### Phase 8 - Host Endpoints / Dashboard Inspection
 
-Most dashboard structure already supports planned Construction. Need to ensure backend endpoints return data.
+Most dashboard structure already supports planned ministers. Need to ensure backend endpoints return Willie data.
 
 Likely files:
 
@@ -313,7 +313,7 @@ Likely files:
 - `Dashboard/src/components/minister/MinisterBriefingView.tsx`
 - maybe `Dashboard/src/api/ministers.ts`
 
-Dashboard should show Construction as live and support:
+Dashboard should show Willie as live and support:
 
 - System Prompt
 - Briefing
@@ -322,7 +322,7 @@ Dashboard should show Construction as live and support:
 - Raw LLM Output
 - Advice
 
-Add a Construction-specific briefing grouping in `MinisterBriefingView.tsx`:
+Add a Willie-specific briefing grouping in `MinisterBriefingView.tsx`:
 
 - Power
 - Rooms / shelter
@@ -337,7 +337,7 @@ Keep raw/debug fields under the original backend contract names.
 
 ### Phase 9 - Replay And Observability
 
-Construction should follow the newer rule:
+Willie should follow the newer rule:
 
 > Every minister LLM attempt must be replayable.
 
@@ -345,7 +345,7 @@ Likely code path:
 
 - use `MinisterReplayRecorder`
 - write replay records under the Host-resolved logs root at
-  `replay/construction-YYYYMMDD.jsonl`
+  `replay/willie-YYYYMMDD.jsonl`
 - include:
   - briefing
   - play cycle context
@@ -366,8 +366,8 @@ Add tests before/with implementation.
 
 Likely folders:
 
-- `Src/Tests/Construction/`
-- `Src/Tests/Construction/Fixtures/`
+- `Src/Tests/Willie/`
+- `Src/Tests/Willie/Fixtures/`
 
 Test groups:
 
@@ -393,19 +393,19 @@ Test groups:
    - replay records are written
 
 4. **Prompt tests**
-   - prompt includes Construction briefing
+   - prompt includes Willie briefing
    - prompt includes Mayor cabinet direction
    - prompt forbids coordinates/blueprint precision when unsupported
    - prompt requires current schema
 
 5. **Registry/API tests**
-   - Construction is ready/live
+   - Willie is ready/live
    - manual trigger works
-   - prompt/briefing endpoints return Construction data
+   - prompt/briefing endpoints return Willie data
    - planned-scope behavior changes correctly from 501/not-wired to live response
 
 6. **Dashboard build**
-   - TypeScript compiles after Construction becomes live.
+   - TypeScript compiles after Willie becomes live.
 
 Verification commands later:
 
@@ -418,7 +418,7 @@ Verification commands later:
 
 ## Recommended Implementation Slicing
 
-### Slice A - Rules-Only Construction Skeleton
+### Slice A - Rules-Only Willie Skeleton
 
 - contracts
 - briefing
@@ -432,7 +432,7 @@ This gives deterministic value without LLM complexity.
 
 ### Slice B - Live Minister Wiring
 
-- `MinisterOfConstruction`
+- `MinisterOfWillie`
 - DI
 - `MinisterRegistry` ready/live
 - cabinet order
@@ -455,9 +455,9 @@ If fastest visible agent behavior is desired, combine A+B and defer C. If parity
 
 ## Recommendation
 
-Build **Willie** as **Construction** in two steps:
+Build **Willie** in two steps:
 
 1. First implementation: rules-first, live dashboard, no LLM yet except maybe planned prompt docs.
 2. Second implementation: LLM/RAG escalation once the deterministic briefing and first rule set prove useful.
 
-This avoids spending LLM work on weak/immature briefing fields and keeps Construction grounded.
+This avoids spending LLM work on weak/immature briefing fields and keeps Willie grounded.

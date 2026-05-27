@@ -1,7 +1,8 @@
-# Willie (Construction) — Advice / Output Schema
+# Willie — Advice / Output Schema
 
 > **Agent-created design doc.** Synthesis pending human review. Scope is the
-> **advice / output side** of the schema only: `AdviceItem`, `AdviceAction`,
+> **advice / output side** of the schema only: `WillieAdvice` (the
+> Willie-owned `AdviceItem` shape), `AdviceAction`,
 > the per-kind apply payloads, a new multi-option concept, and a
 > `blueprint_group` placement payload. The **request / flag side**
 > (`AgentFlag`, `ResourceRequest`) is owned by the parallel
@@ -126,7 +127,7 @@ permits.
 
 ## 3. `AdviceOption` + `AdviceItem.options[]`
 
-**Decision applied:** add optional multi-option advice. Some Construction advice
+**Decision applied:** add optional multi-option advice. Some Willie advice
 (layout, freezer/room placement) is better expressed as **N alternatives the
 player picks among** than a single forced action.
 
@@ -337,7 +338,7 @@ Exact cells/rotations are **not** authored by the minister LLM. A simple LLM
 cannot reliably emit per-cell placement, and `advice.md` already forbids the LLM
 choosing payloads/target ids. Split authorship:
 
-- **Judgment layer (LLM or rules):** emits a small semantic `ConstructionIntent`
+- **Judgment layer (LLM or rules):** emits a small semantic `WillieBuildIntent`
   — `concern`, `priority`, title/body/rationale, and an optional
   `build_intent { target_class, room_class?, size_hint?, capacity?, near?[],
   constraints?[] }`. **No coordinates.**

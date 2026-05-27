@@ -113,7 +113,7 @@ If no human-facing label was ever rendered for the concept, that's fine — the 
 
 **Motivation.** The design-language concept "advice type" was renamed to **"concern"** this session. Rationale: "advice type" is a generic CS word; the concept is the autonomy-dial graduation unit + dedup key + category label (per `Docs/design/advice.md`). "Concern" reads naturally in both Suggest mode (minister surfaces a concern) and Auto (player trusts minister with a concern). This slice lands the code-side rename; a parallel sonnet doc-rename slice updates the design docs.
 
-**Context.** Decision recorded in `Docs/DESIGN.md` decision log this session. Related: the 9 Construction (Willie) advice-type values were also renamed this session (design-only, separate edit pass). The "advice action" surface (`AdviceActionKind`, `place_blueprint`, etc.) is **untouched** — distinct from concern.
+**Context.** Decision recorded in `Docs/DESIGN.md` decision log this session. Related: the 9 Willie advice-type values were also renamed this session (design-only, separate edit pass). The "advice action" surface (`AdviceActionKind`, `place_blueprint`, etc.) is **untouched** — distinct from concern.
 
 **Scope shipped.**
 - `AdviceItem.AdviceType` → `AdviceItem.Concern`; `[JsonPropertyName("advice_type")]` → `("concern")`.

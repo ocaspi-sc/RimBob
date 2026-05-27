@@ -1,10 +1,10 @@
-# Willie (Construction) — Canonical Concern Set
+# Willie — Canonical Concern Set
 
 > **Reconciliation note.** This file resolves the conflicting concern lists in
 > [`base-construction-layout-agent.md`](base-construction-layout-agent.md) (8 concerns)
 > and [`base-layout-construction-tips.md`](base-layout-construction-tips.md) (9 concerns)
-> into ONE canonical set for the Construction minister (persona **Willie**, cabinet
-> label **Construction**). It is design synthesis pending human review; the human
+> into ONE canonical set for Willie, the construction-domain minister. It is
+> design synthesis pending human review; the human
 > promotes the final list into
 > [`Docs/design/ministers/construction.md`](../Docs/design/ministers/construction.md),
 > whose concerns are currently an open question.
@@ -17,9 +17,9 @@
 >   `AdviceActionKind` in `Src/Common/Advice/AdviceAction.cs`.
 > - Mirror the Food enum style (`Src/Common/Advice/FoodAdviceType.cs`): a granular,
 >   execution-facing, per-minister closed C# enum, snake_cased on the JSON wire.
-> - Inbound-request ownership is taken from the Construction issue catalogue in
+> - Inbound-request ownership is taken from the Willie issue catalogue in
 >   [`deterministic-cos-cabinet-issue-solver.md`](deterministic-cos-cabinet-issue-solver.md)
->   (Construction section). Food is the only LIVE requester this milestone; the
+>   (Willie section). Food is the only LIVE requester this milestone; the
 >   rest are design-forward.
 
 ---
@@ -35,20 +35,20 @@ all others are design-forward.
 | `power_stability` | Net power deficit, no/low battery backup, or a fragile load margin that endangers critical consumers. | Food **(LIVE)** — coolers/freezer draw power; Defense (turrets), Medical (hospital), Industry (benches) when those scope live. |
 | `thermal_control` | Build/repair the buildable thermal envelope — cooler, walls, vents, power, and placement — behind a refrigeration need. Covers cooling assets generally (extends to hospital/heat shells as more ministers go live). | Food **(LIVE)** freezer/cooler/cold-room request; later Medical (sterile/temperature-controlled shell), Welfare (heat/cold safety). |
 | `functional_rooms` | A *named functional room* the colony is missing or that is undersized/wrong-purpose for its job (bedroom, hospital, prison, workshop, research room, recreation), beyond the survival floor. | Welfare (bedrooms / barracks / survival-floor enclosure; recreation; quality), Medical (hospital), Research (research room), Industry (workshop) — all design-forward. |
-| `storage_placement` | Stockpiles/shelves are mis-placed relative to the work that consumes or produces them — benches without input storage, materials far from the build queue, food storage split from kitchen/butcher. | Food **(LIVE)** food-storage-to-kitchen proximity; Industry (bench input/output flow) design-forward. Construction owns the physical placement; the requester owns *why* the throughput matters. |
+| `storage_placement` | Stockpiles/shelves are mis-placed relative to the work that consumes or produces them — benches without input storage, materials far from the build queue, food storage split from kitchen/butcher. | Food **(LIVE)** food-storage-to-kitchen proximity; Industry (bench input/output flow) design-forward. Willie owns the physical placement; the requester owns *why* the throughput matters. |
 | `material_bottleneck` | Steel, wood, stone blocks, components, or stone chunks are too low to satisfy visible/queued build demand. | Food **(LIVE)** (materials gating a freezer/stove build); Defense, Medical, Industry, Research design-forward. Often pairs with an Industry/Economy flag request. |
 | `fire_risk` | Wood-heavy critical rooms where stone/material is available, or insufficient firebreak spacing between structures. Material risk **and** spacing risk. | Self-derived (freezer/kitchen/power/hospital/storage/bedroom rooms); Defense for active-threat/fire context design-forward. |
 | `stalled_builds` | Existing blueprints/frames cannot progress — missing materials at the site, unreachable work, or a pending unmet cross-minister request. | Any minister whose requested build has stalled. Food **(LIVE)** when a requested freezer/stove blueprint is stuck. |
 | `base_layout` | High-frequency work loops are wasting pawn travel (named route chains: field→freezer→kitchen→dining, storage→bench, material→build site). Also the home for whole-base topology signals (see §2). | Food **(LIVE)** food-chain loop length; cross-cutting for all ministers' work loops. |
 
 This is the smallest non-overlapping set that still covers every inbound need
-named in the CoS Construction catalogue while staying granular enough to be
+named in the CoS Willie catalogue while staying granular enough to be
 autonomy-dial units. Eight types (`basic_shelter` moved to Welfare 2026-05-27
 — see §4.5).
 
-### Mapping to the CoS Construction issue catalogue
+### Mapping to the CoS Willie issue catalogue
 
-The CoS catalogue lists six Construction issue *families*; this enum is a
+The CoS catalogue lists six Willie issue *families*; this enum is a
 slightly finer execution-facing view of the same domain, which is correct —
 issue families group for routing, concerns graduate for autonomy:
 
@@ -112,7 +112,7 @@ Rationale — they answer different questions and serve different requesters:
 - `storage_placement` is about **material-flow placement** — stockpiles/shelves
   in the wrong *spot* relative to the work that uses them. It is a Food (LIVE)
   and Industry concern about travel/throughput, not about whether a room exists.
-  The tips plan explicitly frames this as a material-flow issue Construction owns
+  The tips plan explicitly frames this as a material-flow issue Willie owns
   because it sees physical placement, distinct from zoning purpose.
 - Merging them would force one autonomy-dial knob to govern both "decide the
   colony needs a hospital" (a structural, judgment-heavy, LLM-escalation call)
@@ -135,7 +135,7 @@ There is **no generic `build_structure` concern**, and there must not be.
 - `concern` is the unit the autonomy dial graduates one at a time and must
   stay **granular and execution-facing** (per `advice.md` and the Food enum). A
   catch-all "build a structure" would be the opposite: it would let the player
-  graduate "Construction may build *anything*" in one dial click, which is
+  graduate "Willie may build *anything*" in one dial click, which is
   exactly the over-broad autonomy the per-concern design exists to prevent.
 - "Build a structure" is an **ACTION, not a category.** The placement primitive
   already exists as `AdviceActionKind.PlaceBlueprint` (`place_blueprint`) in
@@ -179,7 +179,7 @@ the cooler trigger; Willie places) places this concern in Welfare:
   the smell §2 rejected for `base_topology`.
 - **Bootstrapping.** Welfare is design-forward; it does not LIVE-emit requests
   yet. So is half the §1 table. `basic_shelter` joins the design-forward set;
-  no LIVE behavior is lost (no Construction-side `basic_shelter` rule had
+  no LIVE behavior is lost (no Willie-side `basic_shelter` rule had
   shipped).
 
 Where the survival-floor signals go:

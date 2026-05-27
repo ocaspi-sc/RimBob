@@ -1,9 +1,9 @@
-# WFC Variant Generator For Construction
+# WFC Variant Generator For Willie
 
 ## Goal
 
 Evaluate Wave Function Collapse as a bounded **candidate generator** for
-Construction placement proposals, not as the primary placement solver.
+Willie placement proposals, not as the primary placement solver.
 
 ## Current Decision
 
@@ -70,7 +70,7 @@ local exact-solver drafts.
    `wall`, `door`, `cooler`, `shelf`, `walkway`, `empty`, and fixed anchors.
 2. Seed WFC with deterministic inputs and store the seed in the proposal trace.
 3. Generate a small number of drafts, then run the normal solver validator/scorer.
-4. Render rejected and accepted WFC drafts in the Construction dashboard proposal
+4. Render rejected and accepted WFC drafts in the Willie dashboard proposal
    view with reason chips and score components.
 5. Compare WFC drafts against hand-authored templates in fixtures.
 
@@ -90,6 +90,6 @@ on upgrade.**
 ## Open Questions
 
 - Which first grammar is worth the cost: freezer, hospital, barracks, or power?
-- Should WFC live only in dashboard experimentation until Construction is live?
+- Should WFC live only in dashboard experimentation until Willie is live?
 - What fixture corpus proves WFC beats simple templates often enough to keep it?
 - What per-generator draft budget keeps WFC from crowding out simpler generators?

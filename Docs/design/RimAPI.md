@@ -128,7 +128,7 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 
 > **Fork shape.** `/map/reach`, `/map/path-cost`, and
 > `/map/path-cost/batch` expose default in-map reachability and walk-cost
-> scoring for Construction/Willie placement ranking. `reach` wraps
+> scoring for Willie placement ranking. `reach` wraps
 > `Map.reachability.CanReach`; `path-cost` uses `tier:"region"` for cheap
 > region-BFS rank or `tier:"astar"` for exact RimWorld pathfinder cost; batch
 > requests are capped at 4096 pairs and reject the whole batch on malformed
@@ -140,7 +140,7 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 
 > **Verified historical shape.** `/map/animals?map_id=...` could omit health/tame fields on ordinary wild animals. Missing health meant "not reported", not injured/dead; ingestion defaulted it to healthy for Chef's wild-animal opportunity count. The RimBob fork now emits `tame` and `health` where RimWorld exposes them, which lets Chef exclude tame or unhealthy animals before hunt scoring.
 
-> **Verified shape (RimBob fork).** `/map/rooms?map_id=...` returns `data.rooms[]`. Room rows include `id`, `role_label`, `temperature`, `cells_count`, `touches_map_edge`, `is_prison_cell`, `is_doorway`, `open_roof_count`, `contained_beds_ids[]`, and room stats `impressiveness`, `beauty`, `cleanliness`, `space`, `wealth`. RimBob ingests this into `RoomRegistry` for read-only Welfare source briefings and Construction/Welfare evidence.
+> **Verified shape (RimBob fork).** `/map/rooms?map_id=...` returns `data.rooms[]`. Room rows include `id`, `role_label`, `temperature`, `cells_count`, `touches_map_edge`, `is_prison_cell`, `is_doorway`, `open_roof_count`, `contained_beds_ids[]`, and room stats `impressiveness`, `beauty`, `cleanliness`, `space`, `wealth`. RimBob ingests this into `RoomRegistry` for read-only Welfare source briefings and Willie/Welfare evidence.
 
 ### Bill (work-table recipes)
 | Method | Path | Purpose |
@@ -183,7 +183,7 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 > pending blueprint/frame lifecycle: validate, place, read, allow/disallow,
 > explicit-id cancel, and backlog summary. It does not cover general building
 > detail, room, stockpile, power-net, or buildability-layer evidence; those are
-> separate Construction/Willie follow-ups in `HumanTodo.md`.
+> separate Willie follow-ups in `HumanTodo.md`.
 
 ### Order (designations)
 | Method | Path | Purpose |

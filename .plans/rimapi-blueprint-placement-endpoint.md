@@ -274,14 +274,14 @@ Keep these outside this slice:
 - `rimapi-power-net-read`
 - `rimapi-buildability-layers-read`
 
-Those endpoints are general Construction/Willie evidence, not pending
+Those endpoints are general Willie evidence, not pending
 blueprint/frame lifecycle.
 
 ---
 
 ## Summary (landed 2026-05-27)
 
-**Motivation.** Willie (Construction) needs a complete fork-side blueprint
+**Motivation.** Willie needs a complete fork-side blueprint
 lifecycle so the minister can validate, place, list, allow/disallow, cancel,
 and summarize pending pending-build work without ever touching the RimBob
 Host. This slice closes the last contract gap in that lifecycle.

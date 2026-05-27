@@ -8,7 +8,7 @@ Note: Original RimBob summary. This is not a verbatim copy of the source.
 
 ## RimBob Use
 
-Reference for how in-game planning UX should feel: lightweight, colored, layered, editable, and close to the normal Architect workflow. Useful for future Construction dashboard overlays and for translating agent spatial suggestions into player-readable draft plans.
+Reference for how in-game planning UX should feel: lightweight, colored, layered, editable, and close to the normal Architect workflow. Useful for future Willie dashboard overlays and for translating agent spatial suggestions into player-readable draft plans.
 
 ## Workflow Heuristics
 

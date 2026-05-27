@@ -5,7 +5,7 @@ export type ScopeKey =
   | 'dev_blog'
   | 'mayor'
   | 'food'
-  | 'construction'
+  | 'willie'
   | 'defense'
   | 'welfare'
   | 'medical'
@@ -91,7 +91,7 @@ export const scopeConfigs: ScopeConfig[] = [
   { key: 'dev_blog', label: 'DEV BLOG', kind: 'dev_blog', status: 'live', enabledViews: devBlogViews.map(view => view.key) },
   { key: 'mayor', label: 'Mayor', kind: 'minister', status: 'live', enabledViews: allMinisterViews },
   { key: 'food', label: 'Chef', kind: 'minister', status: 'live', enabledViews: allMinisterViews },
-  { key: 'construction', label: 'Construction', kind: 'minister', status: 'planned', enabledViews: allMinisterViews },
+  { key: 'willie', label: 'Willie', kind: 'minister', status: 'planned', enabledViews: allMinisterViews },
   { key: 'defense', label: 'Defense', kind: 'minister', status: 'planned', enabledViews: allMinisterViews },
   { key: 'welfare', label: 'Welfare', kind: 'minister', status: 'planned', enabledViews: allMinisterViews },
   { key: 'medical', label: 'Medical', kind: 'minister', status: 'planned', enabledViews: allMinisterViews },

@@ -10,7 +10,7 @@ Note: Original RimBob summary. This is not a verbatim copy of the source.
 ## RimBob Use
 
 Summed-area tables, also known as integral images, are the first primitive to
-implement for rectangular Construction placement. They turn repeated rectangle
+implement for rectangular Willie placement. They turn repeated rectangle
 queries into constant-time table lookups after one linear precompute pass.
 
 For RimBob, this should back cheap hard gates before any pathfinding, material

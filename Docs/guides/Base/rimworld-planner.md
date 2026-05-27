@@ -8,7 +8,7 @@ Note: Original RimBob summary. This is not a verbatim copy of the source.
 
 ## RimBob Use
 
-Planning workflow reference rather than a mechanics guide. Useful for future dashboard or Construction-minister tooling: drafts, overlays, ASCII exchange, PNG exports, local-first maps, and fast iteration.
+Planning workflow reference rather than a mechanics guide. Useful for future dashboard or Willie tooling: drafts, overlays, ASCII exchange, PNG exports, local-first maps, and fast iteration.
 
 ## Workflow Heuristics
 
@@ -29,7 +29,6 @@ The source does not expose static base-layout example images in the page. No loc
 
 ## Dashboard/Agent Implications
 
-- A future Construction dashboard could export a current layout sketch as PNG plus a compact text plan.
+- A future Willie dashboard could export a current layout sketch as PNG plus a compact text plan.
 - A future RAG/corpus entry should prefer machine-readable adjacency facts over screenshots when RimBob is expected to reason over the plan.
 - If RimBob ever suggests room placement, the UI should show it as an inspectable draft layer, not as an automatic build order.
-

@@ -408,7 +408,7 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
 
     /// <summary>
     /// POST api/v1/order/designate/area — designate Hunt / Harvest / Mine / Deconstruct
-    /// over a rect. Used by Chef (harvest, hunt) and Construction (mine, decon).
+    /// over a rect. Used by Chef (harvest, hunt) and Willie (mine, decon).
     /// RIMAPI accepts designation/type and either point_a/point_b or rect.
     /// </summary>
     public async Task DesignateAreaAsync(
