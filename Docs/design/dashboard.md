@@ -83,10 +83,10 @@ success, the header must show `stale` and render dependent RIMAPI/LLM/Mayor
 values as `last ...`; if no Host API response is reachable, those dependent
 values are `unknown`, not inferred from cached data. `LLM configured` means a
 Gemini key exists; provider success/failure comes from the latest raw-output
-status. `Mayor idle vN` means no Mayor run is active and the latest loaded
-Mayor snapshot is version `N`. Every header marker/chip should carry a tooltip
-with the exact source field or operational meaning so compact labels do not
-hide what is being measured.
+status. `Mayor idle` means no Mayor run is active; the latest loaded Mayor
+snapshot version belongs in the tooltip or SYSTEM details, not the compact
+label. Every header marker/chip should carry a terse data tooltip with the
+source endpoint or field plus the current/last value, not explanatory prose.
 The header also exposes `Run Cabinet Now`. Minister workspaces expose
 `Run {Minister} Now` beside the selected minister's last-run time. The selected
 view is already visible in the tab bar and should not be repeated beside the run

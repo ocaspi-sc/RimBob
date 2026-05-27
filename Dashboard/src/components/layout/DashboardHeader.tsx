@@ -44,16 +44,16 @@ export function DashboardHeader({
         <span className="eyebrow">RimWorld Advisory Cabinet</span>
         <h1>RimBob Dashboard v2</h1>
         <div className="running-version" aria-label="Running RimBob version">
-          <span title={version ? `Running RimBob version: ${version.running_version}` : 'Waiting for /api/system/health version metadata.'}>
+          <span title={version ? `source=/api/system/health; version.running_version=${version.running_version}` : 'source=/api/system/health; version.running_version=checking'}>
             {versionMarker}
           </span>
-          <code title={version ? `Build revision: ${version.build_revision ?? version.build_version}` : 'Waiting for Host build revision metadata.'}>
+          <code title={version ? `source=/api/system/health; version.build_revision=${version.build_revision ?? version.build_version}` : 'source=/api/system/health; version.build_revision=checking'}>
             {revisionMarker}
           </code>
-          <span title={version ? `Host build datetime: ${formatBuildDateTime(version.build_datetime)}` : 'Waiting for Host build datetime metadata.'}>
+          <span title={version ? `source=/api/system/health; version.build_datetime=${formatBuildDateTime(version.build_datetime)}` : 'source=/api/system/health; version.build_datetime=checking'}>
             {buildMarker}
           </span>
-          <span title={version ? `Dashboard asset fingerprint: ${version.dashboard_asset_version}` : 'Waiting for dashboard asset fingerprint.'}>
+          <span title={version ? `source=/api/system/health; version.dashboard_asset_version=${version.dashboard_asset_version}` : 'source=/api/system/health; version.dashboard_asset_version=checking'}>
             {assetMarker}
           </span>
           <span title={runtimeTooltip(runtimeRoot, hostProcessPath)}>
@@ -107,7 +107,7 @@ function deriveHostApiState(
       kind: 'live',
       label: 'live',
       tone: 'ok',
-      title: `Latest /api/status success${statusLoadedAt ? ` at ${formatBuildDateTime(statusLoadedAt)}` : ''}.`,
+      title: `source=/api/status; state=live; last_ok=${formatMaybeDate(statusLoadedAt)}`,
     };
   }
 
@@ -117,7 +117,7 @@ function deriveHostApiState(
       kind: 'stale',
       label: age ? `stale ${age}` : 'stale',
       tone: 'warn',
-      title: `Last /api/status success is stale. Current error: ${statusError}`,
+      title: `source=/api/status; state=stale; last_ok=${formatMaybeDate(statusLoadedAt)}; error=${statusError}`,
     };
   }
 
@@ -126,7 +126,7 @@ function deriveHostApiState(
       kind: 'offline',
       label: 'offline',
       tone: 'error',
-      title: `/api/status is not reachable: ${statusError}`,
+      title: `source=/api/status; state=offline; error=${statusError}`,
     };
   }
 
@@ -134,7 +134,7 @@ function deriveHostApiState(
     kind: 'checking',
     label: 'checking',
     tone: 'idle',
-    title: 'Waiting for the first /api/status response.',
+    title: 'source=/api/status; state=checking',
   };
 }
 
@@ -143,7 +143,7 @@ function deriveRimApiState(status: RimBobStatus | null, host: HostApiState): Hea
     return {
       label: 'unknown',
       tone: 'idle',
-      title: 'RIMAPI state is unknown until the Host API is reachable.',
+      title: `source=/api/status.rimapi_reachable; state=unknown; host_api=${host.kind}`,
     };
   }
 
@@ -152,16 +152,14 @@ function deriveRimApiState(status: RimBobStatus | null, host: HostApiState): Hea
     return {
       label: `last ${liveLabel}`,
       tone: 'idle',
-      title: 'Last known RIMAPI state from a stale Host API response.',
+      title: `source=/api/status.rimapi_reachable; state=stale; last=${status.rimapi_reachable}; host_api=stale`,
     };
   }
 
   return {
     label: liveLabel,
     tone: status.rimapi_reachable ? 'ok' : 'warn',
-    title: status.rimapi_reachable
-      ? 'Host has completed a live RIMAPI refresh in this process.'
-      : 'Host is reachable, but RimWorld/RIMAPI has not produced a live refresh.',
+    title: `source=/api/status.rimapi_reachable; value=${status.rimapi_reachable}; colony_state_origin=${status.colony_state_origin ?? 'unknown'}`,
   };
 }
 
@@ -170,7 +168,7 @@ function deriveLlmState(status: RimBobStatus | null, host: HostApiState): Header
     return {
       label: 'unknown',
       tone: 'idle',
-      title: 'LLM state is unknown until the Host API is reachable.',
+      title: `source=/api/status.llm_status; state=unknown; host_api=${host.kind}`,
     };
   }
 
@@ -180,16 +178,14 @@ function deriveLlmState(status: RimBobStatus | null, host: HostApiState): Header
     return {
       label: `last ${label}`,
       tone: 'idle',
-      title: 'Last known LLM state from a stale Host API response.',
+      title: llmTitle(status, llmStatus, 'stale'),
     };
   }
 
   return {
     label,
     tone: llmToneFor(llmStatus),
-    title: llmStatus === 'ready'
-      ? 'Gemini key is configured; no provider result has been recorded yet.'
-      : `Latest Host-reported LLM status: ${llmStatus}`,
+    title: llmTitle(status, llmStatus, 'live'),
   };
 }
 
@@ -198,7 +194,7 @@ function deriveMayorState(status: RimBobStatus | null, host: HostApiState): Head
     return {
       label: 'unknown',
       tone: 'idle',
-      title: 'Mayor state is unknown until the Host API is reachable.',
+      title: `source=/api/status.mayor_running; state=unknown; host_api=${host.kind}`,
     };
   }
 
@@ -207,7 +203,7 @@ function deriveMayorState(status: RimBobStatus | null, host: HostApiState): Head
     return {
       label: `last ${label}`,
       tone: 'idle',
-      title: 'Last known Mayor state from a stale Host API response.',
+      title: `source=/api/status; state=stale; mayor_running=${status.mayor_running}; mayor_snapshot_version=${status.mayor_snapshot_version ?? 'null'}`,
     };
   }
 
@@ -222,8 +218,19 @@ function deriveStreamState(stream: StreamDiagnostics): HeaderState {
   return {
     label: stream.state,
     tone: stream.state === 'open' ? 'ok' : stream.state === 'error' ? 'warn' : 'idle',
-    title: 'Browser EventSource state for /api/advice/stream. This is separate from the Host API poll.',
+    title: `source=/api/advice/stream; state=${stream.state}; ready_state=${stream.readyState}; events=${stream.eventCount}; reconnects=${stream.reconnectCount}; last_event=${stream.lastEventType ?? 'none'}`,
   };
+}
+
+function llmTitle(status: RimBobStatus, llmStatus: string, state: 'live' | 'stale'): string {
+  return [
+    'source=/api/status',
+    `state=${state}`,
+    `llm_status=${llmStatus}`,
+    `llm_configured=${status.llm_configured}`,
+    `llm_last_event_at=${formatMaybeDate(status.llm_last_event_at)}`,
+    `llm_last_error=${status.llm_last_error ?? 'null'}`,
+  ].join('; ');
 }
 
 function llmToneFor(status: string): PillTone {
@@ -242,18 +249,24 @@ function llmLabelFor(status: string): string {
 function mayorLabel(status: RimBobStatus): string {
   if (status.mayor_last_error) return 'error';
   if (status.mayor_running) return 'running';
-  if (status.mayor_snapshot_version !== null) return `idle v${status.mayor_snapshot_version}`;
+  if (status.mayor_snapshot_version !== null) return 'idle';
   return 'no snapshot';
 }
 
 function mayorTitle(status: RimBobStatus): string {
-  if (status.mayor_last_error) return status.mayor_last_error;
-  if (status.mayor_running) return `Mayor run started at ${formatMaybeDate(status.mayor_started_at)}.`;
-  if (status.mayor_snapshot_version !== null) {
-    return `No Mayor run is active. Latest snapshot version: ${status.mayor_snapshot_version}.`;
+  if (status.mayor_last_error) {
+    return `source=/api/status; mayor_last_error=${status.mayor_last_error}`;
   }
 
-  return 'No Mayor snapshot has been loaded or generated yet.';
+  if (status.mayor_running) {
+    return `source=/api/status; mayor_running=true; mayor_started_at=${formatMaybeDate(status.mayor_started_at)}`;
+  }
+
+  if (status.mayor_snapshot_version !== null) {
+    return `source=/api/status; mayor_running=false; mayor_snapshot_version=${status.mayor_snapshot_version}; mayor_completed_at=${formatMaybeDate(status.mayor_completed_at)}`;
+  }
+
+  return 'source=/api/status; mayor_running=false; mayor_snapshot_version=null';
 }
 
 function formatBuildDateTime(value: string): string {
@@ -276,13 +289,14 @@ function dashboardAssetLabel(assetVersion: string): string {
 
 function runtimeTooltip(runtimeRoot: string | null, hostProcessPath: string | null): string {
   if (!runtimeRoot && !hostProcessPath) {
-    return 'Waiting for Host runtime path metadata.';
+    return 'source=/api/system/health; runtime.runtime_root=checking; runtime.host_process_path=checking';
   }
 
   return [
-    `Runtime root: ${runtimeRoot ?? 'unknown'}`,
-    `Host process: ${hostProcessPath ?? 'unknown'}`,
-  ].join(' | ');
+    'source=/api/system/health',
+    `runtime.runtime_root=${runtimeRoot ?? 'unknown'}`,
+    `runtime.host_process_path=${hostProcessPath ?? 'unknown'}`,
+  ].join('; ');
 }
 
 function formatMaybeDate(value: string | null): string {
