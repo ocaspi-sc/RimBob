@@ -7,9 +7,6 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 ## Agent Discipline
 
 - Read `Docs/DESIGN.md`, `HumanTodo.md`, and the relevant focus doc before changing files.
-- When the user asks conceptual, design, "should we", "why", or "what about" questions, answer/review first. Do not rush to implementation unless clearly asked.
-- When i write "wdyt" that's your cue to offer pushback, to rethink the design, think outside the box.
-- If a prompt combines questions and actions, make sure to answer all questions first, then continue to actions (unless my questions undermine your confidence)
 - Prefer short concise answers, but never skip the important details!
   - e.g. just say All tests passed instead of reporting commands used
 - Prefer concise bullets for operational summaries when they improve scan speed.
@@ -26,6 +23,14 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 - Show me pseudo code
 - Use cheap subagents often
 - Show me your plan before doing any significant work
+
+
+# Dictionary
+
+- AMA = you should ask me questions for every desicion.
+- WDYT = Don't implement it, but give me your honest opinion. offer pushback, rethink the design, think outside the box, maybe change the scope.
+- When the user asks conceptual, design, "should we", "why", or "what about" questions, answer/review first. Do not rush to implementation unless clearly asked.
+- If a prompt combines questions and actions, make sure to answer all questions first, then continue to actions (unless my questions undermine your confidence)
 
 ## Coding
 
