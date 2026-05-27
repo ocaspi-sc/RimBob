@@ -3,7 +3,7 @@
 Retrieved: 2026-05-25
 
 This folder is a local, source-attributed image pack for studying normal
-RimWorld base layouts. It is reference material for Construction / Willie
+RimWorld base layouts. It is reference material for Willie
 layout-pattern mining, not a design contract by itself.
 
 ## Contents
