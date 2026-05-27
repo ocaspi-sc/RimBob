@@ -6,7 +6,7 @@ namespace RimBob.State;
 
 public sealed record ColonyStateSnapshot
 {
-    public const int CurrentSchemaVersion = 3;
+    public const int CurrentSchemaVersion = 4;
 
     [JsonPropertyName("schema_version")]
     public required int SchemaVersion { get; init; }
@@ -95,6 +95,9 @@ public sealed record ColonyStateSnapshot
 
     [JsonPropertyName("research")]
     public required ResearchInfo Research { get; init; }
+
+    [JsonPropertyName("willie_backlog")]
+    public required WillieConstructionBacklog WillieBacklog { get; init; }
 }
 
 public sealed record ColonySnapshotStatus(

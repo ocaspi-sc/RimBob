@@ -39,6 +39,34 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
             ?? throw new InvalidOperationException($"RIMAPI envelope.data was null for {path}");
     }
 
+    private async Task<TResponse> PostEnvelopedAsync<TRequest, TResponse>(
+        string path,
+        TRequest body,
+        CancellationToken ct)
+    {
+        using HttpResponseMessage response = await http.PostAsJsonAsync(path, body, ct);
+        try
+        {
+            response.EnsureSuccessStatusCode();
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new RimApiHttpException($"RIMAPI HTTP error at {path}: {(int?)response.StatusCode} {response.ReasonPhrase}", response.StatusCode, ex);
+        }
+
+        RimApiEnvelope<TResponse>? envelope = await response.Content.ReadFromJsonAsync<RimApiEnvelope<TResponse>>(cancellationToken: ct)
+            ?? throw new InvalidOperationException($"RIMAPI returned null for {path}");
+
+        if (!envelope.Success)
+        {
+            string errors = string.Join(", ", envelope.Errors ?? []);
+            throw new RimApiException($"RIMAPI error at {path}: {errors}");
+        }
+
+        return envelope.Data
+            ?? throw new InvalidOperationException($"RIMAPI envelope.data was null for {path}");
+    }
+
     private static string Query(string value) => Uri.EscapeDataString(value);
 
     private static async Task EnsureWriteAcceptedAsync(HttpResponseMessage response, string path, CancellationToken ct)
@@ -284,6 +312,55 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
     public Task<IReadOnlyList<RoomDto>> GetRoomsAsync(
         int mapId, CancellationToken ct = default) =>
         GetEnvelopedListAsync<RoomDto>($"api/v1/map/rooms?map_id={mapId}", ct, "rooms");
+
+    /// <summary>GET api/v1/map/construction/backlog?map_id - pending blueprint/frame backlog groups.</summary>
+    public Task<IReadOnlyList<ConstructionBacklogGroupDto>> GetConstructionBacklogAsync(
+        int mapId,
+        CancellationToken ct = default) =>
+        GetEnvelopedListAsync<ConstructionBacklogGroupDto>(
+            $"api/v1/map/construction/backlog?map_id={mapId}", ct);
+
+    /// <summary>GET api/v1/map/reach - default in-map cell reachability for Willie placement scoring.</summary>
+    public Task<MapReachResponseDto> GetReachAsync(
+        int mapId,
+        int fromX,
+        int fromZ,
+        int toX,
+        int toZ,
+        string mode = "pass_doors",
+        string peMode = "on_cell",
+        CancellationToken ct = default) =>
+        GetEnvelopedAsync<MapReachResponseDto>(
+            $"api/v1/map/reach?map_id={mapId}&from_x={fromX}&from_z={fromZ}&to_x={toX}&to_z={toZ}&mode={Query(mode)}&pe_mode={Query(peMode)}",
+            ct);
+
+    /// <summary>POST api/v1/map/path-cost - single-pair path-cost primitive for future Willie solver scoring.</summary>
+    public Task<MapPathCostResponseDto> PostPathCostAsync(
+        MapPathCostRequestDto request,
+        CancellationToken ct = default) =>
+        PostEnvelopedAsync<MapPathCostRequestDto, MapPathCostResponseDto>(
+            "api/v1/map/path-cost",
+            request,
+            ct);
+
+    /// <summary>POST api/v1/map/path-cost/batch - bounded batch path-cost primitive for future Willie solver scoring.</summary>
+    public Task<MapPathCostBatchResponseDto> PostPathCostBatchAsync(
+        MapPathCostBatchRequestDto request,
+        CancellationToken ct = default)
+    {
+        // TODO: source the 4096 cap from a shared constant once a second consumer needs it; today only PS1 reads.
+        const int maxPathCostBatchPairs = 4096;
+        if (request.Pairs.Count > maxPathCostBatchPairs)
+            throw new ArgumentException(
+                $"Path-cost batch pairs length {request.Pairs.Count} exceeds limit {maxPathCostBatchPairs}.",
+                nameof(request));
+
+        // TODO: first consumer is PS1 (placement-solver.md); methods unused until then.
+        return PostEnvelopedAsync<MapPathCostBatchRequestDto, MapPathCostBatchResponseDto>(
+            "api/v1/map/path-cost/batch",
+            request,
+            ct);
+    }
 
     // ── Threats / Events ──────────────────────────────────────────────────────
 

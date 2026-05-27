@@ -25,7 +25,8 @@ RIMAPI       what is              what it means
 The state store keeps the current colony snapshot in a single visible root. The
 root contains domain aggregates for people, stockpiles, stored items, item defs,
 animal defs, buildings, work-table bill state, power, map context, threats,
-research, factions, economy, and other live state as slices need them.
+research, factions, economy, Willie construction backlog, and other live state
+as slices need them.
 
 Design rules:
 
@@ -195,6 +196,26 @@ food in `resources/summary`.
 
 The implemented Food briefing is narrower than the eventual target, and that is
 fine. Use code/tests for current fields; use this doc for the design direction.
+
+### Willie Briefing
+
+Willie now has a first `IBriefing` implementation backed by state-store
+derivation. This slice is dormant: it adds the briefing record, a
+`WillieBacklog` aggregate from `/api/v1/map/construction/backlog`, and room
+anchor inventory from room/building state. It does not register
+`MinisterOfWillie`, emit advice, or add a dashboard tab yet.
+
+Current derived surfaces:
+
+- Pending blueprint/frame groups, including blocked/disallowed counts and
+  missing material totals.
+- Room anchors keyed by `RoomClass` for future room-program and placement work.
+- Willie data-coverage flags so rules can distinguish missing evidence from
+  healthy state.
+
+`WillieBacklog` is latest-state only and participates in the persisted
+`ColonyState` snapshot. The snapshot schema was bumped for this aggregate: no
+compat code; wipe-and-regen on upgrade.
 
 ### Future Briefings
 

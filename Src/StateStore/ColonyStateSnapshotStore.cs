@@ -201,6 +201,7 @@ public sealed class ColonyStateSnapshotStore
         state.Animals.Update(snapshot.Animals);
         state.Resources.Update(snapshot.Resources);
         state.Research.Update(snapshot.Research);
+        state.WillieBacklog.Update(snapshot.WillieBacklog);
         state.LastRefreshSource = ColonyStateOrigin.Snapshot;
         state.LastLiveRefreshAt = null;
     }
@@ -303,7 +304,8 @@ public sealed class ColonyStateSnapshotStore
             StoredResources = state.StoredResources.Value,
             Animals = state.Animals.Value,
             Resources = state.Resources.Value,
-            Research = state.Research.Value
+            Research = state.Research.Value,
+            WillieBacklog = state.WillieBacklog.Value
         };
     }
 
@@ -329,6 +331,7 @@ public sealed class ColonyStateSnapshotStore
             ["StoredResources"] = state.StoredResources.Version,
             ["Animals"] = state.Animals.Version,
             ["Resources"] = state.Resources.Version,
-            ["Research"] = state.Research.Version
+            ["Research"] = state.Research.Version,
+            ["WillieBacklog"] = state.WillieBacklog.Version
         };
 }

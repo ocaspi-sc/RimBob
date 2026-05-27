@@ -37,6 +37,7 @@ public sealed class ColonyState
     public Versioned<AnimalRegistry>   Animals    { get; } = new(AggregateDefaults.Animals);
     public Versioned<ResourceSummary>  Resources  { get; } = new(AggregateDefaults.Resources);
     public Versioned<ResearchInfo>     Research   { get; } = new(AggregateDefaults.Research);
+    public Versioned<WillieConstructionBacklog> WillieBacklog { get; } = new(AggregateDefaults.WillieBacklog);
 
     public ColonyStateOrigin LastRefreshSource { get; set; } = ColonyStateOrigin.None;
 
@@ -54,6 +55,9 @@ public sealed class ColonyState
 
     public static readonly string[] WelfareBriefingAggregateNames =
         ["Economy", "Colonists", "Rooms"];
+
+    public static readonly string[] WillieBriefingAggregateNames =
+        ["Map", "Economy", "Colonists", "Rooms", "Stockpiles", "Buildings", "Power", "WillieBacklog"];
 
     /// <summary>
     /// Versions of every aggregate the MayorBriefing reads, in canonical order.
@@ -77,5 +81,11 @@ public sealed class ColonyState
     public long[] GetVersionsForWelfareBriefing() =>
     [
         Economy.Version, Colonists.Version, Rooms.Version
+    ];
+
+    public long[] GetVersionsForWillieBriefing() =>
+    [
+        Map.Version, Economy.Version, Colonists.Version, Rooms.Version, Stockpiles.Version,
+        Buildings.Version, Power.Version, WillieBacklog.Version
     ];
 }

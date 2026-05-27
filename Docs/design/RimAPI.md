@@ -134,6 +134,10 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 > requests are capped at 4096 pairs and reject the whole batch on malformed
 > cells. These endpoints are read-only and not pawn-specific.
 
+> **RimBob wrapper coverage.** `RimApiClient` now has typed wrappers for all
+> three endpoints. They are network primitives only until Placement Solver PS1
+> consumes them.
+
 > **Verified shape.** `/map/farm/summary?map_id=...` returns live growing-zone crop rows under `data.crop_types[]`, not the cached `crop_breakdown[]` shape. Useful fields include `total_plants`, `growth_progress_average` as a percent value, and per-crop `plant_def_name`, `total_plants`, `harvestable_plants`, and numeric `zone_id`. Food uses this as the primary crop count/growth/zone source.
 
 > **Verified shape.** `/map/plants?map_id=...` currently returns broad thing-like plant rows with `thing_id`, `def_name`, `label`, `categories`, `position`, `stack_count`, and `is_forbidden`. It may not include growth, crop, or zone fields, so Food should not rely on this endpoint alone to know which crop is growing; combine it with `/map/farm/summary`.
@@ -184,6 +188,10 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 > explicit-id cancel, and backlog summary. It does not cover general building
 > detail, room, stockpile, power-net, or buildability-layer evidence; those are
 > separate Willie follow-ups in `HumanTodo.md`.
+
+> **RimBob consumption.** The state store now consumes
+> `/map/construction/backlog` into the `WillieBacklog` aggregate and derives
+> material-bottleneck / stalled-builds summaries for `WillieBriefing`.
 
 ### Order (designations)
 | Method | Path | Purpose |

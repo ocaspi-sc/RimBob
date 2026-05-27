@@ -84,16 +84,17 @@ Likely first advice areas:
 
 ### Concerns (defined)
 
-Nine canonical concerns, kept granular so each is an independent autonomy-dial unit:
-`power_stability`, `freezer_infrastructure`, `basic_shelter`, `room_program`,
-`storage_adjacency`, `material_bottleneck`, `fire_risk`, `build_queue_blocked`,
-`layout_efficiency`. Definitions + the first-slice rules-vs-LLM split live in
-[`willie-advice-types.md`](../../../.plans/willie-advice-types.md).
+The canonical concern set lives in
+[`willie-advice-types.md`](../../../.plans/willie-advice-types.md). That plan is
+the source of truth for the current eight Willie concerns and the rules-vs-LLM
+split. `basic_shelter` moved to Welfare; survival-floor bedroom/barracks asks
+reach Willie as `functional_rooms` build requests.
 
-Decisions: `base_topology` is folded into `layout_efficiency` (a dashboard /
-briefing grouping, not its own type); `room_program` and `storage_adjacency`
-stay separate (room existence/purpose vs material-flow placement — different
-blast radius, must graduate independently). No generic `build_structure` concern:
+Decisions: `base_topology` is folded into `base_layout` (a dashboard /
+briefing grouping, not its own type); `functional_rooms` and
+`storage_placement` stay separate (room existence/purpose vs material-flow
+placement - different blast radius, must graduate independently). No generic
+`build_structure` concern:
 "build" is an **action** (`place_blueprint`), not a category, because
 `concern` is the autonomy-dial unit and stays granular.
 
@@ -139,7 +140,11 @@ Willie briefing should answer:
 - Are there structural or fire risks?
 - Which requests from other ministers require build work?
 
-Exact briefing fields should be defined in code/tests when Willie ships.
+The first Willie briefing record now exists in source as a dormant state-store
+view. It includes backlog summaries from `/api/v1/map/construction/backlog`,
+room-anchor inventory for `RoomClass` lookup, and coverage flags. It does not
+make Willie a live minister yet; registry, rules, advice, and dashboard scope
+remain follow-on work.
 
 ---
 

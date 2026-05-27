@@ -128,4 +128,37 @@ public sealed class BriefingCacheTests
         second.BriefingVersion.Should().Be(2);
         second.Rooms.Count.Should().Be(1);
     }
+
+    [Fact]
+    public void GetWillieBriefing_AfterBacklogUpdate_ReturnsNewInstance()
+    {
+        ColonyState state = new();
+        BriefingCache cache = new(state, new TestLogger<BriefingCache>());
+
+        WillieBriefing first = cache.GetWillieBriefing();
+        state.WillieBacklog.Update(new WillieConstructionBacklog([
+            new WillieBacklogGroup(
+                Kind: "Blueprint",
+                DefName: "Cooler",
+                StuffDefName: "Steel",
+                Allowed: true,
+                Count: 1,
+                ThingIds: ["101"],
+                SampleCells: [new MapPosition(10, 0, 20)],
+                TotalWorkLeft: 250f,
+                Cost: [new MaterialCount("Steel", 90)],
+                MaterialsAvailable: [new MaterialCount("Steel", 60)],
+                MaterialsMissing: [new MaterialCount("ComponentIndustrial", 2)],
+                BlockedCount: 1,
+                DisallowedCount: 0)
+        ])
+        {
+            SourceAvailable = true
+        });
+        WillieBriefing second = cache.GetWillieBriefing();
+
+        second.Should().NotBeSameAs(first);
+        second.BriefingVersion.Should().Be(2);
+        second.StalledBuilds.PendingBuildCount.Should().Be(1);
+    }
 }

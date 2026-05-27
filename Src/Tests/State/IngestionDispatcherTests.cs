@@ -45,6 +45,7 @@ public sealed class IngestionDispatcherTests
         s.Animals.Version.Should().Be(1);
         s.Resources.Version.Should().Be(1);
         s.Research.Version.Should().Be(1);
+        s.WillieBacklog.Version.Should().Be(1);
         s.LastRefreshSource.Should().Be(ColonyStateOrigin.Live);
         s.LastLiveRefreshAt.Should().NotBeNull();
     }
@@ -155,6 +156,9 @@ public sealed class IngestionDispatcherTests
         s.Power.Value.CapacityWd.Should().Be(500f);
         s.Threats.Value.Lords.Should().ContainSingle()
             .Which.JobType.Should().Be("Raid");
+        s.WillieBacklog.Value.SourceAvailable.Should().BeTrue();
+        s.WillieBacklog.Value.Groups.Should().ContainSingle()
+            .Which.DefName.Should().Be("Cooler");
     }
 
     [Fact]
@@ -749,6 +753,43 @@ public sealed class IngestionDispatcherTests
             Progress: 1500f, ResearchPoints: 3000f,
             IsFinished: false, CanStartNow: true,
             ProgressPercent: 50f);
+        var willieBacklog = new List<ConstructionBacklogGroupDto>
+        {
+            new()
+            {
+                Kind = "Blueprint",
+                DefName = "Cooler",
+                StuffDefName = "Steel",
+                Allowed = true,
+                Count = 1,
+                ThingIds = [101],
+                SampleCells = [new MapCellDto(10, 20)],
+                TotalWorkLeft = 250f,
+                Cost = [new ConstructionMaterialCountDto { DefName = "Steel", Count = 90 }],
+                MaterialsAvailable =
+                [
+                    new ConstructionMaterialAvailabilityDto
+                    {
+                        DefName = "Steel",
+                        Required = 90,
+                        Available = 60,
+                        Missing = 30
+                    }
+                ],
+                MaterialsMissing =
+                [
+                    new ConstructionMaterialAvailabilityDto
+                    {
+                        DefName = "ComponentIndustrial",
+                        Required = 2,
+                        Available = 0,
+                        Missing = 2
+                    }
+                ],
+                BlockedCount = 1,
+                DisallowedCount = 0
+            }
+        };
 
         return new PathRouter()
             .Add("api/v1/maps",                    Envelope(new List<MapInfoDto> { map }))
@@ -848,7 +889,8 @@ public sealed class IngestionDispatcherTests
                 }
                 """))
             .Add("api/v1/resources/summary",       Envelope(resources))
-            .Add("api/v1/research/progress",       Envelope(research));
+            .Add("api/v1/research/progress",       Envelope(research))
+            .Add("api/v1/map/construction/backlog", Envelope(willieBacklog));
     }
 
     private static string NewTempSnapshotPath() =>

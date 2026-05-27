@@ -39,8 +39,11 @@ public sealed class ColonyStateSnapshotStoreTests
             snapshot.AggregateVersions.Should().ContainKey("AnimalDefs").WhoseValue.Should().Be(1);
             snapshot.AggregateVersions.Should().ContainKey("Research").WhoseValue.Should().Be(1);
             snapshot.AggregateVersions.Should().ContainKey("Rooms").WhoseValue.Should().Be(1);
+            snapshot.AggregateVersions.Should().ContainKey("WillieBacklog").WhoseValue.Should().Be(1);
             snapshot.Rooms.Rooms.Should().ContainSingle()
                 .Which.Impressiveness.Should().Be(31f);
+            snapshot.WillieBacklog.Groups.Should().ContainSingle()
+                .Which.DefName.Should().Be("Cooler");
 
             ColonyState restored = new();
             loaded.RestoreInto(restored);
@@ -52,10 +55,12 @@ public sealed class ColonyStateSnapshotStoreTests
             restored.Stockpiles.Value.Should().BeEquivalentTo(original.Stockpiles.Value);
             restored.Colonists.Value.Should().BeEquivalentTo(original.Colonists.Value);
             restored.Rooms.Value.Should().BeEquivalentTo(original.Rooms.Value);
+            restored.WillieBacklog.Value.Should().BeEquivalentTo(original.WillieBacklog.Value);
             restored.Terrain.Version.Should().Be(1);
             restored.Stockpiles.Version.Should().Be(1);
             restored.Colonists.Version.Should().Be(1);
             restored.Rooms.Version.Should().Be(1);
+            restored.WillieBacklog.Version.Should().Be(1);
 
             BriefingCache cache = new(restored, new TestLogger<BriefingCache>());
             MayorBriefing mayor = cache.GetMayorBriefing();
@@ -261,6 +266,25 @@ public sealed class ColonyStateSnapshotStoreTests
         ]));
         state.Resources.Update(new ResourceSummary(120, 3_400f, 36, 0f, 0, 0, 4, 2, 320f));
         state.Research.Update(new ResearchInfo("Microelectronics", 0.45f, false));
+        state.WillieBacklog.Update(new WillieConstructionBacklog([
+            new WillieBacklogGroup(
+                Kind: "Blueprint",
+                DefName: "Cooler",
+                StuffDefName: "Steel",
+                Allowed: true,
+                Count: 1,
+                ThingIds: ["101"],
+                SampleCells: [new MapPosition(10, 0, 20)],
+                TotalWorkLeft: 250f,
+                Cost: [new MaterialCount("Steel", 90)],
+                MaterialsAvailable: [new MaterialCount("Steel", 60)],
+                MaterialsMissing: [new MaterialCount("ComponentIndustrial", 2)],
+                BlockedCount: 1,
+                DisallowedCount: 0)
+        ])
+        {
+            SourceAvailable = true
+        });
 
         return state;
     }

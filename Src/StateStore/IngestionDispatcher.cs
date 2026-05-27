@@ -45,10 +45,12 @@ public sealed class IngestionDispatcher(
         Task<IReadOnlyList<IncidentDto>>        incidentsTask = rimApi.GetIncidentsAsync(home.Id, ct);
         Task<ResourcesSummaryDto>               resourcesTask = rimApi.GetResourcesSummaryAsync(home.Id, ct);
         Task<ResearchProgressDto>               researchTask  = rimApi.GetResearchProgressAsync(ct);
+        // TODO: revisit cadence if the backlog grows past N groups (per-cycle cost watch).
+        Task<WillieConstructionBacklog>          willieBacklogTask = ReadWillieBacklogAsync(home.Id, ct);
 
         await Task.WhenAll(stateTask, dateTask, pawnsTask, farmTask, plantsTask, thingsTask, defCatalogTask,
                            storedTask, animalsTask, roomsTask, zonesTask, terrainTask, buildingsTask, powerTask, weatherTask, lordsTask, incidentsTask,
-                           resourcesTask, researchTask);
+                           resourcesTask, researchTask, willieBacklogTask);
 
         GameStateDto gs = stateTask.Result;
         state.Economy.Update(MapAggregateMapper.FromGameState(gs, dateTask.Result));
@@ -82,6 +84,7 @@ public sealed class IngestionDispatcher(
 
         state.Resources.Update(ResourceAggregateMapper.FromResources(resourcesTask.Result));
         state.Research.Update(ResourceAggregateMapper.FromResearch(researchTask.Result));
+        state.WillieBacklog.Update(willieBacklogTask.Result);
 
         state.LastRefreshSource = ColonyStateOrigin.Live;
         state.LastLiveRefreshAt = DateTimeOffset.UtcNow;
@@ -124,5 +127,24 @@ public sealed class IngestionDispatcher(
         }
 
         return new WorkTableRegistry(workTables);
+    }
+
+    private async Task<WillieConstructionBacklog> ReadWillieBacklogAsync(
+        int mapId,
+        CancellationToken ct)
+    {
+        try
+        {
+            IReadOnlyList<ConstructionBacklogGroupDto> groups =
+                await rimApi.GetConstructionBacklogAsync(mapId, ct);
+            return WillieBacklogMapper.FromConstructionBacklog(groups);
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            log.LogWarning(
+                ex,
+                "Could not refresh Willie construction backlog; build-queue evidence will be unavailable.");
+            return AggregateDefaults.WillieBacklog;
+        }
     }
 }

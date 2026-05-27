@@ -292,6 +292,39 @@ public sealed record ResearchInfo(
     bool    IsFinished
 );
 
+public sealed record WillieConstructionBacklog(IReadOnlyList<WillieBacklogGroup> Groups)
+{
+    public bool SourceAvailable { get; init; }
+}
+
+public sealed record WillieBacklogGroup(
+    string Kind,
+    string DefName,
+    string? StuffDefName,
+    bool Allowed,
+    int Count,
+    IReadOnlyList<string> ThingIds,
+    IReadOnlyList<MapPosition> SampleCells,
+    float TotalWorkLeft,
+    IReadOnlyList<MaterialCount> Cost,
+    IReadOnlyList<MaterialCount> MaterialsAvailable,
+    IReadOnlyList<MaterialCount> MaterialsMissing,
+    int BlockedCount,
+    int DisallowedCount
+)
+{
+    // TODO: compute frame_age_exceeded via state-store snapshot diff in a follow-on slice.
+}
+
+public sealed record MaterialCount(string DefName, int Count)
+{
+    public int? Required { get; init; }
+
+    public int? Available { get; init; }
+
+    public int? Missing { get; init; }
+}
+
 // Empty defaults — used at ColonyState construction so Versioned<T>.Value is never null.
 public static class AggregateDefaults
 {
@@ -315,4 +348,5 @@ public static class AggregateDefaults
     public static readonly AnimalRegistry    Animals     = new([]);
     public static readonly ResourceSummary   Resources   = new(0, 0f, 0, 0f, 0, 0, 0, 0, 0f);
     public static readonly ResearchInfo      Research    = new(null, null, false);
+    public static readonly WillieConstructionBacklog WillieBacklog = new([]);
 }
