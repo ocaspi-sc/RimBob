@@ -96,6 +96,9 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 | GET | `/map/pawns?map_id` | pawns w/ name, health, mood, hunger, position |
 | GET | `/map/terrain?map_id` | RLE terrain grid |
 | GET | `/map/fog-grid?map_id` | RLE visibility |
+| GET | `/map/reach?map_id&from_x&from_z&to_x&to_z` | fork-only cell reachability wrapper |
+| POST | `/map/path-cost` | fork-only single-pair region/A* path cost |
+| POST | `/map/path-cost/batch` | fork-only bounded batch region/A* path costs |
 | GET | `/map/ore?map_id` | ore deposits |
 | GET | `/map/plants?map_id` | plants w/ growth |
 | GET | `/map/animals?map_id` | wild + tame |
@@ -118,6 +121,14 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 > **Verified shape.** `/map/things?map_id=...` returns broad map items including `thing_id`, `def_name`, `label`, `categories`, `position`, `stack_count`, `market_value`, and `is_forbidden`. It includes forbidden map items, so Food treats it as fallback/debug inventory; `/resources/stored` is preferred for reachable stored food.
 >
 > **Verified shape.** `/map/terrain?map_id=...` returns map dimensions, a terrain palette, and an RLE grid. `/def/all` terrain definitions include fertility and affordances; Food uses those as compact crop-fertility context, not as an exact placement solver.
+
+> **Fork shape.** `/map/reach`, `/map/path-cost`, and
+> `/map/path-cost/batch` expose default in-map reachability and walk-cost
+> scoring for Construction/Willie placement ranking. `reach` wraps
+> `Map.reachability.CanReach`; `path-cost` uses `tier:"region"` for cheap
+> region-BFS rank or `tier:"astar"` for exact RimWorld pathfinder cost; batch
+> requests are capped at 4096 pairs and reject the whole batch on malformed
+> cells. These endpoints are read-only and not pawn-specific.
 
 > **Verified shape.** `/map/farm/summary?map_id=...` returns live growing-zone crop rows under `data.crop_types[]`, not the cached `crop_breakdown[]` shape. Useful fields include `total_plants`, `growth_progress_average` as a percent value, and per-crop `plant_def_name`, `total_plants`, `harvestable_plants`, and numeric `zone_id`. Food uses this as the primary crop count/growth/zone source.
 
