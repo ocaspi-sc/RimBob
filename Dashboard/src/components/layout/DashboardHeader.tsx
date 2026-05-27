@@ -28,6 +28,7 @@ export function DashboardHeader({
   version: RimBobRunningVersion | null;
 }) {
   const hostState = deriveHostApiState(status, statusError, statusLoadedAt);
+  const rimWorldState = deriveRimWorldState(status, hostState);
   const rimApiState = deriveRimApiState(status, hostState);
   const llmState = deriveLlmState(status, hostState);
   const mayorState = deriveMayorState(status, hostState);
@@ -64,6 +65,7 @@ export function DashboardHeader({
       <div className="header-controls">
         <div className="header-status">
           <StatusPill tone={hostState.tone} title={hostState.title}>Host API {hostState.label}</StatusPill>
+          <StatusPill tone={rimWorldState.tone} title={rimWorldState.title}>RimWorld {rimWorldState.label}</StatusPill>
           <StatusPill tone={rimApiState.tone} title={rimApiState.title}>RIMAPI {rimApiState.label}</StatusPill>
           <StatusPill tone={llmState.tone} title={llmState.title}>LLM {llmState.label}</StatusPill>
           <StatusPill tone={streamState.tone} title={streamState.title}>SSE {streamState.label}</StatusPill>
@@ -143,7 +145,7 @@ function deriveRimApiState(status: RimBobStatus | null, host: HostApiState): Hea
     return {
       label: 'unknown',
       tone: 'idle',
-      title: `RIMAPI status is unknown. Host API is ${host.kind}.`,
+      title: `RIMAPI refresh status is unknown. Host API is ${host.kind}.`,
     };
   }
 
@@ -152,7 +154,7 @@ function deriveRimApiState(status: RimBobStatus | null, host: HostApiState): Hea
     return {
       label: `last ${liveLabel}`,
       tone: 'idle',
-      title: `RIMAPI was last known ${liveLabel}. Host API is stale, so this is not current.`,
+      title: `RIMAPI refresh was last known ${liveLabel}. Host API is stale, so this is not current. Last colony state origin: ${colonyStateOrigin(status)}.`,
     };
   }
 
@@ -160,8 +162,35 @@ function deriveRimApiState(status: RimBobStatus | null, host: HostApiState): Hea
     label: liveLabel,
     tone: status.rimapi_reachable ? 'ok' : 'warn',
     title: status.rimapi_reachable
-      ? `RIMAPI is live. RimWorld produced a live refresh. Colony state origin: ${status.colony_state_origin ?? 'unknown'}.`
-      : `RIMAPI is waiting. RimWorld has not produced a live refresh. Colony state origin: ${status.colony_state_origin ?? 'unknown'}.`,
+      ? `RIMAPI refresh is live. Host has received live colony data from the loaded mod. Colony state origin: ${colonyStateOrigin(status)}.`
+      : `RIMAPI refresh is waiting. Host has not received live colony data from the loaded mod in this process. Colony state origin: ${colonyStateOrigin(status)}.`,
+  };
+}
+
+function deriveRimWorldState(status: RimBobStatus | null, host: HostApiState): HeaderState {
+  if (host.kind === 'offline' || host.kind === 'checking' || !status) {
+    return {
+      label: 'unknown',
+      tone: 'idle',
+      title: `RimWorld status is unknown. Host API is ${host.kind}.`,
+    };
+  }
+
+  const liveLabel = status.rimapi_reachable ? 'live' : 'waiting';
+  if (host.kind === 'stale') {
+    return {
+      label: `last ${liveLabel}`,
+      tone: 'idle',
+      title: `RimWorld was last known ${liveLabel}. Host API is stale, so this is not current. Last colony state origin: ${colonyStateOrigin(status)}.`,
+    };
+  }
+
+  return {
+    label: liveLabel,
+    tone: status.rimapi_reachable ? 'ok' : 'warn',
+    title: status.rimapi_reachable
+      ? `RimWorld is live. Live colony data is available through the loaded RIMAPI mod. Colony state origin: ${colonyStateOrigin(status)}.`
+      : `RimWorld is waiting. Start RimWorld with the RIMAPI mod loaded and a colony open. Colony state origin: ${colonyStateOrigin(status)}.`,
   };
 }
 
@@ -222,6 +251,10 @@ function deriveStreamState(stream: StreamDiagnostics): HeaderState {
     tone: stream.state === 'open' ? 'ok' : stream.state === 'error' ? 'warn' : 'idle',
     title: `Server-Sent Events advice stream is ${stream.state}. Live advice events: ${stream.eventCount}. Reconnects: ${stream.reconnectCount}. Last event: ${stream.lastEventType ?? 'none'}.`,
   };
+}
+
+function colonyStateOrigin(status: RimBobStatus): string {
+  return status.colony_state_origin ?? 'unknown';
 }
 
 function llmTitle(status: RimBobStatus, llmStatus: string, state: 'live' | 'stale', label: string): string {
