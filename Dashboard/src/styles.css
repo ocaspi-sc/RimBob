@@ -70,7 +70,7 @@ code {
   min-height: 78px;
   padding: 14px 16px;
   display: grid;
-  grid-template-columns: minmax(230px, 0.75fr) minmax(0, 1.85fr);
+  grid-template-columns: minmax(420px, 0.9fr) minmax(0, 1.1fr);
   align-items: center;
   gap: 20px;
   min-width: 0;
@@ -132,8 +132,8 @@ code {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  flex: 1 1 680px;
-  gap: 5px;
+  flex: 1 1 560px;
+  gap: 8px;
   flex-wrap: wrap;
   min-width: 0;
 }
@@ -142,7 +142,7 @@ code {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 7px;
+  gap: 9px;
   flex-wrap: wrap;
   min-width: 0;
   width: 100%;
@@ -238,20 +238,6 @@ code {
 
 .status-pill.info .status-dot {
   background: var(--cyan);
-}
-
-.header-status .status-pill {
-  min-height: 24px;
-  gap: 4px;
-  padding: 3px 6px;
-  font-size: 0.68rem;
-  line-height: 1.15;
-}
-
-.header-status .status-dot {
-  flex: 0 0 5px;
-  width: 5px;
-  height: 5px;
 }
 
 .dashboard-v2-grid {
