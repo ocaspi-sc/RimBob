@@ -12,6 +12,7 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 - After finishing a change, make sure I can see it. Rebuild if necessary, and include a clickable URL or file link to the result.
 - Use cheap subagents often
 - Show me your plan before doing any significant work
+- When writing markdown (.md) files, don't add your own linebreaks in the middle of the paragraph. the viewer has line wrapping.
 
 ## Coding
 
