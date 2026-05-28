@@ -70,7 +70,7 @@ code {
   min-height: 78px;
   padding: 14px 16px;
   display: grid;
-  grid-template-columns: minmax(340px, 0.8fr) minmax(0, 1.6fr);
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 20px;
   min-width: 0;
@@ -92,6 +92,19 @@ code {
 .brand-block h1 {
   font-size: 1.55rem;
   overflow-wrap: anywhere;
+}
+
+.title-status-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.title-status-row h1 {
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .running-version {
@@ -135,8 +148,8 @@ code {
 .header-status {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  flex: 1 1 680px;
+  justify-content: flex-start;
+  flex: 1 1 260px;
   gap: 8px;
   flex-wrap: wrap;
   min-width: 0;
@@ -149,7 +162,6 @@ code {
   gap: 9px;
   flex-wrap: wrap;
   min-width: 0;
-  width: 100%;
 }
 
 .trigger-button {
@@ -4000,6 +4012,12 @@ code {
 
   .dashboard-header {
     align-items: stretch;
+  }
+
+  .title-status-row {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
   }
 
   .header-controls,

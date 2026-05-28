@@ -43,7 +43,17 @@ export function DashboardHeader({
     <header className="dashboard-header panel-shell">
       <div className="brand-block">
         <span className="eyebrow">RimWorld Advisory Cabinet</span>
-        <h1>RimBob Dashboard v2</h1>
+        <div className="title-status-row">
+          <h1>RimBob Dashboard v2</h1>
+          <div className="header-status">
+            <StatusPill tone={hostState.tone} title={hostState.title}>Host API {hostState.label}</StatusPill>
+            <StatusPill tone={rimWorldState.tone} title={rimWorldState.title}>RimWorld {rimWorldState.label}</StatusPill>
+            <StatusPill tone={rimApiState.tone} title={rimApiState.title}>RIMAPI {rimApiState.label}</StatusPill>
+            <StatusPill tone={llmState.tone} title={llmState.title}>LLM {llmState.label}</StatusPill>
+            <StatusPill tone={streamState.tone} title={streamState.title}>SSE {streamState.label}</StatusPill>
+            <StatusPill tone={mayorState.tone} title={mayorState.title}>Mayor {mayorState.label}</StatusPill>
+          </div>
+        </div>
         <div className="running-version" aria-label="Running RimBob version">
           <span title={version ? `Running Host version: ${version.running_version}.` : 'Waiting for the running Host version.'}>
             {versionMarker}
@@ -63,14 +73,6 @@ export function DashboardHeader({
         </div>
       </div>
       <div className="header-controls">
-        <div className="header-status">
-          <StatusPill tone={hostState.tone} title={hostState.title}>Host API {hostState.label}</StatusPill>
-          <StatusPill tone={rimWorldState.tone} title={rimWorldState.title}>RimWorld {rimWorldState.label}</StatusPill>
-          <StatusPill tone={rimApiState.tone} title={rimApiState.title}>RIMAPI {rimApiState.label}</StatusPill>
-          <StatusPill tone={llmState.tone} title={llmState.title}>LLM {llmState.label}</StatusPill>
-          <StatusPill tone={streamState.tone} title={streamState.title}>SSE {streamState.label}</StatusPill>
-          <StatusPill tone={mayorState.tone} title={mayorState.title}>Mayor {mayorState.label}</StatusPill>
-        </div>
         <button
           type="button"
           className="trigger-button global"
