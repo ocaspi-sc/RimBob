@@ -6,7 +6,7 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 
 ## Agent Discipline
 
-- Read `soul.md` for interaction defaults, then read `Docs/DESIGN.md`, `Tasks.md`, and the relevant focus doc before changing files.
+- Read `SOUL.md` for interaction defaults, then read `Docs/DESIGN.md`, `Tasks.md`, and the relevant focus doc before changing files.
 - Store agent-created plans in `.plans/`. At session end, offer to update `Tasks.md` with new tasks uncovered.
 - This project is maintained simultaneously by multiple AI agents from different companies.
 - After finishing a change, make sure I can see it. Rebuild if necessary, and include a clickable URL or file link to the result.
@@ -105,7 +105,7 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 
 ## Project Invariants
 
-- The active RIMAPI mod is a local fork at `C:\dev\RIMAPI-for-RimBob` (repo: `ocaspi-sc/RIMAPI-for-RimBob`), not the upstream `IlyaChichkov/RIMAPI`. RimBob still integrates over HTTP at `http://localhost:8765/`; nothing in this repo links against the mod. The fork targets RimWorld 1.6 only; use `Release-1.6` for fork builds and do not reintroduce RimWorld 1.5 compatibility paths.
+- RIMAPI-for-RimBob is our fork of the RIMAPI mod at `C:\dev\RIMAPI-for-RimBob` (repo: `ocaspi-sc/RIMAPI-for-RimBob`), not the upstream `IlyaChichkov/RIMAPI`. RimBob still integrates over HTTP at `http://localhost:8765/`; nothing in this repo links against the mod. RIMAPI-for-RimBob targets RimWorld 1.6 only.
 - RimBob is an assisted-gameplay advisor for RimWorld. The player keeps control.
 - MVP posture is **suggest + player-confirmed apply** (not suggest-only). Ministers emit advice; the player applies a growing-but-partial allowlist of non-pawn RIMAPI writes by clicking Apply. Every write is player-click-gated — this is NOT `Auto`/autonomous, and coverage stays partial (far from full control). Per-minister `Auto` (no per-click execution) is deferred until M7+ and requires explicit player consent.
 - Mayor publishes the Agenda. Feeder ministers publish `AdviceItem`s. No minister autonomously writes to RIMAPI; the Host executes only allowlisted single-operation writes, and only on an explicit player Apply click.
