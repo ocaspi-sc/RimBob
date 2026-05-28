@@ -523,7 +523,10 @@ server errors. Logs remain the place for stack traces and low-level diagnostics.
 
 Manual trigger traces must be visible in the dashboard. The current trigger
 should remain a `Suggest`-mode evaluation control and must not call RIMAPI write
-endpoints.
+endpoints. Minister workspace headers may repeat the selected minister trigger
+as a compact "Run Rules" control beside `Run {Minister} Now`; it uses the same
+minister trigger endpoint and has the same no-game-write boundary as the
+workspace-level run button.
 
 ### Icon Rendering
 

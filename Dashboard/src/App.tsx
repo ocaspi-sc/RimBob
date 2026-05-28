@@ -116,6 +116,7 @@ export default function App() {
                 triggerDisabled={triggers.triggerState.target !== null || !hostApiLive}
                 triggerPending={triggers.triggerState.target === activeScope.key}
                 onTrigger={() => void triggers.triggerMinisterNow(activeScope)}
+                onTriggerRules={() => void triggers.triggerMinisterRules(activeScope)}
               />
               <ViewTabs
                 activeView={activeMinisterView}

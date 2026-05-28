@@ -14,6 +14,7 @@ export interface ManualTriggers {
   triggerState: TriggerState;
   triggerCabinetNow: () => Promise<void>;
   triggerMinisterNow: (scope: ScopeConfig) => Promise<void>;
+  triggerMinisterRules: (scope: ScopeConfig) => Promise<void>;
 }
 
 export function useManualTriggers(): ManualTriggers {
@@ -52,15 +53,26 @@ export function useManualTriggers(): ManualTriggers {
     [runManualTrigger],
   );
 
-  const triggerMinisterNow = useCallback(
-    async (scope: ScopeConfig) =>
-      runManualTrigger(scope.key, `Run ${scope.label} Now`, () => triggerMinister(scope.key)),
+  const runMinisterTrigger = useCallback(
+    async (scope: ScopeConfig, label: string) =>
+      runManualTrigger(scope.key, label, () => triggerMinister(scope.key)),
     [runManualTrigger],
+  );
+
+  const triggerMinisterNow = useCallback(
+    async (scope: ScopeConfig) => runMinisterTrigger(scope, `Run ${scope.label} Now`),
+    [runMinisterTrigger],
+  );
+
+  const triggerMinisterRules = useCallback(
+    async (scope: ScopeConfig) => runMinisterTrigger(scope, 'Run Rules'),
+    [runMinisterTrigger],
   );
 
   return {
     triggerState,
     triggerCabinetNow,
     triggerMinisterNow,
+    triggerMinisterRules,
   };
 }

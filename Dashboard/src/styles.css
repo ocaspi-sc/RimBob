@@ -169,6 +169,7 @@ code {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   border: 1px solid rgba(98, 216, 230, 0.42);
   border-radius: 7px;
   background: rgba(98, 216, 230, 0.09);
@@ -178,6 +179,11 @@ code {
   font-weight: 700;
   white-space: nowrap;
   cursor: pointer;
+}
+
+.trigger-button.secondary {
+  border-color: rgba(151, 176, 190, 0.38);
+  background: rgba(151, 176, 190, 0.08);
 }
 
 .trigger-button.global {
@@ -193,6 +199,11 @@ code {
 .trigger-button.global:hover:not(:disabled) {
   border-color: rgba(80, 211, 141, 0.85);
   background: rgba(80, 211, 141, 0.19);
+}
+
+.trigger-button.secondary:hover:not(:disabled) {
+  border-color: rgba(151, 176, 190, 0.72);
+  background: rgba(151, 176, 190, 0.14);
 }
 
 .trigger-button:disabled {
@@ -520,6 +531,13 @@ code {
   justify-content: flex-end;
   gap: 9px;
   flex-wrap: wrap;
+  min-width: 0;
+}
+
+.workspace-trigger-buttons {
+  display: inline-grid;
+  grid-template-columns: minmax(0, auto) minmax(0, auto);
+  gap: 8px;
   min-width: 0;
 }
 
@@ -4039,6 +4057,15 @@ code {
 
   .trigger-error {
     text-align: center;
+  }
+
+  .workspace-trigger-buttons {
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .workspace-trigger-buttons .trigger-button {
+    width: auto;
   }
 
   .metric-grid,
