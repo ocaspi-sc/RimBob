@@ -64,19 +64,6 @@ $dashboardConsoleScopes = @(
     [pscustomobject]@{ Label = "DEV BLOG"; Scope = "dev_blog"; Views = $dashboardDevBlogViews }
 )
 
-$dashboardMinisterScopes = @(
-    [pscustomobject]@{ Label = "Mayor"; Scope = "mayor"; Planned = $false },
-    [pscustomobject]@{ Label = "Food"; Scope = "food"; Planned = $false },
-    [pscustomobject]@{ Label = "Construction"; Scope = "construction"; Planned = $true },
-    [pscustomobject]@{ Label = "Defense"; Scope = "defense"; Planned = $true },
-    [pscustomobject]@{ Label = "Welfare"; Scope = "welfare"; Planned = $true },
-    [pscustomobject]@{ Label = "Medical"; Scope = "medical"; Planned = $true },
-    [pscustomobject]@{ Label = "Research"; Scope = "research"; Planned = $true },
-    [pscustomobject]@{ Label = "Industry"; Scope = "industry"; Planned = $true },
-    [pscustomobject]@{ Label = "Economy"; Scope = "economy"; Planned = $true },
-    [pscustomobject]@{ Label = "Chief of Staff"; Scope = "chief_of_staff"; Planned = $true }
-)
-
 $dashboardMinisterViews = @(
     [pscustomobject]@{ Label = "System Prompt"; View = "prompt" },
     [pscustomobject]@{ Label = "Briefing"; View = "briefing" },
@@ -85,6 +72,25 @@ $dashboardMinisterViews = @(
     [pscustomobject]@{ Label = "Raw LLM Output"; View = "raw_llm" },
     [pscustomobject]@{ Label = "Infographics"; View = "infographics" },
     [pscustomobject]@{ Label = "Advice"; View = "advice" }
+)
+
+$dashboardRulesOnlyMinisterViews = @(
+    [pscustomobject]@{ Label = "Briefing"; View = "briefing" },
+    [pscustomobject]@{ Label = "Rules"; View = "rules" },
+    [pscustomobject]@{ Label = "Advice"; View = "advice" }
+)
+
+$dashboardMinisterScopes = @(
+    [pscustomobject]@{ Label = "Mayor"; Scope = "mayor"; Planned = $false; Views = $dashboardMinisterViews },
+    [pscustomobject]@{ Label = "Food"; Scope = "food"; Planned = $false; Views = $dashboardMinisterViews },
+    [pscustomobject]@{ Label = "Willie"; Scope = "willie"; Planned = $false; Views = $dashboardRulesOnlyMinisterViews },
+    [pscustomobject]@{ Label = "Defense"; Scope = "defense"; Planned = $true; Views = $dashboardMinisterViews },
+    [pscustomobject]@{ Label = "Welfare"; Scope = "welfare"; Planned = $true; Views = $dashboardMinisterViews },
+    [pscustomobject]@{ Label = "Medical"; Scope = "medical"; Planned = $true; Views = $dashboardMinisterViews },
+    [pscustomobject]@{ Label = "Research"; Scope = "research"; Planned = $true; Views = $dashboardMinisterViews },
+    [pscustomobject]@{ Label = "Industry"; Scope = "industry"; Planned = $true; Views = $dashboardMinisterViews },
+    [pscustomobject]@{ Label = "Economy"; Scope = "economy"; Planned = $true; Views = $dashboardMinisterViews },
+    [pscustomobject]@{ Label = "Chief of Staff"; Scope = "chief_of_staff"; Planned = $true; Views = $dashboardMinisterViews }
 )
 
 function Invoke-Step {
@@ -384,7 +390,7 @@ function Add-DashboardViewMenu {
         }
 
         $scopeItem = New-Object System.Windows.Forms.ToolStripMenuItem -ArgumentList $label
-        foreach ($view in $dashboardMinisterViews) {
+        foreach ($view in $ministerScope.Views) {
             [void](Add-DashboardMenuCommand `
                 -Items $scopeItem.DropDownItems `
                 -Label $view.Label `

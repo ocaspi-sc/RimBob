@@ -158,9 +158,7 @@ Minister scopes use a fixed top tab bar:
 - Infographics
 - Advice
 
-Rules-only ministers may expose the subset that is actually wired. Willie starts
-with Briefing, Rules, and Advice; Prompt, RAG, Raw LLM Output, and Apply are not
-shown until those backend surfaces exist.
+Rules-only ministers expose only the subset that is actually wired. Willie starts with Briefing, Rules, and Advice; Prompt, RAG, Raw LLM Output, Infographics, and Apply are not shown until those backend surfaces exist. The dashboard view tabs and launcher tray deep links must both respect that per-minister enabled-view set.
 
 Use explicit game icons from the Host icon gateway in scope labels, view labels,
 section titles, field labels, compact metric labels, and obvious entity rows
@@ -622,6 +620,8 @@ Shows the latest minister briefing grouped into readable sections rather than
 dumping raw JSON as the only view. Include raw/source inspection where useful,
 but keep the primary view scannable.
 
+Willie's Briefing view leads with a construction-focused readout for power stability, build queue/material blockers, functional room anchors, storage footprint, layout/fire risk basics, and data coverage, then keeps the source payload in raw JSON disclosures for inspection.
+
 Chef's Briefing view should also show deterministic crop-candidate math as a
 compact inspector panel when the backend exposes it. The panel is read-only and
 exists to make crop choice, season fit, fertility, storage modifiers, and
@@ -681,6 +681,8 @@ minister snapshot. Flags are not action duplicates: they carry routing pressure
 and `requests[]` such as labor, building, bill, tile, or freezer needs that
 should remain visible even when the player-facing `actions[]` list avoids a
 high-blast-radius policy knob.
+
+Willie's Advice view uses the deterministic state summary from the rules-only minister, with labelled Power, Build queue, Rooms, and Coverage rows before any advice cards.
 
 If an action carries a backend-approved executable handle, the Advice view may show
 an Apply control on that action. Apply controls must be visually distinct from

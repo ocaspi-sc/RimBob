@@ -1,6 +1,6 @@
 import { fetchColonySnapshot } from './api/colony';
 import { fetchStatus, fetchSystemHealth } from './api/status';
-import { findScope, isMinisterViewKey, ministerViews, scopeConfigs, viewForScope, viewsForScope } from './dashboard/scopes';
+import { findScope, isMinisterViewKey, scopeConfigs, viewForScope, viewsForScope } from './dashboard/scopes';
 import { formatLastRun } from './dashboard/selectors';
 import { AnalyticsOverview } from './components/analytics/AnalyticsOverview';
 import { DevBlogOverview } from './components/devBlog/DevBlogOverview';
@@ -120,7 +120,7 @@ export default function App() {
               <ViewTabs
                 activeView={activeMinisterView}
                 ariaLabel={`${activeScope.label} inspection views`}
-                views={ministerViews}
+                views={activeViews}
                 onSelect={selection.selectView}
               />
               <MinisterWorkspace

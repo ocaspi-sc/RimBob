@@ -241,6 +241,8 @@ export interface SystemHealth {
     last_live_refresh_at: string | null;
     briefing_version: number;
     food_briefing_version: number;
+    willie_briefing_version: number;
+    welfare_briefing_version: number;
     mayor_snapshot_version: number | null;
     active_advice_count: number;
     active_flag_count: number;

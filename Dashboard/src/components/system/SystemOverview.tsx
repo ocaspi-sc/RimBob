@@ -262,6 +262,9 @@ export function SystemOverview({
               <MetricCard label={<FieldLabel iconKey="rimapi">RIMAPI</FieldLabel>} value={rimApiReachable ? 'reachable' : 'offline'} tone={rimApiReachable ? 'ok' : 'error'} />
               <MetricCard label={<FieldLabel iconKey="game">RimWorld</FieldLabel>} value={rimWorldLive ? 'live' : rimApiReachable ? 'waiting' : 'unknown'} tone={rimWorldLive ? 'ok' : rimApiReachable ? 'warn' : 'neutral'} />
               <MetricCard label={<FieldLabel iconKey="agenda">Mayor snapshot</FieldLabel>} value={health?.runtime.mayor_snapshot_version ?? status?.mayor_snapshot_version ?? 'none'} />
+              <MetricCard label={<FieldLabel iconKey="briefing_version">Mayor briefing</FieldLabel>} value={health?.runtime.briefing_version ?? status?.briefing_version ?? 'n/a'} />
+              <MetricCard label={<FieldLabel iconKey="food_briefing_version">Chef briefing</FieldLabel>} value={health?.runtime.food_briefing_version ?? 'n/a'} />
+              <MetricCard label={<FieldLabel iconKey="willie_briefing_version">Willie briefing</FieldLabel>} value={health?.runtime.willie_briefing_version ?? 'n/a'} />
               <MetricCard label={<FieldLabel iconKey="advice">Advice</FieldLabel>} value={health?.runtime.active_advice_count ?? 'n/a'} />
               <MetricCard label={<FieldLabel iconKey="flags">Flags</FieldLabel>} value={health?.runtime.active_flag_count ?? 'n/a'} />
               <MetricCard label={<FieldLabel iconKey="mayor">Mayor</FieldLabel>} value={status?.mayor_running ? 'running' : 'idle'} tone={status?.mayor_last_error ? 'error' : status?.mayor_running ? 'ok' : 'neutral'} />

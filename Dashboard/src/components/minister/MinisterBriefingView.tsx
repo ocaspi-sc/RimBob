@@ -5,7 +5,9 @@ import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { CoverageBadge } from '../shared/DataCoverage';
 import { DisclosureSection } from '../shared/DisclosureSection';
 import { EmptyState } from '../shared/EmptyState';
+import { DynamicTable } from '../shared/Inspector';
 import { JsonTree, summarizeValue } from '../shared/JsonTree';
+import { MetricCard } from '../shared/MetricCard';
 import { SemanticLabel } from '../shared/SemanticIcon';
 import { FoodCropMathPanel } from './FoodCropMathPanel';
 
@@ -48,6 +50,9 @@ export function MinisterBriefingView({ scope }: { scope: ScopeConfig }) {
       )}
 
       {scope.key === 'food' && <FoodCropMathPanel />}
+      {scope.key === 'willie' && isRecord(briefing.data) && (
+        <WillieBriefingReadout briefing={briefing.data} />
+      )}
 
       {groups.map(group => (
         <DisclosureSection
@@ -141,6 +146,158 @@ function groupBriefing(scope: string, briefing: unknown): BriefingGroup[] {
   ].filter(group => hasContent(group.value));
 }
 
+function WillieBriefingReadout({ briefing }: { briefing: Record<string, unknown> }) {
+  const power = recordAt(briefing, 'powerStability');
+  const thermal = recordAt(briefing, 'thermalControl');
+  const rooms = recordAt(briefing, 'functionalRooms');
+  const storage = recordAt(briefing, 'storagePlacement');
+  const material = recordAt(briefing, 'materialBottleneck');
+  const stalled = recordAt(briefing, 'stalledBuilds');
+  const baseLayout = recordAt(briefing, 'baseLayout');
+  const fireRisk = recordAt(briefing, 'fireRisk');
+  const coverage = recordAt(briefing, 'dataCoverage');
+  const anchorInventory = recordAt(briefing, 'anchorInventory');
+  const constructionBacklog = recordAt(briefing, 'constructionBacklog');
+  const anchors = arrayAt(anchorInventory, 'anchors');
+  const backlogGroups = arrayAt(constructionBacklog, 'groups');
+  const missingMaterials = arrayAt(material, 'missingMaterials');
+  const roomCounts = recordAt(rooms, 'roomCountsByClass');
+  const coverageRows = coverage
+    ? Object.entries(coverage).map(([key, value]) => ({ key, value: value === true ? 'available' : 'missing' }))
+    : [];
+
+  const netW = numberAt(power, 'netW');
+  const storedWd = numberAt(power, 'storedWd');
+  const capacityWd = numberAt(power, 'capacityWd');
+  const reserveRatio = storedWd !== null && capacityWd !== null && capacityWd > 0
+    ? storedWd / capacityWd
+    : null;
+  const pendingBuildCount = numberAt(stalled, 'pendingBuildCount') ?? 0;
+  const blockedCount = numberAt(stalled, 'blockedCount') ?? numberAt(material, 'blockedCount') ?? 0;
+  const disallowedCount = numberAt(stalled, 'disallowedCount') ?? numberAt(material, 'disallowedCount') ?? 0;
+  const roomsMissing = missingExpectedRooms(roomCounts);
+
+  return (
+    <section className="willie-briefing-readout" aria-label="Willie briefing readout">
+      <div className="metric-grid willie-briefing-metrics">
+        <MetricCard
+          label={metricLabel('power_stability', 'Net power')}
+          value={formatWatts(netW)}
+          note={`${formatWatts(numberAt(power, 'productionW'))} production / ${formatWatts(numberAt(power, 'consumptionW'))} load`}
+          tone={netW !== null && netW < 0 ? 'error' : 'ok'}
+        />
+        <MetricCard
+          label={metricLabel('briefing_version', 'Briefing')}
+          value={`v${formatInteger(numberAt(briefing, 'briefingVersion'))}`}
+          note={`tick ${formatInteger(numberAt(briefing, 'gameTick'))}`}
+        />
+        <MetricCard
+          label={metricLabel('build_queue', 'Build queue')}
+          value={`${formatInteger(pendingBuildCount)} pending`}
+          note={`${formatInteger(blockedCount)} blocked / ${formatInteger(disallowedCount)} disallowed`}
+          tone={blockedCount > 0 ? 'warn' : 'neutral'}
+        />
+        <MetricCard
+          label={metricLabel('storage_placement', 'Storage footprint')}
+          value={`${formatInteger(numberAt(storage, 'stockpileZones'))} zones`}
+          note={`${formatInteger(numberAt(storage, 'stockpileCells'))} stockpile cells`}
+        />
+        <MetricCard
+          label={metricLabel('functional_rooms', 'Room anchors')}
+          value={formatInteger(anchors.length)}
+          note={roomsMissing.length > 0 ? `Missing ${roomsMissing.join(', ')}` : 'Kitchen, hospital, storage evidence present when anchors exist'}
+          tone={roomsMissing.length > 0 ? 'warn' : 'ok'}
+        />
+        <MetricCard
+          label={metricLabel('thermal_control', 'Thermal')}
+          value={`${formatInteger(numberAt(thermal, 'coolerCount'))} coolers`}
+          note={`${formatInteger(numberAt(thermal, 'freezerAnchorCount'))} freezer anchors / ${formatInteger(numberAt(thermal, 'heaterCount'))} heaters`}
+        />
+      </div>
+
+      <div className="willie-briefing-panels">
+        <article className="willie-readout-panel">
+          <header>
+            <h3><SemanticLabel icon={iconForField('power_stability')}><span>Power Stability</span></SemanticLabel></h3>
+            <span className={netW !== null && netW < 0 ? 'status-text error' : 'status-text ok'}>
+              {netW !== null && netW < 0 ? 'deficit' : 'stable'}
+            </span>
+          </header>
+          <div className="willie-fact-grid">
+            <Fact label="Generators" value={formatInteger(numberAt(power, 'generatorCount'))} />
+            <Fact label="Batteries" value={formatInteger(numberAt(power, 'batteryCount'))} />
+            <Fact label="Battery reserve" value={reserveRatio === null ? 'n/a' : `${formatPercent(reserveRatio)} (${formatWd(storedWd)} / ${formatWd(capacityWd)})`} />
+          </div>
+        </article>
+
+        <article className="willie-readout-panel">
+          <header>
+            <h3><SemanticLabel icon={iconForField('material_bottleneck')}><span>Build Queue And Materials</span></SemanticLabel></h3>
+            <span className={missingMaterials.length > 0 || blockedCount > 0 ? 'status-text warn' : 'status-text ok'}>
+              {missingMaterials.length > 0 ? `${missingMaterials.length} material gaps` : 'no material gaps'}
+            </span>
+          </header>
+          <div className="willie-material-list">
+            {missingMaterials.length > 0 ? (
+              missingMaterials.slice(0, 6).map((item, index) => <span key={`missing-${index}`}>{formatMaterial(item)}</span>)
+            ) : (
+              <span>No missing materials reported by the current construction backlog.</span>
+            )}
+          </div>
+          <DynamicTable
+            rows={backlogGroups}
+            preferredColumns={['kind', 'defName', 'stuffDefName', 'allowed', 'count', 'blockedCount', 'disallowedCount', 'totalWorkLeft']}
+            emptyMessage="No construction backlog groups are visible."
+          />
+        </article>
+
+        <article className="willie-readout-panel">
+          <header>
+            <h3><SemanticLabel icon={iconForField('functional_rooms')}><span>Functional Rooms And Anchors</span></SemanticLabel></h3>
+            <span className={roomsMissing.length > 0 ? 'status-text warn' : 'status-text ok'}>
+              {roomsMissing.length > 0 ? `${roomsMissing.length} missing` : 'covered'}
+            </span>
+          </header>
+          <div className="willie-room-counts">
+            {roomCounts && Object.keys(roomCounts).length > 0 ? (
+              Object.entries(roomCounts).map(([key, value]) => <span key={key}>{humanize(key)} {formatInteger(numberFromUnknown(value))}</span>)
+            ) : (
+              <span>No room-class counts available yet.</span>
+            )}
+          </div>
+          <DynamicTable
+            rows={anchors}
+            preferredColumns={['class', 'roleLabel', 'cellsCount', 'roomId', 'centroid', 'regionId']}
+            emptyMessage="No classified room anchors are available."
+          />
+        </article>
+
+        <article className="willie-readout-panel">
+          <header>
+            <h3><SemanticLabel icon={iconForField('base_layout')}><span>Layout, Risk, And Coverage</span></SemanticLabel></h3>
+            <span className={coverageRows.some(row => row.value === 'missing') ? 'status-text warn' : 'status-text ok'}>
+              {coverageRows.filter(row => row.value === 'available').length}/{coverageRows.length} signals
+            </span>
+          </header>
+          <div className="willie-fact-grid">
+            <Fact label="Rooms" value={formatInteger(numberAt(baseLayout, 'roomCount'))} />
+            <Fact label="Buildings" value={formatInteger(numberAt(baseLayout, 'buildingCount'))} />
+            <Fact label="Wood structures" value={formatInteger(numberAt(fireRisk, 'woodStructureCount'))} />
+          </div>
+          <div className="willie-coverage-grid">
+            {coverageRows.map(row => (
+              <span key={row.key} className={row.value}>
+                <SemanticLabel icon={iconForField(row.key)}><code>{row.key}</code></SemanticLabel>
+                <CoverageBadge state={row.value === 'available' ? 'available' : 'missing'} />
+              </span>
+            ))}
+          </div>
+        </article>
+      </div>
+    </section>
+  );
+}
+
 function extractCoverage(briefing: unknown): Array<{ key: string; label: string; ok: boolean }> {
   if (!isRecord(briefing) || !isRecord(briefing.dataCoverage)) return [];
   return Object.entries(briefing.dataCoverage).map(([key, value]) => ({
@@ -148,6 +305,74 @@ function extractCoverage(briefing: unknown): Array<{ key: string; label: string;
     label: humanize(key),
     ok: value === true,
   }));
+}
+
+function Fact({ label, value }: { label: string; value: string }) {
+  return (
+    <span>
+      <small>{label}</small>
+      <strong>{value}</strong>
+    </span>
+  );
+}
+
+function metricLabel(iconKey: string, label: string) {
+  return <SemanticLabel icon={iconForField(iconKey)}><span>{label}</span></SemanticLabel>;
+}
+
+function recordAt(source: Record<string, unknown> | null, key: string): Record<string, unknown> | null {
+  if (!source) return null;
+  const value = source[key];
+  return isRecord(value) ? value : null;
+}
+
+function arrayAt(source: Record<string, unknown> | null, key: string): unknown[] {
+  if (!source) return [];
+  const value = source[key];
+  return Array.isArray(value) ? value : [];
+}
+
+function numberAt(source: Record<string, unknown> | null, key: string): number | null {
+  if (!source) return null;
+  return numberFromUnknown(source[key]);
+}
+
+function numberFromUnknown(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  return null;
+}
+
+function formatInteger(value: number | null): string {
+  if (value === null) return 'n/a';
+  return Math.round(value).toLocaleString();
+}
+
+function formatWatts(value: number | null): string {
+  if (value === null) return 'n/a';
+  const sign = value > 0 ? '+' : '';
+  return `${sign}${Math.round(value).toLocaleString()} W`;
+}
+
+function formatWd(value: number | null): string {
+  if (value === null) return 'n/a';
+  return `${Math.round(value).toLocaleString()} Wd`;
+}
+
+function formatPercent(value: number): string {
+  return `${Math.round(value * 100)}%`;
+}
+
+function formatMaterial(value: unknown): string {
+  if (!isRecord(value)) return 'unknown material';
+  const defName = typeof value.defName === 'string' ? value.defName : 'unknown';
+  const count = numberFromUnknown(value.count) ?? numberFromUnknown(value.missing) ?? numberFromUnknown(value.required);
+  return count === null ? defName : `${formatInteger(count)} ${defName}`;
+}
+
+function missingExpectedRooms(roomCounts: Record<string, unknown> | null): string[] {
+  if (!roomCounts) return ['kitchen', 'hospital', 'storage'];
+  const normalized = new Map(Object.entries(roomCounts).map(([key, value]) => [key.toLocaleLowerCase(), value]));
+  return ['kitchen', 'hospital', 'storage'].filter(room => (numberFromUnknown(normalized.get(room)) ?? 0) <= 0);
 }
 
 function pickGroup(key: string, title: string, source: Record<string, unknown>, keys: string[], defaultOpen = false): BriefingGroup {

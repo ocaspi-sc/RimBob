@@ -111,9 +111,13 @@ type StateSummaryLine = {
 
 const STATE_SUMMARY_ICON_KEYS: Record<string, string> = {
   acquisition: 'wild_harvest',
+  'build queue': 'build_queue',
+  coverage: 'data_coverage',
   crops: 'crops',
   'confidence gaps': 'data_coverage',
   'kitchen/storage': 'kitchen',
+  power: 'power_stability',
+  rooms: 'functional_rooms',
   stores: 'food',
 };
 

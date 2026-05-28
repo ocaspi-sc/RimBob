@@ -107,6 +107,11 @@ export function findScope(key: ScopeKey): ScopeConfig {
 }
 
 export function viewsForScope(scope: ScopeConfig): DashboardViewDefinition[] {
+  const registeredViews = viewsForScopeKind(scope);
+  return registeredViews.filter(view => scope.enabledViews.includes(view.key));
+}
+
+function viewsForScopeKind(scope: ScopeConfig): DashboardViewDefinition[] {
   if (scope.kind === 'system') return systemViews;
   if (scope.kind === 'info') return infoViews;
   if (scope.kind === 'analytics') return analyticsViews;
