@@ -34,7 +34,6 @@ export function DashboardHeader({
   const mayorState = deriveMayorState(status, hostState);
   const streamState = deriveStreamState(stream);
   const versionMarker = version ? `RimBob ${version.running_version}` : 'RimBob checking';
-  const revisionMarker = version ? `rev ${version.build_revision_short ?? version.build_version}` : 'rev checking';
   const buildMarker = version ? `built ${formatBuildDateTime(version.build_datetime)}` : 'built checking';
   const assetMarker = version ? `UI ${dashboardAssetLabel(version.dashboard_asset_version)}` : 'UI checking';
   const rootMarker = runtimeRoot ? `root ${shortPath(runtimeRoot, 3)}` : 'root checking';
@@ -49,9 +48,6 @@ export function DashboardHeader({
             <span title={version ? `Running Host version: ${version.running_version}.` : 'Waiting for the running Host version.'}>
               {versionMarker}
             </span>
-            <code title={version ? `Running Host build revision: ${version.build_revision ?? version.build_version}.` : 'Waiting for the running Host build revision.'}>
-              {revisionMarker}
-            </code>
             <span title={version ? `Host build time: ${formatBuildDateTime(version.build_datetime)}.` : 'Waiting for the Host build time.'}>
               {buildMarker}
             </span>

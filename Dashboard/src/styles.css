@@ -120,8 +120,7 @@ code {
   line-height: 1.2;
 }
 
-.running-version span,
-.running-version code {
+.running-version span {
   max-width: 100%;
   min-height: 22px;
   display: inline-flex;
@@ -134,10 +133,6 @@ code {
   padding: 3px 7px;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.running-version code {
-  color: #c9f7ff;
 }
 
 .eyebrow {
