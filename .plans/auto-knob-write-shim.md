@@ -1,7 +1,7 @@
 # Auto Knob-Write Shim — Placeholder
 
 > **DEFERRED — Auto epic. Do not build before the first per-minister Auto
-> graduation.** This stub exists so cross-references (`HumanTodo.md`, design
+> graduation.** This stub exists so cross-references (`Tasks.md`, design
 > docs) have a stable target. The real plan is written when a real Auto
 > candidate is picked.
 

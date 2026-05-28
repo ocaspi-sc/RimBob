@@ -190,7 +190,7 @@ Where the survival-floor signals go:
   `BuildingRequest { room_class: bedroom | barracks }`. The `place_blueprint`
   surface and `BlueprintGroup` payload are unchanged.
 - **Per-room boundary-cell / door reads** (the `rimapi-room-entry-cells`
-  HumanTodo) still serve Willie's `AnchorInventory.EntryCells[]`; the future
+  Tasks) still serve Willie's `AnchorInventory.EntryCells[]`; the future
   `missing_door` rule (if Welfare wants one) reads the same endpoint.
 
 If real-play evidence later shows survival-floor builds need a distinct
@@ -220,7 +220,7 @@ later" = needs escalation judgment or data not yet derivable from current RIMAPI
   derivable once the building/blueprint read exists; deterministic threshold.
 - `fire_risk` — **partial in Slice A:** the *material* half (wooden walls in a
   classified critical room + stone blocks available) is a deterministic rule and
-  depends on the building-condition/material read (HumanTodo
+  depends on the building-condition/material read (Tasks
   `source-todo-building-condition-read`). The *spacing* half (firebreak gaps
   between structures) needs inter-structure distance data and may slip later.
 
@@ -237,7 +237,7 @@ later" = needs escalation judgment or data not yet derivable from current RIMAPI
   but the general case is later.
 - `functional_rooms` — inherently escalation-heavy ("does the colony need a hospital
   now?" is a posture/phase judgment). Requires room-purpose/quality derivation
-  (HumanTodo `source-todo-room-quality-read`) and is an explicit Escalation
+  (Tasks `source-todo-room-quality-read`) and is an explicit Escalation
   Boundary in `construction.md`. LLM, later.
 
 Empty-state and escalation behavior follow Food: a clean base publishes a

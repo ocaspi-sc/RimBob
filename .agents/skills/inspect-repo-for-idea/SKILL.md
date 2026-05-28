@@ -10,7 +10,7 @@ Review another codebase as a source of design and implementation ideas for RimBo
 ## Workflow
 
 1. Ground the review in RimBob.
-   - Read `Docs/DESIGN.md`, `HumanTodo.md`, and the relevant focus docs before judging fit.
+   - Read `Docs/DESIGN.md`, `Tasks.md`, and the relevant focus docs before judging fit.
    - Common focus docs: `Docs/design/ministers.md`, `Docs/design/state-store.md`, `Docs/design/advice.md`, `Docs/design/dashboard.md`, `Docs/design/RimAPI.md`, and `Docs/design/ministers/<name>.md`.
    - Preserve core constraints: suggest-first MVP, rules-first ministers, compact briefings, no direct minister-to-RIMAPI calls, player-confirmed Assisted Apply only, and Auto/HTN/Labor deferred.
 
@@ -47,7 +47,7 @@ Review another codebase as a source of design and implementation ideas for RimBo
 
 ## RimMind Todo Capture
 
-When the user asks to capture findings in `HumanTodo.md`:
+When the user asks to capture findings in `Tasks.md`:
 
 1. Add lines under `## Captured by /todo`, immediately after `<!-- entries go here -->`.
 2. Give each line a unique, one-word, lowercase kebab-case identifier immediately after the checkbox.
@@ -59,7 +59,7 @@ When the user asks to capture findings in `HumanTodo.md`:
 5. Include tags that make the future slice easy to find, such as `#food`, `#construction`, `#defense`, `#research`, `#welfare`, `#medical`, `#storage`, `#tooling`, `#cos`, `#dashboard`, `#rimapi`, `#replay`, or `#prompts`.
 6. Link to source files in the persistent clone when one exists. Use angle-bracket links for paths with spaces.
 7. Split broad ideas into multiple todos when they target different ministers, endpoints, or implementation seams.
-8. Keep each line short enough to scan. Do not write paragraphs into `HumanTodo.md`.
+8. Keep each line short enough to scan. Do not write paragraphs into `Tasks.md`.
 9. Verify every new local file link exists before committing.
 10. Do not generate `.plans/` artifacts unless the user explicitly asks for a plan.
 

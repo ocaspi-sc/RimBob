@@ -21,7 +21,7 @@ Turn external guides into a durable RimBob guide corpus. Default output is summa
 ## Workflow
 
 1. Ground the target.
-   - Read `Docs/DESIGN.md`, `HumanTodo.md`, and the relevant focus doc if the guide will inform a minister, dashboard, RAG, or planning direction.
+   - Read `Docs/DESIGN.md`, `Tasks.md`, and the relevant focus doc if the guide will inform a minister, dashboard, RAG, or planning direction.
    - Identify the durable target path. Examples:
      - Base layouts: `Docs/guides/Base/`
      - Beginner survival: `Docs/guides/beginner/`

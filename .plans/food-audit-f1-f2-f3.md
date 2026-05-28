@@ -1,6 +1,6 @@
 # Food Audit — Apply Findings F1 + F2 + F3
 
-From the [2026-05-20 minister-refine audit](../HumanTodo.md).
+From the [2026-05-20 minister-refine audit](../Tasks.md).
 
 ## Scope
 

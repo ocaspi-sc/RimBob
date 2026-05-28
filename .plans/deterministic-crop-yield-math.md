@@ -20,7 +20,7 @@ The first slice should answer:
 
 ## Current State
 
-- `HumanTodo.md` tracks this as a post-M3 Food follow-up.
+- `Tasks.md` tracks this as a post-M3 Food follow-up.
 - `Rules.cs` currently emits `expand_growing_capacity` when food is below 20
   days and `CanSowBeforeWinter()` is true.
 - `GrowingZoneStep()` always says "emergency rice growing tiles".

@@ -18,7 +18,7 @@ Generate a minister LLM response with a subagent, ingest it through RimBob's man
 ## Workflow
 
 1. Ground in repo and runtime truth.
-   - Read `Docs/DESIGN.md`, `HumanTodo.md`, `Docs/design/dashboard.md`, `Docs/design/ministers.md`, and the target minister doc under `Docs/design/ministers/`.
+   - Read `Docs/DESIGN.md`, `Tasks.md`, `Docs/design/dashboard.md`, `Docs/design/ministers.md`, and the target minister doc under `Docs/design/ministers/`.
    - Check current endpoints in `Src/ApiHost/Endpoints/MinisterEndpoints.cs`.
    - Verify Host health:
      ```powershell

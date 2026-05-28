@@ -257,7 +257,7 @@ Out of scope:
 - Region id exposure as a primitive (`GET /api/v1/map/region-at`). Useful but
   not required by Placement Solver; defer until a consumer asks.
 - `outage-prone net IDs` from `willie-briefing-schema.md` — separate
-  `rimapi-power-net-read` slice already in HumanTodo.
+  `rimapi-power-net-read` slice already in Tasks.
 - RimBob Host wiring (DTOs, client method, solver consumption) — separate
   follow-up after these endpoints land.
 

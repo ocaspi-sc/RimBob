@@ -18,7 +18,7 @@ lifecycle:
 
 No RimBob Host, minister, dashboard, apply-handle, or cell-picker wiring in this
 slice. No room, stockpile, power-net, building-detail, or buildability-layer
-endpoints in this slice; those are separate Willie follow-ups in `HumanTodo.md`.
+endpoints in this slice; those are separate Willie follow-ups in `Tasks.md`.
 
 No compatibility code; this adds new fork-only endpoints and no persisted state.
 If a later wire/persistence format changes, wipe-and-regen on upgrade.
@@ -309,7 +309,7 @@ existing implementations already satisfied the plan's contract.
 
 - Dashboard: none in this slice — fork-only change, no Host wiring.
 - Live RimWorld checks against the rebuilt fork (still pending; tracked as
-  the `rimapi-blueprint-live-verify` capture in `HumanTodo.md`):
+  the `rimapi-blueprint-live-verify` capture in `Tasks.md`):
   - `/api/v1/dev/endpoints` lists all blueprint lifecycle endpoints.
   - Validate a clear cell and a blocked cell.
   - Validate a stuff-required buildable (e.g. Wall) with and without

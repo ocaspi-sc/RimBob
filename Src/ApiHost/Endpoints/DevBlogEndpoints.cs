@@ -1149,7 +1149,7 @@ public sealed class DevBlogHistoryAnalyzer : IDevBlogHistoryReader
         if (path.StartsWith("Src/Coordination/", StringComparison.OrdinalIgnoreCase)
             || path.StartsWith("Src/Common/", StringComparison.OrdinalIgnoreCase)) return "Ministers/Core";
         if (path.StartsWith("Docs/", StringComparison.OrdinalIgnoreCase)
-            || path.Equals("HumanTodo.md", StringComparison.OrdinalIgnoreCase)
+            || path.Equals("Tasks.md", StringComparison.OrdinalIgnoreCase)
             || path.Equals("README.md", StringComparison.OrdinalIgnoreCase)) return "Design/Docs";
         if (path.StartsWith(".agents/", StringComparison.OrdinalIgnoreCase)
             || path.Equals("AGENTS.md", StringComparison.OrdinalIgnoreCase)

@@ -2,7 +2,7 @@
 
 > Companion to [`willie-briefing-schema.md`](willie-briefing-schema.md). S1 of that doc is offloaded here so the parent stays readable.
 >
-> Per-row contract: `signal | source | availability | consumers | notes`. Availability is `have` / `need-fork` / `defer`. `need-fork` rows name the missing endpoint (or sibling HumanTodo). Consumers reference Slice-A rule names (see schema doc S4) and Placement Solver pipeline stages ([`placement-solver.md`](placement-solver.md) §3 / §3.2).
+> Per-row contract: `signal | source | availability | consumers | notes`. Availability is `have` / `need-fork` / `defer`. `need-fork` rows name the missing endpoint (or sibling Tasks). Consumers reference Slice-A rule names (see schema doc S4) and Placement Solver pipeline stages ([`placement-solver.md`](placement-solver.md) §3 / §3.2).
 >
 > `basic_shelter` is **not** in the canonical concern set; it moved to Welfare 2026-05-27 (see [`willie-advice-types.md`](willie-advice-types.md) §4.5). Survival-floor bedroom/barracks asks reach Willie via `BuildingRequest{ room_class: bedroom | barracks }` under `functional_rooms`.
 
@@ -19,7 +19,7 @@
 | Battery reserve (Wd) | `/api/v1/map/power/info` → `CurrentlyStoredPower`; state-store `PowerNetwork.StoredWd` | `have` | rule `low_battery_reserve`; solver `battery_margin` | Aggregate; per-battery breakdown not exposed. |
 | Battery capacity (Wd) | `/api/v1/map/power/info` → `TotalPowerStorage`; state-store `PowerNetwork.CapacityWd` | `have` | rule `low_battery_reserve`; solver `battery_margin` | — |
 | Producer / storage / consumer building IDs | `/api/v1/map/power/info` → `ProducePowerBuildings` / `StorePowerBuildings` / `ConsumePowerBuildings` | `have` | solver `power_access` (conduit-distance precompute) | RIMAPI returns int lists; map ↔ `BuildingRecord` by id. |
-| Per-net split (gen/draw/stored per `PowerNet`) | `rimapi-power-net-read` (sibling plan) | `need-fork` | rule `outage_prone_net`; solver `power_access` per-net | HumanTodo `rimapi-power-net-read`. |
+| Per-net split (gen/draw/stored per `PowerNet`) | `rimapi-power-net-read` (sibling plan) | `need-fork` | rule `outage_prone_net`; solver `power_access` per-net | Tasks `rimapi-power-net-read`. |
 | Per-net outage flag (was net offline last cycle?) | `rimapi-power-net-read` + state-store diff | `need-fork` | rule `outage_prone_net` | Endpoint exposes online/offline; diff over cycles is RimBob-side. |
 | Disconnected critical asset (cooler/turret/hospital not on any net) | `rimapi-power-net-read` | `need-fork` | rule `disconnected_critical_asset` | Cross-references room role / building def with net membership. |
 
@@ -97,7 +97,7 @@
 | Named route-chain walkable length | FORK3 batch `path-cost` (endpoint landed; RimBob client pending) | `have` (endpoint) / `need-derive` (RimBob client) | rule `walkable_loop_length_long`; solver `path_cost` | Same anchors, walkable instead of euclidean. |
 | Corridor widths / choke points | `rimapi-buildability-layers-read` over corridor rect | `defer` | (future) `corridor_too_narrow`; solver `primary_circulation_spine` | LLM-tier per `willie-advice-types.md` §5; defer until topology graph exists. |
 | Blueprint density (planned tiles / map area) | state-store `BuildingRegistry.Count` + `TerrainSnapshot.Width × Height` | `have` | informational; solver `expansion_room` | Coarse. Per-cell density needs buildability layer. |
-| Planning overlay state | Capability B (vanilla `Designator_Plan`) | `defer` | (future) `planning_overlay_drift` | Covered by `willie-plan-new-base` HumanTodo. |
+| Planning overlay state | Capability B (vanilla `Designator_Plan`) | `defer` | (future) `planning_overlay_drift` | Covered by `willie-plan-new-base` Tasks. |
 | Critical-room depth from perimeter | needs region/topology graph | `defer` | LLM-tier `defense_exposure`; cross-cuts `fire_risk` | Deferred per `willie-advice-types.md` §5. |
 
 ---

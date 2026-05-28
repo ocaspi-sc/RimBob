@@ -87,7 +87,7 @@ The ints convert to floats implicitly. No new units, no new downstream changes.
 `TotalPossiblePowerW`, nameplate `ConsumptionW`, and building-id lists. None of
 the current consumers ([`MayorBriefingDerivation.cs:227`](Src/StateStore/Derivations/MayorBriefingDerivation.cs:227),
 the `PowerSnapshot` derivation) reads those fields, and Willie's
-building-condition work ([`source-todo-building-condition-read`](../HumanTodo.md))
+building-condition work ([`source-todo-building-condition-read`](../Tasks.md))
 is the better home for per-building power state. Keep this slice focused on
 "stop returning zeros."
 
@@ -189,7 +189,7 @@ stops showing zeros".
 - Expanding `PowerNetwork` with `TotalPossiblePowerW`, nameplate
   `TotalConsumptionW`, or building-id lists.
 - Mayor / dashboard surfacing of per-building power state (belongs with
-  [`source-todo-building-condition-read`](../HumanTodo.md)).
+  [`source-todo-building-condition-read`](../Tasks.md)).
 - Any RIMAPI-side change. The fork already returns the 9 fields correctly.
 - Deleting persisted `latest-*.json` snapshot files. (Mentioned in the
   earlier draft. The next ingest tick overwrites in-memory state; the

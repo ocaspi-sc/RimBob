@@ -455,7 +455,7 @@ panels against a stable briefing.
 - **`rimapi-room-detail-read` / `rimapi-stockpile-detail-read` /
   `rimapi-building-detail-read` / `rimapi-power-net-read` /
   `rimapi-map-region-at` / `rimapi-room-entry-cells` /
-  `rimapi-buildability-layers-read`** — each is its own HumanTodo
+  `rimapi-buildability-layers-read`** — each is its own Tasks
   capture. The briefing record exposes the fields these endpoints will
   fill; until they land the relevant `WillieBriefing` slots stay empty
   per their `need-fork` rows in
@@ -490,8 +490,8 @@ panels against a stable briefing.
 
 ---
 
-## 7. HumanTodo capture
+## 7. Tasks capture
 
 **Already landed** in commit `e0d4ebd` (2026-05-28). See the
 `willie-briefing-derivation` entry under `Captured by /todo` in
-[`HumanTodo.md`](../HumanTodo.md).
+[`Tasks.md`](../Tasks.md).

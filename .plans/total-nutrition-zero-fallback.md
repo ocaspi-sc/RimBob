@@ -4,7 +4,7 @@
 
 RIMAPI sometimes returns `total_nutrition == 0` even when `food_total > 0` and there are clearly meals + raw food on the map. Today, the Food briefing silently reflects that zero into `EstimatedDaysOfFood`, which collapses to "no usable nutrition signal" in the player-facing summary and makes Food advice misfire. The upstream fix in RIMAPI is undecided and out of our control timeline; we should add a documented RimBob-side fallback so the briefing degrades gracefully without lying about authority.
 
-User framing (verbatim from HumanTodo line 66): *"Investigate and fix/patch `total_nutrition == 0`. Decide whether to patch RIMAPI upstream or compute a documented RimBob fallback from stored meal/raw-food counts."* — we are taking the RimBob-side fallback path.
+User framing (verbatim from `Tasks.md` line 66): *"Investigate and fix/patch `total_nutrition == 0`. Decide whether to patch RIMAPI upstream or compute a documented RimBob fallback from stored meal/raw-food counts."* — we are taking the RimBob-side fallback path.
 
 ## Context
 

@@ -68,7 +68,7 @@ Claude writes `C:\dev\RimBob\.plans\<slug>.md`. Required sections:
 - **Where to see it (dashboard)** — which panel/endpoint a human checks to confirm the change is live. If no dashboard surface exists, say so and add a follow-up.
 - **Open questions** — anything Codex should escalate rather than guess at.
 
-Link the plan from `HumanTodo.md` per the normal rule. Do not commit it yet — it stays as a dirty file on master while the run is open.
+Link the plan from `Tasks.md` per the normal rule. Do not commit it yet — it stays as a dirty file on master while the run is open.
 
 ### 2. Pre-flight
 
@@ -226,5 +226,5 @@ Reply to the user with: landed commit hash, dashboard URL/panel from the Summary
 ## What this skill is not
 
 - Not for design questions, "what if" explorations, or refactor brainstorms. Those stay in Claude's own session.
-- Not for one-line typo fixes, doc tweaks, or HumanTodo edits. Those don't need a worktree.
+- Not for one-line typo fixes, doc tweaks, or `Tasks.md` edits. Those don't need a worktree.
 - Not a way to bypass the verifier. The Sonnet sub-agent step is required; "looks fine to me" is not a substitute.

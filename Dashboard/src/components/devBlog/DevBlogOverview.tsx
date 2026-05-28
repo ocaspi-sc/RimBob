@@ -29,7 +29,7 @@ const manualCommitTitles: Record<string, string> = {
   '058a3fbe': 'Mayor fallback',
   '065bb9c1': 'Wizardly branch sync',
   '083a2477': 'Execution board',
-  '08d287e3': 'Human todo',
+  '08d287e3': 'Tasks',
   '08d52d71': 'Launcher docs',
   '09fe3d4c': 'Minister registry',
   '0b5f3b40': 'Mayor data',
@@ -102,7 +102,7 @@ const manualCommitTitles: Record<string, string> = {
   '65a85af9': 'Tray launcher',
   '65b7809b': 'Work diagram',
   '6617c820': 'Plan revert',
-  '662e7e41': 'Human todo',
+  '662e7e41': 'Tasks',
   '66f05fea': 'Aggregate logs',
   '6705720f': 'RIMAPI coverage',
   '67148f18': 'Human note',
@@ -1252,8 +1252,8 @@ function featureDisplayInfo(featureKey: string): { title: string; description: s
       };
     case 'Todo and idea triage':
       return {
-        title: '🗂️ HumanTodo Triage Board',
-        description: 'HumanTodo structure, slash todo capture, execution-board cleanup, and generated RimMind/RimSage idea triage.',
+        title: '🗂️ Tasks Triage Board',
+        description: 'Tasks structure, slash todo capture, execution-board cleanup, and generated RimMind/RimSage idea triage.',
         icon: iconForField('logs'),
       };
     case 'Local runtime and launcher ops':
@@ -1317,7 +1317,7 @@ function featureGroupTitle(title: string): string {
     case 'Cleanup todo':
     case 'Execution board':
     case 'Human note':
-    case 'Human todo':
+    case 'Tasks':
     case 'RAG todo':
     case 'RimMind ideas':
     case 'RimSage ideas':
@@ -1327,7 +1327,7 @@ function featureGroupTitle(title: string): string {
     case 'Todo workflow':
     case 'Todo notes':
     case 'Workspace commit':
-    case 'Update HumanTodo.md':
+    case 'Update Tasks.md':
       return 'Todo and idea triage';
     case 'AI leads':
     case 'Briefing gaps':

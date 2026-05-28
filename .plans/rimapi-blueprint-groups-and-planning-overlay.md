@@ -22,7 +22,7 @@ Willie's target chain needs more:
 - North-star chain: Food requests a freezer → Willie suggests 3 layout options →
   player picks one in the dashboard → the chosen blueprint **group** is placed.
   That commit places a whole group at once.
-- Future "Willie plans a new base / major expansion" idea (HumanTodo): blueprints
+- Future "Willie plans a new base / major expansion" idea (Tasks): blueprints
   laid as a **planning overlay** the player commits region-by-region, not
   auto-built.
 

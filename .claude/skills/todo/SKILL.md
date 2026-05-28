@@ -1,6 +1,6 @@
 ---
 name: todo
-description: Invoked when the user types exactly "/todo". Appends one short identified, tagged entry to the "Captured by /todo" section in HumanTodo.md. Plain captures stay line-only; discussion-backed captures may create and link a `.plans/` plan.
+description: Invoked when the user types exactly "/todo". Appends one short identified, tagged entry to the "Captured by /todo" section in Tasks.md. Plain captures stay line-only; discussion-backed captures may create and link a `.plans/` plan.
 ---
 
 # todo

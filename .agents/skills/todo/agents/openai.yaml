@@ -1,4 +1,4 @@
 interface:
   display_name: "Capture Todo"
-  short_description: "Append one tagged todo line to HumanTodo.md"
-  default_prompt: "Use $todo to append one short tagged entry to the Captured by /todo section in HumanTodo.md."
+  short_description: "Append one tagged todo line to Tasks.md"
+  default_prompt: "Use $todo to append one short tagged entry to the Captured by /todo section in Tasks.md."

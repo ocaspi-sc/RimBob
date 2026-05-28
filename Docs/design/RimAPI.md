@@ -187,7 +187,7 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 > pending blueprint/frame lifecycle: validate, place, read, allow/disallow,
 > explicit-id cancel, and backlog summary. It does not cover general building
 > detail, room, stockpile, power-net, or buildability-layer evidence; those are
-> separate Willie follow-ups in `HumanTodo.md`.
+> separate Willie follow-ups in `Tasks.md`.
 
 > **RimBob consumption.** The state store now consumes
 > `/map/construction/backlog` into the `WillieBacklog` aggregate and derives

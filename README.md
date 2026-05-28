@@ -24,7 +24,7 @@ coverage are deferred until the later Auto epic.
 ```text
 Docs/                  Design docs, roadmap, and RimWorld guides
 Dashboard/             React + TypeScript dashboard
-HumanTodo.md           Human task inbox and execution board
+Tasks.md              Task inbox and execution board
 Src/ApiHost/           ASP.NET host, REST endpoints, SSE stream, dashboard serving
 Src/Common/            Pure domain types and shared contracts
 Src/Coordination/      Advice bus, agenda store, tick orchestration, flag channel
@@ -153,7 +153,7 @@ Start with:
 
 - `Docs/DESIGN.md` for the overall product and architecture
 - `Docs/ROADMAP.md` for milestone order
-- `HumanTodo.md` for active work and loose task capture
+- `Tasks.md` for active work and loose task capture
 - `Docs/design/agenda.md` for the Mayor Agenda model
 - `Docs/design/dashboard.md` for dashboard behavior and HTTP/SSE contract
 

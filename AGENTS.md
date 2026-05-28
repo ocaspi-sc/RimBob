@@ -6,8 +6,8 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 
 ## Agent Discipline
 
-- Read `soul.md` for interaction defaults, then read `Docs/DESIGN.md`, `HumanTodo.md`, and the relevant focus doc before changing files.
-- Store agent-created plans in `.plans/`. At session end, offer to update `HumanTodo.md` with new tasks uncovered.
+- Read `soul.md` for interaction defaults, then read `Docs/DESIGN.md`, `Tasks.md`, and the relevant focus doc before changing files.
+- Store agent-created plans in `.plans/`. At session end, offer to update `Tasks.md` with new tasks uncovered.
 - This project is maintained simultaneously by multiple AI agents from different companies.
 - After finishing a change, make sure I can see it. Rebuild if necessary, and include a clickable URL or file link to the result.
 - Use cheap subagents often
@@ -67,7 +67,7 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 ### Contention And Special Cases
 
 - When doing git operations, if there's a lock file or another session appears to be writing or committing, wait briefly and retry the narrow operation; do not force broad Git actions.
-- If you encounter these dirty files in `C:\dev\RimBob` on master branch with a couple of unrelated small human edits, stack them in a small commit just for those files: `AGENTS.md`, `CLAUDE.md`, `HumanTodo.md`.
+- If you encounter these dirty files in `C:\dev\RimBob` on master branch with a couple of unrelated small human edits, stack them in a small commit just for those files: `AGENTS.md`, `CLAUDE.md`, `Tasks.md`.
 
 ---
 
@@ -84,7 +84,7 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 |---|---|
 | High-level principles, design goals | `Docs/DESIGN.md` |
 | Build order, milestones | `Docs/ROADMAP.md` |
-| Actionable tasks | `HumanTodo.md` |
+| Actionable tasks | `Tasks.md` |
 | Minister shape, rules system, rule refinement | `Docs/design/ministers.md` |
 | Advice schema, feedback lifecycle, autonomy dial | `Docs/design/advice.md` |
 | Dashboard UI, HTTP+SSE contract, auth posture | `Docs/design/dashboard.md` |
@@ -125,7 +125,7 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 - Prefer `.\run-rimbob.ps1` after builds. Use `.\run-rimbob.ps1 -Foreground` when terminal output must stay attached.
 - Port `5000` is reserved for the main `C:\dev\RimBob` checkout. When running RimBob from any worktree, use a different `-ListenUrl` / port, then verify `/api/system/health` and the `RimBob.Host.exe` process path before calling the worktree build live.
 - Use manual `npm.cmd run build` / `dotnet run` only when debugging one side of the stack.
-- When adding backend logs, replay corpus files, prompt dumps, traces, or diagnostics, update dashboard-visible metadata in the same turn. If intentionally hidden, add a concrete `HumanTodo.md` follow-up and mention it in the final response.
+- When adding backend logs, replay corpus files, prompt dumps, traces, or diagnostics, update dashboard-visible metadata in the same turn. If intentionally hidden, add a concrete `Tasks.md` follow-up and mention it in the final response.
 
 ---
 

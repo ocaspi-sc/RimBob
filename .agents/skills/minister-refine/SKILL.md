@@ -10,7 +10,7 @@ Refine one RimBob minister from evidence. Default to an evidence-backed proposal
 ## Workflow
 
 1. Ground in repo truth.
-   - Read `Docs/DESIGN.md`, `HumanTodo.md`, `Docs/design/ministers.md`, `Docs/design/evaluation.md`, and the target minister doc under `Docs/design/ministers/`.
+   - Read `Docs/DESIGN.md`, `Tasks.md`, `Docs/design/ministers.md`, `Docs/design/evaluation.md`, and the target minister doc under `Docs/design/ministers/`.
    - Resolve current artifacts: `Src/Ministers/<Minister>/`, `Src/LlmGateway/prompts/<minister>.system.md`, briefing record in `Src/Common/Briefings/`, derivation in `Src/StateStore/Derivations/`, tests and fixtures under `Src/Tests/<Minister>/`.
    - Also check future pushbacks at `Src/Cabinet/<Minister>/Pushbacks/*.jsonl`. If absent, continue from logs and say Pushbacks are not wired yet.
 

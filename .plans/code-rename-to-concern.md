@@ -36,7 +36,7 @@ The design docs are being updated by a **parallel sonnet doc-rename slice** (bac
 **Non-goals (Codex MUST NOT do):**
 
 - No `.md` design-doc edits — those are owned by the parallel sonnet doc-rename slice. Touching `Docs/**.md` or `.plans/**.md` will create merge contention.
-- No `HumanTodo.md` edits — same reason; doc slice handles `advice-type-enums` → `concern-enums`.
+- No `Tasks.md` edits — same reason; doc slice handles `advice-type-enums` → `concern-enums`.
 - No semantic changes: no new advice fields, no new advice types/concerns, no behavioral changes.
 - No unrelated refactors: do NOT touch the `AdviceActionApply` god-record split, advice `options[]`, `blueprint_group`, typed request arrays, or icon/reason drop — those are the `schema-landing` slice, separate.
 - No replay-corpus rewriting/migration script. Just the tolerant reader.
@@ -131,7 +131,7 @@ If no human-facing label was ever rendered for the concept, that's fine — the 
 - **Files to glance at:** `Src/Common/Advice/FoodConcern.cs`, `Src/Common/Advice/AdviceItem.cs`, `Src/LlmGateway/AdviceResponseNormalizer.cs`, `Src/LlmGateway/prompts/food.system.md`, `Dashboard/src/types/advice.ts`.
 
 **Open follow-ups (separate slices).**
-- Parallel sonnet doc-rename slice — `Docs/`, `.plans/`, `HumanTodo.md`, `AGENTS.md`: prose + wire token; kept PascalCase code symbols (stale after this code rename — see next bullet).
+- Parallel sonnet doc-rename slice — `Docs/`, `.plans/`, `Tasks.md`, `AGENTS.md`: prose + wire token; kept PascalCase code symbols (stale after this code rename — see next bullet).
 - `doc-code-symbol-sync` — once doc rename + this code rename both land, sweep design docs for stale `FoodAdviceType` / `AdviceItem.AdviceType` mentions and update to `FoodConcern` / `AdviceItem.Concern`.
 
 **Codex run:** `20260524-214649-code-rename-to-concern` · branch `codex/prompt-20260524-214649-code-rename-to-concern` · landed commit `e882bada55dfe85c687944142cbd52b4303089ce`

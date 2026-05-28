@@ -22,7 +22,7 @@ Reference corpora:
 
 - [Placement Algorithm References](../../placement_algorithms/README.md) - algorithmic building blocks for efficient Willie candidate generation, pruning, scoring, and validation.
 
-Direct todo entries in [HumanTodo.md](../../../HumanTodo.md):
+Direct todo entries in [Tasks.md](../../../Tasks.md):
 
 - `source-todo-building-condition-read` - add building hitpoint/power/working-state reads before Willie relies on condition evidence.
 - `construction-minister` - add Willie after minimal CoS handling.
@@ -35,7 +35,7 @@ Direct todo entries in [HumanTodo.md](../../../HumanTodo.md):
 - `rimapi-power-net-read` - add power-net detail reads for energy bottleneck and disconnected-asset evidence.
 - `rimapi-buildability-layers-read` - add bounded buildability-layer reads for placement scoring.
 
-Supporting research todo entries in [HumanTodo.md](../../../HumanTodo.md):
+Supporting research todo entries in [Tasks.md](../../../Tasks.md):
 
 - `investigate-player-approved-construction-proposal` - learn from RimMind proposal approval patterns.
 - `investigate-construction-minister-algorithms-rimmind` - mine RimMind construction/layout algorithms.

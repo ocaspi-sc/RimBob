@@ -19,7 +19,7 @@ Each slice carries its own motivation:
 - **S2** — RimMind cross-walk. Two RimMind world-data parts (`ConstructionBacklogPart`, `StorageSaturationPart`) already compute Willie-relevant signals. Ingesting an existing implementation beats reinventing it; the cross-walk decides per-part whether to ingest, mirror in RIMAPI, or skip.
 - **S3** — `AnchorInventory` contract. The 2026-05-27 locked decision changed anchor representation from centroid to `{room_id, entry_cells[], region_id}`. PS1 cannot start until the record shape and per-cycle construction are written down.
 - **S4** — Slice-A rule cut. Rules-vs-aspiration classification per concern is the actionable output. Willie Rules Slice A reads this list to scope its first PR.
-- **S5** — HumanTodo promotions. Every `need-fork` row must trace to a HumanTodo. Without that trace, the gap is invisible to future implementers and the meta-plan §4 graph rots.
+- **S5** — Tasks promotions. Every `need-fork` row must trace to a Tasks. Without that trace, the gap is invisible to future implementers and the meta-plan §4 graph rots.
 
 ---
 
@@ -112,7 +112,7 @@ Two RimMind world-data parts overlap the Willie briefing. Both predate RIMAPI's 
 | RimMind field | Briefing row | Action |
 |---|---|---|
 | `StorageSaturationItem.{Name, UsedPct, Critical}` | `storage_placement` → "Stockpile saturation (used/cap)" | **No RIMAPI equivalent.** `/api/v1/resources/storages/summary` is coarse (totals, no per-zone UsedPct). RimMind's per-SlotGroup math is the design template. |
-| Per-type cap math (zone vs shelf vs StorageGroup) | same row | Fork should reproduce; folded into `rimapi-stockpile-detail-read` (HumanTodo). |
+| Per-type cap math (zone vs shelf vs StorageGroup) | same row | Fork should reproduce; folded into `rimapi-stockpile-detail-read` (Tasks). |
 
 **Net recommendation.** Extend `rimapi-stockpile-detail-read` to include the RimMind per-`SlotGroup` saturation math. Until that endpoint lands, the briefing treats the row as `need-fork`; RimBob does NOT reimplement RimMind's logic in the state store because RIMAPI is the cleaner integration surface (RimBob talks to RimWorld over HTTP only; RimMind talks in-process; reaching into `map.haulDestinationManager` is the fork's job).
 
@@ -120,7 +120,7 @@ Two RimMind world-data parts overlap the Willie briefing. Both predate RIMAPI's 
 
 - **Overlap.** Construction backlog: RimMind and the fork now both compute it; the fork's DTO is the source of truth for RimBob. RimMind reuse is moot.
 - **Gap (fork-side).** Storage saturation: extend `rimapi-stockpile-detail-read` to emit RimMind's SlotGroup math.
-- **Gap (out of RimMind scope).** Per-room temperature, wall material, room bounds, door positions, region IDs — none of these live in RimMind; all are fresh RIMAPI work tracked by existing HumanTodos (see S5).
+- **Gap (out of RimMind scope).** Per-room temperature, wall material, room bounds, door positions, region IDs — none of these live in RimMind; all are fresh RIMAPI work tracked by existing Tasks (see S5).
 
 ---
 
@@ -286,13 +286,13 @@ Validation gate: "S4 non-empty for at least 3 concerns" → **7 of 8 concerns sa
 
 ---
 
-## S5 — Follow-up HumanTodo promotions
+## S5 — Follow-up Tasks promotions
 
-Every `need-fork` row in the field doc / S4 must trace to an explicit HumanTodo. Most are already filed; this section maps each `need-fork` signal to its existing todo, and lists the two **new** captures the briefing introduces.
+Every `need-fork` row in the field doc / S4 must trace to an explicit task entry. Most are already filed; this section maps each `need-fork` signal to its existing todo, and lists the two **new** captures the briefing introduces.
 
-### Already covered by existing HumanTodos
+### Already covered by existing task entries
 
-| `need-fork` signal | HumanTodo (`HumanTodo.md`) |
+| `need-fork` signal | Task entry (`Tasks.md`) |
 |---|---|
 | Wall material per building; building working state / hp / power | `source-todo-building-condition-read` → finer-grained `rimapi-building-detail-read` |
 | Room contained-building list (general, not just beds); room bounds | `rimapi-room-detail-read` |
@@ -305,9 +305,9 @@ Every `need-fork` row in the field doc / S4 must trace to an explicit HumanTodo.
 | Backlog state-store ingestion + briefing field | RimBob-side derivation work; no fork todo needed. Tracked as a follow-on inside the Willie minister implementation slice (`base-construction-layout-agent` / Slices A–C). |
 | Frame age via state-store diff | Same — pure RimBob derivation, no fork todo. |
 
-### New HumanTodo captures the briefing introduces
+### New task captures the briefing introduces
 
-Two `need-fork` rows have no existing HumanTodo and need fresh entries (appended to the `Captured by /todo` section of [`HumanTodo.md`](../HumanTodo.md) in the same commit as this fill):
+Two `need-fork` rows have no existing task entry and need fresh entries (appended to the `Captured by /todo` section of [`Tasks.md`](../Tasks.md) in the same commit as this fill):
 
 1. **`rimapi-map-region-at`** `[2026-05-27]` `#rimapi #construction #pathfinding #willie` — Add `/api/v1/map/region-at?map_id=…&x=…&z=…` returning the `Region.id` for the cell (deferred follow-up from [`rimapi-map-reach-and-path-cost.md`](rimapi-map-reach-and-path-cost.md) §"Follow-Up Boundaries"). Willie's `AnchorInventory.RegionId` (S3) is the first consumer; without it the solver still works via FORK3 batch path-cost (which uses regions internally) but cannot cluster candidates by region pre-validation. Cheap wrapper around `map.regionGrid.GetValidRegionAt_NoRebuild`.
 2. **`rimapi-room-entry-cells`** `[2026-05-27]` `#rimapi #construction #willie` — Extend `rimapi-room-detail-read` (or land as a sibling endpoint) to emit the cells on each room's boundary that are doors / door openings — the `AnchorInventory.EntryCells[]` source. Required for `near:<class>` walkable ranking; Welfare may also read it for a future `missing_door` rule (since `basic_shelter` moved to Welfare per `willie-advice-types.md` §4.5).
@@ -348,7 +348,7 @@ Already resolved (do not re-open — see meta-plan §3 / §5):
 - Placement Solver internals — covered by [`placement-solver.md`](placement-solver.md) now that the briefing schema unblocks it.
 - Promoting design into `Docs/design/ministers/construction.md` — separate phase 7 in the meta-plan.
 - FORK2 blueprint-group endpoint specification — owned by [`rimapi-blueprint-groups-and-planning-overlay.md`](rimapi-blueprint-groups-and-planning-overlay.md).
-- The two new HumanTodo plans (`rimapi-map-region-at`, `rimapi-room-entry-cells`) — captures only in this slice; full plans land when those endpoints become the next active fork slice.
+- The two new Tasks plans (`rimapi-map-region-at`, `rimapi-room-entry-cells`) — captures only in this slice; full plans land when those endpoints become the next active fork slice.
 
 ---
 
@@ -360,11 +360,11 @@ Already resolved (do not re-open — see meta-plan §3 / §5):
 
 **Scope.** Filled the five slices of `.plans/willie-briefing-schema.md`:
 
-- **S1** — Per-concern signal tables. **Offloaded to [`willie-briefing-fields.md`](willie-briefing-fields.md)** to keep this doc readable. 8 concern tables + 2 cross-cutting tables. `basic_shelter` is not in the canonical set (moved to Welfare 2026-05-27 — see [`willie-advice-types.md`](willie-advice-types.md) §4.5). Every row carries `signal | source | availability | consumers | notes` and every `need-fork` row names a sibling HumanTodo.
+- **S1** — Per-concern signal tables. **Offloaded to [`willie-briefing-fields.md`](willie-briefing-fields.md)** to keep this doc readable. 8 concern tables + 2 cross-cutting tables. `basic_shelter` is not in the canonical set (moved to Welfare 2026-05-27 — see [`willie-advice-types.md`](willie-advice-types.md) §4.5). Every row carries `signal | source | availability | consumers | notes` and every `need-fork` row names a sibling Tasks.
 - **S2** — RimMind cross-walk for `ConstructionBacklogPart` (already duplicated by RIMAPI `/api/v1/map/construction/backlog` — ingest the endpoint, do not reimplement) and `StorageSaturationPart` (no RIMAPI equivalent yet — extend `rimapi-stockpile-detail-read`).
 - **S3** — `AnchorInventory` + `RoomAnchor` record, per-cycle construction steps, and an end-to-end `near:kitchen` walkthrough proving the contract covers the north-star freezer demo on both the Slice-A centroid path and the Slice-B FORK3 walkable path.
 - **S4** — Slice-A rule-vs-aspiration cut. **7 of 8 concerns** carry ≥1 `real-now` rule; the top-3 first-slice targets are `functional_rooms`, `thermal_control`, `storage_placement`. `fire_risk` is the lone concern with zero `real-now` rules (everything blocked on `rimapi-building-detail-read` / `rimapi-room-detail-read`).
-- **S5** — HumanTodo promotion. Every `need-fork` row already has a sibling todo except two; this slice introduces two new captures: `rimapi-map-region-at` (`AnchorInventory.RegionId` source) and `rimapi-room-entry-cells` (`AnchorInventory.EntryCells[]` + future `missing_door` rule).
+- **S5** — Tasks promotion. Every `need-fork` row already has a sibling todo except two; this slice introduces two new captures: `rimapi-map-region-at` (`AnchorInventory.RegionId` source) and `rimapi-room-entry-cells` (`AnchorInventory.EntryCells[]` + future `missing_door` rule).
 
 **Revisions (post-review).**
 
@@ -379,10 +379,10 @@ Already resolved (do not re-open — see meta-plan §3 / §5):
 
 - Read `.plans/willie-briefing-schema.md` (this doc) and `.plans/willie-briefing-fields.md` (companion). Confirm:
   - Every row in every field-doc table has the five-column treatment (no `TBD`).
-  - Every `need-fork` row references either a HumanTodo line number or one of the two new S5 captures.
+  - Every `need-fork` row references either a Tasks line number or one of the two new S5 captures.
   - S4 rule classifications match the field-doc source availabilities (a `real-now` rule should depend only on `have` rows).
   - S3 record shape is consistent with `RoomRecord` (state-store) and `RoomClass` (request taxonomy §1a).
-- Open `HumanTodo.md` and confirm the two new captures (`rimapi-map-region-at`, `rimapi-room-entry-cells`) appear under "Captured by /todo" with the `[2026-05-27]` date tag and a link back to this plan.
+- Open `Tasks.md` and confirm the two new captures (`rimapi-map-region-at`, `rimapi-room-entry-cells`) appear under "Captured by /todo" with the `[2026-05-27]` date tag and a link back to this plan.
 
 **Outcome.**
 

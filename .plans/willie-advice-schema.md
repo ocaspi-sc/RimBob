@@ -350,7 +350,7 @@ choosing payloads/target ids. Split authorship:
 So `options[]` / `blueprint_group` / apply payloads in §2–§4 are the
 **stored/wire shape produced by code**, attached to the advice *after* the LLM
 returns its intent. Implication: the **Placement Solver** ([plan](placement-solver.md))
-is a **new deterministic component** (maps to HumanTodo `construction-placement-layout-strategy-base`);
+is a **new deterministic component** (maps to Tasks `construction-placement-layout-strategy-base`);
 early Willie slices emit prose advice + `build_intent` with `options = null` until
 that engine + the RIMAPI blueprint-group endpoints exist.
 

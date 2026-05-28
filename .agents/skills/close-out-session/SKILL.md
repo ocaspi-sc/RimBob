@@ -10,7 +10,7 @@ Close the session by turning the work into durable artifacts: a short recap, nar
 ## Workflow
 
 1. **Establish scope.**
-   - Read `AGENTS.md`, `HumanTodo.md`, and any focus docs or plans touched during the session.
+   - Read `AGENTS.md`, `Tasks.md`, and any focus docs or plans touched during the session.
    - Inspect `git status --short --branch`, staged changes, unstaged changes, untracked files, recent commits, and the current branch.
    - Identify which changes belong to this session from the conversation, file mtimes only as supporting evidence, and the actual diffs.
    - Classify dirty files as `session-owned`, `pre-existing or user-owned`, or `uncertain`. Do not stage, revert, delete, or move files outside `session-owned` without explicit approval.
@@ -44,7 +44,7 @@ Close the session by turning the work into durable artifacts: a short recap, nar
 
 6. **Capture follow-ups.**
    - Suggest a short list of possible follow-ups based on real gaps found during the session: failed verification, missing docs, deferred cleanup, new risks, or good next slices.
-   - Add only the best one to three follow-ups to `HumanTodo.md` under `## Captured by /todo`, immediately after `<!-- entries go here -->`.
+   - Add only the best one to three follow-ups to `Tasks.md` under `## Captured by /todo`, immediately after `<!-- entries go here -->`.
    - Use the repo todo format:
      ```md
      - [ ] unique-id [YYYY-MM-DD] #tag1 #tag2 Short imperative description.
