@@ -45,6 +45,23 @@ export function DashboardHeader({
         <span className="eyebrow">RimWorld Advisory Cabinet</span>
         <div className="title-status-row">
           <h1>RimBob Dashboard v2</h1>
+          <div className="running-version" aria-label="Running RimBob version">
+            <span title={version ? `Running Host version: ${version.running_version}.` : 'Waiting for the running Host version.'}>
+              {versionMarker}
+            </span>
+            <code title={version ? `Running Host build revision: ${version.build_revision ?? version.build_version}.` : 'Waiting for the running Host build revision.'}>
+              {revisionMarker}
+            </code>
+            <span title={version ? `Host build time: ${formatBuildDateTime(version.build_datetime)}.` : 'Waiting for the Host build time.'}>
+              {buildMarker}
+            </span>
+            <span title={version ? dashboardAssetTooltip(version.dashboard_asset_version) : 'Waiting for the dashboard bundle fingerprint.'}>
+              {assetMarker}
+            </span>
+            <span title={runtimeTooltip(runtimeRoot, hostProcessPath)}>
+              {rootMarker}
+            </span>
+          </div>
           <div className="header-status">
             <StatusPill tone={hostState.tone} title={hostState.title}>Host API {hostState.label}</StatusPill>
             <StatusPill tone={rimWorldState.tone} title={rimWorldState.title}>RimWorld {rimWorldState.label}</StatusPill>
@@ -53,23 +70,6 @@ export function DashboardHeader({
             <StatusPill tone={streamState.tone} title={streamState.title}>SSE {streamState.label}</StatusPill>
             <StatusPill tone={mayorState.tone} title={mayorState.title}>Mayor {mayorState.label}</StatusPill>
           </div>
-        </div>
-        <div className="running-version" aria-label="Running RimBob version">
-          <span title={version ? `Running Host version: ${version.running_version}.` : 'Waiting for the running Host version.'}>
-            {versionMarker}
-          </span>
-          <code title={version ? `Running Host build revision: ${version.build_revision ?? version.build_version}.` : 'Waiting for the running Host build revision.'}>
-            {revisionMarker}
-          </code>
-          <span title={version ? `Host build time: ${formatBuildDateTime(version.build_datetime)}.` : 'Waiting for the Host build time.'}>
-            {buildMarker}
-          </span>
-          <span title={version ? dashboardAssetTooltip(version.dashboard_asset_version) : 'Waiting for the dashboard bundle fingerprint.'}>
-            {assetMarker}
-          </span>
-          <span title={runtimeTooltip(runtimeRoot, hostProcessPath)}>
-            {rootMarker}
-          </span>
         </div>
       </div>
       <div className="header-controls">

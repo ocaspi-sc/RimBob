@@ -95,10 +95,10 @@ code {
 }
 
 .title-status-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 0.45fr) minmax(0, 1.25fr);
   align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
+  gap: 10px;
   min-width: 0;
 }
 
@@ -108,11 +108,13 @@ code {
 }
 
 .running-version {
-  margin-top: 6px;
+  margin-top: 0;
   display: flex;
   align-items: center;
   gap: 7px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  min-width: 0;
+  overflow: hidden;
   color: var(--muted);
   font-size: 0.76rem;
   line-height: 1.2;
@@ -127,6 +129,8 @@ code {
   border: 1px solid var(--line-soft);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.035);
+  flex: 0 1 auto;
+  min-width: 0;
   padding: 3px 7px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -148,11 +152,11 @@ code {
 .header-status {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  flex: 1 1 260px;
+  justify-content: flex-end;
   gap: 8px;
   flex-wrap: wrap;
   min-width: 0;
+  width: 100%;
 }
 
 .header-controls {
@@ -4036,6 +4040,10 @@ code {
     width: 100%;
     display: grid;
     grid-template-columns: 1fr;
+  }
+
+  .running-version {
+    flex-wrap: wrap;
   }
 
   .header-controls,
