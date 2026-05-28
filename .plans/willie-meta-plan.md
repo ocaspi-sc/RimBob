@@ -165,11 +165,12 @@ flowchart TD
   S2 --> Solver1
   FORK2 --> Solver1
   FORK3["RIMAPI map reach + path-cost ✓ LANDED<br/>(rimapi-map-reach-and-path-cost.md)"] -.solver scoring.-> Solver1
-  Solver1 --> WILLIE["Willie minister: contracts -> Rules.cs<br/>-> MinisterOfWillie -> registry/DI/cabinet order"]
+  DERIV --> WILLIE["Willie minister ✓ LANDED e902e96<br/>(Rules.cs + MinisterOfWillie + registry/DI;<br/>rules read briefing directly, no solver dep)"]
   S1 --> S3["Schema S3 ✓ LANDED 4927741<br/>(apply per-kind split +<br/>place_blueprint_group)"]
   FORK2 --> S3
   S3 --> WILLIE
-  WILLIE --> DASH["Willie dashboard surfacing<br/>(tab: briefing + advice + rules/debug;<br/>anchor inventory, backlog, data coverage,<br/>solver trace panels)"]
+  Solver1 -.freezer options[].-> WILLIE
+  WILLIE --> DASH["Willie dashboard ✓ LANDED ddef5f3<br/>(readout tab; anchor/backlog/coverage/<br/>solver-trace panels = follow-on)"]
   DERIV -.feeds panels.-> DASH
   Solver1 -.solver trace.-> DASH
   Solver1 --> Solver2["Solver2 generator competition<br/>(template + rectangle + pattern)"] --> Solver3["Solver3 breadth + reuse existing rooms"]
@@ -178,7 +179,7 @@ flowchart TD
   Solver3 --> SOLVER4B["Solver4 + planning overlay (Cap B)"]
 
   classDef done fill:#1f3a1f,stroke:#3fa83f,color:#cfe8cf;
-  class S1,S2,S3,FORK1,FORK3,SCHEMA,DERIV done;
+  class S1,S2,S3,FORK1,FORK3,SCHEMA,DERIV,WILLIE,DASH done;
   classDef partial fill:#3a341f,stroke:#a8993f,color:#e8e0cf;
   class FORK2 partial;
 ```
@@ -229,18 +230,18 @@ overlay) pending.
    Deps satisfied: S2 ✓, group `validate` ✓ (FORK2 Slice A), `WillieBriefing` +
    `WillieAnchorInventory` ✓ (commit `3235902`), FORK3 client ✓. Solver1 reads the
    briefing's anchor inventory; Slice-A scoring euclidean, Slice-B walkable.
-6. **Willie minister** - mirror Food: contracts -> `Rules.cs` (rules-first;
-   calls Placement Solver on an active `building_request`) ->
-   `MinisterOfWillie` -> registry/DI/cabinet order. Rules cut:
-   [`willie-rules-slice-a.md`](willie-rules-slice-a.md) (WR1–WR4).
-7. **Willie dashboard surfacing** - the Willie tab + all Willie state on the
-   dashboard (AGENTS: "dashboard reflects exact state"). Briefing view, advice
-   list, rules/debug view, plus panels for **anchor inventory**,
-   **construction backlog**, **data coverage**, and the **solver trace**
-   (`generator_id`, hard-gate reasons, metric rows, readiness booleans).
-   Mirror the Food tab; read-only/suggest-mode (no Apply this phase). Feeds:
-   the briefing derivation (panels) + the Placement Solver (trace). This is a
-   distinct deliverable, not folded into the minister-wiring phase.
+6. **Willie minister** [✓ LANDED `e902e96`] - mirror Food: `Rules.cs`
+   (rules-first; reads `WillieBriefing` directly) -> `MinisterOfWillie` ->
+   registry/DI/cabinet order. Rules cut:
+   [`willie-rules-slice-a.md`](willie-rules-slice-a.md) (WR1–WR4). Landed
+   independent of the solver — the freezer rule's solver-backed `options[]`
+   is a TODO until Solver1 lands (rules-only, suggest-mode, no Apply).
+7. **Willie dashboard surfacing** [✓ readout LANDED `ddef5f3`] - the Willie
+   tab + Willie state on the dashboard (AGENTS: "dashboard reflects exact
+   state"). Readout tab landed. **Follow-on:** dedicated panels for **anchor
+   inventory**, **construction backlog**, **data coverage**, and the **solver
+   trace** (`generator_id`, hard-gate reasons, metric rows, readiness
+   booleans) — the trace panel needs Solver1 first.
 8. **Promote design -> `construction.md`** - keep canonical docs aligned once
    anchors settle.
 9. **Optional/future** - WFC variant generator; planning overlay (Capability B);
@@ -295,12 +296,18 @@ generation uses a bounded generator registry with one shared validator/scorer.
   ingestion, `WillieAnchorInventoryDerivation`, FORK3 RimApiClient wrappers,
   docs (state-store / RimAPI / construction), tests. DTOs landed under
   `Src/GameStateSync/Dtos/`.
+- **Willie minister (Rules Slice A) ✓ LANDED `e902e96`** +
+  **dashboard readout ✓ LANDED `ddef5f3`** —
+  [`willie-rules-slice-a.md`](willie-rules-slice-a.md) (WR1–WR4).
+  `WillieConcern` enum, `Rules.cs`, `MinisterOfWillie`, registry, Willie tab.
+  Rules-only, suggest-mode, no Apply; freezer rule's solver `options[]` is a
+  TODO awaiting Solver1.
 - **← NEXT ACTIVE: Placement Solver Solver1.** All deps green (S2, FORK2 group
   validate, briefing + anchor inventory, FORK3 client). Skeleton:
   freezer / near-kitchen / `TemplateAnchoredGenerator` / one candidate /
-  group-validate / single option. Plan: [`placement-solver.md`](placement-solver.md) §5.
-  Willie Rules Slice A can start in parallel (reads `WillieBriefing` directly;
-  the 3 first-cut concerns are in `willie-briefing-schema.md` §S4).
+  group-validate / single option. Plan:
+  [`placement-solver-1.md`](placement-solver-1.md) (Solver1a–d; refreshed +
+  review-hardened). Adds the group-validate client method (not yet landed).
 - **RIMAPI track (parallel, separate repo):**
   - `FORK1` triplet ✓ landed.
   - `FORK2` blueprint groups Capability A — group `validate` / `place`
@@ -311,12 +318,13 @@ generation uses a bounded generator registry with one shared validator/scorer.
   - `rimapi-power-info-dto` ✓ landed.
   - New captures from briefing schema S5: `rimapi-map-region-at`,
     `rimapi-room-entry-cells`.
-- **Willie Rules Slice A** can start in parallel with Solver1 (reads
-  `WillieBriefing` directly): [`willie-rules-slice-a.md`](willie-rules-slice-a.md).
-- **Deferred until minister wiring lands:** **Willie dashboard surfacing**
-  (§4 `DASH` — Willie tab + briefing/advice/rules views + anchor-inventory /
-  backlog / data-coverage / solver-trace panels) and `construction.md`
-  promotion (§4 `PROMOTE`). The dashboard task is the concrete "put all the
-  Willie stuff on the dashboard" deliverable; it needs the minister registered
-  first. FORK2 group validate/place is already in, so Solver1's group-validate
-  path is no longer gated.
+- **Remaining after Solver1:**
+  - Wire the freezer rule to `PlacementSolver.SolveAsync` (the `options[]`
+    TODO in `Rules.cs`) once Solver1 lands.
+  - **Willie dashboard panels** (§4 `DASH` follow-on) — dedicated
+    anchor-inventory / backlog / data-coverage / solver-trace panels beyond
+    the landed readout tab; solver-trace panel needs Solver1.
+  - **Derivation extensions** (`willie-rules-slice-a.md` §4) — thermal
+    room-temps, storage distance, room quality/cells, frame age, constructor
+    priority — each unlocks more Slice-A rules against richer briefing fields.
+  - `construction.md` promotion (§4 `PROMOTE`).
