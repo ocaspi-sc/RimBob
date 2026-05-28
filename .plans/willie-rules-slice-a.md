@@ -43,10 +43,18 @@ Populated today (shippable rules):
 | `functional_rooms` | `RoomCountsByClass` | `kitchen_missing` / `hospital_missing` / `storage_room_missing` (presence) |
 | `thermal_control` | `CoolerCount/HeaterCount/FreezerAnchorCount` + inbound flag | `freezer_request_active` (inbound `building_request`), `cooler_missing` (`CoolerCount == 0 && FreezerAnchorCount > 0`) |
 
-Not populated yet → **deferred** to derivation extensions (§4): per-room
+Populated but **too coarse for any §S4 rule** (no Slice-A rule; not a gap):
+
+| concern | landed summary fields | why no rule yet |
+|---|---|---|
+| `storage_placement` | `StockpileZones`, `StockpileCells` (presence/count only) | every §S4 storage rule needs a *distance* or *saturation* metric (`NearestKitchenDistanceCells`, `CoolerAdjacentFoodUnits`, SlotGroup saturation) that the summary does not carry — see §4 `willie-storage-distance`. |
+| `fire_risk` | `WoodStructureCount` (map-wide count) | §S4 lists `fire_risk` with **zero** real-now rules; per-room wall material / membership is `need-fork` (`rimapi-building-detail-read` / `rimapi-room-detail-read`). A map-wide wood count cannot localize the risk. |
+| `base_layout` | `RoomCount`, `BuildingCount` (totals only) | the real-now §S4 rule `food_chain_loop_length_long` needs per-anchor *centroid distance* (euclidean over kitchen/freezer/dining anchors), not room/building totals — the "anchor-to-anchor loop distance" derivation in §4. |
+
+Not populated at all → **deferred** to derivation extensions (§4): per-room
 temperature, storage distance metrics, room cells/quality, wall material,
-frame age, constructor work-priority, base-layout loop length. The §S4 rules
-that depend on these (`room_too_hot`, `food_stockpile_far_from_kitchen`,
+frame age, constructor work-priority, anchor-to-anchor loop distance. The §S4
+rules that depend on these (`room_too_hot`, `food_stockpile_far_from_kitchen`,
 `room_undersized_for_purpose`, `room_quality_low`, `wood_wall_in_critical_room`,
 `frame_age_exceeded`, `no_assigned_constructor`, `food_chain_loop_length_long`)
 wait for those fields.
@@ -102,17 +110,27 @@ Files (new):
 - `Src/Ministers/Willie/Rules.cs`
   - `IMinisterRules<WillieBriefing>` (`Src/Common/Ministers/IMinisterRules.cs`).
   - `Evaluate(WillieBriefing briefing, ColonyContext context) → RulesResult`.
+    The interface `Evaluate` keeps the landed two-arg shape; **do not change
+    `IMinisterRules`** (Food depends on it — no-compat clause).
   - Rule families (populated-field cut from §0). Order by priority: power
     deficit → material/stalled → missing functional rooms → thermal.
   - **Empty-state success** mirrors Food: a clean base publishes a
     successful empty snapshot (trace e.g. `maintain_build_program`), not a
     noisy rule.
-  - `freezer_request_active`: detect inbound `building_request` with
-    `temperature.target_band == freezing` via `context` flags. Slice A emits
-    prose advice + a `place_blueprint` action **without** an executable
-    Apply.
-    - `// TODO: call PlacementSolver.SolveAsync (placement-solver-ps1.md)
-      once PS1 lands to attach options[] + a fork-validated blueprint_group;
+  - `freezer_request_active`: detect an inbound `building_request` with
+    `Temperature.TargetBand == Freezing`. **Correction (verified against
+    landed code):** `ColonyContext` (`Src/Common/Ministers/ColonyContext.cs`)
+    carries only Mayor posture — it has **no** flags. Inbound requests live on
+    `AgentFlag`s in `FlagChannel.Active()` (`Src/Coordination/FlagChannel.cs`),
+    which the *minister* holds, not `Evaluate`. So WR3's `MinisterOfWillie`
+    reads `flags.Active()`, extracts the freezing `BuildingRequest`s, and hands
+    them to the rules — e.g. a small `WillieRulesInput`/overload
+    `Evaluate(briefing, context, inboundRequests)` that the public
+    `IMinisterRules.Evaluate` delegates to with an empty list. Do **not** try
+    to read flags off `context`. Slice A emits prose advice + a
+    `place_blueprint` action **without** an executable Apply.
+    - `// TODO: call PlacementSolver.SolveAsync (placement-solver-1.md)
+      once Solver1 lands to attach options[] + a fork-validated blueprint_group;
       until then the freezer rule is prose-only.`
 
 Tests: see WR4.
@@ -129,6 +147,11 @@ Files (new):
   - Minister class mirroring `Src/Ministers/Food/Chef.cs`: holds the rules,
     publishes the `WillieBriefing`, exposes suggest-mode advice. Read-only
     (no Apply path this slice).
+  - Takes `FlagChannel` as a constructor dependency (as `Chef` does) and, per
+    the WR2 correction, reads `flags.Active()` to source inbound freezing
+    `building_request`s, then passes them to the rules' freezing-request
+    overload. `Evaluate(briefing, ColonyContext.Default)` is the call site for
+    everything else.
 
 Files (modified):
 
@@ -159,9 +182,11 @@ Files (new):
   - power deficit fires on `NetW < 0`; low-battery on reserve ratio.
   - `backlog_material_gap` fires on non-empty `MissingMaterials`.
   - `frame_blocked_by_material` fires on `BlockedCount > 0`.
-  - `kitchen_missing` fires when `RoomCountsByClass` lacks `kitchen`.
-  - `freezer_request_active` fires on an inbound freezing `building_request`
-    and emits prose (no Apply).
+  - `kitchen_missing` fires when `RoomCountsByClass` has no `Kitchen` key
+    (dict is keyed by `RoomClass.ToString()`, compared case-insensitively).
+  - `freezer_request_active` fires when an inbound freezing `building_request`
+    is fed in via the rules' freezing-request overload (not via
+    `ColonyContext`) and emits prose (no Apply).
   - clean base → empty success trace (`maintain_build_program`).
 - `Src/Tests/Willie/Fixtures/` — canned `WillieBriefing` JSON per case
   (AGENTS: fixtures under `Src/Tests/<MinisterName>/Fixtures/`).
@@ -200,14 +225,18 @@ small follow-on (capture in HumanTodo when scheduled):
 
 - **`willie-thermal-room-temps`** — add per-room temperature + role to
   `WillieThermalControlSummary` (reads landed `RoomRecord.Temperature` /
-  `RoleLabel`). Unlocks `room_too_hot` / `room_too_cold` / `freezer_lost_seal`.
+  `RoomRecord.RoleLabel`; `freezer_lost_seal` also reads landed
+  `RoomRecord.OpenRoofCount`). Unlocks `room_too_hot` / `room_too_cold` /
+  `freezer_lost_seal`.
 - **`willie-storage-distance`** — add nearest-stockpile-to-kitchen distance +
   cooler-adjacency to `WillieStoragePlacementSummary` (mirror
   `FoodStorageSummary`). Unlocks `food_stockpile_far_from_kitchen` /
   `food_storage_split_from_freezer`.
 - **`willie-room-quality-fields`** — add `CellsCount` + quality stats per
-  room class to `WillieFunctionalRoomsSummary` (reads landed `RoomRecord`
-  quality fields). Unlocks `room_undersized_for_purpose` / `room_quality_low`.
+  room class to `WillieFunctionalRoomsSummary` (reads landed
+  `RoomRecord.CellsCount`, `RoomRecord.Impressiveness`, `RoomRecord.Beauty` —
+  the quality fields are nullable, so the rule must null-guard). Unlocks
+  `room_undersized_for_purpose` / `room_quality_low`.
 - **`willie-frame-age`** — state-store snapshot diff for frame first-seen
   cycle. Unlocks `frame_age_exceeded`.
 - **`willie-constructor-priority`** — count pawns with `Construction` work
@@ -220,8 +249,8 @@ small follow-on (capture in HumanTodo when scheduled):
 
 ## 5. Out of scope (separate plans)
 
-- **Placement Solver PS1** — [`placement-solver-ps1.md`](placement-solver-ps1.md).
-  Rules Slice A calls `SolveAsync` only after PS1 lands (TODO in WR2).
+- **Placement Solver Solver1** — [`placement-solver-1.md`](placement-solver-1.md).
+  Rules Slice A calls `SolveAsync` only after Solver1 lands (TODO in WR2).
 - **LLM escalation (Slice C)** — Willie prompt + RAG; after rules + tests.
 - **Apply path** (`place_blueprint_group` executor) — bundles with the
   Assisted Apply work, not this slice.

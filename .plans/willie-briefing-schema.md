@@ -11,13 +11,13 @@
 The Willie minister cannot move past schema-landing until its **briefing record** is specified. Without a per-field map, two downstream tracks stall:
 
 - **Willie Rules Slice A** writes deterministic rules that read briefing fields. If a rule reads a field that turns out to be `need-fork` or `defer`, the rule ships dead. The cut between "rules I can ship now" and "rules that wait for the next fork slice" must be explicit before the first `Rules.cs` line is written.
-- **Placement Solver PS1** ([`placement-solver.md`](placement-solver.md)) resolves `near:<class>` against an anchor inventory the briefing publishes. If the anchor contract is wrong (e.g. centroid-only when the locked decision is `{room_id, entry_cells[], region_id}`), PS1 ships against a contract the rest of the solver pipeline can't honour.
+- **Placement Solver Solver1** ([`placement-solver.md`](placement-solver.md)) resolves `near:<class>` against an anchor inventory the briefing publishes. If the anchor contract is wrong (e.g. centroid-only when the locked decision is `{room_id, entry_cells[], region_id}`), Solver1 ships against a contract the rest of the solver pipeline can't honour.
 
 Each slice carries its own motivation:
 
 - **S1** — Per-concern signal tables. Without explicit `have / need-fork / defer` per row, every consumer guesses. The tables are the single source of truth for "is signal X readable today?"
 - **S2** — RimMind cross-walk. Two RimMind world-data parts (`ConstructionBacklogPart`, `StorageSaturationPart`) already compute Willie-relevant signals. Ingesting an existing implementation beats reinventing it; the cross-walk decides per-part whether to ingest, mirror in RIMAPI, or skip.
-- **S3** — `AnchorInventory` contract. The 2026-05-27 locked decision changed anchor representation from centroid to `{room_id, entry_cells[], region_id}`. PS1 cannot start until the record shape and per-cycle construction are written down.
+- **S3** — `AnchorInventory` contract. The 2026-05-27 locked decision changed anchor representation from centroid to `{room_id, entry_cells[], region_id}`. Solver1 cannot start until the record shape and per-cycle construction are written down.
 - **S4** — Slice-A rule cut. Rules-vs-aspiration classification per concern is the actionable output. Willie Rules Slice A reads this list to scope its first PR.
 - **S5** — Tasks promotions. Every `need-fork` row must trace to a Tasks. Without that trace, the gap is invisible to future implementers and the meta-plan §4 graph rots.
 
@@ -167,7 +167,7 @@ Tracing the [`willie-meta-plan.md`](willie-meta-plan.md) §1 chain through the a
 2. **Willie Rules.** Detects active `building_request`; constructs `PlacementSpec` (per [`placement-solver.md`](placement-solver.md) §2).
 3. **Anchor resolution.** Solver reads `WillieBriefing.AnchorInventory`, filters `Anchors.Where(a => a.Class == RoomClass.Kitchen)`. Result: 0..N `RoomAnchor`s, each with `RoomId`, `Centroid`, and (in Slice B) `EntryCells` + `RegionId`.
 4. **Sizing.** `capacity_need.food_units = 200` → 5×5 freezer template (per §3 step 2).
-5. **Candidate generation.** `TemplateAnchoredGenerator` (PS1) emits one freezer-shell-plus-cooler `BlueprintGroup` per kitchen anchor, anchored adjacent to the kitchen's `Centroid` (Slice A) or `EntryCells` (Slice B).
+5. **Candidate generation.** `TemplateAnchoredGenerator` (Solver1) emits one freezer-shell-plus-cooler `BlueprintGroup` per kitchen anchor, anchored adjacent to the kitchen's `Centroid` (Slice A) or `EntryCells` (Slice B).
 6. **Scoring — Slice A.** `freezer_to_kitchen_distance` = `MapDistance.Manhattan(candidate_centroid, kitchen.Centroid)`. Rank ascending. No FORK3 read needed.
 7. **Scoring — Slice B (post-RimBob FORK3 client wiring).** Batch `POST /api/v1/map/path-cost/batch { tier: region, pairs: candidates × kitchen.EntryCells }`; rank by min walkable cost; A* tiebreak on the top K. (FORK3 endpoints landed; RimBob client method pending.)
 8. **Validation.** FORK2 `blueprint-group/validate` survives.
@@ -328,8 +328,8 @@ Both captures point back to this design doc so the future implementer has the mo
 ## Open questions / dependencies
 
 - **Backlog ingestion shape.** Should the state-store cache the full `ConstructionBacklogGroupDto` list, or pre-aggregate per-def for cheaper briefing computation? Lean: cache the full DTO (mirrors how `StockpileLedger` already carries raw `StockpileZone`s) and aggregate at derivation time.
-- **`stalled_builds` frame-age threshold.** What N (cycles) constitutes "stalled"? Calibrate against playtest data once PS1 is live; document the default in the rule itself.
-- **`functional_rooms` per-class minimum cell counts.** Need a defaults table (kitchen ≥ N₁, hospital ≥ N₂, …). Lean: import from the solver template sizing constants (PS1 will need the same numbers; single source of truth).
+- **`stalled_builds` frame-age threshold.** What N (cycles) constitutes "stalled"? Calibrate against playtest data once Solver1 is live; document the default in the rule itself.
+- **`functional_rooms` per-class minimum cell counts.** Need a defaults table (kitchen ≥ N₁, hospital ≥ N₂, …). Lean: import from the solver template sizing constants (Solver1 will need the same numbers; single source of truth).
 
 Already resolved (do not re-open — see meta-plan §3 / §5):
 
@@ -354,7 +354,7 @@ Already resolved (do not re-open — see meta-plan §3 / §5):
 
 ## Summary (landed 2026-05-27, refreshed)
 
-**Motivation.** The Willie Placement Solver (PS1) and Willie Rules (Slice A) cannot start until each briefing field is classified `have` / `need-fork` / `defer`. The skeleton existed but the per-concern tables, RimMind cross-walk, anchor contract, and Slice-A rule cut were all empty placeholders.
+**Motivation.** The Willie Placement Solver (Solver1) and Willie Rules (Slice A) cannot start until each briefing field is classified `have` / `need-fork` / `defer`. The skeleton existed but the per-concern tables, RimMind cross-walk, anchor contract, and Slice-A rule cut were all empty placeholders.
 
 **Context.** Schema S1/S2/S3 landed (`7d0818c`, `8676d59`, `4927741`); FORK1 single-asset blueprint triplet landed (`3eb1d84`); **FORK3 reach + path-cost endpoints landed**; **`PowerInfoDto` fix landed**; room-quality read landed (`source-todo-room-quality-read`). Anchor-scoring representation locked to `{room_id, entry_cells[], region_id}` 2026-05-27. RimMind parts `ConstructionBacklogPart` and `StorageSaturationPart` available for mining.
 
@@ -386,6 +386,6 @@ Already resolved (do not re-open — see meta-plan §3 / §5):
 
 **Outcome.**
 
-- Willie Placement Solver **PS1** is unblocked: the anchor contract and the Slice-A vs Slice-B scoring fallback are both specified.
+- Willie Placement Solver **Solver1** is unblocked: the anchor contract and the Slice-A vs Slice-B scoring fallback are both specified.
 - Willie Rules **Slice A** is unblocked: the deterministic rule set covers 7 concerns and names the per-concern rule list to write first (`functional_rooms`, `thermal_control`, `storage_placement`).
 - Meta-plan §4 Willie Briefing Schema node moves from `DRAFTED` to `LANDED`.

@@ -161,18 +161,21 @@ flowchart TD
   FORK2 --> ROOM["Room/anchor detection<br/>(room-purpose inference)"]
   ROOM --> SCHEMA
   SCHEMA --> DERIV["Willie briefing derivation ✓ LANDED 3235902<br/>(WillieBriefing + backlog ingest +<br/>anchor inventory + FORK3 client)"]
-  DERIV --> PS1["Placement Solver PS1<br/>(template freezer skeleton + generator registry)<br/>← UNBLOCKED, next active"]
-  S2 --> PS1
-  FORK2 --> PS1
-  FORK3["RIMAPI map reach + path-cost ✓ LANDED<br/>(rimapi-map-reach-and-path-cost.md)"] -.solver scoring.-> PS1
-  PS1 --> WILLIE["Willie minister: contracts -> Rules.cs<br/>-> MinisterOfWillie -> registry -> dashboard"]
+  DERIV --> Solver1["Placement Solver Solver1<br/>(template freezer skeleton + generator registry)<br/>← UNBLOCKED, next active"]
+  S2 --> Solver1
+  FORK2 --> Solver1
+  FORK3["RIMAPI map reach + path-cost ✓ LANDED<br/>(rimapi-map-reach-and-path-cost.md)"] -.solver scoring.-> Solver1
+  Solver1 --> WILLIE["Willie minister: contracts -> Rules.cs<br/>-> MinisterOfWillie -> registry/DI/cabinet order"]
   S1 --> S3["Schema S3 ✓ LANDED 4927741<br/>(apply per-kind split +<br/>place_blueprint_group)"]
   FORK2 --> S3
   S3 --> WILLIE
-  PS1 --> PS2["PS2 generator competition<br/>(template + rectangle + pattern)"] --> PS3["PS3 breadth + reuse existing rooms"]
+  WILLIE --> DASH["Willie dashboard surfacing<br/>(tab: briefing + advice + rules/debug;<br/>anchor inventory, backlog, data coverage,<br/>solver trace panels)"]
+  DERIV -.feeds panels.-> DASH
+  Solver1 -.solver trace.-> DASH
+  Solver1 --> Solver2["Solver2 generator competition<br/>(template + rectangle + pattern)"] --> Solver3["Solver3 breadth + reuse existing rooms"]
   WILLIE --> PROMOTE["Promote design -> construction.md"]
-  PS3 --> WFC["(optional) WFC generator spike"]
-  PS3 --> PSB["PS4 + planning overlay (Cap B)"]
+  Solver3 --> WFC["(optional) WFC generator spike"]
+  Solver3 --> SOLVER4B["Solver4 + planning overlay (Cap B)"]
 
   classDef done fill:#1f3a1f,stroke:#3fa83f,color:#cfe8cf;
   class S1,S2,S3,FORK1,FORK3,SCHEMA,DERIV done;
@@ -182,7 +185,7 @@ flowchart TD
 
 Note: FORK3 endpoints + the RimBob client wrappers (`GetReachAsync` /
 `PostPathCostAsync` / `PostPathCostBatchAsync`) both landed (briefing-derivation
-commit `3235902`). PS1 can ship Slice A with euclidean-from-centroid scoring and
+commit `3235902`). Solver1 can ship Slice A with euclidean-from-centroid scoring and
 swap in walkable distance for Slice B with no new wiring. FORK2 Cap A: group
 `validate` / `place` (Slice A) landed; remaining Cap A slices + Cap B (planning
 overlay) pending.
@@ -216,34 +219,42 @@ overlay) pending.
      plus a RimBob client method (pending); Slice A ships with
      euclidean-from-centroid approximation as fallback.
 4. **Room/anchor detection** - room-purpose inference from RIMAPI reads (resolve
-   `near:kitchen` -> map location). The hard sub-problem; may gate PS1. Depends
+   `near:kitchen` -> map location). The hard sub-problem; may gate Solver1. Depends
    on building/room reads (`source-todo-building-condition-read`,
    `source-todo-room-quality-read`) — i.e. on FORK2.
-5. **Placement Solver** [← NEXT ACTIVE; deps green] - PS1 skeleton (freezer,
-   near-kitchen, `TemplateAnchoredGenerator`, one candidate) -> PS2 competing
-   generators (templates + rectangle + local patterns, top 1-3 options) -> PS3
-   more room classes and reuse-existing-footprint logic -> PS4 base planning.
+5. **Placement Solver** [← NEXT ACTIVE; deps green] - Solver1 skeleton (freezer,
+   near-kitchen, `TemplateAnchoredGenerator`, one candidate) -> Solver2 competing
+   generators (templates + rectangle + local patterns, top 1-3 options) -> Solver3
+   more room classes and reuse-existing-footprint logic -> Solver4 base planning.
    Deps satisfied: S2 ✓, group `validate` ✓ (FORK2 Slice A), `WillieBriefing` +
-   `WillieAnchorInventory` ✓ (commit `3235902`), FORK3 client ✓. PS1 reads the
+   `WillieAnchorInventory` ✓ (commit `3235902`), FORK3 client ✓. Solver1 reads the
    briefing's anchor inventory; Slice-A scoring euclidean, Slice-B walkable.
 6. **Willie minister** - mirror Food: contracts -> `Rules.cs` (rules-first;
    calls Placement Solver on an active `building_request`) ->
-   `MinisterOfWillie` -> registry/DI/cabinet order -> dashboard scope.
-   Slices A/B/C from `base-construction-layout-agent.md`.
-7. **Promote design -> `construction.md`** - keep canonical docs aligned once
+   `MinisterOfWillie` -> registry/DI/cabinet order. Rules cut:
+   [`willie-rules-slice-a.md`](willie-rules-slice-a.md) (WR1–WR4).
+7. **Willie dashboard surfacing** - the Willie tab + all Willie state on the
+   dashboard (AGENTS: "dashboard reflects exact state"). Briefing view, advice
+   list, rules/debug view, plus panels for **anchor inventory**,
+   **construction backlog**, **data coverage**, and the **solver trace**
+   (`generator_id`, hard-gate reasons, metric rows, readiness booleans).
+   Mirror the Food tab; read-only/suggest-mode (no Apply this phase). Feeds:
+   the briefing derivation (panels) + the Placement Solver (trace). This is a
+   distinct deliverable, not folded into the minister-wiring phase.
+8. **Promote design -> `construction.md`** - keep canonical docs aligned once
    anchors settle.
-8. **Optional/future** - WFC variant generator; planning overlay (Capability B);
-   whole-base planning (PS4).
+9. **Optional/future** - WFC variant generator; planning overlay (Capability B);
+   whole-base planning (Solver4).
 
 **Tests:** Placement Solver tests live in `Src/Tests/PlacementSolver/`;
 seed-based replay for solver determinism (same inputs -> same options ranking).
 Per-minister tests live alongside their minister directory under `Src/Tests/`.
 
 **Critical path:** [S1/S2/S3 ✓] [FORK1 ✓] [FORK2 group validate/place ✓]
-[FORK3 ✓] [briefing schema + derivation ✓ `3235902`] -> **PS1** ->
+[FORK3 ✓] [briefing schema + derivation ✓ `3235902`] -> **Solver1** ->
 Willie Rules Slice A -> Willie minister wiring -> dashboard. The gates that
 blocked everything spatial (briefing/data-gap + room/anchor detection) are
-**cleared** — `WillieAnchorInventory` ships from the derivation. PS1 is the
+**cleared** — `WillieAnchorInventory` ships from the derivation. Solver1 is the
 next active node.
 
 ---
@@ -284,7 +295,7 @@ generation uses a bounded generator registry with one shared validator/scorer.
   ingestion, `WillieAnchorInventoryDerivation`, FORK3 RimApiClient wrappers,
   docs (state-store / RimAPI / construction), tests. DTOs landed under
   `Src/GameStateSync/Dtos/`.
-- **← NEXT ACTIVE: Placement Solver PS1.** All deps green (S2, FORK2 group
+- **← NEXT ACTIVE: Placement Solver Solver1.** All deps green (S2, FORK2 group
   validate, briefing + anchor inventory, FORK3 client). Skeleton:
   freezer / near-kitchen / `TemplateAnchoredGenerator` / one candidate /
   group-validate / single option. Plan: [`placement-solver.md`](placement-solver.md) §5.
@@ -300,7 +311,12 @@ generation uses a bounded generator registry with one shared validator/scorer.
   - `rimapi-power-info-dto` ✓ landed.
   - New captures from briefing schema S5: `rimapi-map-region-at`,
     `rimapi-room-entry-cells`.
-- **Deferred until PS1 lands:** Willie minister wiring (§4 `WILLIE` —
-  contracts → `Rules.cs` → `MinisterOfWillie` → registry → dashboard) and
-  `construction.md` promotion (§4 `PROMOTE`). FORK2 group validate/place is
-  already in, so PS1's group-validate path is no longer gated.
+- **Willie Rules Slice A** can start in parallel with Solver1 (reads
+  `WillieBriefing` directly): [`willie-rules-slice-a.md`](willie-rules-slice-a.md).
+- **Deferred until minister wiring lands:** **Willie dashboard surfacing**
+  (§4 `DASH` — Willie tab + briefing/advice/rules views + anchor-inventory /
+  backlog / data-coverage / solver-trace panels) and `construction.md`
+  promotion (§4 `PROMOTE`). The dashboard task is the concrete "put all the
+  Willie stuff on the dashboard" deliverable; it needs the minister registered
+  first. FORK2 group validate/place is already in, so Solver1's group-validate
+  path is no longer gated.

@@ -122,12 +122,12 @@ validation, dedupe, and final option selection.
 
 | Generator | First use | Notes |
 |---|---|---|
-| `TemplateAnchoredGenerator` | PS1 | Baseline freezer/room templates near resolved anchors. Boring, explainable, and first to ship. |
-| `LargestEmptyRectangleGenerator` | PS2 | Finds viable rectangular footprints for rooms and expansion space. |
-| `MaximalEmptyRegionGenerator` | PS3 | Maintains richer free-space candidates when the base is irregular. |
-| `PatternMatchGenerator` | PS2/PS3 | Cooler wall slots, door-side patterns, turbine clearance, conduit reach, and local defense/build lint. |
-| `ConstrainedGrowthGenerator` | PS3 | Grows a room/cluster from anchors when a fixed rectangle is too rigid. |
-| `ReuseExistingFootprintGenerator` | PS3 | Repairs, replaces, expands, or repurposes existing rooms before proposing new footprint sprawl. |
+| `TemplateAnchoredGenerator` | Solver1 | Baseline freezer/room templates near resolved anchors. Boring, explainable, and first to ship. |
+| `LargestEmptyRectangleGenerator` | Solver2 | Finds viable rectangular footprints for rooms and expansion space. |
+| `MaximalEmptyRegionGenerator` | Solver3 | Maintains richer free-space candidates when the base is irregular. |
+| `PatternMatchGenerator` | Solver2/Solver3 | Cooler wall slots, door-side patterns, turbine clearance, conduit reach, and local defense/build lint. |
+| `ConstrainedGrowthGenerator` | Solver3 | Grows a room/cluster from anchors when a fixed rectangle is too rigid. |
+| `ReuseExistingFootprintGenerator` | Solver3 | Repairs, replaces, expands, or repurposes existing rooms before proposing new footprint sprawl. |
 | `LocalCpSatGenerator` | Future | Exact local packing for small pruned sets only; never whole-map brute force. |
 | `WfcVariantGenerator` | Future spike | Internal-layout variant source inside an already-bounded region; never the core solver spine. |
 
@@ -256,10 +256,10 @@ solve(spec, snapshot):
 
 | Slice | Scope |
 |---|---|
-| **PS1 skeleton** | One `room_class` (freezer), one anchor (near kitchen), `TemplateAnchoredGenerator` only, **one** candidate (not 3), rectangular shell + 1 cooler, fork-validate, single option. Proves the pipeline end-to-end while establishing the generator registry/trace shape. |
-| **PS2 options** | Add bounded competition: template variants + `LargestEmptyRectangleGenerator` + local `PatternMatchGenerator` where useful. Emit 1-3 diverse options with shared score components and `tradeoff_note`s. |
-| **PS3 breadth** | More room classes (hospital, bedroom, workshop), better anchor/room detection, `ReuseExistingFootprintGenerator`, no-fit fallbacks, and richer build-order safety. |
-| **PS4 (future)** | Whole-base planning outline driving the planning overlay (rimapi-groups Capability B). Local CP-SAT and WFC stay optional generator experiments after the basic solver proves value. |
+| **Solver1 skeleton** | One `room_class` (freezer), one anchor (near kitchen), `TemplateAnchoredGenerator` only, **one** candidate (not 3), rectangular shell + 1 cooler, fork-validate, single option. Proves the pipeline end-to-end while establishing the generator registry/trace shape. |
+| **Solver2 options** | Add bounded competition: template variants + `LargestEmptyRectangleGenerator` + local `PatternMatchGenerator` where useful. Emit 1-3 diverse options with shared score components and `tradeoff_note`s. |
+| **Solver3 breadth** | More room classes (hospital, bedroom, workshop), better anchor/room detection, `ReuseExistingFootprintGenerator`, no-fit fallbacks, and richer build-order safety. |
+| **Solver4 (future)** | Whole-base planning outline driving the planning overlay (rimapi-groups Capability B). Local CP-SAT and WFC stay optional generator experiments after the basic solver proves value. |
 
 ---
 
@@ -301,7 +301,7 @@ compat code; wipe-and-regen on upgrade.**
 
 - [ ] **Anchor/room detection.** How to resolve `near:kitchen` / `near:stockpile`
       from RIMAPI reads - room purpose inference is the hard sub-problem. May
-      gate PS1 if room reads are weak.
+      gate Solver1 if room reads are weak.
 - [x] **Packing approach.** Use competing bounded generators behind one shared
       validator/scorer. Start with templates; add rectangle and pattern
       generators before heavier algorithms.

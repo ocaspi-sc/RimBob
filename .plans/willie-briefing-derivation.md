@@ -7,7 +7,7 @@
 > [`willie-briefing-fields.md`](willie-briefing-fields.md). Pulls in the
 > RIMAPI signals already exposed (FORK1 `/api/v1/map/construction/backlog`,
 > FORK3 `/api/v1/map/reach` / `/api/v1/map/path-cost` / batch) so Willie
-> Rules Slice A and the Placement Solver PS1 can read a real briefing.
+> Rules Slice A and the Placement Solver Solver1 can read a real briefing.
 >
 > Sliced by risk — **gimp one slice at a time**, keep build/tests green
 > between.
@@ -22,7 +22,7 @@ C#. Two downstream tracks still cannot start:
 - **Willie Rules Slice A** writes deterministic rules that read briefing
   fields. Without `WillieBriefing` in `Src/Common/Briefings/`, `Rules.cs`
   has nothing to read.
-- **Placement Solver PS1** reads `WillieAnchorInventory` to resolve
+- **Placement Solver Solver1** reads `WillieAnchorInventory` to resolve
   `near:<class>` requests. The anchor record is specified but does not
   exist.
 
@@ -40,10 +40,10 @@ Per-slice motivation:
   it yet. Adds a new state-store aggregate + the briefing fields backed by
   it. Unblocks `material_bottleneck` and `stalled_builds` real-now rules.
 - **WB3** — `WillieAnchorInventoryDerivation`. Anchor inventory is the
-  PS1 entry point. Reads existing `RoomRegistry` + `BuildingRegistry`; no
+  Solver1 entry point. Reads existing `RoomRegistry` + `BuildingRegistry`; no
   new RIMAPI endpoint.
 - **WB4** — RimBob FORK3 client methods. Endpoints landed fork-side; no
-  C# in RimBob talks to them yet. Required by PS1 Slice-B scoring and by
+  C# in RimBob talks to them yet. Required by Solver1 Slice-B scoring and by
   the `frame_unreachable` / `walkable_loop_length_long` Slice-A rules.
 
 ---
@@ -310,8 +310,8 @@ empty anchor list (solver fallback per `placement-solver.md`).
 ### WB4 — FORK3 RimApiClient methods  *(NETWORK PRIMITIVES)*
 
 Adds RimBob client methods for the three FORK3 endpoints. **No
-ingestion** in this slice — the methods stand alone until PS1 calls them.
-This keeps the slice tiny and lets PS1 land independently.
+ingestion** in this slice — the methods stand alone until Solver1 calls them.
+This keeps the slice tiny and lets Solver1 land independently.
 
 Files (new):
 
@@ -371,12 +371,12 @@ Docs to touch (same commit):
 
 - `RimApiClient.PostPathCostBatchAsync` cap constant —
   `// TODO: source the 4096 cap from a shared constant once a second
-  consumer needs it; today only PS1 reads`
-- All three methods — `// TODO: first consumer is PS1
+  consumer needs it; today only Solver1 reads`
+- All three methods — `// TODO: first consumer is Solver1
   (placement-solver.md); methods unused until then`
 
 Risk: **low.** Pure additive HTTP wrappers. No state-store change.
-Mitigation: methods unused outside tests until PS1 ships.
+Mitigation: methods unused outside tests until Solver1 ships.
 
 ---
 
@@ -446,7 +446,7 @@ panels against a stable briefing.
 - **Willie Rules `Rules.cs`** — depends on this plan but lands in the
   follow-on Willie minister slice. The Slice-A rule cut is specified in
   `willie-briefing-schema.md` §S4.
-- **Placement Solver PS1** — separate plan
+- **Placement Solver Solver1** — separate plan
   ([`placement-solver.md`](placement-solver.md) §5). Consumes
   `WillieAnchorInventory` + FORK3 client methods from this plan.
 - **Dashboard `Willie` tab** — needs the minister to register first.
