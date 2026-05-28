@@ -112,6 +112,7 @@ public static class SystemEndpoints
             RimApiRuntimeSnapshot rimApi = await rimApiRuntime.ProbeAsync(ct);
             MayorBriefing mayorBriefing = briefings.GetMayorBriefing();
             FoodBriefing foodBriefing = briefings.GetFoodBriefing();
+            WillieBriefing willieBriefing = briefings.GetWillieBriefing();
             WelfareSourceBriefing welfareBriefing = briefings.GetWelfareBriefing();
             string logsDir = HostLogPaths.ResolveLogsDirectory(env.ContentRootPath, opts.LogsRoot);
             string dataRoot = HostLogPaths.ResolveDataRootDirectory(env.ContentRootPath, opts.DataRoot);
@@ -170,6 +171,7 @@ public static class SystemEndpoints
                     last_live_refresh_at = colony.LastLiveRefreshAt,
                     briefing_version = mayorBriefing.BriefingVersion,
                     food_briefing_version = foodBriefing.BriefingVersion,
+                    willie_briefing_version = willieBriefing.BriefingVersion,
                     welfare_briefing_version = welfareBriefing.BriefingVersion,
                     mayor_snapshot_version = outputStore.CurrentMayorAgenda?.Version,
                     active_advice_count = adviceBus.ActiveAdvice().Count,

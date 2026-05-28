@@ -1,0 +1,5 @@
+{
+  "description": "Stable Willie Slice A briefing with power margin, functional rooms, no material gap, and no inbound freezer request.",
+  "expected_trace": "maintain_build_program",
+  "expected_advice": []
+}

@@ -9,9 +9,12 @@ using RimBob.Host.Endpoints;
 using RimBob.Ingestion;
 using RimBob.Knowledge;
 using RimBob.LLM;
-using RimBob.Ministers.Food;
 using RimBob.Ministers.Mayor;
 using RimBob.State;
+using Chef = RimBob.Ministers.Food.Chef;
+using FoodRules = RimBob.Ministers.Food.Rules;
+using MinisterOfWillie = RimBob.Ministers.Willie.MinisterOfWillie;
+using WillieRules = RimBob.Ministers.Willie.Rules;
 
 HostProcessCrashGuard.Configure();
 
@@ -219,10 +222,13 @@ try
     }
 
     builder.Services.AddSingleton<Mayor>();
-    builder.Services.AddSingleton<Rules>();
+    builder.Services.AddSingleton<FoodRules>();
+    builder.Services.AddSingleton<WillieRules>();
     builder.Services.AddSingleton<Chef>();
+    builder.Services.AddSingleton<MinisterOfWillie>();
     builder.Services.AddSingleton<IMinister>(sp => sp.GetRequiredService<Mayor>());
     builder.Services.AddSingleton<IMinister>(sp => sp.GetRequiredService<Chef>());
+    builder.Services.AddSingleton<IMinister>(sp => sp.GetRequiredService<MinisterOfWillie>());
     builder.Services.AddSingleton<CabinetCycle>();
     builder.Services.AddHostedService<ColonySnapshotRestoreHostedService>();
     builder.Services.AddHostedService<AgendaBootstrapHostedService>();

@@ -21,6 +21,9 @@ public sealed class MinisterRegistry
     private static readonly IReadOnlyList<string> MinisterViews =
         ["prompt", "briefing", "rag", "rules", "raw_llm", "advice"];
 
+    private static readonly IReadOnlyList<string> RulesOnlyMinisterViews =
+        ["briefing", "rules", "advice"];
+
     private readonly IReadOnlyList<MinisterDescriptor> scopes =
     [
         new("system", "SYSTEM", "system", true, ["overview"]),
@@ -47,7 +50,14 @@ public sealed class MinisterRegistry
             HasRawLlmOutput: true,
             HasManualLlmOutput: true,
             HasRag: true),
-        new("willie", "Willie", "minister", false, MinisterViews),
+        new(
+            Key: "willie",
+            Label: "Willie",
+            Kind: "minister",
+            Ready: true,
+            EnabledViews: RulesOnlyMinisterViews,
+            CabinetOrder: 15,
+            CanManualTrigger: true),
         new("defense", "Defense", "minister", false, MinisterViews),
         new("welfare", "Welfare", "minister", false, MinisterViews),
         new("medical", "Medical", "minister", false, MinisterViews),

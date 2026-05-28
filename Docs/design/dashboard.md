@@ -127,9 +127,10 @@ derived live meaning, and DEV BLOG renders repository-history meaning. INFO
 stays static/reference-oriented so it does not become either a second SYSTEM
 page or a second ANALYTICS page.
 
-Live minister scopes are Mayor and Chef (`food` key). Future minister scopes remain visible
-but disabled or marked not wired until backend data exists: Willie,
-Defense, Welfare, Medical, Research, Industry, Economy, and Chief of Staff.
+Live minister scopes are Mayor, Chef (`food` key), and Willie. Future minister
+scopes remain visible but disabled or marked not wired until backend data
+exists: Defense, Welfare, Medical, Research, Industry, Economy, and Chief of
+Staff.
 
 The left rail selects the inspected scope, not the view.
 
@@ -156,6 +157,10 @@ Minister scopes use a fixed top tab bar:
 - Raw LLM Output
 - Infographics
 - Advice
+
+Rules-only ministers may expose the subset that is actually wired. Willie starts
+with Briefing, Rules, and Advice; Prompt, RAG, Raw LLM Output, and Apply are not
+shown until those backend surfaces exist.
 
 Use explicit game icons from the Host icon gateway in scope labels, view labels,
 section titles, field labels, compact metric labels, and obvious entity rows

@@ -199,11 +199,11 @@ fine. Use code/tests for current fields; use this doc for the design direction.
 
 ### Willie Briefing
 
-Willie now has a first `IBriefing` implementation backed by state-store
-derivation. This slice is dormant: it adds the briefing record, a
+Willie has a first `IBriefing` implementation backed by state-store derivation.
+It feeds the rules-only `MinisterOfWillie` slice: the briefing record,
 `WillieBacklog` aggregate from `/api/v1/map/construction/backlog`, and room
-anchor inventory from room/building state. It does not register
-`MinisterOfWillie`, emit advice, or add a dashboard tab yet.
+anchor inventory from room/building state are now visible through the Willie
+dashboard scope.
 
 Current derived surfaces:
 

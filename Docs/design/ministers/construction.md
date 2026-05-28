@@ -1,7 +1,7 @@
 # Willie - Minister Design
 
 > **Living document.** See `AGENTS.md` for update rules.
-> Willie is a future feeder advisor. This doc records domain boundaries
+> Willie is a rules-only feeder advisor. This doc records domain boundaries
 > and first-slice intent, not a code-level rule catalogue.
 > Willie owns the construction domain; schema/code names use `Willie*`, not `Construction*`.
 
@@ -71,16 +71,20 @@ Willie's layout reasoning becomes noisy enough to justify it.
 
 ## First Slice Shape
 
-Willie should begin as rules-first `Suggest`-mode advice.
+Willie now begins as rules-first `Suggest`-mode advice. Slice A is deterministic
+only: no LLM escalation and no Apply payloads.
 
-Likely first advice areas:
+First deterministic advice areas:
 
-- Repair breaches or damaged critical infrastructure.
 - Resolve power deficit or low backup.
-- Build missing beds/basic rooms.
-- Address missing freezer/power assets requested by Chef.
-- Warn about wood structures in critical rooms.
 - Surface material/component bottlenecks that block current plans.
+- Surface blocked current blueprints/frames.
+- Build missing functional rooms from populated room anchors.
+- Address missing freezer/power assets requested by Chef.
+
+Richer storage-distance, fire-risk, frame-age, and base-layout rules wait on
+briefing derivation extensions or fork reads. Wire/persistence changes in this
+area follow the project default: no compat code; wipe-and-regen on upgrade.
 
 ### Concerns (defined)
 
@@ -89,6 +93,8 @@ The canonical concern set lives in
 the source of truth for the current eight Willie concerns and the rules-vs-LLM
 split. `basic_shelter` moved to Welfare; survival-floor bedroom/barracks asks
 reach Willie as `functional_rooms` build requests.
+`Src/Common/Advice/WillieConcern.cs` now carries the closed eight-member enum on
+the code side.
 
 Decisions: `base_topology` is folded into `base_layout` (a dashboard /
 briefing grouping, not its own type); `functional_rooms` and
@@ -140,11 +146,11 @@ Willie briefing should answer:
 - Are there structural or fire risks?
 - Which requests from other ministers require build work?
 
-The first Willie briefing record now exists in source as a dormant state-store
-view. It includes backlog summaries from `/api/v1/map/construction/backlog`,
-room-anchor inventory for `RoomClass` lookup, and coverage flags. It does not
-make Willie a live minister yet; registry, rules, advice, and dashboard scope
-remain follow-on work.
+The first Willie briefing record now feeds `MinisterOfWillie` in a rules-only
+slice. It includes backlog summaries from `/api/v1/map/construction/backlog`,
+room-anchor inventory for `RoomClass` lookup, and coverage flags. The dashboard
+renders the Willie scope with Briefing, Rules, and Advice views; Prompt/RAG/Raw
+LLM remain intentionally absent until a later LLM slice.
 
 ---
 

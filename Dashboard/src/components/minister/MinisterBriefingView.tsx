@@ -107,6 +107,24 @@ function groupBriefing(scope: string, briefing: unknown): BriefingGroup[] {
     ].filter(group => hasContent(group.value));
   }
 
+  if (scope === 'willie') {
+    return [
+      pickGroup('overview', 'Overview', briefing, ['briefingVersion', 'date', 'gameTick', 'mapId', 'colonistCount'], true),
+      pickGroup('power_stability', 'Power Stability', briefing, ['powerStability']),
+      pickGroup('thermal_control', 'Thermal Control', briefing, ['thermalControl']),
+      pickGroup('functional_rooms', 'Functional Rooms', briefing, ['functionalRooms', 'anchorInventory']),
+      pickGroup('storage_placement', 'Storage Placement', briefing, ['storagePlacement']),
+      pickGroup('build_queue', 'Build Queue', briefing, ['materialBottleneck', 'stalledBuilds', 'constructionBacklog']),
+      pickGroup('layout_and_risk', 'Layout And Risk', briefing, ['baseLayout', 'fireRisk']),
+      pickGroup('data_coverage', 'Data Coverage', briefing, ['dataCoverage']),
+      { key: 'raw_remaining_fields', title: 'Raw remaining fields', value: omitKeys(briefing, [
+        'briefingVersion', 'date', 'gameTick', 'mapId', 'colonistCount', 'powerStability', 'thermalControl',
+        'functionalRooms', 'anchorInventory', 'storagePlacement', 'materialBottleneck', 'stalledBuilds',
+        'constructionBacklog', 'baseLayout', 'fireRisk', 'dataCoverage',
+      ]) },
+    ].filter(group => hasContent(group.value));
+  }
+
   return [
     pickGroup('overview', 'Overview', briefing, ['briefingVersion', 'date', 'gameTick', 'season'], true),
     pickGroup('people', 'People', briefing, ['colonists', 'skills', 'traits', 'medical', 'prisoners']),
