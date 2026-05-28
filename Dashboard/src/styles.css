@@ -70,7 +70,7 @@ code {
   min-height: 78px;
   padding: 14px 16px;
   display: grid;
-  grid-template-columns: minmax(420px, 0.9fr) minmax(0, 1.1fr);
+  grid-template-columns: minmax(340px, 0.8fr) minmax(0, 1.6fr);
   align-items: center;
   gap: 20px;
   min-width: 0;
@@ -91,6 +91,7 @@ code {
 
 .brand-block h1 {
   font-size: 1.55rem;
+  overflow-wrap: anywhere;
 }
 
 .running-version {
@@ -106,6 +107,7 @@ code {
 
 .running-version span,
 .running-version code {
+  max-width: 100%;
   min-height: 22px;
   display: inline-flex;
   align-items: center;
@@ -113,6 +115,8 @@ code {
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.035);
   padding: 3px 7px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .running-version code {
@@ -132,7 +136,7 @@ code {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  flex: 1 1 560px;
+  flex: 1 1 680px;
   gap: 8px;
   flex-wrap: wrap;
   min-width: 0;
@@ -238,6 +242,10 @@ code {
 
 .status-pill.info .status-dot {
   background: var(--cyan);
+}
+
+.header-status .status-pill {
+  font-size: 0.68rem;
 }
 
 .dashboard-v2-grid {
