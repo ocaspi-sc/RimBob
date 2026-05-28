@@ -2,7 +2,7 @@
 
 > Implementation plan. Lands **code** in RimBob. No fork work.
 >
-> Implements the **Solver1 skeleton** slice of the design in [`placement-solver.md`](placement-solver.md) §5, refreshed against the now-landed reality (briefing derivation `3235902`, FORK2 group validate/place Slice A, FORK3 client wrappers).
+> Implements the **Solver1 skeleton** slice of the design in [`placement-solver.md`](placement-solver.md) §5, refreshed against the now-landed reality (briefing derivation `3235902`, FORK2 group validate/place Slice A, FORK3 reach/path-cost client wrappers).
 >
 > Sliced by risk — **gimp one slice at a time**, keep build/tests green between. **No compat code; wipe-and-regen on upgrade** for any persisted solver-trace/option shape (AGENTS Coding rule).
 >
@@ -14,11 +14,11 @@
 
 The Placement Solver is the deterministic engine that turns a `building_request` into 1–3 validated, pickable layout options for Willie. Solver1 is the smallest end-to-end cut: **one room class (freezer), one anchor (near kitchen), one generator, one candidate, one validated option** — proving the pipeline shape before competition/diversity (Solver2+) is added.
 
-Solver1 is now unblocked: `WillieBriefing.AnchorInventory` ships from the derivation (`3235902`), the FORK2 group-`validate` endpoint exists, schema S1 already landed the dormant `BlueprintGroup` / `AdviceOption` types (`Src/Common/Advice/AdviceOption.cs`, namespace `RimBob.Core.Advice`), and the FORK3 client wrappers exist for the Slice-B scoring upgrade.
+Solver1 is now unblocked: `WillieBriefing.AnchorInventory` ships from the derivation (`3235902`), the FORK2 group-`validate` endpoint exists, schema S1 already landed the dormant `BlueprintGroup` / `AdviceOption` types (`Src/Common/Advice/AdviceOption.cs`, namespace `RimBob.Core.Advice`), and the FORK3 client wrappers exist for Solver1 walkable scoring.
 
 **Refresh deltas vs the `placement-solver.md` design (written pre-landing):**
 
-- Anchor source is the concrete `WillieAnchorInventory` record (`Src/Common/Briefings/WillieRoomAnchor.cs`, namespace `RimBob.Core.Briefings`), **not** an abstract anchor. Solver1 reads `briefing.AnchorInventory.Anchors.Where(a => a.Class == RoomClass.Kitchen)` (`WillieRoomAnchor.Class` is `RoomClass`). `Centroid` is a `MapPosition?` (3-D `X/Y/Z`, `Src/Common/Aggregates/Snapshots.cs`) and is populated; `EntryCells` / `RegionId` are empty/null stubs (their fork endpoints have not landed) → Solver1 scores by **Manhattan-from-centroid** on the `X/Z` plane, reusing the landed `MapDistance.Manhattan` helper (`Src/StateStore/Derivations/Common/MapDistance.cs`, namespace `RimBob.State.Derivations.Common`) — the cheap Slice-A fallback the locked decision allows (Slice-B swaps in FORK3 walkable path-cost).
+- Anchor source is the concrete `WillieAnchorInventory` record (`Src/Common/Briefings/WillieRoomAnchor.cs`, namespace `RimBob.Core.Briefings`), **not** an abstract anchor. Solver1 reads `briefing.AnchorInventory.Anchors.Where(a => a.Class == RoomClass.Kitchen)` (`WillieRoomAnchor.Class` is `RoomClass`). `Centroid` is a `MapPosition?` (3-D `X/Y/Z`, `Src/Common/Aggregates/Snapshots.cs`) and is populated when contained building positions exist. `EntryCells` / `RegionId` are empty/null stubs (their fork endpoints have not landed), so Solver1 uses them when present and otherwise uses `Centroid` only as a fallback target cell. Solver1 scoring calls FORK3 `PostPathCostBatchAsync` over candidate access cells → anchor target cells with `tier:"region"` and ranks by minimum reachable path cost. `MapDistance.Manhattan` (`Src/StateStore/Derivations/Common/MapDistance.cs`, namespace `RimBob.State.Derivations.Common`) stays a last-resort fallback when no path-cost result is available; it is not the primary scoring model.
 - The FORK2 group-`validate` endpoint exists fork-side, but **RimBob has no client method for it yet** (`3235902` added only the FORK3 reach/path-cost wrappers `PostPathCostAsync` / `PostPathCostBatchAsync`). Solver1 must add `PostBlueprintGroupValidateAsync` + its DTOs.
 - The solver introduces a new minister directory `Src/Ministers/Willie/` (namespace `RimBob.Ministers.Willie`, project `RimBob.Ministers.csproj`). The schema-level `Construction → Willie` rename (`8f21699`) already landed, but **no `Src/Ministers/Willie/` directory exists yet** — Solver1 creates it (AGENTS: "every new minister gets its own directory under `Src/Ministers/<Name>/`"). The older design text's `Src/Ministers/Construction/` is stale.
 
@@ -75,13 +75,13 @@ Files (new) — all under namespace `RimBob.Ministers.Willie` (or a `.Placement`
 - `Src/Ministers/Willie/Placement/AnchorResolver.cs`
   - `IReadOnlyList<WillieRoomAnchor> ResolveNear(PlacementSpec spec, WillieBriefing briefing)` — for each `AdjacencyHint` with `Relation == AdjacencyRelation.Near`, parse its free-string `Target` (e.g. `"kitchen"`) into a `RoomClass` and filter `briefing.AnchorInventory.Anchors` by `anchor.Class` (Solver1: `near kitchen` → `RoomClass.Kitchen`). Returns 0..N anchors.
   - `// TODO: AdjacencyHint.Target is a free string; Solver1 does a simple case-insensitive RoomClass parse. Replace with a shared alias map when more room classes land (Solver3).`
-  - `// TODO: WillieRoomAnchor.EntryCells/RegionId are empty/null until rimapi-room-entry-cells / rimapi-map-region-at land; Solver1 anchors on Centroid only.`
+  - `// TODO: WillieRoomAnchor.EntryCells/RegionId are empty/null until rimapi-room-entry-cells / rimapi-map-region-at land; Solver1 uses Centroid only as the fallback target cell and still scores with FORK3 path-cost when possible.`
 - `Src/Ministers/Willie/Placement/FreezerTemplate.cs`
   - Pure footprint math: map a `CapacityNeed` with `Measure == CapacityMeasure.FoodUnits` and `Amount` (200) to a rect size (200 → 5×5), enumerate shell cells (floor + walls + door) + 1 cooler cell on a wall. Emit cells as `MapCell` (`x`/`z`). No I/O — unit-testable in isolation.
 - `Src/Ministers/Willie/Generators/IPlacementGenerator.cs`
   - `IReadOnlyList<PlacementDraft> Generate(PlacementSpec spec, PlacementEvidence evidence, int budget)`.
 - `Src/Ministers/Willie/Generators/TemplateAnchoredGenerator.cs`
-  - Solver1: emit **one** `PlacementDraft` (a `BlueprintGroup` from `RimBob.Core.Advice` — `{ Label, MapId, Assets }` with `BlueprintAsset` `{ Role, DefName, StuffDefName?, Cell, Rotation }` — plus source anchor + reason summary) per resolved kitchen anchor, placing the freezer template adjacent to the anchor `Centroid` (`MapPosition?`, use `X`/`Z`).
+  - Solver1: emit **one** `PlacementDraft` (a `BlueprintGroup` from `RimBob.Core.Advice` — `{ Label, MapId, Assets }` with `BlueprintAsset` `{ Role, DefName, StuffDefName?, Cell, Rotation }` — plus source anchor + reason summary) per resolved kitchen anchor, placing the freezer template near the anchor `Centroid` (`MapPosition?`, use `X`/`Z`) only when `EntryCells` are unavailable. This is generation seeding, not final ranking; the scorer uses FORK3 path-cost over candidate access cells.
 - `Src/Ministers/Willie/PlacementEvidence.cs`
   - Solver1-minimal precompute: map bounds parsed from `MapInfoSnapshot.Size` (a `string?` like `"250x250"`, **not** int width/height fields), occupied cells from `BuildingRegistry.Buildings` `BuildingRecord.Position` (`MapPosition?`), and the resolved anchor list.
     - `// TODO: BuildingRecord.Position is a single cell, not a footprint; occupancy is approximate until per-building footprints land.`
@@ -104,7 +104,7 @@ Files (new) — namespace `RimBob.Ministers.Willie`:
     1. `AnchorResolver.ResolveNear`.
     2. `TemplateAnchoredGenerator.Generate` → drafts.
     3. **Hard gates:** out-of-bounds (vs `MapInfoSnapshot.Size` bounds), occupied-cell overlap (from `PlacementEvidence`). Reject before any fork call.
-    4. **Cheap score:** `freezer_to_kitchen_distance` = `MapDistance.Manhattan(draftCentroid, anchorCentroid)` (the landed `RimBob.State.Derivations.Common.MapDistance`; both args are `MapPosition`, so null-check `WillieRoomAnchor.Centroid` first). Pick best 1.
+    4. **Walkable score:** build path-cost pairs from each surviving draft's access cell (at minimum the freezer door / adjacent stand cell) to each resolved kitchen anchor target cell (`EntryCells` if present, otherwise `Centroid` fallback). Skip anchors with neither `EntryCells` nor `Centroid`. Call `PostPathCostBatchAsync` with `tier:"region"`, `mode:"pass_doors"`, and `pe_mode:"on_cell"`; rank by minimum reachable `cost`. Keep `MapDistance.Manhattan` only as a no-RIMAPI/no-valid-path fallback trace. Pick best 1.
     5. **Validate:** `PostBlueprintGroupValidateAsync` on the single survivor; drop on `!CanPlaceAll` or any `OverlapConflicts`.
     6. **Assemble:** aggregate the response `Cost` (`BlueprintCostDto` `{ DefName, Count }`) into `IReadOnlyList<MaterialEstimate>` (`{ def_name, count }`); build one `AdviceOption` (`{ Id, Label, Summary, BlueprintGroup, EstimatedMaterials, TradeoffNote? }`) and attach it to an `AdviceItem` (`Src/Common/Advice/AdviceItem.cs`, `RimBob.Core.Advice`) via its `Options` list, with `Concern = "thermal_control"`.
     7. **No-fit fallback:** return a `PlacementResult` flagged no-fit so the caller emits `material_bottleneck` / `stalled_builds` / prose instead (Rules owns that branch; Solver1 just signals it).
@@ -125,7 +125,7 @@ Files (new), namespace `RimBob.Tests.Willie`:
 
 - `Src/Tests/Willie/PlacementDeterminismTests.cs`
   - Same spec + same snapshot + same seed → identical draft set + identical option ranking (design §6).
-  - Score trace carries `raw_value` + `unit` (`tiles`) + `normalized` for `freezer_to_kitchen_distance` (design §3.3).
+  - Score trace carries `raw_value` + `unit` (`path_tiles` for FORK3 path-cost, `tiles` only for Manhattan fallback) + `normalized` for `freezer_to_kitchen_distance` (design §3.3).
 - `Src/Tests/Willie/Fixtures/` — canned map-grid + spec JSON (AGENTS: fixtures live under `Src/Tests/<MinisterName>/Fixtures/`).
 
 Risk: **low.** Pure test addition.
@@ -146,7 +146,7 @@ Risk: **low.** Pure test addition.
   - **AGENTS minister-dir convention:** "`Rules.cs` is the first file in every minister directory; it must compile and have tests before the LLM is wired." Solver1 creates `Src/Ministers/Willie/` but is a deterministic, non-LLM component and does **not** add `Rules.cs` — `willie-rules-slice-a.md` owns `Src/Ministers/Willie/Rules.cs` and is the slice that satisfies that convention. If Solver1 lands first, that is an accepted, temporary gap the Rules slice closes; do not scaffold a stub `Rules.cs` here.
 - **Group `place` (the Apply write)** — `place_blueprint_group` executor; bundles with the Assisted Apply path, not Solver1.
 - **Solver2 competition / diversity / multiple options** — design §5.
-- **Slice-B walkable scoring** — swap Manhattan for FORK3 `PostPathCostBatchAsync` over `EntryCells`; needs `rimapi-room-entry-cells` for entry cells + the region-at endpoint. No solver-contract change.
+- **Anchor-quality upgrade** — replace centroid fallback target cells with `EntryCells` and `RegionId` once `rimapi-room-entry-cells` / `rimapi-map-region-at` land. Solver1 already uses FORK3 path-cost batch when it has target cells; the later upgrade improves target quality and pre-clustering without changing the solver contract.
 - **Solver3 room classes beyond freezer**, reuse-existing-footprint, richer evidence (terrain/reachability ingestion).
 - **Dashboard solver-trace panel** — needs the minister registered (`willie-rules-slice-a.md` WR3); Solver1 only produces the trace.
 
@@ -156,7 +156,7 @@ Risk: **low.** Pure test addition.
 
 - Solver1a: client unit test green; manual `curl` of group-validate against a live RIMAPI (port 5101) matches the DTO.
 - Solver1b: template + resolver tests green; footprint deterministic.
-- Solver1c: solver test green — one validated option on the happy path; no-fit on occupied anchor and on `!CanPlaceAll`.
+- Solver1c: solver test green — one path-cost-ranked, validated option on the happy path; no-fit on occupied anchor, no reachable path, and `!CanPlaceAll`.
 - Solver1d: determinism test green (same inputs → same ranking); trace carries units.
 
 ---
@@ -164,5 +164,5 @@ Risk: **low.** Pure test addition.
 ## 5. HumanTodo capture (append in same commit as this plan)
 
 ```
-- [ ] placement-solver-1 [2026-05-28] #construction #willie #solver Implementation plan for Placement Solver Solver1 skeleton: PlacementSpec + group-validate client (Solver1a), anchor resolution + TemplateAnchoredGenerator (Solver1b), gates/score/validate/assemble (Solver1c), determinism tests (Solver1d). Freezer/near-kitchen/one-option; Manhattan Slice-A scoring. [plan](.plans/placement-solver-1.md)
+- [ ] placement-solver-1 [2026-05-28] #construction #willie #solver Implementation plan for Placement Solver Solver1 skeleton: PlacementSpec + group-validate client (Solver1a), anchor resolution + TemplateAnchoredGenerator (Solver1b), gates/path-cost score/validate/assemble (Solver1c), determinism tests (Solver1d). Freezer/near-kitchen/one-option; FORK3 walkable scoring with centroid fallback target cells. [plan](.plans/placement-solver-1.md)
 ```
