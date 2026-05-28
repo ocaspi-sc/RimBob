@@ -155,12 +155,13 @@ Placement Solver, the fork group endpoints, and the dashboard pick UI.
 ```mermaid
 flowchart TD
   S1["Schema S1 ✓ LANDED 7d0818c<br/>(cleanup + dormant types)"] --> S2["Schema S2 ✓ LANDED 8676d59<br/>(typed request arrays;<br/>Food emits building_request)"]
-  FORK1["RIMAPI single-asset triplet ✓ LANDED 3eb1d84<br/>(RIMAPI repo; RimBob meta 300f5ce)"] --> FORK2["RIMAPI blueprint groups (Cap A)"]
+  FORK1["RIMAPI single-asset triplet ✓ LANDED 3eb1d84<br/>(RIMAPI repo; RimBob meta 300f5ce)"] --> FORK2["RIMAPI blueprint groups Cap A<br/>✓ Slice A LANDED (group validate/place)"]
   S2 --> SCHEMA["Willie Briefing Schema ✓ LANDED 2026-05-27<br/>(willie-briefing-schema.md +<br/>willie-briefing-fields.md)"]
   FORK2 --> SCHEMA
   FORK2 --> ROOM["Room/anchor detection<br/>(room-purpose inference)"]
   ROOM --> SCHEMA
-  SCHEMA --> PS1["Placement Solver PS1<br/>(template freezer skeleton + generator registry)"]
+  SCHEMA --> DERIV["Willie briefing derivation ✓ LANDED 3235902<br/>(WillieBriefing + backlog ingest +<br/>anchor inventory + FORK3 client)"]
+  DERIV --> PS1["Placement Solver PS1<br/>(template freezer skeleton + generator registry)<br/>← UNBLOCKED, next active"]
   S2 --> PS1
   FORK2 --> PS1
   FORK3["RIMAPI map reach + path-cost ✓ LANDED<br/>(rimapi-map-reach-and-path-cost.md)"] -.solver scoring.-> PS1
@@ -174,10 +175,17 @@ flowchart TD
   PS3 --> PSB["PS4 + planning overlay (Cap B)"]
 
   classDef done fill:#1f3a1f,stroke:#3fa83f,color:#cfe8cf;
-  class S1,S2,S3,FORK1,FORK3,SCHEMA done;
+  class S1,S2,S3,FORK1,FORK3,SCHEMA,DERIV done;
+  classDef partial fill:#3a341f,stroke:#a8993f,color:#e8e0cf;
+  class FORK2 partial;
 ```
 
-Note: FORK3 endpoints (`/api/v1/map/reach`, `/api/v1/map/path-cost`, batch) landed. RimBob client wiring is the remaining gap; PS1 can still ship Slice A with euclidean-from-centroid scoring, and Slice B swaps in walkable distance once the RimBob client method lands. RIMAPI also exposes `/api/v1/map/rooms` (read-side) plus the new pathfinding triplet.
+Note: FORK3 endpoints + the RimBob client wrappers (`GetReachAsync` /
+`PostPathCostAsync` / `PostPathCostBatchAsync`) both landed (briefing-derivation
+commit `3235902`). PS1 can ship Slice A with euclidean-from-centroid scoring and
+swap in walkable distance for Slice B with no new wiring. FORK2 Cap A: group
+`validate` / `place` (Slice A) landed; remaining Cap A slices + Cap B (planning
+overlay) pending.
 
 **Phase ordering:**
 
@@ -186,8 +194,9 @@ Note: FORK3 endpoints (`/api/v1/map/reach`, `/api/v1/map/path-cost`, batch) land
    `AdviceActionApply` poly-split with `place_blueprint_group`; `options[]` and
    `BlueprintGroup` dormant in `Src/Common/Advice/`.
 2. **RIMAPI** - single-asset triplet [✓ LANDED — RIMAPI `3eb1d84`, RimBob
-   meta `300f5ce`] -> blueprint groups (Capability A, pending). Required before
-   the Placement Solver can validate candidates.
+   meta `300f5ce`] -> blueprint groups Capability A: group `validate` / `place`
+   [✓ Slice A LANDED]; remaining Cap A slices + Cap B planning overlay pending.
+   Group `validate` is what the Placement Solver calls on candidate survivors.
 3. **Willie Briefing Schema** [✓ LANDED 2026-05-27 —
    [`willie-briefing-schema.md`](willie-briefing-schema.md) +
    [`willie-briefing-fields.md`](willie-briefing-fields.md)]. Per
@@ -210,11 +219,13 @@ Note: FORK3 endpoints (`/api/v1/map/reach`, `/api/v1/map/path-cost`, batch) land
    `near:kitchen` -> map location). The hard sub-problem; may gate PS1. Depends
    on building/room reads (`source-todo-building-condition-read`,
    `source-todo-room-quality-read`) — i.e. on FORK2.
-5. **Placement Solver** - PS1 skeleton (freezer, near-kitchen,
-   `TemplateAnchoredGenerator`, one candidate) -> PS2 competing generators
-   (templates + rectangle + local patterns, top 1-3 options) -> PS3 more room
-   classes and reuse-existing-footprint logic -> PS4 base planning. Depends on
-   S2, groups, briefing, and room detection.
+5. **Placement Solver** [← NEXT ACTIVE; deps green] - PS1 skeleton (freezer,
+   near-kitchen, `TemplateAnchoredGenerator`, one candidate) -> PS2 competing
+   generators (templates + rectangle + local patterns, top 1-3 options) -> PS3
+   more room classes and reuse-existing-footprint logic -> PS4 base planning.
+   Deps satisfied: S2 ✓, group `validate` ✓ (FORK2 Slice A), `WillieBriefing` +
+   `WillieAnchorInventory` ✓ (commit `3235902`), FORK3 client ✓. PS1 reads the
+   briefing's anchor inventory; Slice-A scoring euclidean, Slice-B walkable.
 6. **Willie minister** - mirror Food: contracts -> `Rules.cs` (rules-first;
    calls Placement Solver on an active `building_request`) ->
    `MinisterOfWillie` -> registry/DI/cabinet order -> dashboard scope.
@@ -228,10 +239,12 @@ Note: FORK3 endpoints (`/api/v1/map/reach`, `/api/v1/map/path-cost`, batch) land
 seed-based replay for solver determinism (same inputs -> same options ranking).
 Per-minister tests live alongside their minister directory under `Src/Tests/`.
 
-**Critical path:** [S1/S2/S3 ✓] [FORK1 ✓] -> FORK2 (groups) ->
-briefing/data-gap + room detection -> PS1 -> Willie Rules Slice A -> dashboard.
-The **briefing/data-gap** and **room detection** are the real gates;
-everything spatial waits on them.
+**Critical path:** [S1/S2/S3 ✓] [FORK1 ✓] [FORK2 group validate/place ✓]
+[FORK3 ✓] [briefing schema + derivation ✓ `3235902`] -> **PS1** ->
+Willie Rules Slice A -> Willie minister wiring -> dashboard. The gates that
+blocked everything spatial (briefing/data-gap + room/anchor detection) are
+**cleared** — `WillieAnchorInventory` ships from the derivation. PS1 is the
+next active node.
 
 ---
 
@@ -263,24 +276,31 @@ generation uses a bounded generator registry with one shared validator/scorer.
 
 - **Willie Briefing Schema ✓ LANDED 2026-05-27** —
   [`willie-briefing-schema.md`](willie-briefing-schema.md) +
-  [`willie-briefing-fields.md`](willie-briefing-fields.md). All five slices
-  filled. `basic_shelter` reconciled into Welfare (`willie-advice-types.md`
-  §4.5); canonical concern set is now 8.
-- **Next active work — Track A:**
-  [`willie-briefing-derivation.md`](willie-briefing-derivation.md). Lands
-  `WillieBriefing` record, `WillieConstructionBacklog` state-store
-  aggregate + ingestion, `WillieAnchorInventoryDerivation`, and FORK3
-  RimApiClient wrappers. Pure RimBob; no fork dependency. Unblocks Willie
-  Rules Slice A + Placement Solver PS1.
+  [`willie-briefing-fields.md`](willie-briefing-fields.md). 8 concerns;
+  `basic_shelter` reconciled into Welfare (`willie-advice-types.md` §4.5).
+- **Willie briefing derivation ✓ LANDED `3235902`** —
+  [`willie-briefing-derivation.md`](willie-briefing-derivation.md) (WB1–WB4).
+  `WillieBriefing` record, `WillieBacklog` aggregate + construction-backlog
+  ingestion, `WillieAnchorInventoryDerivation`, FORK3 RimApiClient wrappers,
+  docs (state-store / RimAPI / construction), tests. DTOs landed under
+  `Src/GameStateSync/Dtos/`.
+- **← NEXT ACTIVE: Placement Solver PS1.** All deps green (S2, FORK2 group
+  validate, briefing + anchor inventory, FORK3 client). Skeleton:
+  freezer / near-kitchen / `TemplateAnchoredGenerator` / one candidate /
+  group-validate / single option. Plan: [`placement-solver.md`](placement-solver.md) §5.
+  Willie Rules Slice A can start in parallel (reads `WillieBriefing` directly;
+  the 3 first-cut concerns are in `willie-briefing-schema.md` §S4).
 - **RIMAPI track (parallel, separate repo):**
   - `FORK1` triplet ✓ landed.
-  - `FORK2` blueprint groups Capability A — pending.
+  - `FORK2` blueprint groups Capability A — group `validate` / `place`
+    ✓ Slice A landed; remaining Cap A slices + Cap B planning overlay pending.
   - `FORK3` map reach + path-cost
     ([`rimapi-map-reach-and-path-cost.md`](rimapi-map-reach-and-path-cost.md))
-    ✓ endpoints landed; RimBob client method pending.
+    ✓ endpoints landed; RimBob client wrappers ✓ landed (`3235902`).
   - `rimapi-power-info-dto` ✓ landed.
   - New captures from briefing schema S5: `rimapi-map-region-at`,
     `rimapi-room-entry-cells`.
-- **Deferred until `FORK2` lands:** Willie minister wiring
-  (§4 `WILLIE`), Placement Solver PS1 group-validate path (§4 `PS1`),
-  `construction.md` promotion (§4 `PROMOTE`).
+- **Deferred until PS1 lands:** Willie minister wiring (§4 `WILLIE` —
+  contracts → `Rules.cs` → `MinisterOfWillie` → registry → dashboard) and
+  `construction.md` promotion (§4 `PROMOTE`). FORK2 group validate/place is
+  already in, so PS1's group-validate path is no longer gated.
