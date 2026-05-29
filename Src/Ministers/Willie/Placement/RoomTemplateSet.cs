@@ -15,6 +15,15 @@ public sealed class RoomTemplateSet
                 group => group.First());
     }
 
+    public static RoomTemplateSet Default { get; } = new(
+    [
+        new FreezerTemplate(),
+        new HospitalTemplate(),
+        new BedroomTemplate(),
+        new WorkshopTemplate(),
+        new StorageTemplate()
+    ]);
+
     public static RoomTemplateSet FreezerOnly { get; } = new([new FreezerTemplate()]);
 
     public IRoomTemplate? ForSpec(PlacementSpec spec)

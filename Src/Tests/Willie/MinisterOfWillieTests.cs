@@ -14,6 +14,8 @@ namespace RimBob.Tests.Willie;
 
 public sealed class MinisterOfWillieTests
 {
+    private static readonly DateTimeOffset FixedNow = new(2026, 5, 29, 12, 0, 0, TimeSpan.Zero);
+
     [Fact]
     public async Task RuleDecision_PublishesWillieAdviceSnapshot()
     {
@@ -71,6 +73,20 @@ public sealed class MinisterOfWillieTests
     }
 
     [Fact]
+    public async Task FreezerFlagNotRequestedFromWillie_DoesNotCallPlacementSolver()
+    {
+        FakePlacementSolver solver = FakePlacementSolver.WithOptions(PlacementOption());
+        Harness harness = new(solver);
+        harness.SetStableState();
+        harness.Flags.Publish(FreezerFlag(requestedFrom: "Food"));
+
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
+
+        solver.CallCount.Should().Be(0);
+        harness.Bus.ActiveAdvice().Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task FreezerSolverNoFit_RetainsProseAdviceAndPersistsSolverTrace()
     {
         FakePlacementSolver solver = FakePlacementSolver.WithNoFit(NoFitReason.NoReachablePath);
@@ -92,7 +108,7 @@ public sealed class MinisterOfWillieTests
         outputJson.Should().Contain("test_note");
     }
 
-    private static AgentFlag FreezerFlag() =>
+    private static AgentFlag FreezerFlag(string requestedFrom = "Willie") =>
         new(
             Id: "food:freezer_missing",
             SourceMinister: "Chef",
@@ -109,7 +125,7 @@ public sealed class MinisterOfWillieTests
                     RoomClass: RoomClass.Freezer,
                     Temperature: new TempNeed(TemperatureBand.Freezing, MustHold: true),
                     Priority: AdvicePriority.Medium,
-                    RequestedFrom: "Willie")
+                    RequestedFrom: requestedFrom)
             ]);
 
     private static AdviceOption PlacementOption() =>
@@ -139,7 +155,7 @@ public sealed class MinisterOfWillieTests
             BriefingCache cache = new(Colony, new TestLogger<BriefingCache>());
             Minister = new(
                 cache,
-                new Rules(),
+                new Rules(new FixedTimeProvider(FixedNow)),
                 solver ?? FakePlacementSolver.WithNoFit(NoFitReason.NoDrafts),
                 Colony,
                 new MinisterOutputStore(),
@@ -152,7 +168,7 @@ public sealed class MinisterOfWillieTests
         public void SetStableState()
         {
             Colony.LastRefreshSource = ColonyStateOrigin.Live;
-            Colony.LastLiveRefreshAt = DateTimeOffset.UtcNow;
+            Colony.LastLiveRefreshAt = FixedNow;
             Colony.Map.Update(new MapInfoSnapshot(7, "(250,1,250)"));
             Colony.Economy.Update(new EconomyLedger(300_000, 0f, "", "", false, "5th of Aprimay, 5500, 14h"));
             Colony.Colonists.Update(new ColonistRegistry([
@@ -255,5 +271,10 @@ public sealed class MinisterOfWillieTests
             Records.Add(record);
             return Task.CompletedTask;
         }
+    }
+
+    private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => utcNow;
     }
 }

@@ -42,6 +42,79 @@ public sealed class PlacementSolverTests
     }
 
     [Fact]
+    public async Task SolveAsync_WhenNoAnchors_ReturnsNoAnchorsNoFit()
+    {
+        PlacementSolver solver = new(
+            new FakePathCostProbe(reachable: true, cost: 12),
+            new FakePlacementValidator(canPlaceAll: true));
+
+        PlacementResult result = await solver.SolveAsync(
+            SpecWithMaterials(),
+            StableBriefing() with { AnchorInventory = new WillieAnchorInventory([]) },
+            State([]));
+
+        result.NoFit.Should().Be(NoFitReason.NoAnchors);
+        result.Options.Should().BeEmpty();
+        result.Draftable.Should().Be(PlacementReadiness.Blocked);
+        result.Trace.Notes.Should().Contain("no resolved near-anchor with a target cell");
+    }
+
+    [Fact]
+    public async Task SolveAsync_WhenGeneratorsEmitNoDrafts_ReturnsNoDraftsNoFit()
+    {
+        PlacementSolver solver = new(
+            new FakePathCostProbe(reachable: true, cost: 12),
+            new FakePlacementValidator(canPlaceAll: true),
+            [new FixedDraftGenerator(Array.Empty<PlacementDraft>())]);
+
+        PlacementResult result = await solver.SolveAsync(SpecWithMaterials(), Briefing(), State([]));
+
+        result.NoFit.Should().Be(NoFitReason.NoDrafts);
+        result.Options.Should().BeEmpty();
+        result.Draftable.Should().Be(PlacementReadiness.Blocked);
+        result.Trace.Notes.Should().Contain("generators emitted no drafts");
+    }
+
+    [Fact]
+    public async Task SolveAsync_WhenPathCostHasNoReachablePairs_ReturnsNoReachablePathNoFit()
+    {
+        PlacementSolver solver = new(
+            new FakePathCostProbe(reachable: false, cost: 12),
+            new FakePlacementValidator(canPlaceAll: true));
+
+        PlacementResult result = await solver.SolveAsync(SpecWithMaterials(), Briefing(), State([]));
+
+        result.NoFit.Should().Be(NoFitReason.NoReachablePath);
+        result.Options.Should().BeEmpty();
+        result.Draftable.Should().Be(PlacementReadiness.Ready);
+        result.Trace.Notes.Should().Contain("no reachable path from draft access cell to anchor target");
+    }
+
+    [Fact]
+    public async Task SolveAsync_WithZeroPathCosts_EmitsFiniteDeterministicScores()
+    {
+        PlacementSolver solver = new(
+            new FakePathCostProbe(reachable: true, cost: 0),
+            new FakePlacementValidator(canPlaceAll: true));
+
+        PlacementResult first = await solver.SolveAsync(SpecWithMaterials(), Briefing(), State([]));
+        PlacementResult second = await solver.SolveAsync(SpecWithMaterials(), Briefing(), State([]));
+
+        IReadOnlyList<MetricValue> distanceMetrics = first.Trace.Drafts
+            .Where(trace => trace.Status == "scored")
+            .SelectMany(trace => trace.Metrics)
+            .Where(metric => metric.Id == "freezer_to_kitchen_distance")
+            .ToList();
+        distanceMetrics.Should().NotBeEmpty();
+        distanceMetrics.Should().OnlyContain(metric =>
+            metric.RawValue == 0 &&
+            metric.Normalized == 1d &&
+            !double.IsNaN(metric.Contribution) &&
+            !double.IsInfinity(metric.Contribution));
+        second.Trace.Should().BeEquivalentTo(first.Trace, options => options.WithStrictOrdering());
+    }
+
+    [Fact]
     public async Task SolveAsync_WhenDraftOverlapsOccupiedCell_ReturnsNoFit()
     {
         ResolvedAnchor anchor = ResolvedKitchenAnchor(new MapPosition(8, 0, 8));
@@ -166,6 +239,20 @@ public sealed class PlacementSolverTests
         option.Label.Should().Be("Starter hospital");
         option.BlueprintGroup.Assets.Should().Contain(asset => asset.Role == "medical_bed");
         option.Summary.Should().Contain("starter hospital");
+    }
+
+    [Fact]
+    public async Task SolveAsync_WithDefaultGenerators_UsesProductionTemplateBreadth()
+    {
+        PlacementSolver solver = new(
+            new FakePathCostProbe(reachable: true, cost: 8),
+            new FakePlacementValidator(canPlaceAll: true));
+
+        PlacementResult result = await solver.SolveAsync(HospitalSpec(), HospitalBriefing(), State([]));
+
+        result.NoFit.Should().BeNull();
+        result.Options.Should().NotBeEmpty();
+        result.Options[0].Label.Should().Be("Starter hospital");
     }
 
     public static PlacementSpec SpecWithMaterials() =>

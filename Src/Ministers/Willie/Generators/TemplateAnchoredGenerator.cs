@@ -9,7 +9,7 @@ public sealed class TemplateAnchoredGenerator : IPlacementGenerator
 
     public TemplateAnchoredGenerator(RoomTemplateSet? templates = null)
     {
-        this.templates = templates ?? RoomTemplateSet.FreezerOnly;
+        this.templates = templates ?? RoomTemplateSet.Default;
     }
 
     public string Id => "template_anchored";
@@ -66,7 +66,8 @@ public sealed class TemplateAnchoredGenerator : IPlacementGenerator
 
                 if (!assets.All(asset => evidence.InBounds(asset.Cell)) ||
                     !accessCells.All(evidence.InBounds) ||
-                    assets.Any(asset => evidence.IsOccupied(asset.Cell)))
+                    assets.Any(asset => evidence.IsOccupied(asset.Cell)) ||
+                    accessCells.Any(evidence.IsOccupied))
                 {
                     continue;
                 }

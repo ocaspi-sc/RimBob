@@ -26,6 +26,17 @@ public sealed class RoomTemplateSetTests
             .Should().BeNull();
     }
 
+    [Fact]
+    public void Default_IncludesProductionTemplateBreadth()
+    {
+        RoomTemplateSet.Default.ForSpec(Spec(BuildingClass.Bed, RoomClass.Hospital))
+            .Should().BeOfType<HospitalTemplate>();
+        RoomTemplateSet.Default.ForSpec(Spec(BuildingClass.ProductionBench, roomClass: null))
+            .Should().BeOfType<WorkshopTemplate>();
+        RoomTemplateSet.Default.ForSpec(Spec(BuildingClass.Shelf, roomClass: null))
+            .Should().BeOfType<StorageTemplate>();
+    }
+
     private static PlacementSpec Spec(BuildingClass targetClass, RoomClass? roomClass) =>
         new(
             Request: "test",

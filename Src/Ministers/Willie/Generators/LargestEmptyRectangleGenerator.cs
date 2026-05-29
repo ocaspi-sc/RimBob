@@ -10,7 +10,7 @@ public sealed class LargestEmptyRectangleGenerator : IPlacementGenerator
 
     public LargestEmptyRectangleGenerator(RoomTemplateSet? templates = null)
     {
-        this.templates = templates ?? RoomTemplateSet.FreezerOnly;
+        this.templates = templates ?? RoomTemplateSet.Default;
     }
 
     public string Id => "largest_empty_rect";

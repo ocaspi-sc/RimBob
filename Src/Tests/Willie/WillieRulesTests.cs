@@ -9,6 +9,8 @@ namespace RimBob.Tests.Willie;
 
 public sealed class WillieRulesTests
 {
+    private static readonly DateTimeOffset FixedNow = new(2026, 5, 29, 12, 0, 0, TimeSpan.Zero);
+
     [Fact]
     public void StableBuildProgram_ReturnsEmptyDecision()
     {
@@ -95,6 +97,28 @@ public sealed class WillieRulesTests
         AgentFlag flag = decision.Flags.Should().ContainSingle().Subject;
         flag.ItemRequests.Should().NotBeNull();
         flag.ItemRequests!.Should().Contain(request => request.ItemDef == "Steel" && request.Quantity == 80);
+    }
+
+    [Fact]
+    public void EmittedAdviceAndFlagsUseInjectedClock()
+    {
+        WillieBriefing briefing = StableBriefing() with
+        {
+            MaterialBottleneck = new WillieMaterialBottleneckSummary(
+                BacklogGroups: [],
+                MissingMaterials: [new MaterialCount("Steel", 80)],
+                BlockedCount: 0,
+                DisallowedCount: 0)
+        };
+        Rules rules = new(new FixedTimeProvider(FixedNow));
+
+        RulesResult result = rules.Evaluate(briefing, ColonyContext.Default);
+
+        Decision decision = result.Should().BeOfType<Decision>().Subject;
+        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        advice.IssuedAt.Should().Be(FixedNow);
+        advice.ExpiresAt.Should().Be(FixedNow.AddHours(4));
+        decision.Flags.Should().ContainSingle().Which.ExpiresAt.Should().Be(FixedNow.AddHours(24));
     }
 
     [Fact]
@@ -213,5 +237,10 @@ public sealed class WillieRulesTests
             counts[roomClass.ToString()] = counts.TryGetValue(roomClass.ToString(), out int current) ? current + 1 : 1;
 
         return new WillieFunctionalRoomsSummary(counts);
+    }
+
+    private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => utcNow;
     }
 }

@@ -11,6 +11,12 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
     private const string MinisterName = "Willie";
     private const string Domain = "construction";
     private const float LowBatteryReserveRatio = 0.25f;
+    private readonly TimeProvider timeProvider;
+
+    public Rules(TimeProvider? timeProvider = null)
+    {
+        this.timeProvider = timeProvider ?? TimeProvider.System;
+    }
 
     public RulesResult Evaluate(WillieBriefing briefing, ColonyContext context) =>
         Evaluate(briefing, context, []);
@@ -148,7 +154,7 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
             DiagnosticsFor(briefing, inboundBuildingRequests, "maintain_build_program"));
     }
 
-    private static Decision MissingRoomDecision(
+    private Decision MissingRoomDecision(
         WillieBriefing briefing,
         IReadOnlyList<BuildingRequest> inboundBuildingRequests,
         string trace,
@@ -171,7 +177,7 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
             ],
             WillieFlagRequests.Empty);
 
-    private static Decision DecisionFor(
+    private Decision DecisionFor(
         WillieBriefing briefing,
         IReadOnlyList<BuildingRequest> inboundBuildingRequests,
         string trace,
@@ -183,7 +189,7 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
         IReadOnlyList<AdviceAction> actions,
         WillieFlagRequests requests)
     {
-        DateTimeOffset now = DateTimeOffset.UtcNow;
+        DateTimeOffset now = timeProvider.GetUtcNow();
         string concernWire = ToSnakeCase(concern.ToString());
         AdviceItem advice = new(
             Id: $"{MinisterName.ToLowerInvariant()}_{trace}",

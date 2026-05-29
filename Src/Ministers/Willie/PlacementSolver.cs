@@ -34,9 +34,21 @@ public sealed class PlacementSolver : IPlacementSolver
     {
         this.pathCostProbe = pathCostProbe;
         this.placementValidator = placementValidator;
-        this.generators = generators is { Count: > 0 }
-            ? generators
-            : [new ReuseExistingFootprintGenerator(), new TemplateAnchoredGenerator(), new LargestEmptyRectangleGenerator()];
+        if (generators is { Count: > 0 })
+        {
+            this.generators = generators;
+        }
+        else
+        {
+            RoomTemplateSet templates = RoomTemplateSet.Default;
+            this.generators =
+            [
+                new ReuseExistingFootprintGenerator(templates),
+                new TemplateAnchoredGenerator(templates),
+                new LargestEmptyRectangleGenerator(templates)
+            ];
+        }
+
         this.scorer = scorer ?? new WalkablePathCostScorer();
     }
 
@@ -88,7 +100,7 @@ public sealed class PlacementSolver : IPlacementSolver
         }
 
         IReadOnlyList<PlacementDraft> uniqueDrafts = DraftDedupe.ByCellsShapeAnchor(gatedDrafts);
-        if (gatedDrafts.Count == 0)
+        if (uniqueDrafts.Count == 0)
         {
             return NoFit(
                 NoFitReason.HardGateRejected,

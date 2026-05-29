@@ -60,6 +60,7 @@ try
     builder.WebHost.UseUrls(options.ListenUrl);
 
     // ── Services ───────────────────────────────────────────────────────────────
+    builder.Services.AddSingleton(TimeProvider.System);
     builder.Services.AddHttpClient<RimApiClient>((sp, c) =>
     {
         var opts = sp.GetRequiredService<IOptions<RimBobOptions>>().Value;

@@ -77,6 +77,29 @@ public sealed class AnchorResolverTests
         resolved.TargetCell.Should().Be(new MapPosition(11, 0, 12));
     }
 
+    [Theory]
+    [InlineData("Kitchen", RoomClass.Kitchen)]
+    [InlineData("hospital", RoomClass.Hospital)]
+    [InlineData("storage", RoomClass.Storage)]
+    [InlineData("research", RoomClass.Research)]
+    public void ResolveNear_UsesUnaliasedRoomClassNames(string target, RoomClass roomClass)
+    {
+        WillieBriefing briefing = StableBriefing() with
+        {
+            AnchorInventory = new WillieAnchorInventory(
+            [
+                Anchor("target-room", roomClass, 24, new MapPosition(11, 0, 12))
+            ])
+        };
+
+        ResolvedAnchor resolved = AnchorResolver.ResolveNear(SpecWithNear(target), briefing)
+            .Should().ContainSingle().Subject;
+
+        resolved.Anchor.Class.Should().Be(roomClass);
+        resolved.TargetCell.Should().Be(new MapPosition(11, 0, 12));
+        resolved.MatchReason.Should().Be(AnchorMatchReason.CentroidFallback);
+    }
+
     private static WillieRoomAnchor Anchor(
         string id,
         RoomClass roomClass,

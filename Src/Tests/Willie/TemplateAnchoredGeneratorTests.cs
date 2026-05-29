@@ -58,6 +58,22 @@ public sealed class TemplateAnchoredGeneratorTests
     }
 
     [Fact]
+    public void Generate_SkipsOccupiedAccessCell()
+    {
+        ResolvedAnchor anchor = ResolvedKitchenAnchor(new MapPosition(8, 0, 8));
+        MapCell blockedAccessCell = new(8, 11);
+        PlacementEvidence evidence = Evidence(
+            [anchor],
+            [new BuildingRecord("occupied-access", "Wall", 1f, null, null, new MapPosition(blockedAccessCell.X, 0, blockedAccessCell.Z))]);
+
+        PlacementDraft draft = new TemplateAnchoredGenerator()
+            .Generate(Spec(), evidence, new GenerationBudget(MaxDrafts: 1, MaxSearchRadius: 4))
+            .Should().ContainSingle().Subject;
+
+        draft.AccessCells.Should().NotContain(blockedAccessCell);
+    }
+
+    [Fact]
     public void Generate_WithHigherBudgetEmitsDeterministicVariants()
     {
         ResolvedAnchor anchor = ResolvedKitchenAnchor(new MapPosition(8, 0, 8));

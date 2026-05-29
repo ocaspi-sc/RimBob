@@ -10,7 +10,7 @@ public sealed class ReuseExistingFootprintGenerator : IPlacementGenerator
 
     public ReuseExistingFootprintGenerator(RoomTemplateSet? templates = null)
     {
-        this.templates = templates ?? RoomTemplateSet.FreezerOnly;
+        this.templates = templates ?? RoomTemplateSet.Default;
     }
 
     public string Id => "reuse_existing_footprint";
