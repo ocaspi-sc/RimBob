@@ -21,7 +21,10 @@ public sealed class PlacementDeterminismTests
 
         second.Options.Should().BeEquivalentTo(first.Options, options => options.WithStrictOrdering());
         second.Trace.Should().BeEquivalentTo(first.Trace, options => options.WithStrictOrdering());
-        MetricValue metric = first.Trace.Drafts.Single(trace => trace.Status == "scored").Metrics.Single();
+        MetricValue metric = first.Trace.Drafts
+            .Where(trace => trace.Status == "scored")
+            .SelectMany(trace => trace.Metrics)
+            .First(metric => metric.Id == "freezer_to_kitchen_distance");
         metric.RawValue.Should().Be(14);
         metric.Unit.Should().Be("path_tiles");
         metric.Normalized.Should().BeGreaterThan(0);

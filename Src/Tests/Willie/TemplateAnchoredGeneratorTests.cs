@@ -58,6 +58,22 @@ public sealed class TemplateAnchoredGeneratorTests
     }
 
     [Fact]
+    public void Generate_WithHigherBudgetEmitsDeterministicVariants()
+    {
+        ResolvedAnchor anchor = ResolvedKitchenAnchor(new MapPosition(8, 0, 8));
+        PlacementEvidence evidence = Evidence([anchor], []);
+
+        IReadOnlyList<PlacementDraft> drafts = new TemplateAnchoredGenerator()
+            .Generate(Spec(), evidence, new GenerationBudget(MaxDrafts: 4, MaxSearchRadius: 3));
+
+        drafts.Should().HaveCount(4);
+        drafts
+            .Select(draft => (X: draft.Group.Assets.Min(asset => asset.Cell.X), Z: draft.Group.Assets.Min(asset => asset.Cell.Z)))
+            .Distinct()
+            .Should().HaveCount(4);
+    }
+
+    [Fact]
     public void Generate_RespectsSearchRadius()
     {
         ResolvedAnchor anchor = ResolvedKitchenAnchor(new MapPosition(0, 0, 0));

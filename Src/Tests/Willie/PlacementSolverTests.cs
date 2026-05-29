@@ -11,7 +11,7 @@ namespace RimBob.Tests.Willie;
 public sealed class PlacementSolverTests
 {
     [Fact]
-    public async Task SolveAsync_WithValidatedFreezerDraft_ReturnsOneOption()
+    public async Task SolveAsync_WithValidatedFreezerDraft_ReturnsMultipleOptions()
     {
         FakePathCostProbe pathCost = new(reachable: true, cost: 12);
         FakePlacementValidator validator = new(canPlaceAll: true);
@@ -20,7 +20,7 @@ public sealed class PlacementSolverTests
         PlacementResult result = await solver.SolveAsync(SpecWithMaterials(), Briefing(), State([]));
 
         result.NoFit.Should().BeNull();
-        result.Options.Should().ContainSingle();
+        result.Options.Should().HaveCount(3);
         AdviceOption option = result.Options[0];
         option.BlueprintGroup.Assets.Should().Contain(asset => asset.Role == "cooler");
         option.EstimatedMaterials.Should().ContainSingle(material =>
@@ -28,11 +28,16 @@ public sealed class PlacementSolverTests
         result.Draftable.Should().Be(PlacementReadiness.Ready);
         result.PlacementValid.Should().Be(PlacementReadiness.Ready);
         result.MaterialsReady.Should().Be(PlacementReadiness.Ready);
-        MetricValue metric = result.Trace.Drafts.Single(trace => trace.Status == "scored").Metrics
-            .Should().ContainSingle().Subject;
+        MetricValue metric = result.Trace.Drafts
+            .Where(trace => trace.Status == "scored")
+            .SelectMany(trace => trace.Metrics)
+            .First(metric => metric.Id == "freezer_to_kitchen_distance");
         metric.Unit.Should().Be("path_tiles");
         metric.RawValue.Should().Be(12);
         metric.Normalized.Should().BeGreaterThan(0);
+        result.Trace.Drafts.Where(trace => trace.Status == "selected").Should().HaveCount(3);
+        result.Trace.Drafts.Where(trace => trace.Status == "validated").Should().HaveCount(3);
+        validator.ValidateCount.Should().Be(3);
         validator.ValidatedGroup.Should().NotBeNull();
     }
 
@@ -81,6 +86,49 @@ public sealed class PlacementSolverTests
         result.Trace.Drafts.Should().Contain(trace => trace.Status == "validation_rejected");
     }
 
+    [Fact]
+    public async Task SolveAsync_WithOneValidSelectedDraft_ReturnsOneOption()
+    {
+        ResolvedAnchor anchor = ResolvedKitchenAnchor(new MapPosition(8, 0, 8));
+        PlacementDraft valid = Draft("valid", anchor, new MapCell(5, 5), new MapCell(4, 5));
+        PlacementSolver solver = new(
+            new FakePathCostProbe(reachable: true, cost: 4),
+            new LabelPlacementValidator(new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "valid" }),
+            [new FixedDraftGenerator(valid)]);
+
+        PlacementResult result = await solver.SolveAsync(SpecWithMaterials(), Briefing(), State([]));
+
+        result.NoFit.Should().BeNull();
+        result.Options.Should().ContainSingle().Which.Label.Should().Be("valid");
+        result.Trace.Drafts.Should().ContainSingle(trace => trace.Status == "selected");
+        result.Trace.Drafts.Should().ContainSingle(trace => trace.Status == "validated");
+    }
+
+    [Fact]
+    public async Task SolveAsync_WithSeveralDrafts_ValidatesAtMostThree()
+    {
+        ResolvedAnchor anchor = ResolvedKitchenAnchor(new MapPosition(8, 0, 8));
+        IReadOnlyList<PlacementDraft> drafts =
+        [
+            Draft("draft-a", anchor, new MapCell(3, 3), new MapCell(2, 3)),
+            Draft("draft-b", anchor, new MapCell(6, 3), new MapCell(5, 3)),
+            Draft("draft-c", anchor, new MapCell(9, 3), new MapCell(8, 3)),
+            Draft("draft-d", anchor, new MapCell(12, 3), new MapCell(11, 3))
+        ];
+        CountingPlacementValidator validator = new(canPlaceAll: true);
+        PlacementSolver solver = new(
+            new SequencedPathCostProbe([1, 2, 3, 4]),
+            validator,
+            [new FixedDraftGenerator(drafts)]);
+
+        PlacementResult result = await solver.SolveAsync(SpecWithMaterials(), Briefing(), State([]));
+
+        result.NoFit.Should().BeNull();
+        result.Options.Should().HaveCount(3);
+        validator.ValidateCount.Should().Be(3);
+        result.Trace.Drafts.Where(trace => trace.Status == "selected").Should().HaveCount(3);
+    }
+
     public static PlacementSpec SpecWithMaterials() =>
         new(
             Request: "starter freezer",
@@ -126,6 +174,26 @@ public sealed class PlacementSolverTests
             position,
             AnchorMatchReason.CentroidFallback);
 
+    private static PlacementDraft Draft(
+        string label,
+        ResolvedAnchor anchor,
+        MapCell origin,
+        MapCell accessCell) =>
+        new(
+            GeneratorId: label,
+            Group: new BlueprintGroup(
+                Label: label,
+                MapId: 7,
+                Assets:
+                [
+                    new BlueprintAsset("floor", "Concrete", null, origin, 0),
+                    new BlueprintAsset("door", "Door", "WoodLog", new MapCell(origin.X + 1, origin.Z), 0)
+                ]),
+            SourceAnchor: anchor,
+            AccessCells: [accessCell],
+            Assumptions: [],
+            ReasonSummary: "test draft");
+
     private static WillieBriefing StableBriefing() =>
         new(
             BriefingVersion: 1,
@@ -163,11 +231,13 @@ public sealed class PlacementSolverTests
     private sealed class FakePlacementValidator(bool canPlaceAll) : IPlacementValidator
     {
         public BlueprintGroup? ValidatedGroup { get; private set; }
+        public int ValidateCount { get; private set; }
 
         public Task<PlacementValidationResult> ValidateAsync(
             BlueprintGroup group,
             CancellationToken ct = default)
         {
+            ValidateCount++;
             ValidatedGroup = group;
             PlacementValidationResult result = new(
                 CanPlaceAll: canPlaceAll,
@@ -178,14 +248,77 @@ public sealed class PlacementSolverTests
         }
     }
 
-    private sealed class FixedDraftGenerator(PlacementDraft draft) : IPlacementGenerator
+    private sealed class CountingPlacementValidator(bool canPlaceAll) : IPlacementValidator
     {
+        public int ValidateCount { get; private set; }
+
+        public Task<PlacementValidationResult> ValidateAsync(
+            BlueprintGroup group,
+            CancellationToken ct = default)
+        {
+            ValidateCount++;
+            PlacementValidationResult result = new(
+                CanPlaceAll: canPlaceAll,
+                Items: [],
+                Cost: [new MaterialEstimate("BlocksGranite", 5)],
+                OverlapConflicts: []);
+            return Task.FromResult(result);
+        }
+    }
+
+    private sealed class LabelPlacementValidator(IReadOnlySet<string> validLabels) : IPlacementValidator
+    {
+        public Task<PlacementValidationResult> ValidateAsync(
+            BlueprintGroup group,
+            CancellationToken ct = default)
+        {
+            bool valid = validLabels.Contains(group.Label);
+            PlacementValidationResult result = new(
+                CanPlaceAll: valid,
+                Items: [],
+                Cost: [new MaterialEstimate("BlocksGranite", 5)],
+                OverlapConflicts: []);
+            return Task.FromResult(result);
+        }
+    }
+
+    private sealed class FixedDraftGenerator : IPlacementGenerator
+    {
+        private readonly IReadOnlyList<PlacementDraft> drafts;
+
+        public FixedDraftGenerator(PlacementDraft draft)
+        {
+            drafts = [draft];
+        }
+
+        public FixedDraftGenerator(IReadOnlyList<PlacementDraft> drafts)
+        {
+            this.drafts = drafts;
+        }
+
         public string Id => "fixed";
 
         public IReadOnlyList<PlacementDraft> Generate(
             PlacementSpec spec,
             PlacementEvidence evidence,
             GenerationBudget budget) =>
-            [draft];
+            drafts;
+    }
+
+    private sealed class SequencedPathCostProbe(IReadOnlyList<int> costs) : IPathCostProbe
+    {
+        public Task<IReadOnlyList<PathCostResult>> GetPathCostsAsync(
+            int mapId,
+            IReadOnlyList<PathCostPair> pairs,
+            string tier = "region",
+            string mode = "pass_doors",
+            string peMode = "on_cell",
+            CancellationToken ct = default)
+        {
+            IReadOnlyList<PathCostResult> results = pairs
+                .Select((pair, index) => new PathCostResult(true, costs[index % costs.Count], pair.From, pair.To))
+                .ToList();
+            return Task.FromResult(results);
+        }
     }
 }

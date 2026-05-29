@@ -25,17 +25,15 @@ public sealed class TemplateAnchoredGenerator : IPlacementGenerator
         List<PlacementDraft> drafts = [];
         foreach (ResolvedAnchor anchor in evidence.Anchors)
         {
-            PlacementDraft? draft = FirstFit(spec, evidence, budget, interior, anchor);
-            if (draft is null) continue;
-
-            drafts.Add(draft);
+            drafts.AddRange(VariantsForAnchor(spec, evidence, budget, interior, anchor)
+                .Take(budget.MaxDrafts - drafts.Count));
             if (drafts.Count >= budget.MaxDrafts) break;
         }
 
         return drafts;
     }
 
-    private PlacementDraft? FirstFit(
+    private IReadOnlyList<PlacementDraft> VariantsForAnchor(
         PlacementSpec spec,
         PlacementEvidence evidence,
         GenerationBudget budget,
@@ -44,6 +42,7 @@ public sealed class TemplateAnchoredGenerator : IPlacementGenerator
     {
         MapCell target = anchor.TargetCell.ToMapCell();
         RectSize exterior = new(interior.Width + 2, interior.Height + 2);
+        List<PlacementDraft> drafts = [];
         for (int radius = 0; radius <= budget.MaxSearchRadius; radius++)
         {
             foreach (MapCell origin in RingOrigins(target, radius))
@@ -68,17 +67,19 @@ public sealed class TemplateAnchoredGenerator : IPlacementGenerator
                     Label: LabelFor(spec),
                     MapId: evidence.MapId,
                     Assets: assets);
-                return new PlacementDraft(
+                drafts.Add(new PlacementDraft(
                     GeneratorId: Id,
                     Group: group,
                     SourceAnchor: anchor,
                     AccessCells: accessCells,
                     Assumptions: AssumptionsFor(anchor, evidence),
-                    ReasonSummary: $"first fit near {anchor.Anchor.Class} anchor {anchor.Anchor.RoomId}");
+                    ReasonSummary: $"template variant near {anchor.Anchor.Class} anchor {anchor.Anchor.RoomId}"));
+                if (drafts.Count >= budget.MaxDrafts)
+                    return drafts;
             }
         }
 
-        return null;
+        return drafts;
     }
 
     private static IReadOnlyList<BlueprintAsset> TranslateAssets(RoomShell shell, MapCell origin) =>

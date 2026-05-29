@@ -48,8 +48,11 @@ public sealed class WalkablePathCostScorer : IPlacementScorer
             : ScoreDraft(draft, reachable.Cost, "path_tiles");
     }
 
-    private ScoredDraft ScoreWithManhattanFallback(PlacementDraft draft)
+    private ScoredDraft? ScoreWithManhattanFallback(PlacementDraft draft)
     {
+        if (draft.AccessCells.Count == 0)
+            return null;
+
         int fallbackDistance = draft.AccessCells
             .Select(cell => MapDistance.Manhattan(cell.ToMapPosition(), draft.SourceAnchor.TargetCell))
             .Min();
@@ -59,7 +62,7 @@ public sealed class WalkablePathCostScorer : IPlacementScorer
     private ScoredDraft ScoreDraft(PlacementDraft draft, int rawCost, string unit)
     {
         double normalized = 1d / (1d + rawCost);
-        MetricValue metric = new(
+        MetricValue distance = new(
             Id: "freezer_to_kitchen_distance",
             RawValue: rawCost,
             Unit: unit,
@@ -67,6 +70,19 @@ public sealed class WalkablePathCostScorer : IPlacementScorer
             Weight: weights.WalkablePathCost,
             Contribution: normalized * weights.WalkablePathCost,
             Better: "lower");
-        return new ScoredDraft(draft, rawCost, [metric]);
+        MetricValue generatorConfidence = new(
+            Id: "generator_confidence",
+            RawValue: GeneratorConfidenceFor(draft.GeneratorId),
+            Unit: null,
+            Normalized: GeneratorConfidenceFor(draft.GeneratorId),
+            Weight: weights.GeneratorConfidence,
+            Contribution: GeneratorConfidenceFor(draft.GeneratorId) * weights.GeneratorConfidence,
+            Better: "higher");
+        return new ScoredDraft(draft, rawCost, [distance, generatorConfidence]);
     }
+
+    private static double GeneratorConfidenceFor(string generatorId) =>
+        string.Equals(generatorId, "template_anchored", StringComparison.OrdinalIgnoreCase)
+            ? 0.8
+            : 0.5;
 }

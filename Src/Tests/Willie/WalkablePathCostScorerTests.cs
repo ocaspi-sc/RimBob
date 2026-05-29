@@ -31,13 +31,14 @@ public sealed class WalkablePathCostScorerTests
             .Should().ContainSingle().Subject;
 
         scored.RawCost.Should().Be(11);
-        MetricValue metric = scored.Metrics.Should().ContainSingle().Subject;
+        MetricValue metric = scored.Metrics.Single(metric => metric.Id == "freezer_to_kitchen_distance");
         metric.Id.Should().Be("freezer_to_kitchen_distance");
         metric.Unit.Should().Be("path_tiles");
         metric.Normalized.Should().BeApproximately(1d / 12d, 0.0001);
         metric.Weight.Should().Be(16);
         metric.Contribution.Should().BeApproximately(16d / 12d, 0.0001);
         metric.Better.Should().Be("lower");
+        scored.Metrics.Should().Contain(component => component.Id == "generator_confidence");
     }
 
     [Fact]
@@ -75,7 +76,7 @@ public sealed class WalkablePathCostScorerTests
             .Should().ContainSingle().Subject;
 
         scored.RawCost.Should().Be(7);
-        MetricValue metric = scored.Metrics.Should().ContainSingle().Subject;
+        MetricValue metric = scored.Metrics.Single(metric => metric.Id == "freezer_to_kitchen_distance");
         metric.Unit.Should().Be("tiles");
         metric.Normalized.Should().BeApproximately(1d / 8d, 0.0001);
     }

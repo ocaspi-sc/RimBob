@@ -9,6 +9,8 @@ namespace RimBob.Ministers.Willie;
 
 public sealed class PlacementSolver
 {
+    private const int MaxValidateCount = 3;
+    private const int MaxOptionCount = 3;
     private readonly IPathCostProbe pathCostProbe;
     private readonly IPlacementValidator placementValidator;
     private readonly IReadOnlyList<IPlacementGenerator> generators;
@@ -50,9 +52,8 @@ public sealed class PlacementSolver
             colonyState.Map.Value,
             colonyState.Buildings.Value,
             anchors);
-        GenerationBudget budget = new(MaxDrafts: 1, MaxSearchRadius: 32);
         IReadOnlyList<PlacementDraft> drafts = generators
-            .SelectMany(generator => generator.Generate(spec, evidence, budget))
+            .SelectMany(generator => generator.Generate(spec, evidence, BudgetFor(generator)))
             .ToList();
         if (drafts.Count == 0)
         {
@@ -75,6 +76,7 @@ public sealed class PlacementSolver
             draftTraces.Add(TraceFor(draft, "rejected", rejectionReason, []));
         }
 
+        IReadOnlyList<PlacementDraft> uniqueDrafts = DraftDedupe.ByCellsShapeAnchor(gatedDrafts);
         if (gatedDrafts.Count == 0)
         {
             return NoFit(
@@ -84,8 +86,8 @@ public sealed class PlacementSolver
                 "all drafts failed shared hard gates");
         }
 
-        PathCostLookup pathCosts = await BuildPathCostLookupAsync(gatedDrafts, evidence.MapId, notes, ct);
-        IReadOnlyList<ScoredDraft> scored = scorer.Score(gatedDrafts, pathCosts);
+        PathCostLookup pathCosts = await BuildPathCostLookupAsync(uniqueDrafts, evidence.MapId, notes, ct);
+        IReadOnlyList<ScoredDraft> scored = RankScored(scorer.Score(uniqueDrafts, pathCosts)).ToList();
         draftTraces.AddRange(scored.Select(score => TraceFor(score.Draft, "scored", null, score.Metrics)));
         if (scored.Count == 0)
         {
@@ -96,29 +98,59 @@ public sealed class PlacementSolver
                 "no reachable path from draft access cell to anchor target");
         }
 
-        ScoredDraft best = scored
-            .OrderBy(score => score.RawCost)
-            .ThenBy(score => score.Draft.GeneratorId, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(score => score.Draft.Group.Assets.Min(asset => asset.Cell.X))
-            .ThenBy(score => score.Draft.Group.Assets.Min(asset => asset.Cell.Z))
-            .First();
-
-        PlacementValidationResult validation = await placementValidator.ValidateAsync(best.Draft.Group, ct);
-        if (!validation.CanPlaceAll || validation.OverlapConflicts.Count > 0)
+        IReadOnlyList<ScoredDraft> selected = DiverseSelector.SelectTopK(scored, MaxValidateCount);
+        draftTraces.AddRange(selected.Select(score =>
+            TraceFor(score.Draft, "selected", null, score.Metrics, score.DiversityReason)));
+        List<ValidatedScoredDraft> validated = [];
+        foreach (ScoredDraft selectedDraft in selected)
         {
-            draftTraces.Add(TraceFor(best.Draft, "validation_rejected", ValidationReason(validation), best.Metrics));
+            PlacementValidationResult validation = await placementValidator.ValidateAsync(selectedDraft.Draft.Group, ct);
+            if (!validation.CanPlaceAll || validation.OverlapConflicts.Count > 0)
+            {
+                draftTraces.Add(TraceFor(
+                    selectedDraft.Draft,
+                    "validation_rejected",
+                    ValidationReason(validation),
+                    selectedDraft.Metrics,
+                    selectedDraft.DiversityReason));
+                continue;
+            }
+
+            ScoredDraft withMaterialCost = AddMaterialCostMetric(selectedDraft, validation.Cost);
+            validated.Add(new ValidatedScoredDraft(withMaterialCost, validation));
+            draftTraces.Add(TraceFor(
+                withMaterialCost.Draft,
+                "validated",
+                null,
+                withMaterialCost.Metrics,
+                withMaterialCost.DiversityReason));
+        }
+
+        if (validated.Count == 0)
+        {
             return NoFit(
                 NoFitReason.ValidationRejected,
                 draftTraces,
                 notes,
-                ValidationReason(validation));
+                "all selected drafts failed fork validation");
         }
 
-        AdviceOption option = AssembleOption(spec, best, validation);
-        PlacementReadiness materialsReady = MaterialReadiness(spec, validation.Cost);
+        IReadOnlyList<ValidatedScoredDraft> finalCandidates = validated
+            .OrderByDescending(candidate => candidate.Score.TotalScore)
+            .ThenBy(candidate => candidate.Score.RawCost)
+            .ThenBy(candidate => candidate.Score.Draft.SourceAnchor.Anchor.RoomId, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(candidate => Footprint.From(candidate.Score.Draft.Group.Assets).MinX)
+            .ThenBy(candidate => Footprint.From(candidate.Score.Draft.Group.Assets).MinZ)
+            .ThenBy(candidate => candidate.Score.Draft.GeneratorId, StringComparer.OrdinalIgnoreCase)
+            .Take(MaxOptionCount)
+            .ToList();
+        IReadOnlyList<AdviceOption> options = finalCandidates
+            .Select(candidate => AssembleOption(spec, candidate.Score, candidate.Validation))
+            .ToList();
+        PlacementReadiness materialsReady = MaterialReadiness(spec, finalCandidates.Select(candidate => candidate.Validation.Cost));
         notes.Add("group_place_apply_out_of_scope");
         return new PlacementResult(
-            Options: [option],
+            Options: options,
             Trace: new PlacementTrace("placement_solver", draftTraces, notes),
             NoFit: null,
             Draftable: PlacementReadiness.Ready,
@@ -126,6 +158,11 @@ public sealed class PlacementSolver
             MaterialsReady: materialsReady,
             ApplyReady: PlacementReadiness.Blocked);
     }
+
+    private static GenerationBudget BudgetFor(IPlacementGenerator generator) =>
+        string.Equals(generator.Id, "template_anchored", StringComparison.OrdinalIgnoreCase)
+            ? new GenerationBudget(MaxDrafts: 4, MaxSearchRadius: 32)
+            : new GenerationBudget(MaxDrafts: 4, MaxSearchRadius: 32);
 
     private async Task<PathCostLookup> BuildPathCostLookupAsync(
         IReadOnlyList<PlacementDraft> drafts,
@@ -188,6 +225,34 @@ public sealed class PlacementSolver
         return true;
     }
 
+    private static IReadOnlyList<ScoredDraft> RankScored(IReadOnlyList<ScoredDraft> scored) =>
+        scored
+            .OrderByDescending(score => score.TotalScore)
+            .ThenBy(score => score.RawCost)
+            .ThenBy(score => score.Draft.SourceAnchor.Anchor.RoomId, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(score => Footprint.From(score.Draft.Group.Assets).MinX)
+            .ThenBy(score => Footprint.From(score.Draft.Group.Assets).MinZ)
+            .ThenBy(score => score.Draft.GeneratorId, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    private static ScoredDraft AddMaterialCostMetric(
+        ScoredDraft score,
+        IReadOnlyList<MaterialEstimate> cost)
+    {
+        int rawCost = cost.Sum(material => material.Count);
+        double normalized = 1d / (1d + rawCost);
+        List<MetricValue> metrics = [.. score.Metrics];
+        metrics.Add(new MetricValue(
+            Id: "material_cost",
+            RawValue: rawCost,
+            Unit: "items",
+            Normalized: normalized,
+            Weight: ScoreWeights.Default.MaterialCost,
+            Contribution: normalized * ScoreWeights.Default.MaterialCost,
+            Better: "lower"));
+        return score with { Metrics = metrics };
+    }
+
     private static AdviceOption AssembleOption(
         PlacementSpec spec,
         ScoredDraft best,
@@ -228,6 +293,20 @@ public sealed class PlacementSolver
         return PlacementReadiness.Ready;
     }
 
+    private static PlacementReadiness MaterialReadiness(
+        PlacementSpec spec,
+        IEnumerable<IReadOnlyList<MaterialEstimate>> costs)
+    {
+        List<PlacementReadiness> readiness = costs
+            .Select(cost => MaterialReadiness(spec, cost))
+            .ToList();
+        if (readiness.Any(state => state == PlacementReadiness.Ready))
+            return PlacementReadiness.Ready;
+        if (readiness.Any(state => state == PlacementReadiness.Unknown))
+            return PlacementReadiness.Unknown;
+        return PlacementReadiness.Blocked;
+    }
+
     private static PlacementResult NoFit(
         NoFitReason reason,
         IReadOnlyList<PlacementDraftTrace> draftTraces,
@@ -256,12 +335,17 @@ public sealed class PlacementSolver
         PlacementDraft draft,
         string status,
         string? reason,
-        IReadOnlyList<MetricValue> metrics) =>
+        IReadOnlyList<MetricValue> metrics,
+        string? diversityReason = null) =>
         new(
             GeneratorId: draft.GeneratorId,
             AnchorRoomId: draft.SourceAnchor.Anchor.RoomId,
             Status: status,
             Reason: reason,
-            Metrics: metrics);
+            Metrics: metrics,
+            DiversityReason: diversityReason);
 
+    private sealed record ValidatedScoredDraft(
+        ScoredDraft Score,
+        PlacementValidationResult Validation);
 }

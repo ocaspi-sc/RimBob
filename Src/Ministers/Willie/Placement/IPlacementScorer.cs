@@ -15,4 +15,8 @@ public interface IPlacementScorer
 public sealed record ScoredDraft(
     PlacementDraft Draft,
     int RawCost,
-    IReadOnlyList<MetricValue> Metrics);
+    IReadOnlyList<MetricValue> Metrics,
+    string? DiversityReason = null)
+{
+    public double TotalScore => Metrics.Sum(metric => metric.Contribution);
+}

@@ -21,7 +21,8 @@ public sealed record PlacementDraftTrace(
     string AnchorRoomId,
     string Status,
     string? Reason,
-    IReadOnlyList<MetricValue> Metrics);
+    IReadOnlyList<MetricValue> Metrics,
+    string? DiversityReason = null);
 
 public sealed record MetricValue(
     string Id,
