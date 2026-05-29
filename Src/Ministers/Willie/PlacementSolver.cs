@@ -1,3 +1,4 @@
+using System.Globalization;
 using RimBob.Core.Advice;
 using RimBob.Core.Aggregates;
 using RimBob.Core.Briefings;
@@ -275,7 +276,6 @@ public sealed class PlacementSolver
             .ThenBy(asset => asset.Cell.Z)
             .First()
             .Cell;
-        MetricValue metric = best.Metrics.Single(metric => metric.Id == "freezer_to_kitchen_distance");
         string target = best.Draft.SourceAnchor.Anchor.Class.ToString().ToLowerInvariant();
         return new AdviceOption(
             Id: $"placement_{spec.TargetClass.ToString().ToLowerInvariant()}_{firstCell.X}_{firstCell.Z}",
@@ -283,7 +283,53 @@ public sealed class PlacementSolver
             Summary: $"Validated {best.Draft.Group.Assets.Count}-asset freezer shell near {target}.",
             BlueprintGroup: best.Draft.Group,
             EstimatedMaterials: validation.Cost,
-            TradeoffNote: $"Door-to-{target} score uses {metric.RawValue} {metric.Unit}.");
+            TradeoffNote: TradeoffNoteFor(best, target));
+    }
+
+    private static string TradeoffNoteFor(ScoredDraft score, string target)
+    {
+        MetricValue metric = WinningTradeoffMetric(score.Metrics);
+        Footprint footprint = Footprint.From(score.Draft.Group.Assets);
+        string footprintText = $"footprint {footprint.MinX},{footprint.MinZ}";
+        string rawValue = FormatRawValue(metric.RawValue);
+        string unit = metric.Unit is null ? string.Empty : $" {metric.Unit}";
+        return metric.Id switch
+        {
+            "freezer_to_kitchen_distance" => $"Closest to {target}: {rawValue}{unit} from door ({footprintText}).",
+            "expansion_room" => $"Most room to expand: {rawValue}{unit} around {footprintText}.",
+            "material_cost" => $"Cheapest materials: {rawValue}{unit} estimated for {footprintText}.",
+            _ => $"Best weighted score: {metric.Id} {rawValue}{unit} at {footprintText}."
+        };
+    }
+
+    private static MetricValue WinningTradeoffMetric(IReadOnlyList<MetricValue> metrics) =>
+        metrics
+            .Where(metric => TradeoffMetricPriority(metric.Id) < int.MaxValue)
+            .OrderByDescending(metric => metric.Contribution)
+            .ThenBy(metric => TradeoffMetricPriority(metric.Id))
+            .FirstOrDefault()
+        ?? metrics
+            .OrderByDescending(metric => metric.Contribution)
+            .ThenBy(metric => metric.Id, StringComparer.Ordinal)
+            .First();
+
+    private static int TradeoffMetricPriority(string metricId) =>
+        metricId switch
+        {
+            "freezer_to_kitchen_distance" => 0,
+            "expansion_room" => 1,
+            "material_cost" => 2,
+            _ => int.MaxValue
+        };
+
+    private static string FormatRawValue(double? rawValue)
+    {
+        if (rawValue is null) return "unknown";
+
+        double value = rawValue.Value;
+        return Math.Abs(value - Math.Round(value)) < 0.0001
+            ? ((int)Math.Round(value)).ToString(CultureInfo.InvariantCulture)
+            : value.ToString("0.##", CultureInfo.InvariantCulture);
     }
 
     private static PlacementReadiness MaterialReadiness(

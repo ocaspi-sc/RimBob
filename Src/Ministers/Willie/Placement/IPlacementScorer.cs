@@ -6,6 +6,7 @@ public interface IPlacementScorer
 
     /// <summary>
     /// Deterministic contract: same gated drafts, lookup, and evidence produce the same ordered scored drafts.
+    /// The solver's canonical final order is total score descending, raw cost, anchor room id, footprint origin, then generator id.
     /// </summary>
     IReadOnlyList<ScoredDraft> Score(
         IReadOnlyList<PlacementDraft> gatedDrafts,
