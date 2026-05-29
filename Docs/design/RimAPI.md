@@ -178,6 +178,8 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 | POST | `/builder/blueprint` | legacy copied-area blueprint placement |
 | POST | `/builder/blueprint/validate` | fork-only dry-run for one caller-supplied blueprint |
 | POST | `/builder/blueprint/place` | fork-only safe placement for one validated blueprint |
+| POST | `/builder/blueprint-group/validate` | fork-only dry-run for caller-supplied blueprint groups |
+| POST | `/builder/blueprint-group/place` | fork-only safe placement for validated blueprint groups |
 | POST | `/builder/blueprint/allowed-state` | fork-only allow/disallow for explicit pending blueprint/frame ids |
 | POST | `/builder/blueprint/cancel` | fork-only cancel for explicit pending blueprint/frame ids |
 | GET | `/map/blueprints?map_id` | fork-only pending `Blueprint_Build` and `Frame` read |
@@ -192,6 +194,9 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 > **RimBob consumption.** The state store now consumes
 > `/map/construction/backlog` into the `WillieBacklog` aggregate and derives
 > material-bottleneck / stalled-builds summaries for `WillieBriefing`.
+> `RimApiClient` also wraps `/builder/blueprint-group/validate` for
+> Placement Solver dry-run validation. The matching group `place` wrapper stays
+> out of scope until the player-click Assisted Apply path lands.
 
 ### Order (designations)
 | Method | Path | Purpose |

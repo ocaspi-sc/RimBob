@@ -4,6 +4,7 @@ using Serilog;
 using Serilog.Formatting.Json;
 using RimBob.Coordination;
 using RimBob.Core.Ministers;
+using RimBob.Core.Placement;
 using RimBob.Host;
 using RimBob.Host.Endpoints;
 using RimBob.Ingestion;
@@ -64,6 +65,9 @@ try
         c.BaseAddress = new Uri(opts.RimApiBaseUrl);
         c.Timeout = TimeSpan.FromSeconds(10);
     });
+    builder.Services.AddSingleton<RimApiPlacementProbe>();
+    builder.Services.AddSingleton<IPlacementValidator>(sp => sp.GetRequiredService<RimApiPlacementProbe>());
+    builder.Services.AddSingleton<IPathCostProbe>(sp => sp.GetRequiredService<RimApiPlacementProbe>());
     builder.Services.AddSingleton<IconCacheService>(sp =>
     {
         RimBobOptions opts = sp.GetRequiredService<IOptions<RimBobOptions>>().Value;

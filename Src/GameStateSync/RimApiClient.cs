@@ -320,6 +320,16 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
         GetEnvelopedListAsync<ConstructionBacklogGroupDto>(
             $"api/v1/map/construction/backlog?map_id={mapId}", ct);
 
+    /// <summary>POST api/v1/builder/blueprint-group/validate - dry-run group blueprint placement for Willie solver options.</summary>
+    public Task<BlueprintGroupValidateResponseDto> PostBlueprintGroupValidateAsync(
+        BlueprintGroupValidateRequestDto request,
+        CancellationToken ct = default) =>
+        PostEnvelopedAsync<BlueprintGroupValidateRequestDto, BlueprintGroupValidateResponseDto>(
+            "api/v1/builder/blueprint-group/validate",
+            request,
+            ct);
+    // TODO: add PostBlueprintGroupPlaceAsync when the Apply path lands; group placement is a player-click write, separate from Solver1 validation.
+
     /// <summary>GET api/v1/map/reach - default in-map cell reachability for Willie placement scoring.</summary>
     public Task<MapReachResponseDto> GetReachAsync(
         int mapId,

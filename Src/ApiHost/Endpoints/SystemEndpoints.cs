@@ -57,7 +57,11 @@ public static class SystemEndpoints
         new("GET", "/api/v1/faction/icon?id", "icon_gateway", "Dashboard", "Read-only faction icon fetch through /api/icons/faction/{loadId}."),
         new("GET", "/api/v1/pawn/portrait/image", "icon_gateway", "Dashboard", "Read-only lazy pawn portrait fetch; not prewarmed."),
         new("GET", "/api/v1/colonist/body/image?id", "icon_gateway", "Dashboard", "Read-only colonist body/head fetch; not prewarmed."),
-        new("GET", "/api/v1/buildings/recipes?building_id", "assisted_read", "Chef Assisted Apply", "On-demand recipe resolution for the simple-meal bill upsert; not cached in ColonyState.")
+        new("GET", "/api/v1/buildings/recipes?building_id", "assisted_read", "Chef Assisted Apply", "On-demand recipe resolution for the simple-meal bill upsert; not cached in ColonyState."),
+        new("GET", "/api/v1/map/reach", "solver_client", "Willie Placement Solver", "Reachability primitive wrapped for placement scoring; not part of periodic state refresh."),
+        new("POST", "/api/v1/map/path-cost", "solver_client", "Willie Placement Solver", "Single-pair walk-cost primitive wrapped for placement scoring; not part of periodic state refresh."),
+        new("POST", "/api/v1/map/path-cost/batch", "solver_client", "Willie Placement Solver", "Batch walk-cost primitive wrapped for Solver1 ranking; called on demand by the solver port."),
+        new("POST", "/api/v1/builder/blueprint-group/validate", "solver_client", "Willie Placement Solver", "Dry-run group blueprint validation wrapped for Solver1 options; group place remains a separate Apply path.")
     ];
 
     private static readonly RimApiCoverageRow[] DeferredWriteStubs =
