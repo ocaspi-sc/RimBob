@@ -20,6 +20,7 @@ export const systemPanelRegistry: PanelConfig[] = [
 export const infoPanelRegistry: PanelConfig[] = [
   { id: 'info-glossary', title: 'Important Buzzwords', scope: 'info', requiredCapability: 'static dashboard reference copy' },
   { id: 'info-scope-guide', title: 'Where To Look', scope: 'info', requiredCapability: 'static dashboard reference copy' },
+  { id: 'info-algorithms', title: 'Algorithms', scope: 'info', requiredCapability: 'static dashboard reference copy' },
 ];
 
 export const analyticsPanelRegistry: PanelConfig[] = [

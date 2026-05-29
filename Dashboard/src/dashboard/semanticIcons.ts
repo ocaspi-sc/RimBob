@@ -90,6 +90,7 @@ const viewIcons: Record<string, SemanticIconSpec> = {
   glossary: common.info,
   contracts: common.rules,
   data_sources: common.storage,
+  algorithms: common.research,
   session: common.analytics,
   colony: common.mayor,
   sse: common.logs,
@@ -144,6 +145,8 @@ const sectionIcons: Record<string, SemanticIconSpec> = {
 
 const fieldIcons: Record<string, SemanticIconSpec> = {
   active_raid: common.threat,
+  algorithm: common.research,
+  algorithms: common.research,
   active_threat: common.threat,
   active_advice: common.advice,
   active_advice_emitted: common.advice,

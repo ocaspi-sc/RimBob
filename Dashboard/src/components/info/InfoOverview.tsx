@@ -262,6 +262,264 @@ const dataSources = [
   },
 ];
 
+interface AlgorithmLink {
+  label: string;
+  href: string;
+}
+
+interface AlgorithmEntry {
+  name: string;
+  status: 'live' | 'planned';
+  family: string;
+  owner: string;
+  complexity: string;
+  inputs: string[];
+  outputs: string[];
+  context: string;
+  sourceLinks: AlgorithmLink[];
+  wikipediaLinks: AlgorithmLink[];
+  imageKind: 'rect' | 'ring' | 'path' | 'score' | 'diversity' | 'crop' | 'pack' | 'cosine' | 'sat' | 'distance' | 'cpsat' | 'jps';
+}
+
+const githubRoot = 'https://github.com/ocaspi-sc/RimBob/blob/master/';
+
+const wiki = {
+  largestEmptyRectangle: 'https://en.wikipedia.org/wiki/Largest_empty_rectangle',
+  templateMatching: 'https://en.wikipedia.org/wiki/Template_matching',
+  aStar: 'https://en.wikipedia.org/wiki/A%2A_search_algorithm',
+  multiObjective: 'https://en.wikipedia.org/wiki/Multi-objective_optimization',
+  greedy: 'https://en.wikipedia.org/wiki/Greedy_algorithm',
+  cropSimulation: 'https://en.wikipedia.org/wiki/Crop_simulation_model',
+  rectanglePacking: 'https://en.wikipedia.org/wiki/Rectangle_packing',
+  cosine: 'https://en.wikipedia.org/wiki/Cosine_similarity',
+  summedAreaTable: 'https://en.wikipedia.org/wiki/Summed-area_table',
+  distanceTransform: 'https://en.wikipedia.org/wiki/Distance_transform',
+  constraintProgramming: 'https://en.wikipedia.org/wiki/Constraint_programming',
+  jumpPointSearch: 'https://en.wikipedia.org/wiki/Jump_point_search',
+  taxicab: 'https://en.wikipedia.org/wiki/Taxicab_geometry',
+};
+
+const algorithms: AlgorithmEntry[] = [
+  {
+    name: 'Largest empty rectangle search',
+    status: 'live',
+    family: 'Computational geometry',
+    owner: 'Willie',
+    complexity: 'O(W * H^2 + (WH)^2) worst case after rectangle reduction, O(WH) memory.',
+    inputs: ['Map bounds', 'Occupied cells', 'Freezer footprint size', 'Anchor target cell'],
+    outputs: ['Top free rectangles', 'Candidate freezer origins', 'Rejection notes for truncated scans'],
+    context: 'Willie uses this when anchored template placement needs room-sized free space instead of just trying cells around an anchor.',
+    sourceLinks: [
+      { label: 'PlacementEvidence.cs', href: github('Src/Ministers/Willie/PlacementEvidence.cs#L107') },
+      { label: 'LargestEmptyRectangleGenerator.cs', href: github('Src/Ministers/Willie/Generators/LargestEmptyRectangleGenerator.cs#L107') },
+    ],
+    wikipediaLinks: [
+      { label: 'Largest empty rectangle', href: wiki.largestEmptyRectangle },
+    ],
+    imageKind: 'rect',
+  },
+  {
+    name: 'Anchor-based template search',
+    status: 'live',
+    family: 'Template search',
+    owner: 'Willie',
+    complexity: 'O(A * R^2 * F) before current budgets cap it; A anchors, R radius, F template assets.',
+    inputs: ['Resolved anchors', 'Search radius', 'Freezer shell template', 'Bounds and occupancy evidence'],
+    outputs: ['Translated blueprint groups', 'Door and access cells', 'Template assumptions'],
+    context: 'Willie expands rings around kitchen/storage anchors and rotates the freezer shell so the door faces the anchor.',
+    sourceLinks: [
+      { label: 'TemplateAnchoredGenerator.cs', href: github('Src/Ministers/Willie/Generators/TemplateAnchoredGenerator.cs#L36') },
+      { label: 'FreezerTemplate.cs', href: github('Src/Ministers/Willie/Placement/FreezerTemplate.cs#L10') },
+    ],
+    wikipediaLinks: [
+      { label: 'Template matching', href: wiki.templateMatching },
+    ],
+    imageKind: 'ring',
+  },
+  {
+    name: 'Walkable path-cost scoring',
+    status: 'live',
+    family: 'Pathfinding score',
+    owner: 'Willie',
+    complexity: 'RimBob-side O(P) for P access-cell pairs; external RIMAPI region/A* cost depends on map graph size.',
+    inputs: ['Draft access cells', 'Anchor target cell', 'RIMAPI path-cost batch results', 'Manhattan fallback distance'],
+    outputs: ['Reachable scored drafts', 'Normalized distance metric', 'Raw path cost in path_tiles or tiles'],
+    context: 'Willie ranks freezer placements by real walkability to the anchor, falling back to Manhattan distance only when the probe is unavailable.',
+    sourceLinks: [
+      { label: 'WalkablePathCostScorer.cs', href: github('Src/Ministers/Willie/Placement/WalkablePathCostScorer.cs#L38') },
+      { label: 'PathCostLookup.cs', href: github('Src/Ministers/Willie/Placement/PathCostLookup.cs#L24') },
+    ],
+    wikipediaLinks: [
+      { label: 'A* search algorithm', href: wiki.aStar },
+      { label: 'Taxicab geometry', href: wiki.taxicab },
+    ],
+    imageKind: 'path',
+  },
+  {
+    name: 'Multi-objective placement ranking',
+    status: 'live',
+    family: 'Weighted ranking',
+    owner: 'Willie',
+    complexity: 'O(D log D + V * M), where D drafts are sorted, V validations are material-scored, and M material rows are summed.',
+    inputs: ['Path-cost metric', 'Expansion-room metric', 'Generator confidence', 'Diversity bonus', 'Material validation cost'],
+    outputs: ['Ranked top 1-3 options', 'Tradeoff note', 'Unit-bearing score trace'],
+    context: 'Willie keeps generators as proposal sources and lets one shared judge combine hard gates, weighted metrics, validation, and final ordering.',
+    sourceLinks: [
+      { label: 'PlacementSolver.cs', href: github('Src/Ministers/Willie/PlacementSolver.cs#L250') },
+      { label: 'ScoreWeights.cs', href: github('Src/Ministers/Willie/Placement/ScoreWeights.cs#L1') },
+    ],
+    wikipediaLinks: [
+      { label: 'Multi-objective optimization', href: wiki.multiObjective },
+    ],
+    imageKind: 'score',
+  },
+  {
+    name: 'Greedy diversity selection',
+    status: 'live',
+    family: 'Greedy selection',
+    owner: 'Willie',
+    complexity: 'O(D * K^2) for D ranked drafts and selected count K; effectively O(D) with the current tiny K.',
+    inputs: ['Ranked scored drafts', 'Already selected drafts', 'Anchor ids', 'Door rotations', 'Footprint origins'],
+    outputs: ['Diverse validation set', 'Diversity reason', 'Diversity score contribution'],
+    context: 'Willie avoids validating three near-identical freezer candidates by rewarding different anchors, orientations, or origins.',
+    sourceLinks: [
+      { label: 'DiverseSelector.cs', href: github('Src/Ministers/Willie/Placement/DiverseSelector.cs#L9') },
+      { label: 'DraftDedupe.cs', href: github('Src/Ministers/Willie/Placement/DraftDedupe.cs#L74') },
+    ],
+    wikipediaLinks: [
+      { label: 'Greedy algorithm', href: wiki.greedy },
+    ],
+    imageKind: 'diversity',
+  },
+  {
+    name: 'Crop forecast scoring',
+    status: 'live',
+    family: 'Yield forecasting',
+    owner: 'Chef',
+    complexity: 'O(P * B log B); P crop profiles is currently 3, so fertility-band sorting dominates.',
+    inputs: ['Colonist count', 'Food days', 'Crop profiles', 'Terrain fertility bands', 'Days to winter', 'Storage posture'],
+    outputs: ['Best crop candidate', 'Projected nutrition', 'Projected food days added', 'Winter margin', 'Confidence and storage multipliers'],
+    context: 'Chef explains why rice, potatoes, or corn fits the current food and season window instead of hardcoding one crop forever.',
+    sourceLinks: [
+      { label: 'FoodCropMath.cs', href: github('Src/Ministers/Food/FoodCropMath.cs#L57') },
+      { label: 'FoodBriefingDerivation.cs', href: github('Src/StateStore/Derivations/FoodBriefingDerivation.cs#L664') },
+    ],
+    wikipediaLinks: [
+      { label: 'Crop simulation model', href: wiki.cropSimulation },
+    ],
+    imageKind: 'crop',
+  },
+  {
+    name: 'Bounded harvest and hunt target packing',
+    status: 'live',
+    family: 'Bounded spatial grouping',
+    owner: 'Chef',
+    complexity: 'Harvest worst case O(N^3); hunt O(N log N + L*N) for sorted animals and target limit L.',
+    inputs: ['Candidate plants or animals', 'Reference point', 'Apply target limit', 'Maximum allowed rectangle area'],
+    outputs: ['Apply-safe map rectangle', 'Target ids', 'Target count', 'Proximity label'],
+    context: 'Chef turns many possible harvest or hunt targets into a small rectangular designation that the player can inspect and apply safely.',
+    sourceLinks: [
+      { label: 'Harvest target selection', href: github('Src/StateStore/Derivations/FoodBriefingDerivation.cs#L298') },
+      { label: 'Hunt target selection', href: github('Src/StateStore/Derivations/FoodBriefingDerivation.cs#L590') },
+    ],
+    wikipediaLinks: [
+      { label: 'Rectangle packing', href: wiki.rectanglePacking },
+    ],
+    imageKind: 'pack',
+  },
+  {
+    name: 'Cosine similarity retrieval',
+    status: 'live',
+    family: 'Vector search',
+    owner: 'Mayor and Chef via RAG',
+    complexity: 'O(N * E + N log N) for N chunks and embedding dimension E; sorting all scores dominates after dot products.',
+    inputs: ['Query embedding', 'Guide chunk embeddings', 'topK'],
+    outputs: ['Top matching guide chunks', 'Similarity scores used for ordering'],
+    context: 'RAG uses this in-process store to retrieve guide snippets without a vector database.',
+    sourceLinks: [
+      { label: 'KnowledgeBase.cs', href: github('Src/KnowledgeBase/KnowledgeBase.cs#L39') },
+    ],
+    wikipediaLinks: [
+      { label: 'Cosine similarity', href: wiki.cosine },
+    ],
+    imageKind: 'cosine',
+  },
+  {
+    name: 'Summed-area tables',
+    status: 'planned',
+    family: 'Grid precomputation',
+    owner: 'Willie',
+    complexity: 'Build O(WH), query O(1), memory O(WH) per map layer.',
+    inputs: ['Binary or weighted map layer', 'Rectangular query bounds'],
+    outputs: ['Constant-time rectangle sums', 'Cheap hard-gate and soft-penalty checks'],
+    context: 'Planned for Willie buildability and danger/filth/roof checks before expensive validation.',
+    sourceLinks: [
+      { label: 'summed-area-tables.md', href: github('Docs/placement_algorithms/summed-area-tables.md#L1') },
+      { label: 'placement README', href: github('Docs/placement_algorithms/README.md#L31') },
+    ],
+    wikipediaLinks: [
+      { label: 'Summed-area table', href: wiki.summedAreaTable },
+    ],
+    imageKind: 'sat',
+  },
+  {
+    name: 'Distance transforms',
+    status: 'planned',
+    family: 'Distance field',
+    owner: 'Willie',
+    complexity: 'Usually O(WH) per source layer on grid BFS or distance-field passes; memory O(WH).',
+    inputs: ['Map grid', 'Target source cells', 'Distance metric or movement model'],
+    outputs: ['Distance field', 'Anchor scores', 'Adjacency penalties or bonuses'],
+    context: 'Planned to turn kitchen/freezer/field/conduit/threat proximity into reusable fields instead of repeated local scans.',
+    sourceLinks: [
+      { label: 'distance-transforms.md', href: github('Docs/placement_algorithms/distance-transforms.md#L1') },
+      { label: 'placement README', href: github('Docs/placement_algorithms/README.md#L34') },
+    ],
+    wikipediaLinks: [
+      { label: 'Distance transform', href: wiki.distanceTransform },
+    ],
+    imageKind: 'distance',
+  },
+  {
+    name: 'CP-SAT NoOverlap2D',
+    status: 'planned',
+    family: 'Constraint solving',
+    owner: 'Willie',
+    complexity: 'NP-hard / exponential in the general case; useful only after pruning to a small local candidate set.',
+    inputs: ['Candidate room rectangles', 'Bounds', 'Presence variables', 'No-overlap constraints', 'Weighted objective'],
+    outputs: ['Exact local layout choice', 'Infeasible result', 'Constraint-backed tradeoff score'],
+    context: 'Planned as a later exact local solver for multi-room placement after cheaper generators shrink the search space.',
+    sourceLinks: [
+      { label: 'cp-sat-no-overlap-2d.md', href: github('Docs/placement_algorithms/cp-sat-no-overlap-2d.md#L1') },
+      { label: 'construction design', href: github('Docs/design/ministers/construction.md#L117') },
+    ],
+    wikipediaLinks: [
+      { label: 'Constraint programming', href: wiki.constraintProgramming },
+      { label: 'Rectangle packing', href: wiki.rectanglePacking },
+    ],
+    imageKind: 'cpsat',
+  },
+  {
+    name: 'Jump Point Search',
+    status: 'planned',
+    family: 'Pathfinding acceleration',
+    owner: 'Willie',
+    complexity: 'Worst case O(WH log(WH)) like A*, but often much faster on open uniform grids by pruning symmetric nodes.',
+    inputs: ['Uniform-cost grid', 'Start cell', 'Goal cell', 'Blocked/passable map layer'],
+    outputs: ['Reachable path or no-path result', 'Fewer expanded nodes than plain A* in open grids'],
+    context: 'Planned for repeated grid reachability checks after candidates survive cheaper filters.',
+    sourceLinks: [
+      { label: 'jump-point-search.md', href: github('Docs/placement_algorithms/jump-point-search.md#L1') },
+      { label: 'placement README', href: github('Docs/placement_algorithms/README.md#L39') },
+    ],
+    wikipediaLinks: [
+      { label: 'Jump Point Search', href: wiki.jumpPointSearch },
+      { label: 'A* search algorithm', href: wiki.aStar },
+    ],
+    imageKind: 'jps',
+  },
+];
+
 export function InfoOverview({
   selectedView,
   views,
@@ -376,7 +634,81 @@ export function InfoOverview({
       </DisclosureSection>
         </>
       )}
+
+      {selectedView === 'algorithms' && (
+        <DisclosureSection title={<SemanticLabel icon={iconForField('algorithm')}><span>Algorithms</span></SemanticLabel>} defaultOpen meta={`${algorithms.length} panels`}>
+          <div className="algorithm-grid">
+            {algorithms.map(algorithm => (
+              <AlgorithmCard key={algorithm.name} algorithm={algorithm} />
+            ))}
+          </div>
+        </DisclosureSection>
+      )}
     </div>
+  );
+}
+
+function AlgorithmCard({ algorithm }: { algorithm: AlgorithmEntry }) {
+  return (
+    <article className="algorithm-card">
+      <div className="algorithm-card-header">
+        <div>
+          <span className={`algorithm-status algorithm-status-${algorithm.status}`}>{algorithm.status}</span>
+          <h3><SemanticLabel icon={iconForInfoTerm(algorithm.name, algorithm.family)}><span>{algorithm.name}</span></SemanticLabel></h3>
+          <p>{algorithm.family}</p>
+        </div>
+        <img className="algorithm-image" src={algorithmImageDataUrl(algorithm)} alt={`${algorithm.name} diagram`} loading="lazy" />
+      </div>
+
+      <dl className="algorithm-facts">
+        <div>
+          <dt>Owner</dt>
+          <dd>{algorithm.owner}</dd>
+        </div>
+        <div>
+          <dt>Runtime</dt>
+          <dd>{algorithm.complexity}</dd>
+        </div>
+        <div>
+          <dt>Context</dt>
+          <dd>{algorithm.context}</dd>
+        </div>
+      </dl>
+
+      <div className="algorithm-io">
+        <AlgorithmList title="Inputs" items={algorithm.inputs} />
+        <AlgorithmList title="Outputs" items={algorithm.outputs} />
+      </div>
+
+      <div className="algorithm-links">
+        <AlgorithmLinks title="RimBob source" links={algorithm.sourceLinks} />
+        <AlgorithmLinks title="Wikipedia" links={algorithm.wikipediaLinks} />
+      </div>
+    </article>
+  );
+}
+
+function AlgorithmList({ items, title }: { items: string[]; title: string }) {
+  return (
+    <section>
+      <h4>{title}</h4>
+      <ul>
+        {items.map(item => <li key={item}>{item}</li>)}
+      </ul>
+    </section>
+  );
+}
+
+function AlgorithmLinks({ links, title }: { links: AlgorithmLink[]; title: string }) {
+  return (
+    <section>
+      <h4>{title}</h4>
+      <div>
+        {links.map(link => (
+          <a key={link.href} href={link.href} target="_blank" rel="noreferrer">{link.label}</a>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -396,6 +728,160 @@ function StatList({ entries, title }: { entries: StatEntry[]; title: string }) {
       </div>
     </section>
   );
+}
+
+function github(path: string): string {
+  return `${githubRoot}${path}`;
+}
+
+function algorithmImageDataUrl(algorithm: AlgorithmEntry): string {
+  const title = escapeSvg(algorithm.name);
+  const subtitle = escapeSvg(algorithm.family);
+  const art = algorithmArt(algorithm.imageKind);
+  const svg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="210" viewBox="0 0 360 210" role="img">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#10243a"/>
+      <stop offset="1" stop-color="#171a25"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#62d8e6"/>
+      <stop offset="1" stop-color="#50d38d"/>
+    </linearGradient>
+  </defs>
+  <rect width="360" height="210" rx="14" fill="url(#bg)"/>
+  <rect x="14" y="14" width="332" height="182" rx="10" fill="#0b1018" stroke="#344050"/>
+  ${art}
+  <text x="22" y="178" fill="#eef5f8" font-family="Segoe UI, sans-serif" font-size="16" font-weight="700">${title}</text>
+  <text x="22" y="194" fill="#8fa0ad" font-family="Segoe UI, sans-serif" font-size="11">${subtitle}</text>
+</svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
+function algorithmArt(kind: AlgorithmEntry['imageKind']): string {
+  switch (kind) {
+    case 'rect':
+      return `
+  <g opacity="0.9">
+    ${gridSvg()}
+    <rect x="100" y="54" width="134" height="82" rx="4" fill="rgba(80,211,141,0.18)" stroke="#50d38d" stroke-width="3"/>
+    <circle cx="74" cy="62" r="5" fill="#f06f7a"/>
+    <circle cx="252" cy="94" r="5" fill="#f06f7a"/>
+    <circle cx="142" cy="132" r="5" fill="#f06f7a"/>
+  </g>`;
+    case 'ring':
+      return `
+  <g fill="none" stroke="#62d8e6" stroke-width="2">
+    <circle cx="174" cy="88" r="10" fill="#50d38d" stroke="none"/>
+    <rect x="136" y="50" width="76" height="76" rx="8"/>
+    <rect x="112" y="26" width="124" height="124" rx="12" opacity="0.55"/>
+    <path d="M174 88 L234 88" stroke="#f0bd5f" stroke-width="4"/>
+    <rect x="226" y="76" width="42" height="24" rx="4" fill="rgba(240,189,95,0.16)"/>
+  </g>`;
+    case 'path':
+      return `
+  <g>
+    ${gridSvg()}
+    <path d="M52 132 C88 126 88 76 126 78 S168 132 210 112 S236 54 286 58" fill="none" stroke="#f0bd5f" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="52" cy="132" r="8" fill="#50d38d"/>
+    <circle cx="286" cy="58" r="8" fill="#f06f7a"/>
+  </g>`;
+    case 'score':
+      return `
+  <g>
+    <rect x="68" y="112" width="42" height="34" rx="4" fill="#62d8e6"/>
+    <rect x="128" y="82" width="42" height="64" rx="4" fill="#50d38d"/>
+    <rect x="188" y="56" width="42" height="90" rx="4" fill="#f0bd5f"/>
+    <rect x="248" y="96" width="42" height="50" rx="4" fill="#a78bfa"/>
+    <path d="M58 148 H304" stroke="#526173" stroke-width="2"/>
+  </g>`;
+    case 'diversity':
+      return `
+  <g>
+    <circle cx="84" cy="68" r="14" fill="#50d38d"/>
+    <circle cx="150" cy="112" r="14" fill="#62d8e6"/>
+    <circle cx="224" cy="58" r="14" fill="#f0bd5f"/>
+    <circle cx="260" cy="130" r="14" fill="#a78bfa"/>
+    <path d="M84 68 L150 112 L224 58 L260 130" fill="none" stroke="#526173" stroke-width="3" stroke-dasharray="6 6"/>
+  </g>`;
+    case 'crop':
+      return `
+  <g>
+    <rect x="64" y="116" width="46" height="30" rx="4" fill="#50d38d"/>
+    <rect x="132" y="88" width="46" height="58" rx="4" fill="#f0bd5f"/>
+    <rect x="200" y="52" width="46" height="94" rx="4" fill="#62d8e6"/>
+    <path d="M286 134 C270 108 276 78 306 58 C314 94 306 120 286 134Z" fill="#50d38d"/>
+  </g>`;
+    case 'pack':
+      return `
+  <g>
+    <rect x="66" y="42" width="220" height="112" rx="6" fill="rgba(98,216,230,0.08)" stroke="#62d8e6" stroke-width="3"/>
+    <rect x="86" y="62" width="46" height="26" rx="3" fill="#50d38d"/>
+    <rect x="142" y="64" width="36" height="50" rx="3" fill="#f0bd5f"/>
+    <rect x="190" y="70" width="70" height="28" rx="3" fill="#a78bfa"/>
+    <rect x="92" y="106" width="68" height="32" rx="3" fill="#62d8e6"/>
+  </g>`;
+    case 'cosine':
+      return `
+  <g stroke-linecap="round">
+    <path d="M96 142 L252 58" stroke="#62d8e6" stroke-width="7"/>
+    <path d="M96 142 L276 120" stroke="#50d38d" stroke-width="7"/>
+    <path d="M150 112 C172 128 204 132 232 124" fill="none" stroke="#f0bd5f" stroke-width="4"/>
+    <circle cx="96" cy="142" r="7" fill="#eef5f8"/>
+  </g>`;
+    case 'sat':
+      return `
+  <g>
+    ${gridSvg()}
+    <rect x="92" y="58" width="148" height="82" rx="5" fill="rgba(240,189,95,0.18)" stroke="#f0bd5f" stroke-width="3"/>
+    <circle cx="92" cy="58" r="5" fill="#62d8e6"/>
+    <circle cx="240" cy="58" r="5" fill="#62d8e6"/>
+    <circle cx="92" cy="140" r="5" fill="#62d8e6"/>
+    <circle cx="240" cy="140" r="5" fill="#62d8e6"/>
+  </g>`;
+    case 'distance':
+      return `
+  <g fill="none" stroke-width="3">
+    <circle cx="178" cy="94" r="22" stroke="#50d38d"/>
+    <circle cx="178" cy="94" r="48" stroke="#62d8e6" opacity="0.75"/>
+    <circle cx="178" cy="94" r="74" stroke="#a78bfa" opacity="0.55"/>
+    <circle cx="178" cy="94" r="7" fill="#f0bd5f" stroke="none"/>
+  </g>`;
+    case 'cpsat':
+      return `
+  <g>
+    <rect x="64" y="48" width="88" height="62" rx="5" fill="#62d8e6"/>
+    <rect x="176" y="42" width="64" height="96" rx="5" fill="#50d38d"/>
+    <rect x="254" y="88" width="50" height="50" rx="5" fill="#f0bd5f"/>
+    <path d="M152 78 H176 M240 90 H254" stroke="#eef5f8" stroke-width="4" stroke-dasharray="5 7"/>
+  </g>`;
+    case 'jps':
+      return `
+  <g>
+    ${gridSvg()}
+    <path d="M54 138 H132 V76 H232 V48 H292" fill="none" stroke="#50d38d" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M92 138 H118 M164 76 H206 M252 48 H278" stroke="#f0bd5f" stroke-width="3" stroke-dasharray="4 7"/>
+    <circle cx="54" cy="138" r="7" fill="#62d8e6"/>
+    <circle cx="292" cy="48" r="7" fill="#f06f7a"/>
+  </g>`;
+  }
+}
+
+function gridSvg(): string {
+  return `
+  <g stroke="#293442" stroke-width="1">
+    <path d="M52 42 H300 M52 66 H300 M52 90 H300 M52 114 H300 M52 138 H300"/>
+    <path d="M52 42 V138 M76 42 V138 M100 42 V138 M124 42 V138 M148 42 V138 M172 42 V138 M196 42 V138 M220 42 V138 M244 42 V138 M268 42 V138 M292 42 V138"/>
+  </g>`;
+}
+
+function escapeSvg(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 function GlossaryList({ entries, title }: { entries: GlossaryEntry[]; title: string }) {

@@ -38,7 +38,8 @@ $dashboardInfoViews = @(
     [pscustomobject]@{ Label = "Overview"; View = "overview" },
     [pscustomobject]@{ Label = "Glossary"; View = "glossary" },
     [pscustomobject]@{ Label = "Contracts"; View = "contracts" },
-    [pscustomobject]@{ Label = "Data Sources"; View = "data_sources" }
+    [pscustomobject]@{ Label = "Data Sources"; View = "data_sources" },
+    [pscustomobject]@{ Label = "Algorithms"; View = "algorithms" }
 )
 
 $dashboardAnalyticsViews = @(

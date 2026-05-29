@@ -139,7 +139,7 @@ The left rail selects the inspected scope, not the view.
 Non-minister console scopes use a shallow local tab bar:
 
 - SYSTEM: Runtime, Connectivity, Storage, Coverage, Events.
-- INFO: Overview, Glossary, Contracts, Data Sources.
+- INFO: Overview, Glossary, Contracts, Data Sources, Algorithms.
 - ANALYTICS: Session, Colony, Advice, SSE, Candidates.
 - DEV BLOG: Features, Churn, Commits, Topics, Suggestions.
 
@@ -280,6 +280,7 @@ INFO owns:
 - Scope guide: when to use SYSTEM, ANALYTICS, and minister inspection views.
 - Data-source guide: which dashboard surfaces are live, persisted/restored,
   SSE/session buffered, or static reference copy.
+- Algorithms catalogue: static reference panels for the deterministic and planned algorithms RimBob uses or is evaluating, with inputs, outputs, source links, complexity, context, and owning minister.
 
 ### ANALYTICS View
 

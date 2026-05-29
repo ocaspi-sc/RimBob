@@ -18,7 +18,7 @@ export type ScopeKind = 'system' | 'info' | 'analytics' | 'dev_blog' | 'minister
 export type ScopeStatus = 'live' | 'planned' | 'reference';
 export type MinisterViewKey = 'prompt' | 'raw_llm' | 'briefing' | 'rag' | 'rules' | 'infographics' | 'advice';
 export type SystemViewKey = 'runtime' | 'connectivity' | 'storage' | 'coverage' | 'events';
-export type InfoViewKey = 'overview' | 'glossary' | 'contracts' | 'data_sources';
+export type InfoViewKey = 'overview' | 'glossary' | 'contracts' | 'data_sources' | 'algorithms';
 export type AnalyticsViewKey = 'session' | 'colony' | 'advice' | 'sse' | 'candidates';
 export type DevBlogViewKey = 'features' | 'churn' | 'commits' | 'topics' | 'suggestions';
 export type DashboardViewKey =
@@ -54,6 +54,7 @@ export const infoViews: DashboardViewDefinition[] = [
   { key: 'glossary', label: 'Glossary' },
   { key: 'contracts', label: 'Contracts' },
   { key: 'data_sources', label: 'Data Sources' },
+  { key: 'algorithms', label: 'Algorithms' },
 ];
 
 export const analyticsViews: DashboardViewDefinition[] = [
