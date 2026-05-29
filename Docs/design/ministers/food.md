@@ -268,14 +268,10 @@ local paths are insufficient, but Economy/Trade or Mayor owns trade framing.
 
 Hard cases:
 
-- Psychoid/smokeleaf/devilstrand: Chef can comment on tile opportunity cost;
-  Industry, Economy, or Welfare owns the strategic reason.
-- Animal breeding/culling/training: Chef only owns slaughter-for-food pressure
-  for now.
-- Nutrient paste: Chef owns the food-chain recommendation; Welfare owns mood
-  cost.
-- Caravan provisioning: Chef owns nutrition sufficiency; future travel/trade
-  owner owns execution.
+- Psychoid/smokeleaf/devilstrand: Chef can comment on tile opportunity cost; Industry, Economy, or Welfare owns the strategic reason.
+- Animal breeding/culling/training: Chef owns feed pressure and slaughter-for-food pressure only. Welfare owns tame-animal living-condition requests; Economy owns herd economics, sale, and trade; Defense owns dangerous or combat animals; Medical owns treatment.
+- Nutrient paste: Chef owns the food-chain recommendation; Welfare owns mood cost.
+- Caravan provisioning: Chef owns nutrition sufficiency; future travel/trade owner owns execution.
 
 ---
 
@@ -309,8 +305,6 @@ locations, work capacity, or yield calculations absent from briefing/code.
 - [x] Add deterministic crop-yield math and computed crop candidates.
 - [x] Improve baseline hunting value/risk scoring from animal-def metadata.
 - [ ] Account for caravan provisioning and food removed from the home map.
-- [ ] Decide ownership for drug/textile crops once Economy/Industry/Welfare are
-      live.
-- [ ] Decide whether animal economy deserves its own minister or stays a Chef
-      hard case.
+- [ ] Decide ownership for drug/textile crops once Economy/Industry/Welfare are live.
+- [ ] Decide whether animal economy, training, and living-condition complexity deserves its own minister after Chef, Welfare, Economy, and Defense rules become noisy.
 - [ ] Map Food-chain Assisted Apply candidates separately from full Auto writes.

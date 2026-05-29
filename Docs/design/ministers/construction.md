@@ -58,14 +58,12 @@ Willie owns built infrastructure:
 - Temperature systems as buildable assets.
 - Build queue feasibility, material readiness, and construction bottlenecks.
 - Material/component stockpile zones.
+- Pens, barns, animal beds, and animal shelter assets when requested by Welfare or another owning minister.
 - Layout efficiency as an extension of room/base planning.
 
-Willie owns build feasibility and placement cost. Other ministers own why
-a build matters. For example, Chef owns freezer need; Willie owns the
-cooler/wall/power work required to satisfy it.
+Willie owns build feasibility and placement cost. Other ministers own why a build matters. For example, Chef owns freezer need and Welfare owns tame-animal living-condition need; Willie owns the cooler, wall, power, fence, barn, or bed work required to satisfy it.
 
-No separate Base Layout minister is planned for the first pass. Split only if
-Willie's layout reasoning becomes noisy enough to justify it.
+No separate Base Layout minister is planned for the first pass. Split only if Willie's layout reasoning becomes noisy enough to justify it.
 
 ---
 
@@ -193,6 +191,6 @@ In MVP these requests remain advice and flags; they never execute writes by them
 
 - [x] Willie concerns defined — see **Concerns (defined)** above and `.plans/willie-advice-types.md`.
 - [ ] Define room-program derivation in the state store.
-- [ ] Decide how Willie consumes Chef/Defense/Medical build requests.
+- [ ] Decide how Willie consumes Chef/Welfare/Defense/Medical build requests.
 - [ ] Decide when Research should split from Willie.
 - [ ] Define practical layout heuristics without overbuilding a planner.

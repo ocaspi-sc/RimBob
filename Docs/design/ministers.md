@@ -184,7 +184,7 @@ Each minister owns either a production chain or a well-defined subsystem:
 | Defense | Threat response: raids, drafted combat, fortifications as defensive intent, weapons/ammo readiness |
 | Willie | Built infrastructure: rooms, power, temperature systems, base layout, non-defense blueprints |
 | Industry | Non-food production chain: stonecutting, tailoring, smithing, machining, fabrication, drug production, production stockpiles |
-| Welfare | Mood & Needs: mood risk from pawn/guest needs, thoughts, recreation, schedules, relationships, comfort, beauty, ideology pressure |
+| Welfare | Mood & Needs: mood risk from pawn/guest needs, thoughts, recreation, schedules, relationships, comfort, beauty, ideology pressure, tame-animal living-condition requests |
 | Medical | Health subsystem: wounds, disease, surgery, triage, medicine stock, hospital readiness |
 | Research | Technology path: research queue, unlock dependencies, capability planning |
 | Economy | Wealth and trade chain: trade goods, caravans, buying scarce resources, selling surplus, wealth pressure |
@@ -192,14 +192,7 @@ Each minister owns either a production chain or a well-defined subsystem:
 | Chief of Staff | Flag triage and conflict arbitration; owns no direct production chain |
 | Labor | Deferred Auto-epic work-system **policy recommender** (priorities/zones/schedules/policies). RimWorld's job-giver allocates pawns. Re-engages at Auto. |
 
-Welfare's domain label is **Mood & Needs**. It watches needs and thoughts as
-they affect mood and break risk, then asks the owning domain for the smallest
-concrete fix. Guest/visitor comfort, lodging quality, and hospitality social
-pressure default to Welfare; Economy owns trade, caravans, goodwill, and
-diplomacy purpose; Willie owns physical guest-room work; Defense owns
-active threat response. Hunger routes to Chef when the fix is nutrition; pain,
-disease, and wounds route to Medical when the fix is treatment. Welfare keeps
-the mood impact and break-risk framing.
+Welfare's domain label is **Mood & Needs**. It watches needs and thoughts as they affect mood and break risk, then asks the owning domain for the smallest concrete fix. Guest/visitor comfort, lodging quality, and hospitality social pressure default to Welfare; Economy owns trade, caravans, goodwill, and diplomacy purpose; Willie owns physical guest-room work; Defense owns active threat response. Tame animal living-condition pressure also defaults to Welfare when the issue is pens, barns, animal beds, temperature-safe shelter, cleanliness-sensitive rest areas, or similar comfort/suffering evidence; Willie owns the physical assets, Chef owns feed/slaughter pressure, Economy owns herd economics, Defense owns threat/combat animals, and Medical owns treatment. Hunger routes to Chef when the fix is nutrition; pain, disease, and wounds route to Medical when the fix is treatment. Welfare keeps the mood impact and break-risk framing.
 
 ### Resource Requests
 
@@ -258,6 +251,7 @@ surface an apply handle for a narrow action.
 | Action family | Owner | Common requesters | Notes |
 |---|---|---|---|
 | Build rooms, walls, doors, floors, roofs, furniture | Willie | All ministers | Willie owns build feasibility, placement, materials, and layout cost |
+| Build pens, barns, animal beds, animal shelter assets | Willie | Welfare, Chef, Economy, Defense, Medical | Welfare owns tame-animal living-condition need; Willie owns build feasibility and placement |
 | Build power generation, batteries, conduits, switches | Willie | Chef, Industry, Defense, Medical | Requester owns why power matters |
 | Build temperature systems | Willie | Chef, Welfare, Medical, Industry | Freezer need is Chef; asset build is Willie |
 | Build production benches | Willie | Industry, Chef, Medical, Research | Requester owns production need |
@@ -292,6 +286,7 @@ surface an apply handle for a narrow action.
 | Schedules, joy/work/sleep balance, mental-break prevention | Welfare | Medical, Defense | Suggest-only until Labor/Auto |
 | Relationships, social fights, ideology mood pressure | Welfare | Mayor | Split later only if complexity justifies it |
 | Guest lodging, comfort, and hospitality social pressure | Welfare | Economy, Willie | Economy owns visitor trade/diplomacy purpose; Willie owns room work; Defense owns threats |
+| Tame animal living-condition pressure | Welfare | Chef, Economy, Defense, Medical | Requests Willie for pens, barns, beds, shelter, or rest-area fixes; does not own feed, herd economics, combat, or treatment |
 | Triage, tending, disease monitoring, surgery, hospital readiness | Medical | Welfare, Willie, Industry | Split from Welfare because cadence/severity differ |
 | Medicine stock, hospital beds, sterile room, vitals risk | Medical | Willie, Industry, Economy | Medical owns readiness |
 
@@ -313,7 +308,7 @@ surface an apply handle for a narrow action.
 |---|---|
 | Psychoid/smokeleaf/beer | Industry owns production; Welfare owns drug policy; Economy owns sale strategy |
 | Devilstrand | Chef comments on growing opportunity cost; Industry owns textile use; Economy owns sale value |
-| Animals | Chef owns slaughter pressure; Economy owns sale/trade; Defense owns combat animals; future Animals minister possible |
+| Animals | Welfare owns tame-animal living-condition requests; Chef owns feed/starvation/slaughter pressure; Economy owns sale/trade/herd economics; Defense owns combat or dangerous animals; Medical owns treatment; future Animals minister possible |
 | Guests/visitors | Welfare is default host for comfort, lodging, and social pressure; Economy owns trade/caravan/goodwill/diplomacy purpose; Willie owns guest-room builds; Defense owns active threat response |
 | Prisoners | Welfare owns mood/needs pressure from living conditions; Medical owns health; Economy owns ransom/slavery/trade; Defense owns escape/riot risk |
 | Ideology/rituals | Welfare owns mood pressure until rules/prompts become noisy |
@@ -362,6 +357,7 @@ Minister of Zoning because zones are means to other ministers' ends.
 | Ammo / weapon stockpile | Defense | Near killbox or armoury |
 | Medicine stockpile | Medical | Near hospital; Medical tracks medical supply chain |
 | Growing zone | Chef | Placement, size, crop assignment |
+| Animal pen / barn area | Welfare | Living-condition purpose; Willie owns fences, doors, barns, and beds; Chef/Economy/Defense can request constraints |
 | Dumping zone | Willie | Rock chunks, corpses, waste; base hygiene |
 | Home zone | Mayor / CoS | Colony-wide; no minister claims it |
 | Allowed zone | Mayor / CoS | Colony-wide; no minister claims it |
