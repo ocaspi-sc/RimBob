@@ -9,8 +9,9 @@
 > exact C# lives in source after landing.
 >
 > **Milestone:** M4 (first cabinet wave); Willie lands **first** after Food
-> (Food's first live dependencies are cooler/power/room/storage builds). Design
-> phase ~complete; **no Willie minister code landed yet.**
+> (Food's first live dependencies are cooler/power/room/storage builds). Schema,
+> briefing, Willie minister (Rules Slice A) + dashboard readout **landed**;
+> **Placement Solver Solver1 is the next active node.**
 
 ---
 
@@ -50,7 +51,7 @@ Placement Solver, the fork group endpoints, and the dashboard pick UI.
 
 | Plan | Holds |
 |---|---|
-| [`willie-advice-types.md`](willie-advice-types.md) | The 9 canonical Willie concerns + first-slice rules-vs-LLM split. |
+| [`willie-advice-types.md`](willie-advice-types.md) | The 8 canonical Willie concerns + first-slice rules-vs-LLM split. |
 | [`willie-advice-schema.md`](willie-advice-schema.md) | Advice/output side: flatten (drop icon/reason), per-kind apply split, `options[]`, `blueprint_group`, `place_blueprint_group`. |
 | [`willie-request-taxonomy.md`](willie-request-taxonomy.md) | Request/input side: typed request arrays, rich `BuildingRequest`, inbound ask-map -> concern. |
 | [`willie-briefing-schema.md`](willie-briefing-schema.md) + [`willie-briefing-fields.md`](willie-briefing-fields.md) | Willie Briefing Schema: per-field `signal/source/availability/consumers/notes` for the 8 canonical concerns + anchor inventory contract. **S1–S5 landed 2026-05-27.** |
@@ -159,7 +160,7 @@ flowchart TD
   S2 --> SCHEMA["Willie Briefing Schema ✓ LANDED 2026-05-27<br/>(willie-briefing-schema.md +<br/>willie-briefing-fields.md)"]
   FORK2 --> SCHEMA
   FORK2 --> ROOM["Room/anchor detection<br/>(room-purpose inference)"]
-  ROOM --> SCHEMA
+  ROOM -.may gate.-> Solver1
   SCHEMA --> DERIV["Willie briefing derivation ✓ LANDED 3235902<br/>(WillieBriefing + backlog ingest +<br/>anchor inventory + FORK3 client)"]
   DERIV --> Solver1["Placement Solver Solver1<br/>(template freezer skeleton + generator registry)<br/>← UNBLOCKED, next active"]
   S2 --> Solver1
@@ -227,7 +228,8 @@ overlay) pending.
    near-kitchen, `TemplateAnchoredGenerator`, one candidate) -> Solver2 competing
    generators (templates + rectangle + local patterns, top 1-3 options) -> Solver3
    more room classes and reuse-existing-footprint logic -> Solver4 base planning.
-   Deps satisfied: S2 ✓, group `validate` ✓ (FORK2 Slice A), `WillieBriefing` +
+   Deps satisfied: S2 ✓, group `validate` endpoint ✓ (FORK2 Slice A; RimBob
+   client wrapper pending — Solver1 adds it), `WillieBriefing` +
    `WillieAnchorInventory` ✓ (commit `3235902`), FORK3 client ✓. Solver1 reads the
    briefing's anchor inventory; Slice-A scoring euclidean, Slice-B walkable.
 6. **Willie minister** [✓ LANDED `e902e96`] - mirror Food: `Rules.cs`
@@ -266,7 +268,6 @@ next active node.
 |---|---|---|
 | Group atomicity on partial fresh-state failure + `MaxBlueprintGroupAssets` | advice-schema Q1 (see also rimapi-groups §4) | validate-all gate, then best-effort place + per-asset report; cap ~64 |
 | Anchor/room-purpose detection approach | placement-solver Q1 | the hard gate; templated room detection first; RIMAPI `/api/v1/map/rooms` available today |
-| Anchor scoring representation | placement-solver / willie-briefing-schema S3 | **resolved 2026-05-27:** `{room_id, entry_cells[], region_id}` + region-BFS scoring (FORK3); euclidean-from-centroid only as Slice-A fallback |
 | Generator budgets and diversity thresholds | placement-solver Q3 | start with tiny per-generator caps; validate only a diverse top survivor set |
 | Floor-fill representation (per-cell vs compressed rect) | advice-schema Q2 | per-cell now; cap room size; revisit if payloads bloat |
 | `ResourceRequest` vs `AdviceAction` shared-shape refactor | both anchors flagged | partly mooted - S2 retires `ResourceRequest` from the flag path |
@@ -278,7 +279,9 @@ next active node.
 and `storage_placement` both kept; `build_structure` dropped; `basic_shelter`
 moved to Welfare (2026-05-27 — see `willie-advice-types.md` §4.5);
 suggest+apply posture; deterministic request -> solver path; candidate
-generation uses a bounded generator registry with one shared validator/scorer.
+generation uses a bounded generator registry with one shared validator/scorer;
+anchor scoring = `{room_id, entry_cells[], region_id}` + region-BFS (FORK3),
+euclidean-from-centroid as Slice-A fallback (resolved 2026-05-27).
 
 ---
 

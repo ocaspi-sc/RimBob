@@ -1,8 +1,12 @@
 # Placement Solver - Plan
 
-> Agent-created plan. Lands in **RimBob** (Willie minister side), not the
-> RIMAPI fork. Deterministic component; **no LLM**. Turns a structured build spec
+> Agent-created **design doc**. Lands in **RimBob** (Willie minister side), not
+> RIMAPI. Deterministic component; **no LLM**. Turns a structured build spec
 > into validated, pickable layout options for Willie.
+>
+> **Impl plan + landed-reality deltas:** [`placement-solver-1.md`](placement-solver-1.md)
+> (Solver1 skeleton). This design was written pre-landing; where the two differ,
+> the impl plan reflects current code.
 
 ---
 
@@ -33,7 +37,7 @@ flowchart LR
   A --> EVID["precompute map evidence"]
   EVID --> GEN["competing candidate generators<br/>(bounded pool)"]
   GEN --> SCORE["hard gates + cheap score<br/>+ diversity pick"]
-  SCORE --> VAL["fork validate survivors<br/>(can_place, overlap, cost)"]
+  SCORE --> VAL["RIMAPI validate survivors<br/>(can_place, overlap, cost)"]
   VAL --> OPT["top 1-3 AdviceOption[]<br/>+ est_materials"]
   OPT --> ADV["AdviceItem (Willie tab)<br/>options[] + pick/Apply"]
   VAL -->|no fit| FB["fallback: material_bottleneck /<br/>stalled_builds / prose"]
@@ -70,10 +74,10 @@ has a single entry contract:
 | `capacity_need?` | `capacity_need` | sizing driver (`{food_units,200}`, `{beds,4}`) |
 | `adjacency[]` | `adjacency` | semantic anchors (`near kitchen`, `away_from bedroom`) |
 | `power?` / `temperature?` | same | implied power draw / thermal band |
-| `constraints[]` | (intent) / derived | `double_wall`, `fire_safe_material`, etc. |
+| `constraints[]` | derived (no request field) | `double_wall`, `fire_safe_material`, etc. — derived from `room_class`/intent; `BuildingRequest` carries no `constraints` |
 | `materials_on_hand?` | `materials_on_hand` | affordability hint |
 | `deadline?` / `priority?` | same | urgency |
-| `source` | `requested_from` + flag `source_minister` | requester (for cross-link + `concern` mapping) |
+| `source` | `requested_from` | requester (for cross-link + `concern` mapping); no `source_minister` flag exists on `BuildingRequest` |
 
 `concern` of the emitted advice comes from the request-to-concern mapping already
 in [`willie-request-taxonomy.md`](willie-request-taxonomy.md) section 3
@@ -97,10 +101,10 @@ in [`willie-request-taxonomy.md`](willie-request-taxonomy.md) section 3
    produces draft `blueprint_group` candidates with `generator_id`, source
    anchors, assumptions, and a reason summary. The pool may contain many drafts;
    the public output remains the best 1-3 options.
-5. **Hard gates + cheap scoring** - reject impossible drafts before any fork
+5. **Hard gates + cheap scoring** - reject impossible drafts before any RIMAPI
    call, compute the shared score vector, dedupe near-identical footprints, and
    select a small diverse survivor set for expensive validation.
-6. **Validation** - call the fork `blueprint-group/validate`
+6. **Validation** - call the RIMAPI `blueprint-group/validate`
    ([`rimapi-blueprint-groups-and-planning-overlay.md`](rimapi-blueprint-groups-and-planning-overlay.md)
    Capability A.1) for survivors; drop `!can_place` / overlapping; re-rank with
    validate results and keep the best diverse 1-3.
@@ -233,11 +237,11 @@ solve(spec, snapshot):
 
 ## 4. Where it lives / dependencies
 
-- The solver does **I/O** (live map reads + fork validate calls), so it is **not
+- The solver does **I/O** (live map reads + RIMAPI validate calls), so it is **not
   pure domain** (repo rule: pure domain projects take no external deps). Pure
   packing/anchor math can be a testable helper; orchestration is service-side.
 - Likely: `Src/Ministers/Willie/PlacementSolver.cs` (orchestration via
-  `RimApiClient` + the fork blueprint-group client) + pure layout helpers. The
+  `RimApiClient` + the RIMAPI blueprint-group client) + pure layout helpers. The
   Willie `Rules.cs` calls it when an active `building_request` is present.
 - Candidate generators should be small pluggable services over the same
   `PlacementSpec` + precomputed evidence. They should be easy to fixture-test
@@ -256,7 +260,7 @@ solve(spec, snapshot):
 
 | Slice | Scope |
 |---|---|
-| **Solver1 skeleton** | One `room_class` (freezer), one anchor (near kitchen), `TemplateAnchoredGenerator` only, **one** candidate (not 3), rectangular shell + 1 cooler, fork-validate, single option. Proves the pipeline end-to-end while establishing the generator registry/trace shape. |
+| **Solver1 skeleton** | One `room_class` (freezer), one anchor (near kitchen), `TemplateAnchoredGenerator` only, **one** candidate (not 3), rectangular shell + 1 cooler, RIMAPI-validate, single option. Proves the pipeline end-to-end while establishing the generator registry/trace shape. |
 | **Solver2 options** | Add bounded competition: template variants + `LargestEmptyRectangleGenerator` + local `PatternMatchGenerator` where useful. Emit 1-3 diverse options with shared score components and `tradeoff_note`s. |
 | **Solver3 breadth** | More room classes (hospital, bedroom, workshop), better anchor/room detection, `ReuseExistingFootprintGenerator`, no-fit fallbacks, and richer build-order safety. |
 | **Solver4 (future)** | Whole-base planning outline driving the planning overlay (rimapi-groups Capability B). Local CP-SAT and WFC stay optional generator experiments after the basic solver proves value. |
@@ -266,7 +270,7 @@ solve(spec, snapshot):
 ## 6. Determinism + tests
 
 Pure packing/anchor math is unit-tested with **map-grid fixtures** (input spec +
-canned map -> expected footprints). The fork `validate` call is the only I/O -
+canned map -> expected footprints). The RIMAPI `validate` call is the only I/O -
 mock it in tests. Same fixture discipline as ministers
 (`Src/Tests/Willie/Fixtures/`).
 
@@ -276,7 +280,7 @@ Generator tests should cover:
 - Generator budgets cap output before validation.
 - Dedupe removes near-identical drafts without hiding distinct tradeoffs.
 - Score components explain why the winning candidate beat the losers.
-- Invalid generator outputs are rejected by the shared gates or fork validation.
+- Invalid generator outputs are rejected by the shared gates or RIMAPI validation.
 
 If proposal, option, or solver-trace persistence/wire shapes change, use **no
 compat code; wipe-and-regen on upgrade.**
@@ -299,9 +303,11 @@ compat code; wipe-and-regen on upgrade.**
 
 ## 8. Open questions
 
-- [ ] **Anchor/room detection.** How to resolve `near:kitchen` / `near:stockpile`
-      from RIMAPI reads - room purpose inference is the hard sub-problem. May
-      gate Solver1 if room reads are weak.
+- [x] **Anchor/room detection.** Resolved for Solver1: `WillieBriefing.AnchorInventory`
+      ships room anchors from the briefing derivation, so `near:kitchen` filters by
+      `RoomClass`. Not a Solver1 gate anymore. Remaining gap: `EntryCells`/`RegionId`
+      are stubs until their RIMAPI endpoints land, so target cell falls back to
+      `Centroid` (target-quality, not a blocker).
 - [x] **Packing approach.** Use competing bounded generators behind one shared
       validator/scorer. Start with templates; add rectangle and pattern
       generators before heavier algorithms.
@@ -309,7 +315,7 @@ compat code; wipe-and-regen on upgrade.**
       thresholds keep validation cheap while still producing meaningfully
       different options?
 - [ ] **When does it run?** Per cabinet cycle, or on-demand when a
-      `building_request` appears? Each candidate costs fork `validate` calls at
+      `building_request` appears? Each candidate costs RIMAPI `validate` calls at
       frame cadence - bound the call count.
 - [ ] **Supersession.** Re-run on map change / stale options - does a
       not-yet-applied option survive a fresh snapshot? (ties to advice-schema Q5).

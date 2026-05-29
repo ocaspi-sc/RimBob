@@ -105,6 +105,10 @@ Files (new):
     - `// TODO: BuildingRequest has no Constraints[] field today; derive constraints (double_wall, fire_safe_material) from RoomClass/intent when self-intent feeds the solver (placement-solver.md §2). Solver1 leaves it empty.`
     - `Source` maps from `BuildingRequest.RequestedFrom` (used for cross-link + `concern` mapping); there is no `source_minister` flag on the request.
   - `static PlacementSpec FromBuildingRequest(BuildingRequest req)`.
+- `Src/Common/Advice/MetricValue.cs` (namespace `RimBob.Core.Advice`) — the shared, dashboard-rendered score-trace primitive (design §3.3). Solver1 emits **one** instance per option but defines the full shape now (pre-landing → no compat cost; AGENTS wipe-and-regen):
+  - `MetricValue { string Id, double RawValue, MetricUnit Unit, double Normalized, double Weight, double Contribution, BetterDirection Better }`.
+  - `enum BetterDirection { Lower, Higher }`; `enum MetricUnit { PathTiles, Tiles }` (grows Solver2/3) → wire string via the existing `ToSnakeCase` in `Rules.cs` (`PathTiles` → `"path_tiles"`); do not hardcode the string.
+  - `// TODO: weighted_sum across multiple MetricValues + diversity_bonus is Solver2 (design §3.2). Solver1 emits one component, Weight=1.0, Contribution==Normalized.`
 - `Src/GameStateSync/Dtos/BlueprintGroupDto.cs` (namespace `RimBob.Ingestion.Dtos`, matching `MapReachDto.cs`; use `[property: JsonPropertyName("snake_case")]` on every field like the other DTOs in that folder). Field names below are the **confirmed** fork shapes from `C:\dev\RIMAPI-for-RimBob\Source\RIMAPI\RimworldRestApi\Models\BuilderDtos.cs` (`BlueprintGroupValidateRequestDto`, `BlueprintGroupItemDto`, `BlueprintGroupValidateResultDto`, `BlueprintGroupValidateItemResultDto`, `BlueprintCostDto`, `BlueprintGroupOverlapConflictDto`):
   - Request:
     - `BlueprintGroupValidateRequestDto { int MapId, IReadOnlyList<BlueprintGroupItemDto> Items }`.
@@ -152,15 +156,15 @@ Files (new) — all under namespace `RimBob.Ministers.Willie` (or a `.Placement`
   - Solver1 emits **one** `PlacementDraft` per resolved anchor via a **bounded placement search**: scan outward from `anchor.TargetCell` in deterministic ring order (increasing Chebyshev radius, fixed angular start, capped at `budget.MaxSearchRadius`); the first position where the template AABB is in-bounds (`evidence.InBounds`) and non-overlapping (`evidence.IsOccupied`) becomes the draft. Not "adjacent to centroid" — a real first-fit search.
   - **Orientation:** door on the anchor-facing edge (shortens the freezer→kitchen path the scorer measures); cooler centered on the opposite/exterior wall (hot side vents outside the cold room). Deterministic heuristic only — the generator uses it to *seed* a good draft but never *scores* (design §3.1: generators are proposal sources, not authorities).
   - **Placement-constraint vs hard gate:** the generator reads `evidence` occupancy to *skip* doomed positions during the scan; the shared hard gate in Solver1c step 3 stays the final authority. Distinct concerns — keep both.
-  - Builds a `BlueprintGroup` (`RimBob.Core.Advice` — `{ Label, MapId, Assets }`, `BlueprintAsset` `{ Role, DefName, StuffDefName?, Cell, Rotation }`) and wraps it in a `PlacementDraft` (below) carrying `GeneratorId`, `SourceAnchor`, the door `AccessCells`, `Assumptions`, and a reason summary. This is generation seeding; final ranking is the FORK3 path-cost score in Solver1c step 4.
+  - Builds a `BlueprintGroup` (`RimBob.Core.Advice` — `{ Label, MapId, Assets }`, `BlueprintAsset` `{ Role, DefName, StuffDefName?, Cell, Rotation }`); `MapId` from `evidence.MapId`. **Stuff decision (Solver1):** walls + cooler use one hardcoded `StuffDefName = "Steel"` so validate `Cost` (→ `est_materials`) is deterministic. (`// TODO: stuff selection by availability/cost is Solver3; Solver1 hardcodes steel.`) Wraps it in a `PlacementDraft` (below) carrying `GeneratorId`, `SourceAnchor`, the door `AccessCells`, `Assumptions`, and a reason summary. This is generation seeding; final ranking is the FORK3 path-cost score in Solver1c step 4.
 - `Src/Ministers/Willie/Generators/PlacementDraft.cs` (+ `ResolvedAnchor`, `GenerationBudget`, `RectSize`, `RoomShell`, `DoorSide`, `AnchorMatchReason` — group the small generation types here or in `Placement/GenerationTypes.cs`)
   - `PlacementDraft { string GeneratorId, BlueprintGroup Group, ResolvedAnchor SourceAnchor, IReadOnlyList<MapCell> AccessCells, IReadOnlyList<string> Assumptions, string ReasonSummary }` — design §3.1 needs `generator_id` + assumptions for the trace/dashboard (§7); the plan's earlier "group + anchor + reason" shape dropped both. Define wide now (pre-landing → no compat cost; AGENTS wipe-and-regen).
   - `AccessCells` (door cell + outward neighbour) is emitted here so the Solver1c scorer builds path-cost pairs without re-deriving the door.
   - `ResolvedAnchor { WillieRoomAnchor Anchor, MapPosition TargetCell, AnchorMatchReason MatchReason }`; `AnchorMatchReason { EntryCells, CentroidFallback, NoTargetCell }`.
 - `Src/Ministers/Willie/PlacementEvidence.cs`
   - `static PlacementEvidence Build(MapInfoSnapshot map, BuildingRegistry buildings, IReadOnlyList<ResolvedAnchor> anchors)` — pure factory, **no client**. Solver1c builds it **once** before the generator loop (design §3.4) and passes it read-only to every generator (Solver2 has many generators → no per-generator recompute).
-  - Solver1-minimal precompute: map bounds, occupied cells from `BuildingRecord.Position` (`MapPosition?`), resolved anchors.
-  - **Query API (single source of truth):** `bool InBounds(MapCell)` + `bool IsOccupied(MapCell)` — both the Solver1c hard gate AND the generator placement-scan call these, so bounds/occupancy logic lives in one place.
+  - Solver1-minimal precompute: `int MapId` (from `map.Id`), map bounds, occupied cells from `BuildingRecord.Position` (`MapPosition?`), resolved anchors.
+  - **Query API (single source of truth):** `int MapId { get; }` + `bool InBounds(MapCell)` + `bool IsOccupied(MapCell)` — the hard gate AND the generator placement-scan share the bounds/occupancy pair (logic in one place); the generator reads `MapId` to stamp `BlueprintGroup.MapId` (it gets no MapId otherwise — `Generate(spec, evidence, budget)` has no snapshot).
   - Surface the occupancy approximation as a typed field (e.g. `OccupancyIsPointApprox = true`), not a silent assumption.
     - `// TODO: BuildingRecord.Position is a single cell, not a footprint; occupancy is approximate until per-building footprints land.`
     - `// TODO: terrain affordance + reachability evidence when rimapi-buildability-layers-read / FORK3 ingestion land.`
@@ -170,7 +174,7 @@ Files (new) — all under namespace `RimBob.Ministers.Willie` (or a `.Placement`
 
 - **Pure/impure split (design §4):** `FreezerTemplate`, `SizeFor`, shell enumeration, `AnchorResolver`, and the generator are all **pure** given their inputs — zero deps on `RimApiClient`/port. Path-cost scoring stays in Solver1c step 4. Result: Solver1b is fully unit-testable with no mocks (only the fork `validate` call in Solver1c needs mocking, design §6).
 - **`IRoomTemplate` seam:** keep freezer assumptions out of the generator. `FreezerTemplate` implements an `IRoomTemplate` (`RoomShell Build(RectSize, DoorSide)` + fixtures); Solver3 adds hospital/bedroom/workshop templates without editing `TemplateAnchoredGenerator`. Ship one impl, shape the seam — do not build the other templates now.
-- **Cell-type sprawl (tech-debt flag):** three cell shapes now coexist — `MapCell` (`RimBob.Core.Advice`, x/z), `MapCellDto` (`RimBob.Ingestion.Dtos`, x/z), `MapPosition` (`RimBob.Core.Aggregates`, x/y/z). Generation crosses all three (emit `MapCell`, evidence `MapPosition`, validate DTO `MapCellDto`). Can't unify (wire shapes differ) but centralize the `ToCell`/`ToPosition` converters in one helper instead of scattering ad-hoc `new MapCell(p.X, p.Z)` at every boundary.
+- **Cell-type sprawl (tech-debt flag):** three cell shapes now coexist — `MapCell` (`RimBob.Core.Advice`, x/z), `MapCellDto` (`RimBob.Ingestion.Dtos`, x/z), `MapPosition` (`RimBob.Core.Aggregates`, x/y/z). Generation crosses all three (emit `MapCell`, evidence `MapPosition`, validate DTO `MapCellDto`). Can't unify (wire shapes differ) but centralize the `ToCell`/`ToPosition` converters in one helper instead of scattering ad-hoc `new MapCell(p.X, p.Z)` at every boundary. The Solver1c scorer + `IPathCostProbe` port are the second consumer (`MapCell` → port → `MapCellDto`) — land the helper in Solver1b so scoring reuses it.
 
 Tests (new), under `Src/Tests/Willie/` (namespace `RimBob.Tests.Willie`):
 
@@ -185,22 +189,57 @@ Risk: **medium.** The anchor/footprint/placement-search logic is the substance o
 Files (new) — namespace `RimBob.Ministers.Willie`:
 
 - `Src/Ministers/Willie/PlacementSolver.cs`
-  - `public async Task<PlacementResult> SolveAsync(PlacementSpec spec, WillieBriefing briefing, ColonyState colonyState, CancellationToken ct = default)`. (`ColonyState` is the live aggregate root in `RimBob.State`; read `colonyState.Buildings.Value.Buildings` for occupancy. The Ministers project already references State — see `Chef.cs`.)
-  - **Dependency + layering decision (resolve before coding Solver1c):** `PostBlueprintGroupValidateAsync` and `PostPathCostBatchAsync` live on `RimApiClient` in `RimBob.Ingestion` (`Src/GameStateSync/RimBob.Ingestion.csproj`). `RimBob.Ministers.csproj` does **not** reference Ingestion today, and **no minister touches `RimApiClient`** — ministers consume derived briefings / `ColonyState`, not the raw HTTP client. Do **not** wire `RimApiClient` straight into `PlacementSolver`: that crosses the layer boundary and forces `PlacementSolverTests` to mock HTTP. Instead define a narrow port interface (e.g. `IPlacementValidator` / `IPathCostProbe` in `RimBob.Core` or a State-side service), implement it over `RimApiClient` in the composition root, and inject the port. Then tests mock the port and Ministers stays off the wire. If a direct `RimBob.Ministers → RimBob.Ingestion` project ref is chosen instead, call it out explicitly and justify the boundary break.
+  - `public async Task<PlacementResult> SolveAsync(PlacementSpec spec, WillieBriefing briefing, ColonyState colonyState, CancellationToken ct = default)`. (`ColonyState` is the live aggregate root in `RimBob.State`; the Ministers project already references State — see `Chef.cs`.)
+  - **Evidence inputs (source explicitly):** `map = colonyState.Map.Value` (`MapInfoSnapshot`; `map.Id` is the `MapId` threaded into `BlueprintGroup` + validate + path-cost), `buildings = colonyState.Buildings.Value` (`BuildingRegistry`, occupancy from `BuildingRecord.Position`), anchors from `briefing.AnchorInventory` via `AnchorResolver`. Feed all three to `PlacementEvidence.Build(map, buildings, anchors)`.
+  - **Dependency + layering decision (RESOLVED — port in Core, impl in Host):** `PostBlueprintGroupValidateAsync` and `PostPathCostBatchAsync` live on `RimApiClient` in `RimBob.Ingestion` (`Src/GameStateSync/RimBob.Ingestion.csproj`). `RimBob.Ministers.csproj` does **not** reference Ingestion (refs Core/State/Coord/LLM/Knowledge), and **no minister touches `RimApiClient`** — ministers consume derived briefings / `ColonyState`, not the raw HTTP client. **Do not** add a `Ministers → Ingestion` ref. Resolution:
+    - **Port interfaces in `RimBob.Core`:** `IPlacementValidator` (wraps group-validate) + `IPathCostProbe` (wraps path-cost batch; full shape in the *Scoring* subsection). Ministers already refs Core, so `PlacementSolver` takes both via ctor injection; tests mock the ports and Ministers stays off the wire.
+    - **Port impls in `RimBob.Host`** (the composition root, `Src/ApiHost/Program.cs`): Host is the only project that refs **both** Ingestion (`RimApiClient`) and Ministers, so the impls live here — they translate `MapCell ↔ MapCellDto` and call `RimApiClient`. Register the impls + `PlacementSolver` in `Program.cs` next to the existing `AddHttpClient<RimApiClient>` / `AddSingleton` block (~`Program.cs:61`); inject `PlacementSolver` into `MinisterOfWillie`/`Rules` at the eventual wire-in.
   - Pipeline (Solver1 subset of [`placement-solver.md`](placement-solver.md) §3):
     1. `AnchorResolver.ResolveNear`.
     2. `TemplateAnchoredGenerator.Generate` → drafts.
     3. **Hard gates:** out-of-bounds (vs `MapInfoSnapshot.Size` bounds), occupied-cell overlap (from `PlacementEvidence`). Reject before any fork call.
-    4. **Walkable score:** build path-cost pairs from each surviving draft's `AccessCells` to each `ResolvedAnchor.TargetCell` (the EntryCells-vs-Centroid choice and the `NoTargetCell` skip were already made in Solver1b). Call `PostPathCostBatchAsync` with `tier:"region"`, `mode:"pass_doors"`, and `pe_mode:"on_cell"`; rank by minimum reachable `cost`. Keep `MapDistance.Manhattan` only as a no-RIMAPI/no-valid-path fallback trace. Pick best 1.
+    4. **Walkable score (delegated to `IPlacementScorer` — full contract in the *Scoring* subsection below):** `SolveAsync` builds the path-cost pairs — each surviving draft's **outward** `AccessCells` → that draft's own `SourceAnchor.TargetCell` (drafts are per-anchor from Solver1b, so score to the draft's anchor, **not** all anchors; score from the outward cell, **not** the door cell which is part of the unbuilt group) — then calls the injected `IPathCostProbe.BatchAsync` (the port impl issues `PostPathCostBatchAsync` with `tier:"region"`, `mode:"pass_doors"`, `pe_mode:"on_cell"`; the solver never touches `RimApiClient` directly, per the dependency decision above). It wraps the index-aligned results in `PathCostLookup` and hands them to the **pure** scorer, which ranks by per-draft min cost over **reachable** pairs only and picks best 1. Probe **unavailable** → `MapDistance.Manhattan` fallback (degraded trace, unit `tiles`); probe says **unreachable** → no-fit (matches the flowchart `Score → no reachable path → NoFit`; never Manhattan-rescue a real no-path).
     5. **Validate:** `PostBlueprintGroupValidateAsync` on the single survivor; drop on `!CanPlaceAll` or any `OverlapConflicts`.
     6. **Assemble:** aggregate the response `Cost` (`BlueprintCostDto` `{ DefName, Count }`) into `IReadOnlyList<MaterialEstimate>` (`{ def_name, count }`); build one `AdviceOption` (`{ Id, Label, Summary, BlueprintGroup, EstimatedMaterials, TradeoffNote? }`) and attach it to an `AdviceItem` (`Src/Common/Advice/AdviceItem.cs`, `RimBob.Core.Advice`) via its `Options` list, with the concern derived from `WillieConcern.ThermalControl` through the existing `ToSnakeCase` helper in `Rules.cs` (→ `"thermal_control"`) — reuse the enum, do not hardcode the wire string.
     7. **No-fit fallback:** return a `PlacementResult` flagged no-fit so the caller emits `material_bottleneck` / `stalled_builds` / prose instead (Rules owns that branch; Solver1 just signals it).
 - `Src/Ministers/Willie/PlacementResult.cs`
-  - `{ IReadOnlyList<AdviceOption> Options, PlacementTrace Trace, NoFitReason? NoFit }`. Keep `Draftable` / `PlacementValid` / `MaterialsReady` / `ApplyReady` as typed status fields per the design §3.2.
+  - `{ IReadOnlyList<AdviceOption> Options, PlacementTrace Trace, NoFitReason? NoFit }`. Keep `Draftable` / `PlacementValid` / `MaterialsReady` / `ApplyReady` as typed status fields per the design §3.2. `Trace` is the `PlacementTrace` defined in the *Scoring* subsection below.
+
+#### Scoring — step 4 detail  *(the §3.2–3.4 model; Solver1 ships the one-component subset)*
+
+The parent design carries a weighted multi-component score vector (§3.2) + a `MetricValue` trace (§3.3). Solver1 has **one** component (walkable distance) and **one** survivor, so it ships the seam + trace shape but ranks on raw cost. Files (new), namespace `RimBob.Ministers.Willie` unless noted:
+
+- `Src/Ministers/Willie/Placement/IPlacementScorer.cs`
+  - `string Id { get; }` (`"walkable_path_cost"`) + `PlacementTrace Score(IReadOnlyList<PlacementDraft> gatedDrafts, PathCostLookup pathCosts)`.
+  - **Pure** — no I/O, no port. Mirrors `IPlacementGenerator`. Design §3.2: the scorer is the shared authority; generators never score. Solver2 swaps the weighted multi-component vector + diversity behind this seam without editing `SolveAsync`.
+- `Src/Ministers/Willie/Placement/WalkablePathCostScorer.cs` — the one Solver1 impl (algorithm below).
+- `Src/Ministers/Willie/Placement/PathCostLookup.cs`
+  - Pure value wrapping the probe results **index-aligned** to the request pairs, plus `bool ProbeAvailable` and the `pairIndex → draftKey` map. Built by `SolveAsync` from `IPathCostProbe.BatchAsync`; the scorer reads it with no knowledge of HTTP. Results match drafts **by index**, never by reverse-matching cell coordinates (the same access cell can recur across drafts).
+- `Src/Ministers/Willie/PlacementTrace.cs` (co-located with `PlacementResult.cs`)
+  - `PlacementTrace { string ScorerId, ScoreMode Mode, IReadOnlyList<ScoredDraftTrace> Candidates, string? SelectedDraftKey }`.
+  - `ScoredDraftTrace { string DraftKey, HardGateOutcome Gate, IReadOnlyList<MetricValue> Metrics, double Score, bool Selected }`.
+  - `enum ScoreMode { PathCost, ManhattanFallback }`; `HardGateOutcome` = typed gate result (`Passed` | reason enum `OutOfBounds` / `Occupied` / `NoReachablePath`). `MetricValue` is the Core type from Solver1a.
+  - **Stays in the Willie minister** (not Core): it aggregates solver-internal `HardGateOutcome` + draft keys. Only `MetricValue` is Core (generic dashboard primitive); `ScoredDraftTrace` (Willie) → `MetricValue` (Core) is an allowed Willie→Core dep.
+
+Port (the concrete shape the §1c dependency decision asks for) — `RimBob.Core`:
+
+- `IPathCostProbe { bool IsAvailable { get; } Task<IReadOnlyList<PathCostPairResult>> BatchAsync(int mapId, IReadOnlyList<(MapCell From, MapCell To)> pairs, CancellationToken ct = default); }`
+  - `PathCostPairResult { bool Reachable, int Cost }` — **index-aligned** to the input pairs.
+  - Returns **domain** types (`MapCell`), not `MapCellDto`, so Ministers never sees Ingestion DTOs. The composition-root impl translates `MapCell ↔ MapCellDto` and calls `RimApiClient.PostPathCostBatchAsync`. Inject this (not `RimApiClient`) into `PlacementSolver`.
+
+**Algorithm (`WalkablePathCostScorer.Score`):**
+
+1. **Per-draft cost** = `min { r.Cost : r ∈ draft's pairs, r.Reachable }`. **Filter `Reachable` first** — an unreachable pair's `cost` is meaningless and a stray `0` would win falsely (latent bug if skipped).
+2. **No reachable pair, probe available** → draft excluded from ranking, emits a `ScoredDraftTrace` with `Gate = NoReachablePath`. All drafts fail → no-fit. **Never** Manhattan-rescue an unreachable draft (hides a real no-path).
+3. **Probe unavailable** (`!ProbeAvailable`) → `MapDistance.Manhattan(outwardCell, targetCell)` over the same pairs; `Mode = ManhattanFallback`, metric `Unit = Tiles`, add a `missing_data_coverage` marker. Only Manhattan path — degraded, not a no-path signal.
+4. **Normalize (trace-only in Solver1):** min-max across the ranked set, `Better = Lower`; **singleton → `Normalized = 1.0`** (no divide-by-zero, no magic scale constant). Solver1 ranks on **raw** min cost; `Normalized` is descriptive. Weighted-sum-drives-decision = Solver2.
+5. **Deterministic tie-break** (design §6): total order `cost asc → SourceAnchor.RoomId → footprint origin (z, x) → GeneratorId`. Pick best 1; mark `Selected`.
+6. **One metric per draft:** id `"freezer_to_kitchen_distance"`, `Unit = PathTiles` (primary) / `Tiles` (fallback), `Better = Lower`, `Weight = 1.0`, `Contribution = Normalized`. Do **not** also emit a generic `path_cost` metric — design §3.3 lists both, Solver1 emits the single adjacency one.
 
 Tests (new):
 
-- `Src/Tests/Willie/PlacementSolverTests.cs` (namespace `RimBob.Tests.Willie`) — fixture map + spec → one validated option (mock the group-validate call); occupied-anchor → no-fit; `!CanPlaceAll` → no-fit.
+- `Src/Tests/Willie/PlacementSolverTests.cs` (namespace `RimBob.Tests.Willie`) — fixture map + spec → one validated option (mock the group-validate call + the `IPathCostProbe` port); occupied-anchor → no-fit; **no-reachable-path → no-fit** (third no-fit case, matches flowchart); `!CanPlaceAll` → no-fit.
+- `Src/Tests/Willie/WalkablePathCostScorerTests.cs` (namespace `RimBob.Tests.Willie`) — **pure, no HTTP mock** (canned `PathCostLookup`): min over reachable pairs; unreachable `cost=0` pair does **not** win (reachable filter); singleton `Normalized == 1.0`; tie-break is a total + stable order; `!ProbeAvailable` → `ManhattanFallback` mode + `Tiles` unit; all-unreachable → no candidate selected.
 
 Docs to touch: none beyond Solver1a (design stays in `placement-solver.md`).
 
@@ -211,8 +250,8 @@ Risk: **medium.** Orchestration + the one fork call.
 Files (new), namespace `RimBob.Tests.Willie`:
 
 - `Src/Tests/Willie/PlacementDeterminismTests.cs`
-  - Same spec + same snapshot + same seed → identical draft set + identical option ranking (design §6).
-  - Score trace carries `raw_value` + `unit` (`path_tiles` for FORK3 path-cost, `tiles` only for Manhattan fallback) + `normalized` for `freezer_to_kitchen_distance` (design §3.3).
+  - Same spec + same snapshot + same seed → identical draft set + identical option ranking, incl. the scoring tie-break total order (`cost → RoomId → origin → GeneratorId`) (design §6).
+  - `PlacementTrace` carries a `MetricValue` with `RawValue` + `Unit` (`PathTiles` for FORK3 path-cost, `Tiles` only for Manhattan fallback) + `Normalized` for `freezer_to_kitchen_distance`, serialized snake_case via `ToSnakeCase` (design §3.3).
 - `Src/Tests/Willie/Fixtures/` — canned map-grid + spec JSON (AGENTS: fixtures live under `Src/Tests/<MinisterName>/Fixtures/`).
 
 Risk: **low.** Pure test addition.
