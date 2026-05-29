@@ -74,8 +74,8 @@ Dashboard v2 has four stable regions:
 The header keeps the running-version chips directly after the
 `RimBob Dashboard v2` title and the transient status pills right-aligned in the
 same top band when width allows:
-monotonic running build version, build datetime, dashboard asset state, and the
-served Host root/process tooltip. This is the first
+monotonic running build version, build datetime, and the served Host
+root/process tooltip. This is the first
 stale-host/stale-asset check because it answers which code and UI bundle the
 player is actually reading. The header status pills distinguish separate
 surfaces: `Host API` is the latest `/api/status` HTTP poll, `RIMAPI` is whether
@@ -98,8 +98,8 @@ compact label. Header marker tone semantics are consistent:
 green means confirmed healthy/live, blue means configured/loaded/running but
 not a success signal, yellow means degraded or attention-needed, red means a
 current failure, and gray means unknown/checking/last-known/not-current. The
-dashboard asset marker should read as a state such as `UI loaded`; bundle
-hashes belong in the tooltip. Every header marker/chip should carry a terse
+dashboard asset fingerprints belong in SYSTEM/runtime details, not the title
+band. Every header marker/chip should carry a terse
 explanatory tooltip with the current/last value. Avoid normal header tooltips
 that are just route names, implementation URLs, or raw field names; those
 details belong in SYSTEM/debug panels.

@@ -35,7 +35,6 @@ export function DashboardHeader({
   const streamState = deriveStreamState(stream);
   const versionMarker = version ? `RimBob ${version.running_version}` : 'RimBob checking';
   const buildMarker = version ? `built ${formatBuildDateTime(version.build_datetime)}` : 'built checking';
-  const assetMarker = version ? `UI ${dashboardAssetLabel(version.dashboard_asset_version)}` : 'UI checking';
   const rootMarker = runtimeRoot ? `root ${shortPath(runtimeRoot, 3)}` : 'root checking';
 
   return (
@@ -50,9 +49,6 @@ export function DashboardHeader({
             </span>
             <span title={version ? `Host build time: ${formatBuildDateTime(version.build_datetime)}.` : 'Waiting for the Host build time.'}>
               {buildMarker}
-            </span>
-            <span title={version ? dashboardAssetTooltip(version.dashboard_asset_version) : 'Waiting for the dashboard bundle fingerprint.'}>
-              {assetMarker}
             </span>
             <span title={runtimeTooltip(runtimeRoot, hostProcessPath)}>
               {rootMarker}
@@ -357,22 +353,6 @@ function formatBuildDateTime(value: string): string {
   if (Number.isNaN(date.getTime())) return value;
 
   return date.toLocaleString();
-}
-
-function dashboardAssetLabel(assetVersion: string): string {
-  if (assetVersion === 'missing' || assetVersion === 'unknown') return assetVersion;
-
-  return 'loaded';
-}
-
-function dashboardAssetTooltip(assetVersion: string): string {
-  if (assetVersion === 'missing') return 'Dashboard bundle fingerprint is missing.';
-  if (assetVersion === 'unknown') return 'Dashboard bundle fingerprint is unknown.';
-
-  const assets = assetVersion.split('|');
-  const jsAsset = assets.find(asset => asset.endsWith('.js')) ?? 'unknown';
-  const cssAsset = assets.find(asset => asset.endsWith('.css')) ?? 'unknown';
-  return `Dashboard UI bundle loaded. JS fingerprint: ${jsAsset}. CSS fingerprint: ${cssAsset}.`;
 }
 
 function runtimeTooltip(runtimeRoot: string | null, hostProcessPath: string | null): string {
