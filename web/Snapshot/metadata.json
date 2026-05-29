@@ -1,0 +1,1061 @@
+{
+  "captured_at": "2026-05-29T23:17:10.813Z",
+  "snapshot_id": "20260530-0217",
+  "dashboard_url": "http://localhost:5012/",
+  "index_path": "C:\\Users\\orca\\.codex\\worktrees\\ba59\\RimBob\\web\\Snapshot\\index.html",
+  "entry_page": {
+    "scope": "mayor",
+    "view": "advice",
+    "label": "Mayor / Advice",
+    "source_relative_path": "pages/mayor/advice.html"
+  },
+  "health": {
+    "runtime_root": "C:\\Users\\orca\\.codex\\worktrees\\ba59\\RimBob",
+    "host_process_path": "C:\\Users\\orca\\.codex\\worktrees\\ba59\\RimBob\\Src\\ApiHost\\bin\\Debug\\net9.0\\RimBob.Host.exe",
+    "running_version": "0.0.1001",
+    "dashboard_asset_version": "index-D3ImNpph.js|index-dsf7fdvF.css"
+  },
+  "page_count": 86,
+  "static_navigation": {
+    "scope_rail_links": true,
+    "view_tab_links": true
+  },
+  "image_counts": {
+    "embedded": 4334,
+    "failed": 18
+  },
+  "pages": [
+    {
+      "scope": "system",
+      "view": "runtime",
+      "label": "SYSTEM / Runtime",
+      "status": "live",
+      "url": "http://localhost:5012/?scope=system&view=runtime",
+      "relative_path": "pages/system/runtime.html",
+      "image_counts": {
+        "embedded": 36,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "system",
+      "view": "connectivity",
+      "label": "SYSTEM / Connectivity",
+      "status": "live",
+      "url": "http://localhost:5012/?scope=system&view=connectivity",
+      "relative_path": "pages/system/connectivity.html",
+      "image_counts": {
+        "embedded": 45,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "system",
+      "view": "storage",
+      "label": "SYSTEM / Storage",
+      "status": "live",
+      "url": "http://localhost:5012/?scope=system&view=storage",
+      "relative_path": "pages/system/storage.html",
+      "image_counts": {
+        "embedded": 36,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "system",
+      "view": "coverage",
+      "label": "SYSTEM / Coverage",
+      "status": "live",
+      "url": "http://localhost:5012/?scope=system&view=coverage",
+      "relative_path": "pages/system/coverage.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "system",
+      "view": "events",
+      "label": "SYSTEM / Events",
+      "status": "live",
+      "url": "http://localhost:5012/?scope=system&view=events",
+      "relative_path": "pages/system/events.html",
+      "image_counts": {
+        "embedded": 39,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "info",
+      "view": "overview",
+      "label": "INFO / Overview",
+      "status": "reference",
+      "url": "http://localhost:5012/?scope=info&view=overview",
+      "relative_path": "pages/info/overview.html",
+      "image_counts": {
+        "embedded": 45,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "info",
+      "view": "glossary",
+      "label": "INFO / Glossary",
+      "status": "reference",
+      "url": "http://localhost:5012/?scope=info&view=glossary",
+      "relative_path": "pages/info/glossary.html",
+      "image_counts": {
+        "embedded": 50,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "info",
+      "view": "contracts",
+      "label": "INFO / Contracts",
+      "status": "reference",
+      "url": "http://localhost:5012/?scope=info&view=contracts",
+      "relative_path": "pages/info/contracts.html",
+      "image_counts": {
+        "embedded": 41,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "info",
+      "view": "data_sources",
+      "label": "INFO / Data Sources",
+      "status": "reference",
+      "url": "http://localhost:5012/?scope=info&view=data_sources",
+      "relative_path": "pages/info/data_sources.html",
+      "image_counts": {
+        "embedded": 41,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "info",
+      "view": "algorithms",
+      "label": "INFO / Algorithms",
+      "status": "reference",
+      "url": "http://localhost:5012/?scope=info&view=algorithms",
+      "relative_path": "pages/info/algorithms.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "analytics",
+      "view": "session",
+      "label": "ANALYTICS / Session",
+      "status": "live",
+      "url": "http://localhost:5012/?scope=analytics&view=session",
+      "relative_path": "pages/analytics/session.html",
+      "image_counts": {
+        "embedded": 44,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "analytics",
+      "view": "colony",
+      "label": "ANALYTICS / Colony",
+      "status": "live",
+      "url": "http://localhost:5012/?scope=analytics&view=colony",
+      "relative_path": "pages/analytics/colony.html",
+      "image_counts": {
+        "embedded": 44,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "analytics",
+      "view": "advice",
+      "label": "ANALYTICS / Advice",
+      "status": "live",
+      "url": "http://localhost:5012/?scope=analytics&view=advice",
+      "relative_path": "pages/analytics/advice.html",
+      "image_counts": {
+        "embedded": 44,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "analytics",
+      "view": "sse",
+      "label": "ANALYTICS / SSE",
+      "status": "live",
+      "url": "http://localhost:5012/?scope=analytics&view=sse",
+      "relative_path": "pages/analytics/sse.html",
+      "image_counts": {
+        "embedded": 47,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "analytics",
+      "view": "candidates",
+      "label": "ANALYTICS / Candidates",
+      "status": "live",
+      "url": "http://localhost:5012/?scope=analytics&view=candidates",
+      "relative_path": "pages/analytics/candidates.html",
+      "image_counts": {
+        "embedded": 40,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "dev_blog",
+      "view": "features",
+      "label": "DEV BLOG / Features",
+      "status": "live",
+      "url": "http://localhost:5012/?scope=dev_blog&view=features",
+      "relative_path": "pages/dev_blog/features.html",
+      "image_counts": {
+        "embedded": 256,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "dev_blog",
+      "view": "churn",
+      "label": "DEV BLOG / Churn",
+      "status": "live",
+      "url": "http://localhost:5012/?scope=dev_blog&view=churn",
+      "relative_path": "pages/dev_blog/churn.html",
+      "image_counts": {
+        "embedded": 37,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "dev_blog",
+      "view": "commits",
+      "label": "DEV BLOG / Commits",
+      "status": "live",
+      "url": "http://localhost:5012/?scope=dev_blog&view=commits",
+      "relative_path": "pages/dev_blog/commits.html",
+      "image_counts": {
+        "embedded": 39,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "dev_blog",
+      "view": "topics",
+      "label": "DEV BLOG / Topics",
+      "status": "live",
+      "url": "http://localhost:5012/?scope=dev_blog&view=topics",
+      "relative_path": "pages/dev_blog/topics.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "dev_blog",
+      "view": "suggestions",
+      "label": "DEV BLOG / Suggestions",
+      "status": "live",
+      "url": "http://localhost:5012/?scope=dev_blog&view=suggestions",
+      "relative_path": "pages/dev_blog/suggestions.html",
+      "image_counts": {
+        "embedded": 42,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "mayor",
+      "view": "prompt",
+      "label": "Mayor / System Prompt",
+      "status": "live",
+      "url": "http://localhost:5012/?scope=mayor&view=prompt",
+      "relative_path": "pages/mayor/prompt.html",
+      "image_counts": {
+        "embedded": 166,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "mayor",
+      "view": "briefing",
+      "label": "Mayor / Briefing",
+      "status": "live",
+      "url": "http://localhost:5012/?scope=mayor&view=briefing",
+      "relative_path": "pages/mayor/briefing.html",
+      "image_counts": {
+        "embedded": 65,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "mayor",
+      "view": "rag",
+      "label": "Mayor / RAG",
+      "status": "live",
+      "url": "http://localhost:5012/?scope=mayor&view=rag",
+      "relative_path": "pages/mayor/rag.html",
+      "image_counts": {
+        "embedded": 44,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "mayor",
+      "view": "rules",
+      "label": "Mayor / Rules",
+      "status": "live",
+      "url": "http://localhost:5012/?scope=mayor&view=rules",
+      "relative_path": "pages/mayor/rules.html",
+      "image_counts": {
+        "embedded": 48,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "mayor",
+      "view": "raw_llm",
+      "label": "Mayor / Raw LLM Output",
+      "status": "live",
+      "url": "http://localhost:5012/?scope=mayor&view=raw_llm",
+      "relative_path": "pages/mayor/raw_llm.html",
+      "image_counts": {
+        "embedded": 54,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "mayor",
+      "view": "infographics",
+      "label": "Mayor / Infographics",
+      "status": "live",
+      "url": "http://localhost:5012/?scope=mayor&view=infographics",
+      "relative_path": "pages/mayor/infographics.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "mayor",
+      "view": "advice",
+      "label": "Mayor / Advice",
+      "status": "live",
+      "url": "http://localhost:5012/?scope=mayor&view=advice",
+      "relative_path": "pages/mayor/advice.html",
+      "image_counts": {
+        "embedded": 82,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "food",
+      "view": "prompt",
+      "label": "Chef / System Prompt",
+      "status": "live",
+      "url": "http://localhost:5012/?scope=food&view=prompt",
+      "relative_path": "pages/food/prompt.html",
+      "image_counts": {
+        "embedded": 302,
+        "failed": 18
+      }
+    },
+    {
+      "scope": "food",
+      "view": "briefing",
+      "label": "Chef / Briefing",
+      "status": "live",
+      "url": "http://localhost:5012/?scope=food&view=briefing",
+      "relative_path": "pages/food/briefing.html",
+      "image_counts": {
+        "embedded": 79,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "food",
+      "view": "rag",
+      "label": "Chef / RAG",
+      "status": "live",
+      "url": "http://localhost:5012/?scope=food&view=rag",
+      "relative_path": "pages/food/rag.html",
+      "image_counts": {
+        "embedded": 41,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "food",
+      "view": "rules",
+      "label": "Chef / Rules",
+      "status": "live",
+      "url": "http://localhost:5012/?scope=food&view=rules",
+      "relative_path": "pages/food/rules.html",
+      "image_counts": {
+        "embedded": 48,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "food",
+      "view": "raw_llm",
+      "label": "Chef / Raw LLM Output",
+      "status": "live",
+      "url": "http://localhost:5012/?scope=food&view=raw_llm",
+      "relative_path": "pages/food/raw_llm.html",
+      "image_counts": {
+        "embedded": 39,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "food",
+      "view": "infographics",
+      "label": "Chef / Infographics",
+      "status": "live",
+      "url": "http://localhost:5012/?scope=food&view=infographics",
+      "relative_path": "pages/food/infographics.html",
+      "image_counts": {
+        "embedded": 49,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "food",
+      "view": "advice",
+      "label": "Chef / Advice",
+      "status": "live",
+      "url": "http://localhost:5012/?scope=food&view=advice",
+      "relative_path": "pages/food/advice.html",
+      "image_counts": {
+        "embedded": 101,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "willie",
+      "view": "briefing",
+      "label": "Willie / Briefing",
+      "status": "live",
+      "url": "http://localhost:5012/?scope=willie&view=briefing",
+      "relative_path": "pages/willie/briefing.html",
+      "image_counts": {
+        "embedded": 82,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "willie",
+      "view": "rules",
+      "label": "Willie / Rules",
+      "status": "live",
+      "url": "http://localhost:5012/?scope=willie&view=rules",
+      "relative_path": "pages/willie/rules.html",
+      "image_counts": {
+        "embedded": 44,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "willie",
+      "view": "advice",
+      "label": "Willie / Advice",
+      "status": "live",
+      "url": "http://localhost:5012/?scope=willie&view=advice",
+      "relative_path": "pages/willie/advice.html",
+      "image_counts": {
+        "embedded": 51,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "defense",
+      "view": "prompt",
+      "label": "Defense / System Prompt",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=defense&view=prompt",
+      "relative_path": "pages/defense/prompt.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "defense",
+      "view": "briefing",
+      "label": "Defense / Briefing",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=defense&view=briefing",
+      "relative_path": "pages/defense/briefing.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "defense",
+      "view": "rag",
+      "label": "Defense / RAG",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=defense&view=rag",
+      "relative_path": "pages/defense/rag.html",
+      "image_counts": {
+        "embedded": 41,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "defense",
+      "view": "rules",
+      "label": "Defense / Rules",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=defense&view=rules",
+      "relative_path": "pages/defense/rules.html",
+      "image_counts": {
+        "embedded": 48,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "defense",
+      "view": "raw_llm",
+      "label": "Defense / Raw LLM Output",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=defense&view=raw_llm",
+      "relative_path": "pages/defense/raw_llm.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "defense",
+      "view": "infographics",
+      "label": "Defense / Infographics",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=defense&view=infographics",
+      "relative_path": "pages/defense/infographics.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "defense",
+      "view": "advice",
+      "label": "Defense / Advice",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=defense&view=advice",
+      "relative_path": "pages/defense/advice.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "welfare",
+      "view": "prompt",
+      "label": "Welfare / System Prompt",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=welfare&view=prompt",
+      "relative_path": "pages/welfare/prompt.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "welfare",
+      "view": "briefing",
+      "label": "Welfare / Briefing",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=welfare&view=briefing",
+      "relative_path": "pages/welfare/briefing.html",
+      "image_counts": {
+        "embedded": 46,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "welfare",
+      "view": "rag",
+      "label": "Welfare / RAG",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=welfare&view=rag",
+      "relative_path": "pages/welfare/rag.html",
+      "image_counts": {
+        "embedded": 41,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "welfare",
+      "view": "rules",
+      "label": "Welfare / Rules",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=welfare&view=rules",
+      "relative_path": "pages/welfare/rules.html",
+      "image_counts": {
+        "embedded": 48,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "welfare",
+      "view": "raw_llm",
+      "label": "Welfare / Raw LLM Output",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=welfare&view=raw_llm",
+      "relative_path": "pages/welfare/raw_llm.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "welfare",
+      "view": "infographics",
+      "label": "Welfare / Infographics",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=welfare&view=infographics",
+      "relative_path": "pages/welfare/infographics.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "welfare",
+      "view": "advice",
+      "label": "Welfare / Advice",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=welfare&view=advice",
+      "relative_path": "pages/welfare/advice.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "medical",
+      "view": "prompt",
+      "label": "Medical / System Prompt",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=medical&view=prompt",
+      "relative_path": "pages/medical/prompt.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "medical",
+      "view": "briefing",
+      "label": "Medical / Briefing",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=medical&view=briefing",
+      "relative_path": "pages/medical/briefing.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "medical",
+      "view": "rag",
+      "label": "Medical / RAG",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=medical&view=rag",
+      "relative_path": "pages/medical/rag.html",
+      "image_counts": {
+        "embedded": 41,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "medical",
+      "view": "rules",
+      "label": "Medical / Rules",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=medical&view=rules",
+      "relative_path": "pages/medical/rules.html",
+      "image_counts": {
+        "embedded": 48,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "medical",
+      "view": "raw_llm",
+      "label": "Medical / Raw LLM Output",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=medical&view=raw_llm",
+      "relative_path": "pages/medical/raw_llm.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "medical",
+      "view": "infographics",
+      "label": "Medical / Infographics",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=medical&view=infographics",
+      "relative_path": "pages/medical/infographics.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "medical",
+      "view": "advice",
+      "label": "Medical / Advice",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=medical&view=advice",
+      "relative_path": "pages/medical/advice.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "research",
+      "view": "prompt",
+      "label": "Research / System Prompt",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=research&view=prompt",
+      "relative_path": "pages/research/prompt.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "research",
+      "view": "briefing",
+      "label": "Research / Briefing",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=research&view=briefing",
+      "relative_path": "pages/research/briefing.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "research",
+      "view": "rag",
+      "label": "Research / RAG",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=research&view=rag",
+      "relative_path": "pages/research/rag.html",
+      "image_counts": {
+        "embedded": 41,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "research",
+      "view": "rules",
+      "label": "Research / Rules",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=research&view=rules",
+      "relative_path": "pages/research/rules.html",
+      "image_counts": {
+        "embedded": 48,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "research",
+      "view": "raw_llm",
+      "label": "Research / Raw LLM Output",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=research&view=raw_llm",
+      "relative_path": "pages/research/raw_llm.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "research",
+      "view": "infographics",
+      "label": "Research / Infographics",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=research&view=infographics",
+      "relative_path": "pages/research/infographics.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "research",
+      "view": "advice",
+      "label": "Research / Advice",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=research&view=advice",
+      "relative_path": "pages/research/advice.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "industry",
+      "view": "prompt",
+      "label": "Industry / System Prompt",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=industry&view=prompt",
+      "relative_path": "pages/industry/prompt.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "industry",
+      "view": "briefing",
+      "label": "Industry / Briefing",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=industry&view=briefing",
+      "relative_path": "pages/industry/briefing.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "industry",
+      "view": "rag",
+      "label": "Industry / RAG",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=industry&view=rag",
+      "relative_path": "pages/industry/rag.html",
+      "image_counts": {
+        "embedded": 41,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "industry",
+      "view": "rules",
+      "label": "Industry / Rules",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=industry&view=rules",
+      "relative_path": "pages/industry/rules.html",
+      "image_counts": {
+        "embedded": 48,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "industry",
+      "view": "raw_llm",
+      "label": "Industry / Raw LLM Output",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=industry&view=raw_llm",
+      "relative_path": "pages/industry/raw_llm.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "industry",
+      "view": "infographics",
+      "label": "Industry / Infographics",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=industry&view=infographics",
+      "relative_path": "pages/industry/infographics.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "industry",
+      "view": "advice",
+      "label": "Industry / Advice",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=industry&view=advice",
+      "relative_path": "pages/industry/advice.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "economy",
+      "view": "prompt",
+      "label": "Economy / System Prompt",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=economy&view=prompt",
+      "relative_path": "pages/economy/prompt.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "economy",
+      "view": "briefing",
+      "label": "Economy / Briefing",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=economy&view=briefing",
+      "relative_path": "pages/economy/briefing.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "economy",
+      "view": "rag",
+      "label": "Economy / RAG",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=economy&view=rag",
+      "relative_path": "pages/economy/rag.html",
+      "image_counts": {
+        "embedded": 41,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "economy",
+      "view": "rules",
+      "label": "Economy / Rules",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=economy&view=rules",
+      "relative_path": "pages/economy/rules.html",
+      "image_counts": {
+        "embedded": 48,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "economy",
+      "view": "raw_llm",
+      "label": "Economy / Raw LLM Output",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=economy&view=raw_llm",
+      "relative_path": "pages/economy/raw_llm.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "economy",
+      "view": "infographics",
+      "label": "Economy / Infographics",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=economy&view=infographics",
+      "relative_path": "pages/economy/infographics.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "economy",
+      "view": "advice",
+      "label": "Economy / Advice",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=economy&view=advice",
+      "relative_path": "pages/economy/advice.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "chief_of_staff",
+      "view": "prompt",
+      "label": "Chief of Staff / System Prompt",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=chief_of_staff&view=prompt",
+      "relative_path": "pages/chief_of_staff/prompt.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "chief_of_staff",
+      "view": "briefing",
+      "label": "Chief of Staff / Briefing",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=chief_of_staff&view=briefing",
+      "relative_path": "pages/chief_of_staff/briefing.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "chief_of_staff",
+      "view": "rag",
+      "label": "Chief of Staff / RAG",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=chief_of_staff&view=rag",
+      "relative_path": "pages/chief_of_staff/rag.html",
+      "image_counts": {
+        "embedded": 41,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "chief_of_staff",
+      "view": "rules",
+      "label": "Chief of Staff / Rules",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=chief_of_staff&view=rules",
+      "relative_path": "pages/chief_of_staff/rules.html",
+      "image_counts": {
+        "embedded": 48,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "chief_of_staff",
+      "view": "raw_llm",
+      "label": "Chief of Staff / Raw LLM Output",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=chief_of_staff&view=raw_llm",
+      "relative_path": "pages/chief_of_staff/raw_llm.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "chief_of_staff",
+      "view": "infographics",
+      "label": "Chief of Staff / Infographics",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=chief_of_staff&view=infographics",
+      "relative_path": "pages/chief_of_staff/infographics.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "chief_of_staff",
+      "view": "advice",
+      "label": "Chief of Staff / Advice",
+      "status": "planned",
+      "url": "http://localhost:5012/?scope=chief_of_staff&view=advice",
+      "relative_path": "pages/chief_of_staff/advice.html",
+      "image_counts": {
+        "embedded": 38,
+        "failed": 0
+      }
+    }
+  ]
+}

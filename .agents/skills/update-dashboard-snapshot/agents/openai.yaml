@@ -1,0 +1,4 @@
+interface:
+  display_name: "Update Dashboard Snapshot"
+  short_description: "Refresh the static dashboard website"
+  default_prompt: "Use $update-dashboard-snapshot to refresh the full RimBob dashboard static HTML snapshot with Mayor as the entry page, cached navigation links, disabled action buttons, and a SNAPSHOT header tag."
