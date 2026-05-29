@@ -81,6 +81,14 @@ export interface AdviceOption {
   blueprint_group: BlueprintGroup;
   est_materials: MaterialEstimate[];
   tradeoff_note?: string | null;
+  readiness?: AdviceOptionReadiness | null;
+}
+
+export interface AdviceOptionReadiness {
+  draftable: string;
+  placement_valid: string;
+  materials_ready: string;
+  apply_ready: string;
 }
 
 export interface UnforbidThingsApply extends AdviceActionApplyBase {

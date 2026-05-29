@@ -8,7 +8,16 @@ using RimBob.State.Derivations.Common;
 
 namespace RimBob.Ministers.Willie;
 
-public sealed class PlacementSolver
+public interface IPlacementSolver
+{
+    Task<PlacementResult> SolveAsync(
+        PlacementSpec spec,
+        WillieBriefing briefing,
+        ColonyState colonyState,
+        CancellationToken ct = default);
+}
+
+public sealed class PlacementSolver : IPlacementSolver
 {
     private const int MaxValidateCount = 3;
     private const int MaxOptionCount = 3;

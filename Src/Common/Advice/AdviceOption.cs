@@ -14,7 +14,19 @@ public sealed record AdviceOption(
     [property: JsonPropertyName("est_materials")]
     IReadOnlyList<MaterialEstimate> EstimatedMaterials,
     [property: JsonPropertyName("tradeoff_note")]
-    string? TradeoffNote = null);
+    string? TradeoffNote = null,
+    [property: JsonPropertyName("readiness")]
+    AdviceOptionReadiness? Readiness = null);
+
+public sealed record AdviceOptionReadiness(
+    [property: JsonPropertyName("draftable")]
+    string Draftable,
+    [property: JsonPropertyName("placement_valid")]
+    string PlacementValid,
+    [property: JsonPropertyName("materials_ready")]
+    string MaterialsReady,
+    [property: JsonPropertyName("apply_ready")]
+    string ApplyReady);
 
 public sealed record BlueprintGroup(
     [property: JsonPropertyName("label")]

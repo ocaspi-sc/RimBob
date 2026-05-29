@@ -122,8 +122,7 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
                 freezerRequest.Request,
                 "Chef owns the food-storage need; Willie owns the freezer shell, cooler, power, and eventual placement.",
                 [
-                    // TODO: call PlacementSolver.SolveAsync after placement-solver-1 lands to attach options and a fork-validated blueprint_group.
-                    new AdviceAction(AdviceActionKind.PlaceBlueprint, "Plan a freezer or cold-storage shell for this request; no Apply payload is attached until Solver1 lands.", Owner: MinisterName)
+                    new AdviceAction(AdviceActionKind.PlaceBlueprint, "Plan a freezer or cold-storage shell for this request; solver options attach when a validated footprint is available.", Owner: MinisterName)
                 ],
                 WillieFlagRequests.Empty);
 
@@ -362,7 +361,7 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
         !briefing.FunctionalRooms.RoomCountsByClass.TryGetValue(roomClass.ToString(), out int count) ||
         count <= 0;
 
-    private static bool IsFreezingBuildRequest(BuildingRequest request) =>
+    public static bool IsFreezingBuildRequest(BuildingRequest request) =>
         request.Temperature?.TargetBand == TemperatureBand.Freezing ||
         request.RoomClass == RoomClass.Freezer ||
         request.TargetClass == BuildingClass.Freezer;
