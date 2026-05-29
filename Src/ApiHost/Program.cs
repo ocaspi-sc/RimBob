@@ -137,6 +137,7 @@ try
     builder.Services.AddSingleton<MinisterTraceStore>();
     builder.Services.AddSingleton<AssistedApplyService>();
     builder.Services.AddTransient<RimApiRuntimeProbe>();
+    builder.Services.AddSingleton<RimApiRuntimeProbeCache>();
     builder.Services.AddSingleton<IReplayCorpusWriter>(sp =>
         new ReplayCorpusWriter(
             Path.Combine(logsDir, "replay"),

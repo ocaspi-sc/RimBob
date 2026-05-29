@@ -54,6 +54,8 @@ treat the previous UI as reference only.
 - Dashboard consumes Host HTTP endpoints and the advice SSE stream.
 - Local state plus focused polling/SSE hooks is enough for v2; do not add broad
   state-management infrastructure without a concrete need.
+- Base dashboard traffic is intentionally bounded: `/api/status` polls every 5 seconds, `/api/colony/snapshot` polls every 5 seconds, and `/api/system/health` polls every 15 seconds. Page-specific inspectors should load on mount/view change unless they have a concrete freshness need.
+- `/api/status` and `/api/system/health` share a short Host-side RIMAPI runtime probe cache, so nearby status/health polls do not issue duplicate `api/v1/game/state` reads and offline RIMAPI states cool down briefly before probing again.
 - When the Host/API is down, automatic HTTP polling and SSE reconnects back off
   with capped quiet retries. The dashboard should preserve the last visible
   state and recover when RimBob returns without spamming failed localhost

@@ -28,7 +28,7 @@ public static class StatusEndpoints
             LlmClient       llm,
             RawLlmOutputStore rawOutputs,
             MayorStatus     mayor,
-            RimApiRuntimeProbe rimApiRuntime,
+            RimApiRuntimeProbeCache rimApiRuntime,
             CancellationToken ct) =>
         {
             MayorBriefing briefing = briefings.GetMayorBriefing();
@@ -51,10 +51,10 @@ public static class StatusEndpoints
             RawLlmOutputSnapshot? latestLlm,
             MayorStatus mayor,
             MayorBriefing briefing,
-            RimApiRuntimeProbe rimApiRuntime,
+            RimApiRuntimeProbeCache rimApiRuntime,
             CancellationToken ct)
         {
-            RimApiRuntimeSnapshot rimApi = await rimApiRuntime.ProbeAsync(ct);
+            RimApiRuntimeSnapshot rimApi = await rimApiRuntime.GetAsync(ct);
             return Results.Ok(new
             {
                 server            = "ok",

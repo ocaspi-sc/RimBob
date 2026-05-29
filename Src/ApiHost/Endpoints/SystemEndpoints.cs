@@ -110,11 +110,11 @@ public static class SystemEndpoints
             MinisterTraceStore traces,
             IconCacheService iconCache,
             AssistedApplyService assistedApply,
-            RimApiRuntimeProbe rimApiRuntime,
+            RimApiRuntimeProbeCache rimApiRuntime,
             CancellationToken ct) =>
         {
             RimBobOptions opts = options.Value;
-            RimApiRuntimeSnapshot rimApi = await rimApiRuntime.ProbeAsync(ct);
+            RimApiRuntimeSnapshot rimApi = await rimApiRuntime.GetAsync(ct);
             MayorBriefing mayorBriefing = briefings.GetMayorBriefing();
             FoodBriefing foodBriefing = briefings.GetFoodBriefing();
             WillieBriefing willieBriefing = briefings.GetWillieBriefing();

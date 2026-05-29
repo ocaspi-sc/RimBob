@@ -19,9 +19,9 @@ import { useDashboardReloadOnVersionChange } from './hooks/useDashboardReloadOnV
 import { useManualTriggers } from './hooks/useManualTriggers';
 import { usePollingResource } from './hooks/usePollingResource';
 
-const StatusPollMs = 3_000;
+const StatusPollMs = 5_000;
 const SnapshotPollMs = 5_000;
-const SystemHealthPollMs = 5_000;
+const SystemHealthPollMs = 15_000;
 
 export default function App() {
   const selection = useDashboardSelection();
