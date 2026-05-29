@@ -5,6 +5,13 @@ namespace RimBob.Ministers.Willie;
 
 public sealed class TemplateAnchoredGenerator : IPlacementGenerator
 {
+    private readonly RoomTemplateSet templates;
+
+    public TemplateAnchoredGenerator(RoomTemplateSet? templates = null)
+    {
+        this.templates = templates ?? RoomTemplateSet.FreezerOnly;
+    }
+
     public string Id => "template_anchored";
 
     public IReadOnlyList<PlacementDraft> Generate(
@@ -15,17 +22,18 @@ public sealed class TemplateAnchoredGenerator : IPlacementGenerator
         if (budget.MaxDrafts <= 0 || budget.MaxSearchRadius < 0)
             return [];
 
-        if (spec.RoomClass != RoomClass.Freezer && spec.TargetClass != BuildingClass.Freezer)
+        IRoomTemplate? template = templates.ForSpec(spec);
+        if (template is null)
             return [];
 
-        RectSize? interior = FreezerTemplate.SizeFor(spec.CapacityNeed);
+        RectSize? interior = template.SizeFor(spec.CapacityNeed);
         if (interior is null)
             return [];
 
         List<PlacementDraft> drafts = [];
         foreach (ResolvedAnchor anchor in evidence.Anchors)
         {
-            drafts.AddRange(VariantsForAnchor(spec, evidence, budget, interior, anchor)
+            drafts.AddRange(VariantsForAnchor(evidence, budget, template, interior, anchor)
                 .Take(budget.MaxDrafts - drafts.Count));
             if (drafts.Count >= budget.MaxDrafts) break;
         }
@@ -34,9 +42,9 @@ public sealed class TemplateAnchoredGenerator : IPlacementGenerator
     }
 
     private IReadOnlyList<PlacementDraft> VariantsForAnchor(
-        PlacementSpec spec,
         PlacementEvidence evidence,
         GenerationBudget budget,
+        IRoomTemplate template,
         RectSize interior,
         ResolvedAnchor anchor)
     {
@@ -48,7 +56,7 @@ public sealed class TemplateAnchoredGenerator : IPlacementGenerator
             foreach (MapCell origin in RingOrigins(target, radius))
             {
                 DoorSide door = DoorFacingAnchor(origin, exterior, target);
-                RoomShell shell = FreezerTemplate.BuildShell(interior, door);
+                RoomShell shell = template.BuildShell(interior, door);
                 IReadOnlyList<BlueprintAsset> assets = TranslateAssets(shell, origin);
                 IReadOnlyList<MapCell> accessCells =
                 [
@@ -64,7 +72,7 @@ public sealed class TemplateAnchoredGenerator : IPlacementGenerator
                 }
 
                 BlueprintGroup group = new(
-                    Label: LabelFor(spec),
+                    Label: template.Label,
                     MapId: evidence.MapId,
                     Assets: assets);
                 drafts.Add(new PlacementDraft(
@@ -73,7 +81,7 @@ public sealed class TemplateAnchoredGenerator : IPlacementGenerator
                     SourceAnchor: anchor,
                     AccessCells: accessCells,
                     Assumptions: AssumptionsFor(anchor, evidence),
-                    ReasonSummary: $"template variant near {anchor.Anchor.Class} anchor {anchor.Anchor.RoomId}"));
+                    ReasonSummary: $"{template.Label} template variant near {anchor.Anchor.Class} anchor {anchor.Anchor.RoomId}"));
                 if (drafts.Count >= budget.MaxDrafts)
                     return drafts;
             }
@@ -102,11 +110,6 @@ public sealed class TemplateAnchoredGenerator : IPlacementGenerator
             assumptions.Add("occupancy=building_position_point_approximation");
         return assumptions;
     }
-
-    private static string LabelFor(PlacementSpec spec) =>
-        spec.RoomClass == RoomClass.Freezer || spec.TargetClass == BuildingClass.Freezer
-            ? "Starter freezer"
-            : spec.TargetClass.ToString();
 
     private static DoorSide DoorFacingAnchor(MapCell origin, RectSize exterior, MapCell target)
     {

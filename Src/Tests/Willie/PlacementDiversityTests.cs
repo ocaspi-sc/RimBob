@@ -81,6 +81,8 @@ public sealed class PlacementDiversityTests
             return "freezer_to_kitchen_distance";
         if (note.StartsWith("Most room to expand:", StringComparison.Ordinal))
             return "expansion_room";
+        if (note.StartsWith("Safest build order:", StringComparison.Ordinal))
+            return "build_order_safety";
         if (note.StartsWith("Cheapest materials:", StringComparison.Ordinal))
             return "material_cost";
 

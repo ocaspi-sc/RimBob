@@ -149,6 +149,25 @@ public sealed class PlacementSolverTests
             .Should().Contain("largest_empty_rect");
     }
 
+    [Fact]
+    public async Task SolveAsync_WithHospitalSpec_ReturnsHospitalOptions()
+    {
+        RoomTemplateSet templates = BreadthTemplates();
+        PlacementSolver solver = new(
+            new FakePathCostProbe(reachable: true, cost: 8),
+            new FakePlacementValidator(canPlaceAll: true),
+            [new TemplateAnchoredGenerator(templates), new LargestEmptyRectangleGenerator(templates)]);
+
+        PlacementResult result = await solver.SolveAsync(HospitalSpec(), HospitalBriefing(), State([]));
+
+        result.NoFit.Should().BeNull();
+        result.Options.Should().NotBeEmpty();
+        AdviceOption option = result.Options[0];
+        option.Label.Should().Be("Starter hospital");
+        option.BlueprintGroup.Assets.Should().Contain(asset => asset.Role == "medical_bed");
+        option.Summary.Should().Contain("starter hospital");
+    }
+
     public static PlacementSpec SpecWithMaterials() =>
         new(
             Request: "starter freezer",
@@ -187,6 +206,47 @@ public sealed class PlacementSolverTests
         state.Buildings.Update(new BuildingRegistry(buildings));
         return state;
     }
+
+    private static RoomTemplateSet BreadthTemplates() =>
+        new(
+        [
+            new FreezerTemplate(),
+            new HospitalTemplate(),
+            new BedroomTemplate(),
+            new WorkshopTemplate(),
+            new StorageTemplate()
+        ]);
+
+    private static PlacementSpec HospitalSpec() =>
+        new(
+            Request: "starter hospital",
+            Reason: "medical beds",
+            TargetClass: BuildingClass.Bed,
+            TargetDef: null,
+            RoomClass: RoomClass.Hospital,
+            CapacityNeed: new CapacityNeed(CapacityMeasure.Beds, 2),
+            Adjacency: [new AdjacencyHint(AdjacencyRelation.Near, "medbay")],
+            Power: null,
+            Temperature: null,
+            MaterialsOnHand: [new MaterialHint("BlocksGranite", 100)],
+            Deadline: null,
+            Priority: AdvicePriority.Medium,
+            Source: "Willie",
+            Constraints: []);
+
+    private static WillieBriefing HospitalBriefing() =>
+        StableBriefing() with
+        {
+            AnchorInventory = new WillieAnchorInventory([
+                new WillieRoomAnchor(
+                    "hospital-anchor",
+                    RoomClass.Hospital,
+                    "Hospital",
+                    24,
+                    new MapPosition(8, 0, 8),
+                    [])
+            ])
+        };
 
     private static ResolvedAnchor ResolvedKitchenAnchor(MapPosition position) =>
         new(

@@ -56,7 +56,7 @@ public sealed record RoomShell(
     IReadOnlyList<TemplateAsset> Assets,
     MapCell DoorCell,
     MapCell AccessCell,
-    MapCell CoolerCell);
+    MapCell? CoolerCell);
 
 public sealed record TemplateAsset(
     string Role,

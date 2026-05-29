@@ -6,6 +6,23 @@ namespace RimBob.Ministers.Willie;
 
 public static class AnchorResolver
 {
+    private static readonly IReadOnlyDictionary<string, RoomClass> Aliases = new Dictionary<string, RoomClass>(StringComparer.Ordinal)
+    {
+        ["medbay"] = RoomClass.Hospital,
+        ["infirmary"] = RoomClass.Hospital,
+        ["clinic"] = RoomClass.Hospital,
+        ["fridge"] = RoomClass.Freezer,
+        ["cooler"] = RoomClass.Freezer,
+        ["craftroom"] = RoomClass.Workshop,
+        ["crafting"] = RoomClass.Workshop,
+        ["shop"] = RoomClass.Workshop,
+        ["lab"] = RoomClass.Research,
+        ["bunks"] = RoomClass.Barracks,
+        ["dorm"] = RoomClass.Barracks,
+        ["pantry"] = RoomClass.Storage,
+        ["warehouse"] = RoomClass.Storage
+    };
+
     public static IReadOnlyList<ResolvedAnchor> ResolveNear(
         PlacementSpec spec,
         WillieBriefing briefing)
@@ -55,8 +72,9 @@ public static class AnchorResolver
                 return roomClass;
         }
 
-        // TODO: AdjacencyHint.Target is a free string; Solver1 uses exact RoomClass aliases only until the shared alias map lands.
-        return null;
+        return Aliases.TryGetValue(normalizedTarget, out RoomClass alias)
+            ? alias
+            : null;
     }
 
     private static string Normalize(string value)

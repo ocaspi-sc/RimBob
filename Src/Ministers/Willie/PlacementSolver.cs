@@ -237,7 +237,11 @@ public sealed class PlacementSolver : IPlacementSolver
             return false;
         }
 
-        if (assetCells.Distinct().Count() != assetCells.Count)
+        IReadOnlyList<MapCell> nonFloorCells = draft.Group.Assets
+            .Where(asset => !string.Equals(asset.Role, "floor", StringComparison.OrdinalIgnoreCase))
+            .Select(asset => asset.Cell)
+            .ToList();
+        if (nonFloorCells.Distinct().Count() != nonFloorCells.Count)
         {
             rejectionReason = "self_overlap";
             return false;
@@ -289,7 +293,7 @@ public sealed class PlacementSolver : IPlacementSolver
         return new AdviceOption(
             Id: $"placement_{spec.TargetClass.ToString().ToLowerInvariant()}_{firstCell.X}_{firstCell.Z}",
             Label: best.Draft.Group.Label,
-            Summary: $"Validated {best.Draft.Group.Assets.Count}-asset freezer shell near {target}.",
+            Summary: $"Validated {best.Draft.Group.Assets.Count}-asset {best.Draft.Group.Label.ToLowerInvariant()} near {target}.",
             BlueprintGroup: best.Draft.Group,
             EstimatedMaterials: validation.Cost,
             TradeoffNote: TradeoffNoteFor(best, target));
@@ -306,6 +310,7 @@ public sealed class PlacementSolver : IPlacementSolver
         {
             "freezer_to_kitchen_distance" => $"Closest to {target}: {rawValue}{unit} from door ({footprintText}).",
             "expansion_room" => $"Most room to expand: {rawValue}{unit} around {footprintText}.",
+            "build_order_safety" => $"Safest build order: {rawValue}{unit} safety around {footprintText}.",
             "material_cost" => $"Cheapest materials: {rawValue}{unit} estimated for {footprintText}.",
             _ => $"Best weighted score: {metric.Id} {rawValue}{unit} at {footprintText}."
         };
@@ -327,7 +332,8 @@ public sealed class PlacementSolver : IPlacementSolver
         {
             "freezer_to_kitchen_distance" => 0,
             "expansion_room" => 1,
-            "material_cost" => 2,
+            "build_order_safety" => 2,
+            "material_cost" => 3,
             _ => int.MaxValue
         };
 

@@ -95,7 +95,8 @@ public sealed class WalkablePathCostScorer : IPlacementScorer
             Weight: weights.GeneratorConfidence,
             Contribution: generatorConfidenceValue * weights.GeneratorConfidence,
             Better: "higher");
-        return new ScoredDraft(draft, rawCost, [distance, expansionRoom, generatorConfidence]);
+        MetricValue buildOrderSafety = BuildOrderSafetyMetric(draft, evidence);
+        return new ScoredDraft(draft, rawCost, [distance, expansionRoom, generatorConfidence, buildOrderSafety]);
     }
 
     private static double GeneratorConfidenceFor(string generatorId) =>
@@ -104,4 +105,51 @@ public sealed class WalkablePathCostScorer : IPlacementScorer
             : string.Equals(generatorId, "largest_empty_rect", StringComparison.OrdinalIgnoreCase)
                 ? 0.65
             : 0.5;
+
+    private MetricValue BuildOrderSafetyMetric(PlacementDraft draft, PlacementEvidence evidence)
+    {
+        double riskPoints = 0;
+        Footprint footprint = Footprint.From(draft.Group.Assets);
+        if (evidence.Bounds is not null &&
+            (footprint.MinX <= 0 ||
+             footprint.MinZ <= 0 ||
+             footprint.MaxX >= evidence.Bounds.Width - 1 ||
+             footprint.MaxZ >= evidence.Bounds.Height - 1))
+        {
+            riskPoints += 3;
+        }
+
+        foreach (MapCell accessCell in draft.AccessCells)
+        {
+            riskPoints += OccupiedNeighborCount(accessCell, evidence) * 0.5;
+        }
+
+        double normalized = 1d - Math.Min(1d, riskPoints / 6d);
+        return new MetricValue(
+            Id: "build_order_safety",
+            RawValue: normalized * 100d,
+            Unit: "percent",
+            Normalized: normalized,
+            Weight: weights.BuildOrderSafety,
+            Contribution: normalized * weights.BuildOrderSafety,
+            Better: "higher");
+    }
+
+    private static int OccupiedNeighborCount(MapCell cell, PlacementEvidence evidence)
+    {
+        int occupiedNeighbors = 0;
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            for (int dz = -1; dz <= 1; dz++)
+            {
+                if (dx == 0 && dz == 0) continue;
+
+                MapCell neighbor = new(cell.X + dx, cell.Z + dz);
+                if (evidence.InBounds(neighbor) && evidence.IsOccupied(neighbor))
+                    occupiedNeighbors++;
+            }
+        }
+
+        return occupiedNeighbors;
+    }
 }

@@ -110,6 +110,37 @@ public sealed class WalkablePathCostScorerTests
         scored[1].RawCost.Should().Be(5);
     }
 
+    [Fact]
+    public void Score_AddsBuildOrderSafetyAndPenalizesMapEdge()
+    {
+        PlacementDraft edge = Draft(
+            "edge",
+            "kitchen",
+            [new MapCell(1, 1)],
+            new MapPosition(5, 0, 5),
+            originX: 0);
+        PlacementDraft interior = Draft(
+            "interior",
+            "kitchen",
+            [new MapCell(8, 8)],
+            new MapPosition(5, 0, 5),
+            originX: 8);
+        IReadOnlyList<PlacementDraft> drafts = [edge, interior];
+        IReadOnlyList<PathCostPair> pairs = PathCostLookup.RequestPairsFor(drafts);
+        PathCostLookup lookup = PathCostLookup.FromProbeResults(
+            drafts,
+            pairs.Select(pair => new PathCostResult(true, 10, pair.From, pair.To)).ToList());
+
+        IReadOnlyList<ScoredDraft> scored = new WalkablePathCostScorer().Score(drafts, lookup, Evidence());
+
+        MetricValue edgeSafety = scored[0].Metrics.Single(metric => metric.Id == "build_order_safety");
+        MetricValue interiorSafety = scored[1].Metrics.Single(metric => metric.Id == "build_order_safety");
+        edgeSafety.Unit.Should().Be("percent");
+        edgeSafety.Better.Should().Be("higher");
+        edgeSafety.Weight.Should().Be(ScoreWeights.Default.BuildOrderSafety);
+        edgeSafety.Normalized.Should().BeLessThan(interiorSafety.Normalized);
+    }
+
     private static PlacementDraft Draft(
         string generatorId,
         string roomId,

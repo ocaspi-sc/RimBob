@@ -69,8 +69,20 @@ try
     builder.Services.AddSingleton<RimApiPlacementProbe>();
     builder.Services.AddSingleton<IPlacementValidator>(sp => sp.GetRequiredService<RimApiPlacementProbe>());
     builder.Services.AddSingleton<IPathCostProbe>(sp => sp.GetRequiredService<RimApiPlacementProbe>());
-    builder.Services.AddSingleton<IReadOnlyList<IPlacementGenerator>>(_ =>
-        [new TemplateAnchoredGenerator(), new LargestEmptyRectangleGenerator()]);
+    builder.Services.AddSingleton<IReadOnlyList<IRoomTemplate>>(_ =>
+        [
+            new FreezerTemplate(),
+            new HospitalTemplate(),
+            new BedroomTemplate(),
+            new WorkshopTemplate(),
+            new StorageTemplate()
+        ]);
+    builder.Services.AddSingleton<RoomTemplateSet>();
+    builder.Services.AddSingleton<IReadOnlyList<IPlacementGenerator>>(sp =>
+    {
+        RoomTemplateSet templates = sp.GetRequiredService<RoomTemplateSet>();
+        return [new TemplateAnchoredGenerator(templates), new LargestEmptyRectangleGenerator(templates)];
+    });
     builder.Services.AddSingleton<IPlacementScorer, WalkablePathCostScorer>();
     builder.Services.AddSingleton<PlacementSolver>();
     builder.Services.AddSingleton<IPlacementSolver>(sp => sp.GetRequiredService<PlacementSolver>());

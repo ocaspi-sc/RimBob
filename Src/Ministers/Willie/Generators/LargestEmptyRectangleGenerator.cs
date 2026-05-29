@@ -6,6 +6,13 @@ namespace RimBob.Ministers.Willie;
 
 public sealed class LargestEmptyRectangleGenerator : IPlacementGenerator
 {
+    private readonly RoomTemplateSet templates;
+
+    public LargestEmptyRectangleGenerator(RoomTemplateSet? templates = null)
+    {
+        this.templates = templates ?? RoomTemplateSet.FreezerOnly;
+    }
+
     public string Id => "largest_empty_rect";
 
     public IReadOnlyList<PlacementDraft> Generate(
@@ -16,10 +23,11 @@ public sealed class LargestEmptyRectangleGenerator : IPlacementGenerator
         if (budget.MaxDrafts <= 0 || budget.MaxSearchRadius < 0)
             return [];
 
-        if (spec.RoomClass != RoomClass.Freezer && spec.TargetClass != BuildingClass.Freezer)
+        IRoomTemplate? template = templates.ForSpec(spec);
+        if (template is null)
             return [];
 
-        RectSize? interior = FreezerTemplate.SizeFor(spec.CapacityNeed);
+        RectSize? interior = template.SizeFor(spec.CapacityNeed);
         if (interior is null)
             return [];
 
@@ -27,7 +35,7 @@ public sealed class LargestEmptyRectangleGenerator : IPlacementGenerator
         List<PlacementDraft> drafts = [];
         foreach (ResolvedAnchor anchor in evidence.Anchors)
         {
-            drafts.AddRange(VariantsForAnchor(spec, evidence, budget, interior, exterior, anchor)
+            drafts.AddRange(VariantsForAnchor(evidence, budget, template, interior, exterior, anchor)
                 .Take(budget.MaxDrafts - drafts.Count));
             if (drafts.Count >= budget.MaxDrafts) break;
         }
@@ -36,9 +44,9 @@ public sealed class LargestEmptyRectangleGenerator : IPlacementGenerator
     }
 
     private IReadOnlyList<PlacementDraft> VariantsForAnchor(
-        PlacementSpec spec,
         PlacementEvidence evidence,
         GenerationBudget budget,
+        IRoomTemplate template,
         RectSize interior,
         RectSize exterior,
         ResolvedAnchor anchor)
@@ -52,7 +60,7 @@ public sealed class LargestEmptyRectangleGenerator : IPlacementGenerator
                 if (DistanceFromOrigin(origin, exterior, target) > budget.MaxSearchRadius)
                     continue;
 
-                PlacementDraft? draft = TryBuildDraft(spec, evidence, interior, exterior, anchor, rect, origin);
+                PlacementDraft? draft = TryBuildDraft(evidence, template, interior, exterior, anchor, rect, origin);
                 if (draft is null)
                     continue;
 
@@ -66,8 +74,8 @@ public sealed class LargestEmptyRectangleGenerator : IPlacementGenerator
     }
 
     private PlacementDraft? TryBuildDraft(
-        PlacementSpec spec,
         PlacementEvidence evidence,
+        IRoomTemplate template,
         RectSize interior,
         RectSize exterior,
         ResolvedAnchor anchor,
@@ -75,7 +83,7 @@ public sealed class LargestEmptyRectangleGenerator : IPlacementGenerator
         MapCell origin)
     {
         DoorSide door = DoorFacingAnchor(origin, exterior, anchor.TargetCell.ToMapCell());
-        RoomShell shell = FreezerTemplate.BuildShell(interior, door);
+        RoomShell shell = template.BuildShell(interior, door);
         IReadOnlyList<BlueprintAsset> assets = TranslateAssets(shell, origin);
         IReadOnlyList<MapCell> accessCells =
         [
@@ -92,7 +100,7 @@ public sealed class LargestEmptyRectangleGenerator : IPlacementGenerator
         }
 
         BlueprintGroup group = new(
-            Label: LabelFor(spec),
+            Label: template.Label,
             MapId: evidence.MapId,
             Assets: assets);
         return new PlacementDraft(
@@ -101,7 +109,7 @@ public sealed class LargestEmptyRectangleGenerator : IPlacementGenerator
             SourceAnchor: anchor,
             AccessCells: accessCells,
             Assumptions: AssumptionsFor(anchor, evidence, rect),
-            ReasonSummary: $"largest empty rectangle {rect.Width}x{rect.Height} near {anchor.Anchor.Class} anchor {anchor.Anchor.RoomId}");
+            ReasonSummary: $"{template.Label} largest empty rectangle {rect.Width}x{rect.Height} near {anchor.Anchor.Class} anchor {anchor.Anchor.RoomId}");
     }
 
     private static IReadOnlyList<FreeRect> OrderedViableRects(
@@ -174,11 +182,6 @@ public sealed class LargestEmptyRectangleGenerator : IPlacementGenerator
             assumptions.Add("free_space_scan=truncated");
         return assumptions;
     }
-
-    private static string LabelFor(PlacementSpec spec) =>
-        spec.RoomClass == RoomClass.Freezer || spec.TargetClass == BuildingClass.Freezer
-            ? "Starter freezer"
-            : spec.TargetClass.ToString();
 
     private static DoorSide DoorFacingAnchor(MapCell origin, RectSize exterior, MapCell target)
     {
