@@ -103,8 +103,12 @@ public static class WillieBriefingDerivation
             HasStockpiles: state.Stockpiles.Value.Zones.Count > 0,
             HasConstructionBacklog: backlog.SourceAvailable,
             HasAnchorInventory: anchorInventory.Anchors.Count > 0,
-            // TODO: flip true once PS1 consumes the FORK3 client methods.
-            HasReachability: false);
+            HasReachability: state.LastRefreshSource == ColonyStateOrigin.Live &&
+                             anchorInventory.Anchors.Any(HasReachabilityTarget));
+
+    private static bool HasReachabilityTarget(WillieRoomAnchor anchor) =>
+        anchor.EntryCells.Count > 0 ||
+        anchor.Centroid is not null;
 
     private static IReadOnlyList<MaterialCount> CollapseMaterials(IEnumerable<MaterialCount> materials) =>
         materials

@@ -84,7 +84,6 @@ public sealed class WillieAnchorInventoryDerivationTests
         kitchen.Bounds.Should().Be(new MapRect(2, 2, 5, 5));
         kitchen.Cells.Should().HaveCount(4);
         kitchen.EntryCells.Should().Equal(new MapPosition(3, 0, 1));
-        kitchen.RegionId.Should().Be(99);
 
         WillieRoomAnchor bedroom = inventory.Anchors.Single(anchor => anchor.RoomId == "bedroom-room");
         bedroom.Class.Should().Be(RoomClass.Bedroom);

@@ -36,8 +36,7 @@ public static class WillieAnchorInventoryDerivation
             {
                 Bounds = room.Bounds,
                 Cells = room.Cells,
-                EntryCells = room.EntryCells,
-                RegionId = room.RegionId
+                EntryCells = room.EntryCells
             });
         }
 

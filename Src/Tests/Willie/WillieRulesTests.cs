@@ -228,7 +228,7 @@ public sealed class WillieRulesTests
                 HasStockpiles: true,
                 HasConstructionBacklog: true,
                 HasAnchorInventory: true,
-                HasReachability: false));
+                HasReachability: true));
 
     private static WillieFunctionalRoomsSummary FunctionalRooms(params RoomClass[] classes)
     {

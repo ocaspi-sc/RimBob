@@ -13,9 +13,8 @@
 > briefing, Willie minister (Rules Slice A) + dashboard readout, **Placement
 > Solver Solver1/Solver2/Solver3(S3a–c)**, and **solver→Rules wiring** all
 > **landed**. Solver now emits `options[]` on a live freezer `building_request`.
-> **Next active nodes:** deep Willie code review (`willie-code-review.md`),
-> dashboard panels (build-queue tab + briefing HUD), and the deferred Solver3 S3d
-> (`ReuseExistingFootprintGenerator`, RIMAPI-footprint-gated).
+> **Next active nodes:** dashboard panels (build-queue tab + briefing HUD),
+> non-freezer solver wiring, and live verification captures for RIMAPI room reads.
 
 ---
 
@@ -163,8 +162,8 @@ flowchart TD
   FORK1["RIMAPI single-asset triplet ✓ LANDED 3eb1d84<br/>(RIMAPI repo; RimBob meta 300f5ce)"] --> FORK2["RIMAPI blueprint groups Cap A<br/>✓ Slice A LANDED (group validate/place)"]
   S2 --> SCHEMA["Willie Briefing Schema ✓ LANDED 2026-05-27<br/>(willie-briefing-schema.md +<br/>willie-briefing-fields.md)"]
   FORK2 --> SCHEMA
-  FORK2 --> ROOM["Room/anchor detection<br/>(room-purpose inference)"]
-  ROOM -.may gate.-> Solver1
+  FORK2 --> ROOM["Room/anchor detection ✓ LANDED<br/>(entry cells + room cells +<br/>contained buildings consumed)"]
+  ROOM --> Solver1
   SCHEMA --> DERIV["Willie briefing derivation ✓ LANDED 3235902<br/>(WillieBriefing + backlog ingest +<br/>anchor inventory + FORK3 client)"]
   DERIV --> Solver1["Placement Solver Solver1 ✓ LANDED 5a8e6c9<br/>(template freezer skeleton + generator registry)"]
   S2 --> Solver1
@@ -179,16 +178,16 @@ flowchart TD
   WILLIE --> DASH["Willie dashboard ✓ readout LANDED ddef5f3<br/>(build-queue tab + briefing HUD panels = follow-on todos)"]
   DERIV -.feeds panels.-> DASH
   Solver1 -.solver trace.-> DASH
-  Solver1 --> Solver2["Solver2 generator competition ✓ LANDED 9f6fe90..0e86f5f<br/>(template + rectangle + diverse top-K)"] --> Solver3["Solver3 breadth ◐ S3a–c LANDED 7e3be6f<br/>(room-class templates + alias + build_order_safety);<br/>S3d ReuseExistingFootprint deferred (RIMAPI-gated)"]
-  WILLIE --> REVIEW["Deep Willie code review (subagents)<br/>← next active (willie-code-review.md)"]
+  Solver1 --> Solver2["Solver2 generator competition ✓ LANDED 9f6fe90..0e86f5f<br/>(template + rectangle + diverse top-K)"] --> Solver3["Solver3 breadth ✓ LANDED<br/>(room-class templates + alias +<br/>build_order_safety + reuse footprint)"]
+  WILLIE --> REVIEW["Deep Willie code review ✓ EXECUTED<br/>(findings + follow-up slices)"]
   WILLIE --> PROMOTE["Promote design -> construction.md"]
   Solver3 --> WFC["(optional) WFC generator spike"]
   Solver3 --> SOLVER4B["Solver4 + planning overlay (Cap B)"]
 
   classDef done fill:#1f3a1f,stroke:#3fa83f,color:#cfe8cf;
-  class S1,S2,S3,FORK1,FORK3,SCHEMA,DERIV,WILLIE,DASH,Solver1,Solver2,WIRE done;
+  class S1,S2,S3,FORK1,FORK3,SCHEMA,DERIV,ROOM,WILLIE,DASH,Solver1,Solver2,Solver3,WIRE,REVIEW done;
   classDef partial fill:#3a341f,stroke:#a8993f,color:#e8e0cf;
-  class FORK2,Solver3 partial;
+  class FORK2 partial;
 ```
 
 Note: FORK3 endpoints + the RimBob client wrappers (`GetReachAsync` /
@@ -221,25 +220,17 @@ overlay) pending.
      is aggregate-only (gen/draw/battery totals + building id lists); per-net
      split + outage flag = `need-fork`. **`PowerInfoDto` fix landed** so
      aggregate fields surface end-to-end.
-   - **Anchor scoring resolved (2026-05-27):** drop centroid-as-primary;
-     anchor = `{room_id, entry_cells[], region_id}`. Solver does region-tier
-     batch rank → A* top-K tiebreak. Both rely on **FORK3 endpoints (landed)**
-     plus a RimBob client method (pending); Slice A ships with
-     euclidean-from-centroid approximation as fallback.
-4. **Room/anchor detection** - room-purpose inference from RIMAPI reads (resolve
-   `near:kitchen` -> map location). The hard sub-problem; may gate Solver1. Depends
-   on building/room reads (`source-todo-building-condition-read`,
-   `source-todo-room-quality-read`) — i.e. on FORK2.
+   - **Anchor scoring resolved (2026-05-27, closed out 2026-05-30):** anchors use `EntryCells` first and `Centroid` as fallback. Raw `RoomRecord.RegionId` stays in the state mirror for future trace panels, but `WillieRoomAnchor.RegionId` was retired because region-tiering already happens inside the RIMAPI path-cost batch.
+4. **Room/anchor detection** [✓ LANDED, closeout 2026-05-30] - RIMAPI room reads now carry entry cells, room cells/bounds, contained building ids, and raw region ids; `MapAggregateMapper` ingests them, `WillieAnchorInventoryDerivation` derives purpose-built anchors, and `AnchorResolver` + path-cost scoring consume the entry-cell-first target. This no longer gates Solver1/2/3.
 5. **Placement Solver** [✓ Solver1/2/3(S3a–c) LANDED] - Solver1 skeleton
    (freezer, near-kitchen, `TemplateAnchoredGenerator`, one candidate) `5a8e6c9`
    -> Solver2 competing generators (template + `LargestEmptyRectangleGenerator`,
    `IPlacementScorer` seam, diverse top 1-3 options) `9f6fe90..0e86f5f` -> Solver3
    room-class breadth (`IRoomTemplate` seam, hospital/bedroom/workshop/storage
-   templates, `RoomClass` alias map, `build_order_safety`) `7e3be6f`. **Wired:**
+   templates, `RoomClass` alias map, `build_order_safety`) `7e3be6f`, then
+   `ReuseExistingFootprintGenerator` (`willie-reuse-footprint`). **Wired:**
    `MinisterOfWillie` calls `SolveAsync` on `freezer_request_active` and attaches
-   `options[]` to the freezer `AdviceItem` (`fbad240`). **Deferred:** Solver3 S3d
-   `ReuseExistingFootprintGenerator` (RIMAPI footprint-evidence gated —
-   `willie-reuse-footprint`); Solver4 base planning; non-freezer→solver wiring
+   `options[]` to the freezer `AdviceItem` (`fbad240`). **Deferred:** Solver4 base planning; non-freezer→solver wiring
    (missing-room traces still emit prose). Solver-internal breadth ships even
    though only the freezer trace is orchestrator-wired today.
 6. **Willie minister** [✓ LANDED `e902e96`] - mirror Food: `Rules.cs`
@@ -277,7 +268,6 @@ next active node.
 | Decision | Where | Lean |
 |---|---|---|
 | Group atomicity on partial fresh-state failure + `MaxBlueprintGroupAssets` | advice-schema Q1 (see also rimapi-groups §4) | validate-all gate, then best-effort place + per-asset report; cap ~64 |
-| Anchor/room-purpose detection approach | placement-solver Q1 | the hard gate; templated room detection first; RIMAPI `/api/v1/map/rooms` available today |
 | Generator budgets and diversity thresholds | placement-solver Q3 | start with tiny per-generator caps; validate only a diverse top survivor set |
 | Floor-fill representation (per-cell vs compressed rect) | advice-schema Q2 | per-cell now; cap room size; revisit if payloads bloat |
 | `ResourceRequest` vs `AdviceAction` shared-shape refactor | both anchors flagged | partly mooted - S2 retires `ResourceRequest` from the flag path |
@@ -290,8 +280,7 @@ and `storage_placement` both kept; `build_structure` dropped; `basic_shelter`
 moved to Welfare (2026-05-27 — see `willie-advice-types.md` §4.5);
 suggest+apply posture; deterministic request -> solver path; candidate
 generation uses a bounded generator registry with one shared validator/scorer;
-anchor scoring = `{room_id, entry_cells[], region_id}` + region-BFS (FORK3),
-euclidean-from-centroid as Slice-A fallback (resolved 2026-05-27).
+anchor detection closed with entry-cells-first anchors and raw room `RegionId` retained only at the state mirror (resolved 2026-05-30).
 
 ---
 
@@ -327,11 +316,10 @@ euclidean-from-centroid as Slice-A fallback (resolved 2026-05-27).
   `MinisterOfWillie` injects `PlacementSolver` + `ColonyState`, calls
   `SolveAsync` on `freezer_request_active`, attaches `result.Options` to the
   `AdviceItem`; no-fit note + solver-trace surfacing. Rules stays sync/pure.
-- **← NEXT ACTIVE: deep Willie code review (subagents)** —
-  [`willie-code-review.md`](willie-code-review.md). Read-only audit of the
-  landed Willie surface (Rules, orchestrator, solver, generators, templates,
-  evidence, ports, DI, tests) via parallel review subagents; output is a ranked
-  findings report + follow-up gimp slices. No source edits in the review pass.
+- **Deep Willie code review ✓ EXECUTED** —
+  [`willie-code-review.md`](willie-code-review.md) and
+  [`willie-code-review-findings.md`](willie-code-review-findings.md) record 0 P0,
+  5 P1, 4 P2, and 5 follow-up gimp slices.
 - **RIMAPI track (parallel, separate repo):**
   - `FORK1` triplet ✓ landed.
   - `FORK2` blueprint groups Capability A — group `validate` / `place`
@@ -340,8 +328,7 @@ euclidean-from-centroid as Slice-A fallback (resolved 2026-05-27).
     ([`rimapi-map-reach-and-path-cost.md`](rimapi-map-reach-and-path-cost.md))
     ✓ endpoints landed; RimBob client wrappers ✓ landed (`3235902`).
   - `rimapi-power-info-dto` ✓ landed.
-  - New captures from briefing schema S5: `rimapi-map-region-at`,
-    `rimapi-room-entry-cells`.
+  - Room entry cells and map region-at are landed; live room-read verification is tracked by `rimapi-room-reads-live-verify`.
 - **Remaining:**
   - **Willie dashboard panels** (§4 `DASH` follow-on) — two captured todos:
     `willie-build-queue-tab` (backlog + pending groups + picked options) and
@@ -352,8 +339,6 @@ euclidean-from-centroid as Slice-A fallback (resolved 2026-05-27).
     (kitchen/hospital/storage) traces into `SolveAsync`; Solver3 added the
     room-class templates, only the orchestrator hookup is missing
     (`willie-placement-wiring.md` §3).
-  - **Solver3 S3d** `ReuseExistingFootprintGenerator` (`willie-reuse-footprint`)
-    — RIMAPI footprint-evidence gated.
   - **Derivation extensions** (`willie-rules-slice-a.md` §4) — thermal
     room-temps, storage distance, room quality/cells, frame age, constructor
     priority — each unlocks more Slice-A rules against richer briefing fields.

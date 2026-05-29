@@ -21,6 +21,4 @@ public sealed record WillieRoomAnchor(
     public IReadOnlyList<MapPosition> Cells { get; init; } = [];
 
     public IReadOnlyList<MapPosition> EntryCells { get; init; } = [];
-
-    public int? RegionId { get; init; }
 }

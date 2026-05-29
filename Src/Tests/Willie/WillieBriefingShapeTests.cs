@@ -25,7 +25,29 @@ public sealed class WillieBriefingShapeTests
     }
 
     [Fact]
-    public void WillieRoomAnchor_OptionalFields_DefaultToEmptyAndNull()
+    public void WillieBriefing_LiveAnchorsWithTargetCells_HasReachability()
+    {
+        ColonyState state = StateWithKitchenAnchor(ColonyStateOrigin.Live);
+
+        WillieBriefing briefing = WillieBriefingDerivation.Compute(state);
+
+        briefing.DataCoverage.HasAnchorInventory.Should().BeTrue();
+        briefing.DataCoverage.HasReachability.Should().BeTrue();
+    }
+
+    [Fact]
+    public void WillieBriefing_SnapshotAnchors_DoNotClaimReachability()
+    {
+        ColonyState state = StateWithKitchenAnchor(ColonyStateOrigin.Snapshot);
+
+        WillieBriefing briefing = WillieBriefingDerivation.Compute(state);
+
+        briefing.DataCoverage.HasAnchorInventory.Should().BeTrue();
+        briefing.DataCoverage.HasReachability.Should().BeFalse();
+    }
+
+    [Fact]
+    public void WillieRoomAnchor_OptionalFields_DefaultEntryCellsToEmpty()
     {
         WillieRoomAnchor anchor = new(
             RoomId: "room-1",
@@ -40,6 +62,39 @@ public sealed class WillieBriefingShapeTests
 
         roundTripped.Should().NotBeNull();
         roundTripped!.EntryCells.Should().BeEmpty();
-        roundTripped.RegionId.Should().BeNull();
+    }
+
+    private static ColonyState StateWithKitchenAnchor(ColonyStateOrigin origin)
+    {
+        ColonyState state = new()
+        {
+            LastRefreshSource = origin
+        };
+        state.Rooms.Update(new RoomRegistry([
+            new RoomRecord(
+                Id: "kitchen-room",
+                RoleLabel: "Kitchen",
+                Temperature: 21f,
+                CellsCount: 4,
+                TouchesMapEdge: false,
+                IsPrisonCell: false,
+                IsDoorway: false,
+                OpenRoofCount: 0,
+                ContainedBedIds: [],
+                Impressiveness: null,
+                Beauty: null,
+                Cleanliness: null,
+                Space: null,
+                Wealth: null,
+                Cells:
+                [
+                    new MapPosition(2, 0, 2),
+                    new MapPosition(3, 0, 2),
+                    new MapPosition(2, 0, 3),
+                    new MapPosition(3, 0, 3)
+                ],
+                EntryCells: [new MapPosition(2, 0, 1)])
+        ]));
+        return state;
     }
 }

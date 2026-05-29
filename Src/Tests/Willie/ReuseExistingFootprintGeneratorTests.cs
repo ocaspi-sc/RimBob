@@ -23,8 +23,7 @@ public sealed class ReuseExistingFootprintGeneratorTests
         {
             Bounds = new MapRect(10, 10, 14, 14),
             Cells = CellsForRect(10, 10, 14, 14),
-            EntryCells = [new MapPosition(12, 0, 9)],
-            RegionId = 77
+            EntryCells = [new MapPosition(12, 0, 9)]
         };
         PlacementEvidence evidence = PlacementEvidence.Build(
             new MapInfoSnapshot(7, "30x30"),
@@ -240,8 +239,7 @@ public sealed class ReuseExistingFootprintGeneratorTests
         {
             Bounds = new MapRect(x1, z1, x2, z2),
             Cells = CellsForRect(x1, z1, x2, z2),
-            EntryCells = [new MapPosition((x1 + x2) / 2, 0, z1 - 1)],
-            RegionId = 77
+            EntryCells = [new MapPosition((x1 + x2) / 2, 0, z1 - 1)]
         };
 
     private static IReadOnlyList<MapPosition> CellsForRect(int x1, int z1, int x2, int z2)
