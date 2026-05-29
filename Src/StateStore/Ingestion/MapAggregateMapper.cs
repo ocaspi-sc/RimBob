@@ -223,7 +223,12 @@ public static class MapAggregateMapper
                 Beauty: room.Beauty,
                 Cleanliness: room.Cleanliness,
                 Space: room.Space,
-                Wealth: room.Wealth))
+                Wealth: room.Wealth,
+                Bounds: MapRect(room.Bounds),
+                Cells: (room.Cells ?? []).Select(MapPosition).OfType<MapPosition>().ToList(),
+                EntryCells: (room.EntryCells ?? []).Select(MapPosition).OfType<MapPosition>().ToList(),
+                RegionId: room.RegionId,
+                ContainedBuildingIds: ContainedBuildingIdsFor(room)))
             .ToList());
 
     public static StockpileLedger FromStockpiles(
@@ -291,6 +296,18 @@ public static class MapAggregateMapper
 
     public static MapPosition? MapPosition(PositionDto? position) =>
         position is null ? null : new MapPosition(position.X, position.Y, position.Z);
+
+    private static MapRect? MapRect(MapRectDto? rect) =>
+        rect is null ? null : new MapRect(rect.X1, rect.Z1, rect.X2, rect.Z2);
+
+    private static IReadOnlyList<string> ContainedBuildingIdsFor(RoomDto room)
+    {
+        IReadOnlyList<int> source =
+            room.ContainedBuildingIds is { Count: > 0 }
+                ? room.ContainedBuildingIds
+                : room.ContainedBedsIds ?? [];
+        return source.Select(id => id.ToString()).ToList();
+    }
 
     private static string StableThingId(ThingDto thing) =>
         string.IsNullOrWhiteSpace(thing.StableId)

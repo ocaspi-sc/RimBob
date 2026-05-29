@@ -17,6 +17,12 @@ public sealed record ResolvedAnchor(
     MapPosition TargetCell,
     AnchorMatchReason MatchReason);
 
+public sealed record ExistingRoomFootprint(
+    WillieRoomAnchor Anchor,
+    IReadOnlySet<MapCell> Cells,
+    FreeRect Bounds,
+    IReadOnlyList<MapCell> EntryCells);
+
 public sealed record GenerationBudget(int MaxDrafts, int MaxSearchRadius);
 
 public sealed record RectSize(int Width, int Height);

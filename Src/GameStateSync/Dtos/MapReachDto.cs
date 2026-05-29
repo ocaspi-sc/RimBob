@@ -20,6 +20,14 @@ public sealed record MapReachResponseDto(
     [property: JsonPropertyName("pe_mode")]
     string PeMode);
 
+public sealed record MapRegionAtResponseDto(
+    [property: JsonPropertyName("cell")]
+    MapCellDto Cell,
+    [property: JsonPropertyName("in_bounds")]
+    bool InBounds,
+    [property: JsonPropertyName("region_id")]
+    int? RegionId);
+
 public sealed record MapPathCostRequestDto(
     [property: JsonPropertyName("map_id")]
     int MapId,

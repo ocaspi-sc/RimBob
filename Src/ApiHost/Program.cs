@@ -81,7 +81,12 @@ try
     builder.Services.AddSingleton<IReadOnlyList<IPlacementGenerator>>(sp =>
     {
         RoomTemplateSet templates = sp.GetRequiredService<RoomTemplateSet>();
-        return [new TemplateAnchoredGenerator(templates), new LargestEmptyRectangleGenerator(templates)];
+        return
+        [
+            new ReuseExistingFootprintGenerator(templates),
+            new TemplateAnchoredGenerator(templates),
+            new LargestEmptyRectangleGenerator(templates)
+        ];
     });
     builder.Services.AddSingleton<IPlacementScorer, WalkablePathCostScorer>();
     builder.Services.AddSingleton<PlacementSolver>();

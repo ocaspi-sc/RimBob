@@ -13,6 +13,8 @@
 > **No compat code; wipe-and-regen on upgrade** for any persisted advice/option/trace shape.
 > Worktree port: `.\run-rimbob.ps1 -ListenUrl http://127.0.0.1:5101`.
 
+> S3d follow-up note: the original Solver3 landing shipped S3a-S3c and recorded the S3d blocker. The follow-up slice adds the fork room-footprint evidence (`/api/v1/map/rooms` detail flags plus `/api/v1/map/region-at`) and wires a thin `ReuseExistingFootprintGenerator` that only emits interior fixtures/floors inside same-class rooms with real `cells[]`; wall replacement and freezer cooler retrofits stay out of scope.
+
 ---
 
 ## 0. Motivation + the design crux

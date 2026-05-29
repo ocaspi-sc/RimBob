@@ -55,6 +55,30 @@ public sealed class RimApiClientFork3Tests
     }
 
     [Fact]
+    public async Task GetRegionAtAsync_WhenApiReturnsRegion_ReturnsDto()
+    {
+        using HttpClient http = MakeClient(new PathRouter()
+            .Add("map/region-at", Json("""
+                {
+                  "success": true,
+                  "data": {
+                    "cell": { "x": 12, "z": 34 },
+                    "in_bounds": true,
+                    "region_id": 987
+                  },
+                  "errors": []
+                }
+                """)));
+
+        MapRegionAtResponseDto response = await new RimApiClient(http)
+            .GetRegionAtAsync(7, 12, 34);
+
+        response.Cell.Should().Be(new MapCellDto(12, 34));
+        response.InBounds.Should().BeTrue();
+        response.RegionId.Should().Be(987);
+    }
+
+    [Fact]
     public async Task PostPathCostBatchAsync_WhenEnvelopeFails_ThrowsRimApiException()
     {
         using HttpClient http = MakeClient(new PathRouter()

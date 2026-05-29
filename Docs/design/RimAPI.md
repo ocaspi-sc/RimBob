@@ -101,13 +101,14 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 | GET | `/map/terrain?map_id` | RLE terrain grid |
 | GET | `/map/fog-grid?map_id` | RLE visibility |
 | GET | `/map/reach?map_id&from_x&from_z&to_x&to_z` | fork-only cell reachability wrapper |
+| GET | `/map/region-at?map_id&x&z` | fork-only region id for one cell |
 | POST | `/map/path-cost` | fork-only single-pair region/A* path cost |
 | POST | `/map/path-cost/batch` | fork-only bounded batch region/A* path costs |
 | GET | `/map/ore?map_id` | ore deposits |
 | GET | `/map/plants?map_id` | plants w/ growth |
 | GET | `/map/animals?map_id` | wild + tame |
 | GET | `/map/zones?map_id` | zones + areas |
-| GET | `/map/rooms?map_id` | rooms w/ role, temp, beds, roof/open signals, quality stats |
+| GET | `/map/rooms?map_id` | rooms w/ role, temp, beds, roof/open signals, quality stats, optional footprint details |
 | GET | `/map/buildings?map_id` | all buildings |
 | GET | `/map/building/info?id` | one building |
 | GET | `/map/weather?map_id` | weather + temp |
@@ -126,16 +127,15 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 >
 > **Verified shape.** `/map/terrain?map_id=...` returns map dimensions, a terrain palette, and an RLE grid. `/def/all` terrain definitions include fertility and affordances; Food uses those as compact crop-fertility context, not as an exact placement solver.
 
-> **Fork shape.** `/map/reach`, `/map/path-cost`, and
-> `/map/path-cost/batch` expose default in-map reachability and walk-cost
+> **Fork shape.** `/map/reach`, `/map/region-at`, `/map/path-cost`, and
+> `/map/path-cost/batch` expose default in-map reachability, region ids, and walk-cost
 > scoring for Willie placement ranking. `reach` wraps
 > `Map.reachability.CanReach`; `path-cost` uses `tier:"region"` for cheap
 > region-BFS rank or `tier:"astar"` for exact RimWorld pathfinder cost; batch
 > requests are capped at 4096 pairs and reject the whole batch on malformed
 > cells. These endpoints are read-only and not pawn-specific.
 
-> **RimBob wrapper coverage.** `RimApiClient` now has typed wrappers for all
-> three endpoints. They are network primitives only until Placement Solver PS1
+> **RimBob wrapper coverage.** `RimApiClient` now has typed wrappers for these endpoints. They are network primitives only until Placement Solver PS1
 > consumes them.
 
 > **Verified shape.** `/map/farm/summary?map_id=...` returns live growing-zone crop rows under `data.crop_types[]`, not the cached `crop_breakdown[]` shape. Useful fields include `total_plants`, `growth_progress_average` as a percent value, and per-crop `plant_def_name`, `total_plants`, `harvestable_plants`, and numeric `zone_id`. Food uses this as the primary crop count/growth/zone source.
@@ -144,7 +144,7 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 
 > **Verified historical shape.** `/map/animals?map_id=...` could omit health/tame fields on ordinary wild animals. Missing health meant "not reported", not injured/dead; ingestion defaulted it to healthy for Chef's wild-animal opportunity count. The RimBob fork now emits `tame` and `health` where RimWorld exposes them, which lets Chef exclude tame or unhealthy animals before hunt scoring.
 
-> **Verified shape (RimBob fork).** `/map/rooms?map_id=...` returns `data.rooms[]`. Room rows include `id`, `role_label`, `temperature`, `cells_count`, `touches_map_edge`, `is_prison_cell`, `is_doorway`, `open_roof_count`, `contained_beds_ids[]`, and room stats `impressiveness`, `beauty`, `cleanliness`, `space`, `wealth`. RimBob ingests this into `RoomRegistry` for read-only Welfare source briefings and Willie/Welfare evidence.
+> **Verified shape (RimBob fork).** `/map/rooms?map_id=...` returns `data.rooms[]`. Room rows include `id`, `role_label`, `temperature`, `cells_count`, `touches_map_edge`, `is_prison_cell`, `is_doorway`, `open_roof_count`, `contained_beds_ids[]`, and room stats `impressiveness`, `beauty`, `cleanliness`, `space`, `wealth`. With `include_cells=true`, `include_entry_cells=true`, `include_contained_buildings=true`, and `include_region=true`, the fork also emits `bounds`, bounded `cells[]`, boundary `entry_cells[]`, `region_id`, and general `contained_building_ids[]`; oversized rooms omit the detail fields rather than streaming huge room polygons. RimBob ingests this into `RoomRegistry` for read-only Welfare source briefings, Willie anchor quality, and the Placement Solver reuse-existing-footprint generator.
 
 ### Bill (work-table recipes)
 | Method | Path | Purpose |

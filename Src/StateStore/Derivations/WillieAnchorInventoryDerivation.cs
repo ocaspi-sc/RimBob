@@ -16,8 +16,7 @@ public static class WillieAnchorInventoryDerivation
         List<WillieRoomAnchor> anchors = [];
         foreach (RoomRecord room in state.Rooms.Value.Rooms)
         {
-            // TODO: use rimapi-room-detail-read general contained-building list once available; today limited to ContainedBedIds.
-            IReadOnlyList<BuildingRecord> containedBuildings = room.ContainedBedIds
+            IReadOnlyList<BuildingRecord> containedBuildings = room.ContainedBuildingIds
                 .Where(id => buildingsById.ContainsKey(id))
                 .Select(id => buildingsById[id])
                 .ToList();
@@ -32,15 +31,28 @@ public static class WillieAnchorInventoryDerivation
                 Class: roomClass.Value,
                 RoleLabel: room.RoleLabel,
                 CellsCount: room.CellsCount,
-                Centroid: Centroid(containedBuildings),
-                ContainedBuildingIds: containedBuildings.Select(building => building.Id).ToList()));
+                Centroid: Centroid(room.Cells, containedBuildings),
+                ContainedBuildingIds: containedBuildings.Select(building => building.Id).ToList())
+            {
+                Bounds = room.Bounds,
+                Cells = room.Cells,
+                EntryCells = room.EntryCells,
+                RegionId = room.RegionId
+            });
         }
 
         return new WillieAnchorInventory(anchors);
     }
 
-    private static MapPosition? Centroid(IReadOnlyList<BuildingRecord> buildings)
+    private static MapPosition? Centroid(
+        IReadOnlyList<MapPosition> roomCells,
+        IReadOnlyList<BuildingRecord> buildings)
     {
+        if (roomCells.Count > 0)
+        {
+            return CenterOf(roomCells);
+        }
+
         IReadOnlyList<MapPosition> positions = buildings
             .Select(building => building.Position)
             .Where(position => position is not null)
@@ -49,10 +61,14 @@ public static class WillieAnchorInventoryDerivation
 
         if (positions.Count == 0)
         {
-            // TODO: solver Slice-A fallback must skip null-centroid anchors until FORK3 client wires EntryCells path.
             return null;
         }
 
+        return CenterOf(positions);
+    }
+
+    private static MapPosition CenterOf(IReadOnlyList<MapPosition> positions)
+    {
         int x = (int)Math.Round(positions.Average(position => position.X));
         int y = (int)Math.Round(positions.Average(position => position.Y));
         int z = (int)Math.Round(positions.Average(position => position.Z));

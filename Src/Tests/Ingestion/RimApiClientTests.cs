@@ -121,7 +121,17 @@ public sealed class RimApiClientTests
                         "beauty": -1.5,
                         "cleanliness": -0.4,
                         "space": 16.0,
-                        "wealth": 420.0
+                        "wealth": 420.0,
+                        "bounds": { "x1": 3, "z1": 4, "x2": 6, "z2": 7 },
+                        "cells": [
+                          { "x": 3, "y": 0, "z": 4 },
+                          { "x": 4, "y": 0, "z": 4 }
+                        ],
+                        "entry_cells": [
+                          { "x": 3, "y": 0, "z": 3 }
+                        ],
+                        "region_id": 123,
+                        "contained_building_ids": [10, 11]
                       }
                     ]
                   },
@@ -142,6 +152,11 @@ public sealed class RimApiClientTests
         room.Cleanliness.Should().Be(-0.4f);
         room.Space.Should().Be(16.0f);
         room.Wealth.Should().Be(420.0f);
+        room.Bounds.Should().Be(new MapRectDto(3, 4, 6, 7));
+        room.Cells.Should().ContainSingle(cell => cell.X == 3 && cell.Z == 4);
+        room.EntryCells.Should().ContainSingle(cell => cell.X == 3 && cell.Z == 3);
+        room.RegionId.Should().Be(123);
+        room.ContainedBuildingIds.Should().Equal(10, 11);
     }
 
     [Fact]

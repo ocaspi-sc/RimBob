@@ -132,6 +132,8 @@ chosen option.
 A requesting minister (e.g. Chef asking for a freezer) shows only its outbound
 request — never another minister's build Apply.
 
+Solver reuse of existing rooms is evidence-gated: `ReuseExistingFootprintGenerator` may propose interior fixtures/floors inside a same-class existing room only when the fork supplied real bounded room `cells[]`; it does not infer room polygons from point-approx building positions, and it does not replace walls for freezer coolers yet.
+
 ---
 
 ## Briefing Direction

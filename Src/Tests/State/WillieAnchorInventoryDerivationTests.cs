@@ -28,7 +28,17 @@ public sealed class WillieAnchorInventoryDerivationTests
                 Beauty: null,
                 Cleanliness: null,
                 Space: null,
-                Wealth: null),
+                Wealth: null,
+                Bounds: new MapRect(2, 2, 5, 5),
+                Cells:
+                [
+                    new MapPosition(2, 0, 2),
+                    new MapPosition(3, 0, 2),
+                    new MapPosition(4, 0, 2),
+                    new MapPosition(5, 0, 2)
+                ],
+                EntryCells: [new MapPosition(3, 0, 1)],
+                RegionId: 99),
             new RoomRecord(
                 Id: "unknown-room",
                 RoleLabel: "None",
@@ -58,7 +68,8 @@ public sealed class WillieAnchorInventoryDerivationTests
                 Beauty: null,
                 Cleanliness: null,
                 Space: null,
-                Wealth: null)
+                Wealth: null,
+                ContainedBuildingIds: ["bed-1"])
         ]));
         state.Buildings.Update(new BuildingRegistry([
             new BuildingRecord("bed-1", "Bed", 1f, null, null, new MapPosition(8, 0, 9))
@@ -69,9 +80,11 @@ public sealed class WillieAnchorInventoryDerivationTests
         inventory.Anchors.Should().HaveCount(2);
         WillieRoomAnchor kitchen = inventory.Anchors.Single(anchor => anchor.RoomId == "kitchen-room");
         kitchen.Class.Should().Be(RoomClass.Kitchen);
-        kitchen.Centroid.Should().BeNull();
-        kitchen.EntryCells.Should().BeEmpty();
-        kitchen.RegionId.Should().BeNull();
+        kitchen.Centroid.Should().Be(new MapPosition(4, 0, 2));
+        kitchen.Bounds.Should().Be(new MapRect(2, 2, 5, 5));
+        kitchen.Cells.Should().HaveCount(4);
+        kitchen.EntryCells.Should().Equal(new MapPosition(3, 0, 1));
+        kitchen.RegionId.Should().Be(99);
 
         WillieRoomAnchor bedroom = inventory.Anchors.Single(anchor => anchor.RoomId == "bedroom-room");
         bedroom.Class.Should().Be(RoomClass.Bedroom);

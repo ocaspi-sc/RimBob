@@ -36,7 +36,7 @@ public sealed class PlacementSolver : IPlacementSolver
         this.placementValidator = placementValidator;
         this.generators = generators is { Count: > 0 }
             ? generators
-            : [new TemplateAnchoredGenerator(), new LargestEmptyRectangleGenerator()];
+            : [new ReuseExistingFootprintGenerator(), new TemplateAnchoredGenerator(), new LargestEmptyRectangleGenerator()];
         this.scorer = scorer ?? new WalkablePathCostScorer();
     }
 
@@ -61,7 +61,8 @@ public sealed class PlacementSolver : IPlacementSolver
         PlacementEvidence evidence = PlacementEvidence.Build(
             colonyState.Map.Value,
             colonyState.Buildings.Value,
-            anchors);
+            anchors,
+            briefing.AnchorInventory.Anchors);
         IReadOnlyList<PlacementDraft> drafts = generators
             .SelectMany(generator => generator.Generate(spec, evidence, BudgetFor(generator)))
             .ToList();

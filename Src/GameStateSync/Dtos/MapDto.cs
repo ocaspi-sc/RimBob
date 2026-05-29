@@ -310,8 +310,19 @@ public record RoomDto(
     [property: JsonPropertyName("beauty")]             float? Beauty,
     [property: JsonPropertyName("cleanliness")]        float? Cleanliness,
     [property: JsonPropertyName("space")]              float? Space,
-    [property: JsonPropertyName("wealth")]             float? Wealth
+    [property: JsonPropertyName("wealth")]             float? Wealth,
+    [property: JsonPropertyName("bounds")]             MapRectDto? Bounds = null,
+    [property: JsonPropertyName("cells")]              IReadOnlyList<PositionDto>? Cells = null,
+    [property: JsonPropertyName("entry_cells")]        IReadOnlyList<PositionDto>? EntryCells = null,
+    [property: JsonPropertyName("region_id")]          int? RegionId = null,
+    [property: JsonPropertyName("contained_building_ids")] IReadOnlyList<int>? ContainedBuildingIds = null
 );
+
+public record MapRectDto(
+    [property: JsonPropertyName("x1")] int X1,
+    [property: JsonPropertyName("z1")] int Z1,
+    [property: JsonPropertyName("x2")] int X2,
+    [property: JsonPropertyName("z2")] int Z2);
 
 // ── GET /api/v1/resources/summary?map_id ──────────────────────────────────────
 // Colony-wide stockpile rollup. Verified against live RIMAPI 1.9.0.

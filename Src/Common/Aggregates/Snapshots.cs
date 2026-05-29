@@ -82,8 +82,20 @@ public sealed record RoomRecord(
     float? Beauty,
     float? Cleanliness,
     float? Space,
-    float? Wealth
-);
+    float? Wealth,
+    MapRect? Bounds = null,
+    IReadOnlyList<MapPosition>? Cells = null,
+    IReadOnlyList<MapPosition>? EntryCells = null,
+    int? RegionId = null,
+    IReadOnlyList<string>? ContainedBuildingIds = null)
+{
+    public IReadOnlyList<MapPosition> Cells { get; init; } = Cells ?? [];
+
+    public IReadOnlyList<MapPosition> EntryCells { get; init; } = EntryCells ?? [];
+
+    public IReadOnlyList<string> ContainedBuildingIds { get; init; } =
+        ContainedBuildingIds ?? ContainedBedIds;
+}
 
 public sealed record StockpileLedger(
     IReadOnlyList<StockpileZone>     Zones,

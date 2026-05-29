@@ -63,7 +63,16 @@ public sealed class AggregateMapperTests
             Beauty: -1.5f,
             Cleanliness: -0.4f,
             Space: 16f,
-            Wealth: 420f);
+            Wealth: 420f,
+            Bounds: new MapRectDto(3, 4, 6, 7),
+            Cells:
+            [
+                new PositionDto(3, 0, 4),
+                new PositionDto(4, 0, 4)
+            ],
+            EntryCells: [new PositionDto(3, 0, 3)],
+            RegionId: 123,
+            ContainedBuildingIds: [10, 11, 12]);
 
         RoomRegistry registry = MapAggregateMapper.FromRooms([dto]);
 
@@ -71,6 +80,11 @@ public sealed class AggregateMapperTests
         room.Id.Should().Be("42");
         room.RoleLabel.Should().Be("bedroom");
         room.ContainedBedIds.Should().Equal("10", "11");
+        room.ContainedBuildingIds.Should().Equal("10", "11", "12");
+        room.Bounds.Should().Be(new MapRect(3, 4, 6, 7));
+        room.Cells.Should().Equal(new MapPosition(3, 0, 4), new MapPosition(4, 0, 4));
+        room.EntryCells.Should().Equal(new MapPosition(3, 0, 3));
+        room.RegionId.Should().Be(123);
         room.Impressiveness.Should().Be(31f);
         room.Beauty.Should().Be(-1.5f);
         room.Cleanliness.Should().Be(-0.4f);

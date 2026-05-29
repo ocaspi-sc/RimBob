@@ -308,10 +308,13 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
         GetEnvelopedAsync<CreaturesSummaryDto>(
             $"api/v1/map/creatures/summary?map_id={mapId}", ct);
 
-    /// <summary>GET api/v1/map/rooms?map_id — rooms with role, temperature, bed ids, roof/open signals, and quality stats.</summary>
+    /// <summary>GET api/v1/map/rooms?map_id — rooms with role, temperature, quality stats, and Willie placement detail fields.</summary>
     public Task<IReadOnlyList<RoomDto>> GetRoomsAsync(
         int mapId, CancellationToken ct = default) =>
-        GetEnvelopedListAsync<RoomDto>($"api/v1/map/rooms?map_id={mapId}", ct, "rooms");
+        GetEnvelopedListAsync<RoomDto>(
+            $"api/v1/map/rooms?map_id={mapId}&include_cells=true&include_entry_cells=true&include_contained_buildings=true&include_region=true",
+            ct,
+            "rooms");
 
     /// <summary>GET api/v1/map/construction/backlog?map_id - pending blueprint/frame backlog groups.</summary>
     public Task<IReadOnlyList<ConstructionBacklogGroupDto>> GetConstructionBacklogAsync(
@@ -342,6 +345,16 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
         CancellationToken ct = default) =>
         GetEnvelopedAsync<MapReachResponseDto>(
             $"api/v1/map/reach?map_id={mapId}&from_x={fromX}&from_z={fromZ}&to_x={toX}&to_z={toZ}&mode={Query(mode)}&pe_mode={Query(peMode)}",
+            ct);
+
+    /// <summary>GET api/v1/map/region-at - region id for one in-map cell.</summary>
+    public Task<MapRegionAtResponseDto> GetRegionAtAsync(
+        int mapId,
+        int x,
+        int z,
+        CancellationToken ct = default) =>
+        GetEnvelopedAsync<MapRegionAtResponseDto>(
+            $"api/v1/map/region-at?map_id={mapId}&x={x}&z={z}",
             ct);
 
     /// <summary>POST api/v1/map/path-cost - single-pair path-cost primitive for future Willie solver scoring.</summary>

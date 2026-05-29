@@ -16,9 +16,11 @@ public sealed record WillieRoomAnchor(
     MapPosition? Centroid,
     IReadOnlyList<string> ContainedBuildingIds)
 {
-    // TODO: populate after rimapi-room-entry-cells lands.
+    public MapRect? Bounds { get; init; }
+
+    public IReadOnlyList<MapPosition> Cells { get; init; } = [];
+
     public IReadOnlyList<MapPosition> EntryCells { get; init; } = [];
 
-    // TODO: populate after rimapi-map-region-at lands.
     public int? RegionId { get; init; }
 }

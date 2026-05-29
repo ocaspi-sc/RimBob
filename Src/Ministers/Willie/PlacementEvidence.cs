@@ -1,5 +1,6 @@
 using RimBob.Core.Advice;
 using RimBob.Core.Aggregates;
+using RimBob.Core.Briefings;
 using RimBob.State.Derivations.Common;
 
 namespace RimBob.Ministers.Willie;
@@ -16,6 +17,7 @@ public sealed class PlacementEvidence
         MapBounds? bounds,
         HashSet<MapCell> occupiedCells,
         IReadOnlyList<ResolvedAnchor> anchors,
+        IReadOnlyList<ExistingRoomFootprint> roomFootprints,
         IReadOnlyList<FreeRect> freeRects,
         bool freeSpaceScanTruncated)
     {
@@ -23,6 +25,7 @@ public sealed class PlacementEvidence
         Bounds = bounds;
         this.occupiedCells = occupiedCells;
         Anchors = anchors;
+        RoomFootprints = roomFootprints;
         FreeRects = freeRects;
         FreeSpaceScanTruncated = freeSpaceScanTruncated;
     }
@@ -32,6 +35,8 @@ public sealed class PlacementEvidence
     public MapBounds? Bounds { get; }
 
     public IReadOnlyList<ResolvedAnchor> Anchors { get; }
+
+    public IReadOnlyList<ExistingRoomFootprint> RoomFootprints { get; }
 
     // TODO: terrain affordance still absent (rimapi-buildability-layers); free-space is occupancy-only.
     public IReadOnlyList<FreeRect> FreeRects { get; }
@@ -44,7 +49,8 @@ public sealed class PlacementEvidence
     public static PlacementEvidence Build(
         MapInfoSnapshot map,
         BuildingRegistry buildings,
-        IReadOnlyList<ResolvedAnchor> anchors)
+        IReadOnlyList<ResolvedAnchor> anchors,
+        IReadOnlyList<WillieRoomAnchor>? roomAnchors = null)
     {
         HashSet<MapCell> occupied = buildings.Buildings
             .Select(building => building.Position)
@@ -55,12 +61,14 @@ public sealed class PlacementEvidence
 
         MapBounds? bounds = MapBounds.Parse(map.Size);
         FreeSpaceScanResult freeSpace = BuildFreeRects(bounds, occupied);
+        IReadOnlyList<ExistingRoomFootprint> roomFootprints = BuildRoomFootprints(roomAnchors ?? []);
 
         return new PlacementEvidence(
             map.Id,
             bounds,
             occupied,
             anchors,
+            roomFootprints,
             freeSpace.Rects,
             freeSpace.ScanTruncated);
     }
@@ -209,4 +217,40 @@ public sealed class PlacementEvidence
     private sealed record FreeSpaceScanResult(
         IReadOnlyList<FreeRect> Rects,
         bool ScanTruncated);
+
+    private static IReadOnlyList<ExistingRoomFootprint> BuildRoomFootprints(
+        IReadOnlyList<WillieRoomAnchor> roomAnchors)
+    {
+        return roomAnchors
+            .Select(TryBuildRoomFootprint)
+            .OfType<ExistingRoomFootprint>()
+            .OrderBy(footprint => footprint.Anchor.RoomId, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static ExistingRoomFootprint? TryBuildRoomFootprint(WillieRoomAnchor anchor)
+    {
+        HashSet<MapCell> cells = anchor.Cells
+            .Select(cell => cell.ToMapCell())
+            .ToHashSet();
+        if (cells.Count == 0)
+            return null;
+
+        FreeRect bounds = BoundsFor(cells);
+        IReadOnlyList<MapCell> entryCells = anchor.EntryCells
+            .Select(cell => cell.ToMapCell())
+            .OrderBy(cell => cell.X)
+            .ThenBy(cell => cell.Z)
+            .ToList();
+        return new ExistingRoomFootprint(anchor, cells, bounds, entryCells);
+    }
+
+    private static FreeRect BoundsFor(IReadOnlySet<MapCell> cells)
+    {
+        int minX = cells.Min(cell => cell.X);
+        int maxX = cells.Max(cell => cell.X);
+        int minZ = cells.Min(cell => cell.Z);
+        int maxZ = cells.Max(cell => cell.Z);
+        return new FreeRect(new MapCell(minX, minZ), maxX - minX + 1, maxZ - minZ + 1);
+    }
 }
