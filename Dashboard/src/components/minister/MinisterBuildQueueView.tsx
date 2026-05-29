@@ -50,7 +50,7 @@ export function MinisterBuildQueueView({
       <header className="view-heading">
         <span className="eyebrow">{scope.label}</span>
         <h2><SemanticLabel icon={iconForView('build_queue')}><span>Build Queue</span></SemanticLabel></h2>
-        <p>Requested builds, solver proposals, and visible construction backlog in one inspection surface.</p>
+        <p>Requested builds, solver proposals, and placed blueprints or frames in one inspection surface.</p>
       </header>
 
       {!anySectionHasRows && !briefing.loading && !briefing.error && (
@@ -79,13 +79,13 @@ export function MinisterBuildQueueView({
         </BuildQueueSection>
 
         <BuildQueueSection
-          title="In Backlog"
+          title="Placed"
           count={backlog.groups.length}
           iconKey="construction_backlog"
           meta={briefing.loading ? 'loading' : `${formatInteger(backlog.pending)} pending / ${formatInteger(backlog.blocked)} blocked`}
         >
           {briefing.loading ? (
-            <LaneEmpty>Loading current Willie briefing backlog.</LaneEmpty>
+            <LaneEmpty>Loading current placed build evidence.</LaneEmpty>
           ) : briefing.error ? (
             <LaneEmpty>{briefing.error}</LaneEmpty>
           ) : (
@@ -264,7 +264,7 @@ function OptionCard({ card }: { card: ProposedOptionModel }) {
 
 function BacklogLane({ backlog }: { backlog: BacklogModel }) {
   if (backlog.groups.length === 0) {
-    return <LaneEmpty>No construction backlog groups are visible.</LaneEmpty>;
+    return <LaneEmpty>No placed blueprints or frames are visible.</LaneEmpty>;
   }
 
   return (
@@ -276,7 +276,7 @@ function BacklogLane({ backlog }: { backlog: BacklogModel }) {
       <DynamicTable
         rows={backlog.groups}
         preferredColumns={['kind', 'defName', 'stuffDefName', 'allowed', 'count', 'blockedCount', 'disallowedCount', 'totalWorkLeft']}
-        emptyMessage="No construction backlog groups are visible."
+        emptyMessage="No placed blueprints or frames are visible."
       />
     </div>
   );

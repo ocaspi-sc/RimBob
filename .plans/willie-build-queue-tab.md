@@ -33,21 +33,21 @@ Map the existing data to a small, honest set of stacked collapsible sections - d
 |---|---|---|
 | **Requested** | `AgentFlag.building_requests[]` (Willie-domain flags) | the asks Willie has noticed but not yet solved |
 | **Proposed** | `AdviceItem.options[]` on Willie advice | solver layouts awaiting a player pick (freezer today) |
-| **In backlog** | `constructionBacklog.groups[]` + `stalledBuilds` | blueprinted/building/blocked frames already on the map |
+| **Placed** | `constructionBacklog.groups[]` + `stalledBuilds` | blueprints or frames already on the map |
 
 A `Done` section is **deferred** - the briefing only exposes *pending* backlog, not a completed-build history. Add it only if a completion feed lands.
 
 ## 2. Cards (the C contents)
 
 - **Option card** (Proposed section): `label` + `summary`, a **footprint thumbnail** (render `blueprint_group.assets[]` as a tiny SVG/canvas grid colored by `role` - floor/wall/door/cooler), `est_materials` chips, `readiness` as `StatusPill`s, a `tradeoff_note`, and an **Apply** button wired to the existing `place_blueprint_group` apply. Multiple options per advice item sit side by side.
-- **Backlog card / row**: reuse the `DynamicTable` columns already proven in the readout (`kind`, `defName`, `count`, `blockedCount`, `totalWorkLeft`).
+- **Placed card / row**: reuse the `DynamicTable` columns already proven in the readout (`kind`, `defName`, `count`, `blockedCount`, `totalWorkLeft`).
 - **Request card**: `target_class`/`room_class`, `capacity_need`, `adjacency`, `urgency`, `requested_from`.
 
 ---
 
 ## 3. Slices (coarse)
 
-- **BQ1 - tab + shell + data-backed sections.** Add `'build_queue'` to `MinisterViewKey` + `ministerViews` + Willie's `enabledViews` (`scopes.ts`); add a renderer + `MinisterBuildQueueView` (`ministerViewRegistry.tsx`). Render the three stacked disclosure sections from data already in `MinisterViewContext` (`activeAdvice`, `flags`) + a briefing fetch for the backlog. Requested + In-backlog sections use existing table/pill components. Risk: low.
+- **BQ1 - tab + shell + data-backed sections.** Add `'build_queue'` to `MinisterViewKey` + `ministerViews` + Willie's `enabledViews` (`scopes.ts`); add a renderer + `MinisterBuildQueueView` (`ministerViewRegistry.tsx`). Render the three stacked disclosure sections from data already in `MinisterViewContext` (`activeAdvice`, `flags`) + a briefing fetch for the placed-build data. Requested + Placed sections use existing table/pill components. Risk: low.
 - **BQ2 - option-thumbnail cards.** Build the footprint thumbnail renderer + the option card; wire Apply through the existing advice-apply path; show readiness + materials + tradeoff. This is the slice with real new UI. Risk: medium (the thumbnail renderer is the new primitive).
 - **BQ3 - polish (optional).** Sort by urgency/age, empty states per section, live refresh on the advice SSE feed, count metadata per section. Risk: low.
 
@@ -69,12 +69,12 @@ A `Done` section is **deferred** - the briefing only exposes *pending* backlog, 
 
 - "Build Queue" tab appears for Willie only (not other ministers).
 - A live freezer `building_request` populates Requested + Proposed; an option card renders a footprint thumbnail and **Apply round-trips** through the existing path.
-- Backlog section matches the readout table; no regression to Briefing/Rules/Advice tabs.
+- Placed section matches the readout table; no regression to Briefing/Rules/Advice tabs.
 
 ---
 
 ## 7. HumanTodo capture (already in Tasks.md - relink to this plan)
 
 ```text
-- [ ] willie-build-queue-tab [2026-05-29] #dashboard #willie #ui Dashboard "Build Queue" Willie view tab: B stacked collapsible sections (Requested / Proposed / In-backlog) + C option-thumbnail cards (footprint render + readiness pills + Apply). Reuses scopes.ts/ministerViewRegistry tab seam, AdviceOption.blueprint_group, construction backlog, existing apply path. Variants A (flat list) + D (minimap overlay) are follow-ups; D shares a base-map render component with the HUD minimap. [plan](.plans/willie-build-queue-tab.md)
+- [ ] willie-build-queue-tab [2026-05-29] #dashboard #willie #ui Dashboard "Build Queue" Willie view tab: B stacked collapsible sections (Requested / Proposed / Placed) + C option-thumbnail cards (footprint render + readiness pills + Apply). Reuses scopes.ts/ministerViewRegistry tab seam, AdviceOption.blueprint_group, construction backlog, existing apply path. Variants A (flat list) + D (minimap overlay) are follow-ups; D shares a base-map render component with the HUD minimap. [plan](.plans/willie-build-queue-tab.md)
 ```
