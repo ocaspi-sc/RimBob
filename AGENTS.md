@@ -13,6 +13,8 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 - Use cheap subagents often
 - Show me your plan before doing any significant work
 - When writing markdown (.md) files, don't add your own linebreaks in the middle of the paragraph. the viewer has line wrapping.
+- If unsure whether the user wants planning-only or land-it, ask. Do not infer "ship" from a plan request.
+- While reading the code, if you see something confusing, il-designed, convoluted, over-engineered, tech-debt: Suggest refactoring ideas!
 
 ## Coding
 
