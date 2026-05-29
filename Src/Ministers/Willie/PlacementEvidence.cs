@@ -6,18 +6,25 @@ namespace RimBob.Ministers.Willie;
 
 public sealed class PlacementEvidence
 {
+    public const int MaxFreeSpaceScanCells = 65_536;
+    public const int MaxFreeRects = 64;
+
     private readonly HashSet<MapCell> occupiedCells;
 
     private PlacementEvidence(
         int mapId,
         MapBounds? bounds,
         HashSet<MapCell> occupiedCells,
-        IReadOnlyList<ResolvedAnchor> anchors)
+        IReadOnlyList<ResolvedAnchor> anchors,
+        IReadOnlyList<FreeRect> freeRects,
+        bool freeSpaceScanTruncated)
     {
         MapId = mapId;
         Bounds = bounds;
         this.occupiedCells = occupiedCells;
         Anchors = anchors;
+        FreeRects = freeRects;
+        FreeSpaceScanTruncated = freeSpaceScanTruncated;
     }
 
     public int MapId { get; }
@@ -25,6 +32,11 @@ public sealed class PlacementEvidence
     public MapBounds? Bounds { get; }
 
     public IReadOnlyList<ResolvedAnchor> Anchors { get; }
+
+    // TODO: terrain affordance still absent (rimapi-buildability-layers); free-space is occupancy-only.
+    public IReadOnlyList<FreeRect> FreeRects { get; }
+
+    public bool FreeSpaceScanTruncated { get; }
 
     // TODO: BuildingRecord.Position is a single cell, not a footprint; occupancy is approximate until per-building footprints land.
     public bool OccupancyIsPointApprox { get; } = true;
@@ -41,11 +53,16 @@ public sealed class PlacementEvidence
             .Select(position => position.ToMapCell())
             .ToHashSet();
 
+        MapBounds? bounds = MapBounds.Parse(map.Size);
+        FreeSpaceScanResult freeSpace = BuildFreeRects(bounds, occupied);
+
         return new PlacementEvidence(
             map.Id,
-            MapBounds.Parse(map.Size),
+            bounds,
             occupied,
-            anchors);
+            anchors,
+            freeSpace.Rects,
+            freeSpace.ScanTruncated);
     }
 
     public bool InBounds(MapCell cell) =>
@@ -53,4 +70,143 @@ public sealed class PlacementEvidence
 
     public bool IsOccupied(MapCell cell) =>
         occupiedCells.Contains(cell);
+
+    public int CountFreeExpansionTilesAround(IReadOnlyList<BlueprintAsset> assets)
+    {
+        if (Bounds is null || assets.Count == 0) return 0;
+
+        HashSet<MapCell> assetCells = assets.Select(asset => asset.Cell).ToHashSet();
+        int minX = assetCells.Min(cell => cell.X);
+        int maxX = assetCells.Max(cell => cell.X);
+        int minZ = assetCells.Min(cell => cell.Z);
+        int maxZ = assetCells.Max(cell => cell.Z);
+        HashSet<MapCell> expansionCells = [];
+
+        for (int x = minX - 1; x <= maxX + 1; x++)
+        {
+            for (int z = minZ - 1; z <= maxZ + 1; z++)
+            {
+                bool insideFootprintBounds =
+                    x >= minX &&
+                    x <= maxX &&
+                    z >= minZ &&
+                    z <= maxZ;
+                if (insideFootprintBounds) continue;
+
+                MapCell cell = new(x, z);
+                if (!InBounds(cell) || IsOccupied(cell) || assetCells.Contains(cell))
+                    continue;
+
+                expansionCells.Add(cell);
+            }
+        }
+
+        return expansionCells.Count;
+    }
+
+    private static FreeSpaceScanResult BuildFreeRects(
+        MapBounds? bounds,
+        HashSet<MapCell> occupied)
+    {
+        if (bounds is null) return new FreeSpaceScanResult([], false);
+
+        int scanCells = bounds.Width * bounds.Height;
+        if (scanCells > MaxFreeSpaceScanCells)
+            return new FreeSpaceScanResult([], true);
+
+        int[,] clearRunRight = BuildClearRunRight(bounds, occupied);
+        List<FreeRect> candidates = [];
+        for (int z = 0; z < bounds.Height; z++)
+        {
+            for (int x = 0; x < bounds.Width; x++)
+            {
+                FreeRect? bestFromOrigin = LargestRectFromOrigin(clearRunRight, x, z, bounds.Height);
+                if (bestFromOrigin is not null)
+                    candidates.Add(bestFromOrigin);
+            }
+        }
+
+        return new FreeSpaceScanResult(ReduceFreeRects(candidates), false);
+    }
+
+    private static int[,] BuildClearRunRight(
+        MapBounds bounds,
+        HashSet<MapCell> occupied)
+    {
+        int[,] clearRunRight = new int[bounds.Width, bounds.Height];
+        for (int z = 0; z < bounds.Height; z++)
+        {
+            int run = 0;
+            for (int x = bounds.Width - 1; x >= 0; x--)
+            {
+                if (occupied.Contains(new MapCell(x, z)))
+                {
+                    run = 0;
+                    clearRunRight[x, z] = 0;
+                    continue;
+                }
+
+                run++;
+                clearRunRight[x, z] = run;
+            }
+        }
+
+        return clearRunRight;
+    }
+
+    private static FreeRect? LargestRectFromOrigin(
+        int[,] clearRunRight,
+        int originX,
+        int originZ,
+        int mapHeight)
+    {
+        if (clearRunRight[originX, originZ] == 0) return null;
+
+        int minWidth = int.MaxValue;
+        FreeRect? best = null;
+        for (int z = originZ; z < mapHeight; z++)
+        {
+            int rowRun = clearRunRight[originX, z];
+            if (rowRun == 0) break;
+
+            minWidth = Math.Min(minWidth, rowRun);
+            int height = z - originZ + 1;
+            FreeRect candidate = new(new MapCell(originX, originZ), minWidth, height);
+            if (best is null ||
+                candidate.Area > best.Area ||
+                (candidate.Area == best.Area && candidate.Width > best.Width))
+            {
+                best = candidate;
+            }
+        }
+
+        return best;
+    }
+
+    private static IReadOnlyList<FreeRect> ReduceFreeRects(IReadOnlyList<FreeRect> candidates)
+    {
+        List<FreeRect> ordered = candidates
+            .OrderByDescending(rect => rect.Area)
+            .ThenBy(rect => rect.MinX)
+            .ThenBy(rect => rect.MinZ)
+            .ThenByDescending(rect => rect.Width)
+            .ThenByDescending(rect => rect.Height)
+            .ToList();
+        List<FreeRect> reduced = [];
+        foreach (FreeRect candidate in ordered)
+        {
+            if (reduced.Any(rect => rect.Contains(candidate)))
+                continue;
+
+            reduced.Add(candidate);
+            if (reduced.Count >= MaxFreeRects)
+                break;
+        }
+
+        return reduced;
+    }
+
+    private sealed record FreeSpaceScanResult(
+        IReadOnlyList<FreeRect> Rects,
+        bool ScanTruncated);
 }

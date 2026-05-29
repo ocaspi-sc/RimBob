@@ -27,7 +27,7 @@ public sealed class WalkablePathCostScorerTests
             ]);
 
         ScoredDraft scored = new WalkablePathCostScorer()
-            .Score(drafts, lookup)
+            .Score(drafts, lookup, Evidence())
             .Should().ContainSingle().Subject;
 
         scored.RawCost.Should().Be(11);
@@ -39,6 +39,10 @@ public sealed class WalkablePathCostScorerTests
         metric.Contribution.Should().BeApproximately(16d / 12d, 0.0001);
         metric.Better.Should().Be("lower");
         scored.Metrics.Should().Contain(component => component.Id == "generator_confidence");
+        scored.Metrics.Should().Contain(component =>
+            component.Id == "expansion_room" &&
+            component.Unit == "free_tiles" &&
+            component.Better == "higher");
     }
 
     [Fact]
@@ -55,7 +59,7 @@ public sealed class WalkablePathCostScorerTests
             drafts,
             [new PathCostResult(false, 0, pairs[0].From, pairs[0].To)]);
 
-        IReadOnlyList<ScoredDraft> scored = new WalkablePathCostScorer().Score(drafts, lookup);
+        IReadOnlyList<ScoredDraft> scored = new WalkablePathCostScorer().Score(drafts, lookup, Evidence());
 
         scored.Should().BeEmpty();
     }
@@ -72,7 +76,7 @@ public sealed class WalkablePathCostScorerTests
         PathCostLookup lookup = PathCostLookup.ProbeUnavailable(drafts);
 
         ScoredDraft scored = new WalkablePathCostScorer()
-            .Score(drafts, lookup)
+            .Score(drafts, lookup, Evidence())
             .Should().ContainSingle().Subject;
 
         scored.RawCost.Should().Be(7);
@@ -97,7 +101,7 @@ public sealed class WalkablePathCostScorerTests
                 new PathCostResult(true, 5, pairs[1].From, pairs[1].To)
             ]);
 
-        IReadOnlyList<ScoredDraft> scored = new WalkablePathCostScorer().Score(drafts, lookup);
+        IReadOnlyList<ScoredDraft> scored = new WalkablePathCostScorer().Score(drafts, lookup, Evidence());
 
         scored.Should().HaveCount(2);
         scored[0].Draft.Should().BeSameAs(first);
@@ -133,4 +137,10 @@ public sealed class WalkablePathCostScorerTests
             AccessCells: accessCells,
             Assumptions: [],
             ReasonSummary: "test draft");
+
+    private static PlacementEvidence Evidence() =>
+        PlacementEvidence.Build(
+            new MapInfoSnapshot(7, "20x20"),
+            new BuildingRegistry([]),
+            []);
 }

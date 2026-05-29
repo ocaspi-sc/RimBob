@@ -129,6 +129,26 @@ public sealed class PlacementSolverTests
         result.Trace.Drafts.Where(trace => trace.Status == "selected").Should().HaveCount(3);
     }
 
+    [Fact]
+    public async Task SolveAsync_WithDefaultGenerators_CompetesTemplateAndLargestEmptyRectangle()
+    {
+        PlacementSolver solver = new(
+            new FakePathCostProbe(reachable: true, cost: 12),
+            new FakePlacementValidator(canPlaceAll: true));
+
+        PlacementResult result = await solver.SolveAsync(SpecWithMaterials(), Briefing(), State([]));
+
+        result.NoFit.Should().BeNull();
+        result.Trace.Drafts
+            .Where(trace => trace.Status == "scored")
+            .Select(trace => trace.GeneratorId)
+            .Should().Contain(["template_anchored", "largest_empty_rect"]);
+        result.Trace.Drafts
+            .Where(trace => trace.Status == "selected")
+            .Select(trace => trace.GeneratorId)
+            .Should().Contain("largest_empty_rect");
+    }
+
     public static PlacementSpec SpecWithMaterials() =>
         new(
             Request: "starter freezer",

@@ -5,11 +5,12 @@ public interface IPlacementScorer
     string Id { get; }
 
     /// <summary>
-    /// Deterministic contract: same gated drafts and lookup produce the same ordered scored drafts.
+    /// Deterministic contract: same gated drafts, lookup, and evidence produce the same ordered scored drafts.
     /// </summary>
     IReadOnlyList<ScoredDraft> Score(
         IReadOnlyList<PlacementDraft> gatedDrafts,
-        PathCostLookup pathCosts);
+        PathCostLookup pathCosts,
+        PlacementEvidence evidence);
 }
 
 public sealed record ScoredDraft(

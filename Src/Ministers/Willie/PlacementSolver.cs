@@ -26,7 +26,7 @@ public sealed class PlacementSolver
         this.placementValidator = placementValidator;
         this.generators = generators is { Count: > 0 }
             ? generators
-            : [new TemplateAnchoredGenerator()];
+            : [new TemplateAnchoredGenerator(), new LargestEmptyRectangleGenerator()];
         this.scorer = scorer ?? new WalkablePathCostScorer();
     }
 
@@ -87,7 +87,7 @@ public sealed class PlacementSolver
         }
 
         PathCostLookup pathCosts = await BuildPathCostLookupAsync(uniqueDrafts, evidence.MapId, notes, ct);
-        IReadOnlyList<ScoredDraft> scored = RankScored(scorer.Score(uniqueDrafts, pathCosts)).ToList();
+        IReadOnlyList<ScoredDraft> scored = RankScored(scorer.Score(uniqueDrafts, pathCosts, evidence)).ToList();
         draftTraces.AddRange(scored.Select(score => TraceFor(score.Draft, "scored", null, score.Metrics)));
         if (scored.Count == 0)
         {
@@ -209,9 +209,21 @@ public sealed class PlacementSolver
             return false;
         }
 
+        if (draft.AccessCells.Any(cell => !evidence.InBounds(cell)))
+        {
+            rejectionReason = "access_out_of_bounds";
+            return false;
+        }
+
         if (assetCells.Any(evidence.IsOccupied))
         {
             rejectionReason = "occupied_cell";
+            return false;
+        }
+
+        if (draft.AccessCells.Any(evidence.IsOccupied))
+        {
+            rejectionReason = "access_occupied";
             return false;
         }
 

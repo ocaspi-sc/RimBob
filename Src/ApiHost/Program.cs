@@ -69,7 +69,10 @@ try
     builder.Services.AddSingleton<RimApiPlacementProbe>();
     builder.Services.AddSingleton<IPlacementValidator>(sp => sp.GetRequiredService<RimApiPlacementProbe>());
     builder.Services.AddSingleton<IPathCostProbe>(sp => sp.GetRequiredService<RimApiPlacementProbe>());
+    builder.Services.AddSingleton<IReadOnlyList<IPlacementGenerator>>(_ =>
+        [new TemplateAnchoredGenerator(), new LargestEmptyRectangleGenerator()]);
     builder.Services.AddSingleton<IPlacementScorer, WalkablePathCostScorer>();
+    builder.Services.AddSingleton<PlacementSolver>();
     builder.Services.AddSingleton<IconCacheService>(sp =>
     {
         RimBobOptions opts = sp.GetRequiredService<IOptions<RimBobOptions>>().Value;
