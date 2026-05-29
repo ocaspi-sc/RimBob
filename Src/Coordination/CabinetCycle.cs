@@ -5,17 +5,33 @@ using RimBob.State;
 namespace RimBob.Coordination;
 
 public sealed class CabinetCycle(
-    IngestionDispatcher ingestion,
+    IColonyStateRefresher ingestion,
+    ColonyState colony,
+    ColonyStateSnapshotStore snapshotStore,
     IEnumerable<IMinister> ministers,
     MinisterRegistry registry,
     MinisterTraceStore traces,
     ILogger<CabinetCycle> log)
 {
-    public Task RunAsync(CancellationToken ct) => RunAsync(PlayCycleContext.ManualTrigger, ct);
+    public async Task RunAsync(CancellationToken ct) =>
+        await RunCycleAsync(PlayCycleContext.ManualTrigger, ct);
 
-    public async Task RunAsync(PlayCycleContext cycle, CancellationToken ct)
+    public async Task RunAsync(PlayCycleContext cycle, CancellationToken ct) =>
+        await RunCycleAsync(cycle, ct);
+
+    public async Task<CabinetTriggerResult> TriggerCabinetAsync(CancellationToken ct)
     {
-        await ingestion.RefreshAllAsync(ct);
+        bool usedRestoredSnapshot = await RunCycleAsync(PlayCycleContext.ManualTrigger, ct);
+        return new CabinetTriggerResult(
+            "cabinet",
+            PlayCycleContext.ManualTrigger.Trigger.ToString(),
+            colony.LastRefreshSource.ToString(),
+            usedRestoredSnapshot);
+    }
+
+    private async Task<bool> RunCycleAsync(PlayCycleContext cycle, CancellationToken ct)
+    {
+        bool usedRestoredSnapshot = await RefreshStateForReadOnlyEvaluationAsync(cycle, "cabinet", ct);
 
         foreach (MinisterDescriptor descriptor in registry.CabinetMinisters)
         {
@@ -24,8 +40,10 @@ public sealed class CabinetCycle(
                 throw new InvalidOperationException($"Cabinet cycle could not resolve {descriptor.Label} minister.");
 
             log.LogInformation("Cabinet cycle: running {Minister}", descriptor.Label);
-            await RunResolvedMinisterAsync(minister, cycle, ct);
+            await RunResolvedMinisterAsync(minister, cycle, usedRestoredSnapshot, ct);
         }
+
+        return usedRestoredSnapshot;
     }
 
     public async Task<MinisterTriggerResult?> TriggerMinisterAsync(string ministerKey, CancellationToken ct)
@@ -33,23 +51,72 @@ public sealed class CabinetCycle(
         MinisterDescriptor? descriptor = registry.FindMinister(ministerKey);
         if (descriptor is not { Ready: true, CanManualTrigger: true }) return null;
 
-        await ingestion.RefreshAllAsync(ct);
+        bool usedRestoredSnapshot = await RefreshStateForReadOnlyEvaluationAsync(
+            PlayCycleContext.ManualTrigger,
+            descriptor.Label,
+            ct);
 
         IMinister? minister = ResolveMinister(descriptor);
         if (minister is null)
             throw new InvalidOperationException($"Manual trigger could not resolve {descriptor.Label} minister.");
 
-        await RunResolvedMinisterAsync(minister, PlayCycleContext.ManualTrigger, ct);
-        return new MinisterTriggerResult(descriptor.Key, descriptor.Label, PlayCycleContext.ManualTrigger.Trigger.ToString());
+        await RunResolvedMinisterAsync(minister, PlayCycleContext.ManualTrigger, usedRestoredSnapshot, ct);
+        return new MinisterTriggerResult(
+            descriptor.Key,
+            descriptor.Label,
+            PlayCycleContext.ManualTrigger.Trigger.ToString(),
+            colony.LastRefreshSource.ToString(),
+            usedRestoredSnapshot);
     }
 
-    private async Task RunResolvedMinisterAsync(IMinister minister, PlayCycleContext cycle, CancellationToken ct)
+    private async Task<bool> RefreshStateForReadOnlyEvaluationAsync(
+        PlayCycleContext cycle,
+        string scope,
+        CancellationToken ct)
+    {
+        try
+        {
+            await ingestion.RefreshAllAsync(ct);
+            return false;
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            if (!TryRestoreSnapshotForManualFallback(cycle, ex))
+                throw;
+
+            log.LogWarning(
+                ex,
+                "Live state refresh failed for manual {Scope} trigger; restored colony snapshot state for read-only evaluation.",
+                scope);
+            return true;
+        }
+    }
+
+    private bool TryRestoreSnapshotForManualFallback(PlayCycleContext cycle, Exception ex)
+    {
+        if (cycle.Trigger != PlayCycleTrigger.ManualTrigger) return false;
+        if (snapshotStore.Latest is null) return false;
+        if (!RimApiConnectionFailure.IsConnectionFailure(ex)) return false;
+
+        snapshotStore.RestoreInto(colony);
+        return true;
+    }
+
+    private async Task RunResolvedMinisterAsync(
+        IMinister minister,
+        PlayCycleContext cycle,
+        bool usedRestoredSnapshot,
+        CancellationToken ct)
     {
         traces.Begin(minister.Name, cycle);
         try
         {
             await minister.RunPlayCycle(cycle, ct);
-            traces.Complete(minister.Name);
+            traces.Complete(
+                minister.Name,
+                usedRestoredSnapshot
+                    ? "Live refresh failed; evaluated against restored colony snapshot state."
+                    : null);
         }
         catch (Exception ex)
         {
@@ -64,4 +131,15 @@ public sealed class CabinetCycle(
             m.Name.Equals(descriptor.Label, StringComparison.OrdinalIgnoreCase));
 }
 
-public sealed record MinisterTriggerResult(string Scope, string Minister, string Trigger);
+public sealed record MinisterTriggerResult(
+    string Scope,
+    string Minister,
+    string Trigger,
+    string StateSource,
+    bool UsedRestoredSnapshot);
+
+public sealed record CabinetTriggerResult(
+    string Scope,
+    string Trigger,
+    string StateSource,
+    bool UsedRestoredSnapshot);

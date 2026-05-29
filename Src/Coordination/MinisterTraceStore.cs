@@ -85,7 +85,7 @@ public sealed class MinisterTraceStore
         }
     }
 
-    public void Complete(string minister)
+    public void Complete(string minister, string? note = null)
     {
         lock (_lock)
         {
@@ -94,6 +94,9 @@ public sealed class MinisterTraceStore
             {
                 Status = "completed",
                 CompletedAt = DateTimeOffset.UtcNow,
+                Note = string.IsNullOrWhiteSpace(note)
+                    ? current.Note
+                    : $"{current.Note} {note}",
             };
         }
     }

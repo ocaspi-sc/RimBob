@@ -15,7 +15,7 @@ public sealed class IngestionDispatcher(
     RimApiClient rimApi,
     ColonyState state,
     ILogger<IngestionDispatcher> log,
-    ColonyStateSnapshotStore? snapshotStore = null)
+    ColonyStateSnapshotStore? snapshotStore = null) : IColonyStateRefresher
 {
     public async Task RefreshAllAsync(CancellationToken ct = default)
     {

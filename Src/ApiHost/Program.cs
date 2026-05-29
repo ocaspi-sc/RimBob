@@ -121,6 +121,7 @@ try
     builder.Services.AddSingleton(colonySnapshotStore);
     builder.Services.AddSingleton<BriefingCache>();
     builder.Services.AddSingleton<IngestionDispatcher>();
+    builder.Services.AddSingleton<IColonyStateRefresher>(sp => sp.GetRequiredService<IngestionDispatcher>());
 
     builder.Services.AddSingleton(ministerOutputStore);
     builder.Services.AddSingleton<AdviceBus>(sp => new AdviceBus(sp.GetRequiredService<MinisterOutputStore>()));

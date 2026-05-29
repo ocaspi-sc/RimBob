@@ -21,9 +21,10 @@ public static class CabinetEndpoints
             CabinetCycle cabinet,
             CancellationToken ct) =>
         {
+            CabinetTriggerResult result;
             try
             {
-                await cabinet.RunAsync(ct);
+                result = await cabinet.TriggerCabinetAsync(ct);
             }
             catch (Exception ex)
             {
@@ -34,8 +35,10 @@ public static class CabinetEndpoints
             return Results.Ok(new
             {
                 triggered = true,
-                scope = "cabinet",
-                trigger = "ManualTrigger"
+                scope = result.Scope,
+                trigger = result.Trigger,
+                state_source = result.StateSource,
+                used_restored_snapshot = result.UsedRestoredSnapshot
             });
         });
 
@@ -73,7 +76,9 @@ public static class CabinetEndpoints
                 triggered = true,
                 scope = result.Scope,
                 minister = result.Minister,
-                trigger = result.Trigger
+                trigger = result.Trigger,
+                state_source = result.StateSource,
+                used_restored_snapshot = result.UsedRestoredSnapshot
             });
         });
 

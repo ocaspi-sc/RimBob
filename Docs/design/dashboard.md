@@ -509,9 +509,12 @@ high-priority endpoint groups, and should be updated when `RimApiClient` or
 Manual triggers are RimBob evaluation controls, not game controls:
 
 - Cabinet trigger: refresh live state, then run wired live ministers in the
-  dependency order.
+  dependency order. If live refresh fails while Host is serving a restored
+  `ColonyState` snapshot, the trigger may still run read-only evaluation against
+  that stale snapshot and must report that fallback in the response and trace.
 - Minister trigger: refresh live state, then run only the selected wired
-  minister.
+  minister. It follows the same restored-snapshot fallback as the cabinet
+  trigger.
 - Do not keep legacy trigger aliases unless a current dashboard or script
   consumer requires them.
 

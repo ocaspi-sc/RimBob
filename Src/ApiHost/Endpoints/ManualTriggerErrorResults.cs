@@ -1,5 +1,5 @@
-using System.Net.Sockets;
 using RimBob.Ingestion;
+using RimBob.State;
 
 namespace RimBob.Host.Endpoints;
 
@@ -7,7 +7,7 @@ internal static class ManualTriggerErrorResults
 {
     public static bool TryMap(Exception ex, out IResult result)
     {
-        if (IsRimApiConnectionFailure(ex))
+        if (RimApiConnectionFailure.IsConnectionFailure(ex))
         {
             result = Results.Problem(
                 title: "RimWorld is not running",
@@ -37,25 +37,5 @@ internal static class ManualTriggerErrorResults
 
         result = Results.Problem();
         return false;
-    }
-
-    private static bool IsRimApiConnectionFailure(Exception ex)
-    {
-        if (ex is not HttpRequestException requestException) return false;
-
-        if (requestException.InnerException is SocketException socketException)
-        {
-            return socketException.SocketErrorCode is SocketError.ConnectionRefused
-                or SocketError.ConnectionReset
-                or SocketError.HostDown
-                or SocketError.HostNotFound
-                or SocketError.NetworkDown
-                or SocketError.NetworkUnreachable
-                or SocketError.TimedOut;
-        }
-
-        return requestException.Message.Contains("connection refused", StringComparison.OrdinalIgnoreCase)
-            || requestException.Message.Contains("actively refused", StringComparison.OrdinalIgnoreCase)
-            || requestException.Message.Contains("No such host", StringComparison.OrdinalIgnoreCase);
     }
 }
