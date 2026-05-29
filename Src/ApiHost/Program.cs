@@ -10,6 +10,7 @@ using RimBob.Host.Endpoints;
 using RimBob.Ingestion;
 using RimBob.Knowledge;
 using RimBob.LLM;
+using RimBob.Ministers.Willie;
 using RimBob.Ministers.Mayor;
 using RimBob.State;
 using Chef = RimBob.Ministers.Food.Chef;
@@ -68,6 +69,7 @@ try
     builder.Services.AddSingleton<RimApiPlacementProbe>();
     builder.Services.AddSingleton<IPlacementValidator>(sp => sp.GetRequiredService<RimApiPlacementProbe>());
     builder.Services.AddSingleton<IPathCostProbe>(sp => sp.GetRequiredService<RimApiPlacementProbe>());
+    builder.Services.AddSingleton<IPlacementScorer, WalkablePathCostScorer>();
     builder.Services.AddSingleton<IconCacheService>(sp =>
     {
         RimBobOptions opts = sp.GetRequiredService<IOptions<RimBobOptions>>().Value;

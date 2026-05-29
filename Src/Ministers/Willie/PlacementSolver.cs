@@ -9,21 +9,23 @@ namespace RimBob.Ministers.Willie;
 
 public sealed class PlacementSolver
 {
-    private const double PathCostWeight = 16;
     private readonly IPathCostProbe pathCostProbe;
     private readonly IPlacementValidator placementValidator;
     private readonly IReadOnlyList<IPlacementGenerator> generators;
+    private readonly IPlacementScorer scorer;
 
     public PlacementSolver(
         IPathCostProbe pathCostProbe,
         IPlacementValidator placementValidator,
-        IReadOnlyList<IPlacementGenerator>? generators = null)
+        IReadOnlyList<IPlacementGenerator>? generators = null,
+        IPlacementScorer? scorer = null)
     {
         this.pathCostProbe = pathCostProbe;
         this.placementValidator = placementValidator;
         this.generators = generators is { Count: > 0 }
             ? generators
             : [new TemplateAnchoredGenerator()];
+        this.scorer = scorer ?? new WalkablePathCostScorer();
     }
 
     public async Task<PlacementResult> SolveAsync(
@@ -82,7 +84,8 @@ public sealed class PlacementSolver
                 "all drafts failed shared hard gates");
         }
 
-        IReadOnlyList<ScoredDraft> scored = await ScoreByPathCostAsync(gatedDrafts, evidence.MapId, notes, ct);
+        PathCostLookup pathCosts = await BuildPathCostLookupAsync(gatedDrafts, evidence.MapId, notes, ct);
+        IReadOnlyList<ScoredDraft> scored = scorer.Score(gatedDrafts, pathCosts);
         draftTraces.AddRange(scored.Select(score => TraceFor(score.Draft, "scored", null, score.Metrics)));
         if (scored.Count == 0)
         {
@@ -124,61 +127,27 @@ public sealed class PlacementSolver
             ApplyReady: PlacementReadiness.Blocked);
     }
 
-    private async Task<IReadOnlyList<ScoredDraft>> ScoreByPathCostAsync(
+    private async Task<PathCostLookup> BuildPathCostLookupAsync(
         IReadOnlyList<PlacementDraft> drafts,
         int mapId,
         List<string> notes,
         CancellationToken ct)
     {
-        IReadOnlyList<PathCostResult>? pathResults = await TryPathCostBatchAsync(drafts, mapId, notes, ct);
-        List<ScoredDraft> scored = [];
-        foreach (PlacementDraft draft in drafts)
-        {
-            if (pathResults is { Count: > 0 })
-            {
-                PathCostResult? reachable = pathResults
-                    .Where(result =>
-                        result.Reachable &&
-                        draft.AccessCells.Contains(result.From) &&
-                        result.To == draft.SourceAnchor.TargetCell.ToMapCell())
-                    .OrderBy(result => result.Cost)
-                    .FirstOrDefault();
-                if (reachable is null) continue;
-
-                scored.Add(ScoreDraft(draft, reachable.Cost, "path_tiles"));
-                continue;
-            }
-
-            int fallbackDistance = draft.AccessCells
-                .Select(cell => MapDistance.Manhattan(cell.ToMapPosition(), draft.SourceAnchor.TargetCell))
-                .Min();
-            scored.Add(ScoreDraft(draft, fallbackDistance, "tiles"));
-        }
-
-        return scored;
-    }
-
-    private async Task<IReadOnlyList<PathCostResult>?> TryPathCostBatchAsync(
-        IReadOnlyList<PlacementDraft> drafts,
-        int mapId,
-        List<string> notes,
-        CancellationToken ct)
-    {
-        IReadOnlyList<PathCostPair> pairs = drafts
-            .SelectMany(draft => draft.AccessCells
-                .Select(cell => new PathCostPair(cell, draft.SourceAnchor.TargetCell.ToMapCell())))
-            .ToList();
-        if (pairs.Count == 0) return null;
+        IReadOnlyList<PathCostPair> pairs = PathCostLookup.RequestPairsFor(drafts);
+        if (pairs.Count == 0) return PathCostLookup.ProbeUnavailable(drafts);
 
         try
         {
-            return await pathCostProbe.GetPathCostsAsync(
+            IReadOnlyList<PathCostResult> results = await pathCostProbe.GetPathCostsAsync(
                 mapId,
                 pairs,
                 tier: "region",
                 mode: "pass_doors",
                 peMode: "on_cell",
                 ct: ct);
+            if (results.Count == 0) return PathCostLookup.ProbeUnavailable(drafts);
+
+            return PathCostLookup.FromProbeResults(drafts, results);
         }
         catch (OperationCanceledException)
         {
@@ -187,22 +156,8 @@ public sealed class PlacementSolver
         catch (Exception ex)
         {
             notes.Add($"path_cost_fallback={ex.GetType().Name}");
-            return null;
+            return PathCostLookup.ProbeUnavailable(drafts);
         }
-    }
-
-    private static ScoredDraft ScoreDraft(PlacementDraft draft, int rawCost, string unit)
-    {
-        double normalized = 1d / (1d + rawCost);
-        MetricValue metric = new(
-            Id: "freezer_to_kitchen_distance",
-            RawValue: rawCost,
-            Unit: unit,
-            Normalized: normalized,
-            Weight: PathCostWeight,
-            Contribution: normalized * PathCostWeight,
-            Better: "lower");
-        return new ScoredDraft(draft, rawCost, [metric]);
     }
 
     private static bool PassesHardGate(
@@ -309,8 +264,4 @@ public sealed class PlacementSolver
             Reason: reason,
             Metrics: metrics);
 
-    private sealed record ScoredDraft(
-        PlacementDraft Draft,
-        int RawCost,
-        IReadOnlyList<MetricValue> Metrics);
 }
