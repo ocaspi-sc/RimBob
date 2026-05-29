@@ -40,7 +40,8 @@ public sealed class IngestionDispatcher(
         Task<DefCatalogDto>                     defCatalogTask = rimApi.GetDefCatalogAsync(ct);
         Task<StoredResourcesDto>                storedTask    = rimApi.GetStoredResourcesAsync(home.Id, ct);
         Task<IReadOnlyList<AnimalDto>>          animalsTask   = rimApi.GetAnimalsAsync(home.Id, ct);
-        Task<IReadOnlyList<RoomDto>>            roomsTask     = rimApi.GetRoomsAsync(home.Id, ct);
+        // Willie room reuse needs bounded room cells; keep the heavier detail fetch explicit on the shared registry path.
+        Task<IReadOnlyList<RoomDto>>            roomsTask     = rimApi.GetRoomsAsync(home.Id, includeFootprint: true, ct: ct);
         Task<IReadOnlyList<ZoneDto>>            zonesTask     = rimApi.GetZonesAsync(home.Id, ct);
         Task<TerrainGridDto>                    terrainTask   = rimApi.GetTerrainAsync(home.Id, ct);
         Task<IReadOnlyList<BuildingDto>>        buildingsTask = rimApi.GetBuildingsAsync(home.Id, ct);

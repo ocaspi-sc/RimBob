@@ -31,15 +31,26 @@ public sealed class ReuseExistingFootprintGenerator : IPlacementGenerator
         if (interior is null)
             return [];
 
+        RoomShell shell = template.BuildShell(interior, DoorSide.North);
+        IReadOnlyList<TemplateAsset> reusableTemplateAssets = shell.Assets
+            .Where(asset => IsReusableInteriorAsset(asset, interior))
+            .ToList();
+
+        HashSet<string> seenCellKeys = new(StringComparer.Ordinal);
         List<PlacementDraft> drafts = [];
         foreach (ExistingRoomFootprint footprint in MatchingFootprints(evidence, template.RoomClass))
         {
+            IReadOnlyList<MapCell> origins = InteriorOrigins(footprint, interior);
             foreach (ResolvedAnchor sourceAnchor in evidence.Anchors)
             {
-                foreach (MapCell origin in InteriorOrigins(footprint, interior))
+                foreach (MapCell origin in origins)
                 {
-                    PlacementDraft? draft = TryBuildDraft(evidence, template, interior, footprint, sourceAnchor, origin);
+                    PlacementDraft? draft = TryBuildDraft(evidence, template, reusableTemplateAssets, footprint, sourceAnchor, origin);
                     if (draft is null)
+                        continue;
+
+                    string cellKey = CellKey(draft);
+                    if (!seenCellKeys.Add(cellKey))
                         continue;
 
                     drafts.Add(draft);
@@ -55,13 +66,12 @@ public sealed class ReuseExistingFootprintGenerator : IPlacementGenerator
     private PlacementDraft? TryBuildDraft(
         PlacementEvidence evidence,
         IRoomTemplate template,
-        RectSize interior,
+        IReadOnlyList<TemplateAsset> reusableTemplateAssets,
         ExistingRoomFootprint footprint,
         ResolvedAnchor sourceAnchor,
         MapCell origin)
     {
-        RoomShell shell = template.BuildShell(interior, DoorSide.North);
-        IReadOnlyList<BlueprintAsset> assets = ReuseAssets(shell, interior, origin, footprint, evidence);
+        IReadOnlyList<BlueprintAsset> assets = ReuseAssets(reusableTemplateAssets, origin, footprint, evidence);
         if (!assets.Any(asset => !string.Equals(asset.Role, "floor", StringComparison.OrdinalIgnoreCase)))
             return null;
 
@@ -136,18 +146,14 @@ public sealed class ReuseExistingFootprintGenerator : IPlacementGenerator
     }
 
     private static IReadOnlyList<BlueprintAsset> ReuseAssets(
-        RoomShell shell,
-        RectSize interior,
+        IReadOnlyList<TemplateAsset> reusableTemplateAssets,
         MapCell origin,
         ExistingRoomFootprint footprint,
         PlacementEvidence evidence)
     {
         List<BlueprintAsset> assets = [];
-        foreach (TemplateAsset templateAsset in shell.Assets)
+        foreach (TemplateAsset templateAsset in reusableTemplateAssets)
         {
-            if (!IsReusableInteriorAsset(templateAsset, interior))
-                continue;
-
             MapCell cell = TranslateInterior(templateAsset.RelativeCell, origin);
             if (!footprint.Cells.Contains(cell) || !evidence.InBounds(cell) || evidence.IsOccupied(cell))
                 continue;
@@ -171,6 +177,16 @@ public sealed class ReuseExistingFootprintGenerator : IPlacementGenerator
         asset.RelativeCell.X <= interior.Width &&
         asset.RelativeCell.Z >= 1 &&
         asset.RelativeCell.Z <= interior.Height;
+
+    private static string CellKey(PlacementDraft draft) =>
+        string.Join(
+            ";",
+            draft.Group.Assets
+                .Select(asset => asset.Cell)
+                .Distinct()
+                .OrderBy(cell => cell.X)
+                .ThenBy(cell => cell.Z)
+                .Select(cell => $"{cell.X},{cell.Z}"));
 
     private static IReadOnlyList<MapCell> AccessCellsFor(
         ExistingRoomFootprint footprint,

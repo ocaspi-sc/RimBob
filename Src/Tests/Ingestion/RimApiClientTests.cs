@@ -160,6 +160,30 @@ public sealed class RimApiClientTests
     }
 
     [Fact]
+    public async Task GetRooms_DefaultIncludesFootprintDetailQuery()
+    {
+        CaptureHandler handler = new(Envelope(new List<RoomDto>()));
+        using HttpClient http = MakeClient(handler);
+
+        await new RimApiClient(http).GetRoomsAsync(7);
+
+        handler.Path.Should().Be("/api/v1/map/rooms");
+        handler.Query.Should().Be("?map_id=7&include_cells=true&include_entry_cells=true&include_contained_buildings=true&include_region=true");
+    }
+
+    [Fact]
+    public async Task GetRooms_WhenFootprintDetailOptedOut_OmitsDetailQuery()
+    {
+        CaptureHandler handler = new(Envelope(new List<RoomDto>()));
+        using HttpClient http = MakeClient(handler);
+
+        await new RimApiClient(http).GetRoomsAsync(7, includeFootprint: false);
+
+        handler.Path.Should().Be("/api/v1/map/rooms");
+        handler.Query.Should().Be("?map_id=7");
+    }
+
+    [Fact]
     public async Task GetColonistsDetailed_WhenApiReturnsMoodThoughts_ReturnsWellbeingRows()
     {
         using HttpClient http = MakeClient(new PathRouter()

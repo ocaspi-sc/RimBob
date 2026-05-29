@@ -308,13 +308,25 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
         GetEnvelopedAsync<CreaturesSummaryDto>(
             $"api/v1/map/creatures/summary?map_id={mapId}", ct);
 
-    /// <summary>GET api/v1/map/rooms?map_id — rooms with role, temperature, quality stats, and Willie placement detail fields.</summary>
+    /// <summary>
+    /// GET api/v1/map/rooms?map_id — rooms with role, temperature, quality stats, and optional Willie placement detail fields.
+    /// The fork omits detail fields for oversized rooms, bounding worst-case payloads.
+    /// </summary>
+    /// <param name="includeFootprint">When true, requests bounded cells, entries, contained buildings, and region ids.</param>
     public Task<IReadOnlyList<RoomDto>> GetRoomsAsync(
-        int mapId, CancellationToken ct = default) =>
-        GetEnvelopedListAsync<RoomDto>(
-            $"api/v1/map/rooms?map_id={mapId}&include_cells=true&include_entry_cells=true&include_contained_buildings=true&include_region=true",
+        int mapId,
+        bool includeFootprint = true,
+        CancellationToken ct = default)
+    {
+        string detailQuery = includeFootprint
+            ? "&include_cells=true&include_entry_cells=true&include_contained_buildings=true&include_region=true"
+            : string.Empty;
+
+        return GetEnvelopedListAsync<RoomDto>(
+            $"api/v1/map/rooms?map_id={mapId}{detailQuery}",
             ct,
             "rooms");
+    }
 
     /// <summary>GET api/v1/map/construction/backlog?map_id - pending blueprint/frame backlog groups.</summary>
     public Task<IReadOnlyList<ConstructionBacklogGroupDto>> GetConstructionBacklogAsync(
