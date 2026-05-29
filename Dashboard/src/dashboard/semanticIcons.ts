@@ -76,6 +76,7 @@ const scopeIcons: Record<string, SemanticIconSpec> = {
 const viewIcons: Record<string, SemanticIconSpec> = {
   prompt: common.prompt,
   briefing: common.briefing,
+  build_queue: common.construction,
   rag: common.rag,
   rules: common.rules,
   raw_llm: common.logs,

@@ -1,0 +1,573 @@
+import { useState, type ReactNode } from 'react';
+import { applyAdviceAction } from '../../api/advice';
+import { iconUrlFor } from '../../api/icons';
+import { fetchBriefing } from '../../api/ministers';
+import { iconForActionKind, iconForField, iconForView } from '../../dashboard/semanticIcons';
+import { isScopeMinister } from '../../dashboard/selectors';
+import type { ScopeConfig } from '../../dashboard/scopes';
+import { useAsyncResource } from '../../hooks/useAsyncResource';
+import type {
+  AdviceAction,
+  AdviceApplyResponse,
+  AdviceItem,
+  AdviceOption,
+  AgentFlag,
+  BlueprintAsset,
+  BlueprintGroup,
+  BuildingRequest,
+} from '../../types/advice';
+import { DisclosureSection } from '../shared/DisclosureSection';
+import { EmptyState } from '../shared/EmptyState';
+import { GameIcon } from '../shared/GameIcon';
+import { IconizedText } from '../shared/IconizedText';
+import { DynamicTable } from '../shared/Inspector';
+import { StatusPill, type PillTone } from '../shared/StatusPill';
+import { SemanticLabel } from '../shared/SemanticIcon';
+
+export function MinisterBuildQueueView({
+  advice,
+  currentGameTick,
+  flags,
+  scope,
+}: {
+  advice: AdviceItem[];
+  currentGameTick: number | null;
+  flags: Record<string, AgentFlag[]>;
+  scope: ScopeConfig;
+}) {
+  const briefing = useAsyncResource(signal => fetchBriefing(scope.key, signal), [scope.key]);
+  const requests = buildRequestCards(flags);
+  const proposedOptions = buildProposedOptions(advice, scope, currentGameTick);
+  const backlog = buildBacklogModel(briefing.data);
+  const anySectionHasRows = requests.length > 0 || proposedOptions.length > 0 || backlog.groups.length > 0 || backlog.pending > 0;
+
+  if (scope.key !== 'willie') {
+    return <EmptyState code="BUILD QUEUE NOT WIRED">Build Queue is a Willie-only construction view.</EmptyState>;
+  }
+
+  return (
+    <div className="minister-view build-queue-view">
+      <header className="view-heading">
+        <span className="eyebrow">{scope.label}</span>
+        <h2><SemanticLabel icon={iconForView('build_queue')}><span>Build Queue</span></SemanticLabel></h2>
+        <p>Requested builds, solver proposals, and visible construction backlog in one inspection surface.</p>
+      </header>
+
+      {!anySectionHasRows && !briefing.loading && !briefing.error && (
+        <EmptyState code="NO BUILD QUEUE ITEMS">Willie has no requested builds, placement options, or visible backlog rows right now.</EmptyState>
+      )}
+
+      <div className="build-queue-sections" aria-label="Willie build queue sections">
+        <BuildQueueSection title="Requested" count={requests.length} iconKey="building_requests">
+          {requests.length === 0 ? (
+            <LaneEmpty>Building requests aimed at Willie will appear here.</LaneEmpty>
+          ) : (
+            <div className="build-request-stack">
+              {requests.map(card => <RequestCard card={card} key={card.id} />)}
+            </div>
+          )}
+        </BuildQueueSection>
+
+        <BuildQueueSection title="Proposed" count={proposedOptions.length} iconKey="place_blueprint">
+          {proposedOptions.length === 0 ? (
+            <LaneEmpty>Solver placement options appear here when Willie emits `options[]`.</LaneEmpty>
+          ) : (
+            <div className="build-option-grid">
+              {proposedOptions.map(card => <OptionCard card={card} key={`${card.item.id}:${card.option.id}`} />)}
+            </div>
+          )}
+        </BuildQueueSection>
+
+        <BuildQueueSection
+          title="In Backlog"
+          count={backlog.groups.length}
+          iconKey="construction_backlog"
+          meta={briefing.loading ? 'loading' : `${formatInteger(backlog.pending)} pending / ${formatInteger(backlog.blocked)} blocked`}
+        >
+          {briefing.loading ? (
+            <LaneEmpty>Loading current Willie briefing backlog.</LaneEmpty>
+          ) : briefing.error ? (
+            <LaneEmpty>{briefing.error}</LaneEmpty>
+          ) : (
+            <BacklogLane backlog={backlog} />
+          )}
+        </BuildQueueSection>
+      </div>
+    </div>
+  );
+}
+
+type RequestCardModel = {
+  flag: AgentFlag;
+  id: string;
+  request: BuildingRequest;
+};
+
+type ProposedOptionModel = {
+  actionMatch: OptionActionMatch | null;
+  expired: AdviceExpiryState;
+  item: AdviceItem;
+  option: AdviceOption;
+};
+
+type OptionActionMatch = {
+  action: AdviceAction;
+  actionIndex: number;
+};
+
+type BacklogModel = {
+  blocked: number;
+  disallowed: number;
+  groups: unknown[];
+  pending: number;
+};
+
+function BuildQueueSection({
+  children,
+  count,
+  defaultOpen = true,
+  iconKey,
+  meta,
+  title,
+}: {
+  children: ReactNode;
+  count: number;
+  defaultOpen?: boolean;
+  iconKey: string;
+  meta?: string;
+  title: string;
+}) {
+  const countText = `${formatInteger(count)} ${count === 1 ? 'item' : 'items'}`;
+
+  return (
+    <DisclosureSection
+      defaultOpen={defaultOpen}
+      meta={meta ? `${countText} / ${meta}` : countText}
+      title={<SemanticLabel icon={iconForField(iconKey)}><span>{title}</span></SemanticLabel>}
+    >
+      {children}
+    </DisclosureSection>
+  );
+}
+
+function LaneEmpty({ children }: { children: ReactNode }) {
+  return <p className="build-queue-empty">{children}</p>;
+}
+
+function RequestCard({ card }: { card: RequestCardModel }) {
+  const request = card.request;
+  const requestIcon = iconForField(request.target_def ?? request.target_class);
+  const details = formatRequestDetails(request);
+
+  return (
+    <article className="build-request-card">
+      <header>
+        <GameIcon
+          fallback={requestIcon?.fallback ?? 'BQ'}
+          label={requestIcon?.label ?? 'Build request icon'}
+          size="xs"
+          src={iconUrlFor(requestIcon?.ref)}
+        />
+        <div>
+          <span className="eyebrow">{card.flag.source_minister} to Willie</span>
+          <h4><IconizedText maxIcons={1} text={request.request} /></h4>
+        </div>
+        <StatusPill tone={priorityTone(request.priority ?? card.flag.severity)}>{request.priority ?? card.flag.severity}</StatusPill>
+      </header>
+      <p><IconizedText maxIcons={2} text={request.reason} /></p>
+      {details.length > 0 && (
+        <div className="build-request-tags">
+          {details.map(detail => <span key={detail}>{detail}</span>)}
+        </div>
+      )}
+      {card.flag.summary && <small><IconizedText maxIcons={1} text={card.flag.summary} /></small>}
+    </article>
+  );
+}
+
+function OptionCard({ card }: { card: ProposedOptionModel }) {
+  const [applyState, setApplyState] = useState<ActionApplyState>({ status: 'idle', response: null, error: null });
+  const actionIcon = iconForActionKind('place_blueprint');
+  const success = applyState.response?.status === 'applied' || applyState.response?.status === 'already_satisfied';
+  const disabled = card.actionMatch === null || card.expired.expired || applyState.status === 'pending' || success;
+  const disabledReason = card.actionMatch === null
+    ? 'No place_blueprint_group action payload is attached to this option yet.'
+    : card.expired.message;
+
+  const onApply = async () => {
+    if (!card.actionMatch || disabled) return;
+    setApplyState({ status: 'pending', response: null, error: null });
+    try {
+      const response = await applyAdviceAction(card.item.id, card.actionMatch.actionIndex);
+      setApplyState({ status: 'done', response, error: null });
+    } catch (error) {
+      setApplyState({ status: 'error', response: null, error: String(error) });
+    }
+  };
+
+  return (
+    <article className={`build-option-card ${card.item.priority}`}>
+      <header>
+        <GameIcon
+          fallback={actionIcon?.fallback ?? 'BP'}
+          label={actionIcon?.label ?? 'Blueprint option icon'}
+          size="xs"
+          src={iconUrlFor(actionIcon?.ref)}
+        />
+        <div>
+          <span className="eyebrow">{formatLabel(card.item.concern)}</span>
+          <h4>{card.option.label}</h4>
+        </div>
+        <StatusPill tone={priorityTone(card.item.priority)}>{card.item.priority}</StatusPill>
+      </header>
+
+      <BlueprintFootprintThumbnail group={card.option.blueprint_group} />
+      <p><IconizedText maxIcons={2} text={card.option.summary} /></p>
+
+      {card.option.readiness && (
+        <div className="build-option-readiness" aria-label={`${card.option.label} readiness`}>
+          <StatusPill tone={readinessTone(card.option.readiness.draftable)} title="Draftable">draft {card.option.readiness.draftable}</StatusPill>
+          <StatusPill tone={readinessTone(card.option.readiness.placement_valid)} title="Placement validation">place {card.option.readiness.placement_valid}</StatusPill>
+          <StatusPill tone={readinessTone(card.option.readiness.materials_ready)} title="Materials ready">mat {card.option.readiness.materials_ready}</StatusPill>
+          <StatusPill tone={readinessTone(card.option.readiness.apply_ready)} title="Apply ready">apply {card.option.readiness.apply_ready}</StatusPill>
+        </div>
+      )}
+
+      <div className="build-option-materials">
+        {card.option.est_materials.length === 0 ? (
+          <span>No material estimate.</span>
+        ) : (
+          card.option.est_materials.map(material => (
+            <span key={`${card.option.id}-${material.def_name}`}>{formatInteger(material.count)} {material.def_name}</span>
+          ))
+        )}
+      </div>
+
+      {card.option.tradeoff_note && <blockquote><IconizedText maxIcons={1} text={card.option.tradeoff_note} /></blockquote>}
+
+      <div className="action-apply build-option-apply">
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => void onApply()}
+          title={card.actionMatch?.action.apply?.target_summary ?? disabledReason ?? 'Apply this blueprint option'}
+        >
+          {buttonLabel(card, applyState, success)}
+        </button>
+        <small className={`action-apply-result ${applyState.response?.status ?? applyState.status}`}>
+          {applyState.response?.message ?? applyState.error ?? disabledReason ?? card.actionMatch?.action.apply?.target_summary}
+        </small>
+      </div>
+    </article>
+  );
+}
+
+function BacklogLane({ backlog }: { backlog: BacklogModel }) {
+  if (backlog.groups.length === 0) {
+    return <LaneEmpty>No construction backlog groups are visible.</LaneEmpty>;
+  }
+
+  return (
+    <div className="build-backlog-stack">
+      <div className="build-backlog-summary">
+        <StatusPill tone={backlog.blocked > 0 ? 'warn' : 'idle'}>{formatInteger(backlog.blocked)} blocked</StatusPill>
+        <StatusPill tone={backlog.disallowed > 0 ? 'warn' : 'idle'}>{formatInteger(backlog.disallowed)} disallowed</StatusPill>
+      </div>
+      <DynamicTable
+        rows={backlog.groups}
+        preferredColumns={['kind', 'defName', 'stuffDefName', 'allowed', 'count', 'blockedCount', 'disallowedCount', 'totalWorkLeft']}
+        emptyMessage="No construction backlog groups are visible."
+      />
+    </div>
+  );
+}
+
+function BlueprintFootprintThumbnail({ group }: { group: BlueprintGroup }) {
+  if (group.assets.length === 0) {
+    return <div className="blueprint-thumbnail empty">No footprint</div>;
+  }
+
+  const assets = [...group.assets].sort(compareAssetLayer);
+  const xs = assets.map(asset => asset.cell.x);
+  const zs = assets.map(asset => asset.cell.z);
+  const minX = Math.min(...xs);
+  const minZ = Math.min(...zs);
+  const maxX = Math.max(...xs);
+  const maxZ = Math.max(...zs);
+  const width = maxX - minX + 1;
+  const height = maxZ - minZ + 1;
+  const cell = 12;
+  const gap = 1;
+  const svgWidth = width * cell + Math.max(0, width - 1) * gap;
+  const svgHeight = height * cell + Math.max(0, height - 1) * gap;
+  const roles = [...new Set(assets.map(asset => normalizeRole(asset.role)))].sort(compareRole);
+
+  return (
+    <div className="blueprint-thumbnail" aria-label={`${group.label} footprint`}>
+      <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} role="img" aria-label={`${group.assets.length} blueprint assets on map ${group.map_id}`}>
+        <title>{group.label}</title>
+        {assets.map((asset, index) => (
+          <rect
+            key={`${asset.role}-${asset.def_name}-${asset.cell.x}-${asset.cell.z}-${asset.rotation}-${index}`}
+            x={(asset.cell.x - minX) * (cell + gap)}
+            y={(asset.cell.z - minZ) * (cell + gap)}
+            width={cell}
+            height={cell}
+            rx="2"
+            fill={roleColor(asset.role)}
+          />
+        ))}
+      </svg>
+      <div className="blueprint-thumbnail-legend">
+        {roles.map(role => (
+          <span key={role}>
+            <i style={{ background: roleColor(role) }} aria-hidden />
+            {role}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+type ActionApplyState = {
+  error: string | null;
+  response: AdviceApplyResponse | null;
+  status: 'idle' | 'pending' | 'done' | 'error';
+};
+
+type AdviceExpiryState = {
+  expired: boolean;
+  message: string | null;
+};
+
+function buildRequestCards(flags: Record<string, AgentFlag[]>): RequestCardModel[] {
+  return Object.values(flags)
+    .flat()
+    .flatMap(flag => (flag.building_requests ?? [])
+      .filter(request => isWillieRequest(request))
+      .map((request, index) => ({
+        flag,
+        id: `${flag.id}:${request.request}:${index}`,
+        request,
+      })));
+}
+
+function buildProposedOptions(
+  advice: AdviceItem[],
+  scope: ScopeConfig,
+  currentGameTick: number | null,
+): ProposedOptionModel[] {
+  return advice
+    .filter(item => isScopeMinister(item.minister, scope))
+    .flatMap(item => (item.options ?? []).map(option => ({
+      actionMatch: findBlueprintAction(item, option),
+      expired: adviceExpiryState(item, currentGameTick),
+      item,
+      option,
+    })));
+}
+
+function buildBacklogModel(briefing: unknown): BacklogModel {
+  const source = isRecord(briefing) ? briefing : null;
+  const constructionBacklog = recordAt(source, 'constructionBacklog');
+  const stalledBuilds = recordAt(source, 'stalledBuilds');
+
+  return {
+    blocked: numberAt(stalledBuilds, 'blockedCount') ?? 0,
+    disallowed: numberAt(stalledBuilds, 'disallowedCount') ?? 0,
+    groups: arrayAt(constructionBacklog, 'groups'),
+    pending: numberAt(stalledBuilds, 'pendingBuildCount') ?? 0,
+  };
+}
+
+function findBlueprintAction(item: AdviceItem, option: AdviceOption): OptionActionMatch | null {
+  for (let actionIndex = 0; actionIndex < item.actions.length; actionIndex += 1) {
+    const action = item.actions[actionIndex];
+    const apply = action.apply;
+    if (apply?.kind === 'place_blueprint_group' && sameBlueprintGroup(apply.blueprint_group, option.blueprint_group)) {
+      return { action, actionIndex };
+    }
+  }
+
+  return null;
+}
+
+function sameBlueprintGroup(left: BlueprintGroup, right: BlueprintGroup): boolean {
+  return left.map_id === right.map_id &&
+    (left.label === right.label || blueprintFingerprint(left) === blueprintFingerprint(right));
+}
+
+function blueprintFingerprint(group: BlueprintGroup): string {
+  return group.assets
+    .map(asset => `${asset.role}:${asset.def_name}:${asset.stuff_def_name ?? ''}:${asset.cell.x}:${asset.cell.z}:${asset.rotation}`)
+    .sort()
+    .join('|');
+}
+
+function buttonLabel(card: ProposedOptionModel, state: ActionApplyState, success: boolean): string {
+  if (card.expired.expired) return 'Expired';
+  if (state.status === 'pending') return 'Applying';
+  if (success) return 'Applied';
+  return card.actionMatch?.action.apply?.label ?? 'Apply not wired';
+}
+
+function isWillieRequest(request: BuildingRequest): boolean {
+  return stringEquals(request.requested_from, 'Willie');
+}
+
+function formatRequestDetails(request: BuildingRequest): string[] {
+  return [
+    request.target_class ? `class ${formatLabel(request.target_class)}` : null,
+    request.target_def ? `def ${request.target_def}` : null,
+    request.room_class ? `room ${formatLabel(request.room_class)}` : null,
+    formatCapacity(request),
+    formatAdjacency(request),
+    request.urgency ? `urgency ${formatLabel(request.urgency)}` : null,
+    formatMaterials(request),
+  ].filter((value): value is string => Boolean(value));
+}
+
+function formatCapacity(request: BuildingRequest): string | null {
+  const capacity = request.capacity_need;
+  if (!capacity) return null;
+
+  const amount = capacity.amount === null || capacity.amount === undefined
+    ? ''
+    : ` ${formatInteger(capacity.amount)}`;
+  const unit = capacity.unit ? ` ${capacity.unit}` : '';
+  return `capacity ${formatLabel(capacity.measure)}${amount}${unit}`;
+}
+
+function formatAdjacency(request: BuildingRequest): string | null {
+  if (!request.adjacency || request.adjacency.length === 0) return null;
+  return `near ${request.adjacency.map(hint => `${formatLabel(hint.relation)} ${hint.target}`).join(', ')}`;
+}
+
+function formatMaterials(request: BuildingRequest): string | null {
+  if (!request.materials_on_hand || request.materials_on_hand.length === 0) return null;
+  return `materials ${request.materials_on_hand
+    .map(material => `${material.material}${material.approx_qty ? ` ${formatInteger(material.approx_qty)}` : ''}`)
+    .join(', ')}`;
+}
+
+function priorityTone(priority: string | null | undefined): PillTone {
+  const normalized = (priority ?? '').toLowerCase();
+  if (normalized === 'critical' || normalized === 'high') return 'error';
+  if (normalized === 'medium') return 'warn';
+  if (normalized === 'low') return 'info';
+  return 'idle';
+}
+
+function readinessTone(value: string): PillTone {
+  const normalized = value.toLowerCase();
+  if (['ready', 'valid', 'available', 'true', 'ok'].includes(normalized)) return 'ok';
+  if (['blocked', 'invalid', 'failed', 'false', 'not_ready'].includes(normalized)) return 'error';
+  if (normalized.includes('missing') || normalized.includes('unsupported') || normalized.includes('not_exposed')) return 'warn';
+  return 'idle';
+}
+
+function adviceExpiryState(item: AdviceItem, currentGameTick: number | null): AdviceExpiryState {
+  if (typeof item.expires_game_tick === 'number') {
+    if (typeof currentGameTick === 'number' && item.expires_game_tick <= currentGameTick) {
+      return {
+        expired: true,
+        message: `Expired at game tick ${formatInteger(item.expires_game_tick)}.`,
+      };
+    }
+
+    return { expired: false, message: null };
+  }
+
+  const expiresAt = Date.parse(item.expires_at);
+  if (!Number.isNaN(expiresAt) && expiresAt <= Date.now()) {
+    return { expired: true, message: 'Expired by wall-clock TTL.' };
+  }
+
+  return { expired: false, message: null };
+}
+
+function compareAssetLayer(left: BlueprintAsset, right: BlueprintAsset): number {
+  return compareRole(normalizeRole(left.role), normalizeRole(right.role)) ||
+    left.cell.z - right.cell.z ||
+    left.cell.x - right.cell.x;
+}
+
+function compareRole(left: string, right: string): number {
+  return roleOrder(left) - roleOrder(right) || left.localeCompare(right);
+}
+
+function roleOrder(role: string): number {
+  switch (normalizeRole(role)) {
+    case 'floor':
+      return 0;
+    case 'wall':
+      return 1;
+    case 'door':
+      return 2;
+    case 'cooler':
+      return 3;
+    default:
+      return 4;
+  }
+}
+
+function roleColor(role: string): string {
+  switch (normalizeRole(role)) {
+    case 'floor':
+      return '#6f7f5f';
+    case 'wall':
+      return '#b7b0a4';
+    case 'door':
+      return '#d59a52';
+    case 'cooler':
+      return '#62a8c7';
+    case 'heater':
+      return '#c87854';
+    case 'vent':
+      return '#88a7a0';
+    default:
+      return '#8b92a5';
+  }
+}
+
+function normalizeRole(role: string): string {
+  return role.trim().replace(/_/g, ' ').toLowerCase() || 'asset';
+}
+
+function recordAt(source: Record<string, unknown> | null, key: string): Record<string, unknown> | null {
+  if (!source) return null;
+  const value = source[key];
+  return isRecord(value) ? value : null;
+}
+
+function arrayAt(source: Record<string, unknown> | null, key: string): unknown[] {
+  if (!source) return [];
+  const value = source[key];
+  return Array.isArray(value) ? value : [];
+}
+
+function numberAt(source: Record<string, unknown> | null, key: string): number | null {
+  if (!source) return null;
+  const value = source[key];
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function stringEquals(left: string | null | undefined, right: string): boolean {
+  return typeof left === 'string' && left.localeCompare(right, undefined, { sensitivity: 'accent' }) === 0;
+}
+
+function formatLabel(value: string | null | undefined): string {
+  if (!value) return '-';
+  return value
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, char => char.toUpperCase());
+}
+
+function formatInteger(value: number): string {
+  return Math.round(value).toLocaleString();
+}

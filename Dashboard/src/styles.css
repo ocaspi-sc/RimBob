@@ -2550,6 +2550,183 @@ code {
   gap: 7px;
 }
 
+.build-queue-view {
+  gap: 14px;
+}
+
+.build-queue-sections {
+  display: grid;
+  gap: 10px;
+}
+
+.build-queue-sections .disclosure-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.build-request-card header,
+.build-option-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.build-request-card h4,
+.build-option-card h4 {
+  margin: 0;
+  min-width: 0;
+  color: var(--text);
+  font-size: 0.92rem;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.build-queue-empty {
+  margin: 0;
+  min-height: 56px;
+  display: grid;
+  align-items: center;
+  padding: 10px;
+  border: 1px dashed var(--line-soft);
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.build-request-stack,
+.build-option-grid,
+.build-backlog-stack {
+  display: grid;
+  gap: 8px;
+}
+
+.build-request-card,
+.build-option-card {
+  min-width: 0;
+  display: grid;
+  gap: 9px;
+  padding: 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.build-request-card > header,
+.build-option-card > header {
+  align-items: flex-start;
+}
+
+.build-request-card > header > div,
+.build-option-card > header > div {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.build-request-card p,
+.build-option-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.build-request-card small {
+  color: var(--dim);
+  line-height: 1.35;
+}
+
+.build-request-tags,
+.build-option-materials,
+.build-option-readiness,
+.blueprint-thumbnail-legend,
+.build-backlog-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.build-request-tags > span,
+.build-option-materials > span {
+  max-width: 100%;
+  padding: 5px 7px;
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.025);
+  font-size: 0.72rem;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.build-option-card blockquote {
+  margin: 0;
+  padding: 8px 9px;
+  border-left: 2px solid rgba(98, 216, 230, 0.5);
+  color: var(--muted);
+  background: rgba(98, 216, 230, 0.05);
+  line-height: 1.35;
+}
+
+.blueprint-thumbnail {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.blueprint-thumbnail svg {
+  width: 100%;
+  min-height: 116px;
+  max-height: 164px;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 6px;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    rgba(2, 8, 12, 0.42);
+  background-size: 13px 13px;
+}
+
+.blueprint-thumbnail.empty {
+  min-height: 116px;
+  align-items: center;
+  justify-items: center;
+  border: 1px dashed var(--line-soft);
+  border-radius: 6px;
+  color: var(--muted);
+}
+
+.blueprint-thumbnail-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--dim);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+}
+
+.blueprint-thumbnail-legend i {
+  width: 10px;
+  height: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 2px;
+}
+
+.build-option-apply {
+  grid-column: auto;
+}
+
+.build-option-apply button {
+  flex: 0 0 auto;
+}
+
+.build-backlog-stack .dynamic-table-wrap {
+  overflow-x: auto;
+}
+
 .agenda-hero {
   display: flex;
   justify-content: space-between;
@@ -4283,6 +4460,11 @@ code {
 
   .action-apply-result {
     width: 100%;
+  }
+
+  .build-request-card header,
+  .build-option-card header {
+    align-items: flex-start;
   }
 
   .endpoint-timing-error {

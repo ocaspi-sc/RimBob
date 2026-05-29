@@ -160,7 +160,7 @@ Minister scopes use a fixed top tab bar:
 - Infographics
 - Advice
 
-Rules-only ministers expose only the subset that is actually wired. Willie starts with Briefing, Rules, and Advice; Prompt, RAG, Raw LLM Output, Infographics, and Apply are not shown until those backend surfaces exist. The dashboard view tabs and launcher tray deep links must both respect that per-minister enabled-view set.
+Rules-only ministers expose only the subset that is actually wired. Willie starts with Briefing, Build Queue, Rules, and Advice; Prompt, RAG, Raw LLM Output, and Infographics are not shown until those backend surfaces exist. Build Queue may show a placement Apply affordance only when the backend emits an explicit action apply payload for that option; otherwise the option stays inspect-only and names the unsupported apply state. The dashboard view tabs and launcher tray deep links must both respect that per-minister enabled-view set.
 
 Use explicit game icons from the Host icon gateway in scope labels, view labels,
 section titles, field labels, compact metric labels, and obvious entity rows
@@ -636,6 +636,10 @@ Chef's Briefing view should also show deterministic crop-candidate math as a
 compact inspector panel when the backend exposes it. The panel is read-only and
 exists to make crop choice, season fit, fertility, storage modifiers, and
 classification confidence inspectable without digging through prompt JSON.
+
+### Build Queue
+
+Willie's Build Queue view is the construction work-order surface. It uses three stacked collapsible sections backed by existing data: Requested reads active `AgentFlag.building_requests[]` where `requested_from` is Willie, Proposed reads Willie `AdviceItem.options[]`, and In Backlog reads `constructionBacklog.groups[]` plus stalled-build counts from the Willie briefing. Proposed option cards render a small SVG footprint from `blueprint_group.assets[]`, material chips, readiness pills, tradeoff text, and an Apply state. Do not add a Done section until Host exposes completed-build history. Do not infer option placement from prose; if `options[]` or an action apply payload is missing, show an explicit empty or unsupported state instead.
 
 ### RAG
 

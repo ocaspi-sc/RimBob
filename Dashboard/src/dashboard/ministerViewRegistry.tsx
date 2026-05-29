@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react';
 import { MinisterAdviceView } from '../components/minister/MinisterAdviceView';
+import { MinisterBuildQueueView } from '../components/minister/MinisterBuildQueueView';
 import { MinisterBriefingView } from '../components/minister/MinisterBriefingView';
 import { MinisterInfographicsView } from '../components/minister/MinisterInfographicsView';
 import { MinisterPromptView } from '../components/minister/MinisterPromptView';
@@ -35,6 +36,14 @@ export interface MinisterViewDefinition {
 const ministerViewRenderers: Record<MinisterViewKey, MinisterViewRenderer> = {
   prompt: ({ scope }) => <MinisterPromptView scope={scope} />,
   briefing: ({ scope }) => <MinisterBriefingView scope={scope} />,
+  build_queue: ({ activeAdvice, flags, scope, systemHealth }) => (
+    <MinisterBuildQueueView
+      scope={scope}
+      advice={activeAdvice}
+      currentGameTick={systemHealth?.colony_snapshot.game_tick ?? null}
+      flags={flags}
+    />
+  ),
   raw_llm: ({ scope, systemHealth }) => <MinisterRawLlmView scope={scope} systemHealth={systemHealth} />,
   rag: ({ agenda, scope, systemHealth }) => (
     <MinisterRagView scope={scope} agenda={agenda} systemHealth={systemHealth} />

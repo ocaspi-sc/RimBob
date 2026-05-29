@@ -127,7 +127,8 @@ the normalized 0-1 values used for ranking. Status facts such as `draftable`,
 stay booleans/enums rather than fake unit-bearing metrics.
 
 The executable Apply (place a chosen layout) renders in **Willie's own
-dashboard scope**, since Willie emits the placement action.
+dashboard scope** once Willie emits an explicit action apply payload for a
+chosen option.
 A requesting minister (e.g. Chef asking for a freezer) shows only its outbound
 request — never another minister's build Apply.
 
@@ -147,8 +148,8 @@ Willie briefing should answer:
 The first Willie briefing record now feeds `MinisterOfWillie` in a rules-only
 slice. It includes backlog summaries from `/api/v1/map/construction/backlog`,
 room-anchor inventory for `RoomClass` lookup, and coverage flags. The dashboard
-renders the Willie scope with Briefing, Rules, and Advice views; Prompt/RAG/Raw
-LLM remain intentionally absent until a later LLM slice.
+renders the Willie scope with Briefing, Build Queue, Rules, and Advice views;
+Prompt/RAG/Raw LLM remain intentionally absent until a later LLM slice.
 
 ---
 
