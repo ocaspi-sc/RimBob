@@ -1,16 +1,1 @@
-{
-  "hooks": {
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "shell": "powershell",
-            "command": "$data = $input | ConvertFrom-Json; $prompt = $data.prompt + ''; $keywords = @('remember','always','from now on','going forward','whenever','note that','make sure',\"don't forget\"); $hit = $false; foreach ($k in $keywords) { if ($prompt.ToLower().Contains($k)) { $hit = $true; break } }; if ($hit) { @{ hookSpecificOutput = @{ hookEventName = 'UserPromptSubmit'; additionalContext = 'DESIGN DOC DIRECTIVE DETECTED. Per CLAUDE.md: immediately update the most relevant design doc in C:\\dev\\RimBob (DESIGN.md, design/*.md, or design/ministers/*.md). Do not ask for permission. Confirm what was updated with a one-line note.' } } | ConvertTo-Json -Compress }",
-            "statusMessage": "Checking for design directives..."
-          }
-        ]
-      }
-    ]
-  }
-}
+{}

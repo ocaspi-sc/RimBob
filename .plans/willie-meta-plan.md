@@ -10,8 +10,12 @@
 >
 > **Milestone:** M4 (first cabinet wave); Willie lands **first** after Food
 > (Food's first live dependencies are cooler/power/room/storage builds). Schema,
-> briefing, Willie minister (Rules Slice A) + dashboard readout **landed**;
-> **Placement Solver Solver1 is the next active node.**
+> briefing, Willie minister (Rules Slice A) + dashboard readout, **Placement
+> Solver Solver1/Solver2/Solver3(S3a–c)**, and **solver→Rules wiring** all
+> **landed**. Solver now emits `options[]` on a live freezer `building_request`.
+> **Next active nodes:** deep Willie code review (`willie-code-review.md`),
+> dashboard panels (build-queue tab + briefing HUD), and the deferred Solver3 S3d
+> (`ReuseExistingFootprintGenerator`, RIMAPI-footprint-gated).
 
 ---
 
@@ -162,7 +166,7 @@ flowchart TD
   FORK2 --> ROOM["Room/anchor detection<br/>(room-purpose inference)"]
   ROOM -.may gate.-> Solver1
   SCHEMA --> DERIV["Willie briefing derivation ✓ LANDED 3235902<br/>(WillieBriefing + backlog ingest +<br/>anchor inventory + FORK3 client)"]
-  DERIV --> Solver1["Placement Solver Solver1<br/>(template freezer skeleton + generator registry)<br/>← UNBLOCKED, next active"]
+  DERIV --> Solver1["Placement Solver Solver1 ✓ LANDED 5a8e6c9<br/>(template freezer skeleton + generator registry)"]
   S2 --> Solver1
   FORK2 --> Solver1
   FORK3["RIMAPI map reach + path-cost ✓ LANDED<br/>(rimapi-map-reach-and-path-cost.md)"] -.solver scoring.-> Solver1
@@ -170,19 +174,21 @@ flowchart TD
   S1 --> S3["Schema S3 ✓ LANDED 4927741<br/>(apply per-kind split +<br/>place_blueprint_group)"]
   FORK2 --> S3
   S3 --> WILLIE
-  Solver1 -.freezer options[].-> WILLIE
-  WILLIE --> DASH["Willie dashboard ✓ LANDED ddef5f3<br/>(readout tab; anchor/backlog/coverage/<br/>solver-trace panels = follow-on)"]
+  Solver1 --> WIRE["solver→Rules wiring ✓ LANDED fbad240<br/>(MinisterOfWillie calls SolveAsync on<br/>freezer_request_active; options[] on AdviceItem)"]
+  WIRE --> WILLIE
+  WILLIE --> DASH["Willie dashboard ✓ readout LANDED ddef5f3<br/>(build-queue tab + briefing HUD panels = follow-on todos)"]
   DERIV -.feeds panels.-> DASH
   Solver1 -.solver trace.-> DASH
-  Solver1 --> Solver2["Solver2 generator competition<br/>(template + rectangle + pattern)"] --> Solver3["Solver3 breadth + reuse existing rooms"]
+  Solver1 --> Solver2["Solver2 generator competition ✓ LANDED 9f6fe90..0e86f5f<br/>(template + rectangle + diverse top-K)"] --> Solver3["Solver3 breadth ◐ S3a–c LANDED 7e3be6f<br/>(room-class templates + alias + build_order_safety);<br/>S3d ReuseExistingFootprint deferred (RIMAPI-gated)"]
+  WILLIE --> REVIEW["Deep Willie code review (subagents)<br/>← next active (willie-code-review.md)"]
   WILLIE --> PROMOTE["Promote design -> construction.md"]
   Solver3 --> WFC["(optional) WFC generator spike"]
   Solver3 --> SOLVER4B["Solver4 + planning overlay (Cap B)"]
 
   classDef done fill:#1f3a1f,stroke:#3fa83f,color:#cfe8cf;
-  class S1,S2,S3,FORK1,FORK3,SCHEMA,DERIV,WILLIE,DASH done;
+  class S1,S2,S3,FORK1,FORK3,SCHEMA,DERIV,WILLIE,DASH,Solver1,Solver2,WIRE done;
   classDef partial fill:#3a341f,stroke:#a8993f,color:#e8e0cf;
-  class FORK2 partial;
+  class FORK2,Solver3 partial;
 ```
 
 Note: FORK3 endpoints + the RimBob client wrappers (`GetReachAsync` /
@@ -224,14 +230,18 @@ overlay) pending.
    `near:kitchen` -> map location). The hard sub-problem; may gate Solver1. Depends
    on building/room reads (`source-todo-building-condition-read`,
    `source-todo-room-quality-read`) — i.e. on FORK2.
-5. **Placement Solver** [← NEXT ACTIVE; deps green] - Solver1 skeleton (freezer,
-   near-kitchen, `TemplateAnchoredGenerator`, one candidate) -> Solver2 competing
-   generators (templates + rectangle + local patterns, top 1-3 options) -> Solver3
-   more room classes and reuse-existing-footprint logic -> Solver4 base planning.
-   Deps satisfied: S2 ✓, group `validate` endpoint ✓ (FORK2 Slice A; RimBob
-   client wrapper pending — Solver1 adds it), `WillieBriefing` +
-   `WillieAnchorInventory` ✓ (commit `3235902`), FORK3 client ✓. Solver1 reads the
-   briefing's anchor inventory; Slice-A scoring euclidean, Slice-B walkable.
+5. **Placement Solver** [✓ Solver1/2/3(S3a–c) LANDED] - Solver1 skeleton
+   (freezer, near-kitchen, `TemplateAnchoredGenerator`, one candidate) `5a8e6c9`
+   -> Solver2 competing generators (template + `LargestEmptyRectangleGenerator`,
+   `IPlacementScorer` seam, diverse top 1-3 options) `9f6fe90..0e86f5f` -> Solver3
+   room-class breadth (`IRoomTemplate` seam, hospital/bedroom/workshop/storage
+   templates, `RoomClass` alias map, `build_order_safety`) `7e3be6f`. **Wired:**
+   `MinisterOfWillie` calls `SolveAsync` on `freezer_request_active` and attaches
+   `options[]` to the freezer `AdviceItem` (`fbad240`). **Deferred:** Solver3 S3d
+   `ReuseExistingFootprintGenerator` (RIMAPI footprint-evidence gated —
+   `willie-reuse-footprint`); Solver4 base planning; non-freezer→solver wiring
+   (missing-room traces still emit prose). Solver-internal breadth ships even
+   though only the freezer trace is orchestrator-wired today.
 6. **Willie minister** [✓ LANDED `e902e96`] - mirror Food: `Rules.cs`
    (rules-first; reads `WillieBriefing` directly) -> `MinisterOfWillie` ->
    registry/DI/cabinet order. Rules cut:
@@ -305,12 +315,23 @@ euclidean-from-centroid as Slice-A fallback (resolved 2026-05-27).
   `WillieConcern` enum, `Rules.cs`, `MinisterOfWillie`, registry, Willie tab.
   Rules-only, suggest-mode, no Apply; freezer rule's solver `options[]` is a
   TODO awaiting Solver1.
-- **← NEXT ACTIVE: Placement Solver Solver1.** All deps green (S2, FORK2 group
-  validate, briefing + anchor inventory, FORK3 client). Skeleton:
-  freezer / near-kitchen / `TemplateAnchoredGenerator` / one candidate /
-  group-validate / single option. Plan:
-  [`placement-solver-1.md`](placement-solver-1.md) (Solver1a–d; refreshed +
-  review-hardened). Adds the group-validate client method (not yet landed).
+- **Placement Solver Solver1/2/3(S3a–c) ✓ LANDED** —
+  [`placement-solver-1.md`](placement-solver-1.md) `5a8e6c9`,
+  [`placement-solver-2.md`](placement-solver-2.md) `9f6fe90..0e86f5f`,
+  [`placement-solver-3.md`](placement-solver-3.md) S3a–c `7e3be6f`. Freezer
+  skeleton → generator competition (template + empty-rect, `IPlacementScorer`
+  seam, diverse top 1-3) → room-class breadth (`IRoomTemplate` seam, hospital/
+  bedroom/workshop/storage, alias map, `build_order_safety`).
+- **solver→Rules wiring ✓ LANDED `fbad240`** —
+  [`willie-placement-wiring.md`](willie-placement-wiring.md) (W1+W2).
+  `MinisterOfWillie` injects `PlacementSolver` + `ColonyState`, calls
+  `SolveAsync` on `freezer_request_active`, attaches `result.Options` to the
+  `AdviceItem`; no-fit note + solver-trace surfacing. Rules stays sync/pure.
+- **← NEXT ACTIVE: deep Willie code review (subagents)** —
+  [`willie-code-review.md`](willie-code-review.md). Read-only audit of the
+  landed Willie surface (Rules, orchestrator, solver, generators, templates,
+  evidence, ports, DI, tests) via parallel review subagents; output is a ranked
+  findings report + follow-up gimp slices. No source edits in the review pass.
 - **RIMAPI track (parallel, separate repo):**
   - `FORK1` triplet ✓ landed.
   - `FORK2` blueprint groups Capability A — group `validate` / `place`
@@ -321,12 +342,18 @@ euclidean-from-centroid as Slice-A fallback (resolved 2026-05-27).
   - `rimapi-power-info-dto` ✓ landed.
   - New captures from briefing schema S5: `rimapi-map-region-at`,
     `rimapi-room-entry-cells`.
-- **Remaining after Solver1:**
-  - Wire the freezer rule to `PlacementSolver.SolveAsync` (the `options[]`
-    TODO in `Rules.cs`) once Solver1 lands.
-  - **Willie dashboard panels** (§4 `DASH` follow-on) — dedicated
-    anchor-inventory / backlog / data-coverage / solver-trace panels beyond
-    the landed readout tab; solver-trace panel needs Solver1.
+- **Remaining:**
+  - **Willie dashboard panels** (§4 `DASH` follow-on) — two captured todos:
+    `willie-build-queue-tab` (backlog + pending groups + picked options) and
+    `willie-briefing-hud` (replace raw-JSON briefing render with a game-like
+    HUD). Both have variation/idea menus in Tasks.md awaiting a direction pick.
+    Solver-trace panel can now render real candidates.
+  - **Non-freezer → solver wiring** — route `MissingRoomDecision`
+    (kitchen/hospital/storage) traces into `SolveAsync`; Solver3 added the
+    room-class templates, only the orchestrator hookup is missing
+    (`willie-placement-wiring.md` §3).
+  - **Solver3 S3d** `ReuseExistingFootprintGenerator` (`willie-reuse-footprint`)
+    — RIMAPI footprint-evidence gated.
   - **Derivation extensions** (`willie-rules-slice-a.md` §4) — thermal
     room-temps, storage distance, room quality/cells, frame age, constructor
     priority — each unlocks more Slice-A rules against richer briefing fields.
