@@ -96,11 +96,15 @@ public sealed class CabinetCycle(
     {
         if (cycle.Trigger != PlayCycleTrigger.ManualTrigger) return false;
         if (snapshotStore.Latest is null) return false;
-        if (!RimApiConnectionFailure.IsConnectionFailure(ex)) return false;
+        if (!CanUseSnapshotFallback(ex)) return false;
 
         snapshotStore.RestoreInto(colony);
         return true;
     }
+
+    private static bool CanUseSnapshotFallback(Exception ex) =>
+        RimApiConnectionFailure.IsConnectionFailure(ex) ||
+        ex is RimApiLiveStateUnavailableException;
 
     private async Task RunResolvedMinisterAsync(
         IMinister minister,

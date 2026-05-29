@@ -20,8 +20,13 @@ public sealed class IngestionDispatcher(
     public async Task RefreshAllAsync(CancellationToken ct = default)
     {
         IReadOnlyList<MapInfoDto> maps = await rimApi.GetMapsAsync(ct);
-        MapInfoDto home = maps.FirstOrDefault(m => m.IsPlayerHome) ?? maps.FirstOrDefault()
-            ?? throw new InvalidOperationException("RIMAPI returned no maps.");
+        MapInfoDto? home = maps.FirstOrDefault(m => m.IsPlayerHome) ?? maps.FirstOrDefault();
+        if (home is null)
+        {
+            throw new RimApiLiveStateUnavailableException(
+                RimApiLiveStateUnavailableReason.NoLoadedMap,
+                "RIMAPI returned no maps. Load a colony map before refreshing live state.");
+        }
 
         log.LogDebug("RIMAPI refresh selected home map {MapId} (size={MapSize})", home.Id, home.Size);
         state.Map.Update(MapAggregateMapper.FromMap(home));

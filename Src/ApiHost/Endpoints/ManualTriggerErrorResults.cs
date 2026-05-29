@@ -21,6 +21,21 @@ internal static class ManualTriggerErrorResults
             return true;
         }
 
+        if (ex is RimApiLiveStateUnavailableException liveStateUnavailable)
+        {
+            result = Results.Problem(
+                title: "RimWorld map is not loaded",
+                detail: liveStateUnavailable.Message,
+                statusCode: StatusCodes.Status503ServiceUnavailable,
+                extensions: new Dictionary<string, object?>
+                {
+                    ["code"] = "rimworld_map_not_loaded",
+                    ["source"] = "rimapi",
+                    ["reason"] = liveStateUnavailable.Reason.ToString()
+                });
+            return true;
+        }
+
         if (ex is RimApiException)
         {
             result = Results.Problem(

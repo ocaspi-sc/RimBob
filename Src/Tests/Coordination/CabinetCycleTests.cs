@@ -120,6 +120,35 @@ public sealed class CabinetCycleTests
     }
 
     [Fact]
+    public async Task TriggerMinisterAsync_WhenRimApiHasNoLoadedMap_RestoresSnapshotBeforeMinisterRuns()
+    {
+        (ColonyState colony, ColonyStateSnapshotStore snapshotStore) =
+            await RestoredStateWithSnapshotAsync(7);
+        colony.LastRefreshSource = ColonyStateOrigin.Live;
+        colony.LastLiveRefreshAt = DateTimeOffset.UtcNow;
+        FakeMinister willie = new("Willie", colony);
+        CabinetCycle sut = BuildCycle(
+            new MutatingThrowingRefresher(
+                colony,
+                new RimApiLiveStateUnavailableException(
+                    RimApiLiveStateUnavailableReason.NoLoadedMap,
+                    "RIMAPI returned no maps. Load a colony map before refreshing live state."),
+                99),
+            colony,
+            snapshotStore,
+            new MinisterTraceStore(),
+            [willie]);
+
+        MinisterTriggerResult result = await sut.TriggerMinisterAsync("willie", CancellationToken.None)
+            ?? throw new InvalidOperationException("Expected Willie trigger result.");
+
+        result.UsedRestoredSnapshot.Should().BeTrue();
+        result.StateSource.Should().Be(nameof(ColonyStateOrigin.Snapshot));
+        willie.ObservedMapId.Should().Be(7);
+        colony.Map.Value.Id.Should().Be(7);
+    }
+
+    [Fact]
     public async Task TriggerCabinetAsync_WhenLiveRefreshFailsWithRestoredSnapshot_ReportsFallback()
     {
         (ColonyState colony, ColonyStateSnapshotStore snapshotStore) =
