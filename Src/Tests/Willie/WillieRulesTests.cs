@@ -169,12 +169,30 @@ public sealed class WillieRulesTests
             [FreezerRequest()]);
 
         Decision decision = result.Should().BeOfType<Decision>().Subject;
-        decision.Trace.Should().Be("freezer_request_active");
+        decision.Trace.Should().Be(Rules.BuildingRequestActiveTrace);
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
         advice.Concern.Should().Be("thermal_control");
         AdviceAction action = advice.Actions.Should().ContainSingle().Subject;
         action.Kind.Should().Be(AdviceActionKind.PlaceBlueprint);
         action.Apply.Should().BeNull();
+    }
+
+    [Fact]
+    public void InboundNonFreezerRequest_EmitsGeneralBuildingRequestAdvice()
+    {
+        RulesResult result = new Rules().Evaluate(
+            StableBriefing(),
+            ColonyContext.Default,
+            [WorkshopRequest()]);
+
+        Decision decision = result.Should().BeOfType<Decision>().Subject;
+        decision.Trace.Should().Be(Rules.BuildingRequestActiveTrace);
+        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        advice.Concern.Should().Be("functional_rooms");
+        advice.Title.Should().Be("Workshop request needs Willie placement");
+        Rules.TryGetPlacementRequest(decision.Trace, StableBriefing(), [WorkshopRequest()], out BuildingRequest request)
+            .Should().BeTrue();
+        request.RoomClass.Should().Be(RoomClass.Workshop);
     }
 
     [Fact]
@@ -191,7 +209,7 @@ public sealed class WillieRulesTests
             [FreezerRequest()]);
 
         Decision decision = result.Should().BeOfType<Decision>().Subject;
-        decision.Trace.Should().Be("freezer_request_active");
+        decision.Trace.Should().Be(Rules.BuildingRequestActiveTrace);
         decision.Advice.Should().ContainSingle()
             .Which.Concern.Should().Be("thermal_control");
         decision.Diagnostics.Should().NotBeNull();
@@ -226,8 +244,27 @@ public sealed class WillieRulesTests
             .Which.Concern.Should().Be("material_bottleneck");
         decision.Diagnostics.Should().NotBeNull();
         decision.Diagnostics!.SuppressedCandidates.Should().Contain(row =>
-            row.Rule == "freezer_request_active" &&
+            row.Rule == Rules.BuildingRequestActiveTrace &&
             row.Outcome == "suppressed");
+    }
+
+    [Fact]
+    public void MissingKitchenTrace_SynthesizesSolverRequest()
+    {
+        WillieBriefing briefing = StableBriefing() with
+        {
+            FunctionalRooms = FunctionalRooms(RoomClass.Hospital, RoomClass.Storage)
+        };
+
+        Decision decision = Evaluate(briefing);
+
+        decision.Trace.Should().Be("kitchen_missing");
+        Rules.TryGetPlacementRequest(decision.Trace, briefing, [], out BuildingRequest request)
+            .Should().BeTrue();
+        request.RoomClass.Should().Be(RoomClass.Kitchen);
+        request.TargetClass.Should().Be(BuildingClass.ProductionBench);
+        request.Adjacency.Should().ContainSingle()
+            .Which.Target.Should().Be("storage");
     }
 
     private static Decision Evaluate(WillieBriefing briefing)
@@ -245,6 +282,18 @@ public sealed class WillieRulesTests
             RoomClass: RoomClass.Freezer,
             Temperature: new TempNeed(TemperatureBand.Freezing, MustHold: true),
             Priority: AdvicePriority.High,
+            RequestedFrom: "Willie");
+
+    private static BuildingRequest WorkshopRequest() =>
+        new(
+            Request: "starter workshop near storage",
+            Reason: "Industry needs covered production benches",
+            TargetClass: BuildingClass.ProductionBench,
+            TargetDef: "ElectricTailoringBench",
+            RoomClass: RoomClass.Workshop,
+            CapacityNeed: new CapacityNeed(CapacityMeasure.WorkSlots, 1),
+            Adjacency: [new AdjacencyHint(AdjacencyRelation.Near, "storage")],
+            Priority: AdvicePriority.Medium,
             RequestedFrom: "Willie");
 
     private static WillieBriefing StableBriefing() =>

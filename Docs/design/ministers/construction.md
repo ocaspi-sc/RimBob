@@ -112,7 +112,7 @@ pickable `options[]`. Request-driven builds are deterministic: the Solver
 consumes `building_request`s directly (already structured), so no LLM step is
 needed. See [`placement-solver.md`](../../../.plans/placement-solver.md).
 
-Cross-minister freezer requests preempt generic missing-room advice after hard build blockers such as power deficits, material gaps, and blocked frames. A missing kitchen may still suppress or no-fit the solver, but the player should see the freezer request and solver evidence instead of a separate kitchen-missing card hiding the requested build.
+Inbound `building_request`s for any Willie-owned build class preempt generic missing-room advice after hard build blockers such as power deficits, material gaps, and blocked frames. Missing kitchen, hospital, and storage rules synthesize the same request shape internally, so the orchestrator uses one generic `building_request_active`/missing-room solver path and attaches validated options to the emitted advice item instead of keeping non-freezer rooms prose-only.
 
 Here, "1-3 candidate layouts" means the final emitted `options[]`, not the
 internal search space. The solver may run several bounded candidate generators

@@ -32,10 +32,14 @@ public sealed class MinisterOfWillie(
             case Decision decision:
                 PlacementSolverReplayOutput? placementReplayOutput = null;
                 IReadOnlyList<AdviceItem> advice = decision.Advice;
-                if (ShouldRunPlacementSolver(decision.Trace, inboundRequests, out BuildingRequest? freezerRequest))
+                if (Rules.TryGetPlacementRequest(decision.Trace, briefing, inboundRequests, out BuildingRequest placementRequest))
                 {
-                    PlacementSolveAttempt attempt = await TrySolvePlacementAsync(freezerRequest, briefing, ct);
-                    advice = EnrichFreezerAdvice(advice, attempt);
+                    PlacementSolveAttempt attempt = await TrySolvePlacementAsync(placementRequest, briefing, ct);
+                    advice = EnrichSolverAdvice(
+                        advice,
+                        attempt,
+                        DrivingAdviceId(decision.Trace),
+                        removeFallbackWhenApplyReady: IsMissingRoomTrace(decision.Trace));
                     placementReplayOutput = attempt.ReplayOutput;
                 }
 
@@ -125,16 +129,6 @@ public sealed class MinisterOfWillie(
     private static bool IsRequestedFromWillie(BuildingRequest request) =>
         string.Equals(request.RequestedFrom, "Willie", StringComparison.OrdinalIgnoreCase);
 
-    private static bool ShouldRunPlacementSolver(
-        string trace,
-        IReadOnlyList<BuildingRequest> inboundRequests,
-        out BuildingRequest freezerRequest)
-    {
-        freezerRequest = inboundRequests.FirstOrDefault(Rules.IsFreezingBuildRequest)!;
-        return string.Equals(trace, "freezer_request_active", StringComparison.OrdinalIgnoreCase) &&
-            freezerRequest is not null;
-    }
-
     private async Task<PlacementSolveAttempt> TrySolvePlacementAsync(
         BuildingRequest request,
         WillieBriefing briefing,
@@ -146,7 +140,7 @@ public sealed class MinisterOfWillie(
         try
         {
             PlacementResult result = await placementSolver.SolveAsync(spec, briefing, colonyState, ct);
-            return PlacementSolveAttempt.FromResult(result);
+            return PlacementSolveAttempt.FromResult(result, request);
         }
         catch (OperationCanceledException)
         {
@@ -154,7 +148,7 @@ public sealed class MinisterOfWillie(
         }
         catch (Exception ex)
         {
-            log.LogWarning(ex, "Willie placement solver failed for freezer request={Request}", request.Request);
+            log.LogWarning(ex, "Willie placement solver failed for request={Request}", request.Request);
             return PlacementSolveAttempt.FromFailure(ex);
         }
     }
@@ -171,23 +165,28 @@ public sealed class MinisterOfWillie(
             .ToList();
     }
 
-    private static IReadOnlyList<AdviceItem> EnrichFreezerAdvice(
+    private static IReadOnlyList<AdviceItem> EnrichSolverAdvice(
         IReadOnlyList<AdviceItem> advice,
-        PlacementSolveAttempt attempt)
+        PlacementSolveAttempt attempt,
+        string drivingAdviceId,
+        bool removeFallbackWhenApplyReady)
     {
         if (advice.Count == 0) return advice;
 
         return advice
-            .Select(item => IsFreezerAdvice(item) ? EnrichAdviceItem(item, attempt) : item)
+            .Select(item => IsDrivingAdvice(item, drivingAdviceId)
+                ? EnrichAdviceItem(item, attempt, removeFallbackWhenApplyReady)
+                : item)
             .ToList();
     }
 
-    private static bool IsFreezerAdvice(AdviceItem item) =>
-        string.Equals(item.Id, "willie_freezer_request_active", StringComparison.OrdinalIgnoreCase);
+    private static bool IsDrivingAdvice(AdviceItem item, string drivingAdviceId) =>
+        string.Equals(item.Id, drivingAdviceId, StringComparison.OrdinalIgnoreCase);
 
     private static AdviceItem EnrichAdviceItem(
         AdviceItem item,
-        PlacementSolveAttempt attempt)
+        PlacementSolveAttempt attempt,
+        bool removeFallbackWhenApplyReady)
     {
         if (attempt.Result is null)
             return item with { Rationale = AppendPlacementNote(item.Rationale, attempt.Note) };
@@ -205,10 +204,14 @@ public sealed class MinisterOfWillie(
                 })
                 .ToList();
 
-        IReadOnlyList<AdviceAction> actions = options is { Count: > 0 } &&
-            result.ApplyReady != PlacementReadiness.Blocked
-            ? item.Actions.Concat(options.Select(ApplyActionForOption)).ToList()
+        bool attachApplyActions = options is { Count: > 0 } &&
+            result.ApplyReady != PlacementReadiness.Blocked;
+        IReadOnlyList<AdviceAction> baseActions = removeFallbackWhenApplyReady && attachApplyActions
+            ? item.Actions.Where(action => action.Kind != AdviceActionKind.PlaceBlueprint || action.Apply is not null).ToList()
             : item.Actions;
+        IReadOnlyList<AdviceAction> actions = attachApplyActions
+            ? baseActions.Concat(options!.Select(ApplyActionForOption)).ToList()
+            : baseActions;
 
         return item with
         {
@@ -236,26 +239,65 @@ public sealed class MinisterOfWillie(
     private static string ReadinessWire(PlacementReadiness readiness) =>
         readiness.ToString().ToLowerInvariant();
 
-    private static string NoteFor(PlacementResult result)
+    private static string NoteFor(PlacementResult result, BuildingRequest request)
     {
         if (result.Options.Count > 0)
         {
             return $"Placement solver: {result.Options.Count} validated option{Plural(result.Options.Count)}; materials_ready={ReadinessWire(result.MaterialsReady)}, apply_ready={ReadinessWire(result.ApplyReady)}.";
         }
 
-        string reason = result.NoFit is null ? "no validated freezer option was emitted" : NoFitNote(result.NoFit.Value);
+        string reason = result.NoFit is null
+            ? $"no validated {RequestRoomLabel(request)} option was emitted"
+            : NoFitNote(result.NoFit.Value, request);
         return $"Placement solver no-fit: {reason}.";
     }
 
-    private static string NoFitNote(NoFitReason reason) => reason switch
+    private static string NoFitNote(NoFitReason reason, BuildingRequest request) => reason switch
     {
-        NoFitReason.NoAnchors => "no kitchen anchor is available in the Willie briefing",
-        NoFitReason.NoDrafts => "no freezer drafts were generated",
-        NoFitReason.HardGateRejected => "all freezer drafts failed shared hard gates",
-        NoFitReason.NoReachablePath => "no walkable route to a kitchen anchor",
-        NoFitReason.ValidationRejected => "no buildable footprint near the kitchen passed fork validation",
-        _ => "no validated freezer option was emitted"
+        NoFitReason.NoAnchors => $"no {RequestAnchorLabel(request)} anchor is available in the Willie briefing",
+        NoFitReason.NoDrafts => $"no {RequestRoomLabel(request)} drafts were generated",
+        NoFitReason.HardGateRejected => $"all {RequestRoomLabel(request)} drafts failed shared hard gates",
+        NoFitReason.NoReachablePath => $"no walkable route to a {RequestAnchorLabel(request)} anchor",
+        NoFitReason.ValidationRejected => $"no buildable footprint near the {RequestAnchorLabel(request)} passed fork validation",
+        _ => $"no validated {RequestRoomLabel(request)} option was emitted"
     };
+
+    private static string DrivingAdviceId(string trace) =>
+        $"willie_{trace}";
+
+    private static bool IsMissingRoomTrace(string trace) =>
+        trace is "kitchen_missing" or "hospital_missing" or "storage_room_missing";
+
+    private static string RequestRoomLabel(BuildingRequest request) =>
+        request.RoomClass is not null
+            ? FormatEnum(request.RoomClass.Value.ToString())
+            : FormatEnum(request.TargetClass.ToString());
+
+    private static string RequestAnchorLabel(BuildingRequest request)
+    {
+        string? target = request.Adjacency?
+            .FirstOrDefault(adjacency => adjacency.Relation == AdjacencyRelation.Near)
+            ?.Target;
+        if (string.IsNullOrWhiteSpace(target) && Rules.IsFreezingBuildRequest(request))
+            return "kitchen";
+
+        return string.IsNullOrWhiteSpace(target)
+            ? "requested"
+            : target.Replace('_', ' ').ToLowerInvariant();
+    }
+
+    private static string FormatEnum(string value)
+    {
+        List<char> chars = new(value.Length + 4);
+        for (int i = 0; i < value.Length; i++)
+        {
+            char c = value[i];
+            if (char.IsUpper(c) && i > 0) chars.Add(' ');
+            chars.Add(char.ToLowerInvariant(c));
+        }
+
+        return new string(chars.ToArray());
+    }
 
     private static string Plural(int count) => count == 1 ? string.Empty : "s";
 
@@ -301,10 +343,10 @@ public sealed class MinisterOfWillie(
         string Note,
         PlacementSolverReplayOutput ReplayOutput)
     {
-        public static PlacementSolveAttempt FromResult(PlacementResult result) =>
+        public static PlacementSolveAttempt FromResult(PlacementResult result, BuildingRequest request) =>
             new(
                 result,
-                NoteFor(result),
+                NoteFor(result, request),
                 PlacementSolverReplayOutput.FromResult(result));
 
         public static PlacementSolveAttempt FromFailure(Exception ex)

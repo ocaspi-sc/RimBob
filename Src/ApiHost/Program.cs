@@ -74,6 +74,7 @@ try
     builder.Services.AddSingleton<IReadOnlyList<IRoomTemplate>>(_ =>
         [
             new FreezerTemplate(),
+            new KitchenTemplate(),
             new HospitalTemplate(),
             new BedroomTemplate(),
             new WorkshopTemplate(),

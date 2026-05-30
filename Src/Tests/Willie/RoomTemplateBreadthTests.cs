@@ -9,6 +9,7 @@ public sealed class RoomTemplateBreadthTests
     public static TheoryData<IRoomTemplate, CapacityNeed, string> Templates =>
         new()
         {
+            { new KitchenTemplate(), new CapacityNeed(CapacityMeasure.WorkSlots, 1), "stove" },
             { new HospitalTemplate(), new CapacityNeed(CapacityMeasure.Beds, 3), "medical_bed" },
             { new BedroomTemplate(), new CapacityNeed(CapacityMeasure.Occupants, 1), "bed" },
             { new WorkshopTemplate(), new CapacityNeed(CapacityMeasure.WorkSlots, 2), "workbench" },
@@ -53,6 +54,7 @@ public sealed class RoomTemplateBreadthTests
     }
 
     [Theory]
+    [InlineData(RoomClass.Kitchen)]
     [InlineData(RoomClass.Hospital)]
     [InlineData(RoomClass.Workshop)]
     [InlineData(RoomClass.Storage)]
@@ -60,6 +62,7 @@ public sealed class RoomTemplateBreadthTests
     {
         IRoomTemplate template = roomClass switch
         {
+            RoomClass.Kitchen => new KitchenTemplate(),
             RoomClass.Hospital => new HospitalTemplate(),
             RoomClass.Workshop => new WorkshopTemplate(),
             _ => new StorageTemplate()

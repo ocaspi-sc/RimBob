@@ -29,6 +29,8 @@ public sealed class RoomTemplateSetTests
     [Fact]
     public void Default_IncludesProductionTemplateBreadth()
     {
+        RoomTemplateSet.Default.ForSpec(Spec(BuildingClass.ProductionBench, RoomClass.Kitchen))
+            .Should().BeOfType<KitchenTemplate>();
         RoomTemplateSet.Default.ForSpec(Spec(BuildingClass.Bed, RoomClass.Hospital))
             .Should().BeOfType<HospitalTemplate>();
         RoomTemplateSet.Default.ForSpec(Spec(BuildingClass.ProductionBench, roomClass: null))

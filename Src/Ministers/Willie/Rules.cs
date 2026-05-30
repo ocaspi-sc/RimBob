@@ -8,6 +8,8 @@ namespace RimBob.Ministers.Willie;
 
 public sealed class Rules : IMinisterRules<WillieBriefing>
 {
+    public const string BuildingRequestActiveTrace = "building_request_active";
+
     private const string MinisterName = "Willie";
     private const string Domain = "construction";
     private const float LowBatteryReserveRatio = 0.25f;
@@ -82,21 +84,9 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
                     AdvicePriority.High,
                     "Player"));
 
-        BuildingRequest? freezerRequest = inboundBuildingRequests.FirstOrDefault(IsFreezingBuildRequest);
-        if (freezerRequest is not null)
-            return DecisionFor(
-                briefing,
-                inboundBuildingRequests,
-                "freezer_request_active",
-                WillieConcern.ThermalControl,
-                freezerRequest.Priority ?? AdvicePriority.Medium,
-                "Freezer request needs Willie placement",
-                freezerRequest.Request,
-                "Chef owns the food-storage need; Willie owns the freezer shell, cooler, power, and eventual placement.",
-                [
-                    new AdviceAction(AdviceActionKind.PlaceBlueprint, "Plan a freezer or cold-storage shell for this request; solver options attach when a validated footprint is available.", Owner: MinisterName)
-                ],
-                WillieFlagRequests.Empty);
+        BuildingRequest? buildingRequest = SelectPlacementRequest(inboundBuildingRequests);
+        if (buildingRequest is not null)
+            return BuildingRequestDecision(briefing, inboundBuildingRequests, buildingRequest);
 
         if (HasFunctionalRoomEvidence(briefing) && MissingRoom(briefing, RoomClass.Kitchen))
             return MissingRoomDecision(
@@ -170,12 +160,40 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
             priority,
             title,
             body,
-            $"{FormatRoom(roomClass)} work is a built-infrastructure gap; the first slice emits prose until Placement Solver candidates exist.",
+            $"{FormatRoom(roomClass)} work is a built-infrastructure gap; the placement solver owns exact footprint options when map evidence supports them.",
             [
-                // TODO: replace prose-only place_blueprint actions with PlacementSolver options once Solver1 owns room footprints.
-                new AdviceAction(AdviceActionKind.PlaceBlueprint, $"Plan a compact {FormatRoom(roomClass)} footprint in a sensible base location.", Owner: MinisterName)
+                new AdviceAction(AdviceActionKind.PlaceBlueprint, $"Plan a compact {FormatRoom(roomClass)} footprint; solver options attach when a validated footprint is available.", Owner: MinisterName)
             ],
             WillieFlagRequests.Empty);
+
+    private Decision BuildingRequestDecision(
+        WillieBriefing briefing,
+        IReadOnlyList<BuildingRequest> inboundBuildingRequests,
+        BuildingRequest request)
+    {
+        bool freezing = IsFreezingBuildRequest(request);
+        string target = FormatRequestTarget(request);
+        string title = freezing
+            ? "Freezer request needs Willie placement"
+            : $"{TitleCase(target)} request needs Willie placement";
+        string rationale = freezing
+            ? "Chef owns the food-storage need; Willie owns the freezer shell, cooler, power, and eventual placement."
+            : $"The requesting minister owns why this build matters; Willie owns the {target} footprint, materials, and placement.";
+
+        return DecisionFor(
+            briefing,
+            inboundBuildingRequests,
+            BuildingRequestActiveTrace,
+            ConcernFor(request),
+            request.Priority ?? AdvicePriority.Medium,
+            title,
+            request.Request,
+            rationale,
+            [
+                new AdviceAction(AdviceActionKind.PlaceBlueprint, $"Plan a {target} build for this request; solver options attach when a validated footprint is available.", Owner: MinisterName)
+            ],
+            WillieFlagRequests.Empty);
+    }
 
     private Decision DecisionFor(
         WillieBriefing briefing,
@@ -283,10 +301,10 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
             RuleEvaluation("low_battery_reserve", outcomes, selectedRule, "has_power && capacity_wd > 0 && stored/capacity < 0.25", "place_blueprint"),
             RuleEvaluation("backlog_material_gap", outcomes, selectedRule, "missing_materials non-empty", "request_resource"),
             RuleEvaluation("frame_blocked_by_material", outcomes, selectedRule, "blocked_count > 0", "request_resource"),
+            RuleEvaluation(BuildingRequestActiveTrace, outcomes, selectedRule, "inbound Willie building_request", "place_blueprint"),
             RuleEvaluation("kitchen_missing", outcomes, selectedRule, "room_counts lacks kitchen", "place_blueprint"),
             RuleEvaluation("hospital_missing", outcomes, selectedRule, "colonists >= 3 && room_counts lacks hospital", "place_blueprint"),
             RuleEvaluation("storage_room_missing", outcomes, selectedRule, "room_counts lacks storage && stockpile_zones == 0", "place_blueprint"),
-            RuleEvaluation("freezer_request_active", outcomes, selectedRule, "inbound Willie freezing building_request", "place_blueprint"),
             RuleEvaluation("cooler_missing", outcomes, selectedRule, "has_buildings && cooler_count == 0 && freezer_anchor_count > 0", "place_blueprint"),
             RuleEvaluation("maintain_build_program", outcomes, selectedRule, "no deterministic Willie rule matched", "none")
         ];
@@ -339,9 +357,9 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
             matches.Add(new RuleTraceEntry("storage_room_missing", "matched", "no storage anchor or stockpile zone"));
         }
 
-        int freezerRequests = inboundBuildingRequests.Count(IsFreezingBuildRequest);
-        if (freezerRequests > 0)
-            matches.Add(new RuleTraceEntry("freezer_request_active", "matched", $"freezing_building_requests={freezerRequests}"));
+        int buildingRequests = inboundBuildingRequests.Count;
+        if (buildingRequests > 0)
+            matches.Add(new RuleTraceEntry(BuildingRequestActiveTrace, "matched", $"building_requests={buildingRequests}"));
 
         if (briefing.DataCoverage.HasBuildings &&
             briefing.ThermalControl.CoolerCount == 0 &&
@@ -367,10 +385,147 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
         !briefing.FunctionalRooms.RoomCountsByClass.TryGetValue(roomClass.ToString(), out int count) ||
         count <= 0;
 
+    public static bool TryGetPlacementRequest(
+        string trace,
+        WillieBriefing briefing,
+        IReadOnlyList<BuildingRequest> inboundBuildingRequests,
+        out BuildingRequest request)
+    {
+        if (string.Equals(trace, BuildingRequestActiveTrace, StringComparison.OrdinalIgnoreCase))
+        {
+            request = SelectPlacementRequest(inboundBuildingRequests)!;
+            return request is not null;
+        }
+
+        if (TryMissingRoomClass(trace, out RoomClass roomClass))
+        {
+            request = MissingRoomRequest(briefing, roomClass);
+            return true;
+        }
+
+        request = null!;
+        return false;
+    }
+
+    private static BuildingRequest? SelectPlacementRequest(IReadOnlyList<BuildingRequest> requests) =>
+        requests
+            .OrderByDescending(request => (int)(request.Priority ?? AdvicePriority.Medium))
+            .ThenBy(request => FormatRequestTarget(request), StringComparer.OrdinalIgnoreCase)
+            .ThenBy(request => request.Request, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault();
+
     public static bool IsFreezingBuildRequest(BuildingRequest request) =>
         request.Temperature?.TargetBand == TemperatureBand.Freezing ||
         request.RoomClass == RoomClass.Freezer ||
         request.TargetClass == BuildingClass.Freezer;
+
+    private static WillieConcern ConcernFor(BuildingRequest request)
+    {
+        if (IsFreezingBuildRequest(request))
+            return WillieConcern.ThermalControl;
+
+        if (request.RoomClass == RoomClass.Storage ||
+            request.TargetClass is BuildingClass.Stockpile or BuildingClass.Shelf or BuildingClass.DumpingZone)
+        {
+            return WillieConcern.StoragePlacement;
+        }
+
+        if (request.TargetClass is BuildingClass.PowerGeneration or BuildingClass.Battery or BuildingClass.Conduit)
+            return WillieConcern.PowerStability;
+
+        if (request.RoomClass is not null)
+            return WillieConcern.FunctionalRooms;
+
+        return WillieConcern.BaseLayout;
+    }
+
+    private static bool TryMissingRoomClass(string trace, out RoomClass roomClass)
+    {
+        roomClass = trace switch
+        {
+            "kitchen_missing" => RoomClass.Kitchen,
+            "hospital_missing" => RoomClass.Hospital,
+            "storage_room_missing" => RoomClass.Storage,
+            _ => default
+        };
+        return trace is "kitchen_missing" or "hospital_missing" or "storage_room_missing";
+    }
+
+    private static BuildingRequest MissingRoomRequest(WillieBriefing briefing, RoomClass roomClass)
+    {
+        RoomClass? anchorClass = PreferredAnchorClass(briefing, roomClass);
+        IReadOnlyList<AdjacencyHint>? adjacency = anchorClass is null
+            ? null
+            : [new AdjacencyHint(AdjacencyRelation.Near, ToSnakeCase(anchorClass.Value.ToString()))];
+
+        return new BuildingRequest(
+            Request: $"starter {FormatRoom(roomClass)} footprint",
+            Reason: $"Willie rules detected no {FormatRoom(roomClass)} anchor in the current room inventory.",
+            TargetClass: TargetClassForMissingRoom(roomClass),
+            TargetDef: TargetDefForMissingRoom(roomClass),
+            RoomClass: roomClass,
+            CapacityNeed: CapacityNeedForMissingRoom(roomClass),
+            Adjacency: adjacency,
+            Priority: MissingRoomPriority(roomClass),
+            RequestedFrom: MinisterName);
+    }
+
+    private static RoomClass? PreferredAnchorClass(WillieBriefing briefing, RoomClass missingRoomClass)
+    {
+        IReadOnlyList<RoomClass> preferredClasses = PreferredAnchorClasses(missingRoomClass);
+        foreach (RoomClass preferred in preferredClasses)
+        {
+            if (HasRoom(briefing, preferred))
+                return preferred;
+        }
+
+        WillieRoomAnchor? anchor = briefing.AnchorInventory.Anchors
+            .FirstOrDefault(anchor => anchor.Class != missingRoomClass);
+        return anchor?.Class ?? preferredClasses.FirstOrDefault();
+    }
+
+    private static IReadOnlyList<RoomClass> PreferredAnchorClasses(RoomClass missingRoomClass) =>
+        missingRoomClass switch
+        {
+            RoomClass.Kitchen => [RoomClass.Storage, RoomClass.Dining, RoomClass.Recreation],
+            RoomClass.Hospital => [RoomClass.Bedroom, RoomClass.Barracks, RoomClass.Kitchen, RoomClass.Storage],
+            RoomClass.Storage => [RoomClass.Kitchen, RoomClass.Workshop, RoomClass.Dining],
+            _ => [RoomClass.Kitchen, RoomClass.Storage]
+        };
+
+    private static bool HasRoom(WillieBriefing briefing, RoomClass roomClass) =>
+        briefing.FunctionalRooms.RoomCountsByClass.TryGetValue(roomClass.ToString(), out int count) &&
+        count > 0;
+
+    private static BuildingClass TargetClassForMissingRoom(RoomClass roomClass) =>
+        roomClass switch
+        {
+            RoomClass.Kitchen => BuildingClass.ProductionBench,
+            RoomClass.Hospital => BuildingClass.Bed,
+            RoomClass.Storage => BuildingClass.Shelf,
+            _ => BuildingClass.Wall
+        };
+
+    private static string? TargetDefForMissingRoom(RoomClass roomClass) =>
+        roomClass switch
+        {
+            RoomClass.Kitchen => "FueledStove",
+            RoomClass.Hospital => "Bed",
+            RoomClass.Storage => "Shelf",
+            _ => null
+        };
+
+    private static CapacityNeed? CapacityNeedForMissingRoom(RoomClass roomClass) =>
+        roomClass switch
+        {
+            RoomClass.Kitchen => new CapacityNeed(CapacityMeasure.WorkSlots, 1),
+            RoomClass.Hospital => new CapacityNeed(CapacityMeasure.Beds, 2),
+            RoomClass.Storage => new CapacityNeed(CapacityMeasure.StorageStacks, 12),
+            _ => null
+        };
+
+    private static AdvicePriority MissingRoomPriority(RoomClass roomClass) =>
+        roomClass == RoomClass.Kitchen ? AdvicePriority.Medium : AdvicePriority.Low;
 
     private static string FormatMaterials(IReadOnlyList<MaterialCount> materials) =>
         string.Join(", ", materials.Take(4).Select(material => $"{material.Count} {material.DefName}"));
@@ -380,6 +535,14 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
 
     private static string FormatRoom(RoomClass roomClass) =>
         ToSnakeCase(roomClass.ToString()).Replace('_', ' ');
+
+    private static string FormatRequestTarget(BuildingRequest request) =>
+        request.RoomClass is not null
+            ? FormatRoom(request.RoomClass.Value)
+            : ToSnakeCase(request.TargetClass.ToString()).Replace('_', ' ');
+
+    private static string TitleCase(string value) =>
+        CultureInfo.InvariantCulture.TextInfo.ToTitleCase(value);
 
     private static string Plural(int count) => count == 1 ? "" : "s";
 

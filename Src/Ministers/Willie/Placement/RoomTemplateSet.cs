@@ -18,6 +18,7 @@ public sealed class RoomTemplateSet
     public static RoomTemplateSet Default { get; } = new(
     [
         new FreezerTemplate(),
+        new KitchenTemplate(),
         new HospitalTemplate(),
         new BedroomTemplate(),
         new WorkshopTemplate(),

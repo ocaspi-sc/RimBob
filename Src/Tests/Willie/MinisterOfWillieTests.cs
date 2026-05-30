@@ -113,6 +113,29 @@ public sealed class MinisterOfWillieTests
     }
 
     [Fact]
+    public async Task InboundNonFreezerFlag_RunsSolverAndAttachesPlacementOptions()
+    {
+        AdviceOption option = PlacementOption("placement_workshop_20_12", "Starter workshop", 20);
+        FakePlacementSolver solver = FakePlacementSolver.WithOptions(option);
+        Harness harness = new(solver);
+        harness.SetStableState();
+        harness.Flags.Publish(WorkshopFlag());
+
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
+
+        AdviceItem advice = harness.Bus.ActiveAdvice().Should().ContainSingle().Subject;
+        advice.Concern.Should().Be("functional_rooms");
+        advice.Title.Should().Contain("Workshop request");
+        advice.Options.Should().ContainSingle().Which.Id.Should().Be("placement_workshop_20_12");
+        advice.Actions.Should().HaveCount(2);
+        advice.Actions.Should().Contain(action => action.Apply is PlaceBlueprintGroupApply);
+        solver.CallCount.Should().Be(1);
+        solver.LastSpec.Should().NotBeNull();
+        solver.LastSpec!.RoomClass.Should().Be(RoomClass.Workshop);
+        solver.LastSpec.TargetClass.Should().Be(BuildingClass.ProductionBench);
+    }
+
+    [Fact]
     public async Task InboundFreezerFlag_WhenSolverBlocksApply_DoesNotAttachApplyPayload()
     {
         FakePlacementSolver solver = FakePlacementSolver.WithOptions(
@@ -186,6 +209,21 @@ public sealed class MinisterOfWillieTests
     }
 
     [Fact]
+    public async Task InboundNonFreezerNoFit_UsesRequestedRoomInNote()
+    {
+        FakePlacementSolver solver = FakePlacementSolver.WithNoFit(NoFitReason.NoDrafts);
+        Harness harness = new(solver);
+        harness.SetStableState();
+        harness.Flags.Publish(WorkshopFlag());
+
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
+
+        AdviceItem advice = harness.Bus.ActiveAdvice().Should().ContainSingle().Subject;
+        advice.Options.Should().BeNull();
+        advice.Rationale.Should().Contain("no workshop drafts were generated");
+    }
+
+    [Fact]
     public async Task FreezerFlagWithMissingKitchen_RunsSolverAndPersistsNoFitTrace()
     {
         FakePlacementSolver solver = FakePlacementSolver.WithNoFit(NoFitReason.NoAnchors);
@@ -202,10 +240,34 @@ public sealed class MinisterOfWillieTests
         advice.Rationale.Should().Contain("no kitchen anchor is available");
         advice.Options.Should().BeNull();
         MinisterReplayRecord record = replay.Records.Should().ContainSingle().Subject;
-        record.RuleTrace.Should().Be("freezer_request_active");
+        record.RuleTrace.Should().Be(Rules.BuildingRequestActiveTrace);
         record.OutputKind.Should().Be("placement_solver");
         string outputJson = JsonSerializer.Serialize(record.Output);
         outputJson.Should().Contain(nameof(NoFitReason.NoAnchors));
+    }
+
+    [Fact]
+    public async Task MissingKitchen_RunsSolverAndReplacesFallbackWithApplyAction()
+    {
+        AdviceOption option = PlacementOption("placement_kitchen_30_12", "Starter kitchen", 30);
+        FakePlacementSolver solver = FakePlacementSolver.WithOptions(option);
+        Harness harness = new(solver);
+        harness.SetStableStateWithoutKitchen();
+
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
+
+        AdviceItem advice = harness.Bus.ActiveAdvice().Should().ContainSingle().Subject;
+        advice.Id.Should().Be("willie_kitchen_missing");
+        advice.Options.Should().ContainSingle().Which.Id.Should().Be("placement_kitchen_30_12");
+        advice.Actions.Should().ContainSingle()
+            .Which.Apply.Should().BeOfType<PlaceBlueprintGroupApply>();
+        advice.Rationale.Should().Contain("Placement solver: 1 validated option");
+        solver.CallCount.Should().Be(1);
+        solver.LastSpec.Should().NotBeNull();
+        solver.LastSpec!.RoomClass.Should().Be(RoomClass.Kitchen);
+        solver.LastSpec.TargetClass.Should().Be(BuildingClass.ProductionBench);
+        solver.LastSpec.Adjacency.Should().ContainSingle()
+            .Which.Target.Should().Be("storage");
     }
 
     private static AgentFlag FreezerFlag(string requestedFrom = "Willie") =>
@@ -224,6 +286,27 @@ public sealed class MinisterOfWillieTests
                     TargetDef: "Cooler",
                     RoomClass: RoomClass.Freezer,
                     Temperature: new TempNeed(TemperatureBand.Freezing, MustHold: true),
+                    Priority: AdvicePriority.Medium,
+                    RequestedFrom: requestedFrom)
+            ]);
+
+    private static AgentFlag WorkshopFlag(string requestedFrom = "Willie") =>
+        new(
+            Id: "industry:workshop_needed",
+            SourceMinister: "Industry",
+            Severity: FlagSeverity.Medium,
+            Domain: "industry",
+            Summary: "Production needs a workshop",
+            BuildingRequests:
+            [
+                new BuildingRequest(
+                    Request: "starter workshop near storage",
+                    Reason: "Industry needs covered production benches",
+                    TargetClass: BuildingClass.ProductionBench,
+                    TargetDef: "ElectricTailoringBench",
+                    RoomClass: RoomClass.Workshop,
+                    CapacityNeed: new CapacityNeed(CapacityMeasure.WorkSlots, 1),
+                    Adjacency: [new AdjacencyHint(AdjacencyRelation.Near, "storage")],
                     Priority: AdvicePriority.Medium,
                     RequestedFrom: requestedFrom)
             ]);
