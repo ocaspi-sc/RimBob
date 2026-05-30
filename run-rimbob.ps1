@@ -1,8 +1,9 @@
 [CmdletBinding()]
 param(
-    [switch]$SkipDashboardBuild,
-    [switch]$SkipDashboardInstall,
-    [switch]$NoRestore,
+    [switch]$InstallDashboard,
+    [switch]$BuildDashboard,
+    [switch]$BuildHost,
+    [switch]$Restore,
     [string]$Configuration = "Debug",
     [string]$ListenUrl = "",
     [switch]$Foreground,
@@ -138,14 +139,60 @@ function Set-LauncherWindowTitle {
     }
 }
 
+function Assert-HostExecutable {
+    if (-not (Test-Path $hostExe)) {
+        throw "RimBob host executable not found at '$hostExe'. Run .\run-rimbob.ps1 -BuildHost -Restore first."
+    }
+}
+
+function Get-HostArguments {
+    $hostArgs = @()
+    if (-not [string]::IsNullOrWhiteSpace($ListenUrl)) {
+        $hostArgs += "--RimBob:ListenUrl=$ListenUrl"
+    }
+
+    return ,$hostArgs
+}
+
+function Invoke-WithHostEnvironment {
+    param(
+        [Parameter(Mandatory = $true)]
+        [scriptblock]$Action
+    )
+
+    if ([string]::IsNullOrWhiteSpace($ListenUrl)) {
+        & $Action
+        return
+    }
+
+    $previousListenUrl = $env:RimBob__ListenUrl
+    $hadPreviousListenUrl = Test-Path Env:\RimBob__ListenUrl
+    try {
+        $env:RimBob__ListenUrl = $ListenUrl
+        & $Action
+    }
+    finally {
+        if ($hadPreviousListenUrl) {
+            $env:RimBob__ListenUrl = $previousListenUrl
+        }
+        else {
+            Remove-Item Env:\RimBob__ListenUrl -ErrorAction SilentlyContinue
+        }
+    }
+}
+
 function Start-HostForeground {
     Set-ServerWindowTitle
+    Assert-HostExecutable
+    $hostArgs = @(Get-HostArguments)
 
     Invoke-Step "Starting RimBob host" {
         Push-Location $hostDir
         try {
-            & dotnet @dotnetArgs
-            $script:hostExitCode = if ($null -eq $LASTEXITCODE) { 0 } else { $LASTEXITCODE }
+            Invoke-WithHostEnvironment {
+                & $hostExe @hostArgs
+                $script:hostExitCode = if ($null -eq $LASTEXITCODE) { 0 } else { $LASTEXITCODE }
+            }
         }
         finally {
             Pop-Location
@@ -161,12 +208,15 @@ function Invoke-HostBuild {
         $Configuration
     )
 
-    if ($NoRestore) {
+    if (-not $Restore) {
         $buildArgs += "--no-restore"
     }
 
     Invoke-Step "Building RimBob host" {
         & dotnet @buildArgs
+        if ($LASTEXITCODE -ne 0) {
+            throw "dotnet build failed with exit code $LASTEXITCODE."
+        }
     }
 }
 
@@ -414,9 +464,7 @@ function Add-DashboardViewMenu {
 }
 
 function Start-HostNotificationIcon {
-    if (-not (Test-Path $hostExe)) {
-        throw "RimBob host executable not found at '$hostExe'. Run .\run-rimbob.ps1 without -HostOnly first."
-    }
+    Assert-HostExecutable
 
     Set-LauncherWindowTitle
 
@@ -424,10 +472,7 @@ function Start-HostNotificationIcon {
     Add-Type -AssemblyName System.Drawing
     [System.Windows.Forms.Application]::EnableVisualStyles()
 
-    $hostArgs = @()
-    if (-not [string]::IsNullOrWhiteSpace($ListenUrl)) {
-        $hostArgs += "RimBob:ListenUrl=$ListenUrl"
-    }
+    $hostArgs = @(Get-HostArguments)
 
     $startInfo = New-Object System.Diagnostics.ProcessStartInfo
     $startInfo.FileName = $hostExe
@@ -437,7 +482,9 @@ function Start-HostNotificationIcon {
     $startInfo.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Minimized
     $startInfo.Arguments = ($hostArgs -join " ")
 
-    $script:trayHostProcess = [System.Diagnostics.Process]::Start($startInfo)
+    Invoke-WithHostEnvironment {
+        $script:trayHostProcess = [System.Diagnostics.Process]::Start($startInfo)
+    }
     $script:trayDashboardUrl = $dashboardUrl
     $script:trayContext = New-Object System.Windows.Forms.ApplicationContext
 
@@ -505,6 +552,8 @@ function Start-HostNotificationIcon {
 }
 
 function Start-HostNotificationArea {
+    Assert-HostExecutable
+
     if ([string]::IsNullOrWhiteSpace($PSCommandPath)) {
         throw "Cannot start RimBob in the notification area because the script path is unavailable."
     }
@@ -525,10 +574,6 @@ function Start-HostNotificationArea {
         $Configuration
     )
 
-    if ($NoRestore) {
-        $childArgs += "-NoRestore"
-    }
-
     if (-not [string]::IsNullOrWhiteSpace($ListenUrl)) {
         $childArgs += "-ListenUrl"
         $childArgs += $ListenUrl
@@ -546,31 +591,40 @@ function Start-HostNotificationArea {
     Write-Host "Use -Foreground to keep the server attached to this terminal for debugging."
 }
 
-Require-Command "dotnet"
-if (-not $HostOnly) {
+if (-not $HostOnly -and $BuildHost) {
+    Require-Command "dotnet"
+}
+if (-not $HostOnly -and ($InstallDashboard -or $BuildDashboard)) {
     Require-Command "npm.cmd"
 }
 
-if (-not $HostOnly -and -not $SkipDashboardInstall -and -not (Test-Path $nodeModulesDir)) {
+if (-not $HostOnly -and $InstallDashboard) {
     Invoke-Step "Installing dashboard dependencies" {
         Push-Location $dashboardDir
         try {
             & npm.cmd ci
+            if ($LASTEXITCODE -ne 0) {
+                throw "npm.cmd ci failed with exit code $LASTEXITCODE."
+            }
         }
         finally {
             Pop-Location
         }
     }
 }
-elseif (-not $HostOnly -and -not (Test-Path $nodeModulesDir)) {
-    Write-Warning "Dashboard dependencies are missing. Build may fail because node_modules does not exist."
-}
 
-if (-not $HostOnly -and -not $SkipDashboardBuild) {
+if (-not $HostOnly -and $BuildDashboard) {
+    if (-not (Test-Path $nodeModulesDir)) {
+        throw "Dashboard dependencies are missing. Run .\run-rimbob.ps1 -InstallDashboard -BuildDashboard first."
+    }
+
     Invoke-Step "Building dashboard into Src\ApiHost\wwwroot" {
         Push-Location $dashboardDir
         try {
             & npm.cmd run build
+            if ($LASTEXITCODE -ne 0) {
+                throw "npm.cmd run build failed with exit code $LASTEXITCODE."
+            }
         }
         finally {
             Pop-Location
@@ -578,21 +632,7 @@ if (-not $HostOnly -and -not $SkipDashboardBuild) {
     }
 }
 
-$dotnetArgs = @(
-    "run",
-    "--project",
-    $hostProject,
-    "--configuration",
-    $Configuration
-)
-
-if ($NoRestore) {
-    $dotnetArgs += "--no-restore"
-}
-
 if (-not [string]::IsNullOrWhiteSpace($ListenUrl)) {
-    $dotnetArgs += "--"
-    $dotnetArgs += "RimBob:ListenUrl=$ListenUrl"
     Write-Host ""
     Write-Host "Dashboard URL override: $ListenUrl"
 }
@@ -615,6 +655,9 @@ elseif ($HostOnly -or $Foreground) {
     }
 }
 else {
-    Invoke-HostBuild
+    if ($BuildHost) {
+        Invoke-HostBuild
+    }
+
     Start-HostNotificationArea
 }

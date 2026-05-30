@@ -83,17 +83,28 @@ Run RimBob and the dashboard with the helper script:
 .\run-rimbob.ps1
 ```
 
-The script installs dashboard dependencies with `npm.cmd ci` if `node_modules` is missing, builds the dashboard into `Src/ApiHost/wwwroot`, builds `RimBob.Host`, then starts the Host in a minimized taskbar-visible window with a RimBob icon in the Windows notification area. The visible Host window is intentional so stale runs are easy to spot and close. Right-click the icon to open the dashboard in Chrome or stop the host. The icon menu also has direct Chrome commands for the dashboard's console scopes and minister inspection views. If Chrome cannot be found, the launcher falls back to the default browser. Windows may place new notification-area icons behind the overflow chevron until you pin them. Open the dashboard at:
+The script starts the already-built `RimBob.Host` in a minimized taskbar-visible window with a RimBob icon in the Windows notification area. The visible Host window is intentional so stale runs are easy to spot and close. Right-click the icon to open the dashboard in Chrome or stop the host. The icon menu also has direct Chrome commands for the dashboard's console scopes and minister inspection views. If Chrome cannot be found, the launcher falls back to the default browser. Windows may place new notification-area icons behind the overflow chevron until you pin them. Open the dashboard at:
 
 ```text
 http://localhost:5000
 ```
 
-For a faster repeat run after dependencies and dashboard assets are already
-current:
+Build and setup work is opt-in. For a clean checkout or after changing both dashboard and Host code:
 
 ```powershell
-.\run-rimbob.ps1 -SkipDashboardBuild -NoRestore
+.\run-rimbob.ps1 -InstallDashboard -BuildDashboard -BuildHost -Restore
+```
+
+For a normal backend rebuild after packages are already restored:
+
+```powershell
+.\run-rimbob.ps1 -BuildHost
+```
+
+For a dashboard rebuild after `node_modules` already exists:
+
+```powershell
+.\run-rimbob.ps1 -BuildDashboard
 ```
 
 For debugging, or when an agent needs terminal output captured in the current
@@ -117,11 +128,12 @@ cd Dashboard
 npm.cmd run build
 ```
 
-Run the host:
+Build and run the host:
 
 ```powershell
 cd Src/ApiHost
-dotnet run
+dotnet build .\RimBob.Host.csproj --configuration Debug
+.\bin\Debug\net9.0\RimBob.Host.exe
 ```
 
 ## Verification

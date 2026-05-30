@@ -5,7 +5,7 @@ description: Starts the RimBob backend server (RimBob.Host). Use this skill when
 
 # run-rimbob
 
-Builds and runs the RimBob.Host ASP.NET Core project. This single process serves both the API and the React dashboard — there is no separate dashboard process to start.
+Starts the RimBob.Host ASP.NET Core project. This single process serves both the API and the React dashboard - there is no separate dashboard process to start. Build/setup work is opt-in: the launcher starts the already-built Host by default and only installs, rebuilds, or restores when passed positive flags.
 
 ## Project layout
 
@@ -26,22 +26,20 @@ Builds and runs the RimBob.Host ASP.NET Core project. This single process serves
 
    **Exception: if you (or anyone in this session) just rebuilt code that the Host loads,** the running Host for the selected URL is stale. Restart only that selected-url Host so the new build takes effect. From a worktree, do not kill a `5000` Host unless the user explicitly asked to restart the real checkout.
 
-3. **Check launcher-generated dirt** — before running the launcher, capture path-scoped status for `Dashboard/`, `Src/ApiHost/wwwroot/`, and `.agents/skills/run-rimbob/SKILL.md`. Avoid broad `git status` if the repo hits LFS or permission noise. After launch, re-check the same paths and report any tracked changes caused by dashboard install/build output. Do not stage or commit from this skill.
+3. **Check launcher-generated dirt** - before running the launcher with `-InstallDashboard` or `-BuildDashboard`, capture path-scoped status for `Dashboard/`, `Src/ApiHost/wwwroot/`, and `.agents/skills/run-rimbob/SKILL.md`. Avoid broad `git status` if the repo hits LFS or permission noise. After launch, re-check the same paths and report any tracked changes caused by dashboard install/build output. Do not stage or commit from this skill.
 
-4. **Build** — run from the current repo root:
-   ```
-   dotnet build .\Src\ApiHost\RimBob.Host.csproj --configuration Debug
-   ```
-   Surface any build errors to the user immediately. If the build fails with `MSB3021`, `MSB3027`, or copy-denied errors under `bin\Debug\net9.0`, stop only the `RimBob.Host.exe` process whose path matches the selected checkout and retry the build once.
+4. **Choose build/setup flags** - default launch uses the existing `RimBob.Host.exe` and existing dashboard assets. Add `-BuildHost` when Host code changed or the executable is missing. Add `-Restore` only with `-BuildHost` when package assets may be missing or stale. Add `-BuildDashboard` when dashboard code changed. Add `-InstallDashboard` only when `Dashboard\node_modules` is missing or dependencies need a clean install. If a Host build fails with `MSB3021`, `MSB3027`, or copy-denied errors under `bin\Debug\net9.0`, stop only the `RimBob.Host.exe` process whose path matches the selected checkout and retry once with the same positive flags.
 
-5. **Run** — start the server with the repo launcher. Use PowerShell execution-policy bypass when the shell blocks script execution. Use the selected `-ListenUrl` argument when running from a worktree:
+5. **Run** - start the server with the repo launcher. Use PowerShell execution-policy bypass when the shell blocks script execution. Use the selected `-ListenUrl` argument when running from a worktree:
    ```
    powershell.exe -ExecutionPolicy Bypass -File .\run-rimbob.ps1
    powershell.exe -ExecutionPolicy Bypass -File .\run-rimbob.ps1 -ListenUrl http://localhost:<port>
+   powershell.exe -ExecutionPolicy Bypass -File .\run-rimbob.ps1 -BuildHost -Restore
+   powershell.exe -ExecutionPolicy Bypass -File .\run-rimbob.ps1 -InstallDashboard -BuildDashboard -BuildHost -Restore
    ```
    Add `-Foreground` only when terminal output must stay attached for debugging. After launch, wait up to 20 seconds for the selected URL's `/api/health` to return `{"status":"ok"}`.
 
-6. **Handle sandbox and launcher failures** — do not treat the launcher banner as proof the server stayed up. If the dashboard build fails with `Access is denied`, Vite cannot resolve `Dashboard\vite.config.ts`, the background process exits, or health never responds, rerun the same launcher command with sandbox escalation. If the escalated launcher still fails, rerun with `-Foreground` for attached logs. Use direct `RimBob.Host.exe` startup only as a last resort and still verify the selected URL, runtime root, and process path.
+6. **Handle sandbox and launcher failures** - do not treat the launcher banner as proof the server stayed up. If an opted-in dashboard build fails with `Access is denied`, Vite cannot resolve `Dashboard\vite.config.ts`, the background process exits, or health never responds, rerun the same launcher command with sandbox escalation. If the escalated launcher still fails, rerun with `-Foreground` for attached logs. Use direct `RimBob.Host.exe` startup only as a last resort and still verify the selected URL, runtime root, and process path.
 
 7. **Prove the server is live** — after the launcher returns, verify all of these before saying RimBob is running:
 
@@ -67,7 +65,7 @@ Builds and runs the RimBob.Host ASP.NET Core project. This single process serves
 
 ## Node / Dashboard build
 
-The React dashboard (`Dashboard/`, Vite + TypeScript) is pre-built. Its compiled output lives in `Src/ApiHost/wwwroot/` and is served by `UseStaticFiles` — **Node is not needed to run an already-built RimBob Host, but the launcher may still install/build the dashboard unless `-SkipDashboardInstall` or `-SkipDashboardBuild` is passed.**
+The React dashboard (`Dashboard/`, Vite + TypeScript) is pre-built. Its compiled output lives in `Src/ApiHost/wwwroot/` and is served by `UseStaticFiles` - **Node is not needed to run an already-built RimBob Host, and the launcher only installs/builds dashboard assets when `-InstallDashboard` or `-BuildDashboard` is passed.**
 
 Node is only needed when editing the dashboard UI:
 ```

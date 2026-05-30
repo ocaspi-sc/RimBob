@@ -26,7 +26,7 @@ Generate a minister LLM response with a subagent, ingest it through RimBob's man
      ```
    - If Host is not running, prefer:
      ```powershell
-     powershell.exe -ExecutionPolicy Bypass -File .\run-rimbob.ps1 -SkipDashboardBuild -NoRestore
+     powershell.exe -ExecutionPolicy Bypass -File .\run-rimbob.ps1
      ```
 
 2. Capture the exact minister inputs.
