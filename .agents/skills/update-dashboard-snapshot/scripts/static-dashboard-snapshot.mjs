@@ -79,9 +79,12 @@ const fullMinisterViews = [
   { key: "advice", label: "Advice" },
 ];
 
-const rulesOnlyMinisterViews = fullMinisterViews.filter((view) =>
-  ["briefing", "rules", "advice"].includes(view.key),
-);
+const rulesOnlyMinisterViews = [
+  { key: "briefing", label: "Briefing" },
+  { key: "build_queue", label: "Build Queue" },
+  { key: "rules", label: "Rules" },
+  { key: "advice", label: "Advice" },
+];
 
 const ministerScopes = [
   { key: "mayor", label: "Mayor", kind: "minister", status: "live", views: fullMinisterViews },
@@ -95,6 +98,8 @@ const ministerScopes = [
   { key: "economy", label: "Economy", kind: "minister", status: "planned", views: fullMinisterViews },
   { key: "chief_of_staff", label: "Chief of Staff", kind: "minister", status: "planned", views: fullMinisterViews },
 ];
+
+const embeddedImageCache = new Map();
 
 export function dashboardSnapshotPages() {
   return [...consoleScopes, ...ministerScopes].flatMap((scope) =>
@@ -364,11 +369,186 @@ export async function writeStaticDashboardSiteSnapshot({
   };
 }
 
+export async function writeStaticDashboardSiteSnapshotBatch({
+  tab,
+  repoRoot,
+  dashboardUrl,
+  health,
+  timestamp = new Date(),
+  settleMilliseconds = 900,
+  startIndex = 0,
+  pageLimit = 20,
+  reset = false,
+  finalize = false,
+}) {
+  if (!tab) {
+    throw new Error("writeStaticDashboardSiteSnapshotBatch requires a Browser tab.");
+  }
+
+  if (!repoRoot) {
+    throw new Error("writeStaticDashboardSiteSnapshotBatch requires repoRoot.");
+  }
+
+  if (!dashboardUrl) {
+    throw new Error("writeStaticDashboardSiteSnapshotBatch requires dashboardUrl.");
+  }
+
+  const requestedCapturedAt = timestamp instanceof Date
+    ? timestamp.toISOString()
+    : new Date(timestamp).toISOString();
+  const snapshotDir = path.join(repoRoot, "web", "Snapshot");
+  const pagesDir = path.join(snapshotDir, "pages");
+  const partialPath = path.join(snapshotDir, "metadata.partial.json");
+  await fs.mkdir(snapshotDir, { recursive: true });
+
+  if (reset) {
+    await removeOldSinglePageArtifacts(snapshotDir);
+    await fs.rm(pagesDir, { recursive: true, force: true });
+    await fs.rm(partialPath, { force: true });
+  }
+
+  await fs.mkdir(pagesDir, { recursive: true });
+
+  const pages = dashboardSnapshotPages();
+  const partial = reset
+    ? { captured_at: requestedCapturedAt, entry_page: null, captured_pages: [] }
+    : await readSnapshotPartial(partialPath, requestedCapturedAt);
+  const capturedAt = partial.captured_at;
+  const selectedPages = pages.slice(startIndex, Math.min(startIndex + pageLimit, pages.length));
+
+  for (const page of selectedPages) {
+    const pageUrl = urlForPage(dashboardUrl, page);
+    const rendered = await captureRenderedDashboardPage(tab, pageUrl, capturedAt, settleMilliseconds);
+    const imageResult = await embedImages(rendered.images);
+    const html = toStaticHtml(rendered.html, rendered.cssText, imageResult.images, capturedAt, pageUrl, {
+      currentPage: page,
+      pages,
+    });
+    const outputPath = path.join(snapshotDir, ...page.relativePath.split("/"));
+    await fs.mkdir(path.dirname(outputPath), { recursive: true });
+    await fs.writeFile(outputPath, html, "utf8");
+
+    if (page.scope === "mayor" && page.view === "advice") {
+      partial.entry_page = {
+        scope: page.scope,
+        view: page.view,
+        label: `${page.scopeLabel} / ${page.viewLabel}`,
+        source_relative_path: page.relativePath,
+      };
+      const entryHtml = toStaticHtml(rendered.html, rendered.cssText, imageResult.images, capturedAt, pageUrl, {
+        currentPage: { ...page, relativePath: "index.html" },
+        pages,
+      });
+      await fs.writeFile(path.join(snapshotDir, "index.html"), entryHtml, "utf8");
+    }
+
+    partial.captured_pages = partial.captured_pages.filter((capturedPage) =>
+      capturedPage.relative_path !== page.relativePath);
+    partial.captured_pages.push({
+      scope: page.scope,
+      view: page.view,
+      label: `${page.scopeLabel} / ${page.viewLabel}`,
+      status: page.status,
+      url: pageUrl,
+      title: rendered.title,
+      relative_path: page.relativePath,
+      path: outputPath,
+      image_counts: imageResult.counts,
+    });
+  }
+
+  const pageOrder = new Map(pages.map((page, index) => [page.relativePath, index]));
+  partial.captured_pages.sort((left, right) =>
+    (pageOrder.get(left.relative_path) ?? Number.MAX_SAFE_INTEGER) -
+    (pageOrder.get(right.relative_path) ?? Number.MAX_SAFE_INTEGER));
+
+  const capturedRelativePaths = new Set(partial.captured_pages.map((page) => page.relative_path));
+  const missingPages = pages.filter((page) => !capturedRelativePaths.has(page.relativePath));
+  const imageCounts = partial.captured_pages.reduce((counts, page) => ({
+    embedded: counts.embedded + (page.image_counts?.embedded ?? 0),
+    failed: counts.failed + (page.image_counts?.failed ?? 0),
+  }), { embedded: 0, failed: 0 });
+  const shouldFinalize = finalize || missingPages.length === 0;
+  const metadataPath = path.join(snapshotDir, "metadata.json");
+
+  if (shouldFinalize) {
+    if (missingPages.length > 0) {
+      throw new Error(`Cannot finalize snapshot; missing pages: ${missingPages.map((page) => page.relativePath).join(", ")}`);
+    }
+
+    if (!partial.entry_page) {
+      throw new Error("Cannot finalize snapshot; Mayor Advice entry page was not captured.");
+    }
+
+    const capturedByPath = new Map(partial.captured_pages.map((page) => [page.relative_path, page]));
+    const capturedPages = pages.map((page) => {
+      const capturedPage = capturedByPath.get(page.relativePath);
+      return {
+        scope: capturedPage.scope,
+        view: capturedPage.view,
+        label: capturedPage.label,
+        status: capturedPage.status,
+        url: capturedPage.url,
+        relative_path: capturedPage.relative_path,
+        image_counts: capturedPage.image_counts,
+      };
+    });
+    await fs.writeFile(
+      metadataPath,
+      `${JSON.stringify({
+        captured_at: capturedAt,
+        snapshot_id: toTimestamp(capturedAt),
+        dashboard_url: dashboardUrl,
+        index_path: path.join(snapshotDir, "index.html"),
+        entry_page: partial.entry_page,
+        health,
+        page_count: pages.length,
+        static_navigation: {
+          scope_rail_links: true,
+          view_tab_links: true,
+        },
+        image_counts: imageCounts,
+        pages: capturedPages,
+      }, null, 2)}\n`,
+      "utf8",
+    );
+    await fs.rm(partialPath, { force: true });
+  } else {
+    await fs.writeFile(partialPath, `${JSON.stringify(partial, null, 2)}\n`, "utf8");
+  }
+
+  return {
+    capturedAt,
+    capturedThisBatch: selectedPages.length,
+    capturedTotal: partial.captured_pages.length,
+    pageCount: pages.length,
+    nextIndex: Math.min(startIndex + pageLimit, pages.length),
+    finalized: shouldFinalize,
+    missingCount: shouldFinalize ? 0 : missingPages.length,
+    indexPath: path.join(snapshotDir, "index.html"),
+    metadataPath,
+    partialPath,
+    imageCounts,
+  };
+}
+
 async function removeOldSinglePageArtifacts(snapshotDir) {
   const entries = await fs.readdir(snapshotDir, { withFileTypes: true });
   await Promise.all(entries
     .filter((entry) => entry.isFile() && /^dashboard-\d{8}-\d{4}\.(?:html|png)$/i.test(entry.name))
     .map((entry) => fs.rm(path.join(snapshotDir, entry.name), { force: true })));
+}
+
+async function readSnapshotPartial(partialPath, capturedAt) {
+  try {
+    return JSON.parse(await fs.readFile(partialPath, "utf8"));
+  } catch (error) {
+    if (error?.code !== "ENOENT") {
+      throw error;
+    }
+
+    return { captured_at: capturedAt, entry_page: null, captured_pages: [] };
+  }
 }
 
 async function captureRenderedDashboardPage(tab, pageUrl, capturedAt, settleMilliseconds) {
@@ -484,18 +664,38 @@ async function embedImages(images) {
   let failed = 0;
 
   for (const image of images) {
-    try {
-      const { contentType, bytes } = await fetchImageBytes(image.absoluteUrl);
+    const cached = embeddedImageCache.get(image.absoluteUrl);
+    if (cached) {
       result.push({
         ...image,
-        dataUrl: `data:${contentType};base64,${bytes.toString("base64")}`,
+        dataUrl: cached.dataUrl,
+        error: cached.error,
+      });
+      if (cached.error) {
+        failed += 1;
+      } else {
+        embedded += 1;
+      }
+      continue;
+    }
+
+    try {
+      const { contentType, bytes } = await fetchImageBytes(image.absoluteUrl);
+      const dataUrl = `data:${contentType};base64,${bytes.toString("base64")}`;
+      embeddedImageCache.set(image.absoluteUrl, { dataUrl });
+      result.push({
+        ...image,
+        dataUrl,
       });
       embedded += 1;
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const dataUrl = failedImagePlaceholderDataUrl(image);
+      embeddedImageCache.set(image.absoluteUrl, { dataUrl, error: errorMessage });
       result.push({
         ...image,
-        dataUrl: failedImagePlaceholderDataUrl(image),
-        error: error instanceof Error ? error.message : String(error),
+        dataUrl,
+        error: errorMessage,
       });
       failed += 1;
     }
