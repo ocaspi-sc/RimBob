@@ -129,6 +129,15 @@ function Set-ServerWindowTitle {
     }
 }
 
+function Set-LauncherWindowTitle {
+    try {
+        $Host.UI.RawUI.WindowTitle = "RimBob Launcher"
+    }
+    catch {
+        # Some terminals do not expose RawUI title changes.
+    }
+}
+
 function Start-HostForeground {
     Set-ServerWindowTitle
 
@@ -409,6 +418,8 @@ function Start-HostNotificationIcon {
         throw "RimBob host executable not found at '$hostExe'. Run .\run-rimbob.ps1 without -HostOnly first."
     }
 
+    Set-LauncherWindowTitle
+
     Add-Type -AssemblyName System.Windows.Forms
     Add-Type -AssemblyName System.Drawing
     [System.Windows.Forms.Application]::EnableVisualStyles()
@@ -421,8 +432,9 @@ function Start-HostNotificationIcon {
     $startInfo = New-Object System.Diagnostics.ProcessStartInfo
     $startInfo.FileName = $hostExe
     $startInfo.WorkingDirectory = $hostDir
-    $startInfo.UseShellExecute = $false
-    $startInfo.CreateNoWindow = $true
+    $startInfo.UseShellExecute = $true
+    $startInfo.CreateNoWindow = $false
+    $startInfo.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Minimized
     $startInfo.Arguments = ($hostArgs -join " ")
 
     $script:trayHostProcess = [System.Diagnostics.Process]::Start($startInfo)
@@ -525,11 +537,11 @@ function Start-HostNotificationArea {
     Start-Process `
         -FilePath "powershell.exe" `
         -WorkingDirectory $repoRoot `
-        -WindowStyle Hidden `
+        -WindowStyle Minimized `
         -ArgumentList $childArgs
 
     Write-Host ""
-    Write-Host "RimBob host started in the Windows notification area."
+    Write-Host "RimBob host started in a minimized taskbar window and the Windows notification area."
     Write-Host "Right-click the RimBob icon to open dashboard views in Chrome or stop the host."
     Write-Host "Use -Foreground to keep the server attached to this terminal for debugging."
 }

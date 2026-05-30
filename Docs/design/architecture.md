@@ -141,12 +141,7 @@ for readability.
 
 ## Local Run
 
-`run-rimbob.ps1` is the preferred local launcher. It builds the dashboard and
-starts the Host hidden with a RimBob icon in the Windows notification area.
-Right-click the icon to open the dashboard, jump directly to dashboard
-scope/view combinations in Chrome, or stop the Host; the icon exits when the
-Host exits. If Chrome is unavailable, dashboard commands fall back to the
-default browser.
+`run-rimbob.ps1` is the preferred local launcher. It builds the dashboard and starts the Host in a minimized taskbar-visible window with a RimBob icon in the Windows notification area. The visible Host window is intentional so stale runs are easy to spot and close. Right-click the icon to open the dashboard, jump directly to dashboard scope/view combinations in Chrome, or stop the Host; the icon exits when the Host exits. If Chrome is unavailable, dashboard commands fall back to the default browser.
 
 The tray menu mirrors first-class dashboard scopes and minister views. Keep it
 in sync when those registries change; individual dashboard panels are not tray

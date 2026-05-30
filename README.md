@@ -83,15 +83,7 @@ Run RimBob and the dashboard with the helper script:
 .\run-rimbob.ps1
 ```
 
-The script installs dashboard dependencies with `npm.cmd ci` if
-`node_modules` is missing, builds the dashboard into `Src/ApiHost/wwwroot`,
-builds `RimBob.Host`, then starts the host hidden with a RimBob icon in the
-Windows notification area. Right-click the icon to open the dashboard in Chrome
-or stop the host. The icon menu also has direct Chrome commands for the
-dashboard's console scopes and minister inspection views. If Chrome cannot be
-found, the launcher falls back to the default browser. Windows may place new
-notification-area icons behind the overflow chevron until you pin them. Open the
-dashboard at:
+The script installs dashboard dependencies with `npm.cmd ci` if `node_modules` is missing, builds the dashboard into `Src/ApiHost/wwwroot`, builds `RimBob.Host`, then starts the Host in a minimized taskbar-visible window with a RimBob icon in the Windows notification area. The visible Host window is intentional so stale runs are easy to spot and close. Right-click the icon to open the dashboard in Chrome or stop the host. The icon menu also has direct Chrome commands for the dashboard's console scopes and minister inspection views. If Chrome cannot be found, the launcher falls back to the default browser. Windows may place new notification-area icons behind the overflow chevron until you pin them. Open the dashboard at:
 
 ```text
 http://localhost:5000
