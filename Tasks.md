@@ -123,11 +123,11 @@
 ### Now (live-state gaps)
 
 - [ ] medical-hediff-severity-wiring **Medical hediff severity wiring.** If Mayor or a future Medical minister needs life-threatening condition awareness, preserve the relevant `Hediffs` signal into state/briefing instead of inferring severity from generic `Health`.
-- [ ] total-nutrition-0-upstream-investigation **`total_nutrition == 0` upstream investigation.** RIMAPI returns 0 nutrition even when `food_total > 0` and meals exist on map. Check whether this is a bug we can patch around (e.g. compute from `meals_count * 0.9 + raw_food_count * 0.05`) or a deeper RIMAPI gap. [plan](.plans/total-nutrition-zero-fallback.md)
+- [x] total-nutrition-0-upstream-investigation **`total_nutrition == 0` upstream investigation.** Landed RimBob-side fallback in `3069908f`: preserve raw RIMAPI nutrition, derive fallback nutrition from meal/raw-food counts or item classification in the Food briefing, surface `rimapi_total_nutrition_missing`, and qualify the Food dashboard Stores line when the estimate is used. Reverified 2026-05-30 with `dotnet test Src\Tests\RimBob.Tests.csproj --no-restore --no-build` in a clean temp worktree: 468/468 passed. [plan](.plans/total-nutrition-zero-fallback.md)
 
 ### Current implementation order
 
-1. [ ] investigate-fix-patch-total-nutrition **Investigate and fix/patch `total_nutrition == 0`.** Decide whether to patch RIMAPI upstream or compute a documented RimBob fallback from stored meal/raw-food counts.
+1. [x] investigate-fix-patch-total-nutrition **Investigate and fix/patch `total_nutrition == 0`.** Confirmed the RimBob-side fallback path is already landed in `3069908f` and reverified cleanly; no RIMAPI fork patch needed for this slice.
 2. [ ] add-minimal-cos-handling **Add minimal CoS handling.** Implement the Mayor-side helper for dedupe, lead framing, and tactical-alert vs digest routing before multiple feeders exist.
 3. [ ] construction-minister **Add Willie.** Food's first live dependencies are cooler / power / room / storage recommendations, not Defense coupling.
 4. [ ] defense-minister **Add Defense.**
