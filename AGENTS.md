@@ -130,6 +130,13 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 - Use manual `npm.cmd run build` / `dotnet run` only when debugging one side of the stack.
 - When adding backend logs, replay corpus files, prompt dumps, traces, or diagnostics, update dashboard-visible metadata in the same turn. If intentionally hidden, add a concrete `Tasks.md` follow-up and mention it in the final response.
 
+## Minister Output / Log Inspection
+
+- When asked to show a minister's current output without rendering the dashboard, do not start with broad repo searches. First call `/api/system/health` if the Host is reachable and read `storage`, `minister_outputs`, and `logs` paths from that response.
+- Use the narrow live surfaces first: `GET /api/ministers/{minister}/snapshot` for typed output and `GET /api/ministers/{minister}/trace/latest` for the latest trigger/rules/LLM path.
+- If the Host is down or the endpoint is unavailable, read the persisted typed snapshot at `%LOCALAPPDATA%\RimBob\ministers\<minister>.json`, then the replay/audit record at `%LOCALAPPDATA%\RimBob\logs\replay\<minister>-YYYYMMDD.jsonl`, then the human/debug logs at `%LOCALAPPDATA%\RimBob\logs\rimbob-*.log`.
+- Report the advice title, body, action instructions, rule trace, flags, state summary, generation or persisted timestamp, and whether any `apply` payload or `options[]` exist. If the Host was reachable and then goes down, say so and continue from the persisted files.
+
 ---
 
 ## Repo Conventions
