@@ -175,7 +175,8 @@ flowchart TD
   S3 --> WILLIE
   Solver1 --> WIRE["solver→Rules wiring ✓ LANDED fbad240<br/>(MinisterOfWillie calls SolveAsync on<br/>freezer_request_active; options[] on AdviceItem)"]
   WIRE --> WILLIE
-  WILLIE --> DASH["Willie dashboard ✓ readout LANDED ddef5f3<br/>(build-queue tab + briefing HUD panels = follow-on todos)"]
+  WIRE --> APPLY["Willie option Apply ✓ LANDED<br/>(per-option payload + validate/place/readback)"]
+  APPLY --> DASH["Willie dashboard ✓ readout LANDED<br/>(Build Queue Apply auto-enables from payloads)"]
   DERIV -.feeds panels.-> DASH
   Solver1 -.solver trace.-> DASH
   Solver1 --> Solver2["Solver2 generator competition ✓ LANDED 9f6fe90..0e86f5f<br/>(template + rectangle + diverse top-K)"] --> Solver3["Solver3 breadth ✓ LANDED<br/>(room-class templates + alias +<br/>build_order_safety + reuse footprint)"]
@@ -185,7 +186,7 @@ flowchart TD
   Solver3 --> SOLVER4B["Solver4 + planning overlay (Cap B)"]
 
   classDef done fill:#1f3a1f,stroke:#3fa83f,color:#cfe8cf;
-  class S1,S2,S3,FORK1,FORK3,SCHEMA,DERIV,ROOM,WILLIE,DASH,Solver1,Solver2,Solver3,WIRE,REVIEW done;
+  class S1,S2,S3,FORK1,FORK3,SCHEMA,DERIV,ROOM,WILLIE,DASH,Solver1,Solver2,Solver3,WIRE,APPLY,REVIEW done;
   classDef partial fill:#3a341f,stroke:#a8993f,color:#e8e0cf;
   class FORK2 partial;
 ```
@@ -267,7 +268,6 @@ next active node.
 
 | Decision | Where | Lean |
 |---|---|---|
-| Group atomicity on partial fresh-state failure + `MaxBlueprintGroupAssets` | advice-schema Q1 (see also rimapi-groups §4) | validate-all gate, then best-effort place + per-asset report; cap ~64 |
 | Generator budgets and diversity thresholds | placement-solver Q3 | start with tiny per-generator caps; validate only a diverse top survivor set |
 | Floor-fill representation (per-cell vs compressed rect) | advice-schema Q2 | per-cell now; cap room size; revisit if payloads bloat |
 | `ResourceRequest` vs `AdviceAction` shared-shape refactor | both anchors flagged | partly mooted - S2 retires `ResourceRequest` from the flag path |
@@ -280,7 +280,7 @@ and `storage_placement` both kept; `build_structure` dropped; `basic_shelter`
 moved to Welfare (2026-05-27 — see `willie-advice-types.md` §4.5);
 suggest+apply posture; deterministic request -> solver path; candidate
 generation uses a bounded generator registry with one shared validator/scorer;
-anchor detection closed with entry-cells-first anchors and raw room `RegionId` retained only at the state mirror (resolved 2026-05-30).
+anchor detection closed with entry-cells-first anchors and raw room `RegionId` retained only at the state mirror (resolved 2026-05-30); blueprint-group Apply uses `require_all=true`, RIMAPI `placement_order=default`, and `MaxBlueprintGroupAssets=64` (resolved 2026-05-30).
 
 ---
 
@@ -302,8 +302,8 @@ anchor detection closed with entry-cells-first anchors and raw room `RegionId` r
   **dashboard readout ✓ LANDED `ddef5f3`** —
   [`willie-rules-slice-a.md`](willie-rules-slice-a.md) (WR1–WR4).
   `WillieConcern` enum, `Rules.cs`, `MinisterOfWillie`, registry, Willie tab.
-  Rules-only, suggest-mode, no Apply; freezer rule's solver `options[]` is a
-  TODO awaiting Solver1.
+  Rules-only, suggest-mode, no LLM escalation; freezer solver `options[]` now
+  carry per-option `place_blueprint_group` Apply payloads.
 - **Placement Solver Solver1/2/3(S3a–c) ✓ LANDED** —
   [`placement-solver-1.md`](placement-solver-1.md) `5a8e6c9`,
   [`placement-solver-2.md`](placement-solver-2.md) `9f6fe90..0e86f5f`,
@@ -316,6 +316,8 @@ anchor detection closed with entry-cells-first anchors and raw room `RegionId` r
   `MinisterOfWillie` injects `PlacementSolver` + `ColonyState`, calls
   `SolveAsync` on `freezer_request_active`, attaches `result.Options` to the
   `AdviceItem`; no-fit note + solver-trace surfacing. Rules stays sync/pure.
+- **Willie option Apply payload LANDED** -
+  [`willie-option-apply-payload.md`](willie-option-apply-payload.md). Willie emits one apply-bearing action per placement option; Host validates, places, refreshes readback, and reports per-asset results through Assisted Apply.
 - **Deep Willie code review ✓ EXECUTED** —
   [`willie-code-review.md`](willie-code-review.md) and
   [`willie-code-review-findings.md`](willie-code-review-findings.md) record 0 P0,
@@ -330,11 +332,7 @@ anchor detection closed with entry-cells-first anchors and raw room `RegionId` r
   - `rimapi-power-info-dto` ✓ landed.
   - Room entry cells and map region-at are landed; live room-read verification is tracked by `rimapi-room-reads-live-verify`.
 - **Remaining:**
-  - **Willie dashboard panels** (§4 `DASH` follow-on) — two captured todos:
-    `willie-build-queue-tab` (backlog + pending groups + picked options) and
-    `willie-briefing-hud` (replace raw-JSON briefing render with a game-like
-    HUD). Both have variation/idea menus in Tasks.md awaiting a direction pick.
-    Solver-trace panel can now render real candidates.
+  - **Solver-trace panel** - Build Queue and briefing HUD are landed; a richer solver-trace filmstrip/panel can now render real candidates.
   - **Non-freezer → solver wiring** — route `MissingRoomDecision`
     (kitchen/hospital/storage) traces into `SolveAsync`; Solver3 added the
     room-class templates, only the orchestrator hookup is missing

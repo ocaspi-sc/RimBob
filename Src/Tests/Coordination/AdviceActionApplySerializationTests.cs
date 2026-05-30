@@ -14,7 +14,7 @@ public sealed class AdviceActionApplySerializationTests
     };
 
     [Fact]
-    public void PlaceBlueprintGroupApply_SerializesAndRoundTripsAsInertDiscriminator()
+    public void PlaceBlueprintGroupApply_SerializesAndRoundTrips()
     {
         AdviceAction action = new(
             AdviceActionKind.PlaceBlueprint,

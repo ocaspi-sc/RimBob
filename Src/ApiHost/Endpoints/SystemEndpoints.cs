@@ -62,7 +62,7 @@ public static class SystemEndpoints
         new("GET", "/api/v1/map/reach", "solver_client", "Willie Placement Solver", "Reachability primitive wrapped for placement scoring; not part of periodic state refresh."),
         new("POST", "/api/v1/map/path-cost", "solver_client", "Willie Placement Solver", "Single-pair walk-cost primitive wrapped for placement scoring; not part of periodic state refresh."),
         new("POST", "/api/v1/map/path-cost/batch", "solver_client", "Willie Placement Solver", "Batch walk-cost primitive wrapped for Solver1 ranking; called on demand by the solver port."),
-        new("POST", "/api/v1/builder/blueprint-group/validate", "solver_client", "Willie Placement Solver", "Dry-run group blueprint validation wrapped for Solver1 options; group place remains a separate Apply path.")
+        new("POST", "/api/v1/builder/blueprint-group/validate", "solver_client", "Willie Placement Solver", "Dry-run group blueprint validation wrapped for Solver1 options and Assisted Apply preflight.")
     ];
 
     private static readonly RimApiCoverageRow[] DeferredWriteStubs =
@@ -71,7 +71,8 @@ public static class SystemEndpoints
         new("POST", "/api/v1/order/designate/area", "assisted_write", "Chef Assisted Apply", "Used for player-confirmed harvest and hunt designations over bounded rects."),
         new("POST", "/api/v1/order/unforbid", "assisted_write", "Chef Assisted Apply", "Used for player-confirmed safe item-id unforbid over explicit haulable thing ids; destructive forbidden endpoints are not used."),
         new("POST", "/api/v1/buildings/bills/add", "assisted_write", "Chef Assisted Apply", "Creates only an allowlisted simple-meal TargetCount bill after player click and fresh validation."),
-        new("PUT", "/api/v1/buildings/bill/update", "assisted_write", "Chef Assisted Apply", "Updates only an existing simple-meal bill target; never deletes, reorders, or suspends bills.")
+        new("PUT", "/api/v1/buildings/bill/update", "assisted_write", "Chef Assisted Apply", "Updates only an existing simple-meal bill target; never deletes, reorders, or suspends bills."),
+        new("POST", "/api/v1/builder/blueprint-group/place", "assisted_write", "Willie Assisted Apply", "Places only deterministic solver-authored blueprint groups after player click, fresh validation, asset cap, and readback refresh.")
     ];
 
     private static readonly RimApiCoverageRow[] MissingRimApiPriorities =
@@ -409,7 +410,7 @@ public static class SystemEndpoints
             represented_endpoint_count = representedEndpointCount,
             active_read_percent = Percentage(ActiveRimApiReads.Length, UpstreamRimApiEndpointTotal),
             represented_endpoint_percent = Percentage(representedEndpointCount, UpstreamRimApiEndpointTotal),
-            coverage_note = "This is not live-discovered from RIMAPI. Update it when RimApiClient or RefreshAllAsync wiring changes. MVP is suggest-only, so write endpoints remain deferred until Auto/Labor work.",
+            coverage_note = "This is not live-discovered from RIMAPI. Update it when RimApiClient or RefreshAllAsync wiring changes. MVP is suggest plus player-confirmed Assisted Apply; broad Auto/Labor writes remain deferred.",
             active_reads = RimApiRows(ActiveRimApiReads),
             represented_not_refreshed = RimApiRows(RepresentedButNotRefreshed),
             deferred_writes = RimApiRows(DeferredWriteStubs),

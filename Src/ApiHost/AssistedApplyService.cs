@@ -5,6 +5,7 @@ using RimBob.Coordination;
 using RimBob.Core.Advice;
 using RimBob.Core.Aggregates;
 using RimBob.Core.Briefings;
+using RimBob.Core.Placement;
 using RimBob.Ingestion;
 using RimBob.Ingestion.Dtos;
 using RimBob.State;
@@ -17,11 +18,15 @@ public sealed class AssistedApplyService(
     ColonyState state,
     IngestionDispatcher ingestion,
     RimApiClient rimApi,
+    IPlacementValidator placementValidator,
+    IPlacementPlacer placementPlacer,
     ILogger<AssistedApplyService> log)
 {
     private const int RecentAttemptLimit = 20;
     private const string SimpleMealRecipeSelector = "simple_meal";
     private const string BillRepeatModeTargetCount = "TargetCount";
+    private const string BlueprintGroupPlacementOrder = "default";
+    private const bool BlueprintGroupRequireAll = true;
     private static readonly IReadOnlyList<string> SimpleMealRecipeDefs = ["CookMealSimple", "CookMealSimpleBulk"];
     private readonly object _lock = new();
     private readonly List<AssistedApplyAttempt> _recentAttempts = [];
@@ -77,7 +82,7 @@ public sealed class AssistedApplyService(
             MarkHuntAreaApply hunt => await ApplyHuntAsync(advice, adviceId, actionIndex, hunt, ct),
             UnforbidThingsApply unforbid => await ApplyUnforbidAsync(advice, adviceId, actionIndex, unforbid, ct),
             UpsertProductionBillApply bill => await ApplyProductionBillAsync(advice, adviceId, actionIndex, bill, ct),
-            PlaceBlueprintGroupApply blueprint => BlueprintGroupNotExecutable(adviceId, actionIndex, blueprint),
+            PlaceBlueprintGroupApply blueprint => await ApplyBlueprintGroupAsync(advice, adviceId, actionIndex, blueprint, ct),
             _ => Response("validation_failed", "That apply kind is not allowlisted.", apply.Kind, adviceId, actionIndex)
         };
         if (ShouldClearAppliedAction(result))
@@ -471,16 +476,181 @@ public sealed class AssistedApplyService(
             new { requested = stillForbidden.Count, changed_or_missing = changed });
     }
 
-    private static AssistedApplyResponse BlueprintGroupNotExecutable(
+    private async Task<AssistedApplyResponse> ApplyBlueprintGroupAsync(
+        AdviceItem advice,
         string adviceId,
         int actionIndex,
-        PlaceBlueprintGroupApply apply) =>
-        Response(
-            "validation_failed",
-            "Blueprint group apply is not executable until the RIMAPI blueprint endpoints land.",
+        PlaceBlueprintGroupApply apply,
+        CancellationToken ct)
+    {
+        int actualAssetCount = apply.BlueprintGroup.Assets.Count;
+        if (actualAssetCount == 0)
+            return Response("validation_failed", "Blueprint group apply is missing blueprint assets.", apply.Kind, adviceId, actionIndex);
+
+        if (apply.AssetCount != actualAssetCount)
+            return Response("validation_failed", "Blueprint group apply asset count does not match its payload.", apply.Kind, adviceId, actionIndex);
+
+        if (actualAssetCount > AssistedApplyLimits.MaxBlueprintGroupAssets)
+            return Response("validation_failed", "Blueprint group is too large for assisted apply.", apply.Kind, adviceId, actionIndex);
+
+        if (apply.BlueprintGroup.MapId != apply.MapId)
+            return Response("validation_failed", "Blueprint group apply map id does not match its payload.", apply.Kind, adviceId, actionIndex);
+
+        AssistedApplyResponse? refreshFailure = await RefreshForValidationAsync(advice, apply.Kind, adviceId, actionIndex, ct);
+        if (refreshFailure is not null)
+            return refreshFailure;
+
+        if (apply.MapId != state.Map.Value.Id)
+            return Response("stale_advice", "Advice targets a different map than the current colony map.", apply.Kind, adviceId, actionIndex);
+
+        PlacementValidationResult validation;
+        try
+        {
+            validation = await placementValidator.ValidateAsync(apply.BlueprintGroup, ct);
+        }
+        catch (Exception ex) when (IsRimApiUnavailable(ex))
+        {
+            log.LogWarning(ex, "RIMAPI blueprint group validate unavailable for advice {AdviceId} action {ActionIndex}", adviceId, actionIndex);
+            return Response("rimapi_unavailable", "RIMAPI is unavailable for blueprint group validation.", apply.Kind, adviceId, actionIndex);
+        }
+        catch (RimApiException ex)
+        {
+            log.LogWarning(ex, "RIMAPI rejected blueprint group validation for advice {AdviceId} action {ActionIndex}", adviceId, actionIndex);
+            return Response("rimapi_rejected", ex.Message, apply.Kind, adviceId, actionIndex);
+        }
+
+        if (!validation.CanPlaceAll)
+        {
+            string reason = FirstBlueprintValidationFailure(validation) ?? "RIMAPI validation rejected the blueprint group.";
+            return Response("stale_advice", $"Blueprint group no longer validates: {reason}", apply.Kind, adviceId, actionIndex);
+        }
+
+        PlacementApplyResult placeResult;
+        try
+        {
+            placeResult = await placementPlacer.PlaceAsync(
+                apply.BlueprintGroup,
+                BlueprintGroupPlacementOrder,
+                BlueprintGroupRequireAll,
+                ct);
+        }
+        catch (Exception ex) when (IsRimApiUnavailable(ex))
+        {
+            log.LogWarning(ex, "RIMAPI blueprint group place unavailable for advice {AdviceId} action {ActionIndex}", adviceId, actionIndex);
+            return Response("rimapi_unavailable", "RIMAPI is unavailable for blueprint group placement.", apply.Kind, adviceId, actionIndex);
+        }
+        catch (RimApiException ex)
+        {
+            log.LogWarning(ex, "RIMAPI rejected blueprint group placement for advice {AdviceId} action {ActionIndex}", adviceId, actionIndex);
+            return Response("rimapi_rejected", ex.Message, apply.Kind, adviceId, actionIndex);
+        }
+
+        if (placeResult.Items.Count == 0)
+            return Response("rimapi_rejected", "RIMAPI returned no blueprint placement results.", apply.Kind, adviceId, actionIndex);
+
+        int placedCount = placeResult.Items.Count(IsBlueprintPlaced);
+        int alreadyPresentCount = placeResult.Items.Count(IsBlueprintAlreadyPresent);
+        int failedCount = placeResult.Items.Count(IsBlueprintFailed);
+        object readback = BlueprintGroupReadback(placeResult, placedCount, alreadyPresentCount, failedCount);
+
+        if (placedCount > 0 || alreadyPresentCount > 0)
+        {
+            AssistedApplyResponse? readbackFailure = await RefreshForReadbackAsync(apply.Kind, adviceId, actionIndex, ct);
+            if (readbackFailure is not null)
+                return readbackFailure;
+        }
+
+        if (failedCount > 0 && (placedCount > 0 || alreadyPresentCount > 0))
+        {
+            return Response(
+                "readback_inconclusive",
+                "Blueprint group placement was partially applied; inspect the map before retrying.",
+                apply.Kind,
+                adviceId,
+                actionIndex,
+                readback);
+        }
+
+        if (placedCount > 0)
+        {
+            return Response(
+                "applied",
+                $"Blueprint group placed {placedCount} asset{(placedCount == 1 ? "" : "s")}.",
+                apply.Kind,
+                adviceId,
+                actionIndex,
+                readback);
+        }
+
+        if (alreadyPresentCount == placeResult.Items.Count)
+        {
+            return Response(
+                "already_satisfied",
+                "Blueprint group is already present on the map.",
+                apply.Kind,
+                adviceId,
+                actionIndex,
+                readback);
+        }
+
+        return Response(
+            "rimapi_rejected",
+            FirstBlueprintPlaceFailure(placeResult) ?? "RIMAPI rejected blueprint group placement.",
             apply.Kind,
             adviceId,
-            actionIndex);
+            actionIndex,
+            readback);
+    }
+
+    private static string? FirstBlueprintValidationFailure(PlacementValidationResult validation)
+    {
+        if (validation.OverlapConflicts.Count > 0)
+            return "blueprint group items overlap each other";
+
+        PlacementValidationItemResult? failed = validation.Items.FirstOrDefault(item =>
+            !item.CanPlace &&
+            !item.AlreadyBlueprinted &&
+            !item.AlreadyBuilt);
+        return failed?.Reason;
+    }
+
+    private static string? FirstBlueprintPlaceFailure(PlacementApplyResult result) =>
+        result.Items.FirstOrDefault(IsBlueprintFailed)?.Reason;
+
+    private static bool IsBlueprintPlaced(PlacementApplyItemResult item) =>
+        item.Placed ||
+        string.Equals(item.Status, "placed", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsBlueprintAlreadyPresent(PlacementApplyItemResult item) =>
+        string.Equals(item.Status, "already_present", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsBlueprintFailed(PlacementApplyItemResult item) =>
+        string.Equals(item.Status, "rejected", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(item.Status, "not_placed", StringComparison.OrdinalIgnoreCase);
+
+    private static object BlueprintGroupReadback(
+        PlacementApplyResult result,
+        int placedCount,
+        int alreadyPresentCount,
+        int failedCount) =>
+        new
+        {
+            status = result.Status,
+            require_all = result.RequireAll,
+            placement_order = result.PlacementOrder,
+            placed_count = placedCount,
+            already_present_count = alreadyPresentCount,
+            failed_count = failedCount,
+            cost = result.Cost,
+            items = result.Items.Select(item => new
+            {
+                index = item.Index,
+                status = item.Status,
+                placed = item.Placed,
+                thing_id = item.ThingId,
+                reason = item.Reason
+            }).ToList()
+        };
 
     private async Task<AssistedApplyResponse?> RefreshForValidationAsync(
         AdviceItem advice,

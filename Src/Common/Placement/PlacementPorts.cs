@@ -9,6 +9,15 @@ public interface IPlacementValidator
         CancellationToken ct = default);
 }
 
+public interface IPlacementPlacer
+{
+    Task<PlacementApplyResult> PlaceAsync(
+        BlueprintGroup group,
+        string placementOrder,
+        bool requireAll,
+        CancellationToken ct = default);
+}
+
 public interface IPathCostProbe
 {
     Task<IReadOnlyList<PathCostResult>> GetPathCostsAsync(
@@ -50,3 +59,18 @@ public sealed record PlacementOverlapConflict(
     MapCell Cell,
     int FirstItemIndex,
     int SecondItemIndex);
+
+public sealed record PlacementApplyResult(
+    string Status,
+    bool RequireAll,
+    string PlacementOrder,
+    IReadOnlyList<PlacementApplyItemResult> Items,
+    IReadOnlyList<MaterialEstimate> Cost);
+
+public sealed record PlacementApplyItemResult(
+    int Index,
+    BlueprintAsset Item,
+    string Status,
+    bool Placed,
+    int? ThingId,
+    string? Reason);

@@ -343,7 +343,15 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
             "api/v1/builder/blueprint-group/validate",
             request,
             ct);
-    // TODO: add PostBlueprintGroupPlaceAsync when the Apply path lands; group placement is a player-click write, separate from Solver1 validation.
+
+    /// <summary>POST api/v1/builder/blueprint-group/place - player-click group blueprint placement after server-side validation.</summary>
+    public Task<BlueprintGroupPlaceResultDto> PostBlueprintGroupPlaceAsync(
+        BlueprintGroupPlaceRequestDto request,
+        CancellationToken ct = default) =>
+        PostEnvelopedAsync<BlueprintGroupPlaceRequestDto, BlueprintGroupPlaceResultDto>(
+            "api/v1/builder/blueprint-group/place",
+            request,
+            ct);
 
     /// <summary>GET api/v1/map/reach - default in-map cell reachability for Willie placement scoring.</summary>
     public Task<MapReachResponseDto> GetReachAsync(

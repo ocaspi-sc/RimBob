@@ -194,9 +194,9 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 > **RimBob consumption.** The state store now consumes
 > `/map/construction/backlog` into the `WillieBacklog` aggregate and derives
 > material-bottleneck / stalled-builds summaries for `WillieBriefing`.
-> `RimApiClient` also wraps `/builder/blueprint-group/validate` for
-> Placement Solver dry-run validation. The matching group `place` wrapper stays
-> out of scope until the player-click Assisted Apply path lands.
+> `RimApiClient` wraps `/builder/blueprint-group/validate` for Placement Solver
+> dry-run validation and `/builder/blueprint-group/place` for Willie's
+> player-click Assisted Apply path.
 
 ### Order (designations)
 | Method | Path | Purpose |

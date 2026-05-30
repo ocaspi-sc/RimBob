@@ -4,7 +4,7 @@ using RimBob.Ingestion.Dtos;
 
 namespace RimBob.Ingestion;
 
-public sealed class RimApiPlacementProbe(RimApiClient client) : IPlacementValidator, IPathCostProbe
+public sealed class RimApiPlacementProbe(RimApiClient client) : IPlacementValidator, IPlacementPlacer, IPathCostProbe
 {
     public async Task<PlacementValidationResult> ValidateAsync(
         BlueprintGroup group,
@@ -16,11 +16,29 @@ public sealed class RimApiPlacementProbe(RimApiClient client) : IPlacementValida
                 Items: group.Assets.Select(ToDto).ToList()),
             ct);
 
-        return new PlacementValidationResult(
-            CanPlaceAll: response.CanPlaceAll,
+        return ToPort(response);
+    }
+
+    public async Task<PlacementApplyResult> PlaceAsync(
+        BlueprintGroup group,
+        string placementOrder,
+        bool requireAll,
+        CancellationToken ct = default)
+    {
+        BlueprintGroupPlaceResultDto response = await client.PostBlueprintGroupPlaceAsync(
+            new BlueprintGroupPlaceRequestDto(
+                MapId: group.MapId,
+                Items: group.Assets.Select(ToDto).ToList(),
+                PlacementOrder: placementOrder,
+                RequireAll: requireAll),
+            ct);
+
+        return new PlacementApplyResult(
+            Status: response.Status,
+            RequireAll: response.RequireAll,
+            PlacementOrder: response.PlacementOrder,
             Items: response.Items.Select(ToPort).ToList(),
-            Cost: response.Cost.Select(ToMaterialEstimate).ToList(),
-            OverlapConflicts: response.OverlapConflicts.Select(ToPort).ToList());
+            Cost: response.Cost.Select(ToMaterialEstimate).ToList());
     }
 
     public async Task<IReadOnlyList<PathCostResult>> GetPathCostsAsync(
@@ -57,6 +75,13 @@ public sealed class RimApiPlacementProbe(RimApiClient client) : IPlacementValida
             Cell: ToDto(asset.Cell),
             Rotation: asset.Rotation);
 
+    private static PlacementValidationResult ToPort(BlueprintGroupValidateResponseDto response) =>
+        new(
+            CanPlaceAll: response.CanPlaceAll,
+            Items: response.Items.Select(ToPort).ToList(),
+            Cost: response.Cost.Select(ToMaterialEstimate).ToList(),
+            OverlapConflicts: response.OverlapConflicts.Select(ToPort).ToList());
+
     private static PlacementValidationItemResult ToPort(BlueprintGroupValidateItemResultDto item) =>
         new(
             Index: item.Index,
@@ -74,6 +99,20 @@ public sealed class RimApiPlacementProbe(RimApiClient client) : IPlacementValida
             WorkToBuild: item.WorkToBuild,
             AlreadyBlueprinted: item.AlreadyBlueprinted,
             AlreadyBuilt: item.AlreadyBuilt);
+
+    private static PlacementApplyItemResult ToPort(BlueprintGroupPlaceItemResultDto item) =>
+        new(
+            Index: item.Index,
+            Item: new BlueprintAsset(
+                Role: item.Item.Role ?? "",
+                DefName: item.Item.DefName,
+                StuffDefName: item.Item.StuffDefName,
+                Cell: ToCell(item.Item.Cell),
+                Rotation: item.Item.Rotation),
+            Status: item.Status,
+            Placed: item.Placed,
+            ThingId: item.ThingId,
+            Reason: item.Reason);
 
     private static PlacementOverlapConflict ToPort(BlueprintGroupOverlapConflictDto conflict) =>
         new(

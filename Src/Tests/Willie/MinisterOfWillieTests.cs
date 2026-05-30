@@ -45,16 +45,44 @@ public sealed class MinisterOfWillieTests
         AdviceItem advice = harness.Bus.ActiveAdvice().Should().ContainSingle().Subject;
         advice.Minister.Should().Be("Willie");
         advice.Concern.Should().Be("thermal_control");
-        advice.Actions.Should().ContainSingle().Which.Apply.Should().BeNull();
+        advice.Actions.Should().HaveCount(2);
+        advice.Actions[0].Apply.Should().BeNull();
         AdviceOption option = advice.Options.Should().ContainSingle().Subject;
         option.Id.Should().Be("placement_freezer_10_12");
         option.Readiness.Should().NotBeNull();
         option.Readiness!.MaterialsReady.Should().Be("ready");
+        PlaceBlueprintGroupApply apply = advice.Actions[1].Apply.Should().BeOfType<PlaceBlueprintGroupApply>().Subject;
+        apply.Label.Should().Be(option.Label);
+        apply.BlueprintGroup.Should().Be(option.BlueprintGroup);
+        apply.AssetCount.Should().Be(option.BlueprintGroup.Assets.Count);
         advice.Rationale.Should().Contain("Placement solver: 1 validated option");
         solver.CallCount.Should().Be(1);
         solver.LastSpec.Should().NotBeNull();
         solver.LastSpec!.TargetClass.Should().Be(BuildingClass.Freezer);
         solver.LastState.Should().BeSameAs(harness.Colony);
+    }
+
+    [Fact]
+    public async Task InboundFreezerFlag_AttachesOneApplyActionPerPlacementOption()
+    {
+        AdviceOption closeOption = PlacementOption("placement_freezer_close", "Close freezer", 10);
+        AdviceOption cheapOption = PlacementOption("placement_freezer_cheap", "Cheap freezer", 30);
+        FakePlacementSolver solver = FakePlacementSolver.WithOptions(closeOption, cheapOption);
+        Harness harness = new(solver);
+        harness.SetStableState();
+        harness.Flags.Publish(FreezerFlag());
+
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
+
+        AdviceItem advice = harness.Bus.ActiveAdvice().Should().ContainSingle().Subject;
+        IReadOnlyList<PlaceBlueprintGroupApply> applies = advice.Actions
+            .Select(action => action.Apply)
+            .OfType<PlaceBlueprintGroupApply>()
+            .ToList();
+        applies.Should().HaveCount(2);
+        applies.Select(apply => apply.Label).Should().Equal("Close freezer", "Cheap freezer");
+        applies[0].BlueprintGroup.Should().Be(closeOption.BlueprintGroup);
+        applies[1].BlueprintGroup.Should().Be(cheapOption.BlueprintGroup);
     }
 
     [Fact]
@@ -128,17 +156,20 @@ public sealed class MinisterOfWillieTests
                     RequestedFrom: requestedFrom)
             ]);
 
-    private static AdviceOption PlacementOption() =>
+    private static AdviceOption PlacementOption(
+        string id = "placement_freezer_10_12",
+        string label = "Compact freezer",
+        int x = 10) =>
         new(
-            Id: "placement_freezer_10_12",
-            Label: "Compact freezer",
+            Id: id,
+            Label: label,
             Summary: "Validated freezer shell near kitchen.",
             BlueprintGroup: new BlueprintGroup(
-                Label: "Compact freezer",
+                Label: label,
                 MapId: 7,
                 Assets:
                 [
-                    new BlueprintAsset("wall", "Wall", "BlocksGranite", new MapCell(10, 12), 0)
+                    new BlueprintAsset("wall", "Wall", "BlocksGranite", new MapCell(x, 12), 0)
                 ]),
             EstimatedMaterials: [new MaterialEstimate("BlocksGranite", 5)],
             TradeoffNote: "Closest to kitchen.");
@@ -216,9 +247,9 @@ public sealed class MinisterOfWillieTests
         public PlacementSpec? LastSpec { get; private set; }
         public ColonyState? LastState { get; private set; }
 
-        public static FakePlacementSolver WithOptions(AdviceOption option) =>
+        public static FakePlacementSolver WithOptions(params AdviceOption[] options) =>
             new(new PlacementResult(
-                Options: [option],
+                Options: options,
                 Trace: Trace(),
                 NoFit: null,
                 Draftable: PlacementReadiness.Ready,

@@ -30,8 +30,8 @@ treat the previous UI as reference only.
   Game writes appear only as Assisted Apply buttons on backend-allowlisted
   advice actions, each requiring an explicit player click. Current allowlisted
   controls are safe food-stack unforbid, validated harvest designation,
-  validated low-risk hunt designation, and the single-workbench simple-meal bill
-  upsert.
+  validated low-risk hunt designation, the single-workbench simple-meal bill
+  upsert, and Willie blueprint-group placement.
 - Manual Run buttons may trigger RimBob re-evaluation, never RimWorld writes.
   Assisted Apply controls are separate from Run controls.
 - Localhost-only: Host binds loopback and serves the dashboard plus `/api/*`.

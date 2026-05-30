@@ -69,8 +69,7 @@ No separate Base Layout minister is planned for the first pass. Split only if Wi
 
 ## First Slice Shape
 
-Willie now begins as rules-first `Suggest`-mode advice. Slice A is deterministic
-only: no LLM escalation and no Apply payloads.
+Willie began as rules-first `Suggest`-mode advice. The current Willie rules path is still deterministic and has no LLM escalation; placement-solver options may now carry player-click `place_blueprint_group` Apply payloads when Willie has exact validated blueprint groups.
 
 First deterministic advice areas:
 
@@ -127,8 +126,8 @@ the normalized 0-1 values used for ranking. Status facts such as `draftable`,
 stay booleans/enums rather than fake unit-bearing metrics.
 
 The executable Apply (place a chosen layout) renders in **Willie's own
-dashboard scope** once Willie emits an explicit action apply payload for a
-chosen option.
+dashboard scope** for options where Willie emits an explicit action apply
+payload.
 A requesting minister (e.g. Chef asking for a freezer) shows only its outbound
 request — never another minister's build Apply.
 

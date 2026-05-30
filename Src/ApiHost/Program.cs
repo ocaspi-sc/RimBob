@@ -69,6 +69,7 @@ try
     });
     builder.Services.AddSingleton<RimApiPlacementProbe>();
     builder.Services.AddSingleton<IPlacementValidator>(sp => sp.GetRequiredService<RimApiPlacementProbe>());
+    builder.Services.AddSingleton<IPlacementPlacer>(sp => sp.GetRequiredService<RimApiPlacementProbe>());
     builder.Services.AddSingleton<IPathCostProbe>(sp => sp.GetRequiredService<RimApiPlacementProbe>());
     builder.Services.AddSingleton<IReadOnlyList<IRoomTemplate>>(_ =>
         [

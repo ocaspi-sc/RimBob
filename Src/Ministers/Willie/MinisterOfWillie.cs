@@ -191,12 +191,29 @@ public sealed class MinisterOfWillie(
                 })
                 .ToList();
 
+        IReadOnlyList<AdviceAction> actions = options is { Count: > 0 }
+            ? item.Actions.Concat(options.Select(ApplyActionForOption)).ToList()
+            : item.Actions;
+
         return item with
         {
             Options = options,
+            Actions = actions,
             Rationale = AppendPlacementNote(item.Rationale, attempt.Note)
         };
     }
+
+    private static AdviceAction ApplyActionForOption(AdviceOption option) =>
+        new(
+            AdviceActionKind.PlaceBlueprint,
+            $"Place the {option.Label} blueprint group.",
+            Owner: "Willie",
+            Apply: new PlaceBlueprintGroupApply(
+                Label: option.Label,
+                TargetSummary: option.Summary,
+                MapId: option.BlueprintGroup.MapId,
+                BlueprintGroup: option.BlueprintGroup,
+                AssetCount: option.BlueprintGroup.Assets.Count));
 
     private static string AppendPlacementNote(string rationale, string note) =>
         string.IsNullOrWhiteSpace(rationale) ? note : $"{rationale} {note}";

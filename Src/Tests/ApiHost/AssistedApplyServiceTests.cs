@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using FluentAssertions;
 using RimBob.Coordination;
 using RimBob.Core.Advice;
@@ -253,17 +254,94 @@ public sealed class AssistedApplyServiceTests
     }
 
     [Fact]
-    public async Task ApplyAsync_WhenBlueprintGroupApplyInvoked_ReturnsNotExecutableWithoutRimApi()
+    public async Task ApplyAsync_WhenBlueprintGroupValidatesAndPlaces_AppliesAndClearsAction()
     {
         AdviceBus bus = new();
         bus.Publish(Advice("food_freezer_missing", BlueprintGroupAction()));
+        MinimalRefreshHandler handler = new();
+        AssistedApplyService service = Service(bus, new ColonyState(), handler);
+
+        AssistedApplyResponse response = await service.ApplyAsync("food_freezer_missing", 0);
+
+        response.Status.Should().Be("applied");
+        response.Kind.Should().Be(AdviceApplyKind.PlaceBlueprintGroup);
+        response.Message.Should().Contain("placed 1 asset");
+        JsonSerializer.Serialize(response.Readback).Should().Contain("\"placed_count\":1");
+        bus.ActiveAdvice().Should().BeEmpty();
+        handler.BlueprintGroupValidateCalls.Should().Be(1);
+        handler.BlueprintGroupPlacePosted.Should().BeTrue();
+        handler.LastBlueprintGroupPlaceBody.Should().Contain("\"placement_order\":\"default\"");
+        handler.LastBlueprintGroupPlaceBody.Should().Contain("\"require_all\":true");
+    }
+
+    [Fact]
+    public async Task ApplyAsync_WhenBlueprintGroupValidateRejects_ReturnsStaleWithoutPlacing()
+    {
+        AdviceBus bus = new();
+        bus.Publish(Advice("food_freezer_missing", BlueprintGroupAction()));
+        MinimalRefreshHandler handler = new()
+        {
+            BlueprintGroupValidateJson = BlueprintGroupValidateResponseJson(
+                canPlaceAll: false,
+                canPlace: false,
+                reason: "blocked by rock")
+        };
+        AssistedApplyService service = Service(bus, new ColonyState(), handler);
+
+        AssistedApplyResponse response = await service.ApplyAsync("food_freezer_missing", 0);
+
+        response.Status.Should().Be("stale_advice");
+        response.Message.Should().Contain("blocked by rock");
+        handler.BlueprintGroupValidateCalls.Should().Be(1);
+        handler.BlueprintGroupPlacePosted.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ApplyAsync_WhenBlueprintGroupPlaceEndpointUnavailable_ReturnsRimApiUnavailable()
+    {
+        AdviceBus bus = new();
+        bus.Publish(Advice("food_freezer_missing", BlueprintGroupAction()));
+        MinimalRefreshHandler handler = new()
+        {
+            BlueprintGroupPlaceStatusCode = HttpStatusCode.NotFound
+        };
+        AssistedApplyService service = Service(bus, new ColonyState(), handler);
+
+        AssistedApplyResponse response = await service.ApplyAsync("food_freezer_missing", 0);
+
+        response.Status.Should().Be("rimapi_unavailable");
+        response.Kind.Should().Be(AdviceApplyKind.PlaceBlueprintGroup);
+        handler.BlueprintGroupValidateCalls.Should().Be(1);
+        handler.BlueprintGroupPlacePosted.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ApplyAsync_WhenBlueprintGroupTargetsDifferentMap_ReturnsStaleWithoutValidating()
+    {
+        AdviceBus bus = new();
+        bus.Publish(Advice("food_freezer_missing", BlueprintGroupAction(mapId: 9)));
+        MinimalRefreshHandler handler = new();
+        AssistedApplyService service = Service(bus, new ColonyState(), handler);
+
+        AssistedApplyResponse response = await service.ApplyAsync("food_freezer_missing", 0);
+
+        response.Status.Should().Be("stale_advice");
+        response.Message.Should().Contain("different map");
+        handler.BlueprintGroupValidateCalls.Should().Be(0);
+        handler.BlueprintGroupPlacePosted.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ApplyAsync_WhenBlueprintGroupExceedsCap_ReturnsValidationFailedWithoutRimApi()
+    {
+        AdviceBus bus = new();
+        bus.Publish(Advice("food_freezer_missing", BlueprintGroupAction(assetCount: AssistedApplyLimits.MaxBlueprintGroupAssets + 1)));
         AssistedApplyService service = Service(bus, new ColonyState());
 
         AssistedApplyResponse response = await service.ApplyAsync("food_freezer_missing", 0);
 
         response.Status.Should().Be("validation_failed");
-        response.Kind.Should().Be(AdviceApplyKind.PlaceBlueprintGroup);
-        response.Message.Should().Contain("not executable");
+        response.Message.Should().Contain("too large");
     }
 
     private static AssistedApplyService Service(AdviceBus bus, ColonyState state)
@@ -273,12 +351,20 @@ public sealed class AssistedApplyServiceTests
 
     private static AssistedApplyService Service(AdviceBus bus, ColonyState state, HttpMessageHandler handler)
     {
-        var rimApi = new RimApiClient(new HttpClient(handler)
+        RimApiClient rimApi = new(new HttpClient(handler)
         {
             BaseAddress = new Uri("http://localhost:8765/")
         });
-        var ingestion = new IngestionDispatcher(rimApi, state, new TestLogger<IngestionDispatcher>());
-        return new AssistedApplyService(bus, state, ingestion, rimApi, new TestLogger<AssistedApplyService>());
+        IngestionDispatcher ingestion = new(rimApi, state, new TestLogger<IngestionDispatcher>());
+        RimApiPlacementProbe placementProbe = new(rimApi);
+        return new AssistedApplyService(
+            bus,
+            state,
+            ingestion,
+            rimApi,
+            placementProbe,
+            placementProbe,
+            new TestLogger<AssistedApplyService>());
     }
 
     private static AdviceItem Advice(string id, AdviceAction action)
@@ -323,27 +409,30 @@ public sealed class AssistedApplyServiceTests
                 TargetIds: ["hare-1", "hare-2"],
                 TargetCount: 2));
 
-    private static AdviceAction BlueprintGroupAction() =>
-        new(
+    private static AdviceAction BlueprintGroupAction(int assetCount = 1, int mapId = 1)
+    {
+        IReadOnlyList<BlueprintAsset> assets = Enumerable.Range(0, assetCount)
+            .Select(index => new BlueprintAsset(
+                Role: "building",
+                DefName: "Cooler",
+                StuffDefName: "Steel",
+                Cell: new MapCell(12 + index, 34),
+                Rotation: 2))
+            .ToList();
+
+        return new(
             AdviceActionKind.PlaceBlueprint,
             "Review compact freezer placement.",
             Apply: new PlaceBlueprintGroupApply(
                 Label: "Place freezer shell",
                 TargetSummary: "Compact freezer shell with one cooler",
-                MapId: 1,
+                MapId: mapId,
                 BlueprintGroup: new BlueprintGroup(
                     Label: "Compact freezer",
-                    MapId: 1,
-                    Assets:
-                    [
-                        new BlueprintAsset(
-                            Role: "building",
-                            DefName: "Cooler",
-                            StuffDefName: "Steel",
-                            Cell: new MapCell(12, 34),
-                            Rotation: 2)
-                    ]),
-                AssetCount: 1));
+                    MapId: mapId,
+                    Assets: assets),
+                AssetCount: assetCount));
+    }
 
     private static MinimalRefreshHandler HandlerWithSingleStove() =>
         new()
@@ -376,6 +465,92 @@ public sealed class AssistedApplyServiceTests
           {"load_id":{{billId}},"recipe_def_name":"CookMealSimple","recipe_label":"cook simple meal","repeat_mode":"TargetCount","target_count":{{targetCount}},"suspended":false,"paused":false}
           """;
 
+    private static string BlueprintGroupValidateResponseJson(
+        bool canPlaceAll,
+        bool canPlace = true,
+        string? reason = null) =>
+        JsonSerializer.Serialize(new
+        {
+            success = true,
+            data = new
+            {
+                can_place_all = canPlaceAll,
+                items = new[]
+                {
+                    new
+                    {
+                        index = 0,
+                        item = BlueprintGroupItemJson(),
+                        can_place = canPlace,
+                        reason,
+                        def_type = "Building",
+                        occupies_cells = new[] { new { x = 12, z = 34 } },
+                        cost = new[] { new { def_name = "Steel", count = 90 } },
+                        work_to_build = 300,
+                        already_blueprinted = false,
+                        already_built = false
+                    }
+                },
+                cost = new[] { new { def_name = "Steel", count = 90 } },
+                overlap_conflicts = Array.Empty<object>()
+            },
+            errors = (string[]?)null
+        });
+
+    private static string BlueprintGroupPlaceResponseJson(string status) =>
+        JsonSerializer.Serialize(new
+        {
+            success = true,
+            data = new
+            {
+                status,
+                require_all = true,
+                placement_order = "default",
+                items = new[]
+                {
+                    new
+                    {
+                        index = 0,
+                        item = BlueprintGroupItemJson(),
+                        status,
+                        placed = status == "placed",
+                        thing_id = 123,
+                        reason = "",
+                        validate = new
+                        {
+                            can_place = true,
+                            reason = (string?)null,
+                            def_type = "Building",
+                            occupies_cells = new[] { new { x = 12, z = 34 } },
+                            cost = new[] { new { def_name = "Steel", count = 90 } },
+                            work_to_build = 300,
+                            already_blueprinted = false,
+                            already_built = false
+                        }
+                    }
+                },
+                cost = new[] { new { def_name = "Steel", count = 90 } },
+                validate = new
+                {
+                    can_place_all = true,
+                    items = Array.Empty<object>(),
+                    cost = new[] { new { def_name = "Steel", count = 90 } },
+                    overlap_conflicts = Array.Empty<object>()
+                }
+            },
+            errors = (string[]?)null
+        });
+
+    private static object BlueprintGroupItemJson() =>
+        new
+        {
+            role = "building",
+            def_name = "Cooler",
+            stuff_def_name = "Steel",
+            cell = new { x = 12, z = 34 },
+            rotation = 2
+        };
+
     private sealed class ThrowingHandler : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
@@ -391,10 +566,17 @@ public sealed class AssistedApplyServiceTests
         public bool DesignatePosted { get; private set; }
         public bool AddBillPosted { get; private set; }
         public bool UpdateBillPosted { get; private set; }
+        public bool BlueprintGroupPlacePosted { get; private set; }
         public int BillListCalls { get; private set; }
+        public int BlueprintGroupValidateCalls { get; private set; }
         public string LastDesignateBody { get; private set; } = "";
         public string LastBillWritePath { get; private set; } = "";
         public string LastBillWriteBody { get; private set; } = "";
+        public string LastBlueprintGroupPlaceBody { get; private set; } = "";
+        public HttpStatusCode BlueprintGroupValidateStatusCode { get; init; } = HttpStatusCode.OK;
+        public HttpStatusCode BlueprintGroupPlaceStatusCode { get; init; } = HttpStatusCode.OK;
+        public string BlueprintGroupValidateJson { get; init; } = BlueprintGroupValidateResponseJson(canPlaceAll: true);
+        public string BlueprintGroupPlaceJson { get; init; } = BlueprintGroupPlaceResponseJson("placed");
         public string MapAnimalsJson { get; init; } = """{"success":true,"data":[],"errors":null}""";
         public string MapBuildingsJson { get; init; } = """{"success":true,"data":[],"errors":null}""";
         public string RecipesJson { get; init; } = """
@@ -411,6 +593,17 @@ public sealed class AssistedApplyServiceTests
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
             string path = request.RequestUri?.PathAndQuery ?? "";
+            if (path.Contains("builder/blueprint-group/validate", StringComparison.OrdinalIgnoreCase))
+            {
+                BlueprintGroupValidateCalls++;
+                return JsonResponse(BlueprintGroupValidateJson, BlueprintGroupValidateStatusCode);
+            }
+
+            if (path.Contains("builder/blueprint-group/place", StringComparison.OrdinalIgnoreCase))
+            {
+                return CaptureBlueprintGroupPlaceAsync(request, ct);
+            }
+
             if (path.Contains("order/designate/area", StringComparison.OrdinalIgnoreCase))
             {
                 return CaptureDesignateAsync(request, ct);
@@ -482,6 +675,18 @@ public sealed class AssistedApplyServiceTests
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
         }
 
+        private async Task<HttpResponseMessage> CaptureBlueprintGroupPlaceAsync(
+            HttpRequestMessage request,
+            CancellationToken ct)
+        {
+            BlueprintGroupPlacePosted = true;
+            LastBlueprintGroupPlaceBody = request.Content is null ? "" : await request.Content.ReadAsStringAsync(ct);
+            return new HttpResponseMessage(BlueprintGroupPlaceStatusCode)
+            {
+                Content = new StringContent(BlueprintGroupPlaceJson, Encoding.UTF8, "application/json")
+            };
+        }
+
         private async Task<HttpResponseMessage> CaptureDesignateAsync(
             HttpRequestMessage request,
             CancellationToken ct)
@@ -512,8 +717,8 @@ public sealed class AssistedApplyServiceTests
             };
         }
 
-        private static Task<HttpResponseMessage> JsonResponse(string json) =>
-            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        private static Task<HttpResponseMessage> JsonResponse(string json, HttpStatusCode statusCode = HttpStatusCode.OK) =>
+            Task.FromResult(new HttpResponseMessage(statusCode)
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json")
             });
