@@ -40,6 +40,32 @@ public static class RoomClassMapper
         return null;
     }
 
+    public static IReadOnlyList<RoomWorkFunction> WorkFunctions(IReadOnlyList<BuildingRecord> buildings)
+    {
+        List<RoomWorkFunction> functions = [];
+        foreach (BuildingRecord building in buildings)
+        {
+            if (BuildingClassifier.IsHospitalBed(building))
+                functions.Add(new RoomWorkFunction(RoomClass.Hospital, building));
+
+            if (BuildingClassifier.IsCookingBuilding(building))
+                functions.Add(new RoomWorkFunction(RoomClass.Kitchen, building));
+
+            if (BuildingClassifier.IsButcherTable(building))
+                functions.Add(new RoomWorkFunction(RoomClass.Butcher, building));
+
+            if (BuildingClassifier.IsResearchBench(building))
+                functions.Add(new RoomWorkFunction(RoomClass.Research, building));
+
+            if (BuildingClassifier.IsWorkshopBench(building))
+                functions.Add(new RoomWorkFunction(RoomClass.Workshop, building));
+        }
+
+        return functions;
+    }
+
     private static bool Contains(string text, string token) =>
         text.Contains(token, StringComparison.OrdinalIgnoreCase);
 }
+
+public sealed record RoomWorkFunction(RoomClass Class, BuildingRecord SourceBuilding);

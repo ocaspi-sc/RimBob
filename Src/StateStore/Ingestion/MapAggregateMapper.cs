@@ -258,16 +258,48 @@ public static class MapAggregateMapper
         zone.Type.Contains("Stockpile", StringComparison.OrdinalIgnoreCase);
 
     public static BuildingRegistry FromBuildings(IReadOnlyList<BuildingDto> buildings) =>
-        new(buildings
-            .Select(building => new BuildingRecord(
-                building.Id.ToString(),
-                building.Def,
+        FromBuildings(buildings, []);
+
+    public static BuildingRegistry FromBuildings(
+        IReadOnlyList<BuildingDto> buildings,
+        IReadOnlyList<WorkTableDto> workTables)
+    {
+        List<BuildingRecord> records = buildings
+            .Select(BuildingRecordFrom)
+            .ToList();
+        HashSet<string> existingIds = records
+            .Select(building => building.Id)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (WorkTableDto workTable in workTables)
+        {
+            string id = workTable.Id.ToString();
+            if (existingIds.Contains(id))
+                continue;
+
+            records.Add(new BuildingRecord(
+                id,
+                workTable.ThingDef,
                 Hp: 1.0f,
                 PowerOn: null,
                 IsWorking: null,
-                Position: MapPosition(building.Position),
-                Label: building.Label))
-            .ToList());
+                Position: MapPosition(workTable.Position),
+                Label: workTable.Label));
+            existingIds.Add(id);
+        }
+
+        return new BuildingRegistry(records);
+    }
+
+    private static BuildingRecord BuildingRecordFrom(BuildingDto building) =>
+        new(
+            building.Id.ToString(),
+            building.Def,
+            Hp: 1.0f,
+            PowerOn: null,
+            IsWorking: null,
+            Position: MapPosition(building.Position),
+            Label: building.Label);
 
     public static WorkTableRecord FromWorkTableBills(string buildingId, IReadOnlyList<WorkTableBillDto> bills) =>
         new(

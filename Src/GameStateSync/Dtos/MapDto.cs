@@ -214,6 +214,14 @@ public record BuildingDto(
     [property: JsonPropertyName("position")] PositionDto? Position
 );
 
+public record WorkTableDto(
+    [property: JsonPropertyName("id")]          int          Id,
+    [property: JsonPropertyName("thing_def")]   string       ThingDef,
+    [property: JsonPropertyName("label")]       string?      Label,
+    [property: JsonPropertyName("position")]    PositionDto? Position,
+    [property: JsonPropertyName("bills_count")] int          BillsCount
+);
+
 // ── GET /map/power/info?map_id ────────────────────────────────────────────────
 // RIMAPI serializes this DTO with PascalCase names; power flow is W, battery storage is Wd.
 public record PowerInfoDto(

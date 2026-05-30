@@ -60,6 +60,39 @@ public sealed class PlacementSolverTests
     }
 
     [Fact]
+    public async Task SolveAsync_WithKitchenFunctionAnchorInBarracks_ReturnsOptions()
+    {
+        PlacementSolver solver = new(
+            new FakePathCostProbe(reachable: true, cost: 12),
+            new FakePlacementValidator(canPlaceAll: true));
+        WillieBriefing briefing = StableBriefing() with
+        {
+            AnchorInventory = new WillieAnchorInventory([
+                new WillieRoomAnchor(
+                    "multi-room",
+                    RoomClass.Barracks,
+                    "Barracks",
+                    64,
+                    new MapPosition(20, 0, 20),
+                    ["bed-1", "stove-1"]),
+                new WillieRoomAnchor(
+                    "multi-room",
+                    RoomClass.Kitchen,
+                    "Barracks",
+                    64,
+                    new MapPosition(8, 0, 8),
+                    ["bed-1", "stove-1"])
+            ])
+        };
+
+        PlacementResult result = await solver.SolveAsync(SpecWithMaterials(), briefing, State([]));
+
+        result.NoFit.Should().BeNull();
+        result.Options.Should().NotBeEmpty();
+        result.Trace.Notes.Should().NotContain("no resolved near-anchor with a target cell");
+    }
+
+    [Fact]
     public async Task SolveAsync_WhenGeneratorsEmitNoDrafts_ReturnsNoDraftsNoFit()
     {
         PlacementSolver solver = new(

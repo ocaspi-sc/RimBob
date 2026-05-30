@@ -21,23 +21,47 @@ public static class WillieAnchorInventoryDerivation
                 .Select(id => buildingsById[id])
                 .ToList();
 
-            RoomClass? roomClass = RoomClassMapper.FromRoleLabel(room.RoleLabel) ??
-                                   RoomClassMapper.FromContainedBuildings(containedBuildings);
-            if (roomClass is null)
+            RoomClass? primaryClass = RoomClassMapper.FromRoleLabel(room.RoleLabel) ??
+                                      RoomClassMapper.FromContainedBuildings(containedBuildings);
+            if (primaryClass is null)
                 continue;
 
+            IReadOnlyList<string> containedBuildingIds = containedBuildings
+                .Select(building => building.Id)
+                .ToList();
+            MapPosition? primaryCentroid = Centroid(room.Cells, containedBuildings);
             anchors.Add(new WillieRoomAnchor(
                 RoomId: room.Id,
-                Class: roomClass.Value,
+                Class: primaryClass.Value,
                 RoleLabel: room.RoleLabel,
                 CellsCount: room.CellsCount,
-                Centroid: Centroid(room.Cells, containedBuildings),
-                ContainedBuildingIds: containedBuildings.Select(building => building.Id).ToList())
+                Centroid: primaryCentroid,
+                ContainedBuildingIds: containedBuildingIds)
             {
                 Bounds = room.Bounds,
                 Cells = room.Cells,
                 EntryCells = room.EntryCells
             });
+
+            HashSet<RoomClass> emittedClasses = [primaryClass.Value];
+            foreach (RoomWorkFunction function in RoomClassMapper.WorkFunctions(containedBuildings))
+            {
+                if (!emittedClasses.Add(function.Class))
+                    continue;
+
+                anchors.Add(new WillieRoomAnchor(
+                    RoomId: room.Id,
+                    Class: function.Class,
+                    RoleLabel: room.RoleLabel,
+                    CellsCount: room.CellsCount,
+                    Centroid: function.SourceBuilding.Position ?? primaryCentroid,
+                    ContainedBuildingIds: containedBuildingIds)
+                {
+                    Bounds = room.Bounds,
+                    Cells = room.Cells,
+                    EntryCells = room.EntryCells
+                });
+            }
         }
 
         return new WillieAnchorInventory(anchors);

@@ -49,6 +49,26 @@ public sealed class AnchorResolverTests
     }
 
     [Fact]
+    public void ResolveNear_FiltersRepeatedRoomIdByFunctionClass()
+    {
+        WillieBriefing briefing = StableBriefing() with
+        {
+            AnchorInventory = new WillieAnchorInventory(
+            [
+                Anchor("multi-room", RoomClass.Barracks, 64, new MapPosition(20, 0, 20)),
+                Anchor("multi-room", RoomClass.Kitchen, 64, new MapPosition(12, 0, 11))
+            ])
+        };
+
+        ResolvedAnchor resolved = AnchorResolver.ResolveNear(SpecWithNear("kitchen"), briefing)
+            .Should().ContainSingle().Subject;
+
+        resolved.Anchor.RoomId.Should().Be("multi-room");
+        resolved.Anchor.Class.Should().Be(RoomClass.Kitchen);
+        resolved.TargetCell.Should().Be(new MapPosition(12, 0, 11));
+    }
+
+    [Fact]
     public void ResolveNear_SkipsAnchorWithoutTargetCell()
     {
         WillieBriefing briefing = StableBriefing() with

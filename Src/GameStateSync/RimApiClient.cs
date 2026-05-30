@@ -298,6 +298,11 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
         int mapId, CancellationToken ct = default) =>
         GetEnvelopedListAsync<BuildingDto>($"api/v1/map/buildings?map_id={mapId}", ct);
 
+    /// <summary>GET api/v1/map/work-tables?map_id — work benches omitted from the general buildings endpoint.</summary>
+    public Task<IReadOnlyList<WorkTableDto>> GetWorkTablesAsync(
+        int mapId, CancellationToken ct = default) =>
+        GetEnvelopedListAsync<WorkTableDto>($"api/v1/map/work-tables?map_id={mapId}", ct);
+
     /// <summary>GET api/v1/map/power/info?map_id — colony-wide power production / consumption / storage.</summary>
     public Task<PowerInfoDto> GetPowerInfoAsync(int mapId, CancellationToken ct = default) =>
         GetEnvelopedAsync<PowerInfoDto>($"api/v1/map/power/info?map_id={mapId}", ct);

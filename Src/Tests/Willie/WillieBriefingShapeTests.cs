@@ -47,6 +47,52 @@ public sealed class WillieBriefingShapeTests
     }
 
     [Fact]
+    public void WillieBriefing_MultiFunctionRoomCountsEachAnchorClass()
+    {
+        ColonyState state = new()
+        {
+            LastRefreshSource = ColonyStateOrigin.Live
+        };
+        state.Rooms.Update(new RoomRegistry([
+            new RoomRecord(
+                Id: "multi-room",
+                RoleLabel: "Barracks",
+                Temperature: 20f,
+                CellsCount: 4,
+                TouchesMapEdge: false,
+                IsPrisonCell: false,
+                IsDoorway: false,
+                OpenRoofCount: 0,
+                ContainedBedIds: ["bed-1"],
+                Impressiveness: null,
+                Beauty: null,
+                Cleanliness: null,
+                Space: null,
+                Wealth: null,
+                Cells:
+                [
+                    new MapPosition(10, 0, 10),
+                    new MapPosition(12, 0, 10),
+                    new MapPosition(10, 0, 12),
+                    new MapPosition(12, 0, 12)
+                ],
+                EntryCells: [new MapPosition(11, 0, 9)],
+                ContainedBuildingIds: ["bed-1", "stove-1"])
+        ]));
+        state.Buildings.Update(new BuildingRegistry([
+            new BuildingRecord("bed-1", "Bed", 1f, null, null, new MapPosition(10, 0, 10)),
+            new BuildingRecord("stove-1", "FueledStove", 1f, null, null, new MapPosition(12, 0, 11))
+        ]));
+
+        WillieBriefing briefing = WillieBriefingDerivation.Compute(state);
+
+        briefing.AnchorInventory.Anchors.Select(anchor => anchor.RoomId)
+            .Should().Equal("multi-room", "multi-room");
+        briefing.FunctionalRooms.RoomCountsByClass.Should().ContainKey("Barracks").WhoseValue.Should().Be(1);
+        briefing.FunctionalRooms.RoomCountsByClass.Should().ContainKey("Kitchen").WhoseValue.Should().Be(1);
+    }
+
+    [Fact]
     public void WillieRoomAnchor_OptionalFields_DefaultEntryCellsToEmpty()
     {
         WillieRoomAnchor anchor = new(

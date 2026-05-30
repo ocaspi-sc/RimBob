@@ -45,6 +45,7 @@ public sealed class IngestionDispatcher(
         Task<IReadOnlyList<ZoneDto>>            zonesTask     = rimApi.GetZonesAsync(home.Id, ct);
         Task<TerrainGridDto>                    terrainTask   = rimApi.GetTerrainAsync(home.Id, ct);
         Task<IReadOnlyList<BuildingDto>>        buildingsTask = rimApi.GetBuildingsAsync(home.Id, ct);
+        Task<IReadOnlyList<WorkTableDto>>       workTablesTask = rimApi.GetWorkTablesAsync(home.Id, ct);
         Task<PowerInfoDto>                      powerTask     = rimApi.GetPowerInfoAsync(home.Id, ct);
         Task<WeatherDto>                        weatherTask   = rimApi.GetWeatherAsync(home.Id, ct);
         Task<IReadOnlyList<LordDto>>            lordsTask     = rimApi.GetLordsAsync(home.Id, ct);
@@ -55,7 +56,7 @@ public sealed class IngestionDispatcher(
         Task<WillieConstructionBacklog>          willieBacklogTask = ReadWillieBacklogAsync(home.Id, ct);
 
         await Task.WhenAll(stateTask, dateTask, pawnsTask, farmTask, plantsTask, thingsTask, defCatalogTask,
-                           storedTask, animalsTask, roomsTask, zonesTask, terrainTask, buildingsTask, powerTask, weatherTask, lordsTask, incidentsTask,
+                           storedTask, animalsTask, roomsTask, zonesTask, terrainTask, buildingsTask, workTablesTask, powerTask, weatherTask, lordsTask, incidentsTask,
                            resourcesTask, researchTask, willieBacklogTask);
 
         GameStateDto gs = stateTask.Result;
@@ -78,7 +79,7 @@ public sealed class IngestionDispatcher(
 
         state.Stockpiles.Update(MapAggregateMapper.FromStockpiles(zonesTask.Result, storedResources));
 
-        BuildingRegistry buildings = MapAggregateMapper.FromBuildings(buildingsTask.Result);
+        BuildingRegistry buildings = MapAggregateMapper.FromBuildings(buildingsTask.Result, workTablesTask.Result);
         state.Buildings.Update(buildings);
         state.WorkTables.Update(await ReadWorkTableBillsAsync(buildings, ct));
 

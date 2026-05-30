@@ -258,6 +258,50 @@ public sealed class IngestionDispatcherTests
     }
 
     [Fact]
+    public async Task RefreshAllAsync_WorkTablesMergeIntoBuildingRegistryAndBillReads()
+    {
+        PathRouter router = StandardRouter()
+            .Add("api/v1/map/work-tables?map_id", Json("""
+                {
+                  "success": true,
+                  "data": [
+                    {
+                      "id": 44710,
+                      "thing_def": "FueledStove",
+                      "label": "fueled stove",
+                      "position": { "x": 93, "y": 0, "z": 186 },
+                      "bills_count": 0
+                    }
+                  ],
+                  "errors": [],
+                  "warnings": [],
+                  "timestamp": null
+                }
+                """))
+            .Add("api/v1/buildings/bills?building_id=44710", Json("""
+                {
+                  "success": true,
+                  "data": [],
+                  "errors": [],
+                  "warnings": [],
+                  "timestamp": null
+                }
+                """));
+        using HttpClient http = MakeClient(router);
+        ColonyState state = new();
+        IngestionDispatcher dispatcher = new(
+            new RimApiClient(http), state, new TestLogger<IngestionDispatcher>());
+
+        await dispatcher.RefreshAllAsync();
+
+        BuildingRecord stove = state.Buildings.Value.Buildings.Single(building => building.Id == "44710");
+        stove.Def.Should().Be("FueledStove");
+        stove.Position.Should().Be(new MapPosition(93, 0, 186));
+        state.WorkTables.Value.WorkTables.Should().ContainSingle()
+            .Which.BuildingId.Should().Be("44710");
+    }
+
+    [Fact]
     public async Task RefreshAllAsync_LiveZoneWrapperShape_FlowsIntoStockpiles()
     {
         PathRouter router = StandardRouter()
@@ -868,6 +912,7 @@ public sealed class IngestionDispatcherTests
                 }
                 """))
             .Add("api/v1/map/buildings",           Envelope(buildings))
+            .Add("api/v1/map/work-tables",         Envelope(new List<WorkTableDto>()))
             .Add("api/v1/map/power/info",          Envelope(power))
             .Add("api/v1/map/weather",             Envelope(weather))
             .Add("api/v1/lords",                   Envelope(lords))

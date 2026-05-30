@@ -149,7 +149,7 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 ### Bill (work-table recipes)
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/map/work-tables?map_id` | list tables |
+| GET | `/map/work-tables?map_id` | list work tables; RimBob ingests them into the building registry so stoves and benches participate in Food and Willie classification |
 | GET | `/buildings/recipes?building_id` | available recipes; wrapped for simple-meal apply |
 | GET | `/buildings/bills?building_id` | bills on a table; ingested for Food bill-state awareness and wrapped for simple-meal apply |
 | POST | `/buildings/bills/add` | add bill; wrapped only for simple-meal apply |

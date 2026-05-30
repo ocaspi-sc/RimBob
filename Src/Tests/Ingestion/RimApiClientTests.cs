@@ -934,6 +934,38 @@ public sealed class RimApiClientTests
     }
 
     [Fact]
+    public async Task GetWorkTables_ReturnsMapWorkTables()
+    {
+        CaptureHandler handler = new(Json("""
+            {
+              "success": true,
+              "data": [
+                {
+                  "id": 44710,
+                  "thing_def": "FueledStove",
+                  "label": "fueled stove",
+                  "position": { "x": 93, "y": 0, "z": 186 },
+                  "bills_count": 1
+                }
+              ],
+              "errors": null
+            }
+            """));
+        using HttpClient http = MakeClient(handler);
+
+        IReadOnlyList<WorkTableDto> result = await new RimApiClient(http).GetWorkTablesAsync(7);
+
+        handler.Path.Should().Be("/api/v1/map/work-tables");
+        handler.Query.Should().Be("?map_id=7");
+        WorkTableDto table = result.Should().ContainSingle().Subject;
+        table.Id.Should().Be(44710);
+        table.ThingDef.Should().Be("FueledStove");
+        table.Label.Should().Be("fueled stove");
+        table.Position.Should().BeEquivalentTo(new { X = 93, Y = 0, Z = 186 });
+        table.BillsCount.Should().Be(1);
+    }
+
+    [Fact]
     public async Task GetWorkTableRecipes_ReturnsAvailableRecipes()
     {
         using HttpClient http = MakeClient(new PathRouter()

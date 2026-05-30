@@ -91,4 +91,30 @@ public sealed class AggregateMapperTests
         room.Space.Should().Be(16f);
         room.Wealth.Should().Be(420f);
     }
+
+    [Fact]
+    public void MapMapper_FromBuildings_MergesWorkTablesAndKeepsBuildingRecordOnIdCollision()
+    {
+        IReadOnlyList<BuildingDto> buildings =
+        [
+            new(10, "Wall", "granite wall", "Building", new PositionDto(1, 0, 2))
+        ];
+        IReadOnlyList<WorkTableDto> workTables =
+        [
+            new(10, "FueledStove", "duplicate stove", new PositionDto(3, 0, 4), 1),
+            new(44710, "FueledStove", "fueled stove", new PositionDto(93, 0, 186), 1)
+        ];
+
+        BuildingRegistry registry = MapAggregateMapper.FromBuildings(buildings, workTables);
+
+        registry.Buildings.Should().HaveCount(2);
+        BuildingRecord original = registry.Buildings.Single(building => building.Id == "10");
+        original.Def.Should().Be("Wall");
+        original.Label.Should().Be("granite wall");
+
+        BuildingRecord stove = registry.Buildings.Single(building => building.Id == "44710");
+        stove.Def.Should().Be("FueledStove");
+        stove.Label.Should().Be("fueled stove");
+        stove.Position.Should().Be(new MapPosition(93, 0, 186));
+    }
 }

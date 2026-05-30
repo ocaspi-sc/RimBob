@@ -91,4 +91,60 @@ public sealed class WillieAnchorInventoryDerivationTests
         bedroom.ContainedBuildingIds.Should().Equal("bed-1");
         inventory.Anchors.Should().NotContain(anchor => anchor.RoomId == "unknown-room");
     }
+
+    [Fact]
+    public void Derive_BarracksWithStoveEmitsPrimaryAndKitchenFunctionAnchors()
+    {
+        ColonyState state = new();
+        state.Rooms.Update(new RoomRegistry([
+            new RoomRecord(
+                Id: "multi-room",
+                RoleLabel: "Barracks",
+                Temperature: 20f,
+                CellsCount: 4,
+                TouchesMapEdge: false,
+                IsPrisonCell: false,
+                IsDoorway: false,
+                OpenRoofCount: 0,
+                ContainedBedIds: ["bed-1"],
+                Impressiveness: null,
+                Beauty: null,
+                Cleanliness: null,
+                Space: null,
+                Wealth: null,
+                Bounds: new MapRect(10, 10, 12, 12),
+                Cells:
+                [
+                    new MapPosition(10, 0, 10),
+                    new MapPosition(12, 0, 10),
+                    new MapPosition(10, 0, 12),
+                    new MapPosition(12, 0, 12)
+                ],
+                EntryCells: [new MapPosition(11, 0, 9)],
+                RegionId: 42,
+                ContainedBuildingIds: ["bed-1", "stove-1"])
+        ]));
+        state.Buildings.Update(new BuildingRegistry([
+            new BuildingRecord("bed-1", "Bed", 1f, null, null, new MapPosition(10, 0, 10)),
+            new BuildingRecord("stove-1", "FueledStove", 1f, null, null, new MapPosition(12, 0, 11), "fueled stove")
+        ]));
+
+        WillieAnchorInventory inventory = WillieAnchorInventoryDerivation.Derive(state);
+
+        inventory.Anchors.Should().HaveCount(2);
+        WillieRoomAnchor barracks = inventory.Anchors.Single(anchor => anchor.Class == RoomClass.Barracks);
+        barracks.RoomId.Should().Be("multi-room");
+        barracks.Centroid.Should().Be(new MapPosition(11, 0, 11));
+        barracks.ContainedBuildingIds.Should().Equal("bed-1", "stove-1");
+        barracks.EntryCells.Should().Equal(new MapPosition(11, 0, 9));
+
+        WillieRoomAnchor kitchen = inventory.Anchors.Single(anchor => anchor.Class == RoomClass.Kitchen);
+        kitchen.RoomId.Should().Be("multi-room");
+        kitchen.RoleLabel.Should().Be("Barracks");
+        kitchen.Centroid.Should().Be(new MapPosition(12, 0, 11));
+        kitchen.Bounds.Should().Be(new MapRect(10, 10, 12, 12));
+        kitchen.Cells.Should().HaveCount(4);
+        kitchen.ContainedBuildingIds.Should().Equal("bed-1", "stove-1");
+        inventory.Anchors.Should().NotContain(anchor => anchor.Class == RoomClass.Bedroom);
+    }
 }
