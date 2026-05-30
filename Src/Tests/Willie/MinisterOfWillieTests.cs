@@ -136,6 +136,29 @@ public sealed class MinisterOfWillieTests
         outputJson.Should().Contain("test_note");
     }
 
+    [Fact]
+    public async Task FreezerFlagWithMissingKitchen_RunsSolverAndPersistsNoFitTrace()
+    {
+        FakePlacementSolver solver = FakePlacementSolver.WithNoFit(NoFitReason.NoAnchors);
+        CapturingReplayWriter replay = new();
+        Harness harness = new(solver, replay);
+        harness.SetStableStateWithoutKitchen();
+        harness.Flags.Publish(FreezerFlag());
+
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
+
+        solver.CallCount.Should().Be(1);
+        AdviceItem advice = harness.Bus.ActiveAdvice().Should().ContainSingle().Subject;
+        advice.Concern.Should().Be("thermal_control");
+        advice.Rationale.Should().Contain("no kitchen anchor is available");
+        advice.Options.Should().BeNull();
+        MinisterReplayRecord record = replay.Records.Should().ContainSingle().Subject;
+        record.RuleTrace.Should().Be("freezer_request_active");
+        record.OutputKind.Should().Be("placement_solver");
+        string outputJson = JsonSerializer.Serialize(record.Output);
+        outputJson.Should().Contain(nameof(NoFitReason.NoAnchors));
+    }
+
     private static AgentFlag FreezerFlag(string requestedFrom = "Willie") =>
         new(
             Id: "food:freezer_missing",
@@ -221,6 +244,15 @@ public sealed class MinisterOfWillieTests
                 new BuildingRecord("battery-1", "Battery", 1f, true, true)
             ]));
             Colony.Power.Update(new PowerNetwork(ProductionW: 900, ConsumptionW: 650, StoredWd: 800, CapacityWd: 1000));
+        }
+
+        public void SetStableStateWithoutKitchen()
+        {
+            SetStableState();
+            Colony.Rooms.Update(new RoomRegistry([
+                Room("hospital-room", "Hospital"),
+                Room("storage-room", "Storage")
+            ]));
         }
 
         private static RoomRecord Room(string id, string role) =>

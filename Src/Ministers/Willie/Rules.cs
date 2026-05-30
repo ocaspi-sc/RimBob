@@ -82,6 +82,22 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
                     AdvicePriority.High,
                     "Player"));
 
+        BuildingRequest? freezerRequest = inboundBuildingRequests.FirstOrDefault(IsFreezingBuildRequest);
+        if (freezerRequest is not null)
+            return DecisionFor(
+                briefing,
+                inboundBuildingRequests,
+                "freezer_request_active",
+                WillieConcern.ThermalControl,
+                freezerRequest.Priority ?? AdvicePriority.Medium,
+                "Freezer request needs Willie placement",
+                freezerRequest.Request,
+                "Chef owns the food-storage need; Willie owns the freezer shell, cooler, power, and eventual placement.",
+                [
+                    new AdviceAction(AdviceActionKind.PlaceBlueprint, "Plan a freezer or cold-storage shell for this request; solver options attach when a validated footprint is available.", Owner: MinisterName)
+                ],
+                WillieFlagRequests.Empty);
+
         if (HasFunctionalRoomEvidence(briefing) && MissingRoom(briefing, RoomClass.Kitchen))
             return MissingRoomDecision(
                 briefing,
@@ -115,22 +131,6 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
                 "Storage room is missing",
                 "No storage room anchor or stockpile zone is visible.");
         }
-
-        BuildingRequest? freezerRequest = inboundBuildingRequests.FirstOrDefault(IsFreezingBuildRequest);
-        if (freezerRequest is not null)
-            return DecisionFor(
-                briefing,
-                inboundBuildingRequests,
-                "freezer_request_active",
-                WillieConcern.ThermalControl,
-                freezerRequest.Priority ?? AdvicePriority.Medium,
-                "Freezer request needs Willie placement",
-                freezerRequest.Request,
-                "Chef owns the food-storage need; Willie owns the freezer shell, cooler, power, and eventual placement.",
-                [
-                    new AdviceAction(AdviceActionKind.PlaceBlueprint, "Plan a freezer or cold-storage shell for this request; solver options attach when a validated footprint is available.", Owner: MinisterName)
-                ],
-                WillieFlagRequests.Empty);
 
         if (briefing.DataCoverage.HasBuildings &&
             briefing.ThermalControl.CoolerCount == 0 &&

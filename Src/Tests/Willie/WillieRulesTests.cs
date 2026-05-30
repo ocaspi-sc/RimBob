@@ -163,20 +163,10 @@ public sealed class WillieRulesTests
     [Fact]
     public void InboundFreezingRequest_EmitsThermalControlAdviceWithoutApply()
     {
-        BuildingRequest freezerRequest = new(
-            Request: "starter freezer near kitchen",
-            Reason: "Chef needs cold storage",
-            TargetClass: BuildingClass.Freezer,
-            TargetDef: "Cooler",
-            RoomClass: RoomClass.Freezer,
-            Temperature: new TempNeed(TemperatureBand.Freezing, MustHold: true),
-            Priority: AdvicePriority.High,
-            RequestedFrom: "Willie");
-
         RulesResult result = new Rules().Evaluate(
             StableBriefing(),
             ColonyContext.Default,
-            [freezerRequest]);
+            [FreezerRequest()]);
 
         Decision decision = result.Should().BeOfType<Decision>().Subject;
         decision.Trace.Should().Be("freezer_request_active");
@@ -187,11 +177,75 @@ public sealed class WillieRulesTests
         action.Apply.Should().BeNull();
     }
 
+    [Fact]
+    public void InboundFreezingRequest_PreemptsMissingKitchenAndKeepsDiagnostics()
+    {
+        WillieBriefing briefing = StableBriefing() with
+        {
+            FunctionalRooms = FunctionalRooms(RoomClass.Hospital, RoomClass.Storage)
+        };
+
+        RulesResult result = new Rules().Evaluate(
+            briefing,
+            ColonyContext.Default,
+            [FreezerRequest()]);
+
+        Decision decision = result.Should().BeOfType<Decision>().Subject;
+        decision.Trace.Should().Be("freezer_request_active");
+        decision.Advice.Should().ContainSingle()
+            .Which.Concern.Should().Be("thermal_control");
+        decision.Diagnostics.Should().NotBeNull();
+        decision.Diagnostics!.SuppressedCandidates.Should().Contain(row =>
+            row.Rule == "kitchen_missing" &&
+            row.Outcome == "suppressed");
+        decision.Diagnostics.AllRules.Should().Contain(row =>
+            row.Rule == "kitchen_missing" &&
+            row.Outcome == "matched");
+    }
+
+    [Fact]
+    public void HardBuildBlocker_PreemptsInboundFreezingRequest()
+    {
+        WillieBriefing briefing = StableBriefing() with
+        {
+            MaterialBottleneck = new WillieMaterialBottleneckSummary(
+                BacklogGroups: [],
+                MissingMaterials: [new MaterialCount("Steel", 80)],
+                BlockedCount: 0,
+                DisallowedCount: 0)
+        };
+
+        RulesResult result = new Rules().Evaluate(
+            briefing,
+            ColonyContext.Default,
+            [FreezerRequest()]);
+
+        Decision decision = result.Should().BeOfType<Decision>().Subject;
+        decision.Trace.Should().Be("backlog_material_gap");
+        decision.Advice.Should().ContainSingle()
+            .Which.Concern.Should().Be("material_bottleneck");
+        decision.Diagnostics.Should().NotBeNull();
+        decision.Diagnostics!.SuppressedCandidates.Should().Contain(row =>
+            row.Rule == "freezer_request_active" &&
+            row.Outcome == "suppressed");
+    }
+
     private static Decision Evaluate(WillieBriefing briefing)
     {
         RulesResult result = new Rules().Evaluate(briefing, ColonyContext.Default);
         return result.Should().BeOfType<Decision>().Subject;
     }
+
+    private static BuildingRequest FreezerRequest() =>
+        new(
+            Request: "starter freezer near kitchen",
+            Reason: "Chef needs cold storage",
+            TargetClass: BuildingClass.Freezer,
+            TargetDef: "Cooler",
+            RoomClass: RoomClass.Freezer,
+            Temperature: new TempNeed(TemperatureBand.Freezing, MustHold: true),
+            Priority: AdvicePriority.High,
+            RequestedFrom: "Willie");
 
     private static WillieBriefing StableBriefing() =>
         new(
