@@ -29,7 +29,7 @@ Direct todo entries in [Tasks.md](../../../Tasks.md):
 - `construction-placement-layout-strategy-base` - decide placement/layout strategy and whether Base Layout ever splits out.
 - `base-layout-construction-tips` - fold community base-building heuristics into spatial lint and dashboard evidence.
 - `add-rimapi-fork-endpoints-blueprint` - add blueprint validate/place/read, allow/disallow, cancel, and backlog endpoints in the RIMAPI fork.
-- `rimapi-building-detail-read` - add detailed building condition, working-state, and flickable/fuel/power evidence.
+- `rimapi-building-detail-read` - added detailed building condition, working-state, and flickable/fuel/power evidence.
 - `rimapi-stockpile-detail-read` - add stockpile detail reads for storage pressure and material flow.
 - `rimapi-room-detail-read` - add room detail reads for welfare-sensitive construction planning.
 - `rimapi-power-net-read` - add power-net detail reads for energy bottleneck and disconnected-asset evidence.

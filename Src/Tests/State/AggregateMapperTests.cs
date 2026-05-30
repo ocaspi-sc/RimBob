@@ -97,7 +97,23 @@ public sealed class AggregateMapperTests
     {
         IReadOnlyList<BuildingDto> buildings =
         [
-            new(10, "Wall", "granite wall", "Building", new PositionDto(1, 0, 2))
+            new(
+                Id: 10,
+                Def: "Wall",
+                Label: "granite wall",
+                Type: "Building",
+                Position: new PositionDto(1, 0, 2),
+                Rotation: 0,
+                Size: new PositionDto(1, 0, 1),
+                Hp: 180f,
+                MaxHp: 200f,
+                Stuff: "BlocksGranite",
+                RoomId: 12,
+                IsWorking: true,
+                Power: new BuildingPowerDto(Required: true, On: false, ConsumptionW: 100f),
+                Fuel: new BuildingFuelDto(Current: 18.5f, Capacity: 25f, FuelDef: "WoodLog"),
+                FlickableOn: false,
+                Flammability: 0.1f)
         ];
         IReadOnlyList<WorkTableDto> workTables =
         [
@@ -111,10 +127,23 @@ public sealed class AggregateMapperTests
         BuildingRecord original = registry.Buildings.Single(building => building.Id == "10");
         original.Def.Should().Be("Wall");
         original.Label.Should().Be("granite wall");
+        original.Hp.Should().Be(180f);
+        original.MaxHp.Should().Be(200f);
+        original.Stuff.Should().Be("BlocksGranite");
+        original.RoomId.Should().Be(12);
+        original.IsWorking.Should().BeTrue();
+        original.PowerOn.Should().BeFalse();
+        original.Power.Should().Be(new BuildingPower(Required: true, On: false, ConsumptionW: 100f));
+        original.Fuel.Should().Be(new BuildingFuel(Current: 18.5f, Capacity: 25f, FuelDef: "WoodLog"));
+        original.FlickableOn.Should().BeFalse();
+        original.Flammability.Should().Be(0.1f);
 
         BuildingRecord stove = registry.Buildings.Single(building => building.Id == "44710");
         stove.Def.Should().Be("FueledStove");
         stove.Label.Should().Be("fueled stove");
         stove.Position.Should().Be(new MapPosition(93, 0, 186));
+        stove.Hp.Should().BeNull();
+        stove.Power.Should().BeNull();
+        stove.Fuel.Should().BeNull();
     }
 }

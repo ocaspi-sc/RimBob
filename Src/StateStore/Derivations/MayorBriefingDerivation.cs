@@ -248,9 +248,20 @@ public static class MayorBriefingDerivation
         return new BuildingsSummary(
             Total:       bs.Count,
             PoweredOff:  bs.Count(b => b.PowerOn == false),
-            Damaged:     bs.Count(b => b.Hp < 0.5f),
+            Damaged:     bs.Count(IsDamagedBuilding),
             Strategic:   strategic
         );
+    }
+
+    private static bool IsDamagedBuilding(BuildingRecord building)
+    {
+        if (building.Hp is null)
+            return false;
+
+        if (building.MaxHp is > 0f)
+            return building.Hp.Value / building.MaxHp.Value < 0.5f;
+
+        return building.Hp.Value < 0.5f;
     }
 
     private static MoodSnapshot DeriveMood(IReadOnlyList<ColonistRecord> pawns)

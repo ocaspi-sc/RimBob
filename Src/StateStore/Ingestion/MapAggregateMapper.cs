@@ -280,7 +280,7 @@ public static class MapAggregateMapper
             records.Add(new BuildingRecord(
                 id,
                 workTable.ThingDef,
-                Hp: 1.0f,
+                Hp: null,
                 PowerOn: null,
                 IsWorking: null,
                 Position: MapPosition(workTable.Position),
@@ -295,11 +295,34 @@ public static class MapAggregateMapper
         new(
             building.Id.ToString(),
             building.Def,
-            Hp: 1.0f,
-            PowerOn: null,
-            IsWorking: null,
+            Hp: building.Hp,
+            PowerOn: building.Power?.On,
+            IsWorking: building.IsWorking,
             Position: MapPosition(building.Position),
-            Label: building.Label);
+            Label: building.Label,
+            MaxHp: building.MaxHp,
+            Stuff: building.Stuff,
+            RoomId: building.RoomId,
+            Power: BuildingPowerFrom(building.Power),
+            Fuel: BuildingFuelFrom(building.Fuel),
+            FlickableOn: building.FlickableOn,
+            Flammability: building.Flammability);
+
+    private static BuildingPower? BuildingPowerFrom(BuildingPowerDto? power) =>
+        power is null
+            ? null
+            : new BuildingPower(
+                Required: power.Required,
+                On: power.On,
+                ConsumptionW: power.ConsumptionW);
+
+    private static BuildingFuel? BuildingFuelFrom(BuildingFuelDto? fuel) =>
+        fuel is null
+            ? null
+            : new BuildingFuel(
+                Current: fuel.Current,
+                Capacity: fuel.Capacity,
+                FuelDef: fuel.FuelDef);
 
     public static WorkTableRecord FromWorkTableBills(string buildingId, IReadOnlyList<WorkTableBillDto> bills) =>
         new(

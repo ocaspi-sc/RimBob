@@ -203,15 +203,35 @@ public record ZoneDto(
 );
 
 // ── GET /map/buildings?map_id ─────────────────────────────────────────────────
-// Live wire fields (RIMAPI 1.9): id (int), def, label, position, rotation, size, type.
-// hp / power_on / is_working are NOT in the wire response — defaulted in MapBuildings.
-// TODO: expand when Willie begins or RIMAPI exposes hp/power state.
 public record BuildingDto(
     [property: JsonPropertyName("id")]       int          Id,
     [property: JsonPropertyName("def")]      string       Def,
     [property: JsonPropertyName("label")]    string?      Label,
     [property: JsonPropertyName("type")]     string?      Type,
-    [property: JsonPropertyName("position")] PositionDto? Position
+    [property: JsonPropertyName("position")] PositionDto? Position,
+    [property: JsonPropertyName("rotation")] int?         Rotation = null,
+    [property: JsonPropertyName("size")]     PositionDto? Size = null,
+    [property: JsonPropertyName("hp")]       float?       Hp = null,
+    [property: JsonPropertyName("max_hp")]   float?       MaxHp = null,
+    [property: JsonPropertyName("stuff")]    string?      Stuff = null,
+    [property: JsonPropertyName("room_id")]  int?         RoomId = null,
+    [property: JsonPropertyName("is_working")] bool?      IsWorking = null,
+    [property: JsonPropertyName("power")]    BuildingPowerDto? Power = null,
+    [property: JsonPropertyName("fuel")]     BuildingFuelDto? Fuel = null,
+    [property: JsonPropertyName("flickable_on")] bool?    FlickableOn = null,
+    [property: JsonPropertyName("flammability")] float?   Flammability = null
+);
+
+public record BuildingPowerDto(
+    [property: JsonPropertyName("required")]      bool  Required,
+    [property: JsonPropertyName("on")]            bool  On,
+    [property: JsonPropertyName("consumption_w")] float ConsumptionW
+);
+
+public record BuildingFuelDto(
+    [property: JsonPropertyName("current")]  float   Current,
+    [property: JsonPropertyName("capacity")] float   Capacity,
+    [property: JsonPropertyName("fuel_def")] string? FuelDef
 );
 
 public record WorkTableDto(

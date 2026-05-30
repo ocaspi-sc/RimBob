@@ -148,8 +148,19 @@ public sealed class IngestionDispatcherTests
         s.Stockpiles.Value.ItemsByDef.Should().ContainKey("MealSurvivalPack").WhoseValue.Should().Be(9);
         s.Animals.Value.Animals.Single().Position.Should().BeEquivalentTo(new { X = 40, Y = 0, Z = 45 });
         s.Stockpiles.Value.Zones.Single().Center.Should().BeEquivalentTo(new { X = 2, Y = 0, Z = 2 });
-        s.Buildings.Value.Buildings.Single().Position.Should().BeEquivalentTo(new { X = 5, Y = 0, Z = 5 });
-        s.Buildings.Value.Buildings.Single().Label.Should().Be("wooden bed");
+        BuildingRecord building = s.Buildings.Value.Buildings.Single();
+        building.Position.Should().BeEquivalentTo(new { X = 5, Y = 0, Z = 5 });
+        building.Label.Should().Be("wooden bed");
+        building.Hp.Should().Be(80f);
+        building.MaxHp.Should().Be(100f);
+        building.Stuff.Should().Be("WoodLog");
+        building.RoomId.Should().Be(1);
+        building.IsWorking.Should().BeTrue();
+        building.PowerOn.Should().BeTrue();
+        building.Power.Should().Be(new BuildingPower(Required: true, On: true, ConsumptionW: 0f));
+        building.Fuel.Should().Be(new BuildingFuel(Current: 2f, Capacity: 5f, FuelDef: "WoodLog"));
+        building.FlickableOn.Should().BeTrue();
+        building.Flammability.Should().Be(1f);
         s.Power.Value.ProductionW.Should().Be(2000f);
         s.Power.Value.ConsumptionW.Should().Be(1500f);
         s.Power.Value.StoredWd.Should().Be(100f);
@@ -778,7 +789,21 @@ public sealed class IngestionDispatcherTests
         };
         var buildings = new List<BuildingDto>
         {
-            new(1, "Bed", "wooden bed", "Building_Bed", new PositionDto(5, 0, 5))
+            new(
+                Id: 1,
+                Def: "Bed",
+                Label: "wooden bed",
+                Type: "Building_Bed",
+                Position: new PositionDto(5, 0, 5),
+                Hp: 80f,
+                MaxHp: 100f,
+                Stuff: "WoodLog",
+                RoomId: 1,
+                IsWorking: true,
+                Power: new BuildingPowerDto(Required: true, On: true, ConsumptionW: 0f),
+                Fuel: new BuildingFuelDto(Current: 2f, Capacity: 5f, FuelDef: "WoodLog"),
+                FlickableOn: true,
+                Flammability: 1f)
         };
         PowerInfoDto power = new(2000, 4000, 100, 500, 2200, 1500, [], [], []);
         var weather = new WeatherDto("Clear", 18f, 0f);

@@ -146,6 +146,8 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 
 > **Verified shape (RimBob fork).** `/map/rooms?map_id=...` returns `data.rooms[]`. Room rows include `id`, `role_label`, `temperature`, `cells_count`, `touches_map_edge`, `is_prison_cell`, `is_doorway`, `open_roof_count`, `contained_beds_ids[]`, and room stats `impressiveness`, `beauty`, `cleanliness`, `space`, `wealth`. With `include_cells=true`, `include_entry_cells=true`, `include_contained_buildings=true`, and `include_region=true`, the fork also emits `bounds`, bounded `cells[]`, boundary `entry_cells[]`, `region_id`, and general `contained_building_ids[]`; oversized rooms omit the detail fields rather than streaming huge room polygons. RimBob ingests this into `RoomRegistry` for read-only Welfare source briefings, Willie anchor quality, and the Placement Solver reuse-existing-footprint generator.
 
+> **Fork shape.** `/map/buildings?map_id=...` and `/map/building/info?id=...` now expose shared building condition fields: `hp`, `max_hp`, `stuff`, `room_id`, `is_working`, nested `power`, nested `fuel`, `flickable_on`, and `flammability`, alongside the original id/def/label/position/rotation/size/type fields. RimBob ingests these into `BuildingRecord`; this is a state snapshot schema change with no compat code, wipe-and-regen on upgrade.
+
 ### Bill (work-table recipes)
 | Method | Path | Purpose |
 |---|---|---|

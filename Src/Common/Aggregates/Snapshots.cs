@@ -107,14 +107,33 @@ public sealed record StockpileZone(string Id, string Type, string? Label, int Ce
 
 public sealed record BuildingRegistry(IReadOnlyList<BuildingRecord> Buildings);
 
+public sealed record BuildingPower(
+    bool Required,
+    bool On,
+    float ConsumptionW
+);
+
+public sealed record BuildingFuel(
+    float Current,
+    float Capacity,
+    string? FuelDef
+);
+
 public sealed record BuildingRecord(
     string Id,
     string Def,
-    float  Hp,
+    float? Hp,
     bool?  PowerOn,
     bool?  IsWorking,
     MapPosition? Position = null,
-    string? Label = null
+    string? Label = null,
+    float? MaxHp = null,
+    string? Stuff = null,
+    int? RoomId = null,
+    BuildingPower? Power = null,
+    BuildingFuel? Fuel = null,
+    bool? FlickableOn = null,
+    float? Flammability = null
 );
 
 public sealed record WorkTableRegistry(IReadOnlyList<WorkTableRecord> WorkTables);
