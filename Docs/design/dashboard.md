@@ -632,7 +632,7 @@ Shows the latest minister briefing grouped into readable sections rather than
 dumping raw JSON as the only view. Include raw/source inspection where useful,
 but keep the primary view scannable.
 
-Willie's Briefing view leads with a construction-focused readout for power stability, build queue/material blockers, functional room anchors, storage footprint, layout/fire risk basics, and data coverage, then keeps the source payload in raw JSON disclosures for inspection.
+Willie's Briefing view leads with a construction HUD: the eight Willie concerns render as severity-toned tiles, current boolean `dataCoverage` fields render as signal bars, and the existing construction readout covers power stability, build queue/material blockers, functional room anchors, storage footprint, and layout/fire-risk basics before the source payload. Raw source data for Willie lives behind one collapsed `Raw briefing` disclosure; richer three-state coverage, minimap overlays, gauges, and solver-trace filmstrips wait for later backend/UI slices.
 
 Chef's Briefing view should also show deterministic crop-candidate math as a
 compact inspector panel when the backend exposes it. The panel is read-only and
