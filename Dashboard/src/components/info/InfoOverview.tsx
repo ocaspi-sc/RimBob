@@ -982,7 +982,7 @@ export function InfoOverview({
       )}
 
       {selectedView === 'algorithms' && (
-        <DisclosureSection title={<span>Algorithms</span>} defaultOpen meta={`${algorithms.length} panels`}>
+        <>
           <div className="algorithm-shape-strip" aria-label="Algorithm grouping suggestions">
             {algorithmGroupingShapes.map(shape => (
               <article key={shape.name} className="algorithm-shape-card">
@@ -1001,14 +1001,14 @@ export function InfoOverview({
               return <AlgorithmGroupSection key={group.id} entries={entries} group={group} />;
             })}
           </div>
-        </DisclosureSection>
+        </>
       )}
     </div>
   );
 }
 
 function AlgorithmGroupSection({ entries, group }: { entries: AlgorithmEntry[]; group: AlgorithmGroup }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const buttonId = useId();
   const panelId = useId();
 

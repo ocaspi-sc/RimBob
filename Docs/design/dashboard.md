@@ -282,7 +282,7 @@ INFO owns:
 - Scope guide: when to use SYSTEM, ANALYTICS, and minister inspection views.
 - Data-source guide: which dashboard surfaces are live, persisted/restored,
   SSE/session buffered, or static reference copy.
-- Algorithms catalogue: static reference rows for the deterministic and planned algorithms RimBob uses or is evaluating, grouped by suggested shapes such as live placement pipeline, Food/RAG runtime, live Welfare runtime, planned spatial accelerators, owner bands, cost classes, and data shapes. Each algorithm gets one row with a large diagram, emoji-labeled facts, typed inputs, typed outputs, source links, Wikipedia links, runtime complexity, RimBob/minister context, and a short plain-language "how it works" paragraph.
+- Algorithms catalogue: static reference rows for the deterministic and planned algorithms RimBob uses or is evaluating, grouped by suggested shapes such as live placement pipeline, Food/RAG runtime, live Welfare runtime, planned spatial accelerators, owner bands, cost classes, and data shapes. Do not add a redundant visible "Algorithms" section inside the Algorithms tab; algorithm groups start collapsed, and each algorithm gets one row with a large diagram, emoji-labeled facts, typed inputs, typed outputs, source links, Wikipedia links, runtime complexity, RimBob/minister context, and a short plain-language "how it works" paragraph.
 
 ### ANALYTICS View
 
