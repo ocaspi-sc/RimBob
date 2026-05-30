@@ -142,17 +142,28 @@ usually an unenclosed/blocked test layout, not a code gap.
 
 ---
 
-## 4. Deliverable — capture a snapshot with options
+## 4. Deliverable — evidence that options attach
 
-Once freezer options render live:
-1. Run the **`update-dashboard-snapshot`** skill (added `f1276cd`) to regenerate
-   `web/Snapshot/`. Today `web/Snapshot/pages/willie/` has only advice/briefing/
-   rules and **no `build_queue.html`** — the capture should now include
-   `willie/build_queue.html` **with populated Proposed cards**.
-2. Optionally exercise the round-trip **once**: click **Apply** on an option,
-   confirm the freezer group places (RIMAPI `blueprint-group/place`) and readback
-   reports `thing_id`s. *(This is a real map write — only do it on a throwaway
-   save. Skip if you want verification without mutation.)*
+Acceptance is **observable state**, not a specific capture tool. Once freezer
+options render live, the proof is JSON:
+
+1. **Primary (JSON evidence, no browser):**
+   - `GET /api/ministers/willie/snapshot` → the `willie_freezer_request_active`
+     advice item carries `options[]` (≥1) with `place_blueprint_group` action
+     payloads; Rationale reports "N validated options".
+   - `GET /api/briefings/willie/latest` → `anchorInventory.anchors` contains the
+     resolved `Class:"kitchen"` anchor; `functionalRooms.roomCountsByClass`
+     counts it.
+   - Replay corpus `logs/replay/willie-*.jsonl` → newest
+     `output_kind:"placement_solver"` entry shows `status:"options"`,
+     `no_fit:null` (NOT `NoAnchors`).
+2. **Optional (visual only):** run the **`update-dashboard-snapshot`** skill to
+   regenerate `web/Snapshot/` if a static HTML artifact of the rendered Build
+   Queue → Proposed cards is wanted. This is a presentation export, **not** the
+   acceptance proof — skip it for routine verification.
+3. **Optional round-trip (mutation):** click **Apply** on an option once, confirm
+   the freezer group places (RIMAPI `blueprint-group/place`) and readback reports
+   `thing_id`s. *(Real map write — throwaway save only.)*
 
 ---
 
@@ -179,6 +190,61 @@ Once freezer options render live:
 - When options are absent, the freezer advice Rationale + Candidates view name the
   exact `NoFitReason`.
 - `update-dashboard-snapshot` captures `willie/build_queue.html` with options.
+
+## 9. Live verification — 2026-05-30 (closed via JSON evidence)
+
+**Commit under test:** `edd17b90` ("feat(willie): add multifunction anchors")
+**Host:** `http://localhost:5000`, map_id=0, 3 colonists, RimWorld live.
+**Evidence sources:** `GET /api/ministers/willie/snapshot` · `GET /api/briefings/willie/latest` · `C:\Users\orca\AppData\Local\RimBob\logs\replay\willie-20260530.jsonl`
+
+### L3 — RESOLVED: Kitchen anchor surfaced from FueledStove 44710
+
+`GET /api/briefings/willie/latest` → `.anchorInventory.anchors` contains three anchors, all on `roomId == "5"` (the barracks room that also holds the stove):
+
+| class | centroid | containedBuildingIds (excerpt) |
+|---|---|---|
+| `barracks` | {x:90, y:0, z:188} | …44710, 44848 |
+| `butcher`  | {x:94, y:0, z:186} | …44710, 44848 |
+| **`kitchen`** | **{x:93, y:0, z:186}** | …**44710**, 44848 |
+
+Building `44710` (FueledStove) appears in all three anchors' `containedBuildingIds`, confirming it was ingested via `/api/v1/map/work-tables` into `state.Buildings` and drove the `kitchen` class via `FromContainedBuildings`. The anchor's `roleLabel` is still `"barracks"` (the RIMAPI room label), but the `class` override to `"kitchen"` is correct.
+
+`.functionalRooms.roomCountsByClass` = `{ Barracks: 1, Butcher: 1, Kitchen: 1 }` — all three multifunction anchors registered.
+
+### Full chain L1 → L6 result
+
+| Link | Result |
+|---|---|
+| **L1** Food emits freezer request | PASS — advice item `willie_freezer_request_active` present in snapshot |
+| **L2** Willie trace = `freezer_request_active` | PASS — replay line 4: `selected_rule: "placement_solver"` |
+| **L3** Kitchen anchor exists | **RESOLVED** — `class: "kitchen"`, roomId 5, FueledStove 44710 (centroid {x:93,y:0,z:186}) |
+| **L4** Walkable route | PASS — solver proceeded past anchor resolution; no `NoReachablePath` |
+| **L5** Drafts generated, gated, fork-validated | PASS — 14 drafts in trace: 2 `validated` (template_anchored + largest_empty_rect), 1 `validation_rejected` (can_place_all_false on third candidate) |
+| **L6** Options attach | PASS — 2 options attached to advice item |
+
+**Willie snapshot** (`/api/ministers/willie/snapshot`) — `willie_freezer_request_active` rationale:
+> "Placement solver: 2 validated options; materials_ready=unknown, apply_ready=blocked."
+
+Both options: label `"Starter freezer"`, summary `"Validated 36-asset starter freezer near kitchen."`, asset_count 36. Option IDs: `placement_freezer_96_194` and `placement_freezer_81_194`.
+
+**Replay corpus** — `willie-20260530.jsonl` line 4 (captured 2026-05-30T17:33:55Z):
+- `output_kind: "placement_solver"`
+- `status: "options"` (not a no-fit)
+- `no_fit: null` — `NoAnchors` is NOT present
+- Trace: 2 drafts reach `status: "validated"`, anchor_room_id `"5"` throughout
+
+### §4 browser-snapshot deliverable superseded
+
+The original §4 deliverable (run `update-dashboard-snapshot`, capture `willie/build_queue.html` with populated Proposed cards) was replaced by operator decision with live API + replay-corpus JSON evidence. No browser tool was used. Evidence logged above from:
+- `GET http://localhost:5000/api/ministers/willie/snapshot`
+- `GET http://localhost:5000/api/briefings/willie/latest`
+- `C:\Users\orca\AppData\Local\RimBob\logs\replay\willie-20260530.jsonl` (line 4, `output_kind: placement_solver`)
+
+### Remaining downstream concern
+
+`apply_ready=blocked` and `materials_ready=unknown` on both options are expected at this stage — the apply-gate and material-readiness check are a separate concern not in scope of this runbook. This is tracked as the **freezer apply-readiness** follow-up slice (being authored in parallel as a sibling plan).
+
+---
 
 ## 8. HumanTodo capture (already in Tasks.md — relink to this plan)
 
