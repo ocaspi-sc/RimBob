@@ -51,6 +51,7 @@ public sealed class MinisterOfWillieTests
         option.Id.Should().Be("placement_freezer_10_12");
         option.Readiness.Should().NotBeNull();
         option.Readiness!.MaterialsReady.Should().Be("ready");
+        option.Readiness.ApplyReady.Should().Be("ready");
         PlaceBlueprintGroupApply apply = advice.Actions[1].Apply.Should().BeOfType<PlaceBlueprintGroupApply>().Subject;
         apply.Label.Should().Be(option.Label);
         apply.BlueprintGroup.Should().Be(option.BlueprintGroup);
@@ -83,6 +84,54 @@ public sealed class MinisterOfWillieTests
         applies.Select(apply => apply.Label).Should().Equal("Close freezer", "Cheap freezer");
         applies[0].BlueprintGroup.Should().Be(closeOption.BlueprintGroup);
         applies[1].BlueprintGroup.Should().Be(cheapOption.BlueprintGroup);
+    }
+
+    [Fact]
+    public async Task InboundFreezerFlag_PopulatesPlacementSpecMaterialsFromStoredResources()
+    {
+        FakePlacementSolver solver = FakePlacementSolver.WithOptions(PlacementOption());
+        Harness harness = new(solver);
+        harness.SetStableState();
+        harness.Colony.StoredResources.Update(new StoredResourceRegistry(
+            Items: [],
+            CountByDef: new Dictionary<string, int>
+            {
+                ["Steel"] = 106,
+                ["BlocksGranite"] = 90,
+                ["ComponentIndustrial"] = 3
+            },
+            CountByCategory: new Dictionary<string, int>()));
+        harness.Flags.Publish(FreezerFlag());
+
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
+
+        solver.LastSpec.Should().NotBeNull();
+        solver.LastSpec!.MaterialsOnHand.Should().Equal(
+            new MaterialHint("BlocksGranite", 90),
+            new MaterialHint("ComponentIndustrial", 3),
+            new MaterialHint("Steel", 106));
+    }
+
+    [Fact]
+    public async Task InboundFreezerFlag_WhenSolverBlocksApply_DoesNotAttachApplyPayload()
+    {
+        FakePlacementSolver solver = FakePlacementSolver.WithOptions(
+            PlacementReadiness.Blocked,
+            PlacementReadiness.Blocked,
+            PlacementOption());
+        Harness harness = new(solver);
+        harness.SetStableState();
+        harness.Flags.Publish(FreezerFlag());
+
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
+
+        AdviceItem advice = harness.Bus.ActiveAdvice().Should().ContainSingle().Subject;
+        advice.Actions.Should().ContainSingle();
+        advice.Actions.Should().NotContain(action => action.Apply is PlaceBlueprintGroupApply);
+        AdviceOption option = advice.Options.Should().ContainSingle().Subject;
+        option.Readiness.Should().NotBeNull();
+        option.Readiness!.MaterialsReady.Should().Be("blocked");
+        option.Readiness.ApplyReady.Should().Be("blocked");
     }
 
     [Fact]
@@ -280,14 +329,20 @@ public sealed class MinisterOfWillieTests
         public ColonyState? LastState { get; private set; }
 
         public static FakePlacementSolver WithOptions(params AdviceOption[] options) =>
+            WithOptions(PlacementReadiness.Ready, PlacementReadiness.Ready, options);
+
+        public static FakePlacementSolver WithOptions(
+            PlacementReadiness materialsReady,
+            PlacementReadiness applyReady,
+            params AdviceOption[] options) =>
             new(new PlacementResult(
                 Options: options,
                 Trace: Trace(),
                 NoFit: null,
                 Draftable: PlacementReadiness.Ready,
                 PlacementValid: PlacementReadiness.Ready,
-                MaterialsReady: PlacementReadiness.Ready,
-                ApplyReady: PlacementReadiness.Blocked));
+                MaterialsReady: materialsReady,
+                ApplyReady: applyReady));
 
         public static FakePlacementSolver WithNoFit(NoFitReason reason) =>
             new(new PlacementResult(

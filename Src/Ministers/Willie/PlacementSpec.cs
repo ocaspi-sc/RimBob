@@ -18,7 +18,9 @@ public sealed record PlacementSpec(
     string? Source,
     IReadOnlyList<string> Constraints)
 {
-    public static PlacementSpec FromBuildingRequest(BuildingRequest request) =>
+    public static PlacementSpec FromBuildingRequest(
+        BuildingRequest request,
+        IReadOnlyList<MaterialHint>? materialsOnHandOverride = null) =>
         new(
             Request: request.Request,
             Reason: request.Reason,
@@ -29,7 +31,7 @@ public sealed record PlacementSpec(
             Adjacency: request.Adjacency ?? [],
             Power: request.Power,
             Temperature: request.Temperature,
-            MaterialsOnHand: request.MaterialsOnHand ?? [],
+            MaterialsOnHand: materialsOnHandOverride ?? request.MaterialsOnHand ?? [],
             Deadline: request.Deadline,
             Priority: request.Priority,
             Source: request.RequestedFrom,

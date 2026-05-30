@@ -645,6 +645,8 @@ public sealed class AssistedApplyServiceTests
                     """);
             if (path.Contains("map/things", StringComparison.OrdinalIgnoreCase))
                 return JsonResponse("""{"success":true,"data":[],"errors":null}""");
+            if (path.Contains("map/work-tables", StringComparison.OrdinalIgnoreCase))
+                return JsonResponse("""{"success":true,"data":[],"errors":null}""");
             if (path.Contains("def/all", StringComparison.OrdinalIgnoreCase))
                 return JsonResponse("""{"success":true,"data":{"things_defs":[],"terrain_defs":[]},"errors":null}""");
             if (path.Contains("resources/stored", StringComparison.OrdinalIgnoreCase))

@@ -140,7 +140,9 @@ public sealed class MinisterOfWillie(
         WillieBriefing briefing,
         CancellationToken ct)
     {
-        PlacementSpec spec = PlacementSpec.FromBuildingRequest(request);
+        PlacementSpec spec = PlacementSpec.FromBuildingRequest(
+            request,
+            MaterialsOnHandFromStoredResources());
         try
         {
             PlacementResult result = await placementSolver.SolveAsync(spec, briefing, colonyState, ct);
@@ -155,6 +157,18 @@ public sealed class MinisterOfWillie(
             log.LogWarning(ex, "Willie placement solver failed for freezer request={Request}", request.Request);
             return PlacementSolveAttempt.FromFailure(ex);
         }
+    }
+
+    private IReadOnlyList<MaterialHint>? MaterialsOnHandFromStoredResources()
+    {
+        IReadOnlyDictionary<string, int> countByDef = colonyState.StoredResources.Value.CountByDef;
+        if (countByDef.Count == 0) return null;
+
+        return countByDef
+            .OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(pair => pair.Key, StringComparer.Ordinal)
+            .Select(pair => new MaterialHint(pair.Key, pair.Value))
+            .ToList();
     }
 
     private static IReadOnlyList<AdviceItem> EnrichFreezerAdvice(
@@ -191,7 +205,8 @@ public sealed class MinisterOfWillie(
                 })
                 .ToList();
 
-        IReadOnlyList<AdviceAction> actions = options is { Count: > 0 }
+        IReadOnlyList<AdviceAction> actions = options is { Count: > 0 } &&
+            result.ApplyReady != PlacementReadiness.Blocked
             ? item.Actions.Concat(options.Select(ApplyActionForOption)).ToList()
             : item.Actions;
 

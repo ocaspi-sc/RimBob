@@ -171,7 +171,9 @@ public sealed class PlacementSolver : IPlacementSolver
             .Select(candidate => AssembleOption(spec, candidate.Score, candidate.Validation))
             .ToList();
         PlacementReadiness materialsReady = MaterialReadiness(spec, finalCandidates.Select(candidate => candidate.Validation.Cost));
-        notes.Add("group_place_apply_out_of_scope");
+        PlacementReadiness applyReady = materialsReady is PlacementReadiness.Ready or PlacementReadiness.Unknown
+            ? PlacementReadiness.Ready
+            : PlacementReadiness.Blocked;
         return new PlacementResult(
             Options: options,
             Trace: new PlacementTrace("placement_solver", draftTraces, notes),
@@ -179,7 +181,7 @@ public sealed class PlacementSolver : IPlacementSolver
             Draftable: PlacementReadiness.Ready,
             PlacementValid: PlacementReadiness.Ready,
             MaterialsReady: materialsReady,
-            ApplyReady: PlacementReadiness.Blocked);
+            ApplyReady: applyReady);
     }
 
     private static GenerationBudget BudgetFor(IPlacementGenerator generator) =>

@@ -28,6 +28,8 @@ public sealed class PlacementSolverTests
         result.Draftable.Should().Be(PlacementReadiness.Ready);
         result.PlacementValid.Should().Be(PlacementReadiness.Ready);
         result.MaterialsReady.Should().Be(PlacementReadiness.Ready);
+        result.ApplyReady.Should().Be(PlacementReadiness.Ready);
+        result.Trace.Notes.Should().NotContain("group_place_apply_out_of_scope");
         MetricValue metric = result.Trace.Drafts
             .Where(trace => trace.Status == "scored")
             .SelectMany(trace => trace.Metrics)
@@ -39,6 +41,42 @@ public sealed class PlacementSolverTests
         result.Trace.Drafts.Where(trace => trace.Status == "validated").Should().HaveCount(3);
         validator.ValidateCount.Should().Be(3);
         validator.ValidatedGroup.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task SolveAsync_WithValidatedDraftAndUnknownMaterials_AllowsApply()
+    {
+        PlacementSolver solver = new(
+            new FakePathCostProbe(reachable: true, cost: 12),
+            new FakePlacementValidator(canPlaceAll: true));
+
+        PlacementResult result = await solver.SolveAsync(
+            SpecWithMaterials() with { MaterialsOnHand = [] },
+            Briefing(),
+            State([]));
+
+        result.NoFit.Should().BeNull();
+        result.Options.Should().NotBeEmpty();
+        result.MaterialsReady.Should().Be(PlacementReadiness.Unknown);
+        result.ApplyReady.Should().Be(PlacementReadiness.Ready);
+    }
+
+    [Fact]
+    public async Task SolveAsync_WithValidatedDraftAndShortMaterials_BlocksApply()
+    {
+        PlacementSolver solver = new(
+            new FakePathCostProbe(reachable: true, cost: 12),
+            new FakePlacementValidator(canPlaceAll: true));
+
+        PlacementResult result = await solver.SolveAsync(
+            SpecWithMaterials() with { MaterialsOnHand = [new MaterialHint("BlocksGranite", 4)] },
+            Briefing(),
+            State([]));
+
+        result.NoFit.Should().BeNull();
+        result.Options.Should().NotBeEmpty();
+        result.MaterialsReady.Should().Be(PlacementReadiness.Blocked);
+        result.ApplyReady.Should().Be(PlacementReadiness.Blocked);
     }
 
     [Fact]
@@ -56,6 +94,7 @@ public sealed class PlacementSolverTests
         result.NoFit.Should().Be(NoFitReason.NoAnchors);
         result.Options.Should().BeEmpty();
         result.Draftable.Should().Be(PlacementReadiness.Blocked);
+        result.ApplyReady.Should().Be(PlacementReadiness.Blocked);
         result.Trace.Notes.Should().Contain("no resolved near-anchor with a target cell");
     }
 
