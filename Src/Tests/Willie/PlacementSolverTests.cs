@@ -62,7 +62,7 @@ public sealed class PlacementSolverTests
     }
 
     [Fact]
-    public async Task SolveAsync_WithValidatedDraftAndShortMaterials_BlocksApply()
+    public async Task SolveAsync_WithValidatedDraftAndShortMaterials_AllowsApply()
     {
         PlacementSolver solver = new(
             new FakePathCostProbe(reachable: true, cost: 12),
@@ -76,7 +76,7 @@ public sealed class PlacementSolverTests
         result.NoFit.Should().BeNull();
         result.Options.Should().NotBeEmpty();
         result.MaterialsReady.Should().Be(PlacementReadiness.Blocked);
-        result.ApplyReady.Should().Be(PlacementReadiness.Blocked);
+        result.ApplyReady.Should().Be(PlacementReadiness.Ready);
     }
 
     [Fact]

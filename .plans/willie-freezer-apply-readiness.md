@@ -6,8 +6,8 @@ The Willie freezer advice item (`willie_freezer_request_active`) carries 2 valid
 placement options but the Apply button remains locked: `apply_ready=blocked` and
 `materials_ready=unknown`. Both states are hardcoded stubs placed intentionally
 during the `willie-option-apply-payload` slice (commit `5dd05f5`). This plan
-identifies the two independent root causes and describes the edits to make
-`materials_ready` compute from live stock and `apply_ready` follow from it.
+identifies the two independent root causes and describes the edits that made
+`materials_ready` compute from live stock; [`willie-apply-ignore-materials.md`](willie-apply-ignore-materials.md) later supersedes the materials-derived `apply_ready` rule.
 
 ## Current Evidence
 
@@ -97,7 +97,9 @@ solver has no path to `ColonyState`).
 
 ## Scope
 
-### Part A — Remove the `apply_ready` hardcode and derive it from `materials_ready`
+**Superseded (in part):** [`willie-apply-ignore-materials.md`](willie-apply-ignore-materials.md) replaces Part A's materials-derived `apply_ready` rule with `apply_ready = placement_valid`; Part B's live stock feed for `materials_ready` still stands.
+
+### Part A — Superseded: remove the `apply_ready` hardcode
 
 - **`Src\Ministers\Willie\PlacementSolver.cs`**  
   In the success path (line 174–182): remove `notes.Add("group_place_apply_out_of_scope")`.

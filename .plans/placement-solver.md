@@ -163,9 +163,7 @@ score(candidate):
         diversity_bonus)
 ```
 
-Material shortage should block `apply_ready`, not hide a good layout candidate.
-A draft can be worth showing when it is `placement_valid` but not yet
-`materials_ready`, as long as the option label and tradeoff note make that clear.
+Material shortage should mark `materials_ready`, not block `apply_ready`; Apply follows `placement_valid` because blueprint placement consumes no stock and the live validate/place gate checks footprint safety. A draft can be worth showing and applying when it is `placement_valid` but not yet `materials_ready`, as long as the option label, readiness pill, and tradeoff note make the shortage clear. See [`willie-apply-ignore-materials.md`](willie-apply-ignore-materials.md).
 
 ### 3.3 Metric value trace
 

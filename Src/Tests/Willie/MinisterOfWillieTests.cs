@@ -136,11 +136,11 @@ public sealed class MinisterOfWillieTests
     }
 
     [Fact]
-    public async Task InboundFreezerFlag_WhenSolverBlocksApply_DoesNotAttachApplyPayload()
+    public async Task InboundFreezerFlag_WhenMaterialsAreShort_AttachesApplyPayload()
     {
         FakePlacementSolver solver = FakePlacementSolver.WithOptions(
             PlacementReadiness.Blocked,
-            PlacementReadiness.Blocked,
+            PlacementReadiness.Ready,
             PlacementOption());
         Harness harness = new(solver);
         harness.SetStableState();
@@ -149,12 +149,13 @@ public sealed class MinisterOfWillieTests
         await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
 
         AdviceItem advice = harness.Bus.ActiveAdvice().Should().ContainSingle().Subject;
-        advice.Actions.Should().ContainSingle();
-        advice.Actions.Should().NotContain(action => action.Apply is PlaceBlueprintGroupApply);
+        advice.Actions.Should().HaveCount(2);
+        advice.Actions.Should().Contain(action => action.Apply is PlaceBlueprintGroupApply);
         AdviceOption option = advice.Options.Should().ContainSingle().Subject;
         option.Readiness.Should().NotBeNull();
         option.Readiness!.MaterialsReady.Should().Be("blocked");
-        option.Readiness.ApplyReady.Should().Be("blocked");
+        option.Readiness.ApplyReady.Should().Be("ready");
+        advice.Rationale.Should().Contain("materials_ready=blocked, apply_ready=ready");
     }
 
     [Fact]

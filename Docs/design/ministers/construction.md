@@ -127,6 +127,8 @@ the normalized 0-1 values used for ranking. Status facts such as `draftable`,
 `placement_valid`, `materials_ready`, `apply_ready`, and RIMAPI validation state
 stay booleans/enums rather than fake unit-bearing metrics.
 
+Material shortage is advisory for blueprint placement: `materials_ready` can be blocked while `apply_ready` stays ready when the footprint is validated, because pawns haul materials after the blueprint group exists.
+
 The executable Apply (place a chosen layout) renders in **Willie's own
 dashboard scope** for options where Willie emits an explicit action apply
 payload.

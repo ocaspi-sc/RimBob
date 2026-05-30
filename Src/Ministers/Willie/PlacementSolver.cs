@@ -171,17 +171,16 @@ public sealed class PlacementSolver : IPlacementSolver
             .Select(candidate => AssembleOption(spec, candidate.Score, candidate.Validation))
             .ToList();
         PlacementReadiness materialsReady = MaterialReadiness(spec, finalCandidates.Select(candidate => candidate.Validation.Cost));
-        PlacementReadiness applyReady = materialsReady is PlacementReadiness.Ready or PlacementReadiness.Unknown
-            ? PlacementReadiness.Ready
-            : PlacementReadiness.Blocked;
+        PlacementReadiness placementValid = PlacementReadiness.Ready;
+        // Blueprint placement consumes no stock; pawns haul materials after the blueprints exist.
         return new PlacementResult(
             Options: options,
             Trace: new PlacementTrace("placement_solver", draftTraces, notes),
             NoFit: null,
             Draftable: PlacementReadiness.Ready,
-            PlacementValid: PlacementReadiness.Ready,
+            PlacementValid: placementValid,
             MaterialsReady: materialsReady,
-            ApplyReady: applyReady);
+            ApplyReady: placementValid);
     }
 
     private static GenerationBudget BudgetFor(IPlacementGenerator generator) =>

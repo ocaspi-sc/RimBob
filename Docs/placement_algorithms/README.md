@@ -74,7 +74,7 @@ for candidate in top_k:
 ## Transfer Rules
 
 - Generate from anchors, templates, and empty-space regions. Avoid scanning every cell with every possible room shape.
-- Separate draft validity from execution readiness. Material shortage should block apply, not hide a good layout candidate.
+- Separate draft validity from material readiness. Material shortage should surface as advisory readiness, while apply follows validated footprint placement.
 - Keep RIMAPI as final truth for placement. Offline tables are proposal accelerators, not authority.
 - Expose rejection reasons in the dashboard: `occupied`, `terrain_affordance`, `blocked_path`, `material_shortage`, `rimapi_rejected`.
 
