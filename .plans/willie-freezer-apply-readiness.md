@@ -207,3 +207,22 @@ couples the solver to `ColonyState` when the minister already has the data.
 - The apply executor (`AssistedApplyService.ApplyBlueprintGroupAsync`) is the live
   safety net; `apply_ready=Ready` does not bypass it — the executor still runs
   validate → place → readback on every click.
+
+## Summary — Landed `f721618` (2026-05-30)
+
+`fix(willie): derive freezer apply readiness`. Part A + Part B1 both landed.
+
+- `PlacementSolver.cs`: removed the unconditional `ApplyReady=Blocked` + stale
+  `group_place_apply_out_of_scope` note; apply-ready now derives from
+  materials-ready (Ready/Unknown → Ready, Blocked → Blocked). NoFit path stays Blocked.
+- `PlacementSpec.cs` + `MinisterOfWillie.TrySolvePlacementAsync`: `ColonyState.
+  StoredResources.CountByDef` feeds `MaterialsOnHand`, so `MaterialReadiness`
+  compares against real stock instead of always returning Unknown.
+- Tests: `PlacementSolverTests` (+39), `MinisterOfWillieTests` (+59),
+  `AssistedApplyServiceTests` aligned with work-table ingestion. Suite green at land.
+
+Landed **before** `willie-nonfreezer-solver-wiring` (`8d66711`) — collision on
+`MinisterOfWillie.cs` avoided; the non-freezer Enrich inherits this readiness wiring.
+
+Not re-verified live this closeout — confirm via `GET /api/ministers/willie/snapshot`
+that freezer options show `materials_ready`/`apply_ready` non-blocked when stock exists.
