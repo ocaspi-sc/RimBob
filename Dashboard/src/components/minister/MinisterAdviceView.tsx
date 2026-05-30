@@ -4,7 +4,6 @@ import type {
   AdviceActionApply,
   AdviceApplyResponse,
   AdviceItem,
-  AdviceOption,
   AgentFlag,
   AttentionRequest,
   BuildingRequest,
@@ -645,32 +644,6 @@ function AdviceCard({
           </div>
         </DisclosureSection>
       )}
-      {(item.options?.length ?? 0) > 0 && (
-        <DisclosureSection
-          title={<SemanticLabel icon={iconForActionKind('place_blueprint')}><span>Placement options</span></SemanticLabel>}
-          defaultOpen
-          meta={`${item.options?.length ?? 0} options`}
-        >
-          <div className="action-list">
-            {item.options?.map(option => {
-              const actionIcon = iconForActionKind('place_blueprint');
-              return (
-                <div key={`${item.id}-option-${option.id}`}>
-                  <GameIcon
-                    fallback={actionIcon?.fallback ?? '-'}
-                    label={actionIcon?.label ?? 'Blueprint option icon'}
-                    size="xs"
-                    src={iconUrlFor(actionIcon?.ref)}
-                  />
-                  <strong>{option.label}</strong>
-                  <span><IconizedText maxIcons={2} text={option.summary} /></span>
-                  <small>{formatPlacementOptionDetails(option)}</small>
-                </div>
-              );
-            })}
-          </div>
-        </DisclosureSection>
-      )}
       {(item.suggested_actions?.length ?? 0) > 0 && (
         <DisclosureSection
           title={<SemanticLabel icon={iconForField('suggested_actions')}><span>Suggested actions</span></SemanticLabel>}
@@ -707,29 +680,6 @@ type ActionApplyState = {
   response: AdviceApplyResponse | null;
   error: string | null;
 };
-
-function formatPlacementOptionDetails(option: AdviceOption): string {
-  const parts = [
-    `${option.blueprint_group.assets.length} assets`,
-    formatOptionMaterials(option),
-    option.tradeoff_note ?? null,
-    formatOptionReadiness(option),
-  ].filter((part): part is string => Boolean(part));
-
-  return parts.join(' | ');
-}
-
-function formatOptionMaterials(option: AdviceOption): string | null {
-  if (option.est_materials.length === 0) return null;
-  return `Materials: ${option.est_materials
-    .map(material => `${material.count} ${material.def_name}`)
-    .join(', ')}`;
-}
-
-function formatOptionReadiness(option: AdviceOption): string | null {
-  if (!option.readiness) return null;
-  return `Ready: draft=${option.readiness.draftable}, placement=${option.readiness.placement_valid}, materials=${option.readiness.materials_ready}, apply=${option.readiness.apply_ready}`;
-}
 
 type AdviceExpiryState = {
   expired: boolean;
