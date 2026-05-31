@@ -1,5 +1,7 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Net.Http;
+using System.Net.Sockets;
 using System.Text.Json;
 using RimBob.Coordination;
 using RimBob.Core.Advice;
@@ -92,6 +94,43 @@ public sealed class MinisterOfWillieTests
         applies.Select(apply => apply.Label).Should().Equal("Close freezer", "Cheap freezer");
         applies[0].BlueprintGroup.Should().Be(closeOption.BlueprintGroup);
         applies[1].BlueprintGroup.Should().Be(cheapOption.BlueprintGroup);
+    }
+
+    [Fact]
+    public async Task InboundFreezerFlag_WhenConnectionFails_PreservesPriorOptionsSnapshot()
+    {
+        await SolverOfflinePreservesPriorOptionsAsync(
+            new HttpRequestException(
+                "connection refused",
+                new SocketException((int)SocketError.ConnectionRefused)));
+    }
+
+    [Fact]
+    public async Task InboundFreezerFlag_WhenNoMapIsLoaded_PreservesPriorOptionsSnapshot()
+    {
+        await SolverOfflinePreservesPriorOptionsAsync(
+            new RimApiLiveStateUnavailableException(
+                RimApiLiveStateUnavailableReason.NoLoadedMap,
+                "RIMAPI returned no maps. Load a colony map before refreshing live state."));
+    }
+
+    [Fact]
+    public async Task InboundFreezerFlag_WhenSolverFailsForNonConnectionReason_PublishesProseDegrade()
+    {
+        FakePlacementSolver solver = FakePlacementSolver.Throwing(new InvalidOperationException("validator broke"));
+        Harness harness = new(solver);
+        harness.SetStableState();
+        harness.Flags.Publish(FreezerFlag());
+
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
+
+        AdviceItem advice = harness.Bus.ActiveAdvice().Should().ContainSingle().Subject;
+        advice.Id.Should().Be("willie_building_request_active");
+        advice.Options.Should().BeNull();
+        advice.Rationale.Should().Contain("Placement solver unavailable: InvalidOperationException. Keeping prose advice.");
+        harness.OutputStore.GetAdviceSnapshot("Willie")!.Advice.Should().ContainSingle()
+            .Which.Id.Should().Be("willie_building_request_active");
+        harness.SolverStore.Latest("Willie")!.Status.Should().Be("error");
     }
 
     [Fact]
@@ -284,6 +323,44 @@ public sealed class MinisterOfWillieTests
             .Which.Target.Should().Be("storage");
     }
 
+    private static async Task SolverOfflinePreservesPriorOptionsAsync(Exception solverException)
+    {
+        FakePlacementSolver solver = FakePlacementSolver.Throwing(solverException);
+        CapturingReplayWriter replay = new();
+        Harness harness = new(solver, replay);
+        harness.SetStableState();
+        AdviceItem priorAdvice = PriorOptionsAdvice();
+        harness.Bus.ReplaceMinisterAdvice("Willie", [priorAdvice], "Prior Willie options.");
+        harness.Flags.Publish(FreezerFlag());
+
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
+
+        AdviceItem activeAdvice = harness.Bus.ActiveAdvice().Should().ContainSingle().Subject;
+        activeAdvice.Id.Should().Be(priorAdvice.Id);
+        activeAdvice.Options.Should().ContainSingle()
+            .Which.Id.Should().Be(priorAdvice.Options!.Single().Id);
+        activeAdvice.Actions.Should().Contain(action => action.Apply is PlaceBlueprintGroupApply);
+
+        AdviceSnapshot persisted = harness.OutputStore.GetAdviceSnapshot("Willie")
+            ?? throw new InvalidOperationException("Expected Willie snapshot to remain persisted.");
+        persisted.Advice.Should().ContainSingle()
+            .Which.Id.Should().Be(priorAdvice.Id);
+        persisted.Advice.Single().Options.Should().ContainSingle()
+            .Which.Id.Should().Be(priorAdvice.Options!.Single().Id);
+
+        MinisterReplayRecord record = replay.Records.Should().ContainSingle().Subject;
+        record.OutputKind.Should().Be("placement_solver");
+        PlacementSolverReplayOutput output = record.Output.Should().BeOfType<PlacementSolverReplayOutput>().Subject;
+        output.Status.Should().Be("offline");
+        record.Advice.Should().ContainSingle()
+            .Which.Rationale.Should().Contain("Placement solver offline");
+
+        WillieSolverSnapshot solverSnapshot = harness.SolverStore.Latest("Willie")
+            ?? throw new InvalidOperationException("Expected Willie solver snapshot.");
+        solverSnapshot.Status.Should().Be("offline");
+        harness.Traces.Latest("Willie")!.Note.Should().Contain("solver offline; preserved prior advice");
+    }
+
     private static AgentFlag FreezerFlag(string requestedFrom = "Willie") =>
         new(
             Id: "food:freezer_missing",
@@ -343,17 +420,50 @@ public sealed class MinisterOfWillieTests
             EstimatedMaterials: [new MaterialEstimate("BlocksGranite", 5)],
             TradeoffNote: "Closest to kitchen.");
 
+    private static AdviceItem PriorOptionsAdvice()
+    {
+        AdviceOption option = PlacementOption("placement_freezer_prior", "Prior freezer", 40);
+        return new AdviceItem(
+            Id: "willie_prior_options",
+            Minister: "Willie",
+            Concern: "thermal_control",
+            Priority: AdvicePriority.Medium,
+            Title: "Prior freezer options",
+            Body: "Previously solved freezer placement.",
+            Rationale: "Keep this solved placement while live validation is unavailable.",
+            Actions:
+            [
+                new AdviceAction(
+                    AdviceActionKind.PlaceBlueprint,
+                    "Place the prior freezer blueprint group.",
+                    Owner: "Willie",
+                    Apply: new PlaceBlueprintGroupApply(
+                        Label: option.Label,
+                        TargetSummary: option.Summary,
+                        MapId: option.BlueprintGroup.MapId,
+                        BlueprintGroup: option.BlueprintGroup,
+                        AssetCount: option.BlueprintGroup.Assets.Count))
+            ],
+            GuideCitationIds: [],
+            IssuedAt: FixedNow,
+            ExpiresAt: FixedNow.AddHours(6),
+            Options: [option]);
+    }
+
     private sealed class Harness
     {
         public ColonyState Colony { get; } = new();
-        public AdviceBus Bus { get; } = new();
+        public AdviceBus Bus { get; }
         public BriefingCache Cache { get; }
         public FlagChannel Flags { get; } = new();
         public MinisterOfWillie Minister { get; }
+        public MinisterOutputStore OutputStore { get; } = new();
         public WillieSolverStore SolverStore { get; } = new();
+        public MinisterTraceStore Traces { get; } = new();
 
         public Harness(IPlacementSolver? solver = null, IReplayCorpusWriter? replay = null)
         {
+            Bus = new AdviceBus(OutputStore);
             Cache = new BriefingCache(Colony, new TestLogger<BriefingCache>());
             Minister = new(
                 Cache,
@@ -361,11 +471,12 @@ public sealed class MinisterOfWillieTests
                 solver ?? FakePlacementSolver.WithNoFit(NoFitReason.NoDrafts),
                 Colony,
                 SolverStore,
-                new MinisterOutputStore(),
+                OutputStore,
                 Bus,
                 Flags,
+                Traces,
                 NullLogger<MinisterOfWillie>.Instance,
-                replay is null ? null : new MinisterReplayRecorder(replay));
+                replay is null ? null : new MinisterReplayRecorder(replay, traces: Traces));
         }
 
         public void SetStableState()
@@ -422,7 +533,7 @@ public sealed class MinisterOfWillieTests
                 Wealth: null);
     }
 
-    private sealed class FakePlacementSolver(PlacementResult result) : IPlacementSolver
+    private sealed class FakePlacementSolver(PlacementResult? result, Exception? exception = null) : IPlacementSolver
     {
         public int CallCount { get; private set; }
         public PlacementSpec? LastSpec { get; private set; }
@@ -454,6 +565,9 @@ public sealed class MinisterOfWillieTests
                 MaterialsReady: PlacementReadiness.Unknown,
                 ApplyReady: PlacementReadiness.Blocked));
 
+        public static FakePlacementSolver Throwing(Exception exception) =>
+            new(null, exception);
+
         public Task<PlacementResult> SolveAsync(
             PlacementSpec spec,
             WillieBriefing briefing,
@@ -463,7 +577,10 @@ public sealed class MinisterOfWillieTests
             CallCount++;
             LastSpec = spec;
             LastState = colonyState;
-            return Task.FromResult(result);
+            if (exception is not null)
+                return Task.FromException<PlacementResult>(exception);
+
+            return Task.FromResult(result ?? throw new InvalidOperationException("Fake solver has no result."));
         }
 
         private static PlacementTrace Trace() =>

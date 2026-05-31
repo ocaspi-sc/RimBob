@@ -104,7 +104,8 @@ public sealed class IngestionDispatcherTests
 
             Func<Task> act = () => dispatcher.RefreshAllAsync();
 
-            await act.Should().ThrowAsync<InvalidOperationException>()
+            await act.Should().ThrowAsync<RimApiLiveStateUnavailableException>()
+                .Where(ex => ex.Reason == RimApiLiveStateUnavailableReason.NoLoadedMap)
                 .WithMessage("*no maps*");
             File.Exists(path).Should().BeFalse();
             store.GetStatus().HasSnapshot.Should().BeFalse();
@@ -631,7 +632,8 @@ public sealed class IngestionDispatcherTests
 
         var act = () => dispatcher.RefreshAllAsync();
 
-        await act.Should().ThrowAsync<InvalidOperationException>()
+        await act.Should().ThrowAsync<RimApiLiveStateUnavailableException>()
+            .Where(ex => ex.Reason == RimApiLiveStateUnavailableReason.NoLoadedMap)
             .WithMessage("*no maps*");
     }
 

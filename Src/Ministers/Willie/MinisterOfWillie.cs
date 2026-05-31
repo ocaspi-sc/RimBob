@@ -16,9 +16,12 @@ public sealed class MinisterOfWillie(
     MinisterOutputStore outputStore,
     AdviceBus bus,
     FlagChannel flags,
+    MinisterTraceStore traces,
     ILogger<MinisterOfWillie> log,
     MinisterReplayRecorder? replay = null) : IMinister
 {
+    private const string SolverOfflineTraceNote = "solver offline; preserved prior advice";
+
     public string Name => "Willie";
 
     public async Task RunPlayCycle(PlayCycleContext cycle, CancellationToken ct)
@@ -51,6 +54,30 @@ public sealed class MinisterOfWillie(
                         GameTick: briefing.GameTick,
                         CapturedAt: DateTimeOffset.UtcNow,
                         Output: attempt.ReplayOutput));
+
+                    if (attempt.SolverOffline)
+                    {
+                        string preservedStateSummary = WillieStateSummary.Build(briefing);
+                        RuleTraceDetails? preservedDiagnostics = decision.Diagnostics?.WithEmissions("rules", decision.Trace, advice, decision.Flags);
+                        await PersistReplayAsync(new MinisterReplayEntry(
+                            Minister: Name,
+                            Cycle: cycle,
+                            Path: "rules",
+                            Briefing: briefing,
+                            Context: context,
+                            RuleTrace: decision.Trace,
+                            RuleDiagnostics: preservedDiagnostics,
+                            Advice: advice,
+                            Flags: decision.Flags,
+                            StateSummary: preservedStateSummary,
+                            OutputKind: "placement_solver",
+                            Output: placementReplayOutput), ct);
+                        traces.Complete(Name, SolverOfflineTraceNote);
+                        log.LogInformation(
+                            "Willie placement solver offline for trace={Trace}; preserved prior advice snapshot",
+                            decision.Trace);
+                        return;
+                    }
                 }
 
                 string stateSummary = WillieStateSummary.Build(briefing);
@@ -173,6 +200,16 @@ public sealed class MinisterOfWillie(
         catch (OperationCanceledException)
         {
             throw;
+        }
+        catch (Exception ex) when (
+            RimApiConnectionFailure.IsConnectionFailure(ex) ||
+            ex is RimApiLiveStateUnavailableException)
+        {
+            log.LogWarning(
+                ex,
+                "Willie placement solver is offline for request={Request}; preserving prior advice.",
+                request.Request);
+            return PlacementSolveAttempt.FromSolverOffline(ex);
         }
         catch (Exception ex)
         {
@@ -369,13 +406,15 @@ public sealed class MinisterOfWillie(
     private sealed record PlacementSolveAttempt(
         PlacementResult? Result,
         string Note,
-        PlacementSolverReplayOutput ReplayOutput)
+        PlacementSolverReplayOutput ReplayOutput,
+        bool SolverOffline)
     {
         public static PlacementSolveAttempt FromResult(PlacementResult result, BuildingRequest request) =>
             new(
                 result,
                 NoteFor(result, request),
-                PlacementSolverReplayOutput.FromResult(result));
+                PlacementSolverReplayOutput.FromResult(result),
+                SolverOffline: false);
 
         public static PlacementSolveAttempt FromFailure(Exception ex)
         {
@@ -384,7 +423,19 @@ public sealed class MinisterOfWillie(
             return new PlacementSolveAttempt(
                 null,
                 note,
-                PlacementSolverReplayOutput.FromFailure(errorType, ex.Message));
+                PlacementSolverReplayOutput.FromFailure(errorType, ex.Message),
+                SolverOffline: false);
+        }
+
+        public static PlacementSolveAttempt FromSolverOffline(Exception ex)
+        {
+            string errorType = ex.GetType().Name;
+            string note = $"Placement solver offline: {errorType}. Preserved prior advice.";
+            return new PlacementSolveAttempt(
+                null,
+                note,
+                PlacementSolverReplayOutput.FromOffline(errorType, ex.Message),
+                SolverOffline: true);
         }
     }
 }
@@ -415,6 +466,18 @@ public sealed record PlacementSolverReplayOutput(
     public static PlacementSolverReplayOutput FromFailure(string errorType, string errorMessage) =>
         new(
             Status: "error",
+            NoFit: null,
+            Draftable: null,
+            PlacementValid: null,
+            MaterialsReady: null,
+            ApplyReady: null,
+            Trace: null,
+            ErrorType: errorType,
+            ErrorMessage: errorMessage);
+
+    public static PlacementSolverReplayOutput FromOffline(string errorType, string errorMessage) =>
+        new(
+            Status: "offline",
             NoFit: null,
             Draftable: null,
             PlacementValid: null,
