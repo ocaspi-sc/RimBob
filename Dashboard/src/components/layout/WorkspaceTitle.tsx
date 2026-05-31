@@ -4,20 +4,34 @@ import { SemanticIconCue } from '../shared/SemanticIcon';
 
 export function WorkspaceTitle({
   lastRunLabel,
-  onTrigger,
-  onTriggerRules,
+  llmPending,
+  onRunLlm,
+  onRunRules,
+  rulesPending,
   scope,
   triggerDisabled,
-  triggerPending,
 }: {
   lastRunLabel: string;
-  onTrigger: () => void;
-  onTriggerRules: () => void;
+  llmPending: boolean;
+  onRunLlm: () => void;
+  onRunRules: () => void;
+  rulesPending: boolean;
   scope: ScopeConfig;
   triggerDisabled: boolean;
-  triggerPending: boolean;
 }) {
   const canTrigger = scope.kind === 'minister' && scope.status === 'live';
+  const canRunLlm = canTrigger && scope.canRunLlm === true;
+  const canRunRules = canTrigger && scope.canRunRules === true;
+  const llmTitle = canRunLlm
+    ? `Run ${scope.label}'s LLM path`
+    : canTrigger
+      ? `${scope.label} has no LLM trigger wired yet`
+      : `${scope.label} is not wired yet`;
+  const rulesTitle = canRunRules
+    ? `Run ${scope.label}'s deterministic rules path only`
+    : canTrigger
+      ? `${scope.label} has no rules-only trigger wired yet`
+      : `${scope.label} is not wired yet`;
   return (
     <header className="workspace-title">
       <div>
@@ -31,23 +45,24 @@ export function WorkspaceTitle({
           <button
             type="button"
             className="trigger-button"
-            disabled={!canTrigger || triggerDisabled}
-            aria-busy={triggerPending}
-            onClick={onTrigger}
-            title={canTrigger ? `Trigger ${scope.label} manually` : `${scope.label} is not wired yet`}
+            disabled={!canRunLlm || triggerDisabled}
+            aria-busy={llmPending}
+            onClick={onRunLlm}
+            title={llmTitle}
           >
-            {triggerPending ? 'Running...' : canTrigger ? `Run ${scope.label} Now` : 'Not Wired'}
+            <SemanticIconCue icon={iconForView('raw_llm')} size="xs" />
+            <span>{llmPending ? 'Running LLM...' : 'Run LLM'}</span>
           </button>
           <button
             type="button"
             className="trigger-button secondary"
-            disabled={!canTrigger || triggerDisabled}
-            aria-busy={triggerPending}
-            onClick={onTriggerRules}
-            title={canTrigger ? `Run ${scope.label}'s rules-first evaluation` : `${scope.label} is not wired yet`}
+            disabled={!canRunRules || triggerDisabled}
+            aria-busy={rulesPending}
+            onClick={onRunRules}
+            title={rulesTitle}
           >
             <SemanticIconCue icon={iconForView('rules')} size="xs" />
-            <span>{triggerPending ? 'Running...' : canTrigger ? 'Run Rules' : 'Rules Not Wired'}</span>
+            <span>{rulesPending ? 'Running Rules...' : 'Run Rules'}</span>
           </button>
         </div>
       </div>

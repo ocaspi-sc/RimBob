@@ -172,6 +172,61 @@ public sealed class CabinetCycleTests
         willie.WakeCount.Should().Be(1);
     }
 
+    [Fact]
+    public async Task TriggerMinisterAsync_WithRulesOnly_UsesRulesOnlyContext()
+    {
+        FakeMinister willie = new("Willie");
+        CabinetCycle sut = BuildCycle(
+            new NoopRefresher(),
+            new ColonyState(),
+            new ColonyStateSnapshotStore(),
+            new MinisterTraceStore(),
+            [willie]);
+
+        MinisterTriggerResult result = await sut.TriggerMinisterAsync("willie", MinisterRunMode.RulesOnly, CancellationToken.None)
+            ?? throw new InvalidOperationException("Expected Willie trigger result.");
+
+        result.RunMode.Should().Be(nameof(MinisterRunMode.RulesOnly));
+        willie.RunModes.Should().Equal(MinisterRunMode.RulesOnly);
+        willie.WakeupPayloads.Should().Equal("dashboard:rules");
+    }
+
+    [Fact]
+    public async Task TriggerMinisterAsync_WithForceLlm_UsesForceLlmContext()
+    {
+        FakeMinister chef = new("Chef");
+        CabinetCycle sut = BuildCycle(
+            new NoopRefresher(),
+            new ColonyState(),
+            new ColonyStateSnapshotStore(),
+            new MinisterTraceStore(),
+            [chef]);
+
+        MinisterTriggerResult result = await sut.TriggerMinisterAsync("food", MinisterRunMode.ForceLlm, CancellationToken.None)
+            ?? throw new InvalidOperationException("Expected Chef trigger result.");
+
+        result.RunMode.Should().Be(nameof(MinisterRunMode.ForceLlm));
+        chef.RunModes.Should().Equal(MinisterRunMode.ForceLlm);
+        chef.WakeupPayloads.Should().Equal("dashboard:llm");
+    }
+
+    [Fact]
+    public async Task TriggerMinisterAsync_WhenModeNotSupported_ReturnsNull()
+    {
+        FakeMinister willie = new("Willie");
+        CabinetCycle sut = BuildCycle(
+            new NoopRefresher(),
+            new ColonyState(),
+            new ColonyStateSnapshotStore(),
+            new MinisterTraceStore(),
+            [willie]);
+
+        MinisterTriggerResult? result = await sut.TriggerMinisterAsync("willie", MinisterRunMode.ForceLlm, CancellationToken.None);
+
+        result.Should().BeNull();
+        willie.WakeCount.Should().Be(0);
+    }
+
     private static CabinetCycle BuildCycle(
         IColonyStateRefresher refresher,
         ColonyState colony,
@@ -213,6 +268,11 @@ public sealed class CabinetCycleTests
             Task.FromException(exception);
     }
 
+    private sealed class NoopRefresher : IColonyStateRefresher
+    {
+        public Task RefreshAllAsync(CancellationToken ct = default) => Task.CompletedTask;
+    }
+
     private sealed class MutatingThrowingRefresher(
         ColonyState colony,
         Exception exception,
@@ -235,11 +295,17 @@ public sealed class CabinetCycleTests
 
         public List<PlayCycleTrigger> Triggers { get; } = [];
 
+        public List<MinisterRunMode> RunModes { get; } = [];
+
+        public List<string?> WakeupPayloads { get; } = [];
+
         public Task RunPlayCycle(PlayCycleContext context, CancellationToken ct)
         {
             WakeCount++;
             ObservedMapId = colony?.Map.Value.Id;
             Triggers.Add(context.Trigger);
+            RunModes.Add(context.RunMode);
+            WakeupPayloads.Add(context.WakeupPayload);
             return Task.CompletedTask;
         }
 

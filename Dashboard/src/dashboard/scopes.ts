@@ -39,6 +39,8 @@ export interface ScopeConfig {
   kind: ScopeKind;
   status: ScopeStatus;
   enabledViews: DashboardViewKey[];
+  canRunRules?: boolean;
+  canRunLlm?: boolean;
 }
 
 export const systemViews: DashboardViewDefinition[] = [
@@ -95,9 +97,9 @@ export const scopeConfigs: ScopeConfig[] = [
   { key: 'info', label: 'INFO', kind: 'info', status: 'reference', enabledViews: infoViews.map(view => view.key) },
   { key: 'analytics', label: 'ANALYTICS', kind: 'analytics', status: 'live', enabledViews: analyticsViews.map(view => view.key) },
   { key: 'dev_blog', label: 'DEV BLOG', kind: 'dev_blog', status: 'live', enabledViews: devBlogViews.map(view => view.key) },
-  { key: 'mayor', label: 'Mayor', kind: 'minister', status: 'live', enabledViews: allMinisterViews },
-  { key: 'food', label: 'Chef', kind: 'minister', status: 'live', enabledViews: allMinisterViews },
-  { key: 'willie', label: 'Willie', kind: 'minister', status: 'live', enabledViews: rulesOnlyMinisterViews },
+  { key: 'mayor', label: 'Mayor', kind: 'minister', status: 'live', enabledViews: allMinisterViews, canRunLlm: true },
+  { key: 'food', label: 'Chef', kind: 'minister', status: 'live', enabledViews: allMinisterViews, canRunRules: true, canRunLlm: true },
+  { key: 'willie', label: 'Willie', kind: 'minister', status: 'live', enabledViews: rulesOnlyMinisterViews, canRunRules: true },
   { key: 'defense', label: 'Defense', kind: 'minister', status: 'planned', enabledViews: allMinisterViews },
   { key: 'welfare', label: 'Welfare', kind: 'minister', status: 'planned', enabledViews: allMinisterViews },
   { key: 'medical', label: 'Medical', kind: 'minister', status: 'planned', enabledViews: allMinisterViews },

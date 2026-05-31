@@ -28,6 +28,7 @@ export interface ManualTriggerPayload {
   scope: string;
   minister?: string;
   trigger: string;
+  run_mode?: string;
 }
 
 export interface FoodCropCandidate {
@@ -159,6 +160,10 @@ export async function fetchTrace(scope: ScopeKey, signal?: AbortSignal): Promise
   return await readJson<MinisterTrace>(`/api/ministers/${scope}/trace/latest`, signal);
 }
 
-export async function triggerMinister(scope: ScopeKey, signal?: AbortSignal): Promise<ManualTriggerPayload> {
-  return await postJson<ManualTriggerPayload>(`/api/ministers/${scope}/trigger`, signal);
+export async function triggerMinisterRules(scope: ScopeKey, signal?: AbortSignal): Promise<ManualTriggerPayload> {
+  return await postJson<ManualTriggerPayload>(`/api/ministers/${scope}/trigger/rules`, signal);
+}
+
+export async function triggerMinisterLlm(scope: ScopeKey, signal?: AbortSignal): Promise<ManualTriggerPayload> {
+  return await postJson<ManualTriggerPayload>(`/api/ministers/${scope}/trigger/llm`, signal);
 }

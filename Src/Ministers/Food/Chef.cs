@@ -27,6 +27,22 @@ public sealed class Chef(
         FoodBriefing briefing = briefings.GetFoodBriefing();
         MinisterBriefingContext context = BuildContext();
 
+        if (cycle.RunMode == MinisterRunMode.ForceLlm)
+        {
+            await RunEscalationAsync(
+                cycle,
+                briefing,
+                context,
+                new Escalate(
+                    "manual_llm_trigger",
+                    new { briefing.BriefingVersion, briefing.GameTick },
+                    RuleTraceDetails.Escalated(
+                        "manual_llm_trigger",
+                        "dashboard Run LLM forces Chef's LLM path")),
+                ct);
+            return;
+        }
+
         if (cycle.IsBootstrap)
         {
             log.LogInformation("Chef bootstrap: forcing first live cycle escalation");
@@ -75,6 +91,30 @@ public sealed class Chef(
                 break;
 
             case Escalate escalate:
+                if (cycle.RunMode == MinisterRunMode.RulesOnly)
+                {
+                    string unresolvedSummary = FoodStateSummary.Build(briefing);
+                    AdviceChainModel emptyChain = FoodChainModelBuilder.Build(briefing, []);
+                    PublishSnapshot([], [], unresolvedSummary, emptyChain);
+                    await PersistReplayAsync(new MinisterReplayEntry(
+                        Minister: Name,
+                        Cycle: cycle,
+                        Path: "rules",
+                        Briefing: briefing,
+                        Context: context,
+                        RuleTrace: null,
+                        RuleDiagnostics: escalate.Diagnostics,
+                        EscalationReason: escalate.Reason,
+                        EscalationContext: BuildEscalationContext(escalate.Context, BuildCropCandidates(briefing)),
+                        GuideCitations: null,
+                        Advice: [],
+                        Flags: [],
+                        StateSummary: unresolvedSummary,
+                        Chain: emptyChain), ct);
+                    log.LogInformation("Chef rules-only trigger stopped before LLM escalation. reason={Reason}", escalate.Reason);
+                    break;
+                }
+
                 await RunEscalationAsync(cycle, briefing, context, escalate, ct);
                 break;
         }

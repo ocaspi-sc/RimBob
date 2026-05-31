@@ -42,6 +42,8 @@ refresh and manual dashboard triggers; `StartupBootstrap` remains a vocabulary
 value for explicitly labeled first-run/bootstrap flows, not a Host-rebuild
 cabinet wake.
 
+Manual dashboard minister triggers also carry a run mode: `Run Rules` means deterministic rules only and must stop before provider work, while `Run LLM` means a forced LLM path and is only enabled for ministers with a wired LLM implementation.
+
 ### First Live Cycle Bootstrap
 
 Every feeder minister may get one special case on its first live cycle after it

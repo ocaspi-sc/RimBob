@@ -105,10 +105,7 @@ band. Every header marker/chip should carry a terse
 explanatory tooltip with the current/last value. Avoid normal header tooltips
 that are just route names, implementation URLs, or raw field names; those
 details belong in SYSTEM/debug panels.
-The header also exposes `Run Cabinet Now`. Minister workspaces expose
-`Run {Minister} Now` beside the selected minister's last-run time. The selected
-view is already visible in the tab bar and should not be repeated beside the run
-button. Planned ministers show disabled/not-wired controls.
+The header also exposes `Run Cabinet Now`. Minister workspaces expose `Run LLM` and `Run Rules` beside the selected minister's last-run time. The selected view is already visible in the tab bar and should not be repeated beside the run buttons. Planned ministers and missing mode capabilities show disabled/not-wired controls.
 
 ### Scopes
 
@@ -511,16 +508,10 @@ high-priority endpoint groups, and should be updated when `RimApiClient` or
 
 Manual triggers are RimBob evaluation controls, not game controls:
 
-- Cabinet trigger: refresh live state, then run wired live ministers in the
-  dependency order. If live refresh fails while Host is serving a restored
-  `ColonyState` snapshot because RIMAPI is unreachable or no colony map is
-  loaded yet, the trigger may still run read-only evaluation against that stale
-  snapshot and must report that fallback in the response and trace.
-- Minister trigger: refresh live state, then run only the selected wired
-  minister. It follows the same restored-snapshot fallback as the cabinet
-  trigger.
-- Do not keep legacy trigger aliases unless a current dashboard or script
-  consumer requires them.
+- Cabinet trigger: refresh live state, then run wired live ministers in the dependency order. If live refresh fails while Host is serving a restored `ColonyState` snapshot because RIMAPI is unreachable or no colony map is loaded yet, the trigger may still run read-only evaluation against that stale snapshot and must report that fallback in the response and trace.
+- Minister `Run Rules`: refresh live state, then run only the selected wired minister's deterministic rules path through `POST /api/ministers/{minister}/trigger/rules`. This mode must not call an LLM; if rules return an escalation, the trace records the escalation reason and stops before provider work.
+- Minister `Run LLM`: refresh live state, then run only the selected wired minister's forced LLM path through `POST /api/ministers/{minister}/trigger/llm`. This button is disabled for scopes without an LLM path, such as Willie until a construction LLM agent is implemented.
+- Do not keep legacy trigger aliases unless a current dashboard or script consumer requires them.
 
 Expected operational failures should be translated before they reach the
 player. If RIMAPI is not listening, manual triggers report "RimWorld is not
@@ -528,12 +519,7 @@ running" with a short recovery instruction; the dashboard shows that problem
 detail directly instead of route names, HTTP status codes, or generic internal
 server errors. Logs remain the place for stack traces and low-level diagnostics.
 
-Manual trigger traces must be visible in the dashboard. The current trigger
-should remain a `Suggest`-mode evaluation control and must not call RIMAPI write
-endpoints. Minister workspace headers may repeat the selected minister trigger
-as a compact "Run Rules" control beside `Run {Minister} Now`; it uses the same
-minister trigger endpoint and has the same no-game-write boundary as the
-workspace-level run button.
+Manual trigger traces must be visible in the dashboard. The current trigger should remain a `Suggest`-mode evaluation control and must not call RIMAPI write endpoints. Minister workspace headers show two explicit mode controls, `Run LLM` and `Run Rules`, so operators can tell whether they are testing provider judgment or deterministic rules. Disabled buttons should stay visible with a scope-specific not-wired tooltip instead of hiding the missing capability.
 
 ### Icon Rendering
 

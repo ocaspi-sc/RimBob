@@ -126,6 +126,45 @@ public sealed class FoodMinisterTests
     }
 
     [Fact]
+    public async Task ManualRulesOnly_WhenRulesEscalate_DoesNotCallLlm()
+    {
+        CapturingReplayWriter replay = new();
+        int calls = 0;
+        Harness h = new((_, _, _, _, _) =>
+        {
+            calls++;
+            return Task.FromResult(new FoodLlmResponse([FoodAdvice("llm_food")], []));
+        }, replay);
+        h.SetFoodDays(25f, wildAnimals: 2, dateTimeRaw: "5th of Decembary, 5500, 14h", animalDef: "Wolf");
+
+        await h.Minister.RunPlayCycle(PlayCycleContext.ManualRulesOnly, CancellationToken.None);
+
+        calls.Should().Be(0);
+        h.PublishedAdvice.Should().BeEmpty();
+        MinisterReplayRecord record = replay.Records.Single(r => r.Path == "rules");
+        record.WakeupPayload.Should().Be("dashboard:rules");
+        record.EscalationReason.Should().NotBeNullOrWhiteSpace();
+        record.Llm.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ManualForceLlm_CallsLlmEvenWhenRulesWouldDecide()
+    {
+        int calls = 0;
+        Harness h = new((_, _, _, _, _) =>
+        {
+            calls++;
+            return Task.FromResult(new FoodLlmResponse([FoodAdvice("forced_llm_food")], []));
+        });
+        h.SetFoodDays(4f);
+
+        await h.Minister.RunPlayCycle(PlayCycleContext.ManualForceLlm, CancellationToken.None);
+
+        calls.Should().Be(1);
+        h.PublishedAdvice.Should().ContainSingle().Which.Id.Should().Be("forced_llm_food");
+    }
+
+    [Fact]
     public async Task Escalation_UsesFoodLlmResponse_AfterBootstrap()
     {
         CapturingReplayWriter replay = new();

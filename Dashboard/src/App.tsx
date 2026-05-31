@@ -114,9 +114,10 @@ export default function App() {
                 scope={activeScope}
                 lastRunLabel={formatLastRun(activeScope, systemHealth.data)}
                 triggerDisabled={triggers.triggerState.target !== null || !hostApiLive}
-                triggerPending={triggers.triggerState.target === activeScope.key}
-                onTrigger={() => void triggers.triggerMinisterNow(activeScope)}
-                onTriggerRules={() => void triggers.triggerMinisterRules(activeScope)}
+                llmPending={triggers.triggerState.target === `${activeScope.key}:llm`}
+                rulesPending={triggers.triggerState.target === `${activeScope.key}:rules`}
+                onRunLlm={() => void triggers.triggerMinisterLlm(activeScope)}
+                onRunRules={() => void triggers.triggerMinisterRules(activeScope)}
               />
               <ViewTabs
                 activeView={activeMinisterView}

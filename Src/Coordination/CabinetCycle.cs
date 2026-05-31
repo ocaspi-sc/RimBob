@@ -46,13 +46,18 @@ public sealed class CabinetCycle(
         return usedRestoredSnapshot;
     }
 
-    public async Task<MinisterTriggerResult?> TriggerMinisterAsync(string ministerKey, CancellationToken ct)
+    public async Task<MinisterTriggerResult?> TriggerMinisterAsync(
+        string ministerKey,
+        MinisterRunMode runMode,
+        CancellationToken ct)
     {
         MinisterDescriptor? descriptor = registry.FindMinister(ministerKey);
-        if (descriptor is not { Ready: true, CanManualTrigger: true }) return null;
+        if (descriptor is not { Ready: true }) return null;
+        if (!CanTriggerMode(descriptor, runMode)) return null;
 
+        PlayCycleContext cycle = ManualCycleFor(runMode);
         bool usedRestoredSnapshot = await RefreshStateForReadOnlyEvaluationAsync(
-            PlayCycleContext.ManualTrigger,
+            cycle,
             descriptor.Label,
             ct);
 
@@ -60,14 +65,18 @@ public sealed class CabinetCycle(
         if (minister is null)
             throw new InvalidOperationException($"Manual trigger could not resolve {descriptor.Label} minister.");
 
-        await RunResolvedMinisterAsync(minister, PlayCycleContext.ManualTrigger, usedRestoredSnapshot, ct);
+        await RunResolvedMinisterAsync(minister, cycle, usedRestoredSnapshot, ct);
         return new MinisterTriggerResult(
             descriptor.Key,
             descriptor.Label,
-            PlayCycleContext.ManualTrigger.Trigger.ToString(),
+            cycle.Trigger.ToString(),
+            runMode.ToString(),
             colony.LastRefreshSource.ToString(),
             usedRestoredSnapshot);
     }
+
+    public async Task<MinisterTriggerResult?> TriggerMinisterAsync(string ministerKey, CancellationToken ct) =>
+        await TriggerMinisterAsync(ministerKey, MinisterRunMode.RulesFirst, ct);
 
     private async Task<bool> RefreshStateForReadOnlyEvaluationAsync(
         PlayCycleContext cycle,
@@ -106,6 +115,22 @@ public sealed class CabinetCycle(
         RimApiConnectionFailure.IsConnectionFailure(ex) ||
         ex is RimApiLiveStateUnavailableException;
 
+    private static bool CanTriggerMode(MinisterDescriptor descriptor, MinisterRunMode runMode) =>
+        runMode switch
+        {
+            MinisterRunMode.RulesOnly => descriptor.CanRunRules,
+            MinisterRunMode.ForceLlm => descriptor.CanRunLlm,
+            _ => descriptor.CanManualTrigger
+        };
+
+    private static PlayCycleContext ManualCycleFor(MinisterRunMode runMode) =>
+        runMode switch
+        {
+            MinisterRunMode.RulesOnly => PlayCycleContext.ManualRulesOnly,
+            MinisterRunMode.ForceLlm => PlayCycleContext.ManualForceLlm,
+            _ => PlayCycleContext.ManualTrigger
+        };
+
     private async Task RunResolvedMinisterAsync(
         IMinister minister,
         PlayCycleContext cycle,
@@ -139,6 +164,7 @@ public sealed record MinisterTriggerResult(
     string Scope,
     string Minister,
     string Trigger,
+    string RunMode,
     string StateSource,
     bool UsedRestoredSnapshot);
 

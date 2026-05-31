@@ -168,6 +168,8 @@ public sealed class MinisterTraceStore
         {
             "rules" when !string.IsNullOrWhiteSpace(ruleFired) =>
                 $"Rules path completed: {ruleFired}.",
+            "rules" when !string.IsNullOrWhiteSpace(escalationReason) =>
+                $"Rules path stopped before LLM escalation: {escalationReason}.",
             "rules" =>
                 "Rules path completed.",
             "llm" when !string.IsNullOrWhiteSpace(escalationReason) =>

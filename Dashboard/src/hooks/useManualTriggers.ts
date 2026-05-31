@@ -1,9 +1,9 @@
 import { useCallback, useState } from 'react';
 import { triggerCabinet } from '../api/cabinet';
-import { triggerMinister } from '../api/ministers';
+import { triggerMinisterLlm, triggerMinisterRules as postMinisterRules } from '../api/ministers';
 import type { ScopeConfig, ScopeKey } from '../dashboard/scopes';
 
-export type TriggerTarget = 'cabinet' | ScopeKey;
+export type TriggerTarget = 'cabinet' | `${ScopeKey}:rules` | `${ScopeKey}:llm`;
 
 export interface TriggerState {
   target: TriggerTarget | null;
@@ -13,7 +13,7 @@ export interface TriggerState {
 export interface ManualTriggers {
   triggerState: TriggerState;
   triggerCabinetNow: () => Promise<void>;
-  triggerMinisterNow: (scope: ScopeConfig) => Promise<void>;
+  triggerMinisterLlm: (scope: ScopeConfig) => Promise<void>;
   triggerMinisterRules: (scope: ScopeConfig) => Promise<void>;
 }
 
@@ -53,26 +53,32 @@ export function useManualTriggers(): ManualTriggers {
     [runManualTrigger],
   );
 
-  const runMinisterTrigger = useCallback(
-    async (scope: ScopeConfig, label: string) =>
-      runManualTrigger(scope.key, label, () => triggerMinister(scope.key)),
+  const runMinisterTrigger = useCallback((
+    scope: ScopeConfig,
+    mode: 'rules' | 'llm',
+    label: string,
+    action: () => Promise<unknown>,
+  ) =>
+    runManualTrigger(`${scope.key}:${mode}`, label, action),
     [runManualTrigger],
   );
 
-  const triggerMinisterNow = useCallback(
-    async (scope: ScopeConfig) => runMinisterTrigger(scope, `Run ${scope.label} Now`),
+  const runMinisterLlm = useCallback(
+    async (scope: ScopeConfig) =>
+      runMinisterTrigger(scope, 'llm', 'Run LLM', () => triggerMinisterLlm(scope.key)),
     [runMinisterTrigger],
   );
 
-  const triggerMinisterRules = useCallback(
-    async (scope: ScopeConfig) => runMinisterTrigger(scope, 'Run Rules'),
+  const runMinisterRules = useCallback(
+    async (scope: ScopeConfig) =>
+      runMinisterTrigger(scope, 'rules', 'Run Rules', () => postMinisterRules(scope.key)),
     [runMinisterTrigger],
   );
 
   return {
     triggerState,
     triggerCabinetNow,
-    triggerMinisterNow,
-    triggerMinisterRules,
+    triggerMinisterLlm: runMinisterLlm,
+    triggerMinisterRules: runMinisterRules,
   };
 }
