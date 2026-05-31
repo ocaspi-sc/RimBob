@@ -58,7 +58,7 @@ Long runs (Start / Resume on real implementation work) take many minutes — pas
 
 ### 1. Write the plan
 
-Claude writes `C:\dev\RimBob\.plans\<slug>.md`. Required sections:
+Claude writes `C:\dev\RimBob\.plans\<slug>.md`. Recommended sections — **guidance, not a literal schema**: the plan is Codex's source of truth, so adapt headings to the slice (earlier plans used Problem/Goal/Scope and Codex coped fine). Cover this substance:
 
 - **Motivation** — why we're doing this. Include the user's framing.
 - **Context** — relevant files, design docs, prior incidents, constraints.
@@ -67,6 +67,8 @@ Claude writes `C:\dev\RimBob\.plans\<slug>.md`. Required sections:
 - **Verification** — concrete commands Codex must run (e.g. `dotnet build`, `npm.cmd run build`, targeted tests, `/api/system/health` smoke) and pass/fail criteria.
 - **Where to see it (dashboard)** — which panel/endpoint a human checks to confirm the change is live. If no dashboard surface exists, say so and add a follow-up.
 - **Open questions** — anything Codex should escalate rather than guess at.
+
+**If the plan ports code from an unlanded branch** (a "salvage"), say so explicitly and name the files. That branch may land to master *during* this run, making the port redundant — tell Codex to consume the already-present version after a `git merge master` rather than re-add it, and (step 5) tell the verifier to treat the pre-landed scope items as satisfied so it does not flag them as gaps.
 
 Link the plan from `Tasks.md` per the normal rule. Do not commit it yet — it stays as a dirty file on master while the run is open.
 
@@ -78,6 +80,17 @@ git -C C:\dev\RimBob worktree list --porcelain
 ```
 
 If master has **staged** changes (index dirty), stop and report — those would contaminate any future squash commit. Unstaged edits and untracked files are fine; the user's in-progress work on master is expected.
+
+**Scan for overlapping in-flight work** before spawning — this repo runs many parallel `codex/*` branches, and a second run touching the same files is the exact token waste this skill exists to avoid:
+
+```powershell
+$targets = @('Src/Ministers/Willie/MinisterOfWillie.cs')   # <-- the plan's main files
+git -C C:\dev\RimBob for-each-ref --format='%(refname:short)' refs/heads/codex |
+  ForEach-Object { $b = $_; git -C C:\dev\RimBob diff --name-only "master...$b" 2>$null |
+    Where-Object { $targets -contains $_ } | ForEach-Object { "$b touches $_" } }
+```
+
+If a branch already touches the plan's files (or its name matches the plan's intent), read its diff and decide before starting: land/extend it, or rescope this slice. Do not start a duplicate run blind — a near-duplicate caught here saves a whole wasted run.
 
 ### 3. Start the Codex run
 
@@ -115,6 +128,10 @@ Capture the printed `run_id`, `session_id`, `branch`, `worktree`. Report them to
 Read the latest `final-message-*.md` and `git -C <worktree> diff --stat`. If Codex bailed (non-zero exit, blocker reported, plan declared wrong), surface that to the user — do not paper over it with a verifier run.
 
 **Note on `apply_patch` errors in the event log:** these are Codex's internal patch-application retries and are normal — Codex tries alternative strategies automatically. They appear as `ERROR codex_core::tools::router: error=apply_patch verification failed` in the run output. Only the final Codex exit code and `final-message-*.md` matter; ignore apply_patch noise in the event stream. Common trigger: non-ASCII characters (e.g. `→`) in the source file; Codex recovers by using a different patch form.
+
+**Other benign Windows noise** in the event stream: ripgrep glob failures (`rg: Src\Tests\*: ... (os error 123)`), git option probes (`git merge-base --short` → `unknown option`), and `fatal: Needed a single revision`. All are Codex's internal tool retries; only the final exit code + `final-message-*.md` are authoritative.
+
+**Mid-stream red → spot-check before landing.** If the event stream showed *any* test failure at any point — even if Codex's final message later claims green — independently re-run the single most-relevant test filter in the worktree before CloseOut. Cheap insurance on the irreversible land; don't take "green now" on faith when it flickered red mid-run.
 
 ### 5. Verify plan adherence (custom Sonnet verifier)
 
@@ -182,7 +199,13 @@ This is the durable handoff. The plan file ends up as both the intent and the ch
 
 ### 8. Land
 
-Resume Codex one more time with the land prompt:
+**Fast path — default when the branch already merged master and is green.** The principal may invoke CloseOut directly; the helper enforces every guard (clean worktree, ahead/not-behind, base on master, no staged base changes) regardless of caller, so the extra Codex resume is pure token cost. Confirm not-behind (`git -C <worktree> rev-list --left-right --count master...HEAD` → left/behind is `0`), then land:
+
+```powershell
+& 'C:\dev\RimBob\.claude\skills\bring-out-the-gimp\scripts\Invoke-CodexPromptRun.ps1' -Mode CloseOut -RunId "<run-id>" -LandAndClose -Verified
+```
+
+**Slow path — when the branch may be behind or you want a fresh re-verify.** Resume Codex one more time with the land prompt so it merges master, re-verifies, then lands:
 
 ```powershell
 & 'C:\dev\RimBob\.claude\skills\bring-out-the-gimp\scripts\Invoke-CodexPromptRun.ps1' `
@@ -204,7 +227,7 @@ Final message: landed commit hash, branch + worktree removal confirmation, any p
 '@
 ```
 
-After it returns, read the new landed commit hash and fill it into the plan's Summary section. Then commit the plan + summary on master with an explicit path stage (per AGENTS.md):
+After it returns, read the new landed commit hash (the helper also records it as `landed_commit` in `metadata.json`) and fill it into the plan's Summary section. Then commit the plan + summary on master with an explicit path stage (per AGENTS.md):
 
 ```powershell
 git -C C:\dev\RimBob add -- .plans/<slug>.md
