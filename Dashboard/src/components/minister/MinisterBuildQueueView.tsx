@@ -37,9 +37,10 @@ export function MinisterBuildQueueView({
 }) {
   const briefing = useAsyncResource(signal => fetchBriefing(scope.key, signal), [scope.key]);
   const requests = buildRequestCards(flags);
-  const proposedOptions = buildProposedOptions(advice, scope, currentGameTick);
+  const proposedOptionGroups = buildProposedOptionGroups(advice, scope, currentGameTick);
+  const proposedOptionCount = proposedOptionGroups.reduce((sum, group) => sum + group.options.length, 0);
   const backlog = buildBacklogModel(briefing.data);
-  const anySectionHasRows = requests.length > 0 || proposedOptions.length > 0 || backlog.groups.length > 0 || backlog.pending > 0;
+  const anySectionHasRows = requests.length > 0 || proposedOptionCount > 0 || backlog.groups.length > 0 || backlog.pending > 0;
 
   if (scope.key !== 'willie') {
     return <EmptyState code="BUILD QUEUE NOT WIRED">Build Queue is a Willie-only construction view.</EmptyState>;
@@ -68,12 +69,17 @@ export function MinisterBuildQueueView({
           )}
         </BuildQueueSection>
 
-        <BuildQueueSection title="Proposed" count={proposedOptions.length} iconKey="place_blueprint">
-          {proposedOptions.length === 0 ? (
+        <BuildQueueSection
+          title="Proposed"
+          count={proposedOptionCount}
+          iconKey="place_blueprint"
+          meta={proposedOptionGroups.length > 0 ? `${formatInteger(proposedOptionGroups.length)} ${proposedOptionGroups.length === 1 ? 'issue' : 'issues'}` : undefined}
+        >
+          {proposedOptionCount === 0 ? (
             <LaneEmpty>Solver placement options appear here when Willie emits `options[]`.</LaneEmpty>
           ) : (
-            <div className="build-option-grid">
-              {proposedOptions.map(card => <OptionCard card={card} key={`${card.item.id}:${card.option.id}`} />)}
+            <div className="build-option-group-stack">
+              {proposedOptionGroups.map(group => <OptionGroup group={group} key={group.item.id} />)}
             </div>
           )}
         </BuildQueueSection>
@@ -108,6 +114,12 @@ type ProposedOptionModel = {
   expired: AdviceExpiryState;
   item: AdviceItem;
   option: AdviceOption;
+};
+
+type ProposedOptionGroupModel = {
+  expired: AdviceExpiryState;
+  item: AdviceItem;
+  options: ProposedOptionModel[];
 };
 
 type OptionActionMatch = {
@@ -182,6 +194,30 @@ function RequestCard({ card }: { card: RequestCardModel }) {
       )}
       {card.flag.summary && <small><IconizedText maxIcons={1} text={card.flag.summary} /></small>}
     </article>
+  );
+}
+
+function OptionGroup({ group }: { group: ProposedOptionGroupModel }) {
+  return (
+    <section className="build-option-group" aria-label={`${group.item.title} proposed options`}>
+      <header>
+        <div>
+          <span className="eyebrow">
+            <SemanticLabel icon={iconForField(group.item.concern)}><span>{formatLabel(group.item.concern)}</span></SemanticLabel>
+          </span>
+          <h3><IconizedText maxIcons={1} text={group.item.title} /></h3>
+        </div>
+        <div className="build-option-group-meta">
+          <StatusPill tone={priorityTone(group.item.priority)}>{group.item.priority}</StatusPill>
+          <span>{formatInteger(group.options.length)} {group.options.length === 1 ? 'option' : 'options'}</span>
+        </div>
+      </header>
+      <p><IconizedText maxIcons={2} text={group.item.body} /></p>
+      {group.expired.message && <small className={group.expired.expired ? 'expired' : ''}>{group.expired.message}</small>}
+      <div className="build-option-grid">
+        {group.options.map(card => <OptionCard card={card} key={`${card.item.id}:${card.option.id}`} />)}
+      </div>
+    </section>
   );
 }
 
@@ -353,19 +389,29 @@ function buildRequestCards(flags: Record<string, AgentFlag[]>): RequestCardModel
       })));
 }
 
-function buildProposedOptions(
+function buildProposedOptionGroups(
   advice: AdviceItem[],
   scope: ScopeConfig,
   currentGameTick: number | null,
-): ProposedOptionModel[] {
+): ProposedOptionGroupModel[] {
   return advice
     .filter(item => isScopeMinister(item.minister, scope))
-    .flatMap(item => (item.options ?? []).map(option => ({
-      actionMatch: findBlueprintAction(item, option),
-      expired: adviceExpiryState(item, currentGameTick),
-      item,
-      option,
-    })));
+    .map(item => {
+      const expired = adviceExpiryState(item, currentGameTick);
+      const options = (item.options ?? []).map(option => ({
+        actionMatch: findBlueprintAction(item, option),
+        expired,
+        item,
+        option,
+      }));
+
+      return {
+        expired,
+        item,
+        options,
+      };
+    })
+    .filter(group => group.options.length > 0);
 }
 
 function buildBacklogModel(briefing: unknown): BacklogModel {
