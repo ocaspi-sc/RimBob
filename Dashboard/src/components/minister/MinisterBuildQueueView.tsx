@@ -23,6 +23,7 @@ import { IconizedText } from '../shared/IconizedText';
 import { DynamicTable } from '../shared/Inspector';
 import { StatusPill, type PillTone } from '../shared/StatusPill';
 import { SemanticLabel } from '../shared/SemanticIcon';
+import { readinessTone } from './readiness';
 
 export function MinisterBuildQueueView({
   advice,
@@ -502,14 +503,6 @@ function priorityTone(priority: string | null | undefined): PillTone {
   if (normalized === 'critical' || normalized === 'high') return 'error';
   if (normalized === 'medium') return 'warn';
   if (normalized === 'low') return 'info';
-  return 'idle';
-}
-
-function readinessTone(value: string): PillTone {
-  const normalized = value.toLowerCase();
-  if (['ready', 'valid', 'available', 'true', 'ok'].includes(normalized)) return 'ok';
-  if (['blocked', 'invalid', 'failed', 'false', 'not_ready'].includes(normalized)) return 'error';
-  if (normalized.includes('missing') || normalized.includes('unsupported') || normalized.includes('not_exposed')) return 'warn';
   return 'idle';
 }
 

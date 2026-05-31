@@ -7,6 +7,7 @@ using RimBob.Core.Ministers;
 using RimBob.Knowledge;
 using RimBob.LLM;
 using RimBob.Ministers.Food;
+using RimBob.Ministers.Willie;
 using RimBob.State;
 
 namespace RimBob.Host.Endpoints;
@@ -46,6 +47,10 @@ public static class MinisterEndpoints
             "/api/ministers/food/hunt-risk/latest",
             "available",
             "Read-only Chef hunt risk diagnostics computed from current animal state and animal-def metadata.");
+        coverage.Register(
+            "/api/ministers/willie/solver/latest",
+            "available",
+            "Latest Willie Placement Solver outcome: selected rule, per-generator draft trace and scores, no-fit reason, and draftable/placement/materials/apply readiness.");
 
         app.MapGet("/api/ministers", (MinisterRegistry registry) =>
             Results.Ok(registry.Scopes.Select(MinisterScopeInfo.FromDescriptor)));
@@ -204,6 +209,17 @@ public static class MinisterEndpoints
                 Thresholds: FoodHuntRiskThresholds.Current,
                 Species: species,
                 Candidates: candidates));
+        });
+
+        app.MapGet("/api/ministers/willie/solver/latest", (
+            MinisterRegistry registry,
+            WillieSolverStore solverStore) =>
+        {
+            MinisterDescriptor? scope = registry.FindMinister("willie");
+            if (scope is null)
+                return Results.NotFound(new { error = "Willie minister scope is not registered." });
+
+            return Results.Ok(solverStore.Latest(scope.Label) ?? WillieSolverSnapshot.NotSeen(scope.Label));
         });
 
         app.MapGet("/api/ministers/{minister}/snapshot", (

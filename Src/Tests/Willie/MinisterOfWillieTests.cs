@@ -61,6 +61,14 @@ public sealed class MinisterOfWillieTests
         solver.LastSpec.Should().NotBeNull();
         solver.LastSpec!.TargetClass.Should().Be(BuildingClass.Freezer);
         solver.LastState.Should().BeSameAs(harness.Colony);
+        WillieSolverSnapshot snapshot = harness.SolverStore.Latest("Willie")!;
+        snapshot.Should().NotBeNull();
+        snapshot.Status.Should().Be("options");
+        snapshot.Request.Should().NotBeNull();
+        snapshot.Request!.Request.Should().Be("starter freezer near kitchen");
+        snapshot.Request.SourceMinister.Should().Be("Chef");
+        snapshot.GameTick.Should().Be(harness.Cache.GetWillieBriefing().GameTick);
+        snapshot.Trace.Should().NotBeNull();
     }
 
     [Fact]
@@ -171,6 +179,7 @@ public sealed class MinisterOfWillieTests
         solver.CallCount.Should().Be(0);
         AdviceItem advice = harness.Bus.ActiveAdvice().Should().ContainSingle().Subject;
         advice.Options.Should().BeNull();
+        harness.SolverStore.Latest("Willie").Should().BeNull();
     }
 
     [Fact]
@@ -207,6 +216,10 @@ public sealed class MinisterOfWillieTests
         string outputJson = JsonSerializer.Serialize(record.Output);
         outputJson.Should().Contain(nameof(NoFitReason.NoReachablePath));
         outputJson.Should().Contain("test_note");
+        WillieSolverSnapshot snapshot = harness.SolverStore.Latest("Willie")!;
+        snapshot.Should().NotBeNull();
+        snapshot.Status.Should().Be("no_fit");
+        snapshot.NoFit.Should().Be(nameof(NoFitReason.NoReachablePath));
     }
 
     [Fact]
@@ -334,17 +347,20 @@ public sealed class MinisterOfWillieTests
     {
         public ColonyState Colony { get; } = new();
         public AdviceBus Bus { get; } = new();
+        public BriefingCache Cache { get; }
         public FlagChannel Flags { get; } = new();
         public MinisterOfWillie Minister { get; }
+        public WillieSolverStore SolverStore { get; } = new();
 
         public Harness(IPlacementSolver? solver = null, IReplayCorpusWriter? replay = null)
         {
-            BriefingCache cache = new(Colony, new TestLogger<BriefingCache>());
+            Cache = new BriefingCache(Colony, new TestLogger<BriefingCache>());
             Minister = new(
-                cache,
+                Cache,
                 new Rules(new FixedTimeProvider(FixedNow)),
                 solver ?? FakePlacementSolver.WithNoFit(NoFitReason.NoDrafts),
                 Colony,
+                SolverStore,
                 new MinisterOutputStore(),
                 Bus,
                 Flags,

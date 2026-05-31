@@ -79,6 +79,62 @@ export interface FoodCropMathPayload {
   candidates: FoodCropCandidate[];
 }
 
+export interface WillieSolverRequestPayload {
+  request: string;
+  reason: string;
+  targetClass: string;
+  targetDef: string | null;
+  roomClass: string | null;
+  requestedFrom: string | null;
+  sourceMinister: string | null;
+  priority: string | null;
+}
+
+export interface WillieSolverMetricValue {
+  id: string;
+  rawValue: number | null;
+  unit: string | null;
+  normalized: number;
+  weight: number;
+  contribution: number;
+  better: string;
+}
+
+export interface WillieSolverDraftTrace {
+  generatorId: string;
+  anchorRoomId: string | null;
+  status: string;
+  reason: string | null;
+  metrics: WillieSolverMetricValue[];
+  diversityReason: string | null;
+}
+
+export interface WillieSolverTrace {
+  selectedRule: string;
+  drafts: WillieSolverDraftTrace[];
+  notes: string[];
+}
+
+export interface WillieSolverOutputPayload {
+  status: string;
+  noFit: string | null;
+  draftable: string | null;
+  placementValid: string | null;
+  materialsReady: string | null;
+  applyReady: string | null;
+  trace: WillieSolverTrace | null;
+  errorType: string | null;
+  errorMessage: string | null;
+}
+
+export interface WillieSolverPayload extends WillieSolverOutputPayload {
+  minister: string;
+  request: WillieSolverRequestPayload | null;
+  gameTick: number | null;
+  capturedAt: string;
+  output: WillieSolverOutputPayload;
+}
+
 export async function fetchBriefing(scope: ScopeKey, signal?: AbortSignal): Promise<unknown> {
   return await readJson<unknown>(`/api/briefings/${scope}/latest`, signal);
 }
@@ -93,6 +149,10 @@ export async function fetchPrompt(scope: ScopeKey, signal?: AbortSignal): Promis
 
 export async function fetchRawLlmOutput(scope: ScopeKey, signal?: AbortSignal): Promise<RawLlmOutputPayload> {
   return await readJson<RawLlmOutputPayload>(`/api/ministers/${scope}/llm-output/latest`, signal);
+}
+
+export async function fetchSolver(scope: ScopeKey, signal?: AbortSignal): Promise<WillieSolverPayload> {
+  return await readJson<WillieSolverPayload>(`/api/ministers/${scope}/solver/latest`, signal);
 }
 
 export async function fetchTrace(scope: ScopeKey, signal?: AbortSignal): Promise<MinisterTrace> {

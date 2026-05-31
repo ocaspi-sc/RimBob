@@ -60,6 +60,6 @@ public sealed class MinisterRegistryTests
         sut.FindMinister("mayor")!.CanManualTrigger.Should().BeTrue();
         sut.FindMinister("food")!.CanManualTrigger.Should().BeTrue();
         sut.FindMinister("willie")!.CanManualTrigger.Should().BeTrue();
-        sut.FindMinister("willie")!.EnabledViews.Should().Equal("briefing", "build_queue", "rules", "advice");
+        sut.FindMinister("willie")!.EnabledViews.Should().Equal("briefing", "build_queue", "solver", "rules", "advice");
     }
 }

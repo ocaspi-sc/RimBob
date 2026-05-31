@@ -7,6 +7,7 @@ import { MinisterPromptView } from '../components/minister/MinisterPromptView';
 import { MinisterRagView } from '../components/minister/MinisterRagView';
 import { MinisterRawLlmView } from '../components/minister/MinisterRawLlmView';
 import { MinisterRulesView } from '../components/minister/MinisterRulesView';
+import { MinisterSolverView } from '../components/minister/MinisterSolverView';
 import { ministerViews, type MinisterViewKey, type ScopeConfig } from './scopes';
 import { valueForScope } from './selectors';
 import type { AdviceChainModel, AdviceItem, AgentFlag } from '../types/advice';
@@ -44,6 +45,7 @@ const ministerViewRenderers: Record<MinisterViewKey, MinisterViewRenderer> = {
       flags={flags}
     />
   ),
+  solver: ({ scope, systemHealth }) => <MinisterSolverView scope={scope} systemHealth={systemHealth} />,
   raw_llm: ({ scope, systemHealth }) => <MinisterRawLlmView scope={scope} systemHealth={systemHealth} />,
   rag: ({ agenda, scope, systemHealth }) => (
     <MinisterRagView scope={scope} agenda={agenda} systemHealth={systemHealth} />

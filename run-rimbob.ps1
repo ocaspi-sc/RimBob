@@ -79,6 +79,7 @@ $dashboardMinisterViews = @(
 $dashboardRulesOnlyMinisterViews = @(
     [pscustomobject]@{ Label = "Briefing"; View = "briefing" },
     [pscustomobject]@{ Label = "Build Queue"; View = "build_queue" },
+    [pscustomobject]@{ Label = "Solver"; View = "solver" },
     [pscustomobject]@{ Label = "Rules"; View = "rules" },
     [pscustomobject]@{ Label = "Advice"; View = "advice" }
 )

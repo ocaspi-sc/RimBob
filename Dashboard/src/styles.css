@@ -3123,6 +3123,142 @@ code {
   line-height: 1.35;
 }
 
+.willie-solver-view {
+  gap: 14px;
+}
+
+.solver-summary,
+.solver-panel {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  background:
+    linear-gradient(135deg, rgba(98, 216, 230, 0.045), rgba(255, 255, 255, 0.02)),
+    rgba(0, 0, 0, 0.14);
+}
+
+.solver-request-meta {
+  margin: 0;
+}
+
+.solver-request-line {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding: 9px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.solver-request-line strong,
+.solver-request-line small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.solver-request-line strong {
+  color: var(--text);
+  font-size: 0.92rem;
+}
+
+.solver-request-line small {
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.solver-summary-grid .metric-card strong {
+  overflow-wrap: anywhere;
+}
+
+.solver-panel > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.solver-panel h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.92rem;
+  letter-spacing: 0;
+}
+
+.solver-panel small {
+  color: var(--muted);
+}
+
+.solver-funnel {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.solver-funnel-node {
+  min-width: 0;
+  min-height: 72px;
+  display: grid;
+  align-content: space-between;
+  gap: 8px;
+  padding: 9px;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.solver-funnel-node span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.solver-funnel-node strong {
+  color: var(--text);
+  font-size: 0.84rem;
+}
+
+.solver-funnel-node.passed {
+  border-color: rgba(80, 211, 141, 0.38);
+  background: rgba(80, 211, 141, 0.07);
+}
+
+.solver-funnel-node.failed {
+  border-color: rgba(255, 107, 107, 0.48);
+  background: rgba(255, 107, 107, 0.1);
+}
+
+.solver-funnel-node.pending {
+  opacity: 0.66;
+}
+
+.solver-readiness-ladder {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.solver-readiness-gate {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+  padding: 9px;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.solver-readiness-gate > span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
 .blueprint-thumbnail {
   min-width: 0;
   display: grid;
@@ -4890,7 +5026,9 @@ code {
   .willie-briefing-panels,
   .willie-fact-grid,
   .willie-coverage-bars > div,
-  .willie-coverage-row {
+  .willie-coverage-row,
+  .solver-funnel,
+  .solver-readiness-ladder {
     grid-template-columns: 1fr;
   }
 

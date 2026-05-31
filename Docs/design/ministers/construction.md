@@ -135,6 +135,8 @@ payload.
 A requesting minister (e.g. Chef asking for a freezer) shows only its outbound
 request — never another minister's build Apply.
 
+Willie's dashboard scope includes a latest-only Solver view for placement diagnostics. The view reads the most recent solver outcome from the Host, shows the driving build request, selected rule, no-fit stage, and readiness ladder, and leaves option picking/apply controls in Build Queue.
+
 Solver reuse of existing rooms is evidence-gated: `ReuseExistingFootprintGenerator` may propose interior fixtures/floors inside a same-class existing room only when the fork supplied real bounded room `cells[]`; it does not infer room polygons from point-approx building positions, and it does not replace walls for freezer coolers yet.
 
 ---
@@ -153,7 +155,7 @@ Willie briefing should answer:
 The first Willie briefing record now feeds `MinisterOfWillie` in a rules-only
 slice. It includes backlog summaries from `/api/v1/map/construction/backlog`,
 room-anchor inventory for `RoomClass` lookup, and coverage flags. The dashboard
-renders the Willie scope with Briefing, Build Queue, Rules, and Advice views;
+renders the Willie scope with Briefing, Build Queue, Solver, Rules, and Advice views;
 Prompt/RAG/Raw LLM remain intentionally absent until a later LLM slice.
 
 Room-anchor inventory treats work tables as building evidence. RimBob ingests `/api/v1/map/work-tables` into the shared building registry, then surfaces one anchor per detected room function: a multi-purpose barracks with a stove keeps its Barracks primary anchor and also exposes a Kitchen anchor at the stove cell for placement requests such as "near kitchen."
