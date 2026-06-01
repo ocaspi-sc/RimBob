@@ -84,11 +84,11 @@ Request discipline:
 
 ### Severity Calibration
 
-- The emitting minister self-rates.
+- The emitting minister assigns the initial severity.
 - CoS may downgrade with a logged reason; it cannot upgrade.
 - A minister upgrades by emitting a new higher-severity flag, preserving audit
   history.
-- Flag severity distribution per minister should be visible during refinement.
+- Flag severity distribution per minister should be visible during Oracle refinement.
 
 ### Lifecycle
 

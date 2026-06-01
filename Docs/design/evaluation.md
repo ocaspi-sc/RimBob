@@ -1,7 +1,7 @@
 # RimBob - Evaluation and Iteration
 
 > **Living document.** See `AGENTS.md` for update rules.
-> This doc defines the improvement loop and approval gates. Exact log fields,
+> This doc defines the Oracle improvement loop and approval gates. Exact log fields,
 > replay record schemas, fixture JSON, and helper scripts live in source, tests,
 > and repo-local skills.
 
@@ -9,7 +9,7 @@
 
 ## Core Idea
 
-Each minister improves its own rules. The loop connects:
+The Oracle improves minister rules and supporting artifacts from evidence. The loop connects:
 
 - what the minister saw,
 - which path it took,
@@ -18,8 +18,7 @@ Each minister improves its own rules. The loop connects:
 - what happened later,
 - and what a proposed change would have done to real prior turns.
 
-The system gets smarter by replaying and reviewing actual behavior, not by
-promoting guesses.
+The system gets smarter when the Oracle replays and reviews actual behavior, not when ministers self-modify or promote guesses.
 
 ---
 
@@ -88,9 +87,7 @@ resource/action/flag diffs, schema validity, and missing-field confidence gaps.
 
 ### Deduplication
 
-Before surfacing a candidate rule or prompt change, compare it against existing
-rules and previously rejected proposals. Suppress near-duplicates so the improve
-loop does not keep proposing changes already covered or rejected.
+Before the Oracle surfaces a candidate rule or prompt change, compare it against existing rules and previously rejected proposals. Suppress near-duplicates so the Oracle loop does not keep proposing changes already covered or rejected.
 
 Exact similarity metrics and thresholds should live in refinement tooling and be
 calibrated from use.
@@ -147,15 +144,13 @@ intentionally updated with a clear rationale.
 
 ### v1: Human In The Loop
 
-All refinement loops require human approval before rule, prompt, briefing,
-fixture, or retrieval-profile changes are written. The improve-mode session
-surfaces:
+All Oracle refinement loops require human approval before rule, prompt, briefing, fixture, or retrieval-profile changes are written. The Oracle session surfaces:
 
 - The pattern and example evidence.
 - The proposed change.
 - Replay before/after results.
 - Fixture results.
-- The minister's rationale.
+- The Oracle's rationale.
 
 Rejection notes are logged so future runs do not re-propose the same change.
 
@@ -169,14 +164,12 @@ are not designed up front.
 
 ## Tooling: Claude Code Escalation
 
-Refinement and minister-side dev automation may hand code-shaped work to Claude
-Code by writing a prompt file under `.plans/` and invoking it against the repo.
+Oracle refinement may hand code-shaped work to Claude Code by writing a prompt file under `.plans/` and invoking it against the repo.
 
 This creates a deliberate two-tier model:
 
 - In-process Gemini handles fast, schema-bound play decisions.
-- Claude Code handles slower code-shaped work such as drafting rule diffs,
-  generating fixtures, and reviewing escalation clusters.
+- Claude Code handles slower code-shaped refinement work such as drafting rule diffs, generating fixtures, and reviewing escalation clusters.
 
 The handoff stays simple: prompt file in, repo diff or generated artifact out.
 No bespoke agent SDK integration is part of MVP.
@@ -194,7 +187,7 @@ Repo-local skills worth keeping:
 
 ## Open Questions
 
-- [ ] How is refinement triggered: manual command, threshold, schedule, or a mix?
+- [ ] How is Oracle refinement triggered: manual command, threshold, schedule, or a mix?
 - [ ] Where are refinement-session transcripts stored?
 - [ ] What retention policy should the durable replay corpus use?
 - [ ] Should outcome attribution be per-advice item or per-minister cycle?

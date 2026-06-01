@@ -14,9 +14,8 @@ Every minister has the same broad shape:
 - A focused briefing computed by the state store.
 - A deterministic rules layer for common cases.
 - LLM escalation for judgment calls.
-- Decision and replay logging for audit and refinement.
-- A refinement mode that proposes rule, prompt, briefing, fixture, or RAG
-  changes from real prior behavior.
+- Decision and replay logging for audit and Oracle refinement.
+- Replay, trace, fixture, and Pushback evidence that lets the Oracle propose rule, prompt, briefing, fixture, or RAG changes from real prior behavior.
 
 What differs by minister is the domain, escalation rate, and advice vocabulary.
 
@@ -72,20 +71,16 @@ opaque note to the minister, not system-parsed control data.
 
 ---
 
-## Refinement Mode
+## Oracle Refinement
 
-Refinement is async, between sessions or on demand. The minister reviews its own
-pushbacks, decision history, replay corpus, prompt traces, and fixtures; then it
-proposes changes for human approval.
+Refinement is async, between sessions or on demand. The Oracle reviews a minister's pushbacks, decision history, replay corpus, prompt traces, and fixtures; then it proposes changes for human approval.
 
 Each minister owns its own pushback list. Pushbacks are scoped: the Mayor does
 not see Chef's pushbacks, and Chef does not see Defense's. Pushbacks can inform
 the issuing minister's next prompt and later provide the refinement corpus.
 Implicit state-diff feedback is not part of MVP; see [`advice.md`](advice.md).
 
-Refinement is the same minister in a different mode, not a separate product
-actor. Code-shaped refinement work may use dev-agent tooling, but human approval
-is required before rule, prompt, briefing, fixture, or RAG changes are promoted.
+The Oracle is a developer/refinement role, not a play-mode minister and not another in-game advisor. Ministers do not inspect their own logs, rewrite their own rules, or self-promote behavior changes. Code-shaped refinement work may use dev-agent tooling, but human approval is required before rule, prompt, briefing, fixture, or RAG changes are promoted.
 
 Any applied minister-logic change must close with a before/after advice diff on
 the same input corpus. Prefer historic replay records; if they are missing or
@@ -155,7 +150,7 @@ LLM rules:
 - `actions` are the single player-facing action list on advice.
 - `AgentFlag.Requests` describe cross-minister needs; they do not allocate pawns
   or reserve another minister's resource in MVP.
-- Trace notes are for logging/refinement, not player-facing advice.
+- Trace notes are for logging and Oracle refinement, not player-facing advice.
 
 ---
 
@@ -376,7 +371,7 @@ program, not a new minister.
 
 ## Open Questions
 
-- [ ] How is refinement triggered: manual command, threshold, schedule, or a mix?
+- [ ] How is Oracle refinement triggered: manual command, threshold, schedule, or a mix?
 - [ ] Where are refinement session transcripts logged for audit?
 - [ ] Should fixture generation be automated by a repo-local skill?
 - [ ] Define the confidence threshold for any post-MVP auto-approve path.

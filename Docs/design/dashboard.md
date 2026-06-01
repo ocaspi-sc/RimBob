@@ -510,7 +510,7 @@ Manual triggers are RimBob evaluation controls, not game controls:
 
 - Cabinet trigger: refresh live state, then run wired live ministers in the dependency order. If live refresh fails while Host is serving a restored `ColonyState` snapshot because RIMAPI is unreachable or no colony map is loaded yet, the trigger may still run read-only evaluation against that stale snapshot and must report that fallback in the response and trace.
 - Minister `Run Rules`: refresh live state, then run only the selected wired minister's deterministic rules path through `POST /api/ministers/{minister}/trigger/rules`. This mode must not call an LLM; if rules return an escalation, the trace records the escalation reason and stops before provider work.
-- Minister `Run LLM`: refresh live state, then run only the selected wired minister's forced LLM path through `POST /api/ministers/{minister}/trigger/llm`. This button is disabled for scopes without an LLM path, such as Willie until a construction LLM agent is implemented.
+- Minister `Run LLM`: refresh live state, then run only the selected wired minister's forced LLM path through `POST /api/ministers/{minister}/trigger/llm`. This button is disabled for scopes without an LLM path, such as Willie until a construction LLM path is implemented.
 - Do not keep legacy trigger aliases unless a current dashboard or script consumer requires them.
 
 Expected operational failures should be translated before they reach the

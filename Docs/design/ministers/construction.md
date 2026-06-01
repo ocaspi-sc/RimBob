@@ -13,7 +13,7 @@ Use these as the current routing links before starting Willie/construction-domai
 
 Direct plans:
 
-- [Base / Willie / Layout Agent Plan](../../../.plans/base-construction-layout-agent.md) - implementation slice plan for the first Willie minister.
+- [Base / Willie / Layout Plan](../../../.plans/base-construction-layout-agent.md) - implementation slice plan for the first Willie minister.
 - [Base Layout / Willie Tips](../../../.plans/base-layout-construction-tips.md) - community layout heuristics translated into Willie spatial lint.
 - [RIMAPI Blueprint Placement Endpoint](../../../.plans/rimapi-blueprint-placement-endpoint.md) - fork-side pending blueprint/frame lifecycle for future Willie apply and backlog reads.
 - [Deterministic CoS Cabinet Issue Solver](../../../.plans/deterministic-cos-cabinet-issue-solver.md) - issue-report routing, including Willie-owned issue classes and cross-minister requests.

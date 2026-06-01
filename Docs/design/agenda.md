@@ -127,9 +127,7 @@ The feedback actions are:
 - **Dismiss** - "I am not doing this."
 - **Pushback** - "This is wrong, and here is why."
 
-There is no implicit feedback for Agenda items in MVP. Feedback is explicit
-only. Pushback text is the highest-value training signal and should feed the
-Mayor's refinement path.
+There is no implicit feedback for Agenda items in MVP. Feedback is explicit only. Pushback text is the highest-value refinement signal and should feed the Mayor's Oracle-led refinement path.
 
 Exact feedback payload shape lives with the advice/feedback code contract.
 

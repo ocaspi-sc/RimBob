@@ -16,7 +16,7 @@
 | M4 | First cabinet wave — Willie, Defense, Welfare feeding the Mayor; flag-severity-gated tactical alerts surface independently of the daily digest | Not started |
 | M4.5 | Assisted Apply — player-confirmed execution for the safest allowlisted advice actions | Implemented |
 | M5 | Feedback loop — Accept / Dismiss / Pushback wired; each minister owns and persists its own pushback list | Not started |
-| M6 | Refinement loop closes — pushbacks drive the first promoted rule per minister | Not started |
+| M6 | Oracle refinement loop closes — pushbacks drive the first promoted rule per minister | Not started |
 | M7 (post-MVP) | First Auto graduation — one minister's narrowest concern (e.g. stockpile-zone suggestions) gains an `Auto` mode behind the dial. Scope designed at re-engagement; see DESIGN.md decision "Auto execution delegates to the game's native automation." | Not started |
 
 > **Out of MVP scope:** the original "Year 1 survived, no human input" milestone is deprecated under the assisted-gameplay pivot. Equivalent autonomous play is now a long-tail goal reached by graduating multiple ministers to `Auto` over many cycles, not a single milestone.
@@ -172,16 +172,16 @@ payloads.
 
 ---
 
-## M6 — Refinement loop closes
+## M6 — Oracle refinement loop closes
 
-**Done when:** for one minister, the refinement loop reads its **own pushback list**, identifies a cluster of consistent corrections (e.g. 6 pushbacks all saying "no hunting in winter"), generates a candidate `Rules.cs` change, compares before/after outputs on a historic corpus of prior minister inputs, runs it against fixtures, and surfaces the diff for human approval. One rule is promoted end-to-end.
+**Done when:** for one minister, the Oracle refinement pass reads that minister's pushback list, identifies a cluster of consistent corrections (e.g. 6 pushbacks all saying "no hunting in winter"), generates a candidate `Rules.cs` change, compares before/after outputs on a historic corpus of prior minister inputs, runs it against fixtures, and surfaces the diff for human approval. One rule is promoted end-to-end.
 
 **Demo:** run the `minister-refine` skill against Chef's pushback list; see a proposed rule + fixture pass-rate diff; approve; observe rule appear in `Rules.cs`.
 
 **Scope:**
-- Refinement-mode tooling for at least one minister.
+- Oracle refinement tooling for at least one minister.
 - Historic replay corpus for before/after output comparison on real prior turns.
-- Pushback-clustering pass (LLM-assisted theme extraction over the minister's own pushback list).
+- Pushback-clustering pass (LLM-assisted theme extraction over that minister's pushback list).
 - Fixture suite at ≥10 scenarios for that minister.
 - Approval-gated promotion path.
 

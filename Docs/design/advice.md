@@ -8,8 +8,7 @@
 
 ## Why This Doc Exists
 
-Under the assisted-gameplay pivot, every minister's player-facing output is an
-`AdviceItem`, and the player's reaction is the primary training signal.
+Under the assisted-gameplay pivot, every minister's player-facing output is an `AdviceItem`, and the player's reaction is the primary refinement signal for Oracle review.
 
 This doc defines:
 
@@ -240,9 +239,7 @@ Feedback buttons are:
 - **Dismiss** - "I read this and am not acting on it."
 - **Pushback** - "You are wrong, and here is why."
 
-Pushback is the highest-value signal. It captures the player's correction in
-their own words, which refinement can cluster into rule, prompt, briefing, or
-RAG improvements.
+Pushback is the highest-value signal. It captures the player's correction in their own words, which the Oracle can cluster into rule, prompt, briefing, or RAG improvements.
 
 ---
 
@@ -256,7 +253,7 @@ Design requirements:
 - Durable across sessions.
 - Append-only by default.
 - Includes enough context to understand what advice was corrected.
-- Readable by the issuing minister for later prompt context and refinement.
+- Available to the issuing minister's later prompt context and to Oracle refinement.
 
 The exact storage path and JSONL shape are implementation details; check source
 and tests before editing.
@@ -265,8 +262,7 @@ Pushbacks have two roles:
 
 - **Inline correction (M5):** recent relevant pushbacks can be injected into the
   issuing minister's prompt as player corrections.
-- **Refinement input (M6):** the full list is clustered to propose durable
-  changes.
+- **Oracle refinement input (M6):** the full list is clustered to propose durable changes.
 
 If a correction is relevant to multiple ministers, the player can push back on
 each minister's advice separately. Cross-minister de-duplication is not MVP.
@@ -286,9 +282,7 @@ evidence from actual play.
 
 ## How Feedback Feeds Refinement
 
-Refinement clusters one minister's pushbacks and replay records. Repeated
-corrections can become candidate rule changes, prompt edits, briefing fields, or
-RAG retrieval changes.
+The Oracle clusters one minister's pushbacks and replay records. Repeated corrections can become candidate rule changes, prompt edits, briefing fields, or RAG retrieval changes.
 
 Examples:
 
@@ -366,7 +360,7 @@ coverage, and per-minister trust gates exist.
 
 - [ ] How should prompt-time pushbacks be selected: recency, relevance, age, or
       token budget?
-- [ ] Do pushbacks ever expire, or are stale corrections handled by refinement?
+- [ ] Do pushbacks ever expire, or are stale corrections handled by Oracle refinement?
 - [ ] How should tactical advice conflicts be surfaced before a full CoS loop
       exists?
 - [ ] Define exact per-minister concern catalogues in the relevant minister
