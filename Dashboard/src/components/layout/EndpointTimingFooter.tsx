@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useId, useRef, useState } from 'react';
 import { SlowEndpointQueryMs, type EndpointQueryTiming } from '../../api/requestTelemetry';
 import { useEndpointQueryTimings } from '../../hooks/useEndpointQueryTimings';
 
@@ -21,34 +21,51 @@ interface EndpointTimingSummary {
 
 export function EndpointTimingFooter({ pageKey }: EndpointTimingFooterProps) {
   const pageStartedAt = usePageStartedAt(pageKey);
+  const [open, setOpen] = useState(false);
+  const buttonId = useId();
+  const panelId = useId();
   const timings = useEndpointQueryTimings();
   const summaries = summarizeEndpointTimings(timings, pageStartedAt);
 
   return (
     <footer className="endpoint-timing-footer" aria-label="Endpoints used by this dashboard page">
-      <div className="endpoint-timing-footer-header">
+      <button
+        id={buttonId}
+        type="button"
+        className="endpoint-timing-footer-header"
+        aria-controls={panelId}
+        aria-expanded={open}
+        onClick={() => setOpen(value => !value)}
+      >
         <span className="eyebrow">Endpoints used</span>
-        <strong>{summaries.length}</strong>
-      </div>
-      {summaries.length === 0 ? (
-        <div className="endpoint-timing-empty">No endpoint queries recorded for this page yet.</div>
-      ) : (
-        <div className="endpoint-timing-list">
-          {summaries.map(summary => {
-            const slow = summary.maxDurationMs >= SlowEndpointQueryMs;
-            return (
-              <div className={`endpoint-timing-row ${slow ? 'slow' : ''}`} key={summary.key}>
-                <span className="endpoint-timing-method">{summary.method}</span>
-                <code>{summary.url}</code>
-                <span className={`endpoint-timing-state ${summary.state}`}>
-                  {summary.statusCode ?? summary.state}
-                </span>
-                <span className="endpoint-timing-ms">{formatMs(summary.latestDurationMs)}</span>
-                <small>{summary.count > 1 ? `${summary.count}x` : formatCompletedAt(summary.completedAt)}</small>
-                {summary.error && <small className="endpoint-timing-error">{summary.error}</small>}
-              </div>
-            );
-          })}
+        <span className="endpoint-timing-header-meta">
+          <strong>{summaries.length}</strong>
+          <small>{open ? 'open' : 'closed'}</small>
+        </span>
+      </button>
+      {open && (
+        <div id={panelId} role="region" aria-labelledby={buttonId}>
+          {summaries.length === 0 ? (
+            <div className="endpoint-timing-empty">No endpoint queries recorded for this page yet.</div>
+          ) : (
+            <div className="endpoint-timing-list">
+              {summaries.map(summary => {
+                const slow = summary.maxDurationMs >= SlowEndpointQueryMs;
+                return (
+                  <div className={`endpoint-timing-row ${slow ? 'slow' : ''}`} key={summary.key}>
+                    <span className="endpoint-timing-method">{summary.method}</span>
+                    <code>{summary.url}</code>
+                    <span className={`endpoint-timing-state ${summary.state}`}>
+                      {summary.statusCode ?? summary.state}
+                    </span>
+                    <span className="endpoint-timing-ms">{formatMs(summary.latestDurationMs)}</span>
+                    <small>{summary.count > 1 ? `${summary.count}x` : formatCompletedAt(summary.completedAt)}</small>
+                    {summary.error && <small className="endpoint-timing-error">{summary.error}</small>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </footer>
@@ -112,8 +129,7 @@ function summarizeEndpointTimings(
   }
 
   return [...summaries.values()]
-    .sort((left, right) => right.completedAt - left.completedAt)
-    .slice(0, 12);
+    .sort((left, right) => right.completedAt - left.completedAt);
 }
 
 function formatMs(durationMs: number): string {

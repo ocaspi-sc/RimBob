@@ -414,14 +414,38 @@ code {
 }
 
 .endpoint-timing-footer-header {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  cursor: pointer;
+  text-align: left;
 }
 
 .endpoint-timing-footer-header strong {
   color: var(--cyan);
+}
+
+.endpoint-timing-footer-header:hover .eyebrow {
+  color: var(--text);
+}
+
+.endpoint-timing-header-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.endpoint-timing-header-meta small {
+  color: var(--dim);
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
 }
 
 .endpoint-timing-empty {

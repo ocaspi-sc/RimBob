@@ -413,7 +413,9 @@ Each dashboard page renders a compact endpoint footer at the bottom of the main
 workspace. It lists the Host HTTP endpoints and live stream endpoints observed
 while that page is active, including method, status, and latest query duration;
 slow requests are visually promoted so stale or heavy pages are obvious during
-play.
+play. The footer defaults collapsed but shows the full grouped endpoint list
+when opened; repeated calls to the same method and URL may be grouped with a
+count rather than rendered as duplicate rows.
 
 Prompt inspector endpoints should preserve the exact `{ system, user }` payload
 shape for dashboard consumers, but may cache the rebuilt prompt briefly by
