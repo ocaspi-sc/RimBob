@@ -36,7 +36,10 @@ public static class FoodStateSummary
         {
             if (briefing.UnclassifiedFoodUnits > 0)
             {
-                return $"Stores: {JoinList(stores)}{unclassifiedDetails}; days-of-food cannot be estimated because the reported food units are not classified as meals or raw food.";
+                string reason = briefing.UnknownFoodUnits > 0
+                    ? "some reported food units are not classified as meals or raw food"
+                    : "the visible food units are forbidden and outside the current food buffer";
+                return $"Stores: {JoinList(stores)}{unclassifiedDetails}; days-of-food cannot be estimated because {reason}.";
             }
 
             return $"Stores: {JoinList(stores)}; days-of-food cannot be estimated because no usable nutrition signal is available.";
@@ -199,9 +202,9 @@ public static class FoodStateSummary
     {
         List<string> parts = [];
         if (briefing.ExcludedFoodUnits > 0)
-            parts.Add($"{briefing.ExcludedFoodUnits} food units excluded from reachable buffer");
+            parts.Add($"{briefing.ExcludedFoodUnits} forbidden food units outside the current food buffer");
         if (briefing.UnknownFoodUnits > 0)
-            parts.Add($"{briefing.UnknownFoodUnits} unknown food units");
+            parts.Add($"{briefing.UnknownFoodUnits} food units not classified as meals or raw food");
 
         return JoinList(parts);
     }
@@ -211,13 +214,15 @@ public static class FoodStateSummary
 
     private static string FormatUnclassifiedDetails(FoodBriefing briefing)
     {
-        if (briefing.UnclassifiedFoodItems.Count == 0)
+        IReadOnlyList<string> itemDetails = briefing.UnclassifiedFoodItems.Count > 0
+            ? briefing.UnclassifiedFoodItems.Select(FormatUnclassifiedItem).ToList()
+            : FormatUnforbidTargetDetails(briefing);
+
+        if (itemDetails.Count == 0)
             return "";
 
-        string details = string.Join("; ", briefing.UnclassifiedFoodItems
-            .Take(3)
-            .Select(FormatUnclassifiedItem));
-        int remaining = Math.Max(0, briefing.UnclassifiedFoodItems.Count - 3);
+        string details = string.Join("; ", itemDetails.Take(3));
+        int remaining = Math.Max(0, itemDetails.Count - 3);
         string suffix = remaining > 0 ? $"; plus {Plural(remaining, "more item group")}" : "";
         return $" ({details}{suffix})";
     }
@@ -229,6 +234,48 @@ public static class FoodStateSummary
         string position = string.IsNullOrWhiteSpace(item.Position) ? "" : $" at {item.Position}";
         return $"{item.Count} {forbidden}{label}{position}";
     }
+
+    private static IReadOnlyList<string> FormatUnforbidTargetDetails(FoodBriefing briefing)
+    {
+        int remainingUnits = briefing.ExcludedFoodUnits;
+        List<string> details = [];
+        foreach (IGrouping<FoodTargetGroupKey, FoodUnforbidTarget> group in briefing.UnforbidTargets
+            .GroupBy(target => new FoodTargetGroupKey(
+                target.Def,
+                BaseFoodLabel(target.Label ?? target.Def),
+                target.Kind,
+                target.Source)))
+        {
+            int count = Math.Min(remainingUnits, group.Sum(target => Math.Max(0, target.Count)));
+            if (count <= 0)
+                continue;
+
+            remainingUnits -= count;
+            FoodUnforbidTarget first = group.First();
+            string label = CountedLabel(count, group.Key.Label);
+            string position = $" at {FormatPosition(first.Position)}";
+            details.Add($"{count} forbidden {label}{position}");
+        }
+
+        return details;
+    }
+
+    private static string BaseFoodLabel(string label)
+    {
+        string trimmed = label.Trim();
+        int stackSuffixIndex = trimmed.LastIndexOf(" x", StringComparison.OrdinalIgnoreCase);
+        if (stackSuffixIndex > 0)
+        {
+            string suffix = trimmed[(stackSuffixIndex + 2)..];
+            if (suffix.Length > 0 && suffix.All(char.IsDigit))
+                return trimmed[..stackSuffixIndex].Trim();
+        }
+
+        return string.IsNullOrWhiteSpace(trimmed) ? "food unit" : trimmed;
+    }
+
+    private static string FormatPosition(RimBob.Core.Aggregates.MapPosition position) =>
+        $"({position.X},{position.Y},{position.Z})";
 
     private static IReadOnlyList<FoodHuntRiskSummary> RiskSummaries(FoodBriefing briefing, string risk) =>
         briefing.HuntRiskSummaries
@@ -342,4 +389,10 @@ public static class FoodStateSummary
             2 => $"{items[0]} and {items[1]}",
             _ => $"{string.Join(", ", items.Take(items.Count - 1))}, and {items[^1]}"
         };
-    }
+
+    private sealed record FoodTargetGroupKey(
+        string Def,
+        string Label,
+        string Kind,
+        string Source);
+}

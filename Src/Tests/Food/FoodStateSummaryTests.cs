@@ -130,8 +130,9 @@ public sealed class FoodStateSummaryTests
 
         briefing.ExcludedFoodUnits.Should().Be(0);
         briefing.UnknownFoodUnits.Should().Be(25);
-        summary.Should().Contain("25 unknown food units");
+        summary.Should().Contain("25 food units not classified as meals or raw food");
         summary.Should().Contain("days-of-food cannot be estimated");
+        summary.Should().NotContain("unknown food units");
         summary.Should().NotContain("edible");
     }
 
@@ -154,11 +155,40 @@ public sealed class FoodStateSummaryTests
 
         briefing.ExcludedFoodUnits.Should().Be(8);
         briefing.UnknownFoodUnits.Should().Be(0);
-        summary.Should().Contain("8 food units excluded from reachable buffer");
+        summary.Should().Contain("8 forbidden food units outside the current food buffer");
         summary.Should().NotContain("unknown food units");
         summary.Should().Contain("7 forbidden packaged survival meals at (62,0,219)");
         summary.Should().Contain("1 forbidden squirrel (dead) at (83,0,38)");
         summary.Should().NotContain("food_unit_classification");
+    }
+
+    [Fact]
+    public void Build_UnforbidTargetsExplainForbiddenFoodRemainder()
+    {
+        FoodBriefing briefing = FoodRulesTests.Briefing(null) with
+        {
+            FoodUnits = 57,
+            MealsCount = 0,
+            RawFoodCount = 0,
+            UnclassifiedFoodItems = [],
+            UnforbidTargets =
+            [
+                new FoodUnforbidTarget("meal-1", "MealSurvivalPack", "packaged survival meal x10", 10, "meal", "map_things", new(127, 0, 120)),
+                new FoodUnforbidTarget("meal-2", "MealSurvivalPack", "packaged survival meal x10", 10, "meal", "map_things", new(125, 0, 120)),
+                new FoodUnforbidTarget("meal-3", "MealSurvivalPack", "packaged survival meal", 37, "meal", "map_things", new(127, 0, 118))
+            ]
+        };
+
+        string summary = FoodStateSummary.Build(briefing);
+
+        briefing.ExcludedFoodUnits.Should().Be(57);
+        briefing.UnknownFoodUnits.Should().Be(0);
+        briefing.MissingBriefingSignals.Should().NotContain("food_unit_classification");
+        summary.Should().Contain("57 forbidden food units outside the current food buffer");
+        summary.Should().Contain("57 forbidden packaged survival meals at (127,0,120)");
+        summary.Should().Contain("days-of-food cannot be estimated because the visible food units are forbidden and outside the current food buffer");
+        summary.Should().NotContain("unknown food units");
+        summary.Should().NotContain("packaged survival meal x10s");
     }
 
     [Fact]

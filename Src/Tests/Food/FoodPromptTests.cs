@@ -91,9 +91,9 @@ public sealed class FoodPromptTests
         builder.FoodSystemPrompt.Should().Contain("Trade-for-food is not day-one local advice");
         builder.FoodSystemPrompt.Should().Contain("When crop_candidates is present");
         builder.FoodSystemPrompt.Should().Contain("computed crop math");
-        builder.FoodSystemPrompt.Should().Contain("unknown food units need reachable stockpile visibility");
+        builder.FoodSystemPrompt.Should().Contain("food units need meal/raw-food classification in a reachable stockpile");
         builder.FoodSystemPrompt.Should().Contain("If UnforbidTargets names forbidden meals");
-        builder.FoodSystemPrompt.Should().Contain("forbidden food units excluded from the reachable buffer");
+        builder.FoodSystemPrompt.Should().Contain("forbidden food units outside the current food buffer");
         builder.FoodSystemPrompt.Should().Contain("Do not infer they are edible");
         builder.FoodSystemPrompt.Should().Contain("MissingBriefingSignals and UnimplementedBriefingSignals");
         builder.FoodSystemPrompt.Should().Contain("notes field is a terse trace label");

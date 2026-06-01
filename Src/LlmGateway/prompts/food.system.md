@@ -28,8 +28,8 @@ Rules:
 - When crop_candidates is present, treat it as computed crop math. Do not invent grow days, yield, season fit, terrain fertility, classification confidence, or storage modifiers outside that table.
 - Use high priority for urgent food shortages. Use critical only when the briefing proves near-zero edible food plus immediate starvation risk.
 - If nutrition_source is "unknown", ask for reachable stockpile visibility instead of assuming starvation. Do not use vague "audit" wording.
-- If UnknownFoodUnits is positive, say "unknown food units need reachable stockpile visibility." Do not infer they are edible; do not call them "unknown edible items"; do not ask for "identification" or "audit."
-- If UnforbidTargets names forbidden meals or raw food, describe them as forbidden food units excluded from the reachable buffer, not "unclassified"; recommend an unforbid action for forbidden meals before broader stockpile-visibility advice.
+- If UnknownFoodUnits is positive, say "food units need meal/raw-food classification in a reachable stockpile." Do not infer they are edible; do not call them "unknown edible items"; do not ask for "identification" or "audit."
+- If UnforbidTargets names forbidden meals or raw food, describe them as forbidden food units outside the current food buffer, not "unclassified"; recommend an unforbid action for forbidden meals before broader stockpile-visibility advice.
 - MissingBriefingSignals and UnimplementedBriefingSignals are data-quality guardrails. Use them to temper confidence; do not turn them into vague player chores.
 - The notes field is a terse trace label for debugging, not player-facing advice. Keep it under 12 words and prefer tokens such as "emergency_food_chain: stockpile visibility, cooking building, growing tiles." Do not start notes with "Briefing indicates" and do not use speculative prose such as "this suggests."
 - Use briefing spatial summaries only when present. Do not invent coordinates; if positions are unavailable, say that location data is unavailable.

@@ -840,11 +840,12 @@ public sealed class FoodRulesTests
         decision.Trace.Should().Be("nutrition_signal_gap");
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
         advice.Concern.Should().Be("manage_food_stockpile");
-        advice.Body.Should().Contain("25 unknown food units");
+        advice.Body.Should().Contain("25 food units but no usable meal/raw-food classification");
+        advice.Body.Should().NotContain("unknown food units");
         advice.Body.Should().NotContain("audit");
         advice.Actions.Should().ContainSingle().Which.Should().Match<AdviceAction>(action =>
             action.Kind == AdviceActionKind.SetStockpileZone &&
-            action.Instruction == "Confirm unknown or excluded food is edible and reachable before counting it as buffer.");
+            action.Instruction == "Confirm remaining food units are classified as meals or raw food and reachable before counting them as buffer.");
         decision.Flags.Should().BeEmpty();
     }
 
@@ -868,6 +869,9 @@ public sealed class FoodRulesTests
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
         advice.Concern.Should().Be("manage_food_stockpile");
         advice.Priority.Should().Be(AdvicePriority.Medium);
+        advice.Body.Should().Contain("57 forbidden packaged survival meals outside the current food buffer");
+        advice.Body.Should().NotContain("unknown food units");
+        advice.Body.Should().NotContain("reachable buffer");
         advice.Actions.Should().HaveCount(2);
         AdviceAction unforbidAction = advice.Actions[0];
         unforbidAction.Kind.Should().Be(AdviceActionKind.Unforbid);
@@ -876,6 +880,7 @@ public sealed class FoodRulesTests
             "Unforbid 57 packaged survival meals at (127, 0, 120), (125, 0, 120), (127, 0, 118); then let haulers bring them into the food stockpile.");
         AdviceAction stockpileAction = advice.Actions[1];
         stockpileAction.Kind.Should().Be(AdviceActionKind.SetStockpileZone);
+        stockpileAction.Instruction.Should().Be("Confirm remaining food units are classified as meals or raw food and reachable before counting them as buffer.");
 
         UnforbidThingsApply apply = unforbidAction.Apply.Should().BeOfType<UnforbidThingsApply>().Subject;
         apply.TargetCount.Should().Be(12);
@@ -892,6 +897,7 @@ public sealed class FoodRulesTests
             request.RequestedFrom == "Willie");
         ItemRequest itemRequest = flag.ItemRequests.Should().ContainSingle().Subject;
         itemRequest.Request.Should().Be("57 forbidden packaged survival meals");
+        itemRequest.Reason.Should().Be("visible meals are forbidden and not counted in the current food buffer");
         itemRequest.ItemDef.Should().Be("MealSurvivalPack");
         itemRequest.Quantity.Should().Be(57);
     }

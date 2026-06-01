@@ -53,7 +53,9 @@ public sealed record FoodBriefing(
     public IReadOnlyList<FoodHuntRiskSummary> HuntRiskSummaries { get; init; } = [];
 
     public int ExcludedFoodUnits =>
-        Math.Min(UnclassifiedFoodUnits, UnclassifiedFoodItems.Sum(item => Math.Max(0, item.Count)));
+        Math.Min(UnclassifiedFoodUnits,
+            UnclassifiedFoodItems.Sum(item => Math.Max(0, item.Count)) +
+            UnforbidTargets.Sum(target => Math.Max(0, target.Count)));
 
     public int UnknownFoodUnits => Math.Max(0, UnclassifiedFoodUnits - ExcludedFoodUnits);
 
