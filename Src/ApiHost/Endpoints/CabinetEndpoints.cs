@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using RimBob.Coordination;
 using RimBob.Core.Ministers;
 
@@ -9,10 +11,12 @@ namespace RimBob.Host.Endpoints;
 /// </summary>
 public static class CabinetEndpoints
 {
+    private static readonly JsonSerializerOptions RequestJson = new(JsonSerializerDefaults.Web);
+
     public static IEndpointRouteBuilder MapCabinetEndpoints(this IEndpointRouteBuilder app)
     {
         EndpointCoverageCatalog coverage = app.ServiceProvider.GetRequiredService<EndpointCoverageCatalog>();
-        coverage.Register("/api/cabinet/trigger", "available", "Manual dashboard trigger for all live ministers; suggest-only, no RIMAPI writes.");
+        coverage.Register("/api/cabinet/trigger", "available", "Manual dashboard trigger for all live ministers; returns a run-scoped step log and remains suggest-only, no RIMAPI writes.");
         coverage.Register(
             "/api/ministers/{minister}/trigger/rules",
             _ => "partial",
@@ -23,13 +27,15 @@ public static class CabinetEndpoints
             context => $"Manual forced-LLM dashboard trigger for LLM-backed ministers: {context.CapabilityNames(descriptor => descriptor.CanRunLlm)}. Non-LLM scopes stay disabled.");
 
         app.MapPost("/api/cabinet/trigger", async (
+            HttpRequest request,
             CabinetCycle cabinet,
             CancellationToken ct) =>
         {
+            CabinetTriggerRequest? triggerRequest = await ReadTriggerRequestAsync(request, ct);
             CabinetTriggerResult result;
             try
             {
-                result = await cabinet.TriggerCabinetAsync(ct);
+                result = await cabinet.TriggerCabinetAsync(ct, triggerRequest?.RunId);
             }
             catch (Exception ex)
             {
@@ -43,7 +49,8 @@ public static class CabinetEndpoints
                 scope = result.Scope,
                 trigger = result.Trigger,
                 state_source = result.StateSource,
-                used_restored_snapshot = result.UsedRestoredSnapshot
+                used_restored_snapshot = result.UsedRestoredSnapshot,
+                run_log = result.RunLog
             });
         });
 
@@ -109,4 +116,28 @@ public static class CabinetEndpoints
             used_restored_snapshot = result.UsedRestoredSnapshot
         });
     }
+
+    private static async Task<CabinetTriggerRequest?> ReadTriggerRequestAsync(
+        HttpRequest request,
+        CancellationToken ct)
+    {
+        if (request.ContentLength is null or 0)
+            return null;
+
+        try
+        {
+            return await JsonSerializer.DeserializeAsync<CabinetTriggerRequest>(
+                request.Body,
+                RequestJson,
+                ct);
+        }
+        catch (JsonException ex)
+        {
+            throw new BadHttpRequestException("Invalid cabinet trigger request JSON.", ex);
+        }
+    }
+
+    private sealed record CabinetTriggerRequest(
+        [property: JsonPropertyName("run_id")]
+        string? RunId);
 }

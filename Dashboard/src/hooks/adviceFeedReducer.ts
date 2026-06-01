@@ -1,6 +1,6 @@
 import type { AdviceChainModel, AdviceItem, AdviceSnapshot, AgentFlag } from '../types/advice';
 import type { MayorAgenda } from '../types/agenda';
-import type { DashboardEvent, FeedState, RimBobRunningVersion, StreamDiagnostics } from '../types/system';
+import type { CabinetRunLogSnapshot, DashboardEvent, FeedState, RimBobRunningVersion, StreamDiagnostics } from '../types/system';
 
 const initialDiagnostics: StreamDiagnostics = {
   state: 'connecting',
@@ -17,6 +17,7 @@ export interface AdviceFeedState {
   agenda: MayorAgenda | null;
   previousAgenda: MayorAgenda | null;
   feed: FeedState;
+  cabinetRuns: CabinetRunLogSnapshot[];
   runningVersion: RimBobRunningVersion | null;
   stream: StreamDiagnostics;
   events: DashboardEvent[];
@@ -32,6 +33,7 @@ export type AdviceFeedAction =
   | { type: 'agendaReceived'; agenda: MayorAgenda; eventId: string | null; readyState: number }
   | { type: 'adviceReceived'; advice: AdviceItem; eventId: string | null; readyState: number }
   | { type: 'adviceSnapshotReceived'; snapshot: AdviceSnapshot; eventId: string | null; readyState: number }
+  | { type: 'cabinetRunReceived'; run: CabinetRunLogSnapshot; eventId: string | null; readyState: number }
   | { type: 'pingReceived'; readyState: number }
   | { type: 'parseFailed'; eventType: string; error: string; readyState: number }
   | { type: 'streamErrored'; readyState: number }
@@ -48,6 +50,7 @@ export const initialAdviceFeedState: AdviceFeedState = {
     flags: {},
     stateSummaries: {},
   },
+  cabinetRuns: [],
   runningVersion: null,
   stream: initialDiagnostics,
   events: [],
@@ -188,6 +191,19 @@ export function adviceFeedReducer(
         ),
       };
     }
+    case 'cabinetRunReceived':
+      return {
+        ...state,
+        cabinetRuns: mergeCabinetRuns(state.cabinetRuns, action.run),
+        stream: recordStreamEvent(state.stream, action.readyState, 'cabinet_run', action.eventId),
+        events: pushEvent(
+          state.events,
+          'Cabinet',
+          'cabinet_run',
+          action.run.status === 'failed' ? 'error' : 'info',
+          `Cabinet run ${action.run.status}: ${action.run.steps.length} step${action.run.steps.length === 1 ? '' : 's'}`,
+        ),
+      };
     case 'pingReceived':
       return {
         ...state,
@@ -248,6 +264,16 @@ function priorityRank(priority: AdviceItem['priority']): number {
 
 function sameMinister(a: string, b: string): boolean {
   return a.localeCompare(b, undefined, { sensitivity: 'accent' }) === 0;
+}
+
+function mergeCabinetRuns(
+  current: CabinetRunLogSnapshot[],
+  nextRun: CabinetRunLogSnapshot,
+): CabinetRunLogSnapshot[] {
+  return [
+    nextRun,
+    ...current.filter(run => run.run_id !== nextRun.run_id),
+  ].slice(0, 12);
 }
 
 function mergeStateSummaries(

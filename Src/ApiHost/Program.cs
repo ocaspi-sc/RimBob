@@ -138,6 +138,7 @@ try
     builder.Services.AddSingleton<EndpointCoverageCatalog>();
     builder.Services.AddSingleton(new HostRuntimeIdentity(builder.Environment.ContentRootPath));
     builder.Services.AddSingleton<MinisterTraceStore>();
+    builder.Services.AddSingleton<CabinetRunLogStore>();
     builder.Services.AddSingleton<WillieSolverStore>();
     builder.Services.AddSingleton<AssistedApplyService>();
     builder.Services.AddTransient<RimApiRuntimeProbe>();

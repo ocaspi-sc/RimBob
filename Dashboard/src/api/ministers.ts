@@ -1,6 +1,6 @@
 import type { ScopeKey } from '../dashboard/scopes';
 import type { GameDate } from '../types/colony';
-import type { MinisterTrace } from '../types/system';
+import type { CabinetRunLogSnapshot, MinisterTrace } from '../types/system';
 import { postJson, readJson } from './http';
 
 export interface PromptPayload {
@@ -29,6 +29,9 @@ export interface ManualTriggerPayload {
   minister?: string;
   trigger: string;
   run_mode?: string;
+  state_source?: string;
+  used_restored_snapshot?: boolean;
+  run_log?: CabinetRunLogSnapshot;
 }
 
 export interface FoodCropCandidate {

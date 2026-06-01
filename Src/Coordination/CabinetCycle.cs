@@ -11,6 +11,7 @@ public sealed class CabinetCycle(
     IEnumerable<IMinister> ministers,
     MinisterRegistry registry,
     MinisterTraceStore traces,
+    CabinetRunLogStore runLogs,
     ILogger<CabinetCycle> log)
 {
     public async Task RunAsync(CancellationToken ct) =>
@@ -19,19 +20,49 @@ public sealed class CabinetCycle(
     public async Task RunAsync(PlayCycleContext cycle, CancellationToken ct) =>
         await RunCycleAsync(cycle, ct);
 
-    public async Task<CabinetTriggerResult> TriggerCabinetAsync(CancellationToken ct)
+    public async Task<CabinetTriggerResult> TriggerCabinetAsync(CancellationToken ct, string? runId = null)
     {
-        bool usedRestoredSnapshot = await RunCycleAsync(PlayCycleContext.ManualTrigger, ct);
-        return new CabinetTriggerResult(
+        CabinetRunLogSnapshot startedRun = runLogs.StartRun(
+            runId,
             "cabinet",
-            PlayCycleContext.ManualTrigger.Trigger.ToString(),
-            colony.LastRefreshSource.ToString(),
-            usedRestoredSnapshot);
+            PlayCycleContext.ManualTrigger.Trigger.ToString());
+        bool? usedRestoredSnapshot = null;
+
+        try
+        {
+            usedRestoredSnapshot = await RunCycleAsync(PlayCycleContext.ManualTrigger, ct, startedRun.RunId);
+            CabinetRunLogSnapshot completedRun = runLogs.CompleteRun(
+                startedRun.RunId,
+                colony.LastRefreshSource.ToString(),
+                usedRestoredSnapshot.Value);
+            return new CabinetTriggerResult(
+                "cabinet",
+                PlayCycleContext.ManualTrigger.Trigger.ToString(),
+                colony.LastRefreshSource.ToString(),
+                usedRestoredSnapshot.Value,
+                completedRun);
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            runLogs.FailRun(
+                startedRun.RunId,
+                ex,
+                colony.LastRefreshSource.ToString(),
+                usedRestoredSnapshot);
+            throw;
+        }
     }
 
-    private async Task<bool> RunCycleAsync(PlayCycleContext cycle, CancellationToken ct)
+    private async Task<bool> RunCycleAsync(
+        PlayCycleContext cycle,
+        CancellationToken ct,
+        string? cabinetRunId = null)
     {
-        bool usedRestoredSnapshot = await RefreshStateForReadOnlyEvaluationAsync(cycle, "cabinet", ct);
+        bool usedRestoredSnapshot = await RefreshStateForReadOnlyEvaluationAsync(
+            cycle,
+            "cabinet",
+            ct,
+            cabinetRunId);
 
         foreach (MinisterDescriptor descriptor in registry.CabinetMinisters)
         {
@@ -40,7 +71,7 @@ public sealed class CabinetCycle(
                 throw new InvalidOperationException($"Cabinet cycle could not resolve {descriptor.Label} minister.");
 
             log.LogInformation("Cabinet cycle: running {Minister}", descriptor.Label);
-            await RunResolvedMinisterAsync(minister, cycle, usedRestoredSnapshot, ct);
+            await RunResolvedMinisterAsync(minister, descriptor, cycle, usedRestoredSnapshot, ct, cabinetRunId);
         }
 
         return usedRestoredSnapshot;
@@ -59,13 +90,14 @@ public sealed class CabinetCycle(
         bool usedRestoredSnapshot = await RefreshStateForReadOnlyEvaluationAsync(
             cycle,
             descriptor.Label,
-            ct);
+            ct,
+            cabinetRunId: null);
 
         IMinister? minister = ResolveMinister(descriptor);
         if (minister is null)
             throw new InvalidOperationException($"Manual trigger could not resolve {descriptor.Label} minister.");
 
-        await RunResolvedMinisterAsync(minister, cycle, usedRestoredSnapshot, ct);
+        await RunResolvedMinisterAsync(minister, descriptor, cycle, usedRestoredSnapshot, ct);
         return new MinisterTriggerResult(
             descriptor.Key,
             descriptor.Label,
@@ -81,17 +113,80 @@ public sealed class CabinetCycle(
     private async Task<bool> RefreshStateForReadOnlyEvaluationAsync(
         PlayCycleContext cycle,
         string scope,
-        CancellationToken ct)
+        CancellationToken ct,
+        string? cabinetRunId)
     {
+        if (cabinetRunId is not null)
+        {
+            runLogs.StartStep(
+                cabinetRunId,
+                "live_state_refresh",
+                "Live-state refresh",
+                "refresh",
+                "Refreshing live colony state before read-only evaluation.");
+        }
+
         try
         {
             await ingestion.RefreshAllAsync(ct);
+            if (cabinetRunId is not null)
+            {
+                runLogs.CompleteStep(
+                    cabinetRunId,
+                    "live_state_refresh",
+                    "Live-state refresh",
+                    "refresh",
+                    "Live colony state refreshed.",
+                    stateSource: colony.LastRefreshSource.ToString(),
+                    usedRestoredSnapshot: false);
+            }
             return false;
         }
         catch (Exception ex) when (!ct.IsCancellationRequested)
         {
             if (!TryRestoreSnapshotForManualFallback(cycle, ex))
+            {
+                if (cabinetRunId is not null)
+                {
+                    runLogs.FailStep(
+                        cabinetRunId,
+                        "live_state_refresh",
+                        "Live-state refresh",
+                        "refresh",
+                        ex,
+                        "Live state refresh failed and no restored snapshot fallback was eligible.",
+                        stateSource: colony.LastRefreshSource.ToString(),
+                        usedRestoredSnapshot: false);
+                }
                 throw;
+            }
+
+            if (cabinetRunId is not null)
+            {
+                runLogs.FailStep(
+                    cabinetRunId,
+                    "live_state_refresh",
+                    "Live-state refresh",
+                    "refresh",
+                    ex,
+                    "Live state refresh failed; using restored snapshot for read-only evaluation.",
+                    stateSource: colony.LastRefreshSource.ToString(),
+                    usedRestoredSnapshot: true);
+                runLogs.StartStep(
+                    cabinetRunId,
+                    "restored_snapshot_fallback",
+                    "Restored-snapshot fallback",
+                    "fallback",
+                    "Restoring last curated ColonyState snapshot.");
+                runLogs.CompleteStep(
+                    cabinetRunId,
+                    "restored_snapshot_fallback",
+                    "Restored-snapshot fallback",
+                    "fallback",
+                    "Restored snapshot state is active for this read-only run.",
+                    stateSource: colony.LastRefreshSource.ToString(),
+                    usedRestoredSnapshot: true);
+            }
 
             log.LogWarning(
                 ex,
@@ -133,10 +228,24 @@ public sealed class CabinetCycle(
 
     private async Task RunResolvedMinisterAsync(
         IMinister minister,
+        MinisterDescriptor descriptor,
         PlayCycleContext cycle,
         bool usedRestoredSnapshot,
-        CancellationToken ct)
+        CancellationToken ct,
+        string? cabinetRunId = null)
     {
+        string ministerStepKey = $"minister_{descriptor.Key}";
+        if (cabinetRunId is not null)
+        {
+            runLogs.StartStep(
+                cabinetRunId,
+                ministerStepKey,
+                $"{descriptor.Label} run",
+                "minister",
+                $"Running {descriptor.Label}.",
+                descriptor.Label);
+        }
+
         traces.Begin(minister.Name, cycle);
         try
         {
@@ -146,10 +255,39 @@ public sealed class CabinetCycle(
                 usedRestoredSnapshot
                     ? "Live refresh failed; evaluated against restored colony snapshot state."
                     : null);
+            if (cabinetRunId is not null)
+            {
+                MinisterTraceSnapshot? trace = LatestTraceFor(descriptor, minister);
+                runLogs.CompleteStep(
+                    cabinetRunId,
+                    ministerStepKey,
+                    $"{descriptor.Label} run",
+                    "minister",
+                    MinisterStepDetail(descriptor.Label, trace),
+                    descriptor.Label,
+                    colony.LastRefreshSource.ToString(),
+                    usedRestoredSnapshot,
+                    trace);
+            }
         }
         catch (Exception ex)
         {
             traces.Fail(minister.Name, ex);
+            if (cabinetRunId is not null)
+            {
+                MinisterTraceSnapshot? trace = LatestTraceFor(descriptor, minister);
+                runLogs.FailStep(
+                    cabinetRunId,
+                    ministerStepKey,
+                    $"{descriptor.Label} run",
+                    "minister",
+                    ex,
+                    MinisterStepDetail(descriptor.Label, trace),
+                    descriptor.Label,
+                    colony.LastRefreshSource.ToString(),
+                    usedRestoredSnapshot,
+                    trace);
+            }
             throw;
         }
     }
@@ -158,6 +296,31 @@ public sealed class CabinetCycle(
         ministers.FirstOrDefault(m =>
             MinisterRegistry.NormalizeKey(m.Name).Equals(descriptor.Key, StringComparison.OrdinalIgnoreCase) ||
             m.Name.Equals(descriptor.Label, StringComparison.OrdinalIgnoreCase));
+
+    private MinisterTraceSnapshot? LatestTraceFor(MinisterDescriptor descriptor, IMinister minister) =>
+        traces.Latest(descriptor.Label) ?? traces.Latest(minister.Name);
+
+    private static string MinisterStepDetail(string minister, MinisterTraceSnapshot? trace)
+    {
+        if (trace is null)
+            return $"{minister} completed; no trace snapshot was exposed.";
+
+        List<string> parts = [];
+        if (!string.IsNullOrWhiteSpace(trace.Path))
+            parts.Add($"path {trace.Path}");
+        if (!string.IsNullOrWhiteSpace(trace.RuleFired))
+            parts.Add($"rule {trace.RuleFired}");
+        else if (!string.IsNullOrWhiteSpace(trace.EscalationReason))
+            parts.Add(trace.EscalationReason);
+        if (trace.AdviceCount is not null)
+            parts.Add($"{trace.AdviceCount} advice");
+        if (trace.FlagCount is not null)
+            parts.Add($"{trace.FlagCount} flags");
+        if (!string.IsNullOrWhiteSpace(trace.ErrorType))
+            parts.Add($"{trace.ErrorType}: {trace.ErrorMessage}");
+
+        return parts.Count == 0 ? trace.Note : string.Join("; ", parts);
+    }
 }
 
 public sealed record MinisterTriggerResult(
@@ -172,4 +335,5 @@ public sealed record CabinetTriggerResult(
     string Scope,
     string Trigger,
     string StateSource,
-    bool UsedRestoredSnapshot);
+    bool UsedRestoredSnapshot,
+    CabinetRunLogSnapshot RunLog);

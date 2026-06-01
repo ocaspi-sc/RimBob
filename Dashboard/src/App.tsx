@@ -4,6 +4,7 @@ import { findScope, isMinisterViewKey, scopeConfigs, viewForScope, viewsForScope
 import { formatLastRun } from './dashboard/selectors';
 import { AnalyticsOverview } from './components/analytics/AnalyticsOverview';
 import { DevBlogOverview } from './components/devBlog/DevBlogOverview';
+import { CabinetRunDialog } from './components/layout/CabinetRunDialog';
 import { DashboardHeader } from './components/layout/DashboardHeader';
 import { ColonySidebar } from './components/layout/ColonySidebar';
 import { EndpointTimingFooter } from './components/layout/EndpointTimingFooter';
@@ -25,11 +26,11 @@ const SystemHealthPollMs = 15_000;
 
 export default function App() {
   const selection = useDashboardSelection();
-  const triggers = useManualTriggers();
   const status = usePollingResource(fetchStatus, StatusPollMs);
   const snapshot = usePollingResource(fetchColonySnapshot, SnapshotPollMs);
   const systemHealth = usePollingResource(fetchSystemHealth, SystemHealthPollMs);
   const feed = useAdviceFeed();
+  const triggers = useManualTriggers(feed.cabinetRuns);
   useDashboardReloadOnVersionChange(systemHealth.data, feed.runningVersion);
 
   const activeScope = findScope(selection.selectedScope);
@@ -63,6 +64,11 @@ export default function App() {
         triggerPending={triggers.triggerState.target === 'cabinet'}
         triggerDisabled={triggers.triggerState.target !== null || !hostApiLive}
         onTriggerCabinet={() => void triggers.triggerCabinetNow()}
+      />
+      <CabinetRunDialog
+        onClose={triggers.closeCabinetRunDialog}
+        open={triggers.cabinetRunDialog.open}
+        run={triggers.cabinetRunDialog.run}
       />
 
       <div className="dashboard-v2-grid">

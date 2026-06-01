@@ -9,8 +9,14 @@ export async function readJson<T>(url: string, signal?: AbortSignal): Promise<T>
   return await response.json() as T;
 }
 
-export async function postJson<T>(url: string, signal?: AbortSignal): Promise<T> {
-  const response = await timedFetch(url, { method: 'POST', signal });
+export async function postJson<T>(url: string, signal?: AbortSignal, body?: unknown): Promise<T> {
+  const init: RequestInit = { method: 'POST', signal };
+  if (body !== undefined) {
+    init.headers = { 'Content-Type': 'application/json' };
+    init.body = JSON.stringify(body);
+  }
+
+  const response = await timedFetch(url, init);
   if (!response.ok) {
     throw new Error(await readErrorMessage(response, url));
   }

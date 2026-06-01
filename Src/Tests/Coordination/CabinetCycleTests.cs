@@ -38,6 +38,41 @@ public sealed class CabinetCycleTests
     }
 
     [Fact]
+    public async Task TriggerCabinetAsync_RecordsOrderedSuccessfulRunSteps()
+    {
+        MinisterTraceStore traces = new();
+        CabinetRunLogStore runLogs = new();
+        FakeMinister mayor = new("Mayor", onRun: context =>
+            traces.RecordPath("Mayor", context, "llm", null, null, "daily agenda refresh", null, 1, 0));
+        FakeMinister chef = new("Chef", onRun: context =>
+            traces.RecordPath("Chef", context, "rules", "food_buffer_low", null, null, null, 2, 1));
+        FakeMinister willie = new("Willie", onRun: context =>
+            traces.RecordPath("Willie", context, "rules", "freezer_request_active", null, null, null, 1, 0));
+        CabinetCycle sut = BuildCycle(
+            new NoopRefresher(),
+            new ColonyState(),
+            new ColonyStateSnapshotStore(),
+            traces,
+            [mayor, chef, willie],
+            runLogs);
+
+        CabinetTriggerResult result = await sut.TriggerCabinetAsync(CancellationToken.None, "run-success");
+
+        result.RunLog.RunId.Should().Be("run-success");
+        result.RunLog.Status.Should().Be("completed");
+        result.RunLog.Steps.Select(step => step.Key).Should().Equal(
+            "request_accepted",
+            "live_state_refresh",
+            "minister_food",
+            "minister_willie",
+            "minister_mayor",
+            "cabinet_complete");
+        result.RunLog.Steps.Single(step => step.Key == "minister_food").RuleFired.Should().Be("food_buffer_low");
+        result.RunLog.Steps.Single(step => step.Key == "minister_food").AdviceCount.Should().Be(2);
+        result.RunLog.Steps.Single(step => step.Key == "minister_food").FlagCount.Should().Be(1);
+    }
+
+    [Fact]
     public async Task TriggerMinisterAsync_WhenLiveRefreshFailsWithoutRestoredSnapshot_DoesNotRunMinister()
     {
         ColonyState colony = new();
@@ -156,20 +191,49 @@ public sealed class CabinetCycleTests
         FakeMinister mayor = new("Mayor");
         FakeMinister chef = new("Chef");
         FakeMinister willie = new("Willie");
+        CabinetRunLogStore runLogs = new();
         CabinetCycle sut = BuildCycle(
             new ThrowingRefresher(ConnectionRefused()),
             colony,
             snapshotStore,
             new MinisterTraceStore(),
-            [mayor, chef, willie]);
+            [mayor, chef, willie],
+            runLogs);
 
-        CabinetTriggerResult result = await sut.TriggerCabinetAsync(CancellationToken.None);
+        CabinetTriggerResult result = await sut.TriggerCabinetAsync(CancellationToken.None, "run-fallback");
 
         result.UsedRestoredSnapshot.Should().BeTrue();
         result.StateSource.Should().Be(nameof(ColonyStateOrigin.Snapshot));
+        result.RunLog.Steps.Single(step => step.Key == "live_state_refresh").Status.Should().Be("failed");
+        result.RunLog.Steps.Single(step => step.Key == "restored_snapshot_fallback").Status.Should().Be("completed");
         mayor.WakeCount.Should().Be(1);
         chef.WakeCount.Should().Be(1);
         willie.WakeCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task TriggerCabinetAsync_WhenMinisterThrows_MarksMinisterAndRunFailed()
+    {
+        CabinetRunLogStore runLogs = new();
+        FakeMinister chef = new("Chef", exception: new InvalidOperationException("kitchen exploded"));
+        CabinetCycle sut = BuildCycle(
+            new NoopRefresher(),
+            new ColonyState(),
+            new ColonyStateSnapshotStore(),
+            new MinisterTraceStore(),
+            [chef],
+            runLogs);
+
+        Func<Task> act = () => sut.TriggerCabinetAsync(CancellationToken.None, "run-failed");
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("kitchen exploded");
+        CabinetRunLogSnapshot failedRun = runLogs.Latest("run-failed")
+            ?? throw new InvalidOperationException("Expected failed run log.");
+        failedRun.Status.Should().Be("failed");
+        failedRun.ErrorType.Should().Be(nameof(InvalidOperationException));
+        failedRun.Steps.Single(step => step.Key == "minister_food").Status.Should().Be("failed");
+        failedRun.Steps.Single(step => step.Key == "cabinet_failed").ErrorMessage.Should().Be("kitchen exploded");
     }
 
     [Fact]
@@ -232,7 +296,8 @@ public sealed class CabinetCycleTests
         ColonyState colony,
         ColonyStateSnapshotStore snapshotStore,
         MinisterTraceStore traces,
-        IReadOnlyList<IMinister> ministers) =>
+        IReadOnlyList<IMinister> ministers,
+        CabinetRunLogStore? runLogs = null) =>
         new(
             refresher,
             colony,
@@ -240,6 +305,7 @@ public sealed class CabinetCycleTests
             ministers,
             new MinisterRegistry(),
             traces,
+            runLogs ?? new CabinetRunLogStore(),
             NullLogger<CabinetCycle>.Instance);
 
     private static async Task<(ColonyState Colony, ColonyStateSnapshotStore SnapshotStore)>
@@ -285,7 +351,11 @@ public sealed class CabinetCycleTests
         }
     }
 
-    private sealed class FakeMinister(string name, ColonyState? colony = null) : IMinister
+    private sealed class FakeMinister(
+        string name,
+        ColonyState? colony = null,
+        Action<PlayCycleContext>? onRun = null,
+        Exception? exception = null) : IMinister
     {
         public string Name { get; } = name;
 
@@ -306,6 +376,9 @@ public sealed class CabinetCycleTests
             Triggers.Add(context.Trigger);
             RunModes.Add(context.RunMode);
             WakeupPayloads.Add(context.WakeupPayload);
+            onRun?.Invoke(context);
+            if (exception is not null)
+                return Task.FromException(exception);
             return Task.CompletedTask;
         }
 

@@ -153,6 +153,43 @@ export interface MinisterTrace {
   note: string;
 }
 
+export interface CabinetRunStepSnapshot {
+  key: string;
+  label: string;
+  kind: string;
+  status: string;
+  started_at: string;
+  completed_at: string | null;
+  duration_ms: number | null;
+  detail: string | null;
+  minister: string | null;
+  state_source: string | null;
+  used_restored_snapshot: boolean | null;
+  trace_path: string | null;
+  rule_fired: string | null;
+  escalation_reason: string | null;
+  advice_count: number | null;
+  flag_count: number | null;
+  trace_note: string | null;
+  error_type: string | null;
+  error_message: string | null;
+}
+
+export interface CabinetRunLogSnapshot {
+  run_id: string;
+  scope: string;
+  trigger: string;
+  status: string;
+  started_at: string;
+  completed_at: string | null;
+  duration_ms: number | null;
+  steps: CabinetRunStepSnapshot[];
+  state_source: string | null;
+  used_restored_snapshot: boolean | null;
+  error_type: string | null;
+  error_message: string | null;
+}
+
 export interface RuleTraceDetails {
   selectedRule: string | null;
   matchedSignals: RuleTraceEntry[];

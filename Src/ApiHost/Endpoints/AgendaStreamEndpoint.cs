@@ -29,6 +29,7 @@ public static class AgendaStreamEndpoint
         HttpContext ctx,
         MinisterOutputStore store,
         AdviceBus bus,
+        CabinetRunLogStore cabinetRuns,
         SseDiagnostics diagnostics,
         HostRuntimeIdentity hostIdentity,
         ILoggerFactory loggerFactory,
@@ -47,10 +48,12 @@ public static class AgendaStreamEndpoint
         void OnAgenda(AgendaUpdated e) => channel.Writer.TryWrite(SseMessage.ForAgenda(e.Agenda));
         void OnAdvice(AdviceItem item) => channel.Writer.TryWrite(SseMessage.ForAdvice(item));
         void OnAdviceSnapshot(AdviceSnapshot snapshot) => channel.Writer.TryWrite(SseMessage.ForAdviceSnapshot(snapshot));
+        void OnCabinetRun(CabinetRunLogSnapshot snapshot) => channel.Writer.TryWrite(SseMessage.ForCabinetRun(snapshot));
 
         bus.AgendaUpdated += OnAgenda;
         bus.AdvicePublished += OnAdvice;
         bus.AdviceSnapshotPublished += OnAdviceSnapshot;
+        cabinetRuns.RunChanged += OnCabinetRun;
         diagnostics.Connected();
         log.LogInformation("SSE client connected");
 
@@ -64,6 +67,8 @@ public static class AgendaStreamEndpoint
             await WriteAdviceSnapshotAsync(ctx, activeSnapshot, diagnostics, ct);
             foreach (AdviceItem advice in activeAdvice)
                 await WriteAdviceAsync(ctx, advice, diagnostics, ct);
+            foreach (CabinetRunLogSnapshot cabinetRun in cabinetRuns.LatestRuns())
+                await WriteCabinetRunAsync(ctx, cabinetRun, diagnostics, ct);
 
             while (!ct.IsCancellationRequested)
             {
@@ -81,6 +86,8 @@ public static class AgendaStreamEndpoint
                             await WriteAdviceSnapshotAsync(ctx, e.AdviceSnapshot, diagnostics, ct);
                         if (e.Advice is not null)
                             await WriteAdviceAsync(ctx, e.Advice, diagnostics, ct);
+                        if (e.CabinetRun is not null)
+                            await WriteCabinetRunAsync(ctx, e.CabinetRun, diagnostics, ct);
                     }
                 }
                 else
@@ -100,6 +107,7 @@ public static class AgendaStreamEndpoint
             bus.AgendaUpdated -= OnAgenda;
             bus.AdvicePublished -= OnAdvice;
             bus.AdviceSnapshotPublished -= OnAdviceSnapshot;
+            cabinetRuns.RunChanged -= OnCabinetRun;
             channel.Writer.TryComplete();
             diagnostics.Disconnected();
             log.LogInformation("SSE client disconnected");
@@ -179,6 +187,18 @@ public static class AgendaStreamEndpoint
         diagnostics.EventSent("advice_snapshot", id);
     }
 
+    private static async Task WriteCabinetRunAsync(
+        HttpContext ctx,
+        CabinetRunLogSnapshot snapshot,
+        SseDiagnostics diagnostics,
+        CancellationToken ct)
+    {
+        string payload = JsonSerializer.Serialize(snapshot, Json);
+        await ctx.Response.WriteAsync($"event: cabinet_run\nid: {snapshot.RunId}\ndata: {payload}\n\n", ct);
+        await ctx.Response.Body.FlushAsync(ct);
+        diagnostics.EventSent("cabinet_run", snapshot.RunId);
+    }
+
     private static async Task WritePingAsync(
         HttpContext ctx,
         SseDiagnostics diagnostics,
@@ -189,10 +209,15 @@ public static class AgendaStreamEndpoint
         diagnostics.EventSent("ping");
     }
 
-    private sealed record SseMessage(MayorAgenda? Agenda, AdviceItem? Advice, AdviceSnapshot? AdviceSnapshot)
+    private sealed record SseMessage(
+        MayorAgenda? Agenda,
+        AdviceItem? Advice,
+        AdviceSnapshot? AdviceSnapshot,
+        CabinetRunLogSnapshot? CabinetRun)
     {
-        public static SseMessage ForAgenda(MayorAgenda agenda) => new(agenda, null, null);
-        public static SseMessage ForAdvice(AdviceItem advice) => new(null, advice, null);
-        public static SseMessage ForAdviceSnapshot(AdviceSnapshot snapshot) => new(null, null, snapshot);
+        public static SseMessage ForAgenda(MayorAgenda agenda) => new(agenda, null, null, null);
+        public static SseMessage ForAdvice(AdviceItem advice) => new(null, advice, null, null);
+        public static SseMessage ForAdviceSnapshot(AdviceSnapshot snapshot) => new(null, null, snapshot, null);
+        public static SseMessage ForCabinetRun(CabinetRunLogSnapshot snapshot) => new(null, null, null, snapshot);
     }
 }

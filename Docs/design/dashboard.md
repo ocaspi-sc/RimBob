@@ -511,6 +511,7 @@ high-priority endpoint groups, and should be updated when `RimApiClient` or
 Manual triggers are RimBob evaluation controls, not game controls:
 
 - Cabinet trigger: refresh live state, then run wired live ministers in the dependency order. If live refresh fails while Host is serving a restored `ColonyState` snapshot because RIMAPI is unreachable or no colony map is loaded yet, the trigger may still run read-only evaluation against that stale snapshot and must report that fallback in the response and trace.
+- Cabinet trigger responses include a run-scoped, in-memory step log, and the dashboard opens a compact run-step dialog immediately when `Run Cabinet Now` is clicked. The dashboard generates a `run_id` before posting so `/api/advice/stream` `cabinet_run` events can reconcile progress before the POST returns. Rows come from backend instrumentation around actual work: request accepted, live-state refresh, restored-snapshot fallback when used, Chef run, Willie run, Mayor run, and final complete or failed. Closing the dialog does not cancel the backend run, and the trigger remains a `Suggest`-mode evaluation control with no RIMAPI writes.
 - Minister `Run Rules`: refresh live state, then run only the selected wired minister's deterministic rules path through `POST /api/ministers/{minister}/trigger/rules`. This mode must not call an LLM; if rules return an escalation, the trace records the escalation reason and stops before provider work.
 - Minister `Run LLM`: refresh live state, then run only the selected wired minister's forced LLM path through `POST /api/ministers/{minister}/trigger/llm`. This button is disabled for scopes without an LLM path, such as Willie until a construction LLM path is implemented.
 - Do not keep legacy trigger aliases unless a current dashboard or script consumer requires them.
@@ -570,6 +571,7 @@ Design event types:
   corresponding per-minister dictionaries.
 - Single advice item: retained for compatibility and event timelines; snapshots
   are authoritative for removing stale cards.
+- Cabinet run: ephemeral manual-cabinet run log snapshot keyed by `run_id`, emitted whenever a run or step changes and replayed from the bounded in-memory latest-run buffer on connect. This event is operational dashboard state, not advice state.
 
 ---
 

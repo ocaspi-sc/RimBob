@@ -1,5 +1,5 @@
 import { useEffect, useReducer } from 'react';
-import { parseAdviceEvent, parseAdviceSnapshotEvent, parseHostReadyEvent } from '../api/adviceStream';
+import { parseAdviceEvent, parseAdviceSnapshotEvent, parseCabinetRunEvent, parseHostReadyEvent } from '../api/adviceStream';
 import { fetchLatestAgenda, parseAgendaEvent } from '../api/agenda';
 import { recordEndpointQueryTiming } from '../api/requestTelemetry';
 import { adviceFeedReducer, initialAdviceFeedState, type AdviceFeedState } from './adviceFeedReducer';
@@ -128,6 +128,21 @@ export function useAdviceFeed(): AdviceFeedState {
           });
         } catch (error) {
           dispatch({ type: 'parseFailed', eventType: 'advice_snapshot', error: String(error), readyState: nextSource.readyState });
+        }
+      });
+
+      nextSource.addEventListener('cabinet_run', raw => {
+        const event = raw as MessageEvent;
+        try {
+          const run = parseCabinetRunEvent(event);
+          dispatch({
+            type: 'cabinetRunReceived',
+            run,
+            eventId: event.lastEventId,
+            readyState: nextSource.readyState,
+          });
+        } catch (error) {
+          dispatch({ type: 'parseFailed', eventType: 'cabinet_run', error: String(error), readyState: nextSource.readyState });
         }
       });
 
