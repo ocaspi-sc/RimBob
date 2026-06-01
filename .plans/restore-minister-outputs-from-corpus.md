@@ -110,3 +110,46 @@ Willie → Build Queue → **Requested** lane (restored building_request) and
   two passes, shared reader.
 - Restore grace window value for the TTL re-stamp (fixed 24h vs preserve original
   remaining)? Default: re-stamp to `now + 24h` for request-bearing flags.
+
+---
+
+## Summary (landed 2026-05-31)
+
+**Motivation.** "Willie should be able to use the request made last turn — it should be
+in the logs." `FlagChannel` was in-memory only, so Chef's `building_request` died on
+restart and was absent on a Willie-only manual trigger. Now the last-recorded flags
+(and advice/options) are restored from the replay corpus at boot.
+
+**Context.** Third in the offline trio: `ColonyState` already restored at boot,
+`willie-options-preserve-offline` stops clobbering advice going forward, and this
+restores flags + advice from the corpus at boot. Mirrors
+`ColonySnapshotRestoreHostedService` (load latest + skip-if-live guard). Absorbed the
+deferred `advice-restore-from-replay-corpus`.
+
+**Scope (shipped).**
+- `ReplayCorpusOutputReader` (async): newest corpus record per minister matching a
+  predicate; deserializes with the writer's `JsonSerializerOptions`.
+- `MinisterCorpusRestoreHostedService`: flag restore into `FlagChannel` (TTL re-stamp
+  to `now + 24h` so the wall-clock `ExpiresAt` doesn't immediately prune; skip-if-live
+  guard) + advice/options restore into `AdviceBus` (skip-if-present guard). Runs at boot
+  before `DayTickOrchestrator`.
+- `CorpusRestoreStatusStore` + `/api/system/health` `corpus_restore` provenance
+  (`restoredFromCorpus` / `capturedAt` / `restoredCount` per minister per lane).
+- Async file I/O (`File.ReadAllLinesAsync`) per AGENTS.md; sibling
+  `ReplayCorpusRawOutputReader` left as a follow-up.
+
+**How to verify (human).**
+- Dashboard: Willie → Build Queue → **Requested** (restored `building_request`) +
+  **Proposed** (restored options) survive a restart. `GET /api/system/health` →
+  `corpus_restore` block shows provenance.
+- Commands: `dotnet test Src\Tests\RimBob.Tests.csproj` (493/493).
+- Files: `Src/ApiHost/MinisterCorpusRestoreHostedService.cs`,
+  `Src/Coordination/ReplayCorpusOutputReader.cs`.
+
+**Follow-ups.** Wall-clock→game-tick TTL on request flags (flagged latent); async-ify
+`ReplayCorpusRawOutputReader` (sibling, left untouched).
+
+**Codex run:** `20260531-231406-restore-minister-outputs-from-corpus` · branch
+`codex/prompt-20260531-231406-restore-minister-outputs-from-corpus` · commits `61468aa`,
+`d300dc0`, `df86410` · verifier Adherent: yes · full suite 493/493 · landed commit
+`1af8790` (squash `[codex] Land prompt run 20260531-231406-restore-minister-outputs-from-corpus`).
