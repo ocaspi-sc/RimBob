@@ -127,6 +127,7 @@ public sealed class MinisterOfWillieTests
         AdviceItem advice = harness.Bus.ActiveAdvice().Should().ContainSingle().Subject;
         advice.Id.Should().Be("willie_building_request_active");
         advice.Options.Should().BeNull();
+        advice.Body.Should().Contain("Placement solver could not suggest layout options because it hit InvalidOperationException before validation completed.");
         advice.Rationale.Should().Contain("Placement solver unavailable: InvalidOperationException. Keeping prose advice.");
         harness.OutputStore.GetAdviceSnapshot("Willie")!.Advice.Should().ContainSingle()
             .Which.Id.Should().Be("willie_building_request_active");
@@ -248,6 +249,7 @@ public sealed class MinisterOfWillieTests
 
         AdviceItem advice = harness.Bus.ActiveAdvice().Should().ContainSingle().Subject;
         advice.Options.Should().BeNull();
+        advice.Body.Should().Contain("Placement solver could not suggest layout options because no walkable route to a kitchen anchor.");
         advice.Rationale.Should().Contain("no walkable route to a kitchen anchor");
         MinisterReplayRecord record = replay.Records.Should().ContainSingle().Subject;
         record.OutputKind.Should().Be("placement_solver");
@@ -273,6 +275,7 @@ public sealed class MinisterOfWillieTests
 
         AdviceItem advice = harness.Bus.ActiveAdvice().Should().ContainSingle().Subject;
         advice.Options.Should().BeNull();
+        advice.Body.Should().Contain("Placement solver could not suggest layout options because no workshop drafts were generated.");
         advice.Rationale.Should().Contain("no workshop drafts were generated");
     }
 

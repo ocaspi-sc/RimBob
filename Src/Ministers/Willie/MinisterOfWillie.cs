@@ -254,7 +254,11 @@ public sealed class MinisterOfWillie(
         bool removeFallbackWhenApplyReady)
     {
         if (attempt.Result is null)
-            return item with { Rationale = AppendPlacementNote(item.Rationale, attempt.Note) };
+            return item with
+            {
+                Body = AppendPlacementBodyNote(item.Body, attempt.AdviceBodyNote),
+                Rationale = AppendPlacementNote(item.Rationale, attempt.Note)
+            };
 
         PlacementResult result = attempt.Result;
         IReadOnlyList<AdviceOption>? options = result.Options.Count == 0
@@ -280,6 +284,7 @@ public sealed class MinisterOfWillie(
 
         return item with
         {
+            Body = AppendPlacementBodyNote(item.Body, attempt.AdviceBodyNote),
             Options = options,
             Actions = actions,
             Rationale = AppendPlacementNote(item.Rationale, attempt.Note)
@@ -298,8 +303,11 @@ public sealed class MinisterOfWillie(
                 BlueprintGroup: option.BlueprintGroup,
                 AssetCount: option.BlueprintGroup.Assets.Count));
 
-    private static string AppendPlacementNote(string rationale, string note) =>
-        string.IsNullOrWhiteSpace(rationale) ? note : $"{rationale} {note}";
+    private static string AppendPlacementNote(string text, string note) =>
+        string.IsNullOrWhiteSpace(text) ? note : $"{text} {note}";
+
+    private static string AppendPlacementBodyNote(string body, string? note) =>
+        string.IsNullOrWhiteSpace(note) ? body : AppendPlacementNote(body, note);
 
     private static string ReadinessWire(PlacementReadiness readiness) =>
         readiness.ToString().ToLowerInvariant();
@@ -315,6 +323,16 @@ public sealed class MinisterOfWillie(
             ? $"no validated {RequestRoomLabel(request)} option was emitted"
             : NoFitNote(result.NoFit.Value, request);
         return $"Placement solver no-fit: {reason}.";
+    }
+
+    private static string? AdviceBodyNoteFor(PlacementResult result, BuildingRequest request)
+    {
+        if (result.Options.Count > 0) return null;
+
+        string reason = result.NoFit is null
+            ? $"no validated {RequestRoomLabel(request)} option was emitted"
+            : NoFitNote(result.NoFit.Value, request);
+        return $"Placement solver could not suggest layout options because {reason}.";
     }
 
     private static string NoFitNote(NoFitReason reason, BuildingRequest request) => reason switch
@@ -406,6 +424,7 @@ public sealed class MinisterOfWillie(
     private sealed record PlacementSolveAttempt(
         PlacementResult? Result,
         string Note,
+        string? AdviceBodyNote,
         PlacementSolverReplayOutput ReplayOutput,
         bool SolverOffline)
     {
@@ -413,6 +432,7 @@ public sealed class MinisterOfWillie(
             new(
                 result,
                 NoteFor(result, request),
+                AdviceBodyNoteFor(result, request),
                 PlacementSolverReplayOutput.FromResult(result),
                 SolverOffline: false);
 
@@ -420,9 +440,11 @@ public sealed class MinisterOfWillie(
         {
             string errorType = ex.GetType().Name;
             string note = $"Placement solver unavailable: {errorType}. Keeping prose advice.";
+            string bodyNote = $"Placement solver could not suggest layout options because it hit {errorType} before validation completed.";
             return new PlacementSolveAttempt(
                 null,
                 note,
+                bodyNote,
                 PlacementSolverReplayOutput.FromFailure(errorType, ex.Message),
                 SolverOffline: false);
         }
@@ -431,9 +453,11 @@ public sealed class MinisterOfWillie(
         {
             string errorType = ex.GetType().Name;
             string note = $"Placement solver offline: {errorType}. Preserved prior advice.";
+            string bodyNote = $"Placement solver could not refresh layout options because live map validation was unavailable ({errorType}); preserved prior advice.";
             return new PlacementSolveAttempt(
                 null,
                 note,
+                bodyNote,
                 PlacementSolverReplayOutput.FromOffline(errorType, ex.Message),
                 SolverOffline: true);
         }

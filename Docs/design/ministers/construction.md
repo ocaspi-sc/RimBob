@@ -137,6 +137,8 @@ request — never another minister's build Apply.
 
 Willie's dashboard scope includes a latest-only Solver view for placement diagnostics. The view reads the most recent solver outcome from the Host, shows the driving build request, selected rule, no-fit stage, and readiness ladder, and leaves option picking/apply controls in Build Queue.
 
+When a solver run returns zero `options[]` or errors before options can be attached, the driving Willie `AdviceItem` must say in its body that no layout options were suggested and include the concrete reason. The rationale and Solver view may carry the more technical no-fit/error trace, but the Advice card itself cannot look like plain prose advice when the solver failed to produce placements.
+
 Solver reuse of existing rooms is evidence-gated: `ReuseExistingFootprintGenerator` may propose interior fixtures/floors inside a same-class existing room only when the fork supplied real bounded room `cells[]`; it does not infer room polygons from point-approx building positions, and it does not replace walls for freezer coolers yet.
 
 ---
