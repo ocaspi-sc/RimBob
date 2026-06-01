@@ -76,7 +76,7 @@ Dashboard v2 has four stable regions:
 The header keeps the running-version chips directly after the
 `RimBob Dashboard v2` title and the transient status pills right-aligned in the
 same top band when width allows:
-monotonic running build version, build datetime, and the served Host
+monotonic running build version, Git commit, build datetime, and the served Host
 root/process tooltip. This is the first
 stale-host/stale-asset check because it answers which code and UI bundle the
 player is actually reading. The header status pills distinguish separate

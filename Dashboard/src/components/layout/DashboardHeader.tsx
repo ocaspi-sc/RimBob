@@ -34,6 +34,7 @@ export function DashboardHeader({
   const mayorState = deriveMayorState(status, hostState);
   const streamState = deriveStreamState(stream);
   const versionMarker = version ? `RimBob ${version.running_version}` : 'RimBob checking';
+  const commitMarker = version ? `commit ${version.build_revision_short ?? 'unknown'}` : 'commit checking';
   const buildMarker = version ? `built ${formatBuildDateTime(version.build_datetime)}` : 'built checking';
   const rootMarker = runtimeRoot ? `root ${shortPath(runtimeRoot, 3)}` : 'root checking';
 
@@ -46,6 +47,9 @@ export function DashboardHeader({
           <div className="running-version" aria-label="Running RimBob version">
             <span title={version ? `Running Host version: ${version.running_version}.` : 'Waiting for the running Host version.'}>
               {versionMarker}
+            </span>
+            <span className="version-commit-chip" title={version ? buildRevisionTooltip(version) : 'Waiting for the Host build revision.'}>
+              {commitMarker}
             </span>
             <span title={version ? `Host build time: ${formatBuildDateTime(version.build_datetime)}.` : 'Waiting for the Host build time.'}>
               {buildMarker}
@@ -353,6 +357,14 @@ function formatBuildDateTime(value: string): string {
   if (Number.isNaN(date.getTime())) return value;
 
   return date.toLocaleString();
+}
+
+function buildRevisionTooltip(version: RimBobRunningVersion): string {
+  if (!version.build_revision) {
+    return `Host build revision is not exposed. Informational version: ${version.build_informational_version}.`;
+  }
+
+  return `Host was built from Git commit ${version.build_revision}. Informational version: ${version.build_informational_version}.`;
 }
 
 function runtimeTooltip(runtimeRoot: string | null, hostProcessPath: string | null): string {

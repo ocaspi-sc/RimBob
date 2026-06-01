@@ -96,7 +96,7 @@ code {
 
 .title-status-row {
   display: grid;
-  grid-template-columns: auto minmax(0, 0.45fr) minmax(0, 1.25fr);
+  grid-template-columns: auto minmax(0, 0.55fr) minmax(0, 1.15fr);
   align-items: center;
   gap: 10px;
   min-width: 0;
@@ -133,6 +133,11 @@ code {
   padding: 3px 7px;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.running-version .version-commit-chip {
+  flex: 0 0 auto;
 }
 
 .eyebrow {
