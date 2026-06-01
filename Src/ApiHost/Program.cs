@@ -147,6 +147,8 @@ try
             Path.Combine(logsDir, "replay"),
             sp.GetRequiredService<ILogger<ReplayCorpusWriter>>()));
     builder.Services.AddSingleton(new ReplayCorpusRawOutputReader(Path.Combine(logsDir, "replay")));
+    builder.Services.AddSingleton(new ReplayCorpusOutputReader(Path.Combine(logsDir, "replay")));
+    builder.Services.AddSingleton<CorpusRestoreStatusStore>();
     builder.Services.AddSingleton<MinisterReplayRecorder>();
     builder.Services.AddSingleton<MayorAgendaRules>();
     builder.Services.AddSingleton(new MayorFilePaths(
@@ -264,6 +266,7 @@ try
     builder.Services.AddSingleton<IMinister>(sp => sp.GetRequiredService<MinisterOfWillie>());
     builder.Services.AddSingleton<CabinetCycle>();
     builder.Services.AddHostedService<ColonySnapshotRestoreHostedService>();
+    builder.Services.AddHostedService<MinisterCorpusRestoreHostedService>();
     builder.Services.AddHostedService<AgendaBootstrapHostedService>();
     builder.Services.AddHostedService<DayTickOrchestrator>();
 

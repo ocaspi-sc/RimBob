@@ -88,7 +88,7 @@ public static class SystemEndpoints
     public static IEndpointRouteBuilder MapSystemEndpoints(this IEndpointRouteBuilder app)
     {
         EndpointCoverageCatalog coverage = app.ServiceProvider.GetRequiredService<EndpointCoverageCatalog>();
-        coverage.Register("/api/system/health", "available", "Runtime, LLM, RAG, logs, traces, tests, lightweight icon summary, Host endpoint coverage, and RIMAPI coverage metadata.");
+        coverage.Register("/api/system/health", "available", "Runtime, LLM, RAG, logs, corpus restore provenance, traces, tests, lightweight icon summary, Host endpoint coverage, and RIMAPI coverage metadata.");
         coverage.Register("/api/system/logs/recent", "not_exposed_yet", "Planned bounded log tail.");
 
         app.MapGet("/api/system/health", async (
@@ -109,6 +109,7 @@ public static class SystemEndpoints
             MinisterRegistry registry,
             EndpointCoverageCatalog endpointCoverage,
             MinisterTraceStore traces,
+            CorpusRestoreStatusStore corpusRestoreStatus,
             IconCacheService iconCache,
             AssistedApplyService assistedApply,
             RimApiRuntimeProbeCache rimApiRuntime,
@@ -197,6 +198,7 @@ public static class SystemEndpoints
                 },
                 minister_outputs = outputStatus,
                 colony_snapshot = ColonySnapshotMetadata(colonySnapshot),
+                corpus_restore = CorpusRestoreMetadata(corpusRestoreStatus.Snapshot()),
                 llm = new
                 {
                     provider = "Gemini",
@@ -263,6 +265,25 @@ public static class SystemEndpoints
             last_save_at = status.LastSaveAt,
             last_save_error = status.LastSaveError,
             load_error = status.LoadError,
+        };
+
+    private static object CorpusRestoreMetadata(CorpusRestoreStatus status) =>
+        new
+        {
+            ministers = status.Ministers.Select(minister => new
+            {
+                minister = minister.Minister,
+                flags = CorpusRestoreLaneMetadata(minister.Flags),
+                advice = CorpusRestoreLaneMetadata(minister.Advice),
+            }).ToArray(),
+        };
+
+    private static object CorpusRestoreLaneMetadata(CorpusRestoreLaneStatus status) =>
+        new
+        {
+            restoredFromCorpus = status.RestoredFromCorpus,
+            capturedAt = status.CapturedAt,
+            restoredCount = status.RestoredCount,
         };
 
     private static object RimWorldPayload(RimApiRuntimeSnapshot runtime) => new
