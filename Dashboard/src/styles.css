@@ -4582,6 +4582,11 @@ code {
   overflow-wrap: break-word;
 }
 
+.action-list > div > .action-apply-result.persisted {
+  grid-column: 3;
+  font-weight: 700;
+}
+
 .action-apply-result.applied,
 .action-apply-result.already_satisfied,
 .action-apply-result.done {

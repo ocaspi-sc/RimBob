@@ -604,7 +604,14 @@ function AdviceCard({
             {item.actions.map((action, index) => {
               const key = actionKey(item, index);
               const state = applyState[key] ?? { status: 'idle' as const, response: null, error: null };
-              const success = state.response?.status === 'applied' || state.response?.status === 'already_satisfied';
+              const persistedResult = action.apply_result ?? null;
+              const resultStatus = state.response?.status ?? persistedResult?.status ?? state.status;
+              const resultMessage = state.response?.message ?? state.error ?? persistedResult?.message ?? null;
+              const resultRecordedAt = persistedResult?.recorded_at ? `Recorded ${formatDateTime(persistedResult.recorded_at)}` : null;
+              const success = state.response?.status === 'applied' ||
+                state.response?.status === 'already_satisfied' ||
+                persistedResult?.status === 'applied' ||
+                persistedResult?.status === 'already_satisfied';
               const disabled = state.status === 'pending' || success || expiry.expired;
               const actionIcon = iconForActionKind(action.kind);
               return (
@@ -633,10 +640,18 @@ function AdviceCard({
                       >
                         {expiry.expired ? 'Expired' : state.status === 'pending' ? 'Applying' : success ? 'Applied' : action.apply.label}
                       </button>
-                      <small className={`action-apply-result ${state.response?.status ?? state.status}`}>
-                        {state.response?.message ?? state.error ?? (expiry.expired ? expiry.message : action.apply.target_summary)}
+                      <small className={`action-apply-result ${resultStatus}`}>
+                        {resultMessage ?? (expiry.expired ? expiry.message : action.apply.target_summary)}
                       </small>
                     </div>
+                  )}
+                  {!action.apply && persistedResult && (
+                    <small
+                      className={`action-apply-result persisted ${persistedResult.status}`}
+                      title={resultRecordedAt ?? undefined}
+                    >
+                      {formatApplyResultText(persistedResult.status, persistedResult.message)}
+                    </small>
                   )}
                 </div>
               );
@@ -737,28 +752,17 @@ function adviceExpiryState(item: AdviceItem, currentGameTick: number | null): Ad
 
 function actionKey(item: AdviceItem, actionIndex: number): string {
   const action = item.actions[actionIndex];
-  const applyContext = action?.apply
-    ? applyIdentity(action.apply)
-    : 'text';
-  return `${item.id}:${item.issued_at}:${actionIndex}:${applyContext}`;
+  return `${item.id}:${item.issued_at}:${actionIndex}:${action?.kind ?? 'missing'}:${action?.instruction ?? 'missing'}`;
 }
 
 function isExecutableApply(apply: AdviceActionApply): boolean {
   return apply.kind !== 'place_blueprint_group';
 }
 
-function applyIdentity(apply: AdviceActionApply): string {
-  switch (apply.kind) {
-    case 'mark_harvest_area':
-    case 'mark_hunt_area':
-      return `${apply.kind}:${apply.target_summary}:${apply.target_ids.join(',')}`;
-    case 'unforbid_things':
-      return `${apply.kind}:${apply.target_summary}:${apply.thing_ids.join(',')}`;
-    case 'upsert_production_bill':
-      return `${apply.kind}:${apply.target_summary}:${apply.workbench_building_id}:${apply.target_count}`;
-    case 'place_blueprint_group':
-      return `${apply.kind}:${apply.target_summary}:${apply.blueprint_group.label}:${apply.asset_count}`;
-  }
+function formatApplyResultText(status: string, message: string): string {
+  if (status === 'applied') return `Applied: ${message}`;
+  if (status === 'already_satisfied') return `Already satisfied: ${message}`;
+  return `${formatLabel(status)}: ${message}`;
 }
 
 function PriorityCard({

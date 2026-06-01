@@ -115,7 +115,7 @@ public sealed class AssistedApplyServiceTests
         response.Status.Should().Be("applied");
         response.Kind.Should().Be(AdviceApplyKind.MarkHuntArea);
         response.Message.Should().Contain("Hunt designation");
-        bus.ActiveAdvice().Should().BeEmpty();
+        AssertAppliedAction(bus, "applied", AdviceApplyKind.MarkHuntArea);
         handler.DesignatePosted.Should().BeTrue();
         handler.LastDesignateBody.Should().Contain("\"designation\":\"Hunt\"");
     }
@@ -161,7 +161,7 @@ public sealed class AssistedApplyServiceTests
         response.Status.Should().Be("applied");
         response.Kind.Should().Be(AdviceApplyKind.UpsertProductionBill);
         response.Message.Should().Contain("created");
-        bus.ActiveAdvice().Should().BeEmpty();
+        AssertAppliedAction(bus, "applied", AdviceApplyKind.UpsertProductionBill);
         handler.AddBillPosted.Should().BeTrue();
         handler.UpdateBillPosted.Should().BeFalse();
         handler.LastBillWriteBody.Should().Contain("\"recipe_def_name\":\"CookMealSimple\"");
@@ -203,6 +203,7 @@ public sealed class AssistedApplyServiceTests
         AssistedApplyResponse response = await service.ApplyAsync("food_meals_understocked", 0);
 
         response.Status.Should().Be("already_satisfied");
+        AssertAppliedAction(bus, "already_satisfied", AdviceApplyKind.UpsertProductionBill);
         handler.AddBillPosted.Should().BeFalse();
         handler.UpdateBillPosted.Should().BeFalse();
         handler.BillListCalls.Should().Be(2);
@@ -254,7 +255,7 @@ public sealed class AssistedApplyServiceTests
     }
 
     [Fact]
-    public async Task ApplyAsync_WhenBlueprintGroupValidatesAndPlaces_AppliesAndClearsAction()
+    public async Task ApplyAsync_WhenBlueprintGroupValidatesAndPlaces_AppliesAndRecordsResult()
     {
         AdviceBus bus = new();
         bus.Publish(Advice("food_freezer_missing", BlueprintGroupAction()));
@@ -267,7 +268,7 @@ public sealed class AssistedApplyServiceTests
         response.Kind.Should().Be(AdviceApplyKind.PlaceBlueprintGroup);
         response.Message.Should().Contain("placed 1 asset");
         JsonSerializer.Serialize(response.Readback).Should().Contain("\"placed_count\":1");
-        bus.ActiveAdvice().Should().BeEmpty();
+        AssertAppliedAction(bus, "applied", AdviceApplyKind.PlaceBlueprintGroup);
         handler.BlueprintGroupValidateCalls.Should().Be(1);
         handler.BlueprintGroupPlacePosted.Should().BeTrue();
         handler.LastBlueprintGroupPlaceBody.Should().Contain("\"placement_order\":\"default\"");
@@ -382,6 +383,18 @@ public sealed class AssistedApplyServiceTests
             GuideCitationIds: [],
             IssuedAt: now,
             ExpiresAt: now.AddHours(1));
+    }
+
+    private static void AssertAppliedAction(AdviceBus bus, string status, AdviceApplyKind kind)
+    {
+        AdviceAction action = bus.ActiveAdvice().Should().ContainSingle()
+            .Which.Actions.Should().ContainSingle()
+            .Subject;
+        action.Apply.Should().BeNull();
+        action.ApplyResult.Should().NotBeNull();
+        action.ApplyResult!.Status.Should().Be(status);
+        action.ApplyResult.Kind.Should().Be(kind);
+        action.ApplyResult.Message.Should().NotBeNullOrWhiteSpace();
     }
 
     private static AdviceAction ProductionBillAction(int targetCount = 12, string workbenchId = "10") =>

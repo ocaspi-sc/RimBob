@@ -127,6 +127,14 @@ export interface AdviceAction {
   work_type?: string | null;
   skill?: string | null;
   apply?: AdviceActionApply | null;
+  apply_result?: AdviceActionApplyResult | null;
+}
+
+export interface AdviceActionApplyResult {
+  status: string;
+  message: string;
+  kind?: AdviceApplyKind | null;
+  recorded_at: string;
 }
 
 export interface AdviceApplyResponse {

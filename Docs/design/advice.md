@@ -335,10 +335,7 @@ Apply attempts must be logged with enough context to inspect the advice, target,
 validation decision, RIMAPI result, and read-back state in dashboard/system
 surfaces.
 
-When an apply returns `applied` or `already_satisfied`, the active advice
-snapshot should stop offering that same executable action. Future minister
-refreshes should also suppress the action when fresh state proves the operation
-is already satisfied.
+When an apply returns `applied` or `already_satisfied`, the active advice snapshot should keep the action row visible, clear that row's executable handle, and attach an `apply_result` record so the dashboard can show a durable green confirmation. Future minister refreshes should suppress the executable handle when fresh state proves the operation is already satisfied.
 
 ---
 

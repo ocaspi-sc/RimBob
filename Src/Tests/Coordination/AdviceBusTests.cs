@@ -203,26 +203,32 @@ public sealed class AdviceBusTests
     }
 
     [Fact]
-    public void RemoveAppliedAction_RemovesOnlyThatActionAndPublishesSnapshot()
+    public void MarkActionApplied_ClearsHandleAndPublishesAppliedSnapshot()
     {
         AdviceBus bus = new();
-        bus.ReplaceMinisterAdvice("Chef", [Advice("food", "Chef", [Action("harvest"), Action("bill")])], "Food summary");
+        bus.ReplaceMinisterAdvice("Chef", [Advice("food", "Chef", [Action("harvest"), Action("bill", executable: true)])], "Food summary");
         List<AdviceSnapshot> snapshots = [];
         bus.AdviceSnapshotPublished += snapshots.Add;
+        AdviceActionApplyResult result = ApplyResult("applied");
 
-        bool removed = bus.RemoveAppliedAction("food", 1);
+        bool marked = bus.MarkActionApplied("food", 1, result);
 
-        removed.Should().BeTrue();
+        marked.Should().BeTrue();
         AdviceItem active = bus.ActiveAdvice().Should().ContainSingle().Subject;
-        active.Actions.Should().ContainSingle().Which.Instruction.Should().Be("harvest");
+        active.Actions.Should().HaveCount(2);
+        active.Actions[0].ApplyResult.Should().BeNull();
+        active.Actions[1].Instruction.Should().Be("bill");
+        active.Actions[1].Apply.Should().BeNull();
+        active.Actions[1].ApplyResult.Should().Be(result);
         snapshots.Should().ContainSingle();
         snapshots[0].Minister.Should().BeNull();
-        snapshots[0].Advice.Should().ContainSingle().Which.Actions.Should().ContainSingle();
+        snapshots[0].Advice.Should().ContainSingle().Which.Actions.Should().HaveCount(2);
+        snapshots[0].Advice[0].Actions[1].ApplyResult.Should().Be(result);
         snapshots[0].StateSummaries.Should().ContainKey("Chef").WhoseValue.Should().Be("Food summary");
     }
 
     [Fact]
-    public void RemoveAppliedAction_PreservesMinisterChains()
+    public void MarkActionApplied_PreservesMinisterChains()
     {
         AdviceBus bus = new();
         AdviceChainModel chain = Chain();
@@ -230,22 +236,28 @@ public sealed class AdviceBusTests
         List<AdviceSnapshot> snapshots = [];
         bus.AdviceSnapshotPublished += snapshots.Add;
 
-        bus.RemoveAppliedAction("food", 1).Should().BeTrue();
+        bus.MarkActionApplied("food", 1, ApplyResult("applied")).Should().BeTrue();
 
         snapshots.Should().ContainSingle();
         snapshots[0].Chains.Should().ContainKey("Chef").WhoseValue.Should().BeSameAs(chain);
     }
 
     [Fact]
-    public void RemoveAppliedAction_RemovesAdviceWhenLastActionIsApplied()
+    public void MarkActionApplied_PreservesAdviceWhenLastActionIsApplied()
     {
         AdviceBus bus = new();
-        bus.Publish(Advice("food", "Chef", [Action("bill")]));
+        bus.Publish(Advice("food", "Chef", [Action("bill", executable: true)]));
 
-        bool removed = bus.RemoveAppliedAction("food", 0);
+        bool marked = bus.MarkActionApplied("food", 0, ApplyResult("already_satisfied"));
 
-        removed.Should().BeTrue();
-        bus.ActiveAdvice().Should().BeEmpty();
+        marked.Should().BeTrue();
+        AdviceAction action = bus.ActiveAdvice().Should().ContainSingle()
+            .Which.Actions.Should().ContainSingle()
+            .Subject;
+        action.Instruction.Should().Be("bill");
+        action.Apply.Should().BeNull();
+        action.ApplyResult.Should().NotBeNull();
+        action.ApplyResult!.Status.Should().Be("already_satisfied");
     }
 
     private static AdviceItem Advice(string id, string minister) => new(
@@ -274,8 +286,23 @@ public sealed class AdviceBusTests
         IssuedAt: DateTimeOffset.UtcNow,
         ExpiresAt: DateTimeOffset.UtcNow.AddHours(1));
 
-    private static AdviceAction Action(string instruction) =>
-        new(AdviceActionKind.ProductionBill, instruction);
+    private static AdviceAction Action(string instruction, bool executable = false) =>
+        new(
+            AdviceActionKind.ProductionBill,
+            instruction,
+            Apply: executable
+                ? new UpsertProductionBillApply(
+                    "Set simple meal bill",
+                    "simple meal bill",
+                    MapId: 1,
+                    WorkbenchBuildingId: "10",
+                    RecipeSelectorKey: "simple_meal",
+                    RepeatMode: "TargetCount",
+                    TargetCount: 12)
+                : null);
+
+    private static AdviceActionApplyResult ApplyResult(string status) =>
+        new(status, status == "applied" ? "Applied." : "Already satisfied.", AdviceApplyKind.UpsertProductionBill, DateTimeOffset.UnixEpoch);
 
     private static AdviceAction CookPriorityAction() =>
         new(

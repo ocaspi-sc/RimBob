@@ -85,8 +85,8 @@ public sealed class AssistedApplyService(
             PlaceBlueprintGroupApply blueprint => await ApplyBlueprintGroupAsync(advice, adviceId, actionIndex, blueprint, ct),
             _ => Response("validation_failed", "That apply kind is not allowlisted.", apply.Kind, adviceId, actionIndex)
         };
-        if (ShouldClearAppliedAction(result))
-            adviceBus.RemoveAppliedAction(adviceId, actionIndex);
+        if (ShouldMarkAppliedAction(result))
+            adviceBus.MarkActionApplied(adviceId, actionIndex, ApplyResult(result));
         Record(result);
         return result;
     }
@@ -764,9 +764,12 @@ public sealed class AssistedApplyService(
         ex is HttpRequestException or TaskCanceledException ||
         ex is RimApiHttpException { StatusCode: null or HttpStatusCode.NotFound or HttpStatusCode.NotImplemented or HttpStatusCode.BadGateway or HttpStatusCode.ServiceUnavailable };
 
-    private static bool ShouldClearAppliedAction(AssistedApplyResponse result) =>
+    private static bool ShouldMarkAppliedAction(AssistedApplyResponse result) =>
         string.Equals(result.Status, "applied", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(result.Status, "already_satisfied", StringComparison.OrdinalIgnoreCase);
+
+    private static AdviceActionApplyResult ApplyResult(AssistedApplyResponse result) =>
+        new(result.Status, result.Message, result.Kind, DateTimeOffset.UtcNow);
 
     private static AssistedApplyResponse Response(
         string status,

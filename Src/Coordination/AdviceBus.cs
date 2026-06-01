@@ -136,9 +136,9 @@ public sealed class AdviceBus
         }
     }
 
-    public bool RemoveAppliedAction(string adviceId, int actionIndex)
+    public bool MarkActionApplied(string adviceId, int actionIndex, AdviceActionApplyResult applyResult)
     {
-        AdviceItem? updatedAdvice = null;
+        AdviceItem updatedAdvice;
         AdviceSnapshot snapshot;
         AdviceSnapshot? ministerSnapshot;
         lock (_lock)
@@ -150,16 +150,13 @@ public sealed class AdviceBus
                 return false;
 
             List<AdviceAction> actions = advice.Actions.ToList();
-            actions.RemoveAt(actionIndex);
-            if (actions.Count == 0)
+            actions[actionIndex] = actions[actionIndex] with
             {
-                _activeAdvice.Remove(adviceId);
-            }
-            else
-            {
-                updatedAdvice = advice with { Actions = actions };
-                _activeAdvice[adviceId] = updatedAdvice;
-            }
+                Apply = null,
+                ApplyResult = applyResult
+            };
+            updatedAdvice = advice with { Actions = actions };
+            _activeAdvice[adviceId] = updatedAdvice;
 
             Dictionary<string, string> summaries = new(_ministerStateSummaries, StringComparer.OrdinalIgnoreCase);
             Dictionary<string, AdviceChainModel> chains = new(_ministerChains, StringComparer.OrdinalIgnoreCase);
@@ -178,8 +175,7 @@ public sealed class AdviceBus
         if (ministerSnapshot is not null)
             _outputStore?.QueueAdviceSnapshot(ministerSnapshot);
         AdviceSnapshotPublished?.Invoke(snapshot);
-        if (updatedAdvice is not null)
-            AdvicePublished?.Invoke(updatedAdvice);
+        AdvicePublished?.Invoke(updatedAdvice);
         return true;
     }
 

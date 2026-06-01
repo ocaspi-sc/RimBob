@@ -695,6 +695,7 @@ an Apply control on that action. Apply controls must be visually distinct from
 feedback, disabled when state is stale or validation fails, and followed by a
 compact result state that links to the SYSTEM/trace evidence for the attempted
 write and read-back.
+When apply succeeds or is already satisfied, the action row remains visible and renders the backend `apply_result` as green confirmation while the executable Apply handle is removed from that row.
 
 An Apply control renders only in the scope of the minister that **emitted** the
 action. A requesting minister shows its outbound `requests[]` but never another

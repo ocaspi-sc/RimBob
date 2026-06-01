@@ -21,7 +21,19 @@ public sealed record AdviceAction(
     [property: JsonPropertyName("skill")]
     string? Skill = null,
     [property: JsonPropertyName("apply")]
-    AdviceActionApply? Apply = null);
+    AdviceActionApply? Apply = null,
+    [property: JsonPropertyName("apply_result")]
+    AdviceActionApplyResult? ApplyResult = null);
+
+public sealed record AdviceActionApplyResult(
+    [property: JsonPropertyName("status")]
+    string Status,
+    [property: JsonPropertyName("message")]
+    string Message,
+    [property: JsonPropertyName("kind")]
+    AdviceApplyKind? Kind,
+    [property: JsonPropertyName("recorded_at")]
+    DateTimeOffset RecordedAt);
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]
 [JsonDerivedType(typeof(MarkHarvestAreaApply), "mark_harvest_area")]
