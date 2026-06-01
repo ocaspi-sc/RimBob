@@ -41,7 +41,6 @@ export function DashboardHeader({
   return (
     <header className="dashboard-header panel-shell">
       <div className="brand-block">
-        <span className="eyebrow">RimWorld Advisory Cabinet</span>
         <div className="title-status-row">
           <h1>RimBob Dashboard v2</h1>
           <div className="running-version" aria-label="Running RimBob version">
