@@ -1,0 +1,26 @@
+{
+  "description": "RIMAPI nutrition is missing while day-one packaged survival meals are forbidden and only visible through UnforbidTargets",
+  "expected_advice": ["manage_food_stockpile"],
+  "expected_top_concern": "manage_food_stockpile",
+  "expected_priority_min": "Medium",
+  "should_escalate": false,
+  "briefing": {
+    "estimated_days_of_food": null,
+    "unclassified_food_units": 57,
+    "unclassified_food_items": [],
+    "unforbid_targets": [
+      { "id": "meal-forbidden-01", "def": "MealSurvivalPack", "label": "packaged survival meal x5", "count": 5, "kind": "meal", "source": "map_things", "position": { "x": 127, "y": 0, "z": 120 } },
+      { "id": "meal-forbidden-02", "def": "MealSurvivalPack", "label": "packaged survival meal x5", "count": 5, "kind": "meal", "source": "map_things", "position": { "x": 125, "y": 0, "z": 120 } },
+      { "id": "meal-forbidden-03", "def": "MealSurvivalPack", "label": "packaged survival meal x5", "count": 5, "kind": "meal", "source": "map_things", "position": { "x": 127, "y": 0, "z": 118 } },
+      { "id": "meal-forbidden-04", "def": "MealSurvivalPack", "label": "packaged survival meal x5", "count": 5, "kind": "meal", "source": "map_things", "position": { "x": 125, "y": 0, "z": 118 } },
+      { "id": "meal-forbidden-05", "def": "MealSurvivalPack", "label": "packaged survival meal x5", "count": 5, "kind": "meal", "source": "map_things", "position": { "x": 123, "y": 0, "z": 120 } },
+      { "id": "meal-forbidden-06", "def": "MealSurvivalPack", "label": "packaged survival meal", "count": 5, "kind": "meal", "source": "map_things", "position": { "x": 123, "y": 0, "z": 118 } },
+      { "id": "meal-forbidden-07", "def": "MealSurvivalPack", "label": "packaged survival meal", "count": 5, "kind": "meal", "source": "map_things", "position": { "x": 121, "y": 0, "z": 120 } },
+      { "id": "meal-forbidden-08", "def": "MealSurvivalPack", "label": "packaged survival meal", "count": 5, "kind": "meal", "source": "map_things", "position": { "x": 121, "y": 0, "z": 118 } },
+      { "id": "meal-forbidden-09", "def": "MealSurvivalPack", "label": "packaged survival meal", "count": 5, "kind": "meal", "source": "map_things", "position": { "x": 119, "y": 0, "z": 120 } },
+      { "id": "meal-forbidden-10", "def": "MealSurvivalPack", "label": "packaged survival meal", "count": 4, "kind": "meal", "source": "map_things", "position": { "x": 119, "y": 0, "z": 118 } },
+      { "id": "meal-forbidden-11", "def": "MealSurvivalPack", "label": "packaged survival meal", "count": 4, "kind": "meal", "source": "map_things", "position": { "x": 117, "y": 0, "z": 120 } },
+      { "id": "meal-forbidden-12", "def": "MealSurvivalPack", "label": "packaged survival meal", "count": 4, "kind": "meal", "source": "map_things", "position": { "x": 117, "y": 0, "z": 118 } }
+    ]
+  }
+}

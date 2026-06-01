@@ -353,6 +353,7 @@ public sealed class LlmClientTests
 
         result.ParseMode.Should().Be("strict_json");
         result.Normalized.Should().BeFalse();
+        result.DroppedFlagCount.Should().Be(0);
         result.Response.StateSummary.Should().Be("Food is in crisis and needs storage visibility plus setup.");
         AdviceItem advice = result.Response.Advice.Should().ContainSingle().Subject;
         advice.Actions.Should().ContainSingle().Which.Instruction.Should().Be("Make the reported food units visible in a reachable stockpile.");
@@ -366,6 +367,116 @@ public sealed class LlmClientTests
         result.Response.Flags.Should().ContainSingle().Which.SourceMinister.Should().Be("Chef");
         result.Response.Flags.Should().ContainSingle().Which.ExpiresAt.Should().BeAfter(DateTimeOffset.UtcNow);
     }
+
+    [Fact]
+    public void FoodLlmResponseParser_CountsFlagObjectDroppedForMissingEnvelope()
+    {
+        string raw = FoodResponseWithFlags("""
+        [
+          {
+            "building_requests": [
+              {
+                "request": "starter freezer",
+                "reason": "incoming food needs cold storage",
+                "target_class": "freezer"
+              }
+            ]
+          }
+        ]
+        """);
+
+        FoodLlmParseResult result = FoodLlmResponseParser.Parse(raw, FoodBriefing(0.21f), []);
+
+        result.ParseMode.Should().Be("tolerant_normalization");
+        result.Normalized.Should().BeTrue();
+        result.DroppedFlagCount.Should().Be(1);
+        result.Response.Flags.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void FoodLlmResponseParser_CountsFlagObjectDroppedForInvalidTargetClass()
+    {
+        string raw = FoodResponseWithFlags("""
+        [
+          {
+            "id": "food:freezer_support",
+            "source_minister": "Chef",
+            "severity": "medium",
+            "domain": "food",
+            "summary": "Freezer support needed",
+            "building_requests": [
+              {
+                "request": "starter freezer",
+                "reason": "incoming food needs cold storage",
+                "target_class": "cold_room"
+              }
+            ]
+          }
+        ]
+        """);
+
+        FoodLlmParseResult result = FoodLlmResponseParser.Parse(raw, FoodBriefing(0.21f), []);
+
+        result.ParseMode.Should().Be("tolerant_normalization");
+        result.Normalized.Should().BeTrue();
+        result.DroppedFlagCount.Should().Be(1);
+        result.Response.Flags.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void FoodLlmResponseParser_KeepsWellFormedFlagEnvelope()
+    {
+        string raw = FoodResponseWithFlags("""
+        [
+          {
+            "id": "food:freezer_support",
+            "source_minister": "Chef",
+            "severity": "medium",
+            "domain": "food",
+            "summary": "Freezer support needed",
+            "building_requests": [
+              {
+                "request": "starter freezer",
+                "reason": "incoming food needs cold storage",
+                "target_class": "freezer"
+              }
+            ]
+          }
+        ]
+        """);
+
+        FoodLlmParseResult result = FoodLlmResponseParser.Parse(raw, FoodBriefing(0.21f), []);
+
+        result.DroppedFlagCount.Should().Be(0);
+        result.Response.Flags.Should().ContainSingle().Which.BuildingRequests.Should().ContainSingle()
+            .Which.TargetClass.Should().Be(BuildingClass.Freezer);
+    }
+
+    private static string FoodResponseWithFlags(string flagsJson) => $$"""
+    {
+      "state_summary": "Food is in crisis and needs storage visibility plus setup.",
+      "advice": [
+        {
+          "id": "manual_food",
+          "minister": "Food",
+          "concern": "food_security",
+          "priority": "high",
+          "title": "Set up the food chain",
+          "body": "Make storage visible, place cooking, and start growing.",
+          "rationale": "reported food units need reachable stockpile visibility.",
+          "actions": [
+            {
+              "kind": "set_stockpile_zone",
+              "instruction": "Make the reported food units visible in a reachable stockpile."
+            }
+          ],
+          "guide_citations": []
+        }
+      ],
+      "flags": {{flagsJson}},
+      "notes": "food-chain-bootstrap"
+    }
+    """;
 
     private static FoodBriefing FoodBriefing(float days) => new(
         BriefingVersion: 1,

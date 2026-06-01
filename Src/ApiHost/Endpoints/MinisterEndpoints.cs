@@ -338,7 +338,7 @@ public static class MinisterEndpoints
             try
             {
                 FoodLlmParseResult parseResult = FoodLlmResponseParser.Parse(text, briefing, retrieved);
-                IReadOnlyList<string> styleWarnings = AdviceTextStyleWarnings.ForFood(parseResult.Response);
+                IReadOnlyList<string> styleWarnings = ManualLlmStyleWarnings(parseResult);
                 string stateSummary = FoodStateSummary.Build(briefing);
                 AdviceChainModel chain = FoodChainModelBuilder.Build(briefing, parseResult.Response.Advice);
                 outputs.Record(new RawLlmOutputSnapshot(
@@ -385,6 +385,7 @@ public static class MinisterEndpoints
                     llm_state_summary = parseResult.Response.StateSummary,
                     advice_count = parseResult.Response.Advice.Count,
                     flag_count = parseResult.Response.Flags.Count,
+                    dropped_flag_count = parseResult.DroppedFlagCount,
                     style_warnings = styleWarnings,
                     notes = parseResult.Response.Notes
                 });
@@ -583,6 +584,18 @@ public static class MinisterEndpoints
             return body.GetString() ?? "";
 
         return body.GetRawText();
+    }
+
+    private static IReadOnlyList<string> ManualLlmStyleWarnings(FoodLlmParseResult parseResult)
+    {
+        List<string> warnings = [.. AdviceTextStyleWarnings.ForFood(parseResult.Response)];
+        if (parseResult.DroppedFlagCount > 0)
+        {
+            string plural = parseResult.DroppedFlagCount == 1 ? "" : "s";
+            warnings.Add($"{parseResult.DroppedFlagCount} flag object{plural} dropped during strict AgentFlag parsing; include the envelope and known enum tokens.");
+        }
+
+        return warnings;
     }
 
     private sealed record MinisterScopeInfo(

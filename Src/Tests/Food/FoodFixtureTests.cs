@@ -5,7 +5,7 @@ namespace RimBob.Tests.Food;
 public sealed class FoodFixtureTests
 {
     [Fact]
-    public void FixtureDirectory_ContainsFiveM3Scenarios()
+    public void FixtureDirectory_ContainsSixM3Scenarios()
     {
         DirectoryInfo? dir = new(Directory.GetCurrentDirectory());
         while (dir is not null)
@@ -13,7 +13,7 @@ public sealed class FoodFixtureTests
             string candidate = Path.Combine(dir.FullName, "Src", "Tests", "Food", "Fixtures");
             if (Directory.Exists(candidate))
             {
-                Directory.GetFiles(candidate, "*.json").Should().HaveCount(5);
+                Directory.GetFiles(candidate, "*.json").Should().HaveCount(6);
                 return;
             }
             dir = dir.Parent;

@@ -10,7 +10,8 @@ namespace RimBob.LLM;
 public sealed record FoodLlmParseResult(
     FoodLlmResponse Response,
     string ParseMode,
-    bool Normalized);
+    bool Normalized,
+    int DroppedFlagCount = 0);
 
 public static class FoodLlmResponseParser
 {
@@ -34,7 +35,8 @@ public static class FoodLlmResponseParser
                         briefing),
                     briefing),
                 "strict_json",
-                Normalized: false);
+                Normalized: false,
+                DroppedFlagCount: 0);
         }
 
         LlmAdviceNormalizationContext normalizeContext = new(
@@ -61,7 +63,8 @@ public static class FoodLlmResponseParser
         return new FoodLlmParseResult(
             parsed,
             "tolerant_normalization",
-            Normalized: true);
+            Normalized: true,
+            DroppedFlagCount: normalizedResponse.DroppedFlagCount);
     }
 
     private static FoodLlmResponse? TryParseStrict(string text)
@@ -69,7 +72,7 @@ public static class FoodLlmResponseParser
         try
         {
             JsonNode? root = JsonNode.Parse(text);
-            if (root is null || !HasStrictAdviceShape(root)) return null;
+            if (root is null || !HasStrictResponseShape(root)) return null;
 
             FoodLlmResponse? parsed = root.Deserialize<FoodLlmResponse>(ResponseJson);
             return parsed is not null && IsStrictFoodResponse(parsed) ? parsed : null;
@@ -141,14 +144,32 @@ public static class FoodLlmResponseParser
         expiresGameTick > gameTick &&
         expiresGameTick <= gameTick + AdviceFreshness.TicksPerGameDay * 7;
 
+    private static bool HasStrictResponseShape(JsonNode root) =>
+        HasStrictAdviceShape(root) && HasStrictFlagShape(root);
+
     private static bool HasStrictAdviceShape(JsonNode root)
     {
         JsonArray? advice = root["advice"]?.AsArray();
         return advice is not null && advice.All(item => item?["priority"] is not null && item?["actions"] is not null);
     }
 
+    private static bool HasStrictFlagShape(JsonNode root)
+    {
+        JsonArray? flags = root["flags"]?.AsArray();
+        return flags is null || flags.All(item =>
+            item is null ||
+            item is not JsonObject obj ||
+            obj.Count == 0 ||
+            item["id"] is not null &&
+            item["severity"] is not null &&
+            item["domain"] is not null &&
+            item["summary"] is not null);
+    }
+
     private static bool IsStrictFoodResponse(FoodLlmResponse response) =>
         !string.IsNullOrWhiteSpace(response.StateSummary) &&
+        response.Advice is not null &&
+        response.Flags is not null &&
         response.Advice.All(advice =>
             !string.IsNullOrWhiteSpace(advice.Id) &&
             !string.IsNullOrWhiteSpace(advice.Minister) &&
@@ -159,7 +180,13 @@ public static class FoodLlmResponseParser
             advice.Actions.All(action =>
                 !string.IsNullOrWhiteSpace(action.Instruction)) &&
             response.Flags.All(flag =>
+                IsStrictFlag(flag) &&
                 RequestsComplete(flag)));
+
+    private static bool IsStrictFlag(RimBob.Core.Ministers.AgentFlag flag) =>
+        !string.IsNullOrWhiteSpace(flag.Id) &&
+        !string.IsNullOrWhiteSpace(flag.Domain) &&
+        !string.IsNullOrWhiteSpace(flag.Summary);
 
     private static bool RequestsComplete(RimBob.Core.Ministers.AgentFlag flag) =>
         Complete(flag.BuildingRequests, request => request.Request, request => request.Reason) &&

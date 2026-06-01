@@ -77,10 +77,6 @@ public sealed class FoodRulesTests
             FoodUnits = 52,
             MealsCount = 32,
             RawFoodCount = 12,
-            UnclassifiedFoodItems =
-            [
-                new FoodUnclassifiedItem("MealSurvivalPack", "packaged survival meal", 7, "meal", true, "map_things", "(62,0,219)")
-            ],
             UnforbidTargets =
             [
                 new FoodUnforbidTarget("meal-forbidden", "MealSurvivalPack", "packaged survival meal", 7, "meal", "map_things", new(62, 0, 219))
@@ -94,7 +90,8 @@ public sealed class FoodRulesTests
         advice.Body.Should().Contain("7 forbidden packaged survival meals");
         decision.Flags.Should().ContainSingle().Which.ItemRequests.Should().Contain(r =>
             r.Quantity == 7 &&
-            r.Request.Contains("forbidden packaged survival meals"));
+            r.Request.Contains("forbidden packaged survival meals") &&
+            r.ItemDef == "MealSurvivalPack");
         AdviceAction unforbidStep = advice.Actions.Should().Contain(Action =>
             Action.Kind == AdviceActionKind.Unforbid &&
             Action.Instruction.Contains("Unforbid 7 packaged survival meals")).Subject;
@@ -845,6 +842,58 @@ public sealed class FoodRulesTests
         advice.Concern.Should().Be("manage_food_stockpile");
         advice.Body.Should().Contain("25 unknown food units");
         advice.Body.Should().NotContain("audit");
+        advice.Actions.Should().ContainSingle().Which.Should().Match<AdviceAction>(action =>
+            action.Kind == AdviceActionKind.SetStockpileZone &&
+            action.Instruction == "Confirm unknown or excluded food is edible and reachable before counting it as buffer.");
+        decision.Flags.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void NutritionGapWithForbiddenMeals_LeadsWithUnforbidApplyAndFlagsItemRequest()
+    {
+        FoodBriefing briefing = Briefing(days: null) with
+        {
+            FoodUnits = 57,
+            MealsCount = 0,
+            RawFoodCount = 0,
+            NutritionSource = "unknown",
+            UnclassifiedFoodItems = [],
+            UnforbidTargets = DayOneForbiddenMeals()
+        };
+
+        Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
+            .Should().BeOfType<Decision>().Subject;
+
+        decision.Trace.Should().Be("nutrition_signal_gap");
+        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        advice.Concern.Should().Be("manage_food_stockpile");
+        advice.Priority.Should().Be(AdvicePriority.Medium);
+        advice.Actions.Should().HaveCount(2);
+        AdviceAction unforbidAction = advice.Actions[0];
+        unforbidAction.Kind.Should().Be(AdviceActionKind.Unforbid);
+        unforbidAction.Quantity.Should().Be(57);
+        unforbidAction.Instruction.Should().Be(
+            "Unforbid 57 packaged survival meals at (127, 0, 120), (125, 0, 120), (127, 0, 118); then let haulers bring them into the food stockpile.");
+        AdviceAction stockpileAction = advice.Actions[1];
+        stockpileAction.Kind.Should().Be(AdviceActionKind.SetStockpileZone);
+
+        UnforbidThingsApply apply = unforbidAction.Apply.Should().BeOfType<UnforbidThingsApply>().Subject;
+        apply.TargetCount.Should().Be(12);
+        apply.ThingTargets.Should().HaveCount(12);
+        apply.TargetSummary.Should().Be("57 packaged survival meals across 12 stacks");
+        apply.ThingTargets.Sum(target => DayOneForbiddenMeals()
+            .Single(source => source.Id == target.Id)
+            .Count).Should().Be(57);
+
+        AgentFlag flag = decision.Flags.Should().ContainSingle().Subject;
+        flag.Severity.Should().Be(FlagSeverity.Medium);
+        flag.BuildingRequests.Should().ContainSingle(request =>
+            request.TargetClass == BuildingClass.Stockpile &&
+            request.RequestedFrom == "Willie");
+        ItemRequest itemRequest = flag.ItemRequests.Should().ContainSingle().Subject;
+        itemRequest.Request.Should().Be("57 forbidden packaged survival meals");
+        itemRequest.ItemDef.Should().Be("MealSurvivalPack");
+        itemRequest.Quantity.Should().Be(57);
     }
 
     [Fact]
@@ -902,6 +951,22 @@ public sealed class FoodRulesTests
         ActiveThreat: false,
         RecentFoodIncidents: []
     );
+
+    private static IReadOnlyList<FoodUnforbidTarget> DayOneForbiddenMeals() =>
+    [
+        new("meal-forbidden-01", "MealSurvivalPack", "packaged survival meal x5", 5, "meal", "map_things", new(127, 0, 120)),
+        new("meal-forbidden-02", "MealSurvivalPack", "packaged survival meal x5", 5, "meal", "map_things", new(125, 0, 120)),
+        new("meal-forbidden-03", "MealSurvivalPack", "packaged survival meal x5", 5, "meal", "map_things", new(127, 0, 118)),
+        new("meal-forbidden-04", "MealSurvivalPack", "packaged survival meal x5", 5, "meal", "map_things", new(125, 0, 118)),
+        new("meal-forbidden-05", "MealSurvivalPack", "packaged survival meal x5", 5, "meal", "map_things", new(123, 0, 120)),
+        new("meal-forbidden-06", "MealSurvivalPack", "packaged survival meal", 5, "meal", "map_things", new(123, 0, 118)),
+        new("meal-forbidden-07", "MealSurvivalPack", "packaged survival meal", 5, "meal", "map_things", new(121, 0, 120)),
+        new("meal-forbidden-08", "MealSurvivalPack", "packaged survival meal", 5, "meal", "map_things", new(121, 0, 118)),
+        new("meal-forbidden-09", "MealSurvivalPack", "packaged survival meal", 5, "meal", "map_things", new(119, 0, 120)),
+        new("meal-forbidden-10", "MealSurvivalPack", "packaged survival meal", 4, "meal", "map_things", new(119, 0, 118)),
+        new("meal-forbidden-11", "MealSurvivalPack", "packaged survival meal", 4, "meal", "map_things", new(117, 0, 120)),
+        new("meal-forbidden-12", "MealSurvivalPack", "packaged survival meal", 4, "meal", "map_things", new(117, 0, 118))
+    ];
 
     private static FoodKitchenSummary KitchenWithSimpleMealBill(int targetCount) =>
         new(1, 1, true, true)

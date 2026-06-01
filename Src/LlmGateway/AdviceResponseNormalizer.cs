@@ -20,7 +20,10 @@ internal sealed record NormalizedAdviceResponse(
     string? StateSummary,
     IReadOnlyList<AdviceItem> Advice,
     IReadOnlyList<AgentFlag> Flags,
-    string? Notes);
+    string? Notes,
+    int DroppedFlagCount);
+
+internal sealed record NormalizedFlagResult(AgentFlag? Flag, bool Dropped);
 
 internal static class AdviceResponseNormalizer
 {
@@ -53,15 +56,17 @@ internal static class AdviceResponseNormalizer
         }
 
         List<AgentFlag> flags = [];
+        int droppedFlagCount = 0;
         for (int i = 0; i < flagsArray.Count; i++)
         {
             JsonNode? node = flagsArray[i];
             if (node is null) continue;
-            AgentFlag? flag = NormalizeFlag(node, context, i, json);
-            if (flag is not null) flags.Add(flag);
+            NormalizedFlagResult result = NormalizeFlag(node, context, i, json);
+            if (result.Flag is not null) flags.Add(result.Flag);
+            if (result.Dropped) droppedFlagCount++;
         }
 
-        return new NormalizedAdviceResponse(stateSummary, advice, flags, notes);
+        return new NormalizedAdviceResponse(stateSummary, advice, flags, notes, droppedFlagCount);
     }
 
     private static AdviceItem NormalizeAdvice(
@@ -116,45 +121,73 @@ internal static class AdviceResponseNormalizer
         );
     }
 
-    private static AgentFlag? NormalizeFlag(
+    private static NormalizedFlagResult NormalizeFlag(
         JsonNode node,
         LlmAdviceNormalizationContext context,
         int index,
         JsonSerializerOptions json)
     {
-        AgentFlag? strict = LlmResponseParser.TryDeserialize<AgentFlag>(node, json);
-        if (strict is not null && !string.IsNullOrWhiteSpace(strict.Id))
+        AgentFlag? strict = TryDeserializeFlag(node, json);
+        if (strict is not null && HasRequiredFlagEnvelope(node, strict))
         {
             NormalizedFlagRequests requests = ResourceRequestNormalizer.NormalizeFlagRequests(
                 node,
                 MapFlagSeverityToAdvicePriority(strict.Severity),
                 context,
                 json);
-            return strict with
+            AgentFlag normalized = strict with
             {
                 BuildingRequests = requests.BuildingRequestsOrNull,
                 LaborRequests = requests.LaborRequestsOrNull,
                 ItemRequests = requests.ItemRequestsOrNull,
                 Attention = requests.AttentionOrNull
             };
+            return new NormalizedFlagResult(normalized, Dropped: false);
         }
 
+        if (IsNonEmptyObject(node))
+            return new NormalizedFlagResult(null, Dropped: true);
+
         string? raw = LlmResponseParser.ReadString(node);
-        if (string.IsNullOrWhiteSpace(raw)) return null;
+        if (string.IsNullOrWhiteSpace(raw))
+            return new NormalizedFlagResult(null, Dropped: false);
 
         DateTimeOffset now = DateTimeOffset.UtcNow;
         string id = $"{context.Domain}:{LlmResponseParser.ToSnakeCase(raw)}";
         if (id == $"{context.Domain}:") id = $"{context.Domain}:llm_flag_{context.GameTick}_{index + 1}";
 
-        return new AgentFlag(
+        return new NormalizedFlagResult(new AgentFlag(
             Id: id,
             SourceMinister: context.Minister,
             Severity: InferFlagSeverity(raw),
             Domain: context.Domain,
             Summary: LlmResponseParser.HumanizeIdentifier(raw),
             Detail: raw,
-            ExpiresAt: now.AddHours(24));
+            ExpiresAt: now.AddHours(24)), Dropped: false);
     }
+
+    private static AgentFlag? TryDeserializeFlag(JsonNode node, JsonSerializerOptions json)
+    {
+        try
+        {
+            return node.Deserialize<AgentFlag>(json);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static bool HasRequiredFlagEnvelope(JsonNode node, AgentFlag flag) =>
+        !string.IsNullOrWhiteSpace(flag.Id) &&
+        node["severity"] is not null &&
+        !string.IsNullOrWhiteSpace(flag.Domain) &&
+        node["domain"] is not null &&
+        !string.IsNullOrWhiteSpace(flag.Summary) &&
+        node["summary"] is not null;
+
+    private static bool IsNonEmptyObject(JsonNode node) =>
+        node is JsonObject obj && obj.Count > 0;
 
     private static IReadOnlyList<AdviceItem> NormalizeStrictAdviceItems(IReadOnlyList<AdviceItem> advice) =>
         advice.Select(NormalizeStrictAdvice).ToArray();

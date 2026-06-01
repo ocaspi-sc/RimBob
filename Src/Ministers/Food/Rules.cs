@@ -18,19 +18,26 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         if (briefing.EstimatedDaysOfFood is null)
         {
             if (briefing.UnclassifiedFoodUnits > 0)
+            {
+                FoodFlagRequests nutritionGapRequests = FoodFlagRequests.Building(StockpileVisibilityRequest(
+                    "reachable food stockpile visibility",
+                    "food units outside meals/raw-food counts cannot be converted into days-of-food",
+                    quantity: null,
+                    priority: AdvicePriority.Medium));
+                ItemRequest? forbiddenMealRequest = ForbiddenMealItemRequest(briefing, AdvicePriority.Medium);
+                if (forbiddenMealRequest is not null)
+                    nutritionGapRequests = nutritionGapRequests.Add(forbiddenMealRequest);
+
                 return DecisionFor(briefing, "nutrition_signal_gap",
                     FoodConcern.ManageFoodStockpile,
                     AdvicePriority.Medium,
                     "Food stockpile categories need verification",
                     FoodRemainderBody(briefing),
                     "Missing nutrition would make days-of-food unreliable; use the fallback counts until upstream data is fixed.",
-                    [new(AdviceActionKind.SetStockpileZone, "Confirm unknown or excluded food is edible and reachable before counting it as buffer.")],
-                    FoodFlagRequests.Building(StockpileVisibilityRequest(
-                        "reachable food stockpile visibility",
-                        "food units outside meals/raw-food counts cannot be converted into days-of-food",
-                        quantity: null,
-                        priority: AdvicePriority.Medium)),
-                    false);
+                    NutritionSignalGapActions(briefing),
+                    nutritionGapRequests,
+                    forbiddenMealRequest is not null);
+            }
 
             return DecisionFor(briefing, "unknown_food_state",
                 FoodConcern.FoodSecurity,
@@ -620,22 +627,16 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             RequestedFrom: "Willie");
 
     private static string? FirstForbiddenFoodDef(FoodBriefing briefing) =>
-        briefing.UnclassifiedFoodItems
-            .Where(item => item.IsForbidden)
-            .Select(item => item.Def)
+        ForbiddenMealUnforbidTargets(briefing)
+            .Select(target => target.Def)
             .FirstOrDefault(def => !string.IsNullOrWhiteSpace(def));
 
     private static FoodFlagRequests EmergencyRequests(FoodBriefing briefing, float days, AdvicePriority priority)
     {
         FoodFlagRequests requests = FoodFlagRequests.Empty;
-        int forbiddenMealCount = ForbiddenMealCount(briefing);
-        if (forbiddenMealCount > 0)
-            requests = requests.Add(new ItemRequest(
-                $"{forbiddenMealCount} forbidden {ForbiddenMealLabel(briefing, forbiddenMealCount)}",
-                "visible meals are forbidden and excluded from the reachable food buffer",
-                ItemDef: FirstForbiddenFoodDef(briefing),
-                Quantity: forbiddenMealCount,
-                Priority: priority));
+        ItemRequest? forbiddenMealRequest = ForbiddenMealItemRequest(briefing, priority);
+        if (forbiddenMealRequest is not null)
+            requests = requests.Add(forbiddenMealRequest);
         if (briefing.UnknownFoodUnits > 0 && briefing.MealsCount == 0 && briefing.RawFoodCount == 0)
             requests = requests.Add(StockpileVisibilityRequest(
                 $"reachable stockpile visibility for {briefing.UnknownFoodUnits} unknown food units",
@@ -721,13 +722,9 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
     private static IReadOnlyList<AdviceAction> EmergencyActions(FoodBriefing briefing, float days)
     {
         List<AdviceAction> actions = [];
-        int forbiddenMealCount = ForbiddenMealCount(briefing);
-        if (forbiddenMealCount > 0)
-            actions.Add(new AdviceAction(
-                AdviceActionKind.Unforbid,
-                ForbiddenMealActionText(briefing, forbiddenMealCount),
-                Quantity: forbiddenMealCount,
-                Apply: UnforbidApply(briefing)));
+        AdviceAction? forbiddenMealAction = ForbiddenMealUnforbidAction(briefing);
+        if (forbiddenMealAction is not null)
+            actions.Add(forbiddenMealAction);
         if (briefing.UnknownFoodUnits > 0 && briefing.MealsCount == 0 && briefing.RawFoodCount == 0)
             actions.Add(new AdviceAction(
                 AdviceActionKind.SetStockpileZone,
@@ -765,7 +762,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 Owner: "Mayor"));
         IReadOnlyList<AdviceAction> freezerActions = FreezerSupportActions(briefing, days, HasPotentialPerishableFoodPath(briefing));
         actions.AddRange(freezerActions);
-        int limit = forbiddenMealCount > 0 ? 4 : 3;
+        int limit = forbiddenMealAction is not null ? 4 : 3;
         if (freezerActions.Count > 0)
             limit++;
         return actions.Take(limit).ToList();
@@ -975,18 +972,19 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             .FirstOrDefault();
     }
 
-    private static AdviceActionApply? UnforbidApply(FoodBriefing briefing)
+    private static AdviceActionApply? UnforbidApply(FoodBriefing briefing) =>
+        UnforbidApply(briefing, ForbiddenMealUnforbidTargets(briefing));
+
+    private static AdviceActionApply? UnforbidApply(
+        FoodBriefing briefing,
+        IReadOnlyList<FoodUnforbidTarget> targets)
     {
-        IReadOnlyList<FoodUnforbidTarget> targets = briefing.UnforbidTargets
-            .Where(target => string.Equals(target.Kind, "meal", StringComparison.OrdinalIgnoreCase))
-            .Take(AssistedApplyLimits.MaxUnforbidTargets)
-            .ToList();
         if (targets.Count == 0)
             return null;
 
         int count = targets.Sum(target => target.Count);
         string label = count == 1 ? "Unforbid meal" : "Unforbid meals";
-        string summary = $"{count} {ForbiddenMealLabel(briefing, count)} across {targets.Count} stack{(targets.Count == 1 ? "" : "s")}";
+        string summary = $"{count} {ForbiddenMealLabel(targets, count)} across {targets.Count} stack{(targets.Count == 1 ? "" : "s")}";
 
         return new UnforbidThingsApply(
             Label: label,
@@ -1000,6 +998,17 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 Source: target.Source,
                 Position: target.Position)).ToList(),
             TargetCount: targets.Count);
+    }
+
+    private static IReadOnlyList<AdviceAction> NutritionSignalGapActions(FoodBriefing briefing)
+    {
+        AdviceAction setStockpileZoneAction = new(
+            AdviceActionKind.SetStockpileZone,
+            "Confirm unknown or excluded food is edible and reachable before counting it as buffer.");
+        AdviceAction? forbiddenMealAction = ForbiddenMealUnforbidAction(briefing);
+        return forbiddenMealAction is null
+            ? [setStockpileZoneAction]
+            : [forbiddenMealAction, setStockpileZoneAction];
     }
 
     private static AdviceActionApply? CookBillApply(FoodBriefing briefing)
@@ -1147,32 +1156,86 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
     }
 
     private static int ForbiddenMealCount(FoodBriefing briefing) =>
-        briefing.UnclassifiedFoodItems
-            .Where(item => item.IsForbidden && string.Equals(item.Kind, "meal", StringComparison.OrdinalIgnoreCase))
-            .Sum(item => item.Count);
+        ForbiddenMealUnforbidTargets(briefing)
+            .Sum(target => target.Count);
 
-    private static string ForbiddenMealActionText(FoodBriefing briefing, int forbiddenMealCount)
+    private static IReadOnlyList<FoodUnforbidTarget> ForbiddenMealUnforbidTargets(FoodBriefing briefing) =>
+        briefing.UnforbidTargets
+            .Where(target => string.Equals(target.Kind, "meal", StringComparison.OrdinalIgnoreCase))
+            .Take(AssistedApplyLimits.MaxUnforbidTargets)
+            .ToList();
+
+    private static AdviceAction? ForbiddenMealUnforbidAction(FoodBriefing briefing)
     {
-        IReadOnlyList<string> positions = briefing.UnclassifiedFoodItems
-            .Where(item => item.IsForbidden && string.Equals(item.Kind, "meal", StringComparison.OrdinalIgnoreCase))
-            .Select(item => item.Position)
+        IReadOnlyList<FoodUnforbidTarget> targets = ForbiddenMealUnforbidTargets(briefing);
+        int forbiddenMealCount = targets.Sum(target => target.Count);
+        if (forbiddenMealCount <= 0)
+            return null;
+
+        return new AdviceAction(
+            AdviceActionKind.Unforbid,
+            ForbiddenMealActionText(targets, forbiddenMealCount),
+            Quantity: forbiddenMealCount,
+            Apply: UnforbidApply(briefing, targets));
+    }
+
+    private static ItemRequest? ForbiddenMealItemRequest(FoodBriefing briefing, AdvicePriority priority)
+    {
+        int forbiddenMealCount = ForbiddenMealCount(briefing);
+        if (forbiddenMealCount <= 0)
+            return null;
+
+        return new ItemRequest(
+            $"{forbiddenMealCount} forbidden {ForbiddenMealLabel(briefing, forbiddenMealCount)}",
+            "visible meals are forbidden and excluded from the reachable food buffer",
+            ItemDef: FirstForbiddenFoodDef(briefing),
+            Quantity: forbiddenMealCount,
+            Priority: priority);
+    }
+
+    private static string ForbiddenMealActionText(
+        IReadOnlyList<FoodUnforbidTarget> targets,
+        int forbiddenMealCount)
+    {
+        IReadOnlyList<string> positions = targets
+            .Select(target => FormatPosition(target.Position))
             .Where(position => !string.IsNullOrWhiteSpace(position))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Take(3)
-            .Cast<string>()
             .ToList();
         string location = positions.Count == 0 ? "" : $" at {string.Join(", ", positions)}";
-        return $"Unforbid {forbiddenMealCount} {ForbiddenMealLabel(briefing, forbiddenMealCount)}{location}; then let haulers bring them into the food stockpile.";
+        return $"Unforbid {forbiddenMealCount} {ForbiddenMealLabel(targets, forbiddenMealCount)}{location}; then let haulers bring them into the food stockpile.";
     }
 
     private static string ForbiddenMealLabel(FoodBriefing briefing, int count)
     {
-        FoodUnclassifiedItem? first = briefing.UnclassifiedFoodItems
-            .FirstOrDefault(item => item.IsForbidden && string.Equals(item.Kind, "meal", StringComparison.OrdinalIgnoreCase));
-        string label = first?.Label ?? "meals";
+        return ForbiddenMealLabel(ForbiddenMealUnforbidTargets(briefing), count);
+    }
+
+    private static string ForbiddenMealLabel(IReadOnlyList<FoodUnforbidTarget> targets, int count)
+    {
+        string label = ForbiddenMealBaseLabel(targets.FirstOrDefault());
         if (count == 1 || label.EndsWith("s", StringComparison.OrdinalIgnoreCase))
             return label;
         return $"{label}s";
+    }
+
+    private static string ForbiddenMealBaseLabel(FoodUnforbidTarget? target)
+    {
+        string? label = target?.Label;
+        if (string.IsNullOrWhiteSpace(label))
+            return "meals";
+
+        string trimmed = label.Trim();
+        int stackSuffixIndex = trimmed.LastIndexOf(" x", StringComparison.OrdinalIgnoreCase);
+        if (stackSuffixIndex > 0)
+        {
+            string suffix = trimmed[(stackSuffixIndex + 2)..];
+            if (suffix.Length > 0 && suffix.All(char.IsDigit))
+                return trimmed[..stackSuffixIndex].Trim();
+        }
+
+        return trimmed;
     }
 
     private static int SimpleMealTarget(FoodBriefing briefing) =>
