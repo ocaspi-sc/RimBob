@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using RimBob.Core.Advice;
 using RimBob.Core.Ministers;
 using RimBob.State;
 
@@ -11,6 +12,7 @@ public sealed class CabinetCycle(
     IEnumerable<IMinister> ministers,
     MinisterRegistry registry,
     MinisterTraceStore traces,
+    FlagChannel flags,
     CabinetRunLogStore runLogs,
     ILogger<CabinetCycle> log)
 {
@@ -63,15 +65,33 @@ public sealed class CabinetCycle(
             "cabinet",
             ct,
             cabinetRunId);
+        HashSet<string> ministersRunAsRequestFollowUp = new(StringComparer.OrdinalIgnoreCase);
 
         foreach (MinisterDescriptor descriptor in registry.CabinetMinisters)
         {
+            if (ministersRunAsRequestFollowUp.Contains(descriptor.Key))
+            {
+                log.LogInformation(
+                    "Cabinet cycle: skipping scheduled {Minister}; already ran for a newly published build request.",
+                    descriptor.Label);
+                continue;
+            }
+
             IMinister? minister = ResolveMinister(descriptor);
             if (minister is null)
                 throw new InvalidOperationException($"Cabinet cycle could not resolve {descriptor.Label} minister.");
 
             log.LogInformation("Cabinet cycle: running {Minister}", descriptor.Label);
+            long flagSequenceBeforeRun = flags.CurrentSequence;
             await RunResolvedMinisterAsync(minister, descriptor, cycle, usedRestoredSnapshot, ct, cabinetRunId);
+            IReadOnlyList<string> followUpKeys = await RunWillieBuildingRequestFollowUpsAsync(
+                descriptor,
+                flagSequenceBeforeRun,
+                usedRestoredSnapshot,
+                ct,
+                cabinetRunId);
+            foreach (string followUpKey in followUpKeys)
+                ministersRunAsRequestFollowUp.Add(followUpKey);
         }
 
         return usedRestoredSnapshot;
@@ -97,7 +117,13 @@ public sealed class CabinetCycle(
         if (minister is null)
             throw new InvalidOperationException($"Manual trigger could not resolve {descriptor.Label} minister.");
 
+        long flagSequenceBeforeRun = flags.CurrentSequence;
         await RunResolvedMinisterAsync(minister, descriptor, cycle, usedRestoredSnapshot, ct);
+        await RunWillieBuildingRequestFollowUpsAsync(
+            descriptor,
+            flagSequenceBeforeRun,
+            usedRestoredSnapshot,
+            ct);
         return new MinisterTriggerResult(
             descriptor.Key,
             descriptor.Label,
@@ -291,6 +317,58 @@ public sealed class CabinetCycle(
             throw;
         }
     }
+
+    private async Task<IReadOnlyList<string>> RunWillieBuildingRequestFollowUpsAsync(
+        MinisterDescriptor sourceDescriptor,
+        long flagSequenceBeforeRun,
+        bool usedRestoredSnapshot,
+        CancellationToken ct,
+        string? cabinetRunId = null)
+    {
+        List<AgentFlag> requestFlags = flags.PublishedAfter(flagSequenceBeforeRun)
+            .Select(entry => entry.Flag)
+            .Where(flag => IsFlagFromDescriptor(flag, sourceDescriptor))
+            .Where(HasWillieBuildingRequest)
+            .GroupBy(flag => flag.Id, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.Last())
+            .ToList();
+        if (requestFlags.Count == 0) return [];
+
+        MinisterDescriptor? willie = registry.FindMinister("willie");
+        if (willie is not { Ready: true, CanRunRules: true }) return [];
+        if (sourceDescriptor.Key.Equals(willie.Key, StringComparison.OrdinalIgnoreCase)) return [];
+
+        IMinister? minister = ResolveMinister(willie);
+        if (minister is null)
+            throw new InvalidOperationException("Willie build-request follow-up could not resolve Willie minister.");
+
+        foreach (AgentFlag requestFlag in requestFlags)
+        {
+            log.LogInformation(
+                "Cabinet cycle: running Willie for build request flag {FlagId} from {SourceMinister}",
+                requestFlag.Id,
+                requestFlag.SourceMinister);
+            PlayCycleContext requestCycle = new(
+                PlayCycleTrigger.FlagFired,
+                Flag: requestFlag,
+                WakeupPayload: $"building_request:{requestFlag.Id}",
+                RunMode: MinisterRunMode.RulesOnly);
+            await RunResolvedMinisterAsync(minister, willie, requestCycle, usedRestoredSnapshot, ct, cabinetRunId);
+        }
+
+        return [willie.Key];
+    }
+
+    private static bool IsFlagFromDescriptor(AgentFlag flag, MinisterDescriptor descriptor)
+    {
+        string source = MinisterRegistry.NormalizeKey(flag.SourceMinister);
+        return source.Equals(descriptor.Key, StringComparison.OrdinalIgnoreCase) ||
+               source.Equals(MinisterRegistry.NormalizeKey(descriptor.Label), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool HasWillieBuildingRequest(AgentFlag flag) =>
+        (flag.BuildingRequests ?? [])
+        .Any(request => string.Equals(request.RequestedFrom, "Willie", StringComparison.OrdinalIgnoreCase));
 
     private IMinister? ResolveMinister(MinisterDescriptor descriptor) =>
         ministers.FirstOrDefault(m =>

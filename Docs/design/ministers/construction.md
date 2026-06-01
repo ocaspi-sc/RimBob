@@ -114,6 +114,8 @@ needed. See [`placement-solver.md`](../../../.plans/placement-solver.md).
 
 Inbound `building_request`s for any Willie-owned build class preempt generic missing-room advice after hard build blockers such as power deficits, material gaps, and blocked frames. Missing kitchen, hospital, and storage rules synthesize the same request shape internally, so the orchestrator uses one generic `building_request_active`/missing-room solver path and attaches validated options to the emitted advice item instead of keeping non-freezer rooms prose-only.
 
+When another minister publishes a flag with a Willie `building_request`, the Host immediately wakes Willie in rules-only `FlagFired` mode and focuses that request for the solver run. The operator should not need to click Willie `Run Rules` just to turn a fresh Chef/Welfare/Medical build request into placement options.
+
 Here, "1-3 candidate layouts" means the final emitted `options[]`, not the
 internal search space. The solver may run several bounded candidate generators
 (templates, empty rectangles, pattern matches, reuse-existing-footprint, and

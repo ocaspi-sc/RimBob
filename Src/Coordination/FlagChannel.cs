@@ -6,13 +6,42 @@ public sealed class FlagChannel
 {
     private readonly object _lock = new();
     private readonly Dictionary<string, AgentFlag> _active = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Queue<PublishedAgentFlag> _published = new();
+    private long _publishSequence;
+
+    public long CurrentSequence
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _publishSequence;
+            }
+        }
+    }
 
     public void Publish(AgentFlag flag)
     {
         lock (_lock)
         {
+            _publishSequence++;
             _active[flag.Id] = flag;
+            _published.Enqueue(new PublishedAgentFlag(_publishSequence, flag));
+            while (_published.Count > 256)
+                _published.Dequeue();
+
             PruneExpired(DateTimeOffset.UtcNow);
+        }
+    }
+
+    public IReadOnlyList<PublishedAgentFlag> PublishedAfter(long sequence)
+    {
+        lock (_lock)
+        {
+            return _published
+                .Where(entry => entry.Sequence > sequence)
+                .OrderBy(entry => entry.Sequence)
+                .ToList();
         }
     }
 
@@ -48,3 +77,5 @@ public sealed class FlagChannel
             _active.Remove(id);
     }
 }
+
+public sealed record PublishedAgentFlag(long Sequence, AgentFlag Flag);

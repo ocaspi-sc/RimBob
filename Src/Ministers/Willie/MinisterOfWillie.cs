@@ -150,6 +150,12 @@ public sealed class MinisterOfWillie(
         IReadOnlyList<AgentFlag> activeFlags,
         AgentFlag? directFlag)
     {
+        IReadOnlyList<BuildingRequest>? directRequests = directFlag?.BuildingRequests?
+            .Where(IsRequestedFromWillie)
+            .ToList();
+        if (directRequests is { Count: > 0 })
+            return directRequests;
+
         List<AgentFlag> flagsToRead = [.. activeFlags];
         if (directFlag is not null &&
             flagsToRead.All(flag => !string.Equals(flag.Id, directFlag.Id, StringComparison.OrdinalIgnoreCase)))
@@ -171,6 +177,13 @@ public sealed class MinisterOfWillie(
         IReadOnlyList<AgentFlag> activeFlags,
         AgentFlag? directFlag)
     {
+        if (directFlag is not null &&
+            (directFlag.BuildingRequests ?? []).Any(candidate =>
+                IsRequestedFromWillie(candidate) && candidate == request))
+        {
+            return directFlag.SourceMinister;
+        }
+
         List<AgentFlag> flagsToRead = [.. activeFlags];
         if (directFlag is not null &&
             flagsToRead.All(flag => !string.Equals(flag.Id, directFlag.Id, StringComparison.OrdinalIgnoreCase)))

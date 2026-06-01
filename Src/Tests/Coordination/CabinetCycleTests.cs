@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Net.Sockets;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
+using RimBob.Core.Advice;
 using RimBob.Coordination;
 using RimBob.Core.Aggregates;
 using RimBob.Core.Ministers;
@@ -212,6 +213,60 @@ public sealed class CabinetCycleTests
     }
 
     [Fact]
+    public async Task TriggerMinisterAsync_WhenSourcePublishesWillieBuildRequest_RunsWillieFollowUp()
+    {
+        FlagChannel flags = new();
+        AgentFlag freezerRequest = WillieBuildingRequestFlag();
+        flags.Publish(freezerRequest);
+        FakeMinister chef = new("Chef", flags: flags, emittedFlags: [freezerRequest]);
+        FakeMinister willie = new("Willie");
+        CabinetCycle sut = BuildCycle(
+            new NoopRefresher(),
+            new ColonyState(),
+            new ColonyStateSnapshotStore(),
+            new MinisterTraceStore(),
+            [chef, willie],
+            flags: flags);
+
+        MinisterTriggerResult result = await sut.TriggerMinisterAsync("food", MinisterRunMode.RulesOnly, CancellationToken.None)
+            ?? throw new InvalidOperationException("Expected Chef trigger result.");
+
+        result.Scope.Should().Be("food");
+        chef.WakeCount.Should().Be(1);
+        willie.WakeCount.Should().Be(1);
+        willie.Triggers.Should().Equal(PlayCycleTrigger.FlagFired);
+        willie.RunModes.Should().Equal(MinisterRunMode.RulesOnly);
+        willie.WakeupPayloads.Should().Equal("building_request:food:freezer");
+        willie.FlagIds.Should().Equal("food:freezer");
+    }
+
+    [Fact]
+    public async Task TriggerCabinetAsync_WhenFoodPublishesWillieBuildRequest_DoesNotRunWillieTwice()
+    {
+        FlagChannel flags = new();
+        AgentFlag freezerRequest = WillieBuildingRequestFlag();
+        FakeMinister chef = new("Chef", flags: flags, emittedFlags: [freezerRequest]);
+        FakeMinister willie = new("Willie");
+        FakeMinister mayor = new("Mayor");
+        CabinetCycle sut = BuildCycle(
+            new NoopRefresher(),
+            new ColonyState(),
+            new ColonyStateSnapshotStore(),
+            new MinisterTraceStore(),
+            [chef, willie, mayor],
+            flags: flags);
+
+        CabinetTriggerResult result = await sut.TriggerCabinetAsync(CancellationToken.None);
+
+        result.StateSource.Should().Be(nameof(ColonyStateOrigin.None));
+        chef.WakeCount.Should().Be(1);
+        willie.WakeCount.Should().Be(1);
+        mayor.WakeCount.Should().Be(1);
+        willie.Triggers.Should().Equal(PlayCycleTrigger.FlagFired);
+        willie.FlagIds.Should().Equal("food:freezer");
+    }
+
+    [Fact]
     public async Task TriggerCabinetAsync_WhenMinisterThrows_MarksMinisterAndRunFailed()
     {
         CabinetRunLogStore runLogs = new();
@@ -297,7 +352,8 @@ public sealed class CabinetCycleTests
         ColonyStateSnapshotStore snapshotStore,
         MinisterTraceStore traces,
         IReadOnlyList<IMinister> ministers,
-        CabinetRunLogStore? runLogs = null) =>
+        CabinetRunLogStore? runLogs = null,
+        FlagChannel? flags = null) =>
         new(
             refresher,
             colony,
@@ -305,8 +361,27 @@ public sealed class CabinetCycleTests
             ministers,
             new MinisterRegistry(),
             traces,
+            flags ?? new FlagChannel(),
             runLogs ?? new CabinetRunLogStore(),
             NullLogger<CabinetCycle>.Instance);
+
+    private static AgentFlag WillieBuildingRequestFlag() =>
+        new(
+            Id: "food:freezer",
+            SourceMinister: "Chef",
+            Severity: FlagSeverity.High,
+            Domain: "food",
+            Summary: "Freezer needed",
+            BuildingRequests:
+            [
+                new BuildingRequest(
+                    Request: "starter freezer near kitchen",
+                    Reason: "Food will spoil without cold storage.",
+                    TargetClass: BuildingClass.Freezer,
+                    RoomClass: RoomClass.Freezer,
+                    Priority: AdvicePriority.High,
+                    RequestedFrom: "Willie")
+            ]);
 
     private static async Task<(ColonyState Colony, ColonyStateSnapshotStore SnapshotStore)>
         RestoredStateWithSnapshotAsync(int mapId = 0)
@@ -355,7 +430,9 @@ public sealed class CabinetCycleTests
         string name,
         ColonyState? colony = null,
         Action<PlayCycleContext>? onRun = null,
-        Exception? exception = null) : IMinister
+        Exception? exception = null,
+        FlagChannel? flags = null,
+        IReadOnlyList<AgentFlag>? emittedFlags = null) : IMinister
     {
         public string Name { get; } = name;
 
@@ -369,6 +446,8 @@ public sealed class CabinetCycleTests
 
         public List<string?> WakeupPayloads { get; } = [];
 
+        public List<string?> FlagIds { get; } = [];
+
         public Task RunPlayCycle(PlayCycleContext context, CancellationToken ct)
         {
             WakeCount++;
@@ -376,7 +455,14 @@ public sealed class CabinetCycleTests
             Triggers.Add(context.Trigger);
             RunModes.Add(context.RunMode);
             WakeupPayloads.Add(context.WakeupPayload);
+            FlagIds.Add(context.Flag?.Id);
             onRun?.Invoke(context);
+            if (flags is not null && emittedFlags is not null)
+            {
+                foreach (AgentFlag flag in emittedFlags)
+                    flags.Publish(flag);
+            }
+
             if (exception is not null)
                 return Task.FromException(exception);
             return Task.CompletedTask;

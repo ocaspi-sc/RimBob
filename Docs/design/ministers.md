@@ -43,6 +43,8 @@ cabinet wake.
 
 Manual dashboard minister triggers also carry a run mode: `Run Rules` means deterministic rules only and must stop before provider work, while `Run LLM` means a forced LLM path and is only enabled for ministers with a wired LLM implementation.
 
+Flag-carried requests can also wake an owning rules-only minister. In particular, a newly published Willie-owned `building_request` immediately runs Willie in `FlagFired` / rules-only mode so the deterministic Placement Solver handles the request without an extra manual Willie trigger.
+
 ### First Live Cycle Bootstrap
 
 Every feeder minister may get one special case on its first live cycle after it
