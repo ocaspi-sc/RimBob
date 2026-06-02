@@ -136,6 +136,7 @@ support. Freezer posture is a standing chain dependency: when Chef recommends
 harvest, forage, hunt, cooking, or growing work that will create or depend on
 perishable food, missing cooler/freezer support should be attached as a
 secondary Willie request rather than waiting until surplus already exists.
+Cooking capability is also a standing food-chain prerequisite: when the selected food path creates or depends on raw, foraged, hunted, or harvested food and no cooking building is visible, Chef should request a starter kitchen/cooking-station build from Willie rather than relying on Willie's generic missing-room fallback.
 
 Rules should compute priority from live state where possible: days of food,
 nutrition confidence, colonist count, season/growing window, active threat, and

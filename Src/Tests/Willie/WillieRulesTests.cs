@@ -222,6 +222,65 @@ public sealed class WillieRulesTests
     }
 
     [Fact]
+    public void InboundFreezingRequestNearMissingKitchen_DefersToKitchenPrerequisite()
+    {
+        WillieBriefing briefing = StableBriefing() with
+        {
+            FunctionalRooms = FunctionalRooms(RoomClass.Hospital, RoomClass.Storage)
+        };
+
+        BuildingRequest freezerNearKitchen = FreezerRequest() with
+        {
+            Adjacency = [new AdjacencyHint(AdjacencyRelation.Near, "kitchen")]
+        };
+
+        RulesResult result = new Rules().Evaluate(
+            briefing,
+            ColonyContext.Default,
+            [freezerNearKitchen]);
+
+        Decision decision = result.Should().BeOfType<Decision>().Subject;
+        decision.Trace.Should().Be("kitchen_missing");
+        decision.Advice.Should().ContainSingle()
+            .Which.Concern.Should().Be("functional_rooms");
+        decision.Diagnostics.Should().NotBeNull();
+        decision.Diagnostics!.SuppressedCandidates.Should().Contain(row =>
+            row.Rule == Rules.BuildingRequestActiveTrace &&
+            row.Outcome == "suppressed");
+        Rules.TryGetPlacementRequest(decision.Trace, briefing, [freezerNearKitchen], out BuildingRequest request)
+            .Should().BeTrue();
+        request.RoomClass.Should().Be(RoomClass.Kitchen);
+    }
+
+    [Fact]
+    public void InboundKitchenRequestPreemptsDependentFreezerRequest()
+    {
+        WillieBriefing briefing = StableBriefing() with
+        {
+            FunctionalRooms = FunctionalRooms(RoomClass.Hospital, RoomClass.Storage)
+        };
+        BuildingRequest freezerNearKitchen = FreezerRequest() with
+        {
+            Adjacency = [new AdjacencyHint(AdjacencyRelation.Near, "kitchen")]
+        };
+
+        RulesResult result = new Rules().Evaluate(
+            briefing,
+            ColonyContext.Default,
+            [freezerNearKitchen, KitchenRequest()]);
+
+        Decision decision = result.Should().BeOfType<Decision>().Subject;
+        decision.Trace.Should().Be(Rules.BuildingRequestActiveTrace);
+        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        advice.Concern.Should().Be("functional_rooms");
+        advice.Title.Should().Be("Kitchen request needs Willie placement");
+        Rules.TryGetPlacementRequest(decision.Trace, briefing, [freezerNearKitchen, KitchenRequest()], out BuildingRequest request)
+            .Should().BeTrue();
+        request.RoomClass.Should().Be(RoomClass.Kitchen);
+        request.TargetClass.Should().Be(BuildingClass.ProductionBench);
+    }
+
+    [Fact]
     public void HardBuildBlocker_PreemptsInboundFreezingRequest()
     {
         WillieBriefing briefing = StableBriefing() with
@@ -282,6 +341,18 @@ public sealed class WillieRulesTests
             RoomClass: RoomClass.Freezer,
             Temperature: new TempNeed(TemperatureBand.Freezing, MustHold: true),
             Priority: AdvicePriority.High,
+            RequestedFrom: "Willie");
+
+    private static BuildingRequest KitchenRequest() =>
+        new(
+            Request: "starter kitchen cooking station",
+            Reason: "Chef needs cooking throughput before freezer adjacency matters",
+            TargetClass: BuildingClass.ProductionBench,
+            TargetDef: "Campfire",
+            RoomClass: RoomClass.Kitchen,
+            CapacityNeed: new CapacityNeed(CapacityMeasure.WorkSlots, 1),
+            Adjacency: [new AdjacencyHint(AdjacencyRelation.Near, "storage")],
+            Priority: AdvicePriority.Medium,
             RequestedFrom: "Willie");
 
     private static BuildingRequest WorkshopRequest() =>

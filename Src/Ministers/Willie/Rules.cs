@@ -84,8 +84,8 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
                     AdvicePriority.High,
                     "Player"));
 
-        BuildingRequest? buildingRequest = SelectPlacementRequest(inboundBuildingRequests);
-        if (buildingRequest is not null)
+        BuildingRequest? buildingRequest = SelectPlacementRequest(briefing, inboundBuildingRequests);
+        if (buildingRequest is not null && !ShouldDeferToMissingKitchen(briefing, buildingRequest))
             return BuildingRequestDecision(briefing, inboundBuildingRequests, buildingRequest);
 
         if (HasFunctionalRoomEvidence(briefing) && MissingRoom(briefing, RoomClass.Kitchen))
@@ -393,7 +393,7 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
     {
         if (string.Equals(trace, BuildingRequestActiveTrace, StringComparison.OrdinalIgnoreCase))
         {
-            request = SelectPlacementRequest(inboundBuildingRequests)!;
+            request = SelectPlacementRequest(briefing, inboundBuildingRequests)!;
             return request is not null;
         }
 
@@ -407,12 +407,45 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
         return false;
     }
 
-    private static BuildingRequest? SelectPlacementRequest(IReadOnlyList<BuildingRequest> requests) =>
+    private static BuildingRequest? SelectPlacementRequest(
+        WillieBriefing briefing,
+        IReadOnlyList<BuildingRequest> requests) =>
         requests
-            .OrderByDescending(request => (int)(request.Priority ?? AdvicePriority.Medium))
+            .OrderByDescending(request => MissingKitchenDependencyRank(briefing, request))
+            .ThenByDescending(request => (int)(request.Priority ?? AdvicePriority.Medium))
             .ThenBy(request => FormatRequestTarget(request), StringComparer.OrdinalIgnoreCase)
             .ThenBy(request => request.Request, StringComparer.OrdinalIgnoreCase)
             .FirstOrDefault();
+
+    private static int MissingKitchenDependencyRank(WillieBriefing briefing, BuildingRequest request)
+    {
+        if (!HasFunctionalRoomEvidence(briefing) || !MissingRoom(briefing, RoomClass.Kitchen))
+            return 1;
+
+        if (IsKitchenBuildRequest(request))
+            return 2;
+
+        return DependsOnKitchen(request) ? 0 : 1;
+    }
+
+    private static bool ShouldDeferToMissingKitchen(WillieBriefing briefing, BuildingRequest request) =>
+        HasFunctionalRoomEvidence(briefing) &&
+        MissingRoom(briefing, RoomClass.Kitchen) &&
+        DependsOnKitchen(request) &&
+        !IsKitchenBuildRequest(request);
+
+    private static bool IsKitchenBuildRequest(BuildingRequest request) =>
+        request.RoomClass == RoomClass.Kitchen;
+
+    private static bool DependsOnKitchen(BuildingRequest request) =>
+        (request.Adjacency ?? []).Any(hint => TargetsRoom(hint, RoomClass.Kitchen));
+
+    private static bool TargetsRoom(AdjacencyHint hint, RoomClass roomClass)
+    {
+        string target = hint.Target.Trim();
+        return string.Equals(target, roomClass.ToString(), StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(target, ToSnakeCase(roomClass.ToString()), StringComparison.OrdinalIgnoreCase);
+    }
 
     public static bool IsFreezingBuildRequest(BuildingRequest request) =>
         request.Temperature?.TargetBand == TemperatureBand.Freezing ||

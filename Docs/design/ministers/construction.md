@@ -113,7 +113,7 @@ pickable `options[]`. Request-driven builds are deterministic: the Solver
 consumes `building_request`s directly (already structured), so no LLM step is
 needed. See [`placement-solver.md`](../../../.plans/placement-solver.md).
 
-Inbound `building_request`s for any Willie-owned build class preempt generic missing-room advice after hard build blockers such as power deficits, material gaps, and blocked frames. Missing kitchen, hospital, and storage rules synthesize the same request shape internally, so the orchestrator uses one generic `building_request_active`/missing-room solver path and attaches validated options to the emitted advice item instead of keeping non-freezer rooms prose-only.
+Inbound `building_request`s for any Willie-owned build class usually preempt generic missing-room advice after hard build blockers such as power deficits, material gaps, and blocked frames. If a request structurally depends on a missing room anchor, such as a freezer with `near kitchen` adjacency while no kitchen exists, Willie places the prerequisite first: an explicit inbound kitchen request wins when present, otherwise Willie's missing-kitchen fallback synthesizes the same request shape. Missing kitchen, hospital, and storage rules use the generic `building_request_active`/missing-room solver path and attach validated options to the emitted advice item instead of keeping non-freezer rooms prose-only.
 
 When another minister publishes a flag with a Willie `building_request`, the Host immediately wakes Willie in rules-only `FlagFired` mode and focuses that request for the solver run. The operator should not need to click Willie `Run Rules` just to turn a fresh Chef/Welfare/Medical build request into placement options.
 

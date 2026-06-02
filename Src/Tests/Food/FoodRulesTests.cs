@@ -459,6 +459,51 @@ public sealed class FoodRulesTests
     }
 
     [Fact]
+    public void WildHarvestWithoutCookingBuilding_RequestsStarterKitchenBeforeFreezer()
+    {
+        FoodBriefing briefing = Briefing(days: 14f) with
+        {
+            MealsCount = 57,
+            RawFoodCount = 0,
+            ReadyToHarvest = 0,
+            WildHarvestCandidates = 95,
+            WildHarvestClusters = [new WildHarvestCluster("Plant_Berry", 95, 1f, "nearby to colonists", "colonist position")],
+            HarvestTargets =
+            [
+                new FoodHarvestTarget("wild", "Plant_Berry", 4, new(80, 121, 83, 149), ["berry-1", "berry-2", "berry-3", "berry-4"], null, "nearby to colonists", "colonist position")
+            ],
+            Infrastructure = new FoodInfrastructureSnapshot(0, true, 0f, 0),
+            Storage = new FoodStorageSummary(0, 0, null, null),
+            StockpileCells = 0,
+            Kitchen = new FoodKitchenSummary(0, 0, false, false)
+        };
+
+        Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
+            .Should().BeOfType<Decision>().Subject;
+
+        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        advice.Actions.Should().Contain(action => action.Kind == AdviceActionKind.MarkHarvest);
+        advice.Actions.Should().Contain(action =>
+            action.Kind == AdviceActionKind.PlaceBlueprint &&
+            action.Owner == "Willie" &&
+            action.Instruction.Contains("starter kitchen", StringComparison.OrdinalIgnoreCase));
+        advice.Actions.Should().Contain(action =>
+            action.Kind == AdviceActionKind.PlaceBlueprint &&
+            action.Owner == "Willie" &&
+            action.Instruction.Contains("freezer", StringComparison.OrdinalIgnoreCase));
+        AgentFlag flag = decision.Flags.Should().ContainSingle().Subject;
+        flag.BuildingRequests.Should().Contain(request =>
+            request.TargetClass == BuildingClass.ProductionBench &&
+            request.RoomClass == RoomClass.Kitchen &&
+            request.RequestedFrom == "Willie");
+        flag.BuildingRequests.Should().Contain(request =>
+            request.TargetClass == BuildingClass.Freezer &&
+            request.RoomClass == RoomClass.Freezer &&
+            request.Adjacency != null &&
+            request.Adjacency.Any(hint => string.Equals(hint.Target, "kitchen", StringComparison.OrdinalIgnoreCase)));
+    }
+
+    [Fact]
     public void WildHarvest_ApplyTargetMatchesDisplayedCluster()
     {
         FoodBriefing briefing = Briefing(days: 14f) with

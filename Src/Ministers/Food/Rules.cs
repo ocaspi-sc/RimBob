@@ -74,15 +74,16 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         {
             AdvicePriority priority = days < 15f ? AdvicePriority.High : AdvicePriority.Medium;
             bool needsFreezerSupport = NeedsFreezerSupport(briefing, days, incomingPerishableFood: true);
+            bool needsCookingBuildingSupport = NeedsCookingBuildingSupport(briefing);
             return DecisionFor(briefing, "harvest_mature_crops",
                 FoodConcern.HarvestNow,
                 priority,
                 "Mature crops are ready",
                 $"{briefing.ReadyToHarvest} crop tiles are ready to harvest. Pull them in before weather, rot, or task drift wastes the buffer.",
                 "Mature crops are a deterministic food-chain opportunity.",
-                ActionsWithFreezerSupport(briefing, days, [HarvestAction(briefing, days)], incomingPerishableFood: true),
-                RequestsWithFreezerSupport(briefing, days, PlantLaborIfNeeded(briefing, days, "PlantCut work for ready crops", "mature crops only help once harvested"), incomingPerishableFood: true),
-                days < 15f || needsFreezerSupport);
+                ActionsWithFoodInfrastructureSupport(briefing, days, [HarvestAction(briefing, days)], incomingPerishableFood: true),
+                RequestsWithFoodInfrastructureSupport(briefing, days, PlantLaborIfNeeded(briefing, days, "PlantCut work for ready crops", "mature crops only help once harvested"), priority, incomingPerishableFood: true),
+                days < 15f || needsFreezerSupport || needsCookingBuildingSupport);
         }
 
         if (briefing.MealsCount < briefing.ColonistCount * 2 &&
@@ -92,66 +93,73 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         {
             bool needsFreezerSupport = NeedsFreezerSupport(briefing, days, incomingPerishableFood: true);
             bool needsCookingLabor = ShouldRequestCookingLabor(briefing, days);
+            bool needsCookingBuildingSupport = NeedsCookingBuildingSupport(briefing);
             return DecisionFor(briefing, "meals_understocked",
                 FoodConcern.ManageCookBills,
                 AdvicePriority.Medium,
                 "Cooked meals are understocked",
                 $"Only {briefing.MealsCount} meals are reported for {briefing.ColonistCount} colonists while raw food exists.",
                 "A raw-food buffer still needs cooking throughput to become safe daily nutrition.",
-                ActionsWithFreezerSupport(briefing, days, CookBillActions(briefing, days), incomingPerishableFood: true),
-                RequestsWithFreezerSupport(briefing, days, CookingLaborIfNeeded(briefing, days, AdvicePriority.Medium), incomingPerishableFood: true),
-                needsFreezerSupport || needsCookingLabor);
+                ActionsWithFoodInfrastructureSupport(briefing, days, CookBillActions(briefing, days), incomingPerishableFood: true),
+                RequestsWithFoodInfrastructureSupport(briefing, days, CookingLaborIfNeeded(briefing, days, AdvicePriority.Medium), AdvicePriority.Medium, incomingPerishableFood: true),
+                needsFreezerSupport || needsCookingLabor || needsCookingBuildingSupport);
         }
 
         if (days < 20f && briefing.WildHarvestCandidates > 0 && briefing.ReadyToHarvest == 0)
         {
+            AdvicePriority priority = days < 10f ? AdvicePriority.High : AdvicePriority.Medium;
             bool needsFreezerSupport = NeedsFreezerSupport(briefing, days, incomingPerishableFood: true);
+            bool needsCookingBuildingSupport = NeedsCookingBuildingSupport(briefing);
             return DecisionFor(briefing, "wild_harvest_available",
                 FoodConcern.WildHarvest,
-                days < 10f ? AdvicePriority.High : AdvicePriority.Medium,
+                priority,
                 "Forage can extend the buffer",
                 WildHarvestBody(briefing, days),
                 "Foraging edible plants is lower-risk than hunting when no mature crops are ready.",
-                ActionsWithFreezerSupport(briefing, days, [WildHarvestAction(briefing, days)], incomingPerishableFood: true),
-                RequestsWithFreezerSupport(briefing, days, PlantLaborIfNeeded(briefing, days, "PlantCut work for forage", "edible forage requires plant work"), incomingPerishableFood: true),
-                days < 10f || needsFreezerSupport);
+                ActionsWithFoodInfrastructureSupport(briefing, days, [WildHarvestAction(briefing, days)], incomingPerishableFood: true),
+                RequestsWithFoodInfrastructureSupport(briefing, days, PlantLaborIfNeeded(briefing, days, "PlantCut work for forage", "edible forage requires plant work"), priority, incomingPerishableFood: true),
+                days < 10f || needsFreezerSupport || needsCookingBuildingSupport);
         }
 
         if (days < 20f && CanSuggestHunting(briefing) && briefing.ReadyToHarvest == 0)
         {
             AdvicePriority priority = days < 10f ? AdvicePriority.High : AdvicePriority.Medium;
             bool needsFreezerSupport = NeedsFreezerSupport(briefing, days, incomingPerishableFood: true);
+            bool needsCookingBuildingSupport = NeedsCookingBuildingSupport(briefing);
             return DecisionFor(briefing, "hunt_low_risk_animals",
                 FoodConcern.HuntForFood,
                 priority,
                 "Mark low-risk animals for hunting",
                 HuntingBody(briefing, days),
                 "The briefing has healthy wild animals and no lower-risk harvest path; hunting is a concrete local food-acquisition action.",
-                ActionsWithFreezerSupport(briefing, days, HuntingActions(briefing), incomingPerishableFood: true),
-                RequestsWithFreezerSupport(briefing, days, HuntingRequests(briefing, priority), incomingPerishableFood: true),
-                days < 10f || needsFreezerSupport);
+                ActionsWithFoodInfrastructureSupport(briefing, days, HuntingActions(briefing), incomingPerishableFood: true),
+                RequestsWithFoodInfrastructureSupport(briefing, days, HuntingRequests(briefing, priority), priority, incomingPerishableFood: true),
+                days < 10f || needsFreezerSupport || needsCookingBuildingSupport);
         }
 
         FoodCropCandidate? cropCandidate = FoodCropMath.Recommend(briefing).BestCandidate;
         if (days < 20f && cropCandidate is not null && ShouldRecommendNewGrowingZone(briefing, cropCandidate))
         {
+            AdvicePriority priority = days < 12f ? AdvicePriority.High : AdvicePriority.Medium;
             bool needsFreezerSupport = NeedsFreezerSupport(briefing, days, incomingPerishableFood: true);
+            bool needsCookingBuildingSupport = NeedsCookingBuildingSupport(briefing);
             return DecisionFor(briefing, "expand_growing_capacity",
                 FoodConcern.ExpandGrowingCapacity,
-                days < 12f ? AdvicePriority.High : AdvicePriority.Medium,
+                priority,
                 "Expand food growing capacity",
                 $"Food covers about {days:F1} days and {cropCandidate.Label} still fits the growing window: {cropCandidate.Reason}. Add a compact food crop zone instead of waiting for hunting or trade.",
                 "A concrete growing-zone action is more actionable than a vague labor request; cross-minister flags carry the growing-zone dependency separately.",
-                ActionsWithFreezerSupport(briefing, days, [GrowingZoneAction(cropCandidate)], incomingPerishableFood: true),
-                RequestsWithFreezerSupport(briefing, days,
+                ActionsWithFoodInfrastructureSupport(briefing, days, [GrowingZoneAction(cropCandidate)], incomingPerishableFood: true),
+                RequestsWithFoodInfrastructureSupport(briefing, days,
                     FoodFlagRequests.AttentionRequest(
                         $"{cropCandidate.Tiles} {cropCandidate.Label} growing tiles near fertile soil and food storage",
                         cropCandidate.Reason,
                         quantity: cropCandidate.Tiles,
-                        priority: days < 12f ? AdvicePriority.High : AdvicePriority.Medium,
+                        priority: priority,
                         requestedFrom: "Willie"),
+                    priority,
                     incomingPerishableFood: true),
-                days < 12f || needsFreezerSupport);
+                days < 12f || needsFreezerSupport || needsCookingBuildingSupport);
         }
 
         if (ShouldEscalateHuntTargetsBlockedByRisk(briefing, days))
@@ -238,25 +246,48 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         return new Decision([advice], flags, trace, diagnostics);
     }
 
-    private static IReadOnlyList<AdviceAction> ActionsWithFreezerSupport(
+    private static IReadOnlyList<AdviceAction> ActionsWithFoodInfrastructureSupport(
         FoodBriefing briefing,
         float days,
         IReadOnlyList<AdviceAction> actions,
         bool incomingPerishableFood)
     {
         List<AdviceAction> result = [.. actions];
+        if (NeedsCookingBuildingSupport(briefing) && !HasCookingBuildingAction(result))
+            result.Add(CookingBuildingSupportAction());
         result.AddRange(FreezerSupportActions(briefing, days, incomingPerishableFood));
         return result;
     }
 
-    private static FoodFlagRequests RequestsWithFreezerSupport(
+    private static FoodFlagRequests RequestsWithFoodInfrastructureSupport(
         FoodBriefing briefing,
         float days,
         FoodFlagRequests requests,
+        AdvicePriority priority,
         bool incomingPerishableFood)
     {
-        return requests.Add(FreezerSupportRequests(briefing, days, incomingPerishableFood));
+        FoodFlagRequests result = requests;
+        if (NeedsCookingBuildingSupport(briefing) && !HasKitchenCookingRequest(result))
+            result = result.Add(CookingBuildingRequest(
+                "starter kitchen cooking station",
+                "the selected food path cannot become meals without a cooking building",
+                priority));
+        return result.Add(FreezerSupportRequests(briefing, days, incomingPerishableFood));
     }
+
+    private static AdviceAction CookingBuildingSupportAction() =>
+        new(
+            AdviceActionKind.PlaceBlueprint,
+            "Plan a starter kitchen cooking station so raw or foraged food can become meals.",
+            Owner: "Willie");
+
+    private static bool HasCookingBuildingAction(IReadOnlyList<AdviceAction> actions) =>
+        actions.Any(action =>
+            action.Kind == AdviceActionKind.PlaceBlueprint &&
+            string.Equals(action.Owner, "Willie", StringComparison.OrdinalIgnoreCase) &&
+            (action.Instruction.Contains("campfire", StringComparison.OrdinalIgnoreCase) ||
+             action.Instruction.Contains("stove", StringComparison.OrdinalIgnoreCase) ||
+             action.Instruction.Contains("kitchen cooking station", StringComparison.OrdinalIgnoreCase)));
 
     private static IReadOnlyList<AdviceAction> FreezerSupportActions(
         FoodBriefing briefing,
@@ -304,6 +335,29 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 Priority: FreezerSupportPriority(briefing),
                 RequestedFrom: "Willie"));
     }
+
+    private static BuildingRequest CookingBuildingRequest(
+        string request,
+        string reason,
+        AdvicePriority priority) =>
+        new(
+            request,
+            reason,
+            BuildingClass.ProductionBench,
+            TargetDef: "Campfire",
+            RoomClass: RoomClass.Kitchen,
+            CapacityNeed: new CapacityNeed(CapacityMeasure.WorkSlots, 1),
+            Adjacency: [new AdjacencyHint(AdjacencyRelation.Near, "storage")],
+            Priority: priority,
+            RequestedFrom: "Willie");
+
+    private static bool NeedsCookingBuildingSupport(FoodBriefing briefing) =>
+        !briefing.Kitchen.HasCookingBuilding;
+
+    private static bool HasKitchenCookingRequest(FoodFlagRequests requests) =>
+        requests.BuildingRequests.Any(request =>
+            request.TargetClass == BuildingClass.ProductionBench &&
+            request.RoomClass == RoomClass.Kitchen);
 
     private static bool NeedsFreezerSupport(FoodBriefing briefing, float days, bool incomingPerishableFood) =>
         briefing.Infrastructure.Coolers == 0 &&
