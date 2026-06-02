@@ -140,6 +140,8 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 
 > **Verified shape.** `/map/farm/summary?map_id=...` returns live growing-zone crop rows under `data.crop_types[]`, not the cached `crop_breakdown[]` shape. Useful fields include `total_plants`, `growth_progress_average` as a percent value, and per-crop `plant_def_name`, `total_plants`, `harvestable_plants`, and numeric `zone_id`. Food uses this as the primary crop count/growth/zone source.
 
+> **Verified shape (RimBob fork).** `/map/zones?map_id=...` returns a wrapper object with `data.zones[]` for RimWorld zones and `data.areas[]` for areas. The live Home area row uses `type:"Area_Home"`, `label:"Home"`, numeric `id`, and `cells_count`; an unpainted Home area can report `cells_count:0` with no `cells[]`. RimBob combines both arrays in `GetZonesAsync`, keeps stockpile rows for `StockpileLedger`, and keeps only Home area rows for `MapAreaRegistry`.
+
 > **Verified shape.** `/map/plants?map_id=...` currently returns broad thing-like plant rows with `thing_id`, `def_name`, `label`, `categories`, `position`, `stack_count`, and `is_forbidden`. It may not include growth, crop, or zone fields, so Food should not rely on this endpoint alone to know which crop is growing; combine it with `/map/farm/summary`.
 
 > **Verified historical shape.** `/map/animals?map_id=...` could omit health/tame fields on ordinary wild animals. Missing health meant "not reported", not injured/dead; ingestion defaulted it to healthy for Chef's wild-animal opportunity count. The RimBob fork now emits `tame` and `health` where RimWorld exposes them, which lets Chef exclude tame or unhealthy animals before hunt scoring.

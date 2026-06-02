@@ -146,4 +146,52 @@ public sealed class AggregateMapperTests
         stove.Power.Should().BeNull();
         stove.Fuel.Should().BeNull();
     }
+
+    [Fact]
+    public void MapMapper_FromAreas_KeepsOnlyHomeAreaAndDerivesBoundsAndCentroid()
+    {
+        IReadOnlyList<ZoneDto> zones =
+        [
+            new(
+                Id: "stockpile-1",
+                Type: "Zone_Stockpile",
+                Label: "main",
+                Cells: [new PositionDto(1, 0, 1)],
+                PlantDef: null),
+            new(
+                Id: "grow-1",
+                Type: "GrowingZone",
+                Label: "rice",
+                Cells: [new PositionDto(4, 0, 4)],
+                PlantDef: "Plant_Rice"),
+            new(
+                Id: "0",
+                Type: "Area_Home",
+                Label: "Home",
+                Cells:
+                [
+                    new PositionDto(10, 0, 20),
+                    new PositionDto(14, 0, 22)
+                ],
+                PlantDef: null),
+            new(
+                Id: "4",
+                Type: "Area_Allowed",
+                Label: "Area 1",
+                Cells: [new PositionDto(30, 0, 40)],
+                PlantDef: null)
+        ];
+
+        MapAreaRegistry areas = MapAggregateMapper.FromAreas(zones);
+        StockpileLedger stockpiles = MapAggregateMapper.FromStockpiles(zones);
+
+        MapArea home = areas.Areas.Should().ContainSingle().Subject;
+        home.Id.Should().Be("0");
+        home.Type.Should().Be("Area_Home");
+        home.Label.Should().Be("Home");
+        home.CellCount.Should().Be(2);
+        home.Bounds.Should().Be(new MapRect(10, 20, 14, 22));
+        home.Centroid.Should().Be(new MapPosition(12, 0, 21));
+        stockpiles.Zones.Should().ContainSingle().Which.Id.Should().Be("stockpile-1");
+    }
 }

@@ -83,5 +83,6 @@ public enum AnchorMatchReason
 {
     EntryCells,
     CentroidFallback,
+    BuildableRegionFallback,
     NoTargetCell
 }

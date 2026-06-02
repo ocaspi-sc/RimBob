@@ -147,4 +147,31 @@ public sealed class WillieAnchorInventoryDerivationTests
         kitchen.ContainedBuildingIds.Should().Equal("bed-1", "stove-1");
         inventory.Anchors.Should().NotContain(anchor => anchor.Class == RoomClass.Bedroom);
     }
+
+    [Fact]
+    public void Derive_HomeAreaWithoutRoomsEmitsBuildableRegionAnchor()
+    {
+        ColonyState state = new();
+        state.Areas.Update(new MapAreaRegistry([
+            new MapArea(
+                Id: "0",
+                Type: "Area_Home",
+                Label: "Home",
+                CellCount: 25,
+                Bounds: new MapRect(10, 20, 14, 24),
+                Centroid: new MapPosition(12, 0, 22))
+        ]));
+
+        WillieAnchorInventory inventory = WillieAnchorInventoryDerivation.Derive(state);
+
+        WillieRoomAnchor anchor = inventory.Anchors.Should().ContainSingle().Subject;
+        anchor.RoomId.Should().Be("area:0");
+        anchor.Class.Should().Be(RoomClass.BuildableRegion);
+        anchor.RoleLabel.Should().Be("Home");
+        anchor.CellsCount.Should().Be(25);
+        anchor.Centroid.Should().Be(new MapPosition(12, 0, 22));
+        anchor.Bounds.Should().Be(new MapRect(10, 20, 14, 24));
+        anchor.Cells.Should().BeEmpty();
+        anchor.EntryCells.Should().BeEmpty();
+    }
 }

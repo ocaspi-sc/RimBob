@@ -22,6 +22,7 @@ public sealed class ColonyState
     public Versioned<ColonistRegistry> Colonists  { get; } = new(AggregateDefaults.Colonists);
     public Versioned<RoomRegistry>     Rooms      { get; } = new(AggregateDefaults.Rooms);
     public Versioned<StockpileLedger>  Stockpiles { get; } = new(AggregateDefaults.Stockpiles);
+    public Versioned<MapAreaRegistry>  Areas      { get; } = new(AggregateDefaults.Areas);
     public Versioned<BuildingRegistry> Buildings  { get; } = new(AggregateDefaults.Buildings);
     public Versioned<WorkTableRegistry> WorkTables { get; } = new(AggregateDefaults.WorkTables);
     public Versioned<PowerNetwork>     Power      { get; } = new(AggregateDefaults.Power);
@@ -57,7 +58,7 @@ public sealed class ColonyState
         ["Economy", "Colonists", "Rooms"];
 
     public static readonly string[] WillieBriefingAggregateNames =
-        ["Map", "Economy", "Colonists", "Rooms", "Stockpiles", "Buildings", "Power", "WillieBacklog"];
+        ["Map", "Economy", "Colonists", "Rooms", "Stockpiles", "Areas", "Buildings", "Power", "WillieBacklog"];
 
     /// <summary>
     /// Versions of every aggregate the MayorBriefing reads, in canonical order.
@@ -86,6 +87,6 @@ public sealed class ColonyState
     public long[] GetVersionsForWillieBriefing() =>
     [
         Map.Version, Economy.Version, Colonists.Version, Rooms.Version, Stockpiles.Version,
-        Buildings.Version, Power.Version, WillieBacklog.Version
+        Areas.Version, Buildings.Version, Power.Version, WillieBacklog.Version
     ];
 }

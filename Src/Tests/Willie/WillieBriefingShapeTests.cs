@@ -93,6 +93,31 @@ public sealed class WillieBriefingShapeTests
     }
 
     [Fact]
+    public void WillieBriefing_HomeAreaAnchorSetsAnchorCoverageWithoutFunctionalRoomCount()
+    {
+        ColonyState state = new()
+        {
+            LastRefreshSource = ColonyStateOrigin.Live
+        };
+        state.Areas.Update(new MapAreaRegistry([
+            new MapArea(
+                Id: "0",
+                Type: "Area_Home",
+                Label: "Home",
+                CellCount: 25,
+                Bounds: new MapRect(10, 20, 14, 24),
+                Centroid: new MapPosition(12, 0, 22))
+        ]));
+
+        WillieBriefing briefing = WillieBriefingDerivation.Compute(state);
+
+        briefing.DataCoverage.HasAnchorInventory.Should().BeTrue();
+        briefing.DataCoverage.HasReachability.Should().BeTrue();
+        briefing.AnchorInventory.Anchors.Should().ContainSingle(anchor => anchor.Class == RoomClass.BuildableRegion);
+        briefing.FunctionalRooms.RoomCountsByClass.Should().NotContainKey(nameof(RoomClass.BuildableRegion));
+    }
+
+    [Fact]
     public void WillieRoomAnchor_OptionalFields_DefaultEntryCellsToEmpty()
     {
         WillieRoomAnchor anchor = new(

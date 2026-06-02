@@ -120,6 +120,58 @@ public sealed class AnchorResolverTests
         resolved.MatchReason.Should().Be(AnchorMatchReason.CentroidFallback);
     }
 
+    [Fact]
+    public void ResolveBuildableRegion_UsesCentroid()
+    {
+        WillieBriefing briefing = StableBriefing() with
+        {
+            AnchorInventory = new WillieAnchorInventory(
+            [
+                Anchor("area:0", RoomClass.BuildableRegion, 25, new MapPosition(12, 0, 22))
+            ])
+        };
+
+        ResolvedAnchor resolved = AnchorResolver.ResolveBuildableRegion(briefing)
+            .Should().ContainSingle().Subject;
+
+        resolved.Anchor.Class.Should().Be(RoomClass.BuildableRegion);
+        resolved.TargetCell.Should().Be(new MapPosition(12, 0, 22));
+        resolved.MatchReason.Should().Be(AnchorMatchReason.BuildableRegionFallback);
+    }
+
+    [Fact]
+    public void ResolveBuildableRegion_UsesBoundsCenterWhenCentroidMissing()
+    {
+        WillieRoomAnchor region = Anchor("area:0", RoomClass.BuildableRegion, 25, null) with
+        {
+            Bounds = new MapRect(10, 20, 14, 24)
+        };
+        WillieBriefing briefing = StableBriefing() with
+        {
+            AnchorInventory = new WillieAnchorInventory([region])
+        };
+
+        ResolvedAnchor resolved = AnchorResolver.ResolveBuildableRegion(briefing)
+            .Should().ContainSingle().Subject;
+
+        resolved.TargetCell.Should().Be(new MapPosition(12, 0, 22));
+        resolved.MatchReason.Should().Be(AnchorMatchReason.BuildableRegionFallback);
+    }
+
+    [Fact]
+    public void ResolveNear_DoesNotUseBuildableRegion()
+    {
+        WillieBriefing briefing = StableBriefing() with
+        {
+            AnchorInventory = new WillieAnchorInventory(
+            [
+                Anchor("area:0", RoomClass.BuildableRegion, 25, new MapPosition(12, 0, 22))
+            ])
+        };
+
+        AnchorResolver.ResolveNear(SpecWithNear("kitchen"), briefing).Should().BeEmpty();
+    }
+
     private static WillieRoomAnchor Anchor(
         string id,
         RoomClass roomClass,

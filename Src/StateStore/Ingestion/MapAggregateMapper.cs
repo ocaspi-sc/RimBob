@@ -252,10 +252,31 @@ public static class MapAggregateMapper
             storedResources?.CountByDef ?? new Dictionary<string, int>());
     }
 
+    public static MapAreaRegistry FromAreas(IReadOnlyList<ZoneDto> zones)
+    {
+        List<MapArea> areas = zones
+            .Where(IsHomeArea)
+            .OrderBy(zone => zone.Id, StringComparer.OrdinalIgnoreCase)
+            .Select(zone => new MapArea(
+                zone.Id,
+                zone.Type,
+                zone.Label,
+                zone.Cells?.Count ?? zone.CellsCount ?? 0,
+                BoundsOf(zone.Cells),
+                CenterOf(zone.Cells)))
+            .ToList();
+
+        return new MapAreaRegistry(areas);
+    }
+
     private static bool IsStockpileZone(ZoneDto zone) =>
         string.Equals(zone.Type, "StockpileZone", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(zone.Type, "Zone_Stockpile", StringComparison.OrdinalIgnoreCase) ||
         zone.Type.Contains("Stockpile", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsHomeArea(ZoneDto zone) =>
+        string.Equals(zone.Type, "Area_Home", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(zone.Type, "Home", StringComparison.OrdinalIgnoreCase);
 
     public static BuildingRegistry FromBuildings(IReadOnlyList<BuildingDto> buildings) =>
         FromBuildings(buildings, []);
@@ -376,6 +397,16 @@ public static class MapAggregateMapper
         int y = (int)Math.Round(cells.Average(cell => cell.Y));
         int z = (int)Math.Round(cells.Average(cell => cell.Z));
         return new MapPosition(x, y, z);
+    }
+
+    private static MapRect? BoundsOf(IReadOnlyList<PositionDto>? cells)
+    {
+        if (cells is null || cells.Count == 0) return null;
+        return new MapRect(
+            X1: cells.Min(cell => cell.X),
+            Z1: cells.Min(cell => cell.Z),
+            X2: cells.Max(cell => cell.X),
+            Z2: cells.Max(cell => cell.Z));
     }
 
     private static IReadOnlyDictionary<string, int> DecodeTerrainCounts(TerrainGridDto terrain)

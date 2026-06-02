@@ -64,6 +64,23 @@ public static class WillieAnchorInventoryDerivation
             }
         }
 
+        foreach (MapArea area in state.Areas.Value.Areas.OrderBy(area => area.Id, StringComparer.OrdinalIgnoreCase))
+        {
+            if (area.Centroid is null && area.Bounds is null)
+                continue;
+
+            anchors.Add(new WillieRoomAnchor(
+                RoomId: $"area:{area.Id}",
+                Class: RoomClass.BuildableRegion,
+                RoleLabel: area.Label ?? "Home area",
+                CellsCount: area.CellCount,
+                Centroid: area.Centroid,
+                ContainedBuildingIds: [])
+            {
+                Bounds = area.Bounds
+            });
+        }
+
         return new WillieAnchorInventory(anchors);
     }
 

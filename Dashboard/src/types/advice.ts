@@ -184,6 +184,7 @@ export type RoomClass =
   | 'recreation'
   | 'dining'
   | 'storage'
+  | 'buildable_region'
   | string;
 
 export type CapacityMeasure = 'beds' | 'food_units' | 'work_slots' | 'storage_stacks' | 'occupants' | string;

@@ -19,6 +19,7 @@ public sealed class PlacementEvidence
         IReadOnlyList<ResolvedAnchor> anchors,
         IReadOnlyList<ExistingRoomFootprint> roomFootprints,
         IReadOnlyList<FreeRect> freeRects,
+        FreeRect? buildableRegionBounds,
         bool freeSpaceScanTruncated)
     {
         MapId = mapId;
@@ -27,6 +28,7 @@ public sealed class PlacementEvidence
         Anchors = anchors;
         RoomFootprints = roomFootprints;
         FreeRects = freeRects;
+        BuildableRegionBounds = buildableRegionBounds;
         FreeSpaceScanTruncated = freeSpaceScanTruncated;
     }
 
@@ -40,6 +42,8 @@ public sealed class PlacementEvidence
 
     // TODO: terrain affordance still absent (rimapi-buildability-layers); free-space is occupancy-only.
     public IReadOnlyList<FreeRect> FreeRects { get; }
+
+    public FreeRect? BuildableRegionBounds { get; }
 
     public bool FreeSpaceScanTruncated { get; }
 
@@ -62,6 +66,7 @@ public sealed class PlacementEvidence
         MapBounds? bounds = MapBounds.Parse(map.Size);
         FreeSpaceScanResult freeSpace = BuildFreeRects(bounds, occupied);
         IReadOnlyList<ExistingRoomFootprint> roomFootprints = BuildRoomFootprints(roomAnchors ?? []);
+        FreeRect? buildableRegionBounds = ResolveBuildableRegionBounds(anchors);
 
         return new PlacementEvidence(
             map.Id,
@@ -70,6 +75,7 @@ public sealed class PlacementEvidence
             anchors,
             roomFootprints,
             freeSpace.Rects,
+            buildableRegionBounds,
             freeSpace.ScanTruncated);
     }
 
@@ -78,6 +84,9 @@ public sealed class PlacementEvidence
 
     public bool IsOccupied(MapCell cell) =>
         occupiedCells.Contains(cell);
+
+    public bool InBuildableRegion(MapCell cell) =>
+        BuildableRegionBounds is null || BuildableRegionBounds.Contains(cell);
 
     public int CountFreeExpansionTilesAround(IReadOnlyList<BlueprintAsset> assets)
     {
@@ -217,6 +226,26 @@ public sealed class PlacementEvidence
     private sealed record FreeSpaceScanResult(
         IReadOnlyList<FreeRect> Rects,
         bool ScanTruncated);
+
+    private static FreeRect? ResolveBuildableRegionBounds(IReadOnlyList<ResolvedAnchor> anchors)
+    {
+        if (anchors.Count == 0 ||
+            anchors.Any(anchor => anchor.Anchor.Class != RoomClass.BuildableRegion))
+        {
+            return null;
+        }
+
+        MapRect? bounds = anchors
+            .Select(anchor => anchor.Anchor.Bounds)
+            .FirstOrDefault(bounds => bounds is not null);
+        if (bounds is null) return null;
+
+        int width = bounds.X2 - bounds.X1 + 1;
+        int height = bounds.Z2 - bounds.Z1 + 1;
+        if (width <= 0 || height <= 0) return null;
+
+        return new FreeRect(new MapCell(bounds.X1, bounds.Z1), width, height);
+    }
 
     private static IReadOnlyList<ExistingRoomFootprint> BuildRoomFootprints(
         IReadOnlyList<WillieRoomAnchor> roomAnchors)

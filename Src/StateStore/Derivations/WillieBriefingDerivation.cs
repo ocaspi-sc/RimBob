@@ -60,6 +60,7 @@ public static class WillieBriefingDerivation
 
     private static WillieFunctionalRoomsSummary DeriveFunctionalRooms(WillieAnchorInventory anchors) =>
         new(anchors.Anchors
+            .Where(anchor => anchor.Class != RoomClass.BuildableRegion)
             .GroupBy(anchor => anchor.Class)
             .ToDictionary(
                 group => group.Key.ToString(),
@@ -108,7 +109,8 @@ public static class WillieBriefingDerivation
 
     private static bool HasReachabilityTarget(WillieRoomAnchor anchor) =>
         anchor.EntryCells.Count > 0 ||
-        anchor.Centroid is not null;
+        anchor.Centroid is not null ||
+        anchor.Bounds is not null;
 
     private static IReadOnlyList<MaterialCount> CollapseMaterials(IEnumerable<MaterialCount> materials) =>
         materials

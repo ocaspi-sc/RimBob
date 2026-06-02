@@ -186,6 +186,7 @@ public sealed class ColonyStateSnapshotStore
         state.Colonists.Update(snapshot.Colonists);
         state.Rooms.Update(snapshot.Rooms);
         state.Stockpiles.Update(snapshot.Stockpiles);
+        state.Areas.Update(snapshot.Areas);
         state.Buildings.Update(snapshot.Buildings);
         state.WorkTables.Update(snapshot.WorkTables);
         state.Power.Update(snapshot.Power);
@@ -290,6 +291,7 @@ public sealed class ColonyStateSnapshotStore
             Colonists = state.Colonists.Value,
             Rooms = state.Rooms.Value,
             Stockpiles = state.Stockpiles.Value,
+            Areas = state.Areas.Value,
             Buildings = state.Buildings.Value,
             WorkTables = state.WorkTables.Value,
             Power = state.Power.Value,
@@ -317,6 +319,7 @@ public sealed class ColonyStateSnapshotStore
             ["Colonists"] = state.Colonists.Version,
             ["Rooms"] = state.Rooms.Version,
             ["Stockpiles"] = state.Stockpiles.Version,
+            ["Areas"] = state.Areas.Version,
             ["Buildings"] = state.Buildings.Version,
             ["WorkTables"] = state.WorkTables.Version,
             ["Power"] = state.Power.Version,

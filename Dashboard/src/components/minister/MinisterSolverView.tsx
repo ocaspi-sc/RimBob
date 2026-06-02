@@ -276,6 +276,7 @@ function stageStateLabel(state: FunnelStageState): string {
 
 function formatLabel(value: string | null | undefined): string {
   if (!value) return '-';
+  if (value === 'buildable_region') return 'Buildable region / Home area';
   return value
     .replace(/_/g, ' ')
     .replace(/([a-z0-9])([A-Z])/g, '$1 $2')

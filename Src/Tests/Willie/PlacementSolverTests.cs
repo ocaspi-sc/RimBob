@@ -95,7 +95,71 @@ public sealed class PlacementSolverTests
         result.Options.Should().BeEmpty();
         result.Draftable.Should().Be(PlacementReadiness.Blocked);
         result.ApplyReady.Should().Be(PlacementReadiness.Blocked);
-        result.Trace.Notes.Should().Contain("no resolved near-anchor with a target cell");
+        result.Trace.Notes.Should().Contain("no room anchor and no Home-area buildable region with a target cell");
+    }
+
+    [Fact]
+    public async Task SolveAsync_WhenNoRoomAnchorsAndBuildableRegionPresent_UsesFallbackAnchor()
+    {
+        PlacementSolver solver = new(
+            new FakePathCostProbe(reachable: true, cost: 12),
+            new FakePlacementValidator(canPlaceAll: true));
+        WillieRoomAnchor homeArea = new(
+            RoomId: "area:0",
+            Class: RoomClass.BuildableRegion,
+            RoleLabel: "Home",
+            CellsCount: 400,
+            Centroid: new MapPosition(15, 0, 15),
+            ContainedBuildingIds: [])
+        {
+            Bounds = new MapRect(5, 5, 24, 24)
+        };
+        WillieBriefing briefing = StableBriefing() with
+        {
+            AnchorInventory = new WillieAnchorInventory([homeArea])
+        };
+
+        PlacementResult result = await solver.SolveAsync(SpecWithMaterials(), briefing, State([]));
+
+        result.NoFit.Should().BeNull();
+        result.Options.Should().NotBeEmpty();
+        result.Trace.Notes.Should().Contain("no room anchor matched; using Home-area buildable region as fallback locus");
+        result.Trace.Drafts.Should().Contain(trace => trace.AnchorRoomId == "area:0");
+        result.Options.SelectMany(option => option.BlueprintGroup.Assets)
+            .Should().OnlyContain(asset =>
+                asset.Cell.X >= 5 &&
+                asset.Cell.X <= 24 &&
+                asset.Cell.Z >= 5 &&
+                asset.Cell.Z <= 24);
+    }
+
+    [Fact]
+    public async Task SolveAsync_WhenRoomAnchorExists_DoesNotUseBuildableRegionFallback()
+    {
+        PlacementSolver solver = new(
+            new FakePathCostProbe(reachable: true, cost: 12),
+            new FakePlacementValidator(canPlaceAll: true));
+        WillieRoomAnchor homeArea = new(
+            RoomId: "area:0",
+            Class: RoomClass.BuildableRegion,
+            RoleLabel: "Home",
+            CellsCount: 400,
+            Centroid: new MapPosition(15, 0, 15),
+            ContainedBuildingIds: [])
+        {
+            Bounds = new MapRect(5, 5, 24, 24)
+        };
+        WillieBriefing roomBriefing = Briefing();
+        WillieBriefing briefing = roomBriefing with
+        {
+            AnchorInventory = new WillieAnchorInventory([.. roomBriefing.AnchorInventory.Anchors, homeArea])
+        };
+
+        PlacementResult result = await solver.SolveAsync(SpecWithMaterials(), briefing, State([]));
+
+        result.NoFit.Should().BeNull();
+        result.Trace.Notes.Should().NotContain("no room anchor matched; using Home-area buildable region as fallback locus");
+        result.Trace.Drafts.Should().NotContain(trace => trace.AnchorRoomId == "area:0");
     }
 
     [Fact]

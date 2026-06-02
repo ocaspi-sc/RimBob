@@ -602,6 +602,7 @@ function stringEquals(left: string | null | undefined, right: string): boolean {
 
 function formatLabel(value: string | null | undefined): string {
   if (!value) return '-';
+  if (value === 'buildable_region') return 'Buildable region / Home area';
   return value
     .replace(/_/g, ' ')
     .replace(/\b\w/g, char => char.toUpperCase());

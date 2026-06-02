@@ -63,11 +63,18 @@ public sealed class PlacementSolver : IPlacementSolver
         IReadOnlyList<ResolvedAnchor> anchors = AnchorResolver.ResolveNear(spec, briefing);
         if (anchors.Count == 0)
         {
+            anchors = AnchorResolver.ResolveBuildableRegion(briefing);
+            if (anchors.Count > 0)
+                notes.Add("no room anchor matched; using Home-area buildable region as fallback locus");
+        }
+
+        if (anchors.Count == 0)
+        {
             return NoFit(
                 NoFitReason.NoAnchors,
                 draftTraces,
                 notes,
-                "no resolved near-anchor with a target cell");
+                "no room anchor and no Home-area buildable region with a target cell");
         }
 
         PlacementEvidence evidence = PlacementEvidence.Build(
@@ -230,6 +237,12 @@ public sealed class PlacementSolver : IPlacementSolver
         if (assetCells.Any(cell => !evidence.InBounds(cell)))
         {
             rejectionReason = "out_of_bounds";
+            return false;
+        }
+
+        if (assetCells.Any(cell => !evidence.InBuildableRegion(cell)))
+        {
+            rejectionReason = "outside_buildable_region";
             return false;
         }
 

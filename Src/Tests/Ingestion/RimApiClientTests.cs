@@ -698,6 +698,46 @@ public sealed class RimApiClientTests
     }
 
     [Fact]
+    public async Task GetZones_WhenApiReturnsWrappedZonesAndAreas_ReturnsBoth()
+    {
+        using HttpClient http = MakeClient(new PathRouter()
+            .Add("map/zones", Json("""
+                {
+                  "success": true,
+                  "data": {
+                    "zones": [
+                      {
+                        "id": "z1",
+                        "cells_count": 2,
+                        "label": "Stockpile zone 1",
+                        "type": "Zone_Stockpile"
+                      }
+                    ],
+                    "areas": [
+                      {
+                        "id": 0,
+                        "cells_count": 4,
+                        "label": "Home",
+                        "base_label": "Home",
+                        "type": "Area_Home"
+                      }
+                    ]
+                  },
+                  "errors": null,
+                  "warnings": null,
+                  "timestamp": null
+                }
+                """)));
+
+        IReadOnlyList<ZoneDto> result = await new RimApiClient(http).GetZonesAsync(0);
+
+        result.Select(zone => zone.Type).Should().Equal("Zone_Stockpile", "Area_Home");
+        result[1].Id.Should().Be("0");
+        result[1].Label.Should().Be("Home");
+        result[1].CellsCount.Should().Be(4);
+    }
+
+    [Fact]
     public async Task GetIncidents_WhenApiReturnsWrappedIncidentsObject_ReturnsIncidents()
     {
         using HttpClient http = MakeClient(new PathRouter()

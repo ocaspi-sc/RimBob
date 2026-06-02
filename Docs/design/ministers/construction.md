@@ -16,6 +16,7 @@ Direct plans:
 - [Base / Willie / Layout Plan](../../../.plans/base-construction-layout-agent.md) - implementation slice plan for the first Willie minister.
 - [Base Layout / Willie Tips](../../../.plans/base-layout-construction-tips.md) - community layout heuristics translated into Willie spatial lint.
 - [RIMAPI Blueprint Placement Endpoint](../../../.plans/rimapi-blueprint-placement-endpoint.md) - fork-side pending blueprint/frame lifecycle for future Willie apply and backlog reads.
+- [Willie Home-Area Buildable-Region Anchor](../../../.plans/willie-home-area-buildable-region-anchor.md) - fallback anchor from the player's painted Home area when no room anchor exists.
 - [Deterministic CoS Cabinet Issue Solver](../../../.plans/deterministic-cos-cabinet-issue-solver.md) - issue-report routing, including Willie-owned issue classes and cross-minister requests.
 
 Reference corpora:
@@ -163,6 +164,8 @@ renders the Willie scope with Briefing, Build Queue, Solver, Rules, and Advice v
 Prompt/RAG/Raw LLM remain intentionally absent until a later LLM slice.
 
 Room-anchor inventory treats work tables as building evidence. RimBob ingests `/api/v1/map/work-tables` into the shared building registry, then surfaces one anchor per detected room function: a multi-purpose barracks with a stove keeps its Barracks primary anchor and also exposes a Kitchen anchor at the stove cell for placement requests such as "near kitchen."
+
+When no room anchor resolves, Willie may fall back to a Home-area `BuildableRegion` anchor derived from `/map/zones` `data.areas[]`. This is a low-priority fallback only: it never competes with real room anchors, and the solver uses it only after normal `near:<room>` resolution returns zero anchors. The first version clamps blueprint assets to the Home-area bounds; exact non-rectangular cell-mask placement remains deferred to buildability-layer evidence.
 
 ---
 

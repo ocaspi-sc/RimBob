@@ -48,6 +48,15 @@ public static class AnchorResolver
         return anchors;
     }
 
+    public static IReadOnlyList<ResolvedAnchor> ResolveBuildableRegion(WillieBriefing briefing) =>
+        briefing.AnchorInventory.Anchors
+            .Where(anchor => anchor.Class == RoomClass.BuildableRegion)
+            .OrderBy(anchor => anchor.RoomId, StringComparer.OrdinalIgnoreCase)
+            .ThenByDescending(anchor => anchor.CellsCount)
+            .Select(ResolveBuildableRegionAnchor)
+            .OfType<ResolvedAnchor>()
+            .ToList();
+
     private static ResolvedAnchor? ResolveAnchor(WillieRoomAnchor anchor)
     {
         MapPosition? entryCell = anchor.EntryCells
@@ -61,6 +70,32 @@ public static class AnchorResolver
             return new ResolvedAnchor(anchor, anchor.Centroid, AnchorMatchReason.CentroidFallback);
 
         return null;
+    }
+
+    private static ResolvedAnchor? ResolveBuildableRegionAnchor(WillieRoomAnchor anchor)
+    {
+        MapPosition? entryCell = anchor.EntryCells
+            .OrderBy(cell => cell.X)
+            .ThenBy(cell => cell.Z)
+            .FirstOrDefault();
+        if (entryCell is not null)
+            return new ResolvedAnchor(anchor, entryCell, AnchorMatchReason.EntryCells);
+
+        if (anchor.Centroid is not null)
+            return new ResolvedAnchor(anchor, anchor.Centroid, AnchorMatchReason.BuildableRegionFallback);
+
+        MapPosition? boundsCenter = CenterOf(anchor.Bounds);
+        return boundsCenter is null
+            ? null
+            : new ResolvedAnchor(anchor, boundsCenter, AnchorMatchReason.BuildableRegionFallback);
+    }
+
+    private static MapPosition? CenterOf(MapRect? bounds)
+    {
+        if (bounds is null) return null;
+        int x = (int)Math.Round((bounds.X1 + bounds.X2) / 2d);
+        int z = (int)Math.Round((bounds.Z1 + bounds.Z2) / 2d);
+        return new MapPosition(x, 0, z);
     }
 
     private static RoomClass? ParseRoomClass(string target)

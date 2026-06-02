@@ -30,6 +30,7 @@ public sealed class IngestionDispatcherTests
         s.Colonists.Version.Should().Be(1);
         s.Rooms.Version.Should().Be(1);
         s.Stockpiles.Version.Should().Be(1);
+        s.Areas.Version.Should().Be(1);
         s.Buildings.Version.Should().Be(1);
         s.WorkTables.Version.Should().Be(1);
         s.Power.Version.Should().Be(1);
@@ -149,6 +150,8 @@ public sealed class IngestionDispatcherTests
         s.Stockpiles.Value.ItemsByDef.Should().ContainKey("MealSurvivalPack").WhoseValue.Should().Be(9);
         s.Animals.Value.Animals.Single().Position.Should().BeEquivalentTo(new { X = 40, Y = 0, Z = 45 });
         s.Stockpiles.Value.Zones.Single().Center.Should().BeEquivalentTo(new { X = 2, Y = 0, Z = 2 });
+        s.Areas.Value.Areas.Should().ContainSingle()
+            .Which.Centroid.Should().Be(new MapPosition(12, 0, 12));
         BuildingRecord building = s.Buildings.Value.Buildings.Single();
         building.Position.Should().BeEquivalentTo(new { X = 5, Y = 0, Z = 5 });
         building.Label.Should().Be("wooden bed");
@@ -314,7 +317,7 @@ public sealed class IngestionDispatcherTests
     }
 
     [Fact]
-    public async Task RefreshAllAsync_LiveZoneWrapperShape_FlowsIntoStockpiles()
+    public async Task RefreshAllAsync_LiveZoneWrapperShape_FlowsIntoStockpilesAndAreas()
     {
         PathRouter router = StandardRouter()
             .Add("api/v1/map/zones?map_id", Json("""
@@ -330,7 +333,17 @@ public sealed class IngestionDispatcherTests
                         "type": "Zone_Stockpile"
                       }
                     ],
-                    "areas": []
+                    "areas": [
+                      {
+                        "id": 0,
+                        "type": "Area_Home",
+                        "label": "Home",
+                        "cells": [
+                          { "x": 10, "y": 0, "z": 10 },
+                          { "x": 14, "y": 0, "z": 14 }
+                        ]
+                      }
+                    ]
                   },
                   "errors": [],
                   "warnings": [],
@@ -347,6 +360,11 @@ public sealed class IngestionDispatcherTests
         StockpileZone zone = s.Stockpiles.Value.Zones.Should().ContainSingle().Subject;
         zone.Id.Should().Be("0");
         zone.CellCount.Should().Be(56);
+        MapArea area = s.Areas.Value.Areas.Should().ContainSingle().Subject;
+        area.Id.Should().Be("0");
+        area.Type.Should().Be("Area_Home");
+        area.CellCount.Should().Be(2);
+        area.Centroid.Should().Be(new MapPosition(12, 0, 12));
     }
 
     [Fact]
@@ -915,7 +933,17 @@ public sealed class IngestionDispatcherTests
                         ]
                       }
                     ],
-                    "areas": []
+                    "areas": [
+                      {
+                        "id": 0,
+                        "type": "Area_Home",
+                        "label": "Home",
+                        "cells": [
+                          { "x": 10, "y": 0, "z": 10 },
+                          { "x": 14, "y": 0, "z": 14 }
+                        ]
+                      }
+                    ]
                   },
                   "errors": null,
                   "warnings": null,

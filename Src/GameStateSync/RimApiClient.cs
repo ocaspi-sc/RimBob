@@ -113,7 +113,7 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
     private async Task<IReadOnlyList<T>> GetEnvelopedListAsync<T>(
         string path,
         CancellationToken ct,
-        string? nestedArrayProperty = null)
+        params string[] nestedArrayProperties)
     {
         using HttpResponseMessage response = await http.GetAsync(path, ct);
         response.EnsureSuccessStatusCode();
@@ -142,18 +142,32 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
             if (!data.EnumerateObject().Any())
                 return [];
 
-            if (!string.IsNullOrWhiteSpace(nestedArrayProperty) &&
-                data.TryGetProperty(nestedArrayProperty, out JsonElement nested))
+            if (nestedArrayProperties.Length > 0)
             {
-                if (nested.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
-                    return [];
+                List<T> merged = [];
+                bool foundNestedArrayProperty = false;
+                foreach (string nestedArrayProperty in nestedArrayProperties.Where(property => !string.IsNullOrWhiteSpace(property)))
+                {
+                    if (!data.TryGetProperty(nestedArrayProperty, out JsonElement nested))
+                        continue;
 
-                if (nested.ValueKind == JsonValueKind.Array)
-                    return DeserializeListData<T>($"{path}.data.{nestedArrayProperty}", nested);
+                    foundNestedArrayProperty = true;
+                    if (nested.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+                        continue;
 
-                string nestedMessage = $"RIMAPI schema drift at {path}: expected data.{nestedArrayProperty} to be an array, null, or missing for List<{typeof(T).Name}>, got {nested.ValueKind}.";
-                log?.LogError(nestedMessage);
-                throw new RimApiException(nestedMessage);
+                    if (nested.ValueKind == JsonValueKind.Array)
+                    {
+                        merged.AddRange(DeserializeListData<T>($"{path}.data.{nestedArrayProperty}", nested));
+                        continue;
+                    }
+
+                    string nestedMessage = $"RIMAPI schema drift at {path}: expected data.{nestedArrayProperty} to be an array, null, or missing for List<{typeof(T).Name}>, got {nested.ValueKind}.";
+                    log?.LogError(nestedMessage);
+                    throw new RimApiException(nestedMessage);
+                }
+
+                if (foundNestedArrayProperty)
+                    return merged;
             }
         }
 
@@ -284,10 +298,10 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
 
     // ── Map / Colony state ────────────────────────────────────────────────────
 
-    /// <summary>GET api/v1/map/zones?map_id — grow zones and stockpile zones with cell lists.</summary>
+    /// <summary>GET api/v1/map/zones?map_id — zones plus area rows such as Home.</summary>
     public Task<IReadOnlyList<ZoneDto>> GetZonesAsync(
         int mapId, CancellationToken ct = default) =>
-        GetEnvelopedListAsync<ZoneDto>($"api/v1/map/zones?map_id={mapId}", ct, "zones");
+        GetEnvelopedListAsync<ZoneDto>($"api/v1/map/zones?map_id={mapId}", ct, "zones", "areas");
 
     /// <summary>GET api/v1/map/terrain?map_id — RLE terrain grid plus palette.</summary>
     public Task<TerrainGridDto> GetTerrainAsync(int mapId, CancellationToken ct = default) =>

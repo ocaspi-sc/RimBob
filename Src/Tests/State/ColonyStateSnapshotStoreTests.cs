@@ -39,6 +39,7 @@ public sealed class ColonyStateSnapshotStoreTests
             snapshot.AggregateVersions.Should().ContainKey("AnimalDefs").WhoseValue.Should().Be(1);
             snapshot.AggregateVersions.Should().ContainKey("Research").WhoseValue.Should().Be(1);
             snapshot.AggregateVersions.Should().ContainKey("Rooms").WhoseValue.Should().Be(1);
+            snapshot.AggregateVersions.Should().ContainKey("Areas").WhoseValue.Should().Be(1);
             snapshot.AggregateVersions.Should().ContainKey("WillieBacklog").WhoseValue.Should().Be(1);
             snapshot.Rooms.Rooms.Should().ContainSingle()
                 .Which.Impressiveness.Should().Be(31f);
@@ -53,11 +54,13 @@ public sealed class ColonyStateSnapshotStoreTests
             restored.Terrain.Value.Should().BeEquivalentTo(original.Terrain.Value);
             restored.AnimalDefs.Value.Should().BeEquivalentTo(original.AnimalDefs.Value);
             restored.Stockpiles.Value.Should().BeEquivalentTo(original.Stockpiles.Value);
+            restored.Areas.Value.Should().BeEquivalentTo(original.Areas.Value);
             restored.Colonists.Value.Should().BeEquivalentTo(original.Colonists.Value);
             restored.Rooms.Value.Should().BeEquivalentTo(original.Rooms.Value);
             restored.WillieBacklog.Value.Should().BeEquivalentTo(original.WillieBacklog.Value);
             restored.Terrain.Version.Should().Be(1);
             restored.Stockpiles.Version.Should().Be(1);
+            restored.Areas.Version.Should().Be(1);
             restored.Colonists.Version.Should().Be(1);
             restored.Rooms.Version.Should().Be(1);
             restored.WillieBacklog.Version.Should().Be(1);
@@ -202,6 +205,15 @@ public sealed class ColonyStateSnapshotStoreTests
                 ["MealSurvivalPack"] = 12,
                 ["RawBerries"] = 24
             }));
+        state.Areas.Update(new MapAreaRegistry([
+            new MapArea(
+                Id: "0",
+                Type: "Area_Home",
+                Label: "Home",
+                CellCount: 4,
+                Bounds: new MapRect(10, 10, 13, 13),
+                Centroid: new MapPosition(12, 0, 12))
+        ]));
         state.Buildings.Update(new BuildingRegistry([
             new BuildingRecord("stove-1", "FueledStove", 1f, true, true, new MapPosition(11, 0, 19), "fueled stove"),
             new BuildingRecord("cooler-1", "Cooler", 1f, true, true, new MapPosition(14, 0, 20), "cooler")

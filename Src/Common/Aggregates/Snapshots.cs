@@ -105,6 +105,19 @@ public sealed record StockpileLedger(
 
 public sealed record StockpileZone(string Id, string Type, string? Label, int CellCount, MapPosition? Center = null);
 
+public sealed record MapAreaRegistry(IReadOnlyList<MapArea> Areas)
+{
+    public static MapAreaRegistry Empty { get; } = new([]);
+}
+
+public sealed record MapArea(
+    string Id,
+    string Type,
+    string? Label,
+    int CellCount,
+    MapRect? Bounds = null,
+    MapPosition? Centroid = null);
+
 public sealed record BuildingRegistry(IReadOnlyList<BuildingRecord> Buildings);
 
 public sealed record BuildingPower(
@@ -364,6 +377,7 @@ public static class AggregateDefaults
     public static readonly ColonistRegistry  Colonists   = new([]);
     public static readonly RoomRegistry      Rooms       = new([]);
     public static readonly StockpileLedger   Stockpiles  = new([], new Dictionary<string, int>());
+    public static readonly MapAreaRegistry   Areas       = MapAreaRegistry.Empty;
     public static readonly BuildingRegistry  Buildings   = new([]);
     public static readonly WorkTableRegistry WorkTables  = new([]);
     public static readonly PowerNetwork      Power       = new(0f, 0f, 0f, 0f);

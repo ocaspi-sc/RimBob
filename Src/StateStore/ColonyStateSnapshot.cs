@@ -6,7 +6,7 @@ namespace RimBob.State;
 
 public sealed record ColonyStateSnapshot
 {
-    public const int CurrentSchemaVersion = 5;
+    public const int CurrentSchemaVersion = 6;
 
     [JsonPropertyName("schema_version")]
     public required int SchemaVersion { get; init; }
@@ -50,6 +50,9 @@ public sealed record ColonyStateSnapshot
 
     [JsonPropertyName("stockpiles")]
     public required StockpileLedger Stockpiles { get; init; }
+
+    [JsonPropertyName("areas")]
+    public required MapAreaRegistry Areas { get; init; }
 
     [JsonPropertyName("buildings")]
     public required BuildingRegistry Buildings { get; init; }

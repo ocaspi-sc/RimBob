@@ -22,11 +22,7 @@ RIMAPI       what is              what it means
 
 ## Domain Aggregates
 
-The state store keeps the current colony snapshot in a single visible root. The
-root contains domain aggregates for people, stockpiles, stored items, item defs,
-animal defs, buildings, work-table bill state, power, map context, threats,
-research, factions, economy, Willie construction backlog, and other live state
-as slices need them.
+The state store keeps the current colony snapshot in a single visible root. The root contains domain aggregates for people, stockpiles, map areas, stored items, item defs, animal defs, buildings, work-table bill state, power, map context, threats, research, factions, economy, Willie construction backlog, and other live state as slices need them.
 
 Design rules:
 
@@ -210,12 +206,11 @@ Current derived surfaces:
 - Pending blueprint/frame groups, including blocked/disallowed counts and
   missing material totals.
 - Room anchors keyed by `RoomClass` for future room-program and placement work.
+- Home-area buildable-region anchors as fallback-only placement loci when no room anchor resolves.
 - Willie data-coverage flags so rules can distinguish missing evidence from
   healthy state.
 
-`WillieBacklog` is latest-state only and participates in the persisted
-`ColonyState` snapshot. The snapshot schema was bumped for this aggregate: no
-compat code; wipe-and-regen on upgrade.
+`WillieBacklog` and `MapAreaRegistry` are latest-state only and participate in the persisted `ColonyState` snapshot. Snapshot schema changes for these aggregates use no compat code; wipe-and-regen on upgrade.
 
 ### Future Briefings
 

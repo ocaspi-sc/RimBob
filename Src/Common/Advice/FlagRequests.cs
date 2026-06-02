@@ -166,7 +166,8 @@ public enum RoomClass
     Prison,
     Recreation,
     Dining,
-    Storage
+    Storage,
+    BuildableRegion
 }
 
 [JsonConverter(typeof(SnakeCaseLowerEnumConverter<CapacityMeasure>))]
