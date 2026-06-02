@@ -71,6 +71,7 @@ public sealed class MinisterOfWillieTests
         snapshot.Request.SourceMinister.Should().Be("Chef");
         snapshot.GameTick.Should().Be(harness.Cache.GetWillieBriefing().GameTick);
         snapshot.Trace.Should().NotBeNull();
+        snapshot.Options.Should().ContainSingle().Which.Id.Should().Be("placement_freezer_10_12");
     }
 
     [Fact]
@@ -220,6 +221,26 @@ public sealed class MinisterOfWillieTests
         AdviceItem advice = harness.Bus.ActiveAdvice().Should().ContainSingle().Subject;
         advice.Options.Should().BeNull();
         harness.SolverStore.Latest("Willie").Should().BeNull();
+    }
+
+    [Fact]
+    public async Task NonPlacementDecision_RecordsInboundRequestBoard()
+    {
+        FakePlacementSolver solver = FakePlacementSolver.WithOptions(PlacementOption());
+        Harness harness = new(solver);
+        harness.SetStableState();
+        harness.Colony.Power.Update(new PowerNetwork(ProductionW: 100, ConsumptionW: 500, StoredWd: 0, CapacityWd: 0));
+        harness.Flags.Publish(FreezerFlag());
+
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
+
+        solver.CallCount.Should().Be(0);
+        AdviceItem advice = harness.Bus.ActiveAdvice().Should().ContainSingle().Subject;
+        advice.Concern.Should().Be("power_stability");
+        WillieRequestBoardRow row = harness.SolverStore.RequestBoard("Willie").Should().ContainSingle().Subject;
+        row.Inbound.SourceMinister.Should().Be("Chef");
+        row.Inbound.Request.Should().BeEquivalentTo(FreezerFlag().BuildingRequests!.Single());
+        row.Outcome.Should().BeNull();
     }
 
     [Fact]

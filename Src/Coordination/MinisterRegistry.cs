@@ -24,7 +24,7 @@ public sealed class MinisterRegistry
         ["prompt", "briefing", "rag", "rules", "raw_llm", "advice"];
 
     private static readonly IReadOnlyList<string> RulesOnlyMinisterViews =
-        ["briefing", "build_queue", "solver", "rules", "advice"];
+        ["briefing", "build_queue", "solver", "requests", "rules", "advice"];
 
     private static readonly IReadOnlyList<string> WelfareMinisterViews =
         ["briefing", "rules", "advice"];

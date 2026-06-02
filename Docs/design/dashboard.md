@@ -159,7 +159,7 @@ Minister scopes use a fixed top tab bar:
 - Infographics
 - Advice
 
-Rules-only ministers expose only the subset that is actually wired. Willie starts with Briefing, Build Queue, Solver, Rules, and Advice; Prompt, RAG, Raw LLM Output, and Infographics are not shown until those backend surfaces exist. Build Queue may show a placement Apply affordance only when the backend emits an explicit action apply payload for that option; otherwise the option stays inspect-only and names the unsupported apply state. The dashboard view tabs and launcher tray deep links must both respect that per-minister enabled-view set.
+Rules-only ministers expose only the subset that is actually wired. Willie starts with Briefing, Build Queue, Solver, Requests, Rules, and Advice; Prompt, RAG, Raw LLM Output, and Infographics are not shown until those backend surfaces exist. Build Queue may show a placement Apply affordance only when the backend emits an explicit action apply payload for that option; otherwise the option stays inspect-only and names the unsupported apply state. The dashboard view tabs and launcher tray deep links must both respect that per-minister enabled-view set.
 
 Use explicit game icons from the Host icon gateway in scope labels, view labels,
 section titles, field labels, compact metric labels, and obvious entity rows
@@ -639,6 +639,10 @@ Willie's Build Queue view is the construction work-order surface. It uses three 
 ### Solver
 
 Willie's Solver view is a latest-only diagnostic surface for the Placement Solver, not an Apply surface and not durable minister output. It reads `/api/ministers/willie/solver/latest` and shows the driving build request, selected solver rule, no-fit stage, and the `draftable` / `placement_valid` / `materials_ready` / `apply_ready` ladder. The funnel stages mirror the backend `NoFitReason` enum so operators can see whether placement died at anchors, draft generation, hard gates, reachability, or validation. Build Queue remains the option/apply surface; Solver explains why options exist or why none were emitted.
+
+### Requests
+
+Willie's Requests view is a read-only master-detail diagnostic surface for inbound building requests aimed at Willie. It reads `/api/ministers/willie/solver/requests`, lists the current building-request board in a sidebar, and shows the selected request's full `BuildingRequest` fields plus the latest per-request Placement Solver outcome. Requests with validated options render read-only footprint cards; no-fit, error, and offline outcomes show the concrete solver message; unsolved requests show an awaiting-solve state. Apply stays in Build Queue only.
 
 ### RAG
 

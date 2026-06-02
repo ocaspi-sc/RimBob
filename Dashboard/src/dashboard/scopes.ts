@@ -16,7 +16,7 @@ export type ScopeKey =
 
 export type ScopeKind = 'system' | 'info' | 'analytics' | 'dev_blog' | 'minister';
 export type ScopeStatus = 'live' | 'planned' | 'reference';
-export type MinisterViewKey = 'prompt' | 'raw_llm' | 'briefing' | 'build_queue' | 'solver' | 'rag' | 'rules' | 'infographics' | 'advice';
+export type MinisterViewKey = 'prompt' | 'raw_llm' | 'briefing' | 'build_queue' | 'solver' | 'requests' | 'rag' | 'rules' | 'infographics' | 'advice';
 export type SystemViewKey = 'runtime' | 'connectivity' | 'storage' | 'coverage' | 'events';
 export type InfoViewKey = 'overview' | 'glossary' | 'contracts' | 'data_sources' | 'algorithms';
 export type AnalyticsViewKey = 'session' | 'colony' | 'advice' | 'sse' | 'candidates';
@@ -80,6 +80,7 @@ export const ministerViews: Array<{ key: MinisterViewKey; label: string }> = [
   { key: 'briefing', label: 'Briefing' },
   { key: 'build_queue', label: 'Build Queue' },
   { key: 'solver', label: 'Solver' },
+  { key: 'requests', label: 'Requests' },
   { key: 'rag', label: 'RAG' },
   { key: 'rules', label: 'Rules' },
   { key: 'raw_llm', label: 'Raw LLM Output' },
@@ -89,8 +90,8 @@ export const ministerViews: Array<{ key: MinisterViewKey; label: string }> = [
 
 const allMinisterViews = ministerViews
   .map(view => view.key)
-  .filter(view => view !== 'build_queue' && view !== 'solver');
-const rulesOnlyMinisterViews: DashboardViewKey[] = ['briefing', 'build_queue', 'solver', 'rules', 'advice'];
+  .filter(view => view !== 'build_queue' && view !== 'solver' && view !== 'requests');
+const rulesOnlyMinisterViews: DashboardViewKey[] = ['briefing', 'build_queue', 'solver', 'requests', 'rules', 'advice'];
 const welfareMinisterViews: DashboardViewKey[] = ['briefing', 'rules', 'advice'];
 
 export const scopeConfigs: ScopeConfig[] = [

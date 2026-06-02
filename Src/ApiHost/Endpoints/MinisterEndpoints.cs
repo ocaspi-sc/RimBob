@@ -51,6 +51,10 @@ public static class MinisterEndpoints
             "/api/ministers/willie/solver/latest",
             "available",
             "Latest Willie Placement Solver outcome: selected rule, per-generator draft trace and scores, no-fit reason, and draftable/placement/materials/apply readiness.");
+        coverage.Register(
+            "/api/ministers/willie/solver/requests",
+            "available",
+            "Current Willie building-request board joined with each request's latest live Placement Solver outcome and options.");
 
         app.MapGet("/api/ministers", (MinisterRegistry registry) =>
             Results.Ok(registry.Scopes.Select(MinisterScopeInfo.FromDescriptor)));
@@ -220,6 +224,20 @@ public static class MinisterEndpoints
                 return Results.NotFound(new { error = "Willie minister scope is not registered." });
 
             return Results.Ok(solverStore.Latest(scope.Label) ?? WillieSolverSnapshot.NotSeen(scope.Label));
+        });
+
+        app.MapGet("/api/ministers/willie/solver/requests", (
+            MinisterRegistry registry,
+            WillieSolverStore solverStore) =>
+        {
+            MinisterDescriptor? scope = registry.FindMinister("willie");
+            if (scope is null)
+                return Results.NotFound(new { error = "Willie minister scope is not registered." });
+
+            IReadOnlyList<WillieRequestBoardRow> board = solverStore.RequestBoard(scope.Label);
+            return Results.Ok(new WillieRequestBoardPayload(
+                Minister: scope.Label,
+                Requests: board.Select(WillieRequestRowPayload.FromRow).ToList()));
         });
 
         app.MapGet("/api/ministers/{minister}/snapshot", (
@@ -658,6 +676,35 @@ public static class MinisterEndpoints
         FoodHuntRiskThresholds Thresholds,
         IReadOnlyList<FoodHuntRiskSpeciesDiagnostic> Species,
         IReadOnlyList<FoodHuntRiskCandidateDiagnostic> Candidates);
+
+    private sealed record WillieRequestBoardPayload(
+        string Minister,
+        IReadOnlyList<WillieRequestRowPayload> Requests);
+
+    private sealed record WillieRequestRowPayload(
+        BuildingRequest Request,
+        string? SourceMinister,
+        long? GameTick,
+        DateTimeOffset? CapturedAt,
+        PlacementSolverReplayOutput? Output,
+        IReadOnlyList<AdviceOption> Options)
+    {
+        public static WillieRequestRowPayload FromRow(WillieRequestBoardRow row)
+        {
+            IReadOnlyList<AdviceOption> options = row.Outcome is not null &&
+                string.Equals(row.Outcome.Status, "options", StringComparison.OrdinalIgnoreCase)
+                    ? row.Outcome.Options
+                    : [];
+
+            return new WillieRequestRowPayload(
+                Request: row.Inbound.Request,
+                SourceMinister: row.Inbound.SourceMinister,
+                GameTick: row.Outcome?.GameTick,
+                CapturedAt: row.Outcome?.CapturedAt,
+                Output: row.Outcome?.Output,
+                Options: options);
+        }
+    }
 
     private sealed record FoodHuntRiskThresholds(
         float MinimumHealthyWildHealth,

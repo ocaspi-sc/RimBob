@@ -81,6 +81,7 @@ const viewIcons: Record<string, SemanticIconSpec> = {
   rules: common.rules,
   raw_llm: common.logs,
   solver: common.construction,
+  requests: common.construction,
   infographics: common.infographics,
   advice: common.advice,
   runtime: common.component,

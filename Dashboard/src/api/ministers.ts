@@ -1,4 +1,5 @@
 import type { ScopeKey } from '../dashboard/scopes';
+import type { AdviceOption, BuildingRequest } from '../types/advice';
 import type { GameDate } from '../types/colony';
 import type { CabinetRunLogSnapshot, MinisterTrace } from '../types/system';
 import { postJson, readJson } from './http';
@@ -139,6 +140,20 @@ export interface WillieSolverPayload extends WillieSolverOutputPayload {
   output: WillieSolverOutputPayload;
 }
 
+export interface WillieRequestRow {
+  request: BuildingRequest;
+  sourceMinister: string | null;
+  gameTick: number | null;
+  capturedAt: string | null;
+  output: WillieSolverOutputPayload | null;
+  options: AdviceOption[];
+}
+
+export interface WillieRequestBoardPayload {
+  minister: string;
+  requests: WillieRequestRow[];
+}
+
 export async function fetchBriefing(scope: ScopeKey, signal?: AbortSignal): Promise<unknown> {
   return await readJson<unknown>(`/api/briefings/${scope}/latest`, signal);
 }
@@ -157,6 +172,10 @@ export async function fetchRawLlmOutput(scope: ScopeKey, signal?: AbortSignal): 
 
 export async function fetchSolver(scope: ScopeKey, signal?: AbortSignal): Promise<WillieSolverPayload> {
   return await readJson<WillieSolverPayload>(`/api/ministers/${scope}/solver/latest`, signal);
+}
+
+export async function fetchSolverRequests(scope: ScopeKey, signal?: AbortSignal): Promise<WillieRequestBoardPayload> {
+  return await readJson<WillieRequestBoardPayload>(`/api/ministers/${scope}/solver/requests`, signal);
 }
 
 export async function fetchTrace(scope: ScopeKey, signal?: AbortSignal): Promise<MinisterTrace> {

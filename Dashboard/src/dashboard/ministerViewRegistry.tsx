@@ -6,6 +6,7 @@ import { MinisterInfographicsView } from '../components/minister/MinisterInfogra
 import { MinisterPromptView } from '../components/minister/MinisterPromptView';
 import { MinisterRagView } from '../components/minister/MinisterRagView';
 import { MinisterRawLlmView } from '../components/minister/MinisterRawLlmView';
+import { MinisterRequestsView } from '../components/minister/MinisterRequestsView';
 import { MinisterRulesView } from '../components/minister/MinisterRulesView';
 import { MinisterSolverView } from '../components/minister/MinisterSolverView';
 import { ministerViews, type MinisterViewKey, type ScopeConfig } from './scopes';
@@ -47,6 +48,7 @@ const ministerViewRenderers: Record<MinisterViewKey, MinisterViewRenderer> = {
     />
   ),
   solver: ({ scope, systemHealth }) => <MinisterSolverView scope={scope} systemHealth={systemHealth} />,
+  requests: ({ scope, systemHealth }) => <MinisterRequestsView scope={scope} systemHealth={systemHealth} />,
   raw_llm: ({ scope, systemHealth }) => <MinisterRawLlmView scope={scope} systemHealth={systemHealth} />,
   rag: ({ agenda, scope, systemHealth }) => (
     <MinisterRagView scope={scope} agenda={agenda} systemHealth={systemHealth} />

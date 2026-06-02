@@ -30,6 +30,13 @@ public sealed class MinisterOfWillie(
         MinisterBriefingContext context = BuildContext(outputStore.CurrentMayorAgenda);
         IReadOnlyList<AgentFlag> activeFlags = flags.Active();
         IReadOnlyList<BuildingRequest> inboundRequests = ActiveWillieBuildingRequests(activeFlags, cycle.Flag);
+        IReadOnlyList<WillieInboundRequest> inboundBoard = inboundRequests
+            .Select(request => new WillieInboundRequest(
+                request,
+                SourceMinisterForRequest(request, activeFlags, cycle.Flag),
+                WillieSolverStore.RequestKey(request)))
+            .ToList();
+        solverStore.RecordInbound(Name, inboundBoard);
 
         RulesResult result = rules.Evaluate(briefing, ColonyContext.Default, inboundRequests);
         switch (result)
@@ -53,7 +60,8 @@ public sealed class MinisterOfWillie(
                             SourceMinisterForRequest(placementRequest, activeFlags, cycle.Flag)),
                         GameTick: briefing.GameTick,
                         CapturedAt: DateTimeOffset.UtcNow,
-                        Output: attempt.ReplayOutput));
+                        Output: attempt.ReplayOutput,
+                        Options: attempt.Result?.Options ?? []));
 
                     if (attempt.SolverOffline)
                     {
