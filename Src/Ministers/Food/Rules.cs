@@ -134,7 +134,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 $"Only {briefing.MealsCount} meals are reported for {briefing.ColonistCount} colonists while raw food exists.",
                 "A raw-food buffer still needs cooking throughput to become safe daily nutrition.",
                 CookBillActions(briefing, days),
-                CookingLaborIfNeeded(briefing, days, AdvicePriority.Medium),
+                RequestsWithCookingBuildingSupport(briefing, CookingLaborIfNeeded(briefing, days, AdvicePriority.Medium), AdvicePriority.Medium),
                 needsCookingLabor || needsCookingBuildingSupport));
         }
 

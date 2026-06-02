@@ -430,6 +430,36 @@ public sealed class FoodRulesTests
     }
 
     [Fact]
+    public void MealsUnderstockedWithoutCookingBuilding_RequestsStarterKitchen()
+    {
+        FoodBriefing briefing = Briefing(days: 12f) with
+        {
+            MealsCount = 1,
+            RawFoodCount = 40,
+            ReadyToHarvest = 0,
+            Kitchen = new FoodKitchenSummary(0, 0, false, false)
+        };
+
+        Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
+            .Should().BeOfType<Decision>().Subject;
+
+        AdviceItem advice = AdviceByConcern(decision, "manage_cook_bills");
+        advice.Actions.Should().Contain(action =>
+            action.Kind == AdviceActionKind.PlaceBlueprint &&
+            action.Owner == "Willie");
+        BuildingRequest request = FlagById(decision, "food:meals_understocked").BuildingRequests.Should()
+            .Contain(request => request.Request == "starter kitchen cooking station")
+            .Subject;
+        request.TargetClass.Should().Be(BuildingClass.ProductionBench);
+        request.TargetDef.Should().Be("Campfire");
+        request.RoomClass.Should().Be(RoomClass.Kitchen);
+        request.CapacityNeed.Should().NotBeNull();
+        request.CapacityNeed!.Measure.Should().Be(CapacityMeasure.WorkSlots);
+        request.CapacityNeed.Amount.Should().Be(1);
+        request.RequestedFrom.Should().Be("Willie");
+    }
+
+    [Fact]
     public void WildHarvest_UsesNearestClusterAndAvoidsRoutineLaborRequest()
     {
         FoodBriefing briefing = Briefing(days: 14f) with
