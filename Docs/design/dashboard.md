@@ -625,6 +625,8 @@ but keep the primary view scannable.
 
 Willie's Briefing view leads with a construction HUD: the eight Willie concerns render as severity-toned tiles, current boolean `dataCoverage` fields render as signal bars, and the existing construction readout covers power stability, build queue/material blockers, functional room anchors, storage footprint, and layout/fire-risk basics before the source payload. Raw source data for Willie lives behind one collapsed `Raw briefing` disclosure; richer three-state coverage, minimap overlays, gauges, and solver-trace filmstrips wait for later backend/UI slices.
 
+Welfare's Briefing view leads with a Mood & Needs HUD: `break_risk`, `shelter_floor`, `recreation_gap`, and `comfort_beauty` render as severity-toned concern tiles, mood distribution and bed/recreation metrics render as compact cards, per-pawn mood/need rows show the worst current drivers, and boolean coverage fields render as signal bars before the source payload. Raw source data for Welfare lives behind one collapsed `Raw briefing` disclosure.
+
 Chef's Briefing view should also show deterministic crop-candidate math as a
 compact inspector panel when the backend exposes it. The panel is read-only and
 exists to make crop choice, season fit, fertility, storage modifiers, and
@@ -651,7 +653,6 @@ The Rules view answers: "Why did RimBob say this now?"
 Show trigger, rules-vs-LLM path, selected rule or escalation reason, matched
 signals, suppressed lower-priority candidates, relevant flag or wakeup payload,
 emitted advice/flags, briefing version/tick when available, and last error.
-When the latest trace carries an escalation reason, Rules and Advice both render a prominent top-of-view escalation callout so the operator can see that the minister requested or used LLM judgment without opening trace details.
 Rules trace/replay diagnostics should also include emitted action provenance so
 the operator can see which rule or LLM-after-escalation path produced each
 action row. Keep that provenance in trace/replay diagnostics; raw `actions[]`

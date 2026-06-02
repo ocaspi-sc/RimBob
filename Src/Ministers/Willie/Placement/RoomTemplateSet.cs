@@ -22,6 +22,8 @@ public sealed class RoomTemplateSet
         new HospitalTemplate(),
         new BedroomTemplate(),
         new BarracksTemplate(),
+        new RecreationTemplate(),
+        new DiningTemplate(),
         new WorkshopTemplate(),
         new StorageTemplate()
     ]);
@@ -44,6 +46,8 @@ public sealed class RoomTemplateSet
             BuildingClass.Bed => RoomClass.Bedroom,
             BuildingClass.ProductionBench => RoomClass.Workshop,
             BuildingClass.Stockpile or BuildingClass.Shelf => RoomClass.Storage,
+            BuildingClass.Recreation => RoomClass.Recreation,
+            BuildingClass.Table => RoomClass.Dining,
             _ => null
         };
 }

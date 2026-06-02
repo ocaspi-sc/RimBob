@@ -35,6 +35,14 @@ public sealed class RoomTemplateSetTests
             .Should().BeOfType<HospitalTemplate>();
         RoomTemplateSet.Default.ForSpec(Spec(BuildingClass.Bed, RoomClass.Barracks))
             .Should().BeOfType<BarracksTemplate>();
+        RoomTemplateSet.Default.ForSpec(Spec(BuildingClass.Wall, RoomClass.Recreation))
+            .Should().BeOfType<RecreationTemplate>();
+        RoomTemplateSet.Default.ForSpec(Spec(BuildingClass.Wall, RoomClass.Dining))
+            .Should().BeOfType<DiningTemplate>();
+        RoomTemplateSet.Default.ForSpec(Spec(BuildingClass.Recreation, roomClass: null))
+            .Should().BeOfType<RecreationTemplate>();
+        RoomTemplateSet.Default.ForSpec(Spec(BuildingClass.Table, roomClass: null))
+            .Should().BeOfType<DiningTemplate>();
         RoomTemplateSet.Default.ForSpec(Spec(BuildingClass.ProductionBench, roomClass: null))
             .Should().BeOfType<WorkshopTemplate>();
         RoomTemplateSet.Default.ForSpec(Spec(BuildingClass.Shelf, roomClass: null))

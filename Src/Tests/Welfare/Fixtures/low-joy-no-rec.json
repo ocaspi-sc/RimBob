@@ -1,34 +1,41 @@
 {
-  "BriefingVersion": 12,
-  "GameTick": 180000,
+  "BriefingVersion": 23,
+  "GameTick": 420000,
   "ColonistCount": 3,
   "Mood": {
-    "AverageMood": 0.74,
+    "AverageMood": 0.58,
     "BreakRiskCount": 0,
     "StressedCount": 0,
-    "ContentCount": 2
+    "ContentCount": 1
   },
-  "WorstPawns": [],
-  "NeedLows": [],
+  "WorstPawns": [
+    {
+      "Id": "p1",
+      "Name": "Bob",
+      "Mood": 0.52,
+      "Sleep": 0.7,
+      "Comfort": 0.6,
+      "Beauty": 0.6,
+      "Joy": 0.22,
+      "FreshAir": 0.7,
+      "DrugsDesire": 0,
+      "TopNegativeThoughts": []
+    }
+  ],
+  "NeedLows": [
+    {
+      "PawnId": "p1",
+      "PawnName": "Bob",
+      "Need": "joy",
+      "Value": 0.22
+    }
+  ],
   "Rooms": {
     "Count": 1,
     "BedroomCount": 1,
     "PrisonCellCount": 0,
-    "AverageImpressiveness": 24,
-    "WorstRooms": [
-      {
-        "Id": "room-1",
-        "RoleLabel": "Barracks",
-        "Impressiveness": 24,
-        "Beauty": 0,
-        "Cleanliness": 0,
-        "Space": 18,
-        "Wealth": 300,
-        "CellsCount": 18,
-        "IsPrisonCell": false,
-        "OpenRoofCount": 0
-      }
-    ]
+    "AverageImpressiveness": 22,
+    "WorstRooms": []
   },
   "Sleep": {
     "BedCount": 3,
@@ -37,7 +44,7 @@
     "UnroofedBedroomCount": 0
   },
   "Recreation": {
-    "JoyLowCount": 0,
+    "JoyLowCount": 1,
     "RecreationRoomCount": 0,
     "JoySourceBuildingCount": 0,
     "HasRecreationSource": false
@@ -50,6 +57,6 @@
     "HasMoodThoughts": false,
     "HasRooms": true,
     "HasRoomQuality": true,
-    "HasBuildings": false
+    "HasBuildings": true
   }
 }

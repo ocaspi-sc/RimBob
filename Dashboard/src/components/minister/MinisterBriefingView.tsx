@@ -31,6 +31,8 @@ export function MinisterBriefingView({ scope }: { scope: ScopeConfig }) {
   const coverageRows = extractCoverage(briefing.data);
   const willieBriefing = scope.key === 'willie' && isRecord(briefing.data) ? briefing.data : null;
   const isWillieBriefing = willieBriefing !== null;
+  const welfareBriefing = scope.key === 'welfare' && isRecord(briefing.data) ? briefing.data : null;
+  const isWelfareBriefing = welfareBriefing !== null;
 
   return (
     <div className="minister-view briefing-view">
@@ -40,7 +42,7 @@ export function MinisterBriefingView({ scope }: { scope: ScopeConfig }) {
         <p>Readable source data behind this minister's reasoning.</p>
       </header>
 
-      {coverageRows.length > 0 && !isWillieBriefing && (
+      {coverageRows.length > 0 && !isWillieBriefing && !isWelfareBriefing && (
         <section className="coverage-strip">
           {coverageRows.map(row => (
             <span key={row.key}>
@@ -52,12 +54,15 @@ export function MinisterBriefingView({ scope }: { scope: ScopeConfig }) {
       )}
 
       {scope.key === 'food' && <FoodCropMathPanel />}
+      {isWelfareBriefing && (
+        <WelfareBriefingHud briefing={welfareBriefing} />
+      )}
       {isWillieBriefing && (
         <WillieBriefingHud briefing={willieBriefing} />
       )}
 
-      {isWillieBriefing ? (
-        <WillieRawBriefing groups={groups} />
+      {isWillieBriefing || isWelfareBriefing ? (
+        <RawBriefing groups={groups} />
       ) : (
         groups.map(group => (
           <DisclosureSection
@@ -111,9 +116,13 @@ function groupBriefing(scope: string, briefing: unknown): BriefingGroup[] {
       pickGroup('mood', 'Mood', briefing, ['mood', 'worstPawns']),
       pickGroup('need_lows', 'Need lows', briefing, ['needLows']),
       pickGroup('rooms', 'Rooms', briefing, ['rooms']),
+      pickGroup('sleep', 'Sleep', briefing, ['sleep']),
+      pickGroup('recreation', 'Recreation', briefing, ['recreation']),
+      pickGroup('thought_digest', 'Thought Digest', briefing, ['thoughtDigest']),
       pickGroup('data_coverage', 'Data coverage', briefing, ['dataCoverage']),
       { key: 'raw_remaining_fields', title: 'Raw remaining fields', value: omitKeys(briefing, [
-        'briefingVersion', 'gameTick', 'colonistCount', 'mood', 'worstPawns', 'needLows', 'rooms', 'dataCoverage',
+        'briefingVersion', 'gameTick', 'colonistCount', 'mood', 'worstPawns', 'needLows', 'rooms', 'sleep',
+        'recreation', 'thoughtDigest', 'dataCoverage',
       ]) },
     ].filter(group => hasContent(group.value));
   }
@@ -152,19 +161,159 @@ function groupBriefing(scope: string, briefing: unknown): BriefingGroup[] {
   ].filter(group => hasContent(group.value));
 }
 
-type WillieHudTone = 'ok' | 'warn' | 'error' | 'neutral';
+type HudTone = 'ok' | 'warn' | 'error' | 'neutral';
 
 interface WillieConcernTile {
   detail: string;
   key: string;
   label: string;
-  tone: WillieHudTone;
+  tone: HudTone;
+  value: string;
+}
+
+interface WelfareConcernTile {
+  detail: string;
+  key: string;
+  label: string;
+  tone: HudTone;
   value: string;
 }
 
 interface WillieCoverageRow {
   key: string;
   value: 'available' | 'missing';
+}
+
+function WelfareBriefingHud({ briefing }: { briefing: Record<string, unknown> }) {
+  const mood = recordAt(briefing, 'mood');
+  const sleep = recordAt(briefing, 'sleep');
+  const recreation = recordAt(briefing, 'recreation');
+  const thoughtDigest = recordAt(briefing, 'thoughtDigest');
+  const rooms = recordAt(briefing, 'rooms');
+  const coverage = recordAt(briefing, 'dataCoverage');
+  const worstPawns = arrayAt(briefing, 'worstPawns');
+  const needLows = arrayAt(briefing, 'needLows');
+  const thoughtGroups = arrayAt(thoughtDigest, 'byCategory');
+  const coverageRows: WillieCoverageRow[] = coverage
+    ? Object.entries(coverage).map(([key, value]) => ({ key, value: value === true ? 'available' : 'missing' }))
+    : [];
+  const breakRiskCount = numberAt(mood, 'breakRiskCount') ?? 0;
+  const stressedCount = numberAt(mood, 'stressedCount') ?? 0;
+  const contentCount = numberAt(mood, 'contentCount') ?? 0;
+  const colonistCount = numberAt(briefing, 'colonistCount') ?? 0;
+  const bedDeficit = numberAt(sleep, 'bedDeficit') ?? 0;
+  const unroofedBedroomCount = numberAt(sleep, 'unroofedBedroomCount') ?? 0;
+  const joyLowCount = numberAt(recreation, 'joyLowCount') ?? 0;
+  const hasRecreationSource = booleanAt(recreation, 'hasRecreationSource');
+  const comfortBeautyGroup = thoughtGroup(thoughtGroups, 'comfort_beauty');
+  const concernTiles = buildWelfareConcernTiles({
+    bedDeficit,
+    breakRiskCount,
+    comfortBeautyGroup,
+    joyLowCount,
+    recreation,
+    sleep,
+    unroofedBedroomCount,
+  });
+
+  return (
+    <section className="welfare-briefing-hud" aria-label="Welfare briefing HUD">
+      <div className="willie-hud-strip">
+        <div className="willie-concern-strip welfare-concern-strip" aria-label="Welfare concern severity">
+          {concernTiles.map(tile => (
+            <article key={tile.key} className={`willie-concern-tile ${tile.tone}`}>
+              <header>
+                <SemanticLabel icon={iconForField(tile.key)}><span>{tile.label}</span></SemanticLabel>
+                <span>{humanize(tile.tone)}</span>
+              </header>
+              <strong>{tile.value}</strong>
+              <small>{tile.detail}</small>
+            </article>
+          ))}
+        </div>
+        <WillieCoverageBars rows={coverageRows} label="Welfare data coverage" />
+      </div>
+
+      <div className="metric-grid welfare-briefing-metrics">
+        <MetricCard
+          label={metricLabel('mood', 'Average mood')}
+          value={formatNullablePercent(numberAt(mood, 'averageMood'))}
+          note={`${formatInteger(contentCount)} content / ${formatInteger(stressedCount)} stressed / ${formatInteger(breakRiskCount)} break-risk`}
+          tone={breakRiskCount > 0 ? 'error' : stressedCount > 0 ? 'warn' : 'ok'}
+        />
+        <MetricCard
+          label={metricLabel('shelter_floor', 'Beds')}
+          value={`${formatInteger(numberAt(sleep, 'bedCount'))}/${formatInteger(numberAt(sleep, 'colonistCount') ?? colonistCount)}`}
+          note={`${formatInteger(bedDeficit)} deficit / ${formatInteger(unroofedBedroomCount)} unroofed rooms`}
+          tone={bedDeficit > 0 || unroofedBedroomCount > 0 ? 'warn' : 'ok'}
+        />
+        <MetricCard
+          label={metricLabel('recreation_gap', 'Recreation')}
+          value={`${formatInteger(joyLowCount)} low joy`}
+          note={hasRecreationSource === null ? 'source coverage unavailable' : hasRecreationSource ? 'source visible' : 'no source visible'}
+          tone={joyLowCount > 0 ? 'warn' : 'ok'}
+        />
+        <MetricCard
+          label={metricLabel('comfort_beauty', 'Thought groups')}
+          value={formatInteger(thoughtGroups.length)}
+          note={thoughtGroups.length > 0 ? formatThoughtGroup(thoughtGroups[0]) : 'no negative thought categories'}
+        />
+      </div>
+
+      <div className="welfare-briefing-panels">
+        <article className="willie-readout-panel">
+          <header>
+            <h3><SemanticLabel icon={iconForField('mood')}><span>Mood And Needs</span></SemanticLabel></h3>
+            <span className={breakRiskCount > 0 ? 'status-text error' : stressedCount > 0 ? 'status-text warn' : 'status-text ok'}>
+              {breakRiskCount > 0 ? 'break risk' : stressedCount > 0 ? 'stressed' : 'stable'}
+            </span>
+          </header>
+          <div className="welfare-pawn-list">
+            {worstPawns.length > 0 ? worstPawns.slice(0, 8).map((pawn, index) => (
+              <WelfarePawnRow key={stringAt(pawn, 'id') ?? `pawn-${index}`} pawn={pawn} />
+            )) : (
+              <span>No pawn mood rows are available.</span>
+            )}
+          </div>
+        </article>
+
+        <article className="willie-readout-panel">
+          <header>
+            <h3><SemanticLabel icon={iconForField('shelter_floor')}><span>Sleep Shelter</span></SemanticLabel></h3>
+            <span className={bedDeficit > 0 || unroofedBedroomCount > 0 ? 'status-text warn' : 'status-text ok'}>
+              {bedDeficit > 0 ? 'bed deficit' : unroofedBedroomCount > 0 ? 'roof gap' : 'covered'}
+            </span>
+          </header>
+          <div className="willie-fact-grid">
+            <Fact label="Bedrooms" value={formatInteger(numberAt(rooms, 'bedroomCount'))} />
+            <Fact label="Beds" value={formatInteger(numberAt(sleep, 'bedCount'))} />
+            <Fact label="Deficit" value={formatInteger(bedDeficit)} />
+            <Fact label="Unroofed rooms" value={formatInteger(unroofedBedroomCount)} />
+          </div>
+        </article>
+
+        <article className="willie-readout-panel">
+          <header>
+            <h3><SemanticLabel icon={iconForField('recreation_gap')}><span>Recreation And Comfort</span></SemanticLabel></h3>
+            <span className={joyLowCount > 0 || comfortBeautyGroup ? 'status-text warn' : 'status-text ok'}>
+              {joyLowCount > 0 || comfortBeautyGroup ? 'pressure' : 'clear'}
+            </span>
+          </header>
+          <div className="willie-fact-grid">
+            <Fact label="Low joy" value={formatInteger(joyLowCount)} />
+            <Fact label="Rec rooms" value={formatInteger(numberAt(recreation, 'recreationRoomCount'))} />
+            <Fact label="Joy buildings" value={formatInteger(numberAt(recreation, 'joySourceBuildingCount'))} />
+            <Fact label="Need lows" value={formatInteger(needLows.length)} />
+          </div>
+          <DynamicTable
+            rows={thoughtGroups}
+            preferredColumns={['category', 'pawnCount', 'worstOffset', 'exampleLabel']}
+            emptyMessage="No negative thought groups are available."
+          />
+        </article>
+      </div>
+    </section>
+  );
 }
 
 function WillieBriefingHud({ briefing }: { briefing: Record<string, unknown> }) {
@@ -341,13 +490,13 @@ function WillieBriefingHud({ briefing }: { briefing: Record<string, unknown> }) 
   );
 }
 
-function WillieCoverageBars({ rows }: { rows: WillieCoverageRow[] }) {
+function WillieCoverageBars({ rows, label = 'Willie data coverage' }: { rows: WillieCoverageRow[]; label?: string }) {
   if (rows.length === 0) return null;
 
   const available = rows.filter(row => row.value === 'available').length;
 
   return (
-    <aside className="willie-coverage-bars" aria-label="Willie data coverage">
+    <aside className="willie-coverage-bars" aria-label={label}>
       <header>
         <SemanticLabel icon={iconForField('data_coverage')}><span>Data Coverage</span></SemanticLabel>
         <strong>{available}/{rows.length}</strong>
@@ -365,7 +514,7 @@ function WillieCoverageBars({ rows }: { rows: WillieCoverageRow[] }) {
   );
 }
 
-function WillieRawBriefing({ groups }: { groups: BriefingGroup[] }) {
+function RawBriefing({ groups }: { groups: BriefingGroup[] }) {
   return (
     <DisclosureSection
       title={<SemanticLabel icon={iconForSection('raw_payload')}><span>Raw briefing</span></SemanticLabel>}
@@ -380,6 +529,24 @@ function WillieRawBriefing({ groups }: { groups: BriefingGroup[] }) {
         ))}
       </div>
     </DisclosureSection>
+  );
+}
+
+function WelfarePawnRow({ pawn }: { pawn: unknown }) {
+  if (!isRecord(pawn)) return null;
+  const name = stringAt(pawn, 'name') ?? stringAt(pawn, 'id') ?? 'unknown';
+  const thought = firstThoughtLabel(pawn);
+
+  return (
+    <div className="welfare-pawn-row">
+      <strong>{name}</strong>
+      <span>Mood {formatNullablePercent(numberAt(pawn, 'mood'))}</span>
+      <span>Sleep {formatNullablePercent(numberAt(pawn, 'sleep'))}</span>
+      <span>Comfort {formatNullablePercent(numberAt(pawn, 'comfort'))}</span>
+      <span>Beauty {formatNullablePercent(numberAt(pawn, 'beauty'))}</span>
+      <span>Joy {formatNullablePercent(numberAt(pawn, 'joy'))}</span>
+      <small>{thought ?? 'no negative thought detail'}</small>
+    </div>
   );
 }
 
@@ -497,6 +664,56 @@ function buildWillieConcernTiles({
   ];
 }
 
+function buildWelfareConcernTiles({
+  bedDeficit,
+  breakRiskCount,
+  comfortBeautyGroup,
+  joyLowCount,
+  recreation,
+  sleep,
+  unroofedBedroomCount,
+}: {
+  bedDeficit: number;
+  breakRiskCount: number;
+  comfortBeautyGroup: Record<string, unknown> | null;
+  joyLowCount: number;
+  recreation: Record<string, unknown> | null;
+  sleep: Record<string, unknown> | null;
+  unroofedBedroomCount: number;
+}): WelfareConcernTile[] {
+  const hasRecreationSource = booleanAt(recreation, 'hasRecreationSource');
+  return [
+    {
+      key: 'break_risk',
+      label: 'Break Risk',
+      value: `${formatInteger(breakRiskCount)} at risk`,
+      detail: breakRiskCount > 0 ? 'Immediate mood triage is needed.' : 'No pawn is below the break threshold.',
+      tone: breakRiskCount > 0 ? 'error' : 'ok',
+    },
+    {
+      key: 'shelter_floor',
+      label: 'Shelter Floor',
+      value: `${formatInteger(numberAt(sleep, 'bedCount'))}/${formatInteger(numberAt(sleep, 'colonistCount'))} beds`,
+      detail: `${formatInteger(bedDeficit)} bed deficit; ${formatInteger(unroofedBedroomCount)} unroofed sleeping rooms.`,
+      tone: bedDeficit > 0 || unroofedBedroomCount > 0 ? 'warn' : 'ok',
+    },
+    {
+      key: 'recreation_gap',
+      label: 'Recreation Gap',
+      value: `${formatInteger(joyLowCount)} low joy`,
+      detail: hasRecreationSource === null ? 'Building coverage unavailable.' : hasRecreationSource ? 'A recreation source is visible.' : 'No recreation source is visible.',
+      tone: joyLowCount > 0 ? 'warn' : 'ok',
+    },
+    {
+      key: 'comfort_beauty',
+      label: 'Comfort Beauty',
+      value: comfortBeautyGroup ? `${formatInteger(numberAt(comfortBeautyGroup, 'pawnCount'))} thoughts` : 'clear',
+      detail: comfortBeautyGroup ? formatThoughtGroup(comfortBeautyGroup) : 'No comfort/beauty thought group.',
+      tone: comfortBeautyGroup ? 'warn' : 'ok',
+    },
+  ];
+}
+
 function metricLabel(iconKey: string, label: string) {
   return <SemanticLabel icon={iconForField(iconKey)}><span>{label}</span></SemanticLabel>;
 }
@@ -511,6 +728,18 @@ function arrayAt(source: Record<string, unknown> | null, key: string): unknown[]
   if (!source) return [];
   const value = source[key];
   return Array.isArray(value) ? value : [];
+}
+
+function stringAt(source: unknown, key: string): string | null {
+  if (!isRecord(source)) return null;
+  const value = source[key];
+  return typeof value === 'string' ? value : null;
+}
+
+function booleanAt(source: Record<string, unknown> | null, key: string): boolean | null {
+  if (!source) return null;
+  const value = source[key];
+  return typeof value === 'boolean' ? value : null;
 }
 
 function numberAt(source: Record<string, unknown> | null, key: string): number | null {
@@ -541,6 +770,31 @@ function formatWd(value: number | null): string {
 
 function formatPercent(value: number): string {
   return `${Math.round(value * 100)}%`;
+}
+
+function formatNullablePercent(value: number | null): string {
+  return value === null ? 'n/a' : formatPercent(value);
+}
+
+function formatThoughtGroup(value: unknown): string {
+  if (!isRecord(value)) return 'unknown thought group';
+  const category = typeof value.category === 'string' ? humanize(value.category) : 'Thought';
+  const pawns = numberFromUnknown(value.pawnCount);
+  const example = typeof value.exampleLabel === 'string' ? value.exampleLabel : null;
+  return `${category}${pawns === null ? '' : ` / ${formatInteger(pawns)} pawn${pawns === 1 ? '' : 's'}`}${example ? ` / ${example}` : ''}`;
+}
+
+function thoughtGroup(groups: unknown[], category: string): Record<string, unknown> | null {
+  return groups
+    .filter(isRecord)
+    .find(group => typeof group.category === 'string' && group.category.toLowerCase() === category) ?? null;
+}
+
+function firstThoughtLabel(pawn: Record<string, unknown>): string | null {
+  const thoughts = arrayAt(pawn, 'topNegativeThoughts');
+  const first = thoughts.find(isRecord);
+  if (!first) return null;
+  return stringAt(first, 'label') ?? stringAt(first, 'defName');
 }
 
 function formatMaterial(value: unknown): string {

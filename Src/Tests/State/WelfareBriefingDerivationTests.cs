@@ -95,6 +95,17 @@ public sealed class WelfareBriefingDerivationTests
                 Space: 8f,
                 Wealth: 120f)
         ]));
+        state.Buildings.Update(new BuildingRegistry(
+        [
+            new BuildingRecord(
+                Id: "joy-1",
+                Def: "HorseshoesPin",
+                Hp: 1f,
+                PowerOn: null,
+                IsWorking: true,
+                Position: new MapPosition(5, 0, 6),
+                Label: "horseshoes pin")
+        ]));
 
         WelfareSourceBriefing briefing = WelfareBriefingDerivation.Compute(state, 7);
 
@@ -113,10 +124,24 @@ public sealed class WelfareBriefingDerivationTests
         briefing.Rooms.BedroomCount.Should().Be(2);
         briefing.Rooms.AverageImpressiveness.Should().Be(27f);
         briefing.Rooms.WorstRooms[0].Id.Should().Be("room-bad");
+        briefing.Sleep.BedCount.Should().Be(2);
+        briefing.Sleep.BedDeficit.Should().Be(0);
+        briefing.Sleep.UnroofedBedroomCount.Should().Be(1);
+        briefing.Recreation.JoyLowCount.Should().Be(1);
+        briefing.Recreation.JoySourceBuildingCount.Should().Be(1);
+        briefing.Recreation.HasRecreationSource.Should().BeTrue();
+        briefing.ThoughtDigest.ByCategory.Should().Contain(group =>
+            group.Category == ThoughtCategory.Temperature &&
+            group.PawnCount == 1 &&
+            group.ExampleLabel == "slept in the cold");
+        briefing.ThoughtDigest.ByCategory.Should().Contain(group =>
+            group.Category == ThoughtCategory.ComfortBeauty &&
+            group.ExampleLabel == "ate without table");
         briefing.DataCoverage.HasNeedLevels.Should().BeTrue();
         briefing.DataCoverage.HasMoodThoughts.Should().BeTrue();
         briefing.DataCoverage.HasRooms.Should().BeTrue();
         briefing.DataCoverage.HasRoomQuality.Should().BeTrue();
+        briefing.DataCoverage.HasBuildings.Should().BeTrue();
     }
 
     [Fact]
@@ -153,6 +178,9 @@ public sealed class WelfareBriefingDerivationTests
 
         briefing.Rooms.Count.Should().Be(0);
         briefing.Rooms.BedroomCount.Should().Be(0);
+        briefing.Sleep.BedCount.Should().Be(0);
+        briefing.Sleep.BedDeficit.Should().Be(1);
         briefing.DataCoverage.HasRooms.Should().BeTrue();
+        briefing.DataCoverage.HasBuildings.Should().BeFalse();
     }
 }

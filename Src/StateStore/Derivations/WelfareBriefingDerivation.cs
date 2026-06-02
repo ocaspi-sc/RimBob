@@ -10,11 +10,13 @@ public static class WelfareBriefingDerivation
     private const float StressedTopMood = 0.50f;
     private const float ContentMood = 0.65f;
     private const float LowNeedThreshold = 0.35f;
+    private const float JoyLowThreshold = 0.35f;
 
     public static WelfareSourceBriefing Compute(ColonyState state, long briefingVersion = 0)
     {
         IReadOnlyList<ColonistRecord> pawns = PawnDeriver.LivingColonists(state.Colonists.Value.Colonists);
         IReadOnlyList<RoomRecord> rooms = state.Rooms.Value.Rooms;
+        IReadOnlyList<BuildingRecord> buildings = state.Buildings.Value.Buildings;
 
         return new WelfareSourceBriefing(
             BriefingVersion: briefingVersion,
@@ -24,6 +26,9 @@ public static class WelfareBriefingDerivation
             WorstPawns: DeriveWorstPawns(pawns),
             NeedLows: DeriveNeedLows(pawns),
             Rooms: DeriveRooms(rooms),
+            Sleep: DeriveSleep(pawns.Count, rooms),
+            Recreation: DeriveRecreation(pawns, rooms, buildings),
+            ThoughtDigest: DeriveThoughtDigest(pawns),
             DataCoverage: DeriveCoverage(state, pawns, rooms));
     }
 
@@ -140,9 +145,87 @@ public static class WelfareBriefingDerivation
                 .ToList());
     }
 
+    private static WelfareSleepSummary DeriveSleep(int colonistCount, IReadOnlyList<RoomRecord> rooms)
+    {
+        int bedCount = rooms
+            .SelectMany(room => room.ContainedBedIds)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Count();
+
+        return new WelfareSleepSummary(
+            BedCount: bedCount,
+            ColonistCount: colonistCount,
+            BedDeficit: Math.Max(0, colonistCount - bedCount),
+            UnroofedBedroomCount: rooms.Count(room => IsBedroom(room) && room.OpenRoofCount > 0));
+    }
+
+    private static WelfareRecreationSummary DeriveRecreation(
+        IReadOnlyList<ColonistRecord> pawns,
+        IReadOnlyList<RoomRecord> rooms,
+        IReadOnlyList<BuildingRecord> buildings)
+    {
+        int recreationRoomCount = rooms.Count(IsRecreationRoom);
+        int joySourceBuildingCount = buildings.Count(IsJoySourceBuilding);
+        return new WelfareRecreationSummary(
+            JoyLowCount: pawns.Count(pawn => pawn.Joy > 0f && pawn.Joy < JoyLowThreshold),
+            RecreationRoomCount: recreationRoomCount,
+            JoySourceBuildingCount: joySourceBuildingCount,
+            HasRecreationSource: recreationRoomCount > 0 || joySourceBuildingCount > 0);
+    }
+
+    private static WelfareThoughtDigest DeriveThoughtDigest(IReadOnlyList<ColonistRecord> pawns)
+    {
+        List<PawnThoughtCategory> categorized = pawns
+            .SelectMany(pawn => NegativeThoughts(pawn)
+                .Select(thought => new PawnThoughtCategory(
+                    pawn.Id,
+                    WelfareThoughtTaxonomy.Classify(thought.DefName, thought.Label),
+                    thought)))
+            .ToList();
+
+        IReadOnlyList<WelfareThoughtGroup> groups = categorized
+            .GroupBy(item => item.Category)
+            .Select(group =>
+            {
+                WelfareMoodThought example = group
+                    .OrderBy(item => item.Thought.MoodOffset)
+                    .ThenBy(item => item.Thought.DefName, StringComparer.OrdinalIgnoreCase)
+                    .First()
+                    .Thought;
+                return new WelfareThoughtGroup(
+                    Category: group.Key,
+                    PawnCount: group.Select(item => item.PawnId).Distinct(StringComparer.OrdinalIgnoreCase).Count(),
+                    WorstOffset: group.Min(item => item.Thought.MoodOffset),
+                    ExampleLabel: ThoughtLabel(example));
+            })
+            .OrderBy(group => group.WorstOffset)
+            .ThenBy(group => group.Category.ToString(), StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return new WelfareThoughtDigest(groups);
+    }
+
     private static bool IsBedroom(RoomRecord room) =>
         room.RoleLabel.Contains("bedroom", StringComparison.OrdinalIgnoreCase) ||
         room.ContainedBedIds.Count > 0;
+
+    private static bool IsRecreationRoom(RoomRecord room) =>
+        room.RoleLabel.Contains("recreation", StringComparison.OrdinalIgnoreCase) ||
+        room.RoleLabel.Contains("rec room", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsJoySourceBuilding(BuildingRecord building)
+    {
+        string text = $"{building.Def} {building.Label}".ToLowerInvariant();
+        return text.Contains("horseshoe", StringComparison.Ordinal) ||
+               text.Contains("hoopstone", StringComparison.Ordinal) ||
+               text.Contains("chesstable", StringComparison.Ordinal) ||
+               text.Contains("billiards", StringComparison.Ordinal) ||
+               text.Contains("pokertable", StringComparison.Ordinal) ||
+               text.Contains("television", StringComparison.Ordinal) ||
+               text.Contains("telescope", StringComparison.Ordinal) ||
+               text.Contains("gameofur", StringComparison.Ordinal);
+    }
 
     private static bool HasAnyQualityStat(RoomRecord room) =>
         room.Impressiveness is not null ||
@@ -165,5 +248,16 @@ public static class WelfareBriefingDerivation
                 pawn.DrugsDesire > 0f),
             HasMoodThoughts: pawns.Any(pawn => (pawn.MoodThoughts ?? []).Count > 0),
             HasRooms: state.Rooms.Version > 0,
-            HasRoomQuality: rooms.Any(HasAnyQualityStat));
+            HasRoomQuality: rooms.Any(HasAnyQualityStat),
+            HasBuildings: state.Buildings.Version > 0);
+
+    private static string ThoughtLabel(WelfareMoodThought thought) =>
+        string.IsNullOrWhiteSpace(thought.Label)
+            ? thought.DefName
+            : thought.Label.Trim();
+
+    private sealed record PawnThoughtCategory(
+        string PawnId,
+        ThoughtCategory Category,
+        WelfareMoodThought Thought);
 }

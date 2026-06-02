@@ -1,29 +1,29 @@
 {
-  "BriefingVersion": 13,
-  "GameTick": 240000,
-  "ColonistCount": 3,
+  "BriefingVersion": 26,
+  "GameTick": 600000,
+  "ColonistCount": 5,
   "Mood": {
-    "AverageMood": 0.46,
-    "BreakRiskCount": 1,
+    "AverageMood": 0.57,
+    "BreakRiskCount": 0,
     "StressedCount": 1,
-    "ContentCount": 0
+    "ContentCount": 1
   },
   "WorstPawns": [
     {
       "Id": "p1",
       "Name": "Alice",
-      "Mood": 0.28,
-      "Sleep": 0.22,
-      "Comfort": 0.5,
-      "Beauty": 0.5,
-      "Joy": 0.5,
+      "Mood": 0.49,
+      "Sleep": 0.55,
+      "Comfort": 0.6,
+      "Beauty": 0.6,
+      "Joy": 0.2,
       "FreshAir": 0.7,
       "DrugsDesire": 0,
       "TopNegativeThoughts": [
         {
-          "DefName": "SleptOnGround",
-          "Label": "slept on ground",
-          "MoodOffset": -4,
+          "DefName": "AteWithoutTable",
+          "Label": "ate without table",
+          "MoodOffset": -3,
           "StageIndex": 0
         }
       ]
@@ -33,8 +33,8 @@
     {
       "PawnId": "p1",
       "PawnName": "Alice",
-      "Need": "sleep",
-      "Value": 0.22
+      "Need": "joy",
+      "Value": 0.2
     }
   ],
   "Rooms": {
@@ -46,12 +46,12 @@
   },
   "Sleep": {
     "BedCount": 3,
-    "ColonistCount": 3,
-    "BedDeficit": 0,
+    "ColonistCount": 5,
+    "BedDeficit": 2,
     "UnroofedBedroomCount": 0
   },
   "Recreation": {
-    "JoyLowCount": 0,
+    "JoyLowCount": 1,
     "RecreationRoomCount": 0,
     "JoySourceBuildingCount": 0,
     "HasRecreationSource": false
@@ -59,10 +59,10 @@
   "ThoughtDigest": {
     "ByCategory": [
       {
-        "Category": "shelter_sleep",
+        "Category": "comfort_beauty",
         "PawnCount": 1,
-        "WorstOffset": -4,
-        "ExampleLabel": "slept on ground"
+        "WorstOffset": -3,
+        "ExampleLabel": "ate without table"
       }
     ]
   },
@@ -70,7 +70,7 @@
     "HasNeedLevels": true,
     "HasMoodThoughts": true,
     "HasRooms": true,
-    "HasRoomQuality": false,
-    "HasBuildings": false
+    "HasRoomQuality": true,
+    "HasBuildings": true
   }
 }

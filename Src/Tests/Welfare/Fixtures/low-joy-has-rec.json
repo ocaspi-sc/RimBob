@@ -1,0 +1,62 @@
+{
+  "BriefingVersion": 24,
+  "GameTick": 480000,
+  "ColonistCount": 3,
+  "Mood": {
+    "AverageMood": 0.58,
+    "BreakRiskCount": 0,
+    "StressedCount": 0,
+    "ContentCount": 1
+  },
+  "WorstPawns": [
+    {
+      "Id": "p1",
+      "Name": "Bob",
+      "Mood": 0.52,
+      "Sleep": 0.7,
+      "Comfort": 0.6,
+      "Beauty": 0.6,
+      "Joy": 0.22,
+      "FreshAir": 0.7,
+      "DrugsDesire": 0,
+      "TopNegativeThoughts": []
+    }
+  ],
+  "NeedLows": [
+    {
+      "PawnId": "p1",
+      "PawnName": "Bob",
+      "Need": "joy",
+      "Value": 0.22
+    }
+  ],
+  "Rooms": {
+    "Count": 1,
+    "BedroomCount": 1,
+    "PrisonCellCount": 0,
+    "AverageImpressiveness": 22,
+    "WorstRooms": []
+  },
+  "Sleep": {
+    "BedCount": 3,
+    "ColonistCount": 3,
+    "BedDeficit": 0,
+    "UnroofedBedroomCount": 0
+  },
+  "Recreation": {
+    "JoyLowCount": 1,
+    "RecreationRoomCount": 0,
+    "JoySourceBuildingCount": 1,
+    "HasRecreationSource": true
+  },
+  "ThoughtDigest": {
+    "ByCategory": []
+  },
+  "DataCoverage": {
+    "HasNeedLevels": true,
+    "HasMoodThoughts": false,
+    "HasRooms": true,
+    "HasRoomQuality": true,
+    "HasBuildings": true
+  }
+}

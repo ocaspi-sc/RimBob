@@ -1,9 +1,9 @@
 {
-  "BriefingVersion": 12,
-  "GameTick": 180000,
+  "BriefingVersion": 22,
+  "GameTick": 360000,
   "ColonistCount": 3,
   "Mood": {
-    "AverageMood": 0.74,
+    "AverageMood": 0.68,
     "BreakRiskCount": 0,
     "StressedCount": 0,
     "ContentCount": 2
@@ -14,19 +14,19 @@
     "Count": 1,
     "BedroomCount": 1,
     "PrisonCellCount": 0,
-    "AverageImpressiveness": 24,
+    "AverageImpressiveness": 16,
     "WorstRooms": [
       {
-        "Id": "room-1",
+        "Id": "room-open",
         "RoleLabel": "Barracks",
-        "Impressiveness": 24,
+        "Impressiveness": 16,
         "Beauty": 0,
         "Cleanliness": 0,
-        "Space": 18,
-        "Wealth": 300,
-        "CellsCount": 18,
+        "Space": 16,
+        "Wealth": 250,
+        "CellsCount": 16,
         "IsPrisonCell": false,
-        "OpenRoofCount": 0
+        "OpenRoofCount": 4
       }
     ]
   },
@@ -34,13 +34,13 @@
     "BedCount": 3,
     "ColonistCount": 3,
     "BedDeficit": 0,
-    "UnroofedBedroomCount": 0
+    "UnroofedBedroomCount": 1
   },
   "Recreation": {
     "JoyLowCount": 0,
     "RecreationRoomCount": 0,
-    "JoySourceBuildingCount": 0,
-    "HasRecreationSource": false
+    "JoySourceBuildingCount": 1,
+    "HasRecreationSource": true
   },
   "ThoughtDigest": {
     "ByCategory": []
@@ -50,6 +50,6 @@
     "HasMoodThoughts": false,
     "HasRooms": true,
     "HasRoomQuality": true,
-    "HasBuildings": false
+    "HasBuildings": true
   }
 }

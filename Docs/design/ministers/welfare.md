@@ -30,17 +30,16 @@ Tame animal welfare is in scope as a living-condition requester, not as global a
 
 ## Implementation Status
 
-Welfare now begins as a rules-only `Suggest`-mode minister. Slice A wires `break_risk` and `shelter_floor`: break risk produces player-facing mood triage, while missing sleeping shelter emits a `building_request` to Willie for a basic barracks with enough beds. Welfare does not own Apply; the eventual `place_blueprint` control belongs to Willie's advice after the Placement Solver produces options.
+Welfare is a rules-only `Suggest`-mode minister. Slice A wired `break_risk` and `shelter_floor`: break risk produces player-facing mood triage, while missing sleeping shelter emits a `building_request` to Willie for a basic barracks with enough beds. Slice B keeps `break_risk`/`shelter_floor`, adds `recreation_gap` and `comfort_beauty`, and converts the rules layer to independent-concern emission so simultaneous mood pressures surface together instead of being hidden behind the first matched rule. Welfare does not own Apply; any eventual `place_blueprint` control belongs to Willie's advice after the Placement Solver produces options.
 
-Likely follow-on advice areas:
+Live deterministic concerns:
 
-- Recreation coverage gaps.
-- Schedule problems that are visible and actionable.
-- Comfort/beauty/sleep issues that a concrete build or policy can address.
-- Apparel warmth risk when live data supports it.
-- Social conflict or ideology pressure only when it creates clear advice.
+- Break risk.
+- Sleeping shelter floor: bed deficit or unroofed sleeping rooms.
+- Recreation coverage and low-joy pressure.
+- Comfort/beauty pressure, including table/dining setup requests for concrete table thoughts.
 
-Exact follow-on concerns should be defined when Slice B starts.
+Likely follow-on advice areas: schedule problems that are visible and actionable; apparel warmth risk when live data supports it; social conflict, guest, animal, or ideology pressure only when it creates clear advice.
 
 ---
 
@@ -54,6 +53,7 @@ Available signals:
 - Per-pawn wellbeing need levels: sleep, comfort, beauty, joy, fresh air, and drugs desire where the game exposes it.
 - Active mood thoughts from the RimBob RIMAPI fork: `def_name`, `label`, `mood_offset`, `stage_index`.
 - Room evidence from `/api/v1/map/rooms`: role, temperature, cell count, prison flag, doorway/open-roof/map-edge signals, contained bed ids, and room stats for impressiveness, beauty, cleanliness, space, and wealth.
+- Rule-facing derived summaries: bed count/deficit/unroofed sleeping rooms, joy-low and recreation-source counts, and a thought digest grouped by Welfare's deterministic thought taxonomy.
 
 Snapshot schema changes for these signals use no compat code; wipe-and-regen on upgrade.
 
@@ -120,8 +120,8 @@ Requests remain advice in MVP; they do not issue RIMAPI writes by themselves.
 
 - [ ] Resolve Welfare/Medical overlap before Medical or deeper Welfare slices.
 - [x] Define first Welfare concerns for Slice A.
+- [x] Define first Slice B recreation and comfort/beauty build priorities from live data.
 - [ ] Decide how schedule advice interacts with deferred Labor/Auto.
-- [ ] Define recreation/build priority from live data.
 - [ ] Define first tame-animal living-condition signals when that implementation starts.
 - [ ] Add ideology-specific handling only when DLC scope requires it.
 - [ ] Decide whether prisoner living-conditions mood pressure stays Welfare or moves later.

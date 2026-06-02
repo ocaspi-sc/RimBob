@@ -8,6 +8,9 @@ public sealed record WelfareSourceBriefing(
     IReadOnlyList<WelfarePawnMood> WorstPawns,
     IReadOnlyList<WelfareNeedLow> NeedLows,
     WelfareRoomSummary Rooms,
+    WelfareSleepSummary Sleep,
+    WelfareRecreationSummary Recreation,
+    WelfareThoughtDigest ThoughtDigest,
     WelfareDataCoverage DataCoverage
 ) : IBriefing;
 
@@ -66,9 +69,35 @@ public sealed record WelfareRoomQuality(
     int OpenRoofCount
 );
 
+public sealed record WelfareSleepSummary(
+    int BedCount,
+    int ColonistCount,
+    int BedDeficit,
+    int UnroofedBedroomCount
+);
+
+public sealed record WelfareRecreationSummary(
+    int JoyLowCount,
+    int RecreationRoomCount,
+    int JoySourceBuildingCount,
+    bool HasRecreationSource
+);
+
+public sealed record WelfareThoughtDigest(
+    IReadOnlyList<WelfareThoughtGroup> ByCategory
+);
+
+public sealed record WelfareThoughtGroup(
+    ThoughtCategory Category,
+    int PawnCount,
+    float WorstOffset,
+    string ExampleLabel
+);
+
 public sealed record WelfareDataCoverage(
     bool HasNeedLevels,
     bool HasMoodThoughts,
     bool HasRooms,
-    bool HasRoomQuality
+    bool HasRoomQuality,
+    bool HasBuildings
 );

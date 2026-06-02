@@ -149,6 +149,8 @@ public enum BuildingClass
     TradeBeacon,
     Floor,
     Roof,
+    Recreation,
+    Table,
     TurretPlatform
 }
 
