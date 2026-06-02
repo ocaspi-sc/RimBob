@@ -1,0 +1,39 @@
+{
+  "BriefingVersion": 12,
+  "GameTick": 180000,
+  "ColonistCount": 3,
+  "Mood": {
+    "AverageMood": 0.74,
+    "BreakRiskCount": 0,
+    "StressedCount": 0,
+    "ContentCount": 2
+  },
+  "WorstPawns": [],
+  "NeedLows": [],
+  "Rooms": {
+    "Count": 1,
+    "BedroomCount": 1,
+    "PrisonCellCount": 0,
+    "AverageImpressiveness": 24,
+    "WorstRooms": [
+      {
+        "Id": "room-1",
+        "RoleLabel": "Barracks",
+        "Impressiveness": 24,
+        "Beauty": 0,
+        "Cleanliness": 0,
+        "Space": 18,
+        "Wealth": 300,
+        "CellsCount": 18,
+        "IsPrisonCell": false,
+        "OpenRoofCount": 0
+      }
+    ]
+  },
+  "DataCoverage": {
+    "HasNeedLevels": true,
+    "HasMoodThoughts": false,
+    "HasRooms": true,
+    "HasRoomQuality": true
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "BriefingVersion": 11,
+  "GameTick": 120000,
+  "ColonistCount": 3,
+  "Mood": {
+    "AverageMood": 0.72,
+    "BreakRiskCount": 0,
+    "StressedCount": 0,
+    "ContentCount": 2
+  },
+  "WorstPawns": [
+    {
+      "Id": "p1",
+      "Name": "Alice",
+      "Mood": 0.62,
+      "Sleep": 0.8,
+      "Comfort": 0.6,
+      "Beauty": 0.5,
+      "Joy": 0.7,
+      "FreshAir": 0.7,
+      "DrugsDesire": 0,
+      "TopNegativeThoughts": [
+        {
+          "DefName": "SleptOnGround",
+          "Label": "slept on ground",
+          "MoodOffset": -4,
+          "StageIndex": 0
+        }
+      ]
+    }
+  ],
+  "NeedLows": [],
+  "Rooms": {
+    "Count": 0,
+    "BedroomCount": 0,
+    "PrisonCellCount": 0,
+    "AverageImpressiveness": null,
+    "WorstRooms": []
+  },
+  "DataCoverage": {
+    "HasNeedLevels": true,
+    "HasMoodThoughts": true,
+    "HasRooms": true,
+    "HasRoomQuality": false
+  }
+}

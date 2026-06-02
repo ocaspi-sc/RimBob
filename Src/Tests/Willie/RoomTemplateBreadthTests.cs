@@ -12,6 +12,7 @@ public sealed class RoomTemplateBreadthTests
             { new KitchenTemplate(), new CapacityNeed(CapacityMeasure.WorkSlots, 1), "stove" },
             { new HospitalTemplate(), new CapacityNeed(CapacityMeasure.Beds, 3), "medical_bed" },
             { new BedroomTemplate(), new CapacityNeed(CapacityMeasure.Occupants, 1), "bed" },
+            { new BarracksTemplate(), new CapacityNeed(CapacityMeasure.Beds, 4), "bed" },
             { new WorkshopTemplate(), new CapacityNeed(CapacityMeasure.WorkSlots, 2), "workbench" },
             { new StorageTemplate(), new CapacityNeed(CapacityMeasure.StorageStacks, 16), "shelf" }
         };
@@ -56,6 +57,7 @@ public sealed class RoomTemplateBreadthTests
     [Theory]
     [InlineData(RoomClass.Kitchen)]
     [InlineData(RoomClass.Hospital)]
+    [InlineData(RoomClass.Barracks)]
     [InlineData(RoomClass.Workshop)]
     [InlineData(RoomClass.Storage)]
     public void Templates_RejectWrongCapacityMeasure(RoomClass roomClass)
@@ -64,6 +66,7 @@ public sealed class RoomTemplateBreadthTests
         {
             RoomClass.Kitchen => new KitchenTemplate(),
             RoomClass.Hospital => new HospitalTemplate(),
+            RoomClass.Barracks => new BarracksTemplate(),
             RoomClass.Workshop => new WorkshopTemplate(),
             _ => new StorageTemplate()
         };

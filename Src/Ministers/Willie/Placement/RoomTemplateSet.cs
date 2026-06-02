@@ -21,6 +21,7 @@ public sealed class RoomTemplateSet
         new KitchenTemplate(),
         new HospitalTemplate(),
         new BedroomTemplate(),
+        new BarracksTemplate(),
         new WorkshopTemplate(),
         new StorageTemplate()
     ]);

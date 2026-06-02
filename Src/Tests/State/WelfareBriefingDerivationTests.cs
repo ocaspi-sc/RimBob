@@ -118,4 +118,41 @@ public sealed class WelfareBriefingDerivationTests
         briefing.DataCoverage.HasRooms.Should().BeTrue();
         briefing.DataCoverage.HasRoomQuality.Should().BeTrue();
     }
+
+    [Fact]
+    public void Compute_WhenRoomsRefreshReturnsEmptyList_MarksRoomCoveragePresent()
+    {
+        ColonyState state = new();
+        state.Economy.Update(new EconomyLedger(42, 0f, "Cassandra", "Playing", false, ""));
+        state.Colonists.Update(new ColonistRegistry(
+        [
+            new ColonistRecord(
+                Id: "p1",
+                Name: "Alice",
+                Age: 28,
+                Gender: "Female",
+                Health: 1f,
+                Mood: 0.72f,
+                Hunger: 0.8f,
+                IsDowned: false,
+                IsDead: false,
+                Position: null,
+                CurrentJob: null,
+                Skills: [],
+                Traits: [],
+                Sleep: 0.8f,
+                Comfort: 0.8f,
+                Beauty: 0.8f,
+                Joy: 0.8f,
+                FreshAir: 0.8f,
+                DrugsDesire: 0f)
+        ]));
+        state.Rooms.Update(new RoomRegistry([]));
+
+        WelfareSourceBriefing briefing = WelfareBriefingDerivation.Compute(state, 8);
+
+        briefing.Rooms.Count.Should().Be(0);
+        briefing.Rooms.BedroomCount.Should().Be(0);
+        briefing.DataCoverage.HasRooms.Should().BeTrue();
+    }
 }

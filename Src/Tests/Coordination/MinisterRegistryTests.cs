@@ -24,6 +24,7 @@ public sealed class MinisterRegistryTests
             "chief_of_staff");
 
         sut.Find("mayor")!.Ready.Should().BeTrue();
+        sut.Find("welfare")!.Ready.Should().BeTrue();
         sut.Find("willie")!.Ready.Should().BeTrue();
     }
 
@@ -32,7 +33,7 @@ public sealed class MinisterRegistryTests
     {
         MinisterRegistry sut = new();
 
-        sut.CabinetMinisters.Select(scope => scope.Key).Should().Equal("food", "willie", "mayor");
+        sut.CabinetMinisters.Select(scope => scope.Key).Should().Equal("food", "welfare", "willie", "mayor");
     }
 
     [Theory]
@@ -59,11 +60,15 @@ public sealed class MinisterRegistryTests
 
         sut.FindMinister("mayor")!.CanManualTrigger.Should().BeTrue();
         sut.FindMinister("food")!.CanManualTrigger.Should().BeTrue();
+        sut.FindMinister("welfare")!.CanManualTrigger.Should().BeTrue();
         sut.FindMinister("willie")!.CanManualTrigger.Should().BeTrue();
         sut.FindMinister("mayor")!.CanRunLlm.Should().BeTrue();
         sut.FindMinister("mayor")!.CanRunRules.Should().BeFalse();
         sut.FindMinister("food")!.CanRunLlm.Should().BeTrue();
         sut.FindMinister("food")!.CanRunRules.Should().BeTrue();
+        sut.FindMinister("welfare")!.CanRunLlm.Should().BeFalse();
+        sut.FindMinister("welfare")!.CanRunRules.Should().BeTrue();
+        sut.FindMinister("welfare")!.EnabledViews.Should().Equal("briefing", "rules", "advice");
         sut.FindMinister("willie")!.CanRunLlm.Should().BeFalse();
         sut.FindMinister("willie")!.CanRunRules.Should().BeTrue();
         sut.FindMinister("willie")!.EnabledViews.Should().Equal("briefing", "build_queue", "solver", "rules", "advice");

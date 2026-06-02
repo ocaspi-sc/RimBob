@@ -24,7 +24,7 @@ public static class WelfareBriefingDerivation
             WorstPawns: DeriveWorstPawns(pawns),
             NeedLows: DeriveNeedLows(pawns),
             Rooms: DeriveRooms(rooms),
-            DataCoverage: DeriveCoverage(pawns, rooms));
+            DataCoverage: DeriveCoverage(state, pawns, rooms));
     }
 
     private static WelfareMoodSummary DeriveMood(IReadOnlyList<ColonistRecord> pawns)
@@ -152,6 +152,7 @@ public static class WelfareBriefingDerivation
         room.Wealth is not null;
 
     private static WelfareDataCoverage DeriveCoverage(
+        ColonyState state,
         IReadOnlyList<ColonistRecord> pawns,
         IReadOnlyList<RoomRecord> rooms) =>
         new(
@@ -163,6 +164,6 @@ public static class WelfareBriefingDerivation
                 pawn.FreshAir > 0f ||
                 pawn.DrugsDesire > 0f),
             HasMoodThoughts: pawns.Any(pawn => (pawn.MoodThoughts ?? []).Count > 0),
-            HasRooms: rooms.Count > 0,
+            HasRooms: state.Rooms.Version > 0,
             HasRoomQuality: rooms.Any(HasAnyQualityStat));
 }

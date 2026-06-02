@@ -1,7 +1,7 @@
 # Minister of Welfare - Minister Design
 
 > **Living document.** See `AGENTS.md` for update rules.
-> Welfare is a future feeder advisor. This doc records durable scope and open boundaries, not final enum values or implementation rules.
+> Welfare is a rules-only feeder advisor. This doc records durable scope and open boundaries, not final enum values or implementation rules.
 
 ---
 
@@ -16,7 +16,7 @@ Welfare keeps the minister name and owns the **Mood & Needs** domain:
 - Ideology mood pressure until it justifies a split.
 - Apparel warmth/comfort as mood-and-needs pressure, with Industry owning production.
 
-Medical is now treated as its own subsystem in the cabinet model, though Welfare and Medical will overlap on mood effects from pain, illness, hospital quality, and care access. Medical owns the treatment decision; Welfare owns the mood impact and break-risk framing. Reconcile the final rollout order before implementation.
+Medical is now treated as its own subsystem in the cabinet model, though Welfare and Medical will overlap on mood effects from pain, illness, hospital quality, and care access. Medical owns the treatment decision; Welfare owns the mood impact and break-risk framing. Reconcile the remaining overlap before Medical or deeper Welfare/Medical slices.
 
 Chef owns the nutrition chain. Welfare can flag hunger, bad meal mood, or nutrient-paste pressure as Mood & Needs evidence, but requests Chef when the actual fix is meals, crops, hunting, cooking, or storage.
 
@@ -28,27 +28,25 @@ Tame animal welfare is in scope as a living-condition requester, not as global a
 
 ---
 
-## First Slice Shape
+## Implementation Status
 
-Welfare should begin as rules-first `Suggest`-mode advice.
+Welfare now begins as a rules-only `Suggest`-mode minister. Slice A wires `break_risk` and `shelter_floor`: break risk produces player-facing mood triage, while missing sleeping shelter emits a `building_request` to Willie for a basic barracks with enough beds. Welfare does not own Apply; the eventual `place_blueprint` control belongs to Willie's advice after the Placement Solver produces options.
 
-Likely first advice areas:
+Likely follow-on advice areas:
 
-- Immediate or elevated mental-break risk.
-- The need or thought most responsible for the current mood risk.
 - Recreation coverage gaps.
 - Schedule problems that are visible and actionable.
 - Comfort/beauty/sleep issues that a concrete build or policy can address.
 - Apparel warmth risk when live data supports it.
 - Social conflict or ideology pressure only when it creates clear advice.
 
-Exact concerns should be defined when Welfare implementation starts.
+Exact follow-on concerns should be defined when Slice B starts.
 
 ---
 
 ## Available Source Signals
 
-The current source-data slice does not implement Welfare advice, rules, LLM triggers, or Apply actions. It only makes source data visible through `GET /api/briefings/welfare/latest` and the dashboard's Welfare > Briefing view.
+The source briefing is now consumed by Welfare's rules-only Slice A and remains visible through `GET /api/briefings/welfare/latest` and the dashboard's Welfare > Briefing view. LLM triggers and Welfare-owned Apply actions are still not implemented.
 
 Available signals:
 
@@ -75,14 +73,13 @@ Welfare briefing should answer:
 - Are tame animals suffering from missing pens, barns, beds, temperature-safe shelter, or rest-area conditions that should become a Willie request?
 - Which requests should go to Chef, Willie, Industry, Medical, or Economy?
 
-Exact fields belong in code/tests once Welfare ships.
+New exact fields belong in code/tests once their slice ships.
 
 ---
 
 ## Escalation Boundaries
 
-Rules should handle obvious mood thresholds and missing basic recreation/sleep
-signals. Escalate for:
+Rules should handle obvious mood thresholds and missing basic recreation/sleep signals. Escalate for:
 
 - Specific pawn intervention choices.
 - Complex relationship/social conflicts.
@@ -121,10 +118,10 @@ Requests remain advice in MVP; they do not issue RIMAPI writes by themselves.
 
 ## Open Questions / TODO
 
-- [ ] Resolve Welfare/Medical rollout order before implementation.
-- [ ] Define first Welfare concerns.
+- [ ] Resolve Welfare/Medical overlap before Medical or deeper Welfare slices.
+- [x] Define first Welfare concerns for Slice A.
 - [ ] Decide how schedule advice interacts with deferred Labor/Auto.
 - [ ] Define recreation/build priority from live data.
-- [ ] Define first tame-animal living-condition signals when Welfare implementation starts.
+- [ ] Define first tame-animal living-condition signals when that implementation starts.
 - [ ] Add ideology-specific handling only when DLC scope requires it.
 - [ ] Decide whether prisoner living-conditions mood pressure stays Welfare or moves later.

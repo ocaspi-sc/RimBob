@@ -84,12 +84,18 @@ $dashboardRulesOnlyMinisterViews = @(
     [pscustomobject]@{ Label = "Advice"; View = "advice" }
 )
 
+$dashboardWelfareMinisterViews = @(
+    [pscustomobject]@{ Label = "Briefing"; View = "briefing" },
+    [pscustomobject]@{ Label = "Rules"; View = "rules" },
+    [pscustomobject]@{ Label = "Advice"; View = "advice" }
+)
+
 $dashboardMinisterScopes = @(
     [pscustomobject]@{ Label = "Mayor"; Scope = "mayor"; Planned = $false; Views = $dashboardMinisterViews },
     [pscustomobject]@{ Label = "Food"; Scope = "food"; Planned = $false; Views = $dashboardMinisterViews },
     [pscustomobject]@{ Label = "Willie"; Scope = "willie"; Planned = $false; Views = $dashboardRulesOnlyMinisterViews },
     [pscustomobject]@{ Label = "Defense"; Scope = "defense"; Planned = $true; Views = $dashboardMinisterViews },
-    [pscustomobject]@{ Label = "Welfare"; Scope = "welfare"; Planned = $true; Views = $dashboardMinisterViews },
+    [pscustomobject]@{ Label = "Welfare"; Scope = "welfare"; Planned = $false; Views = $dashboardWelfareMinisterViews },
     [pscustomobject]@{ Label = "Medical"; Scope = "medical"; Planned = $true; Views = $dashboardMinisterViews },
     [pscustomobject]@{ Label = "Research"; Scope = "research"; Planned = $true; Views = $dashboardMinisterViews },
     [pscustomobject]@{ Label = "Industry"; Scope = "industry"; Planned = $true; Views = $dashboardMinisterViews },

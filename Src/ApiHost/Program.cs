@@ -15,7 +15,9 @@ using RimBob.Ministers.Mayor;
 using RimBob.State;
 using Chef = RimBob.Ministers.Food.Chef;
 using FoodRules = RimBob.Ministers.Food.Rules;
+using MinisterOfWelfare = RimBob.Ministers.Welfare.MinisterOfWelfare;
 using MinisterOfWillie = RimBob.Ministers.Willie.MinisterOfWillie;
+using WelfareRules = RimBob.Ministers.Welfare.Rules;
 using WillieRules = RimBob.Ministers.Willie.Rules;
 
 HostProcessCrashGuard.Configure();
@@ -77,6 +79,7 @@ try
             new KitchenTemplate(),
             new HospitalTemplate(),
             new BedroomTemplate(),
+            new BarracksTemplate(),
             new WorkshopTemplate(),
             new StorageTemplate()
         ]);
@@ -259,11 +262,14 @@ try
 
     builder.Services.AddSingleton<Mayor>();
     builder.Services.AddSingleton<FoodRules>();
+    builder.Services.AddSingleton<WelfareRules>();
     builder.Services.AddSingleton<WillieRules>();
     builder.Services.AddSingleton<Chef>();
+    builder.Services.AddSingleton<MinisterOfWelfare>();
     builder.Services.AddSingleton<MinisterOfWillie>();
     builder.Services.AddSingleton<IMinister>(sp => sp.GetRequiredService<Mayor>());
     builder.Services.AddSingleton<IMinister>(sp => sp.GetRequiredService<Chef>());
+    builder.Services.AddSingleton<IMinister>(sp => sp.GetRequiredService<MinisterOfWelfare>());
     builder.Services.AddSingleton<IMinister>(sp => sp.GetRequiredService<MinisterOfWillie>());
     builder.Services.AddSingleton<CabinetCycle>();
     builder.Services.AddHostedService<ColonySnapshotRestoreHostedService>();

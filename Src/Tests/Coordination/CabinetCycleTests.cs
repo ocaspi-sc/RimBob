@@ -47,6 +47,8 @@ public sealed class CabinetCycleTests
             traces.RecordPath("Mayor", context, "llm", null, null, "daily agenda refresh", null, 1, 0));
         FakeMinister chef = new("Chef", onRun: context =>
             traces.RecordPath("Chef", context, "rules", "food_buffer_low", null, null, null, 2, 1));
+        FakeMinister welfare = new("Welfare", onRun: context =>
+            traces.RecordPath("Welfare", context, "rules", "shelter_floor", null, null, null, 1, 1));
         FakeMinister willie = new("Willie", onRun: context =>
             traces.RecordPath("Willie", context, "rules", "freezer_request_active", null, null, null, 1, 0));
         CabinetCycle sut = BuildCycle(
@@ -54,7 +56,7 @@ public sealed class CabinetCycleTests
             new ColonyState(),
             new ColonyStateSnapshotStore(),
             traces,
-            [mayor, chef, willie],
+            [mayor, chef, welfare, willie],
             runLogs);
 
         CabinetTriggerResult result = await sut.TriggerCabinetAsync(CancellationToken.None, "run-success");
@@ -65,10 +67,12 @@ public sealed class CabinetCycleTests
             "request_accepted",
             "live_state_refresh",
             "minister_food",
+            "minister_welfare",
             "minister_willie",
             "minister_mayor",
             "cabinet_complete");
         result.RunLog.Steps.Single(step => step.Key == "minister_food").RuleFired.Should().Be("food_buffer_low");
+        result.RunLog.Steps.Single(step => step.Key == "minister_welfare").RuleFired.Should().Be("shelter_floor");
         result.RunLog.Steps.Single(step => step.Key == "minister_food").AdviceCount.Should().Be(2);
         result.RunLog.Steps.Single(step => step.Key == "minister_food").FlagCount.Should().Be(1);
     }
@@ -191,6 +195,7 @@ public sealed class CabinetCycleTests
             await RestoredStateWithSnapshotAsync();
         FakeMinister mayor = new("Mayor");
         FakeMinister chef = new("Chef");
+        FakeMinister welfare = new("Welfare");
         FakeMinister willie = new("Willie");
         CabinetRunLogStore runLogs = new();
         CabinetCycle sut = BuildCycle(
@@ -198,7 +203,7 @@ public sealed class CabinetCycleTests
             colony,
             snapshotStore,
             new MinisterTraceStore(),
-            [mayor, chef, willie],
+            [mayor, chef, welfare, willie],
             runLogs);
 
         CabinetTriggerResult result = await sut.TriggerCabinetAsync(CancellationToken.None, "run-fallback");
@@ -209,6 +214,7 @@ public sealed class CabinetCycleTests
         result.RunLog.Steps.Single(step => step.Key == "restored_snapshot_fallback").Status.Should().Be("completed");
         mayor.WakeCount.Should().Be(1);
         chef.WakeCount.Should().Be(1);
+        welfare.WakeCount.Should().Be(1);
         willie.WakeCount.Should().Be(1);
     }
 
@@ -241,11 +247,40 @@ public sealed class CabinetCycleTests
     }
 
     [Fact]
+    public async Task TriggerMinisterAsync_WhenWelfarePublishesWillieBuildRequest_RunsWillieFollowUp()
+    {
+        FlagChannel flags = new();
+        AgentFlag shelterRequest = WelfareBuildingRequestFlag();
+        flags.Publish(shelterRequest);
+        FakeMinister welfare = new("Welfare", flags: flags, emittedFlags: [shelterRequest]);
+        FakeMinister willie = new("Willie");
+        CabinetCycle sut = BuildCycle(
+            new NoopRefresher(),
+            new ColonyState(),
+            new ColonyStateSnapshotStore(),
+            new MinisterTraceStore(),
+            [welfare, willie],
+            flags: flags);
+
+        MinisterTriggerResult result = await sut.TriggerMinisterAsync("welfare", MinisterRunMode.RulesOnly, CancellationToken.None)
+            ?? throw new InvalidOperationException("Expected Welfare trigger result.");
+
+        result.Scope.Should().Be("welfare");
+        welfare.WakeCount.Should().Be(1);
+        willie.WakeCount.Should().Be(1);
+        willie.Triggers.Should().Equal(PlayCycleTrigger.FlagFired);
+        willie.RunModes.Should().Equal(MinisterRunMode.RulesOnly);
+        willie.WakeupPayloads.Should().Equal("building_request:welfare:shelter_floor");
+        willie.FlagIds.Should().Equal("welfare:shelter_floor");
+    }
+
+    [Fact]
     public async Task TriggerCabinetAsync_WhenFoodPublishesWillieBuildRequest_DoesNotRunWillieTwice()
     {
         FlagChannel flags = new();
         AgentFlag freezerRequest = WillieBuildingRequestFlag();
         FakeMinister chef = new("Chef", flags: flags, emittedFlags: [freezerRequest]);
+        FakeMinister welfare = new("Welfare");
         FakeMinister willie = new("Willie");
         FakeMinister mayor = new("Mayor");
         CabinetCycle sut = BuildCycle(
@@ -253,13 +288,14 @@ public sealed class CabinetCycleTests
             new ColonyState(),
             new ColonyStateSnapshotStore(),
             new MinisterTraceStore(),
-            [chef, willie, mayor],
+            [chef, welfare, willie, mayor],
             flags: flags);
 
         CabinetTriggerResult result = await sut.TriggerCabinetAsync(CancellationToken.None);
 
         result.StateSource.Should().Be(nameof(ColonyStateOrigin.None));
         chef.WakeCount.Should().Be(1);
+        welfare.WakeCount.Should().Be(1);
         willie.WakeCount.Should().Be(1);
         mayor.WakeCount.Should().Be(1);
         willie.Triggers.Should().Equal(PlayCycleTrigger.FlagFired);
@@ -379,6 +415,26 @@ public sealed class CabinetCycleTests
                     Reason: "Food will spoil without cold storage.",
                     TargetClass: BuildingClass.Freezer,
                     RoomClass: RoomClass.Freezer,
+                    Priority: AdvicePriority.High,
+                    RequestedFrom: "Willie")
+            ]);
+
+    private static AgentFlag WelfareBuildingRequestFlag() =>
+        new(
+            Id: "welfare:shelter_floor",
+            SourceMinister: "Welfare",
+            Severity: FlagSeverity.High,
+            Domain: "welfare",
+            Summary: "Starter barracks needed",
+            BuildingRequests:
+            [
+                new BuildingRequest(
+                    Request: "basic barracks with 3 beds",
+                    Reason: "colony has no bedroom/beds; colonists will sleep unsheltered",
+                    TargetClass: BuildingClass.Bed,
+                    TargetDef: "Bed",
+                    RoomClass: RoomClass.Barracks,
+                    CapacityNeed: new CapacityNeed(CapacityMeasure.Beds, 3),
                     Priority: AdvicePriority.High,
                     RequestedFrom: "Willie")
             ]);

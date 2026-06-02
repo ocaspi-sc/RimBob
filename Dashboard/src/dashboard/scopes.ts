@@ -91,6 +91,7 @@ const allMinisterViews = ministerViews
   .map(view => view.key)
   .filter(view => view !== 'build_queue' && view !== 'solver');
 const rulesOnlyMinisterViews: DashboardViewKey[] = ['briefing', 'build_queue', 'solver', 'rules', 'advice'];
+const welfareMinisterViews: DashboardViewKey[] = ['briefing', 'rules', 'advice'];
 
 export const scopeConfigs: ScopeConfig[] = [
   { key: 'system', label: 'SYSTEM', kind: 'system', status: 'live', enabledViews: systemViews.map(view => view.key) },
@@ -101,7 +102,7 @@ export const scopeConfigs: ScopeConfig[] = [
   { key: 'food', label: 'Chef', kind: 'minister', status: 'live', enabledViews: allMinisterViews, canRunRules: true, canRunLlm: true },
   { key: 'willie', label: 'Willie', kind: 'minister', status: 'live', enabledViews: rulesOnlyMinisterViews, canRunRules: true },
   { key: 'defense', label: 'Defense', kind: 'minister', status: 'planned', enabledViews: allMinisterViews },
-  { key: 'welfare', label: 'Welfare', kind: 'minister', status: 'planned', enabledViews: allMinisterViews },
+  { key: 'welfare', label: 'Welfare', kind: 'minister', status: 'live', enabledViews: welfareMinisterViews, canRunRules: true },
   { key: 'medical', label: 'Medical', kind: 'minister', status: 'planned', enabledViews: allMinisterViews },
   { key: 'research', label: 'Research', kind: 'minister', status: 'planned', enabledViews: allMinisterViews },
   { key: 'industry', label: 'Industry', kind: 'minister', status: 'planned', enabledViews: allMinisterViews },
