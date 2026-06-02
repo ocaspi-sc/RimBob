@@ -3671,6 +3671,89 @@ code {
   padding: 13px;
 }
 
+.minister-escalation-callout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  padding: 12px 13px;
+  border: 1px solid rgba(240, 189, 95, 0.55);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(90deg, rgba(240, 189, 95, 0.16), rgba(240, 189, 95, 0.05)),
+    rgba(12, 16, 18, 0.72);
+  box-shadow: inset 3px 0 0 rgba(240, 189, 95, 0.95);
+}
+
+.minister-escalation-callout.ok {
+  border-color: rgba(80, 211, 141, 0.48);
+  background:
+    linear-gradient(90deg, rgba(80, 211, 141, 0.14), rgba(80, 211, 141, 0.04)),
+    rgba(12, 16, 18, 0.72);
+  box-shadow: inset 3px 0 0 rgba(80, 211, 141, 0.9);
+}
+
+.minister-escalation-callout.error {
+  border-color: rgba(255, 107, 107, 0.54);
+  background:
+    linear-gradient(90deg, rgba(255, 107, 107, 0.15), rgba(255, 107, 107, 0.04)),
+    rgba(12, 16, 18, 0.72);
+  box-shadow: inset 3px 0 0 rgba(255, 107, 107, 0.9);
+}
+
+.minister-escalation-copy {
+  min-width: 0;
+}
+
+.minister-escalation-copy h3 {
+  margin: 2px 0 6px;
+  font-size: 1rem;
+  letter-spacing: 0;
+}
+
+.minister-escalation-copy p {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.minister-escalation-copy small {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.minister-escalation-meta {
+  min-width: 330px;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(130px, 1fr));
+  gap: 6px;
+}
+
+.minister-escalation-meta div {
+  min-width: 0;
+  padding: 7px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.minister-escalation-meta dt {
+  color: var(--dim);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.minister-escalation-meta dd {
+  margin: 2px 0 0;
+  color: var(--text);
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+
 .advice-state-summary {
   padding: 12px 13px;
   border: 1px solid rgba(98, 216, 230, 0.32);
@@ -5283,8 +5366,14 @@ code {
   .timeline-row,
   .priority-card,
   .long-row,
+  .minister-escalation-callout,
+  .minister-escalation-meta,
   .action-list > div {
     grid-template-columns: 1fr;
+  }
+
+  .minister-escalation-meta {
+    min-width: 0;
   }
 
   .action-list > div {

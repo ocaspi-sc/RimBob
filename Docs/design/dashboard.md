@@ -651,6 +651,7 @@ The Rules view answers: "Why did RimBob say this now?"
 Show trigger, rules-vs-LLM path, selected rule or escalation reason, matched
 signals, suppressed lower-priority candidates, relevant flag or wakeup payload,
 emitted advice/flags, briefing version/tick when available, and last error.
+When the latest trace carries an escalation reason, Rules and Advice both render a prominent top-of-view escalation callout so the operator can see that the minister requested or used LLM judgment without opening trace details.
 Rules trace/replay diagnostics should also include emitted action provenance so
 the operator can see which rule or LLM-after-escalation path produced each
 action row. Keep that provenance in trace/replay diagnostics; raw `actions[]`

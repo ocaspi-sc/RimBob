@@ -137,6 +137,7 @@ export default function App() {
                 chains={feed.feed.chains}
                 events={feed.events}
                 flags={feed.feed.flags}
+                manualTriggerTarget={triggers.triggerState.target}
                 previousAgenda={feed.previousAgenda}
                 scope={activeScope}
                 selectedView={activeMinisterView}

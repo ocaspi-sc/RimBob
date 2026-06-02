@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { MayorAgenda, AgendaPriority } from '../../types/agenda';
+import { fetchTrace } from '../../api/ministers';
 import type {
   AdviceActionApply,
   AdviceApplyResponse,
@@ -14,6 +15,8 @@ import type { ScopeConfig } from '../../dashboard/scopes';
 import { isScopeMinister } from '../../dashboard/selectors';
 import { applyAdviceAction } from '../../api/advice';
 import { iconUrlFor } from '../../api/icons';
+import { useAsyncResource } from '../../hooks/useAsyncResource';
+import type { DashboardEvent, MinisterTrace } from '../../types/system';
 import {
   iconForActionKind,
   iconForAgendaCategory,
@@ -28,12 +31,15 @@ import { EmptyState } from '../shared/EmptyState';
 import { GameIcon } from '../shared/GameIcon';
 import { IconizedText } from '../shared/IconizedText';
 import { SemanticIconCue, SemanticLabel } from '../shared/SemanticIcon';
+import { MinisterEscalationCallout } from './MinisterEscalationCallout';
 
 export function MinisterAdviceView({
   advice,
   agenda,
   currentGameTick,
+  events,
   flags,
+  manualTriggerTarget,
   previousAgenda,
   scope,
   stateSummary,
@@ -41,22 +47,35 @@ export function MinisterAdviceView({
   advice: AdviceItem[];
   agenda: MayorAgenda | null;
   currentGameTick: number | null;
+  events: DashboardEvent[];
   flags: AgentFlag[];
+  manualTriggerTarget: string | null;
   previousAgenda: MayorAgenda | null;
   scope: ScopeConfig;
   stateSummary: string | null;
 }) {
-  if (scope.key === 'mayor') {
-    return <MayorAdvice agenda={agenda} previousAgenda={previousAgenda} />;
-  }
-
   const ministerAdvice = advice.filter(item => isScopeMinister(item.minister, scope));
+  const ministerEvents = events.filter(event => isScopeMinister(event.source, scope));
+  const latestMinisterEventId = ministerEvents[0]?.id ?? 'none';
+  const latestAdviceIssuedAt = ministerAdvice[0]?.issued_at ?? 'none';
+  const trace = useAsyncResource(signal => fetchTrace(scope.key, signal), [
+    scope.key,
+    latestMinisterEventId,
+    latestAdviceIssuedAt,
+    manualTriggerTarget,
+  ]);
+
+  if (scope.key === 'mayor') {
+    return <MayorAdvice agenda={agenda} latestTrace={trace.data} previousAgenda={previousAgenda} />;
+  }
 
   if (scope.status !== 'live') {
     return <EmptyState code="ADVICE NOT WIRED">{scope.label} is planned and not emitting advice yet.</EmptyState>;
   }
 
-  if (ministerAdvice.length === 0 && !stateSummary && flags.length === 0) {
+  const hasEscalation = Boolean(trace.data?.escalationReason?.trim());
+
+  if (ministerAdvice.length === 0 && !stateSummary && flags.length === 0 && !hasEscalation) {
     return <EmptyState code="NO ACTIVE ADVICE">{scope.label} has not emitted active advice in this session.</EmptyState>;
   }
 
@@ -69,6 +88,7 @@ export function MinisterAdviceView({
         <h2><SemanticLabel icon={iconForView('advice')}><span>Advice</span></SemanticLabel></h2>
         <p>Latest feeder minister advice from the persisted SSE snapshot.</p>
       </header>
+      <MinisterEscalationCallout trace={trace.data} />
       {stateSummary && (
         <section className="advice-state-summary">
           <span className="eyebrow">Current State</span>
@@ -149,13 +169,25 @@ function parseStateSummaryLine(line: string): StateSummaryLine | null {
 
 function MayorAdvice({
   agenda,
+  latestTrace,
   previousAgenda,
 }: {
   agenda: MayorAgenda | null;
+  latestTrace: MinisterTrace | null;
   previousAgenda: MayorAgenda | null;
 }) {
   if (!agenda) {
-    return <EmptyState code="NO AGENDA">Waiting for the Mayor's first agenda update.</EmptyState>;
+    return (
+      <div className="minister-view advice-view mayor-advice">
+        <header className="view-heading">
+          <span className="eyebrow">Mayor Advice</span>
+          <h2><SemanticLabel icon={iconForView('advice')}><span>Advice</span></SemanticLabel></h2>
+          <p>Waiting for the Mayor's first agenda update.</p>
+        </header>
+        <MinisterEscalationCallout trace={latestTrace} />
+        <EmptyState code="NO AGENDA">Waiting for the Mayor's first agenda update.</EmptyState>
+      </div>
+    );
   }
 
   const previousShort = new Map((previousAgenda?.short_term ?? []).map(item => [item.id, item]));
@@ -176,6 +208,7 @@ function MayorAdvice({
           <span>{formatTime(agenda.generated_at)}</span>
         </div>
       </header>
+      <MinisterEscalationCallout trace={latestTrace} />
 
       <section className="posture-band">
         <span><IconizedText maxIcons={3} text={agenda.posture.economic} /></span>

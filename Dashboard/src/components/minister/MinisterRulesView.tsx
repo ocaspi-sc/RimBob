@@ -10,6 +10,7 @@ import { EmptyState } from '../shared/EmptyState';
 import { DynamicTable, InspectorSurface, UnknownValue, type InspectorSurfaceConfig } from '../shared/Inspector';
 import { SemanticLabel } from '../shared/SemanticIcon';
 import { Timeline } from '../shared/Timeline';
+import { MinisterEscalationCallout } from './MinisterEscalationCallout';
 
 const traceInspectorConfig: InspectorSurfaceConfig = {
   hiddenKeys: [
@@ -66,17 +67,24 @@ const activeAdviceColumns = [
 export function MinisterRulesView({
   advice,
   events,
+  manualTriggerTarget,
   scope,
 }: {
   advice: AdviceItem[];
   events: DashboardEvent[];
+  manualTriggerTarget: string | null;
   scope: ScopeConfig;
 }) {
   const ministerAdvice = advice.filter(item => isScopeMinister(item.minister, scope));
   const ministerEvents = events.filter(event => isScopeMinister(event.source, scope));
   const latestMinisterEventId = ministerEvents[0]?.id ?? 'none';
   const latestAdviceIssuedAt = ministerAdvice[0]?.issued_at ?? 'none';
-  const trace = useAsyncResource(signal => fetchTrace(scope.key, signal), [scope.key, latestMinisterEventId, latestAdviceIssuedAt]);
+  const trace = useAsyncResource(signal => fetchTrace(scope.key, signal), [
+    scope.key,
+    latestMinisterEventId,
+    latestAdviceIssuedAt,
+    manualTriggerTarget,
+  ]);
 
   if (trace.loading) {
     return <EmptyState code="TRACE">Loading latest minister trace.</EmptyState>;
@@ -94,6 +102,7 @@ export function MinisterRulesView({
         <EmptyState code="TRACE NOT EXPOSED">{trace.error ?? 'No trace returned.'}</EmptyState>
       ) : (
         <>
+          <MinisterEscalationCallout trace={trace.data} />
           <TraceSummaryPanel trace={trace.data} />
           {trace.data.ruleDiagnostics && (
             <RuleDiagnosticsPanel details={trace.data.ruleDiagnostics} />

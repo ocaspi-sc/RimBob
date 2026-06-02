@@ -20,6 +20,7 @@ export interface MinisterViewContext {
   chains: Record<string, AdviceChainModel>;
   events: DashboardEvent[];
   flags: Record<string, AgentFlag[]>;
+  manualTriggerTarget: string | null;
   previousAgenda: MayorAgenda | null;
   scope: ScopeConfig;
   stateSummaries: Record<string, string>;
@@ -50,8 +51,8 @@ const ministerViewRenderers: Record<MinisterViewKey, MinisterViewRenderer> = {
   rag: ({ agenda, scope, systemHealth }) => (
     <MinisterRagView scope={scope} agenda={agenda} systemHealth={systemHealth} />
   ),
-  rules: ({ activeAdvice, events, scope }) => (
-    <MinisterRulesView scope={scope} events={events} advice={activeAdvice} />
+  rules: ({ activeAdvice, events, manualTriggerTarget, scope }) => (
+    <MinisterRulesView scope={scope} events={events} advice={activeAdvice} manualTriggerTarget={manualTriggerTarget} />
   ),
   infographics: ({ chains, scope }) => (
     <MinisterInfographicsView
@@ -59,14 +60,16 @@ const ministerViewRenderers: Record<MinisterViewKey, MinisterViewRenderer> = {
       scope={scope}
     />
   ),
-  advice: ({ activeAdvice, agenda, flags, previousAgenda, scope, stateSummaries, systemHealth }) => (
+  advice: ({ activeAdvice, agenda, events, flags, manualTriggerTarget, previousAgenda, scope, stateSummaries, systemHealth }) => (
     <MinisterAdviceView
       scope={scope}
       agenda={agenda}
       previousAgenda={previousAgenda}
       advice={activeAdvice}
       currentGameTick={systemHealth?.colony_snapshot.game_tick ?? null}
+      events={events}
       flags={valueForScope(flags, scope) ?? []}
+      manualTriggerTarget={manualTriggerTarget}
       stateSummary={valueForScope(stateSummaries, scope) ?? null}
     />
   ),
