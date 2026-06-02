@@ -134,6 +134,36 @@ public sealed class PlacementSolverTests
     }
 
     [Fact]
+    public async Task SolveAsync_WhenBuildableRegionHasBoundsOnly_UsesApproximateFallbackTarget()
+    {
+        PlacementSolver solver = new(
+            new FakePathCostProbe(reachable: true, cost: 12),
+            new FakePlacementValidator(canPlaceAll: true));
+        WillieRoomAnchor homeArea = new(
+            RoomId: "area:0",
+            Class: RoomClass.BuildableRegion,
+            RoleLabel: "Home",
+            CellsCount: 20,
+            Centroid: null,
+            ContainedBuildingIds: [])
+        {
+            Bounds = new MapRect(0, 0, 29, 29)
+        };
+        WillieBriefing briefing = StableBriefing() with
+        {
+            AnchorInventory = new WillieAnchorInventory([homeArea])
+        };
+
+        PlacementResult result = await solver.SolveAsync(SpecWithMaterials(), briefing, State([]));
+
+        result.NoFit.Should().BeNull();
+        result.Options.Should().NotBeEmpty();
+        result.Trace.Notes.Should().Contain("no room anchor matched; using Home-area buildable region as fallback locus");
+        result.Trace.Notes.Should().Contain("Home area row did not include cells; using buildable-region bounds center as approximate fallback target");
+        result.Trace.Drafts.Should().Contain(trace => trace.AnchorRoomId == "area:0");
+    }
+
+    [Fact]
     public async Task SolveAsync_WhenRoomAnchorExists_DoesNotUseBuildableRegionFallback()
     {
         PlacementSolver solver = new(

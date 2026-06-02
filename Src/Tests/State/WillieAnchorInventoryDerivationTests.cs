@@ -174,4 +174,45 @@ public sealed class WillieAnchorInventoryDerivationTests
         anchor.Cells.Should().BeEmpty();
         anchor.EntryCells.Should().BeEmpty();
     }
+
+    [Fact]
+    public void Derive_HomeAreaWithPositiveCountButNoCellsUsesMapBounds()
+    {
+        ColonyState state = new();
+        state.Map.Update(new MapInfoSnapshot(0, "(250, 1, 250)"));
+        state.Areas.Update(new MapAreaRegistry([
+            new MapArea(
+                Id: "0",
+                Type: "Area_Home",
+                Label: "Home",
+                CellCount: 20)
+        ]));
+
+        WillieAnchorInventory inventory = WillieAnchorInventoryDerivation.Derive(state);
+
+        WillieRoomAnchor anchor = inventory.Anchors.Should().ContainSingle().Subject;
+        anchor.RoomId.Should().Be("area:0");
+        anchor.Class.Should().Be(RoomClass.BuildableRegion);
+        anchor.CellsCount.Should().Be(20);
+        anchor.Centroid.Should().BeNull();
+        anchor.Bounds.Should().Be(new MapRect(0, 0, 249, 249));
+    }
+
+    [Fact]
+    public void Derive_HomeAreaWithZeroCountAndNoCellsDoesNotEmitAnchor()
+    {
+        ColonyState state = new();
+        state.Map.Update(new MapInfoSnapshot(0, "(250, 1, 250)"));
+        state.Areas.Update(new MapAreaRegistry([
+            new MapArea(
+                Id: "0",
+                Type: "Area_Home",
+                Label: "Home",
+                CellCount: 0)
+        ]));
+
+        WillieAnchorInventory inventory = WillieAnchorInventoryDerivation.Derive(state);
+
+        inventory.Anchors.Should().BeEmpty();
+    }
 }

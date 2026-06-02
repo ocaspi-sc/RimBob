@@ -206,7 +206,7 @@ Current derived surfaces:
 - Pending blueprint/frame groups, including blocked/disallowed counts and
   missing material totals.
 - Room anchors keyed by `RoomClass` for future room-program and placement work.
-- Home-area buildable-region anchors as fallback-only placement loci when no room anchor resolves.
+- Home-area buildable-region anchors as fallback-only placement loci when no room anchor resolves; positive `cells_count` without area cells still produces an approximate map-bounds fallback anchor instead of dead-ending at `NoAnchors`.
 - Willie data-coverage flags so rules can distinguish missing evidence from
   healthy state.
 

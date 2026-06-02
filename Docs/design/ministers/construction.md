@@ -165,7 +165,7 @@ Prompt/RAG/Raw LLM remain intentionally absent until a later LLM slice.
 
 Room-anchor inventory treats work tables as building evidence. RimBob ingests `/api/v1/map/work-tables` into the shared building registry, then surfaces one anchor per detected room function: a multi-purpose barracks with a stove keeps its Barracks primary anchor and also exposes a Kitchen anchor at the stove cell for placement requests such as "near kitchen."
 
-When no room anchor resolves, Willie may fall back to a Home-area `BuildableRegion` anchor derived from `/map/zones` `data.areas[]`. This is a low-priority fallback only: it never competes with real room anchors, and the solver uses it only after normal `near:<room>` resolution returns zero anchors. The first version clamps blueprint assets to the Home-area bounds; exact non-rectangular cell-mask placement remains deferred to buildability-layer evidence.
+When no room anchor resolves, Willie may fall back to a Home-area `BuildableRegion` anchor derived from `/map/zones` `data.areas[]`. This is a low-priority fallback only: it never competes with real room anchors, and the solver uses it only after normal `near:<room>` resolution returns zero anchors. When RIMAPI supplies Home-area cells, the first version clamps blueprint assets to the Home-area bounds; when the fork supplies only positive `cells_count`, Willie still treats the Home area as a valid fallback anchor but uses map bounds and a bounds-center target as an explicitly approximate locus. Exact non-rectangular cell-mask placement remains deferred to buildability-layer evidence.
 
 ---
 

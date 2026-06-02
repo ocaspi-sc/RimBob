@@ -221,6 +221,7 @@ Capture and record in this plan's evidence:
   acceptable for a fallback locus; precise masking waits on buildability layers.
 - **Home area only for v1.** Custom Allowed areas are out of scope; the registry
   shape leaves room for them.
+- **Positive `cells_count` without `cells[]` is still a valid Home fallback.** Live `Area_Home` rows can report a painted count such as `cells_count:20` while omitting the cell list; RimBob treats that as a geometry-light Home anchor, uses map bounds plus a bounds-center target, and exposes the approximation in solver trace notes until the fork supplies area cells.
 
 ## Test plan
 

@@ -65,7 +65,11 @@ public sealed class PlacementSolver : IPlacementSolver
         {
             anchors = AnchorResolver.ResolveBuildableRegion(briefing);
             if (anchors.Count > 0)
+            {
                 notes.Add("no room anchor matched; using Home-area buildable region as fallback locus");
+                if (anchors.Any(anchor => anchor.Anchor.Centroid is null && anchor.Anchor.Bounds is not null))
+                    notes.Add("Home area row did not include cells; using buildable-region bounds center as approximate fallback target");
+            }
         }
 
         if (anchors.Count == 0)

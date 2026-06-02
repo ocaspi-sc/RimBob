@@ -64,9 +64,12 @@ public static class WillieAnchorInventoryDerivation
             }
         }
 
+        MapRect? mapBounds = BoundsFromMapSize(state.Map.Value.Size);
         foreach (MapArea area in state.Areas.Value.Areas.OrderBy(area => area.Id, StringComparer.OrdinalIgnoreCase))
         {
-            if (area.Centroid is null && area.Bounds is null)
+            // RIMAPI area rows can report cells_count without cells[]; keep a painted Home area usable as a fallback locus.
+            MapRect? bounds = area.Bounds ?? (area.CellCount > 0 ? mapBounds : null);
+            if (area.Centroid is null && bounds is null)
                 continue;
 
             anchors.Add(new WillieRoomAnchor(
@@ -77,7 +80,7 @@ public static class WillieAnchorInventoryDerivation
                 Centroid: area.Centroid,
                 ContainedBuildingIds: [])
             {
-                Bounds = area.Bounds
+                Bounds = bounds
             });
         }
 
@@ -113,5 +116,13 @@ public static class WillieAnchorInventoryDerivation
         int y = (int)Math.Round(positions.Average(position => position.Y));
         int z = (int)Math.Round(positions.Average(position => position.Z));
         return new MapPosition(x, y, z);
+    }
+
+    private static MapRect? BoundsFromMapSize(string? mapSize)
+    {
+        MapBounds? bounds = MapBounds.Parse(mapSize);
+        return bounds is null
+            ? null
+            : new MapRect(0, 0, bounds.Width - 1, bounds.Height - 1);
     }
 }
