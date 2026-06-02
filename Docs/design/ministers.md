@@ -45,27 +45,35 @@ Manual dashboard minister triggers also carry a run mode: `Run Rules` means dete
 
 Flag-carried requests can also wake an owning rules-only minister. In particular, a newly published Willie-owned `building_request` immediately runs Willie in `FlagFired` / rules-only mode so the deterministic Placement Solver handles the request without an extra manual Willie trigger.
 
-### First Live Cycle Bootstrap
+### First Live Cycle
 
-Every feeder minister may get one special case on its first live cycle after it
-is newly introduced into a save: bootstrap via escalation first, then return to
-normal rules-first behavior. Host rebuilds do not trigger this by themselves;
-persisted snapshots reload instead.
+There is no first-cycle special case. A newly introduced feeder runs the **same
+rules-first evaluation on its first live cycle as on every other**: evaluate
+deterministic rules, emit advice/flags on a match, and reach the LLM only through
+the normal escalation triggers (chiefly "no rule matches the current briefing
+state"). A genuinely ambiguous first cycle therefore still escalates — by the
+ordinary path, not a forced bootstrap.
 
 Rationale:
 
-- The first memo establishes the minister's initial read of the colony.
-- Early rules are intentionally coarse and may only cover steady-state triage.
-- A grounded first-pass plan is more useful than a generic "domain is weak"
-  card.
+- It keeps the rules-first invariant whole. Forcing an LLM call on cycle 1 was an
+  exception to "rules handle common cases first; the LLM earns its cost only when
+  judgment is needed," and it spent a guaranteed call even when a rule already
+  answered — e.g. the deterministic shelter rule answers a new colony's day-one
+  bed/shelter gap with no LLM.
+- The factual current-state summary already gives the player a grounded initial
+  read of the colony without an LLM. Coarse rules are fixed by better rules, not
+  by a standing first-cycle escalation.
+- A deterministic first cycle is replayable and fixture-testable (e.g. a captured
+  new-colony fixture); a forced-LLM first cycle is not.
+- It drops the fragile "have I bootstrapped yet?" persistence and the first-run
+  vs. Host-rebuild ambiguity entirely.
 
-Constraints:
-
-- Bootstrap is one-time behavior, not a standing exception to rules-first.
-- If the briefing cannot support concrete advice, the minister should say that
-  rather than fabricate precision.
-- Mayor remains separate: a labeled bootstrap Agenda is created only when no
-  persisted minister output exists at all.
+`StartupBootstrap` stays in the trigger vocabulary as a wake **reason** (the
+minister woke because it was newly introduced / on first run); it no longer
+implies forced escalation. Mayor remains separate: a labeled bootstrap Agenda is
+created only when no persisted minister output exists at all — that is a Mayor
+synthesis mechanism, not a feeder rules-first exception, and is unaffected here.
 
 Scheduled wakeups may be registered by rules or escalation output. A fired
 wakeup still runs the normal rules-first evaluation cycle; its payload is an
@@ -126,8 +134,11 @@ even Mayor agenda items should prioritize concrete next moves over broad wish
 lists.
 
 Minister output should be sparse. A normal cycle should surface the most
-important few items and avoid exhaustive menus. Critical or unusually complex
-states can produce more, but each item must still have one clear `priority`.
+important few items and avoid exhaustive menus. Under all-hits this sparsity
+comes from priority-sorting matched rules and capping the tail — not from
+suppressing matched rules, which would also drop their cross-minister flags.
+Critical or unusually complex states can produce more, but each item must still
+have one clear `priority`.
 
 Briefings should provide compact opportunity summaries rather than raw dumps.
 Spatial data is useful when it becomes actionable: distance/proximity buckets,
@@ -161,14 +172,64 @@ LLM rules:
 The rules layer is pure, deterministic C# with no I/O. It handles the common
 case cheaply; the LLM earns its cost only when judgment is needed.
 
-Authoring rules:
+### Rules are data, evaluated once
 
-- Put the highest-value, highest-frequency rule first.
-- Return on the first match unless the minister intentionally produces a multi-item snapshot; a multi-item rules layer should make that contract explicit in its focused design doc and keep escalation as a fallback after deterministic emissions.
-- Give every rule a stable name so logs and replay records can attribute
-  behavior.
-- Treat recurring LLM output as a candidate for rule promotion, not as a reason
-  to keep escalating forever.
+A minister's rules are a single ordered list of rule records, not a cascade of
+hand-written `if` blocks. Each rule declares, in one place:
+
+- a stable id / `trace` (used in logs, traces, replay attribution, and supersession);
+- a human-readable condition and output description, for the diagnostics catalogue;
+- a match predicate over briefing-derived facts;
+- a builder that produces the `Decision` (or `Escalate`) when it fires.
+
+Everything that consumes rules derives from that one list: live evaluation, the
+matched/suppressed signal trace, and the "all rules" diagnostics catalogue. This
+is a single-source-of-truth contract — a rule's predicate, id, and description
+sit together and cannot drift apart. The superseded shape wrote each rule three
+times (executable guards, a parallel predicate re-evaluation for the trace, and
+a static string catalogue); keeping the three in sync was manual and silently
+lossy.
+
+Exact record fields, the shared base/helpers, and predicate bodies are code
+contracts — see `Src/Common/Ministers/`. Design docs do not mirror them.
+
+### Hit-policy: all-hits by default
+
+A cycle can match several rules at once. The rules layer is a decision-table with
+a per-minister **hit-policy**:
+
+- **All-hits (default)** — every matching rule emits its advice and flags; the
+  results aggregate into one snapshot, priority-sorted and capped. Escalation is
+  considered only when no rule matched. This is the default because suppressing a
+  matched rule also drops its cross-minister flag and hides coexisting problems
+  from the inspection dashboard. Chef runs all-hits today.
+- **First-match-wins** — ordered rules; the first match builds the decision and
+  evaluation stops. Equivalent to all-hits plus a forced stop after rule one, so
+  it is strictly less general (mutually-exclusive predicates self-limit under
+  all-hits anyway). Retained on Willie and Welfare as **interim sparsity debt**,
+  not the target.
+
+First-match implicitly does three jobs that all-hits must do explicitly; a
+minister flips from first-match to all-hits only once all three exist for it:
+
+- **priority sort + cap** — rank matched rules and keep the most important few
+  (real sparsity, versus first-match's emit-rule-one blindness);
+- **same-`trace` dedup/consolidation** — fold rules that map to one issue into a
+  single card instead of emitting near-duplicates;
+- **explicit dominance predicates** — where one rule should suppress another,
+  encode it in the predicate (e.g. defer kitchen-dependent placement until a
+  kitchen exists), not in list order.
+
+A minister states its hit-policy in its focused design doc.
+
+### Authoring rules
+
+- Put the highest-value, highest-frequency rule first. Order is the priority in
+  the first-match shape, and the trace/catalogue order otherwise.
+- Give every rule a stable id so logs and replay records can attribute behavior.
+- Keep escalation as a fallback after deterministic rules, not a parallel path.
+- Treat recurring LLM output as a candidate for a new rule, not a reason to keep
+  escalating forever.
 
 ---
 
