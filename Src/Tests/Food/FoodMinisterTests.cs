@@ -58,8 +58,8 @@ public sealed class FoodMinisterTests
 
         await h.Minister.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
 
-        h.PublishedAdvice.Should().ContainSingle().Which.Concern.Should().Be("food_security");
-        h.Flags.Active(FlagSeverity.Medium).Should().ContainSingle().Which.Domain.Should().Be("food");
+        h.PublishedAdvice.Should().Contain(advice => advice.Concern == "food_security");
+        h.Flags.Active(FlagSeverity.Medium).Should().Contain(flag => flag.Domain == "food");
     }
 
     [Fact]
@@ -72,9 +72,9 @@ public sealed class FoodMinisterTests
         h.SetFoodDays(4f);
         await h.Minister.RunPlayCycle(PlayCycleContext.CabinetRefresh, CancellationToken.None);
 
-        h.PublishedAdvice.Should().ContainSingle().Which.Concern.Should().Be("food_security");
+        h.PublishedAdvice.Should().Contain(advice => advice.Concern == "food_security");
         h.Bus.ActiveSnapshot().StateSummaries.Should().ContainKey("Chef");
-        h.Flags.Active(FlagSeverity.Medium).Should().ContainSingle().Which.Domain.Should().Be("food");
+        h.Flags.Active(FlagSeverity.Medium).Should().Contain(flag => flag.Domain == "food");
     }
 
     [Fact]
@@ -94,16 +94,16 @@ public sealed class FoodMinisterTests
         bootstrap.RuleTraceDetails.MatchedSignals.Should().ContainSingle(signal =>
             signal.Rule == "bootstrap_first_live_cycle" &&
             signal.Outcome == "escalated");
-        replay.Records.Should().Contain(r => r.Path == "rules" && r.RuleTrace == "emergency_food_flag");
-        MinisterReplayRecord record = replay.Records.Single(r => r.Path == "rules" && r.RuleTrace == "emergency_food_flag");
+        replay.Records.Should().Contain(r => r.Path == "rules" && (r.RuleTrace ?? "").Contains("emergency_food_flag", StringComparison.OrdinalIgnoreCase));
+        MinisterReplayRecord record = replay.Records.Single(r => r.Path == "rules" && (r.RuleTrace ?? "").Contains("emergency_food_flag", StringComparison.OrdinalIgnoreCase));
         record.SchemaVersion.Should().Be(2);
         record.Minister.Should().Be("Chef");
         record.Trigger.Should().Be(nameof(PlayCycleTrigger.ManualTrigger));
         record.WakeupPayload.Should().Be("dashboard");
         record.Briefing.Should().BeOfType<FoodBriefing>();
         record.Context.Should().BeOfType<MinisterBriefingContext>();
-        record.Advice.Should().ContainSingle().Which.Concern.Should().Be("food_security");
-        record.Flags.Should().ContainSingle().Which.Domain.Should().Be("food");
+        record.Advice.Should().Contain(advice => advice.Concern == "food_security");
+        record.Flags.Should().Contain(flag => flag.Domain == "food");
         record.Chain.Should().NotBeNull();
         record.Chain!.Paths.Should().NotBeEmpty();
     }
@@ -122,7 +122,7 @@ public sealed class FoodMinisterTests
         h.SetFoodDays(4f);
         await h.Minister.RunPlayCycle(PlayCycleContext.CabinetRefresh, CancellationToken.None);
 
-        h.Bus.ActiveAdvice().Should().ContainSingle().Which.Id.Should().Be("chef_emergency_food_flag");
+        h.Bus.ActiveAdvice().Should().Contain(advice => advice.Id == "chef_emergency_food_flag");
     }
 
     [Fact]

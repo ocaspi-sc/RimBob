@@ -164,8 +164,7 @@ case cheaply; the LLM earns its cost only when judgment is needed.
 Authoring rules:
 
 - Put the highest-value, highest-frequency rule first.
-- Return on the first match unless the minister intentionally produces a
-  multi-item snapshot.
+- Return on the first match unless the minister intentionally produces a multi-item snapshot; a multi-item rules layer should make that contract explicit in its focused design doc and keep escalation as a fallback after deterministic emissions.
 - Give every rule a stable name so logs and replay records can attribute
   behavior.
 - Treat recurring LLM output as a candidate for rule promotion, not as a reason

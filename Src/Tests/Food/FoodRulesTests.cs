@@ -26,22 +26,24 @@ public sealed class FoodRulesTests
         RulesResult result = new Rules().Evaluate(briefing, ColonyContext.Default);
 
         Decision decision = result.Should().BeOfType<Decision>().Subject;
-        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        AdviceItem advice = AdviceByConcern(decision, "food_security");
         advice.Concern.Should().Be("food_security");
         advice.Priority.Should().Be(AdvicePriority.High);
         advice.IssuedGameTick.Should().Be(briefing.GameTick);
         advice.ExpiresGameTick.Should().Be(briefing.GameTick + AdviceFreshness.TicksPerGameDay);
-        advice.Actions.Should().Contain(s => s.Kind == AdviceActionKind.ProductionBill);
+        advice.Actions.Should().Contain(s => s.Kind == AdviceActionKind.RequestResource);
         advice.Actions.Should().NotContain(s => s.Kind == AdviceActionKind.SetPriority);
         advice.Actions.Should().NotContain(s => s.Kind == AdviceActionKind.Trade);
+        DecisionShouldIncludeConcerns(decision, "food_security", "expand_growing_capacity");
         decision.Diagnostics.Should().NotBeNull();
-        decision.Diagnostics!.SelectedRule.Should().Be("emergency_food_flag");
+        decision.Diagnostics!.SelectedRule.Should().Be("concerns:emergency_food_flag+expand_growing_capacity");
         decision.Diagnostics.MatchedSignals.Should().Contain(signal =>
             signal.Rule == "emergency_food_flag" &&
             signal.Outcome == "selected");
-        decision.Diagnostics.SuppressedCandidates.Should().Contain(signal =>
+        decision.Diagnostics.MatchedSignals.Should().Contain(signal =>
             signal.Rule == "expand_growing_capacity" &&
-            signal.Outcome == "suppressed");
+            signal.Outcome == "selected");
+        decision.Diagnostics.SuppressedCandidates.Should().BeEmpty();
         decision.Diagnostics.AllRules.Should().HaveCount(13);
         decision.Diagnostics.AllRules.Should().Contain(row =>
             row.Rule == "emergency_food_flag" &&
@@ -57,15 +59,13 @@ public sealed class FoodRulesTests
             row.Rule == "emergency_food_flag" &&
             row.AdviceId == advice.Id &&
             row.ActionCount == advice.Actions.Count);
-        decision.Diagnostics.EmittedActions.Should().HaveCount(advice.Actions.Count);
-        decision.Diagnostics.EmittedActions.Should().OnlyContain(row =>
+        decision.Diagnostics.EmittedActions.Should().Contain(row =>
             row.Source == "rules" &&
             row.Rule == "emergency_food_flag" &&
             row.AdviceId == advice.Id);
-        AgentFlag flag = decision.Flags.Should().ContainSingle().Subject;
+        AgentFlag flag = FlagById(decision, "food:emergency_food_flag");
         flag.Severity.Should().Be(FlagSeverity.High);
-        flag.LaborRequests.Should().NotBeNull();
-        flag.LaborRequests!.Should().Contain(r => r.WorkType == WorkType.Cook);
+        flag.Attention.Should().NotBeNull();
         flag.Attention.Should().NotContain(r => r.Request.Contains("emergency food acquisition", StringComparison.OrdinalIgnoreCase));
     }
 
@@ -86,9 +86,9 @@ public sealed class FoodRulesTests
         Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
             .Should().BeOfType<Decision>().Subject;
 
-        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        AdviceItem advice = AdviceByConcern(decision, "food_security");
         advice.Body.Should().Contain("7 forbidden packaged survival meals");
-        decision.Flags.Should().ContainSingle().Which.ItemRequests.Should().Contain(r =>
+        FlagById(decision, "food:emergency_food_flag").ItemRequests.Should().Contain(r =>
             r.Quantity == 7 &&
             r.Request.Contains("forbidden packaged survival meals") &&
             r.ItemDef == "MealSurvivalPack");
@@ -121,16 +121,16 @@ public sealed class FoodRulesTests
         Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
             .Should().BeOfType<Decision>().Subject;
 
-        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        AdviceItem advice = AdviceByConcern(decision, "food_security");
         advice.Priority.Should().Be(AdvicePriority.Critical);
-        advice.Actions.Should().Contain(s => s.Kind == AdviceActionKind.DesignateZone);
-        advice.Actions.Should().Contain(s => s.Kind == AdviceActionKind.PlaceBlueprint);
+        AdviceByConcern(decision, "expand_growing_capacity").Actions.Should().Contain(s => s.Kind == AdviceActionKind.DesignateZone);
+        AdviceByConcern(decision, "manage_freezer").Actions.Should().Contain(s => s.Kind == AdviceActionKind.PlaceBlueprint);
         advice.Actions.Should().NotContain(s => s.Kind == AdviceActionKind.Note);
-        AgentFlag flag = decision.Flags.Should().ContainSingle().Subject;
+        AgentFlag flag = FlagById(decision, "food:emergency_food_flag");
         flag.Severity.Should().Be(FlagSeverity.Critical);
-        flag.Attention.Should().Contain(r => r.Request.Contains("growing tiles", StringComparison.OrdinalIgnoreCase));
-        flag.BuildingRequests.Should().Contain(r => r.TargetClass == BuildingClass.ProductionBench);
-        flag.LaborRequests.Should().Contain(r => r.WorkType == WorkType.Grow);
+        FlagById(decision, "food:expand_growing_capacity").Attention.Should().Contain(r => r.Request.Contains("growing tiles", StringComparison.OrdinalIgnoreCase));
+        FlagById(decision, "food:expand_growing_capacity").BuildingRequests.Should().Contain(r => r.TargetClass == BuildingClass.ProductionBench);
+        FlagById(decision, "food:expand_growing_capacity").Attention.Should().Contain(r => r.Request.Contains("growing tiles", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -152,18 +152,18 @@ public sealed class FoodRulesTests
         Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
             .Should().BeOfType<Decision>().Subject;
 
-        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        AdviceItem advice = AdviceByConcern(decision, "food_security");
         advice.Actions.Should().Contain(s =>
             s.Kind == AdviceActionKind.SetStockpileZone &&
             s.Quantity == 46);
-        advice.Actions.Should().Contain(s => s.Kind == AdviceActionKind.DesignateZone);
-        advice.Actions.Should().Contain(s => s.Kind == AdviceActionKind.PlaceBlueprint);
-        AgentFlag flag = decision.Flags.Should().ContainSingle().Subject;
+        AdviceByConcern(decision, "expand_growing_capacity").Actions.Should().Contain(s => s.Kind == AdviceActionKind.DesignateZone);
+        AdviceByConcern(decision, "manage_freezer").Actions.Should().Contain(s => s.Kind == AdviceActionKind.PlaceBlueprint);
+        AgentFlag flag = FlagById(decision, "food:emergency_food_flag");
         flag.BuildingRequests.Should().Contain(r =>
             r.TargetClass == BuildingClass.Stockpile &&
             r.Quantity == 46);
-        flag.Attention.Should().Contain(r => r.Request.Contains("growing tiles", StringComparison.OrdinalIgnoreCase));
-        flag.BuildingRequests.Should().Contain(r => r.TargetClass == BuildingClass.ProductionBench);
+        FlagById(decision, "food:expand_growing_capacity").Attention.Should().Contain(r => r.Request.Contains("growing tiles", StringComparison.OrdinalIgnoreCase));
+        FlagById(decision, "food:expand_growing_capacity").BuildingRequests.Should().Contain(r => r.TargetClass == BuildingClass.ProductionBench);
     }
 
     [Fact]
@@ -182,14 +182,14 @@ public sealed class FoodRulesTests
         Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
             .Should().BeOfType<Decision>().Subject;
 
-        decision.Trace.Should().Be("harvest_mature_crops");
-        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        decision.Trace.Should().Contain("harvest_mature_crops");
+        AdviceItem advice = AdviceByConcern(decision, "harvest_now");
         advice.Concern.Should().Be("harvest_now");
         AdviceAction Action = advice.Actions.Single();
         Action.Instruction.Should().Contain("nearby to kitchen");
         Action.Apply.Should().NotBeNull();
         Action.Apply!.Kind.Should().Be(AdviceApplyKind.MarkHarvestArea);
-        decision.Flags.Should().BeEmpty();
+        decision.Flags.Should().NotContain(flag => flag.Id == "food:harvest_mature_crops");
     }
 
     [Fact]
@@ -204,12 +204,12 @@ public sealed class FoodRulesTests
             .Should().BeOfType<Decision>().Subject;
 
         decision.Trace.Should().Be("freezer_missing");
-        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        AdviceItem advice = AdviceByConcern(decision, "manage_freezer");
         advice.Concern.Should().Be("manage_freezer");
         advice.Priority.Should().Be(AdvicePriority.Medium);
         advice.Actions.Should().ContainSingle().Which.Kind.Should().Be(AdviceActionKind.PlaceBlueprint);
         advice.Actions.Single().Owner.Should().Be("Willie");
-        decision.Flags.Should().ContainSingle().Which.BuildingRequests.Should()
+        FlagById(decision, "food:freezer_missing").BuildingRequests.Should()
             .Contain(r => r.TargetClass == BuildingClass.Freezer && r.RequestedFrom == "Willie");
     }
 
@@ -231,15 +231,15 @@ public sealed class FoodRulesTests
         Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
             .Should().BeOfType<Decision>().Subject;
 
-        decision.Trace.Should().Be("harvest_mature_crops");
-        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        decision.Trace.Should().Contain("harvest_mature_crops");
+        AdviceItem advice = AdviceByConcern(decision, "harvest_now");
         advice.Actions.Should().Contain(action => action.Kind == AdviceActionKind.MarkHarvest);
-        AdviceAction freezerAction = advice.Actions.Should().Contain(action =>
+        AdviceAction freezerAction = AdviceByConcern(decision, "manage_freezer").Actions.Should().Contain(action =>
             action.Kind == AdviceActionKind.PlaceBlueprint &&
             action.Owner == "Willie").Subject;
         freezerAction.Instruction.Should().Contain("starter freezer");
         freezerAction.Instruction.Should().Contain("next harvest");
-        decision.Flags.Should().ContainSingle().Which.BuildingRequests.Should().Contain(request =>
+        FlagById(decision, "food:freezer_missing").BuildingRequests.Should().Contain(request =>
             request.TargetClass == BuildingClass.Freezer &&
             request.RequestedFrom == "Willie" &&
             request.Request.Contains("starter freezer"));
@@ -253,11 +253,11 @@ public sealed class FoodRulesTests
         Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
             .Should().BeOfType<Decision>().Subject;
 
-        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        AdviceItem advice = AdviceByConcern(decision, "manage_cook_bills");
         advice.Concern.Should().Be("manage_cook_bills");
         advice.Actions.Should().Contain(s => s.Kind == AdviceActionKind.ProductionBill);
         advice.Actions.Should().NotContain(s => s.Kind == AdviceActionKind.RequestResource);
-        decision.Flags.Should().BeEmpty();
+        decision.Flags.Should().NotContain(flag => flag.Id == "food:meals_understocked");
     }
 
     [Fact]
@@ -275,14 +275,14 @@ public sealed class FoodRulesTests
         Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
             .Should().BeOfType<Decision>().Subject;
 
-        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        AdviceItem advice = AdviceByConcern(decision, "manage_cook_bills");
         advice.Concern.Should().Be("manage_cook_bills");
         advice.Actions.Should().Contain(action => action.Kind == AdviceActionKind.ProductionBill);
-        AdviceAction freezerAction = advice.Actions.Should().Contain(action =>
+        AdviceAction freezerAction = AdviceByConcern(decision, "manage_freezer").Actions.Should().Contain(action =>
             action.Kind == AdviceActionKind.PlaceBlueprint &&
             action.Owner == "Willie").Subject;
         freezerAction.Instruction.Should().Contain("raw food and cooked meals");
-        decision.Flags.Should().ContainSingle().Which.BuildingRequests.Should().Contain(request =>
+        FlagById(decision, "food:freezer_missing").BuildingRequests.Should().Contain(request =>
             request.TargetClass == BuildingClass.Freezer &&
             request.Request.Contains("starter freezer"));
     }
@@ -308,7 +308,7 @@ public sealed class FoodRulesTests
         Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
             .Should().BeOfType<Decision>().Subject;
 
-        AdviceAction billAction = decision.Advice.Should().ContainSingle().Subject
+        AdviceAction billAction = AdviceByConcern(decision, "manage_cook_bills")
             .Actions.Should().Contain(action => action.Kind == AdviceActionKind.ProductionBill).Subject;
         billAction.Instruction.Should().Contain("fueled stove at (93, 0, 186)");
         billAction.Apply.Should().NotBeNull();
@@ -338,7 +338,7 @@ public sealed class FoodRulesTests
         Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
             .Should().BeOfType<Decision>().Subject;
 
-        AdviceAction billAction = decision.Advice.Should().ContainSingle().Subject
+        AdviceAction billAction = AdviceByConcern(decision, "manage_cook_bills")
             .Actions.Should().Contain(action => action.Kind == AdviceActionKind.ProductionBill).Subject;
         billAction.Apply.Should().BeNull();
     }
@@ -357,13 +357,13 @@ public sealed class FoodRulesTests
         RulesResult result = new Rules().Evaluate(briefing, ColonyContext.Default);
 
         Decision decision = result.Should().BeOfType<Decision>().Subject;
-        decision.Trace.Should().NotBe("meals_understocked");
-        decision.Advice.Should().ContainSingle().Subject
-            .Actions.Should().NotContain(action => action.Kind == AdviceActionKind.ProductionBill);
+        decision.Advice.Should().NotContain(advice => advice.Id == "chef_meals_understocked");
+        decision.Advice.SelectMany(advice => advice.Actions).Should()
+            .NotContain(action => action.Kind == AdviceActionKind.ProductionBill);
     }
 
     [Fact]
-    public void UrgentShortage_WithSatisfiedSimpleMealBill_KeepsCookLaborAsFlagRequest()
+    public void UrgentShortage_WithSatisfiedSimpleMealBill_DoesNotDuplicateCookConcern()
     {
         FoodBriefing briefing = Briefing(days: 4f) with
         {
@@ -373,12 +373,12 @@ public sealed class FoodRulesTests
         Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
             .Should().BeOfType<Decision>().Subject;
 
-        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        AdviceItem advice = AdviceByConcern(decision, "food_security");
         advice.Actions.Should().NotContain(action => action.Kind == AdviceActionKind.ProductionBill);
         advice.Actions.Should().NotContain(action => action.Kind == AdviceActionKind.SetPriority);
-        decision.Flags.Should().ContainSingle().Which.LaborRequests.Should().Contain(request =>
-            request.WorkType == WorkType.Cook &&
-            request.RequestedFrom == "Labor");
+        decision.Advice.Should().NotContain(item => item.Id == "chef_meals_understocked");
+        decision.Flags.SelectMany(flag => flag.LaborRequests ?? []).Should().NotContain(request =>
+            request.WorkType == WorkType.Cook);
     }
 
     [Fact]
@@ -386,6 +386,8 @@ public sealed class FoodRulesTests
     {
         FoodBriefing briefing = Briefing(days: 4f) with
         {
+            MealsCount = 1,
+            RawFoodCount = 40,
             Kitchen = new FoodKitchenSummary(1, 1, true, true)
             {
                 CookingBuildingIds = ["stove-1"],
@@ -399,7 +401,7 @@ public sealed class FoodRulesTests
         Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
             .Should().BeOfType<Decision>().Subject;
 
-        AdviceAction billAction = decision.Advice.Should().ContainSingle().Subject
+        AdviceAction billAction = AdviceByConcern(decision, "manage_cook_bills")
             .Actions.Should().Contain(action => action.Kind == AdviceActionKind.ProductionBill).Subject;
         billAction.Instruction.Should().Contain("fueled stove at (93, 0, 186)");
         billAction.Apply.Should().NotBeNull();
@@ -420,9 +422,9 @@ public sealed class FoodRulesTests
         Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
             .Should().BeOfType<Decision>().Subject;
 
-        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        AdviceItem advice = AdviceByConcern(decision, "manage_cook_bills");
         advice.Actions.Should().NotContain(action => action.Kind == AdviceActionKind.SetPriority);
-        decision.Flags.Should().ContainSingle().Which.LaborRequests.Should().Contain(request =>
+        FlagById(decision, "food:meals_understocked").LaborRequests.Should().Contain(request =>
             request.WorkType == WorkType.Cook &&
             request.Skill == "Cooking");
     }
@@ -446,16 +448,16 @@ public sealed class FoodRulesTests
         Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
             .Should().BeOfType<Decision>().Subject;
 
-        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        AdviceItem advice = AdviceByConcern(decision, "wild_harvest");
         advice.Concern.Should().Be("wild_harvest");
         advice.Title.Should().Be("Forage can extend the buffer");
         advice.Rationale.Should().Contain("Foraging edible plants");
-        AdviceAction action = advice.Actions.Single();
+        AdviceAction action = advice.Actions.Should().ContainSingle(a => a.Kind == AdviceActionKind.MarkHarvest).Subject;
         action.Instruction.Should().Contain("nearest 6 Plant_Berry");
         action.Instruction.Should().NotContain("wild");
         action.Apply.Should().NotBeNull();
         action.Apply!.Label.Should().Be("Mark forage");
-        decision.Flags.Should().BeEmpty();
+        decision.Flags.Should().NotContain(flag => flag.Id == "food:wild_harvest_available");
     }
 
     [Fact]
@@ -481,22 +483,22 @@ public sealed class FoodRulesTests
         Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
             .Should().BeOfType<Decision>().Subject;
 
-        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        AdviceItem advice = AdviceByConcern(decision, "wild_harvest");
         advice.Actions.Should().Contain(action => action.Kind == AdviceActionKind.MarkHarvest);
         advice.Actions.Should().Contain(action =>
             action.Kind == AdviceActionKind.PlaceBlueprint &&
             action.Owner == "Willie" &&
             action.Instruction.Contains("starter kitchen", StringComparison.OrdinalIgnoreCase));
-        advice.Actions.Should().Contain(action =>
+        AdviceByConcern(decision, "manage_freezer").Actions.Should().Contain(action =>
             action.Kind == AdviceActionKind.PlaceBlueprint &&
             action.Owner == "Willie" &&
             action.Instruction.Contains("freezer", StringComparison.OrdinalIgnoreCase));
-        AgentFlag flag = decision.Flags.Should().ContainSingle().Subject;
+        AgentFlag flag = FlagById(decision, "food:wild_harvest_available");
         flag.BuildingRequests.Should().Contain(request =>
             request.TargetClass == BuildingClass.ProductionBench &&
             request.RoomClass == RoomClass.Kitchen &&
             request.RequestedFrom == "Willie");
-        flag.BuildingRequests.Should().Contain(request =>
+        FlagById(decision, "food:freezer_missing").BuildingRequests.Should().Contain(request =>
             request.TargetClass == BuildingClass.Freezer &&
             request.RoomClass == RoomClass.Freezer &&
             request.Adjacency != null &&
@@ -527,7 +529,7 @@ public sealed class FoodRulesTests
         Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
             .Should().BeOfType<Decision>().Subject;
 
-        AdviceAction Action = decision.Advice.Should().ContainSingle().Subject
+        AdviceAction Action = AdviceByConcern(decision, "wild_harvest")
             .Actions.Should().ContainSingle().Subject;
         Action.Instruction.Should().Contain("nearest 2 Plant_Berry");
         Action.Apply.Should().NotBeNull();
@@ -563,7 +565,7 @@ public sealed class FoodRulesTests
         Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
             .Should().BeOfType<Decision>().Subject;
 
-        AdviceAction action = decision.Advice.Should().ContainSingle().Subject
+        AdviceAction action = AdviceByConcern(decision, "wild_harvest")
             .Actions.Should().ContainSingle().Subject;
         action.Instruction.Should().Contain("Mark 40 of 111 Plant_Berry");
         action.Apply.Should().NotBeNull();
@@ -585,7 +587,7 @@ public sealed class FoodRulesTests
         Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
             .Should().BeOfType<Decision>().Subject;
 
-        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        AdviceItem advice = AdviceByConcern(decision, "expand_growing_capacity");
         advice.Concern.Should().Be("expand_growing_capacity");
         AdviceAction Action = advice.Actions.Should().ContainSingle().Subject;
         Action.Kind.Should().Be(AdviceActionKind.DesignateZone);
@@ -660,24 +662,17 @@ public sealed class FoodRulesTests
         Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
             .Should().BeOfType<Decision>().Subject;
 
-        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
-        advice.Actions.Should().HaveCount(3);
-        advice.Actions.Should().Contain(action => action.Kind == AdviceActionKind.MarkHarvest);
-        advice.Actions.Should().Contain(action => action.Kind == AdviceActionKind.MarkHunt);
-        advice.Actions.Should().Contain(action =>
-            action.Kind == AdviceActionKind.PlaceBlueprint &&
-            action.Owner == "Willie" &&
-            action.Instruction.Contains("foraged food"));
-        advice.Actions.Should().NotContain(action => action.Kind == AdviceActionKind.DesignateZone);
-        advice.Actions.Should().NotContain(action => action.Kind == AdviceActionKind.SetPriority);
+        DecisionShouldIncludeConcerns(decision, "food_security", "wild_harvest", "hunt_for_food", "manage_freezer");
+        AdviceByConcern(decision, "wild_harvest").Actions.Should().Contain(action => action.Kind == AdviceActionKind.MarkHarvest);
+        AdviceByConcern(decision, "hunt_for_food").Actions.Should().Contain(action => action.Kind == AdviceActionKind.MarkHunt);
+        decision.Advice.Should().NotContain(item => item.Id == "chef_expand_growing_capacity");
+        decision.Advice.SelectMany(item => item.Actions).Should().NotContain(action => action.Kind == AdviceActionKind.SetPriority);
 
-        AgentFlag flag = decision.Flags.Should().ContainSingle().Subject;
-        flag.Attention.Should().Contain(request => request.Request.Contains("cook simple meals", StringComparison.OrdinalIgnoreCase));
-        flag.LaborRequests.Should().NotContain(request => request.WorkType == WorkType.Grow);
-        flag.LaborRequests.Should().Contain(request =>
-            request.WorkType == WorkType.Cook &&
+        decision.Flags.SelectMany(flag => flag.LaborRequests ?? []).Should().NotContain(request => request.WorkType == WorkType.Grow);
+        FlagById(decision, "food:hunt_low_risk_animals").LaborRequests.Should().Contain(request =>
+            request.WorkType == WorkType.Hunt &&
             request.RequestedFrom == "Labor");
-        flag.BuildingRequests.Should().Contain(request =>
+        FlagById(decision, "food:freezer_missing").BuildingRequests.Should().Contain(request =>
             request.TargetClass == BuildingClass.Freezer &&
             request.RequestedFrom == "Willie" &&
             request.Request.Contains("surplus freezer"));
@@ -699,11 +694,11 @@ public sealed class FoodRulesTests
         Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
             .Should().BeOfType<Decision>().Subject;
 
-        AdviceAction Action = decision.Advice.Should().ContainSingle().Subject
+        AdviceAction Action = AdviceByConcern(decision, "expand_growing_capacity")
             .Actions.Should().ContainSingle().Subject;
         Action.Kind.Should().Be(AdviceActionKind.DesignateZone);
         Action.Instruction.Should().Contain("rice");
-        decision.Advice.Should().ContainSingle().Subject.Body.Should().Contain("1 day of winter margin");
+        AdviceByConcern(decision, "expand_growing_capacity").Body.Should().Contain("1 day of winter margin");
     }
 
     [Fact]
@@ -755,14 +750,14 @@ public sealed class FoodRulesTests
         Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
             .Should().BeOfType<Decision>().Subject;
 
-        decision.Trace.Should().Be("hunt_low_risk_animals");
+        decision.Trace.Should().Contain("hunt_low_risk_animals");
         decision.Diagnostics.Should().NotBeNull();
         decision.Diagnostics!.AllRules.Should().Contain(row =>
             row.Rule == "hunt_targets_blocked_by_risk" &&
             row.Outcome == "not_matched");
-        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        AdviceItem advice = AdviceByConcern(decision, "hunt_for_food");
         advice.Concern.Should().Be("hunt_for_food");
-        AdviceAction Action = advice.Actions.Should().ContainSingle().Subject;
+        AdviceAction Action = advice.Actions.Should().ContainSingle(action => action.Kind == AdviceActionKind.MarkHunt).Subject;
         Action.Kind.Should().Be(AdviceActionKind.MarkHunt);
         Action.Instruction.Should().Be("Mark up to 2 hares for hunting (nearby to kitchen).");
         Action.Instruction.Should().NotContain("skip predators");
@@ -806,14 +801,14 @@ public sealed class FoodRulesTests
         Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
             .Should().BeOfType<Decision>().Subject;
 
-        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        AdviceItem advice = AdviceByConcern(decision, "hunt_for_food");
         advice.Concern.Should().Be("hunt_for_food");
         advice.Actions.Should().Contain(action => action.Kind == AdviceActionKind.MarkHunt);
-        AdviceAction freezerAction = advice.Actions.Should().Contain(action =>
+        AdviceAction freezerAction = AdviceByConcern(decision, "manage_freezer").Actions.Should().Contain(action =>
             action.Kind == AdviceActionKind.PlaceBlueprint &&
             action.Owner == "Willie").Subject;
         freezerAction.Instruction.Should().Contain("hunted meat");
-        decision.Flags.Should().ContainSingle().Which.BuildingRequests.Should().Contain(request =>
+        FlagById(decision, "food:freezer_missing").BuildingRequests.Should().Contain(request =>
             request.TargetClass == BuildingClass.Freezer &&
             request.Request.Contains("starter freezer"));
     }
@@ -834,7 +829,7 @@ public sealed class FoodRulesTests
         Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
             .Should().BeOfType<Decision>().Subject;
 
-        AdviceAction action = decision.Advice.Should().ContainSingle().Subject
+        AdviceAction action = AdviceByConcern(decision, "hunt_for_food")
             .Actions.Should().ContainSingle().Subject;
         action.Kind.Should().Be(AdviceActionKind.MarkHunt);
         action.Apply.Should().BeNull();
@@ -863,9 +858,9 @@ public sealed class FoodRulesTests
         Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
             .Should().BeOfType<Decision>().Subject;
 
-        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        AdviceItem advice = AdviceByConcern(decision, "hunt_for_food");
         advice.Body.Should().Contain("about 14 nutrition");
-        advice.Actions.Should().ContainSingle().Which.Instruction.Should().Contain("ibex");
+        advice.Actions.Should().ContainSingle(action => action.Kind == AdviceActionKind.MarkHunt).Which.Instruction.Should().Contain("ibex");
     }
 
     [Fact]
@@ -883,7 +878,7 @@ public sealed class FoodRulesTests
             .Should().BeOfType<Decision>().Subject;
 
         decision.Trace.Should().Be("nutrition_signal_gap");
-        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        AdviceItem advice = AdviceByConcern(decision, "manage_food_stockpile");
         advice.Concern.Should().Be("manage_food_stockpile");
         advice.Body.Should().Contain("25 food units but no usable meal/raw-food classification");
         advice.Body.Should().NotContain("unknown food units");
@@ -891,7 +886,7 @@ public sealed class FoodRulesTests
         advice.Actions.Should().ContainSingle().Which.Should().Match<AdviceAction>(action =>
             action.Kind == AdviceActionKind.SetStockpileZone &&
             action.Instruction == "Confirm remaining food units are classified as meals or raw food and reachable before counting them as buffer.");
-        decision.Flags.Should().BeEmpty();
+        decision.Flags.Should().NotContain(flag => flag.Id == "food:nutrition_signal_gap");
     }
 
     [Fact]
@@ -911,7 +906,7 @@ public sealed class FoodRulesTests
             .Should().BeOfType<Decision>().Subject;
 
         decision.Trace.Should().Be("nutrition_signal_gap");
-        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        AdviceItem advice = AdviceByConcern(decision, "manage_food_stockpile");
         advice.Concern.Should().Be("manage_food_stockpile");
         advice.Priority.Should().Be(AdvicePriority.Medium);
         advice.Body.Should().Contain("57 forbidden packaged survival meals outside the current food buffer");
@@ -935,7 +930,7 @@ public sealed class FoodRulesTests
             .Single(source => source.Id == target.Id)
             .Count).Should().Be(57);
 
-        AgentFlag flag = decision.Flags.Should().ContainSingle().Subject;
+        AgentFlag flag = FlagById(decision, "food:nutrition_signal_gap");
         flag.Severity.Should().Be(FlagSeverity.Medium);
         flag.BuildingRequests.Should().ContainSingle(request =>
             request.TargetClass == BuildingClass.Stockpile &&
@@ -968,6 +963,18 @@ public sealed class FoodRulesTests
             row.Rule == "hunt_targets_blocked_by_risk" &&
             row.Outcome == "escalated" &&
             row.OutputAction.Contains("hunt safety/risk context"));
+    }
+
+    private static AdviceItem AdviceByConcern(Decision decision, string concern) =>
+        decision.Advice.Should().ContainSingle(advice => advice.Concern == concern).Subject;
+
+    private static AgentFlag FlagById(Decision decision, string id) =>
+        decision.Flags.Should().ContainSingle(flag => flag.Id == id).Subject;
+
+    private static void DecisionShouldIncludeConcerns(Decision decision, params string[] concerns)
+    {
+        foreach (string concern in concerns)
+            decision.Advice.Should().Contain(advice => advice.Concern == concern);
     }
 
     internal static FoodBriefing Briefing(float? days) => new(

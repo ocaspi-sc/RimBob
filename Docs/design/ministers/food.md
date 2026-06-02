@@ -132,10 +132,8 @@ availability.
 Rules should cover obvious food-chain states: safe buffer, unknown or unreliable
 nutrition signal, emergency shortage, mature harvest, understocked meals with raw
 food, forage availability, growing capacity, and missing freezer/storage
-support. Freezer posture is a standing chain dependency: when Chef recommends
-harvest, forage, hunt, cooking, or growing work that will create or depend on
-perishable food, missing cooler/freezer support should be attached as a
-secondary Willie request rather than waiting until surplus already exists.
+support. Chef deterministic rules evaluate these as independent concerns: every matched deterministic concern emits its own advice item and its own flag in the same snapshot. There is no cap, no dedup, and no freezer/support concern folding in the first independent-concern slice.
+Freezer posture is its own deterministic concern rather than a secondary action folded onto harvest, forage, hunt, cooking, or growing advice. When no cooler is visible and a perishable food path or stored-food buffer needs cold storage, Chef emits a separate freezer concern and Willie-owned building request.
 Cooking capability is also a standing food-chain prerequisite: when the selected food path creates or depends on raw, foraged, hunted, or harvested food and no cooking building is visible, Chef should request a starter kitchen/cooking-station build from Willie rather than relying on Willie's generic missing-room fallback.
 
 Rules should compute priority from live state where possible: days of food,
@@ -152,6 +150,8 @@ Escalate when:
 - Drug/textile crops compete with food crops.
 - Food procurement pressure exists but execution belongs to Economy/Trade or
   Mayor.
+
+Escalation is a terminal fallback for Chef's current play-cycle contract: build the deterministic concern set first, return it if any concern matched, and only consider LLM escalation when no deterministic concern emitted. This keeps routine multi-bottleneck states cheap while preserving LLM judgment for unresolved or ambiguous food states.
 
 `Critical` should mean immediate starvation evidence, not merely a low buffer.
 

@@ -35,12 +35,12 @@ public sealed class FoodChainModelBuilderTests
             ReadyToHarvest = 9,
             CropZoneSummaries = [new FoodCropZoneSummary("Plant_Rice", "growing:1", 12, 1f, 9, "nearby to kitchen")]
         };
-        AdviceItem advice = DecisionAdvice(briefing);
+        IReadOnlyList<AdviceItem> advice = DecisionAdvice(briefing);
 
-        AdviceChainModel model = FoodChainModelBuilder.Build(briefing, [advice]);
+        AdviceChainModel model = FoodChainModelBuilder.Build(briefing, advice);
 
         Step(model, "grow.trigger").Status.Should().Be(AdviceChainStepStatus.Trigger);
-        Step(model, "grow.zone").Status.Should().Be(AdviceChainStepStatus.Have);
+        Step(model, "grow.zone").Status.Should().Be(AdviceChainStepStatus.Action);
         Step(model, "grow.harvest").Status.Should().Be(AdviceChainStepStatus.Action);
         Step(model, "grow.harvest").Detail.Should().Contain("9 tiles ready");
     }
@@ -55,9 +55,9 @@ public sealed class FoodChainModelBuilderTests
             ReadyToHarvest = 9,
             CropZoneSummaries = [new FoodCropZoneSummary("Plant_Rice", "growing:1", 12, 1f, 9, "nearby to kitchen")]
         };
-        AdviceItem advice = DecisionAdvice(briefing);
+        IReadOnlyList<AdviceItem> advice = DecisionAdvice(briefing);
 
-        AdviceChainModel model = FoodChainModelBuilder.Build(briefing, [advice]);
+        AdviceChainModel model = FoodChainModelBuilder.Build(briefing, advice);
 
         Step(model, "grow.harvest").Status.Should().Be(AdviceChainStepStatus.Action);
         Step(model, "grow.store").Status.Should().Be(AdviceChainStepStatus.Action);
@@ -78,9 +78,9 @@ public sealed class FoodChainModelBuilderTests
             WildHuntTargets = [new WildHuntTarget("Hare", 2, "nearby to kitchen", "kitchen")],
             Kitchen = new FoodKitchenSummary(1, 0, true, false)
         };
-        AdviceItem advice = DecisionAdvice(briefing);
+        IReadOnlyList<AdviceItem> advice = DecisionAdvice(briefing);
 
-        AdviceChainModel model = FoodChainModelBuilder.Build(briefing, [advice]);
+        AdviceChainModel model = FoodChainModelBuilder.Build(briefing, advice);
 
         Step(model, "hunt.hunt").Status.Should().Be(AdviceChainStepStatus.Action);
         Step(model, "hunt.butcher").Status.Should().Be(AdviceChainStepStatus.Action);
@@ -98,9 +98,9 @@ public sealed class FoodChainModelBuilderTests
             ReadyToHarvest = 0,
             Kitchen = new FoodKitchenSummary(1, 1, true, true)
         };
-        AdviceItem advice = DecisionAdvice(briefing);
+        IReadOnlyList<AdviceItem> advice = DecisionAdvice(briefing);
 
-        AdviceChainModel model = FoodChainModelBuilder.Build(briefing, [advice]);
+        AdviceChainModel model = FoodChainModelBuilder.Build(briefing, advice);
 
         Step(model, "grow.cook").Status.Should().Be(AdviceChainStepStatus.Action);
         Step(model, "hunt.cook").Status.Should().Be(AdviceChainStepStatus.Action);
@@ -119,11 +119,12 @@ public sealed class FoodChainModelBuilderTests
         Step(model, "grow.store").Status.Should().Be(AdviceChainStepStatus.Available);
     }
 
-    private static AdviceItem DecisionAdvice(FoodBriefing briefing)
+    private static IReadOnlyList<AdviceItem> DecisionAdvice(FoodBriefing briefing)
     {
         Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
             .Should().BeOfType<Decision>().Subject;
-        return decision.Advice.Should().ContainSingle().Subject;
+        decision.Advice.Should().NotBeEmpty();
+        return decision.Advice;
     }
 
     private static AdviceChainStep Step(AdviceChainModel model, string key) =>
