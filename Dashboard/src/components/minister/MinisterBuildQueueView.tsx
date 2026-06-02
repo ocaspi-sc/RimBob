@@ -77,7 +77,7 @@ export function MinisterBuildQueueView({
           meta={proposedOptionGroups.length > 0 ? `${formatInteger(proposedOptionGroups.length)} ${proposedOptionGroups.length === 1 ? 'issue' : 'issues'}` : undefined}
         >
           {proposedOptionCount === 0 ? (
-            <LaneEmpty>Solver placement options appear here when Willie emits `options[]`.</LaneEmpty>
+            <LaneEmpty>{proposedEmptyHint(requests.length)}</LaneEmpty>
           ) : (
             <div className="build-option-group-stack">
               {proposedOptionGroups.map(group => <OptionGroup group={group} key={group.item.id} />)}
@@ -165,6 +165,12 @@ function BuildQueueSection({
 
 function LaneEmpty({ children }: { children: ReactNode }) {
   return <p className="build-queue-empty">{children}</p>;
+}
+
+function proposedEmptyHint(requestCount: number): string {
+  return requestCount === 0
+    ? 'No build has been requested of Willie yet, so the placement solver has nothing to place. When another minister such as Chef requests a build it appears under Requested above, and validated placement options show up here. Willie can also self-propose when it detects a missing room.'
+    : 'Willie has an open build request, but the solver has not returned a validated footprint yet. Open the driving advice on the Advice tab for the reason: missing anchor, no reachable path, or failed validation.';
 }
 
 function RequestCard({ card }: { card: RequestCardModel }) {
