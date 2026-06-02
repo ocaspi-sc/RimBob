@@ -316,3 +316,57 @@ a one-mapper change. Flag clearly in advice trace that placement is unconstraine
   `rimapi-room-reads-live-verify` chain (the live `NoAnchors` repro this fixes
   for room-less colonies).
 - Indexed under `willie-meta-plan`.
+
+---
+
+## Summary — landed `add66e7` (2026-06-02)
+
+**What shipped.** A colony with a painted Home area but no recognized rooms no
+longer dead-ends at `NoFitReason.NoAnchors`. The solver now falls back to the
+Home area as a low-priority "buildable region" anchor and places drafts inside
+it.
+
+**Verification gate passed.** Live `/api/v1/map/zones` emits the Home area as a
+row with `type` = `"Area_Home"`, `label` = `"Home"`. So this was pure RimBob
+ingestion off the already-fetched `/map/zones` call — **no RIMAPI change**, as
+hoped.
+
+**How it works end to end:**
+- **Ingest** — `MapAggregateMapper.FromAreas` keeps `Area_Home` rows (filter
+  `IsHomeArea`) into a new light `MapAreaRegistry` / `MapArea` aggregate
+  (bounds + centroid + cell count, no full cell list). Wired into `ColonyState`,
+  the snapshot store, and the Willie briefing version set.
+- **Derive** — `WillieAnchorInventoryDerivation` appends one
+  `RoomClass.BuildableRegion` anchor (`RoomId="area:<id>"`) for the Home area.
+- **Resolve** — `AnchorResolver.ResolveBuildableRegion` resolves it to its
+  centroid, or the bounds-center when centroid is null, tagged
+  `AnchorMatchReason.BuildableRegionFallback`.
+- **Solve** — `PlacementSolver` calls the fallback **only** when `ResolveNear`
+  finds zero room anchors, adds a trace note, then clamps candidate placement to
+  the Home-area bounds. Room anchors keep strict priority (the "low priority" is
+  resolution order, not score weights).
+- **Dashboard** — `buildable_region` gets a friendly label + icon across the
+  Solver / Build Queue / Advice views.
+
+**Decisions that held:** new aggregate (not piggybacked on stockpiles); reuse
+the already-fetched `/map/zones` (no new endpoint); light aggregate (no cell
+list); sentinel `RoomClass.BuildableRegion` with fallback-only resolution;
+bounds clamp now.
+
+**Tests landed** (suites green at land): client parse of `Area_Home`
+(`RimApiClientTests`), `FromAreas` mapper (`AggregateMapperTests`), ingestion
+dispatcher area update (`IngestionDispatcherTests`), snapshot round-trip
+(`ColonyStateSnapshotStoreTests`), derivation emits the anchor
+(`WillieAnchorInventoryDerivationTests`), resolver centroid + bounds-center +
+`ResolveNear` exclusion (`AnchorResolverTests`), solver uses fallback only when
+no room anchor (`PlacementSolverTests`), briefing shape stable
+(`WillieBriefingShapeTests`).
+
+**Deferred (unchanged from plan):** full Home-area **cell-mask** placement
+constraint for non-rectangular areas (still bounds-clamped; waits on
+`rimapi-buildability-layers`); custom Allowed areas (Home only); score-weighted
+region-vs-room competition in the same solve.
+
+**Next:** live-verify on a room-less colony with a Home area — confirm the
+`buildable_region` anchor appears in `/api/briefings/willie/latest` and the
+Solver funnel clears the `anchors` stage.
