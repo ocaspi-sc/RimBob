@@ -70,7 +70,7 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 ### Contention And Special Cases
 
 - When doing git operations, if there's a lock file or another session appears to be writing or committing, wait briefly and retry the narrow operation; do not force broad Git actions.
-- If you encounter these dirty files in `C:\dev\RimBob` on master branch with a couple of unrelated small human edits, stack them in a small commit just for those files: `AGENTS.md`, `CLAUDE.md`, `Tasks.md`.
+- If you encounter these dirty files in `C:\dev\RimBob` on master branch with a couple of unrelated small human edits, stack them in a small commit just for those files: `AGENTS.md`, `CLAUDE.md`, `Tasks.md`, , .plans/*
 
 ---
 
