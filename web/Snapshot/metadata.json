@@ -1,8 +1,8 @@
 {
-  "captured_at": "2026-06-03T21:45:50.913Z",
-  "snapshot_id": "20260604-0045",
-  "dashboard_url": "http://localhost:5012",
-  "index_path": "C:\\Users\\orca\\.codex\\worktrees\\ba68\\RimBob\\web\\Snapshot\\index.html",
+  "captured_at": "2026-06-03T21:56:09.443Z",
+  "snapshot_id": "20260604-0056",
+  "dashboard_url": "http://localhost:5000",
+  "index_path": "C:\\dev\\RimBob\\web\\Snapshot\\index.html",
   "entry_page": {
     "scope": "mayor",
     "view": "advice",
@@ -10,36 +10,36 @@
     "source_relative_path": "pages/mayor/advice.html"
   },
   "health": {
-    "generated_at": "2026-06-03T21:48:45.1018087+00:00",
+    "generated_at": "2026-06-03T21:56:09.4415663+00:00",
     "version": {
       "product": "RimBob",
       "rim_bob_version": "1.0.0",
-      "running_version": "0.0.1001",
-      "build_number": "0.0.1001",
-      "build_datetime": "2026-06-03T21:44:11.455Z",
+      "running_version": "0.0.1231",
+      "build_number": "0.0.1231",
+      "build_datetime": "2026-06-03T21:33:31.737Z",
       "build_version": "1.0.0.0",
-      "build_informational_version": "1.0.0+61530e4a6b7f7db7cd25264702c66bdc633ac81a",
-      "build_revision": "61530e4a6b7f7db7cd25264702c66bdc633ac81a",
-      "build_revision_short": "61530e4a",
+      "build_informational_version": "1.0.0+c7246ac0eb505087bebbc6be0ae1c4b77e6d9167",
+      "build_revision": "c7246ac0eb505087bebbc6be0ae1c4b77e6d9167",
+      "build_revision_short": "c7246ac0",
       "dashboard_asset_version": "index-OzZ0zjzb.js|index-kChPSjT-.css",
-      "reload_token": "1.0.0+61530e4a6b7f7db7cd25264702c66bdc633ac81a|0.0.1001|2026-06-03T21:44:11.455Z|index-OzZ0zjzb.js|index-kChPSjT-.css",
-      "host_started_at": "2026-06-03T21:44:27.3758668+00:00",
-      "host_instance_id": "adc944fd84a14f369bd304bbd035ac2c"
+      "reload_token": "1.0.0+c7246ac0eb505087bebbc6be0ae1c4b77e6d9167|0.0.1231|2026-06-03T21:33:31.737Z|index-OzZ0zjzb.js|index-kChPSjT-.css",
+      "host_started_at": "2026-06-03T21:33:58.4622056+00:00",
+      "host_instance_id": "e7f916eb41414152a60ef903c99e5df1"
     },
     "runtime": {
       "server": "ok",
-      "host_started_at": "2026-06-03T21:44:27.3758668+00:00",
-      "host_instance_id": "adc944fd84a14f369bd304bbd035ac2c",
+      "host_started_at": "2026-06-03T21:33:58.4622056+00:00",
+      "host_instance_id": "e7f916eb41414152a60ef903c99e5df1",
       "rim_bob_version": "1.0.0",
-      "running_version": "0.0.1001",
-      "build_number": "0.0.1001",
-      "build_datetime": "2026-06-03T21:44:11.455Z",
+      "running_version": "0.0.1231",
+      "build_number": "0.0.1231",
+      "build_datetime": "2026-06-03T21:33:31.737Z",
       "build_version": "1.0.0.0",
-      "build_informational_version": "1.0.0+61530e4a6b7f7db7cd25264702c66bdc633ac81a",
+      "build_informational_version": "1.0.0+c7246ac0eb505087bebbc6be0ae1c4b77e6d9167",
       "dashboard_asset_version": "index-OzZ0zjzb.js|index-kChPSjT-.css",
-      "host_process_path": "C:\\Users\\orca\\.codex\\worktrees\\ba68\\RimBob\\Src\\ApiHost\\bin\\Debug\\net9.0\\RimBob.Host.exe",
-      "content_root": "C:\\Users\\orca\\.codex\\worktrees\\ba68\\RimBob\\Src\\ApiHost",
-      "runtime_root": "C:\\Users\\orca\\.codex\\worktrees\\ba68\\RimBob",
+      "host_process_path": "C:\\dev\\RimBob\\Src\\ApiHost\\bin\\Debug\\net9.0\\RimBob.Host.exe",
+      "content_root": "C:\\dev\\RimBob\\Src\\ApiHost",
+      "runtime_root": "C:\\dev\\RimBob",
       "rimapi_reachable": true,
       "rimapi_last_error": null,
       "rimworld": {
@@ -118,7 +118,7 @@
       "has_snapshot": true,
       "snapshot_id": "e392579339104a82b685486b39151506",
       "captured_at": "2026-06-03T18:59:30.9803768+00:00",
-      "age_seconds": 10154.1,
+      "age_seconds": 10598.5,
       "game_tick": 538,
       "game_date": {
         "rawRimWorldDate": "2nd of Aprimay, 5500, 6h",
@@ -169,24 +169,24 @@
       "token_usage": "not_exposed_yet"
     },
     "rag": {
-      "enabled": false,
+      "enabled": true,
       "top_k": 3,
       "embedding_model": "gemini-embedding-001",
-      "guides_root": "C:\\Users\\orca\\.codex\\worktrees\\ba68\\RimBob\\Src\\ApiHost\\../../Docs/guides",
+      "guides_root": "C:\\dev\\RimBob\\Src\\ApiHost\\../../Docs/guides",
       "cache_root": "C:\\Users\\orca\\AppData\\Local\\RimBob\\embeddings",
-      "chunk_count": 0,
+      "chunk_count": 191,
       "last_ingest_error": "not_exposed_yet"
     },
     "sse": {
       "activeConnections": 1,
-      "totalConnections": 82,
-      "eventCount": 741,
+      "totalConnections": 2,
+      "eventCount": 105,
       "errorCount": 0,
-      "lastConnectedAt": "2026-06-03T21:48:37.1956664+00:00",
-      "lastDisconnectedAt": "2026-06-03T21:48:37.1702962+00:00",
-      "lastEventAt": "2026-06-03T21:48:37.1966502+00:00",
-      "lastEventType": "advice",
-      "lastEventId": "chef_freezer_missing",
+      "lastConnectedAt": "2026-06-03T21:34:22.1989483+00:00",
+      "lastDisconnectedAt": "2026-06-03T21:34:22.1460874+00:00",
+      "lastEventAt": "2026-06-03T21:56:07.863495+00:00",
+      "lastEventType": "ping",
+      "lastEventId": null,
       "lastErrorAt": null,
       "lastError": null
     },
@@ -347,8 +347,8 @@
       "recent_endpoint": "not_exposed_yet"
     },
     "tests": {
-      "directory": "C:\\Users\\orca\\.codex\\worktrees\\ba68\\RimBob\\Src\\Tests",
-      "project": "C:\\Users\\orca\\.codex\\worktrees\\ba68\\RimBob\\Src\\Tests\\RimBob.Tests.csproj",
+      "directory": "C:\\dev\\RimBob\\Src\\Tests",
+      "project": "C:\\dev\\RimBob\\Src\\Tests\\RimBob.Tests.csproj",
       "exists": true,
       "total_count": 519,
       "file_count": 77,
@@ -1691,7 +1691,7 @@
       "view": "runtime",
       "label": "SYSTEM / Runtime",
       "status": "live",
-      "url": "http://localhost:5012/?scope=system&view=runtime",
+      "url": "http://localhost:5000/?scope=system&view=runtime",
       "relative_path": "pages/system/runtime.html",
       "image_counts": {
         "embedded": 20,
@@ -1703,7 +1703,7 @@
       "view": "connectivity",
       "label": "SYSTEM / Connectivity",
       "status": "live",
-      "url": "http://localhost:5012/?scope=system&view=connectivity",
+      "url": "http://localhost:5000/?scope=system&view=connectivity",
       "relative_path": "pages/system/connectivity.html",
       "image_counts": {
         "embedded": 29,
@@ -1715,7 +1715,7 @@
       "view": "storage",
       "label": "SYSTEM / Storage",
       "status": "live",
-      "url": "http://localhost:5012/?scope=system&view=storage",
+      "url": "http://localhost:5000/?scope=system&view=storage",
       "relative_path": "pages/system/storage.html",
       "image_counts": {
         "embedded": 20,
@@ -1727,7 +1727,7 @@
       "view": "coverage",
       "label": "SYSTEM / Coverage",
       "status": "live",
-      "url": "http://localhost:5012/?scope=system&view=coverage",
+      "url": "http://localhost:5000/?scope=system&view=coverage",
       "relative_path": "pages/system/coverage.html",
       "image_counts": {
         "embedded": 22,
@@ -1739,7 +1739,7 @@
       "view": "events",
       "label": "SYSTEM / Events",
       "status": "live",
-      "url": "http://localhost:5012/?scope=system&view=events",
+      "url": "http://localhost:5000/?scope=system&view=events",
       "relative_path": "pages/system/events.html",
       "image_counts": {
         "embedded": 23,
@@ -1751,7 +1751,7 @@
       "view": "overview",
       "label": "INFO / Overview",
       "status": "reference",
-      "url": "http://localhost:5012/?scope=info&view=overview",
+      "url": "http://localhost:5000/?scope=info&view=overview",
       "relative_path": "pages/info/overview.html",
       "image_counts": {
         "embedded": 29,
@@ -1763,7 +1763,7 @@
       "view": "glossary",
       "label": "INFO / Glossary",
       "status": "reference",
-      "url": "http://localhost:5012/?scope=info&view=glossary",
+      "url": "http://localhost:5000/?scope=info&view=glossary",
       "relative_path": "pages/info/glossary.html",
       "image_counts": {
         "embedded": 34,
@@ -1775,7 +1775,7 @@
       "view": "contracts",
       "label": "INFO / Contracts",
       "status": "reference",
-      "url": "http://localhost:5012/?scope=info&view=contracts",
+      "url": "http://localhost:5000/?scope=info&view=contracts",
       "relative_path": "pages/info/contracts.html",
       "image_counts": {
         "embedded": 25,
@@ -1787,7 +1787,7 @@
       "view": "data_sources",
       "label": "INFO / Data Sources",
       "status": "reference",
-      "url": "http://localhost:5012/?scope=info&view=data_sources",
+      "url": "http://localhost:5000/?scope=info&view=data_sources",
       "relative_path": "pages/info/data_sources.html",
       "image_counts": {
         "embedded": 25,
@@ -1799,7 +1799,7 @@
       "view": "algorithms",
       "label": "INFO / Algorithms",
       "status": "reference",
-      "url": "http://localhost:5012/?scope=info&view=algorithms",
+      "url": "http://localhost:5000/?scope=info&view=algorithms",
       "relative_path": "pages/info/algorithms.html",
       "image_counts": {
         "embedded": 19,
@@ -1811,7 +1811,7 @@
       "view": "session",
       "label": "ANALYTICS / Session",
       "status": "live",
-      "url": "http://localhost:5012/?scope=analytics&view=session",
+      "url": "http://localhost:5000/?scope=analytics&view=session",
       "relative_path": "pages/analytics/session.html",
       "image_counts": {
         "embedded": 28,
@@ -1823,7 +1823,7 @@
       "view": "colony",
       "label": "ANALYTICS / Colony",
       "status": "live",
-      "url": "http://localhost:5012/?scope=analytics&view=colony",
+      "url": "http://localhost:5000/?scope=analytics&view=colony",
       "relative_path": "pages/analytics/colony.html",
       "image_counts": {
         "embedded": 28,
@@ -1835,7 +1835,7 @@
       "view": "advice",
       "label": "ANALYTICS / Advice",
       "status": "live",
-      "url": "http://localhost:5012/?scope=analytics&view=advice",
+      "url": "http://localhost:5000/?scope=analytics&view=advice",
       "relative_path": "pages/analytics/advice.html",
       "image_counts": {
         "embedded": 29,
@@ -1847,7 +1847,7 @@
       "view": "sse",
       "label": "ANALYTICS / SSE",
       "status": "live",
-      "url": "http://localhost:5012/?scope=analytics&view=sse",
+      "url": "http://localhost:5000/?scope=analytics&view=sse",
       "relative_path": "pages/analytics/sse.html",
       "image_counts": {
         "embedded": 31,
@@ -1859,7 +1859,7 @@
       "view": "candidates",
       "label": "ANALYTICS / Candidates",
       "status": "live",
-      "url": "http://localhost:5012/?scope=analytics&view=candidates",
+      "url": "http://localhost:5000/?scope=analytics&view=candidates",
       "relative_path": "pages/analytics/candidates.html",
       "image_counts": {
         "embedded": 24,
@@ -1871,7 +1871,7 @@
       "view": "features",
       "label": "DEV BLOG / Features",
       "status": "live",
-      "url": "http://localhost:5012/?scope=dev_blog&view=features",
+      "url": "http://localhost:5000/?scope=dev_blog&view=features",
       "relative_path": "pages/dev_blog/features.html",
       "image_counts": {
         "embedded": 314,
@@ -1883,7 +1883,7 @@
       "view": "churn",
       "label": "DEV BLOG / Churn",
       "status": "live",
-      "url": "http://localhost:5012/?scope=dev_blog&view=churn",
+      "url": "http://localhost:5000/?scope=dev_blog&view=churn",
       "relative_path": "pages/dev_blog/churn.html",
       "image_counts": {
         "embedded": 21,
@@ -1895,7 +1895,7 @@
       "view": "commits",
       "label": "DEV BLOG / Commits",
       "status": "live",
-      "url": "http://localhost:5012/?scope=dev_blog&view=commits",
+      "url": "http://localhost:5000/?scope=dev_blog&view=commits",
       "relative_path": "pages/dev_blog/commits.html",
       "image_counts": {
         "embedded": 23,
@@ -1907,7 +1907,7 @@
       "view": "topics",
       "label": "DEV BLOG / Topics",
       "status": "live",
-      "url": "http://localhost:5012/?scope=dev_blog&view=topics",
+      "url": "http://localhost:5000/?scope=dev_blog&view=topics",
       "relative_path": "pages/dev_blog/topics.html",
       "image_counts": {
         "embedded": 22,
@@ -1919,7 +1919,7 @@
       "view": "suggestions",
       "label": "DEV BLOG / Suggestions",
       "status": "live",
-      "url": "http://localhost:5012/?scope=dev_blog&view=suggestions",
+      "url": "http://localhost:5000/?scope=dev_blog&view=suggestions",
       "relative_path": "pages/dev_blog/suggestions.html",
       "image_counts": {
         "embedded": 27,
@@ -1931,7 +1931,7 @@
       "view": "prompt",
       "label": "Mayor / System Prompt",
       "status": "live",
-      "url": "http://localhost:5012/?scope=mayor&view=prompt",
+      "url": "http://localhost:5000/?scope=mayor&view=prompt",
       "relative_path": "pages/mayor/prompt.html",
       "image_counts": {
         "embedded": 132,
@@ -1943,7 +1943,7 @@
       "view": "briefing",
       "label": "Mayor / Briefing",
       "status": "live",
-      "url": "http://localhost:5012/?scope=mayor&view=briefing",
+      "url": "http://localhost:5000/?scope=mayor&view=briefing",
       "relative_path": "pages/mayor/briefing.html",
       "image_counts": {
         "embedded": 49,
@@ -1955,7 +1955,7 @@
       "view": "rag",
       "label": "Mayor / RAG",
       "status": "live",
-      "url": "http://localhost:5012/?scope=mayor&view=rag",
+      "url": "http://localhost:5000/?scope=mayor&view=rag",
       "relative_path": "pages/mayor/rag.html",
       "image_counts": {
         "embedded": 28,
@@ -1967,7 +1967,7 @@
       "view": "rules",
       "label": "Mayor / Rules",
       "status": "live",
-      "url": "http://localhost:5012/?scope=mayor&view=rules",
+      "url": "http://localhost:5000/?scope=mayor&view=rules",
       "relative_path": "pages/mayor/rules.html",
       "image_counts": {
         "embedded": 32,
@@ -1979,7 +1979,7 @@
       "view": "raw_llm",
       "label": "Mayor / Raw LLM Output",
       "status": "live",
-      "url": "http://localhost:5012/?scope=mayor&view=raw_llm",
+      "url": "http://localhost:5000/?scope=mayor&view=raw_llm",
       "relative_path": "pages/mayor/raw_llm.html",
       "image_counts": {
         "embedded": 39,
@@ -1991,7 +1991,7 @@
       "view": "infographics",
       "label": "Mayor / Infographics",
       "status": "live",
-      "url": "http://localhost:5012/?scope=mayor&view=infographics",
+      "url": "http://localhost:5000/?scope=mayor&view=infographics",
       "relative_path": "pages/mayor/infographics.html",
       "image_counts": {
         "embedded": 22,
@@ -2003,7 +2003,7 @@
       "view": "advice",
       "label": "Mayor / Advice",
       "status": "live",
-      "url": "http://localhost:5012/?scope=mayor&view=advice",
+      "url": "http://localhost:5000/?scope=mayor&view=advice",
       "relative_path": "pages/mayor/advice.html",
       "image_counts": {
         "embedded": 59,
@@ -2015,7 +2015,7 @@
       "view": "prompt",
       "label": "Chef / System Prompt",
       "status": "live",
-      "url": "http://localhost:5012/?scope=food&view=prompt",
+      "url": "http://localhost:5000/?scope=food&view=prompt",
       "relative_path": "pages/food/prompt.html",
       "image_counts": {
         "embedded": 253,
@@ -2027,7 +2027,7 @@
       "view": "briefing",
       "label": "Chef / Briefing",
       "status": "live",
-      "url": "http://localhost:5012/?scope=food&view=briefing",
+      "url": "http://localhost:5000/?scope=food&view=briefing",
       "relative_path": "pages/food/briefing.html",
       "image_counts": {
         "embedded": 63,
@@ -2039,7 +2039,7 @@
       "view": "rag",
       "label": "Chef / RAG",
       "status": "live",
-      "url": "http://localhost:5012/?scope=food&view=rag",
+      "url": "http://localhost:5000/?scope=food&view=rag",
       "relative_path": "pages/food/rag.html",
       "image_counts": {
         "embedded": 25,
@@ -2051,7 +2051,7 @@
       "view": "rules",
       "label": "Chef / Rules",
       "status": "live",
-      "url": "http://localhost:5012/?scope=food&view=rules",
+      "url": "http://localhost:5000/?scope=food&view=rules",
       "relative_path": "pages/food/rules.html",
       "image_counts": {
         "embedded": 32,
@@ -2063,7 +2063,7 @@
       "view": "raw_llm",
       "label": "Chef / Raw LLM Output",
       "status": "live",
-      "url": "http://localhost:5012/?scope=food&view=raw_llm",
+      "url": "http://localhost:5000/?scope=food&view=raw_llm",
       "relative_path": "pages/food/raw_llm.html",
       "image_counts": {
         "embedded": 27,
@@ -2075,7 +2075,7 @@
       "view": "infographics",
       "label": "Chef / Infographics",
       "status": "live",
-      "url": "http://localhost:5012/?scope=food&view=infographics",
+      "url": "http://localhost:5000/?scope=food&view=infographics",
       "relative_path": "pages/food/infographics.html",
       "image_counts": {
         "embedded": 33,
@@ -2087,7 +2087,7 @@
       "view": "advice",
       "label": "Chef / Advice",
       "status": "live",
-      "url": "http://localhost:5012/?scope=food&view=advice",
+      "url": "http://localhost:5000/?scope=food&view=advice",
       "relative_path": "pages/food/advice.html",
       "image_counts": {
         "embedded": 138,
@@ -2099,7 +2099,7 @@
       "view": "briefing",
       "label": "Willie / Briefing",
       "status": "live",
-      "url": "http://localhost:5012/?scope=willie&view=briefing",
+      "url": "http://localhost:5000/?scope=willie&view=briefing",
       "relative_path": "pages/willie/briefing.html",
       "image_counts": {
         "embedded": 46,
@@ -2111,7 +2111,7 @@
       "view": "build_queue",
       "label": "Willie / Build Queue",
       "status": "live",
-      "url": "http://localhost:5012/?scope=willie&view=build_queue",
+      "url": "http://localhost:5000/?scope=willie&view=build_queue",
       "relative_path": "pages/willie/build_queue.html",
       "image_counts": {
         "embedded": 44,
@@ -2123,7 +2123,7 @@
       "view": "solver",
       "label": "Willie / Solver",
       "status": "live",
-      "url": "http://localhost:5012/?scope=willie&view=solver",
+      "url": "http://localhost:5000/?scope=willie&view=solver",
       "relative_path": "pages/willie/solver.html",
       "image_counts": {
         "embedded": 22,
@@ -2135,7 +2135,7 @@
       "view": "requests",
       "label": "Willie / Requests",
       "status": "live",
-      "url": "http://localhost:5012/?scope=willie&view=requests",
+      "url": "http://localhost:5000/?scope=willie&view=requests",
       "relative_path": "pages/willie/requests.html",
       "image_counts": {
         "embedded": 21,
@@ -2147,7 +2147,7 @@
       "view": "rules",
       "label": "Willie / Rules",
       "status": "live",
-      "url": "http://localhost:5012/?scope=willie&view=rules",
+      "url": "http://localhost:5000/?scope=willie&view=rules",
       "relative_path": "pages/willie/rules.html",
       "image_counts": {
         "embedded": 31,
@@ -2159,7 +2159,7 @@
       "view": "advice",
       "label": "Willie / Advice",
       "status": "live",
-      "url": "http://localhost:5012/?scope=willie&view=advice",
+      "url": "http://localhost:5000/?scope=willie&view=advice",
       "relative_path": "pages/willie/advice.html",
       "image_counts": {
         "embedded": 40,
@@ -2171,7 +2171,7 @@
       "view": "prompt",
       "label": "Defense / System Prompt",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=defense&view=prompt",
+      "url": "http://localhost:5000/?scope=defense&view=prompt",
       "relative_path": "pages/defense/prompt.html",
       "image_counts": {
         "embedded": 22,
@@ -2183,7 +2183,7 @@
       "view": "briefing",
       "label": "Defense / Briefing",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=defense&view=briefing",
+      "url": "http://localhost:5000/?scope=defense&view=briefing",
       "relative_path": "pages/defense/briefing.html",
       "image_counts": {
         "embedded": 22,
@@ -2195,7 +2195,7 @@
       "view": "rag",
       "label": "Defense / RAG",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=defense&view=rag",
+      "url": "http://localhost:5000/?scope=defense&view=rag",
       "relative_path": "pages/defense/rag.html",
       "image_counts": {
         "embedded": 25,
@@ -2207,7 +2207,7 @@
       "view": "rules",
       "label": "Defense / Rules",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=defense&view=rules",
+      "url": "http://localhost:5000/?scope=defense&view=rules",
       "relative_path": "pages/defense/rules.html",
       "image_counts": {
         "embedded": 32,
@@ -2219,7 +2219,7 @@
       "view": "raw_llm",
       "label": "Defense / Raw LLM Output",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=defense&view=raw_llm",
+      "url": "http://localhost:5000/?scope=defense&view=raw_llm",
       "relative_path": "pages/defense/raw_llm.html",
       "image_counts": {
         "embedded": 22,
@@ -2231,7 +2231,7 @@
       "view": "infographics",
       "label": "Defense / Infographics",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=defense&view=infographics",
+      "url": "http://localhost:5000/?scope=defense&view=infographics",
       "relative_path": "pages/defense/infographics.html",
       "image_counts": {
         "embedded": 22,
@@ -2243,7 +2243,7 @@
       "view": "advice",
       "label": "Defense / Advice",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=defense&view=advice",
+      "url": "http://localhost:5000/?scope=defense&view=advice",
       "relative_path": "pages/defense/advice.html",
       "image_counts": {
         "embedded": 22,
@@ -2255,7 +2255,7 @@
       "view": "briefing",
       "label": "Welfare / Briefing",
       "status": "live",
-      "url": "http://localhost:5012/?scope=welfare&view=briefing",
+      "url": "http://localhost:5000/?scope=welfare&view=briefing",
       "relative_path": "pages/welfare/briefing.html",
       "image_counts": {
         "embedded": 25,
@@ -2267,7 +2267,7 @@
       "view": "rules",
       "label": "Welfare / Rules",
       "status": "live",
-      "url": "http://localhost:5012/?scope=welfare&view=rules",
+      "url": "http://localhost:5000/?scope=welfare&view=rules",
       "relative_path": "pages/welfare/rules.html",
       "image_counts": {
         "embedded": 28,
@@ -2279,7 +2279,7 @@
       "view": "advice",
       "label": "Welfare / Advice",
       "status": "live",
-      "url": "http://localhost:5012/?scope=welfare&view=advice",
+      "url": "http://localhost:5000/?scope=welfare&view=advice",
       "relative_path": "pages/welfare/advice.html",
       "image_counts": {
         "embedded": 37,
@@ -2291,7 +2291,7 @@
       "view": "prompt",
       "label": "Medical / System Prompt",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=medical&view=prompt",
+      "url": "http://localhost:5000/?scope=medical&view=prompt",
       "relative_path": "pages/medical/prompt.html",
       "image_counts": {
         "embedded": 22,
@@ -2303,7 +2303,7 @@
       "view": "briefing",
       "label": "Medical / Briefing",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=medical&view=briefing",
+      "url": "http://localhost:5000/?scope=medical&view=briefing",
       "relative_path": "pages/medical/briefing.html",
       "image_counts": {
         "embedded": 22,
@@ -2315,7 +2315,7 @@
       "view": "rag",
       "label": "Medical / RAG",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=medical&view=rag",
+      "url": "http://localhost:5000/?scope=medical&view=rag",
       "relative_path": "pages/medical/rag.html",
       "image_counts": {
         "embedded": 25,
@@ -2327,7 +2327,7 @@
       "view": "rules",
       "label": "Medical / Rules",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=medical&view=rules",
+      "url": "http://localhost:5000/?scope=medical&view=rules",
       "relative_path": "pages/medical/rules.html",
       "image_counts": {
         "embedded": 32,
@@ -2339,7 +2339,7 @@
       "view": "raw_llm",
       "label": "Medical / Raw LLM Output",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=medical&view=raw_llm",
+      "url": "http://localhost:5000/?scope=medical&view=raw_llm",
       "relative_path": "pages/medical/raw_llm.html",
       "image_counts": {
         "embedded": 22,
@@ -2351,7 +2351,7 @@
       "view": "infographics",
       "label": "Medical / Infographics",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=medical&view=infographics",
+      "url": "http://localhost:5000/?scope=medical&view=infographics",
       "relative_path": "pages/medical/infographics.html",
       "image_counts": {
         "embedded": 22,
@@ -2363,7 +2363,7 @@
       "view": "advice",
       "label": "Medical / Advice",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=medical&view=advice",
+      "url": "http://localhost:5000/?scope=medical&view=advice",
       "relative_path": "pages/medical/advice.html",
       "image_counts": {
         "embedded": 22,
@@ -2375,7 +2375,7 @@
       "view": "prompt",
       "label": "Research / System Prompt",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=research&view=prompt",
+      "url": "http://localhost:5000/?scope=research&view=prompt",
       "relative_path": "pages/research/prompt.html",
       "image_counts": {
         "embedded": 22,
@@ -2387,7 +2387,7 @@
       "view": "briefing",
       "label": "Research / Briefing",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=research&view=briefing",
+      "url": "http://localhost:5000/?scope=research&view=briefing",
       "relative_path": "pages/research/briefing.html",
       "image_counts": {
         "embedded": 22,
@@ -2399,7 +2399,7 @@
       "view": "rag",
       "label": "Research / RAG",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=research&view=rag",
+      "url": "http://localhost:5000/?scope=research&view=rag",
       "relative_path": "pages/research/rag.html",
       "image_counts": {
         "embedded": 25,
@@ -2411,7 +2411,7 @@
       "view": "rules",
       "label": "Research / Rules",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=research&view=rules",
+      "url": "http://localhost:5000/?scope=research&view=rules",
       "relative_path": "pages/research/rules.html",
       "image_counts": {
         "embedded": 32,
@@ -2423,7 +2423,7 @@
       "view": "raw_llm",
       "label": "Research / Raw LLM Output",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=research&view=raw_llm",
+      "url": "http://localhost:5000/?scope=research&view=raw_llm",
       "relative_path": "pages/research/raw_llm.html",
       "image_counts": {
         "embedded": 22,
@@ -2435,7 +2435,7 @@
       "view": "infographics",
       "label": "Research / Infographics",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=research&view=infographics",
+      "url": "http://localhost:5000/?scope=research&view=infographics",
       "relative_path": "pages/research/infographics.html",
       "image_counts": {
         "embedded": 22,
@@ -2447,7 +2447,7 @@
       "view": "advice",
       "label": "Research / Advice",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=research&view=advice",
+      "url": "http://localhost:5000/?scope=research&view=advice",
       "relative_path": "pages/research/advice.html",
       "image_counts": {
         "embedded": 22,
@@ -2459,7 +2459,7 @@
       "view": "prompt",
       "label": "Industry / System Prompt",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=industry&view=prompt",
+      "url": "http://localhost:5000/?scope=industry&view=prompt",
       "relative_path": "pages/industry/prompt.html",
       "image_counts": {
         "embedded": 22,
@@ -2471,7 +2471,7 @@
       "view": "briefing",
       "label": "Industry / Briefing",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=industry&view=briefing",
+      "url": "http://localhost:5000/?scope=industry&view=briefing",
       "relative_path": "pages/industry/briefing.html",
       "image_counts": {
         "embedded": 22,
@@ -2483,7 +2483,7 @@
       "view": "rag",
       "label": "Industry / RAG",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=industry&view=rag",
+      "url": "http://localhost:5000/?scope=industry&view=rag",
       "relative_path": "pages/industry/rag.html",
       "image_counts": {
         "embedded": 25,
@@ -2495,7 +2495,7 @@
       "view": "rules",
       "label": "Industry / Rules",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=industry&view=rules",
+      "url": "http://localhost:5000/?scope=industry&view=rules",
       "relative_path": "pages/industry/rules.html",
       "image_counts": {
         "embedded": 32,
@@ -2507,7 +2507,7 @@
       "view": "raw_llm",
       "label": "Industry / Raw LLM Output",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=industry&view=raw_llm",
+      "url": "http://localhost:5000/?scope=industry&view=raw_llm",
       "relative_path": "pages/industry/raw_llm.html",
       "image_counts": {
         "embedded": 22,
@@ -2519,7 +2519,7 @@
       "view": "infographics",
       "label": "Industry / Infographics",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=industry&view=infographics",
+      "url": "http://localhost:5000/?scope=industry&view=infographics",
       "relative_path": "pages/industry/infographics.html",
       "image_counts": {
         "embedded": 22,
@@ -2531,7 +2531,7 @@
       "view": "advice",
       "label": "Industry / Advice",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=industry&view=advice",
+      "url": "http://localhost:5000/?scope=industry&view=advice",
       "relative_path": "pages/industry/advice.html",
       "image_counts": {
         "embedded": 22,
@@ -2543,7 +2543,7 @@
       "view": "prompt",
       "label": "Economy / System Prompt",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=economy&view=prompt",
+      "url": "http://localhost:5000/?scope=economy&view=prompt",
       "relative_path": "pages/economy/prompt.html",
       "image_counts": {
         "embedded": 22,
@@ -2555,7 +2555,7 @@
       "view": "briefing",
       "label": "Economy / Briefing",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=economy&view=briefing",
+      "url": "http://localhost:5000/?scope=economy&view=briefing",
       "relative_path": "pages/economy/briefing.html",
       "image_counts": {
         "embedded": 22,
@@ -2567,7 +2567,7 @@
       "view": "rag",
       "label": "Economy / RAG",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=economy&view=rag",
+      "url": "http://localhost:5000/?scope=economy&view=rag",
       "relative_path": "pages/economy/rag.html",
       "image_counts": {
         "embedded": 25,
@@ -2579,7 +2579,7 @@
       "view": "rules",
       "label": "Economy / Rules",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=economy&view=rules",
+      "url": "http://localhost:5000/?scope=economy&view=rules",
       "relative_path": "pages/economy/rules.html",
       "image_counts": {
         "embedded": 32,
@@ -2591,7 +2591,7 @@
       "view": "raw_llm",
       "label": "Economy / Raw LLM Output",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=economy&view=raw_llm",
+      "url": "http://localhost:5000/?scope=economy&view=raw_llm",
       "relative_path": "pages/economy/raw_llm.html",
       "image_counts": {
         "embedded": 22,
@@ -2603,7 +2603,7 @@
       "view": "infographics",
       "label": "Economy / Infographics",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=economy&view=infographics",
+      "url": "http://localhost:5000/?scope=economy&view=infographics",
       "relative_path": "pages/economy/infographics.html",
       "image_counts": {
         "embedded": 22,
@@ -2615,7 +2615,7 @@
       "view": "advice",
       "label": "Economy / Advice",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=economy&view=advice",
+      "url": "http://localhost:5000/?scope=economy&view=advice",
       "relative_path": "pages/economy/advice.html",
       "image_counts": {
         "embedded": 22,
@@ -2627,7 +2627,7 @@
       "view": "prompt",
       "label": "Chief of Staff / System Prompt",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=chief_of_staff&view=prompt",
+      "url": "http://localhost:5000/?scope=chief_of_staff&view=prompt",
       "relative_path": "pages/chief_of_staff/prompt.html",
       "image_counts": {
         "embedded": 22,
@@ -2639,7 +2639,7 @@
       "view": "briefing",
       "label": "Chief of Staff / Briefing",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=chief_of_staff&view=briefing",
+      "url": "http://localhost:5000/?scope=chief_of_staff&view=briefing",
       "relative_path": "pages/chief_of_staff/briefing.html",
       "image_counts": {
         "embedded": 22,
@@ -2651,7 +2651,7 @@
       "view": "rag",
       "label": "Chief of Staff / RAG",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=chief_of_staff&view=rag",
+      "url": "http://localhost:5000/?scope=chief_of_staff&view=rag",
       "relative_path": "pages/chief_of_staff/rag.html",
       "image_counts": {
         "embedded": 25,
@@ -2663,7 +2663,7 @@
       "view": "rules",
       "label": "Chief of Staff / Rules",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=chief_of_staff&view=rules",
+      "url": "http://localhost:5000/?scope=chief_of_staff&view=rules",
       "relative_path": "pages/chief_of_staff/rules.html",
       "image_counts": {
         "embedded": 32,
@@ -2675,7 +2675,7 @@
       "view": "raw_llm",
       "label": "Chief of Staff / Raw LLM Output",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=chief_of_staff&view=raw_llm",
+      "url": "http://localhost:5000/?scope=chief_of_staff&view=raw_llm",
       "relative_path": "pages/chief_of_staff/raw_llm.html",
       "image_counts": {
         "embedded": 22,
@@ -2687,7 +2687,7 @@
       "view": "infographics",
       "label": "Chief of Staff / Infographics",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=chief_of_staff&view=infographics",
+      "url": "http://localhost:5000/?scope=chief_of_staff&view=infographics",
       "relative_path": "pages/chief_of_staff/infographics.html",
       "image_counts": {
         "embedded": 22,
@@ -2699,7 +2699,7 @@
       "view": "advice",
       "label": "Chief of Staff / Advice",
       "status": "planned",
-      "url": "http://localhost:5012/?scope=chief_of_staff&view=advice",
+      "url": "http://localhost:5000/?scope=chief_of_staff&view=advice",
       "relative_path": "pages/chief_of_staff/advice.html",
       "image_counts": {
         "embedded": 22,
