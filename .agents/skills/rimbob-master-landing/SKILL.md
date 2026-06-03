@@ -14,16 +14,18 @@ Prefer the repo helper:
 ```powershell
 powershell.exe -ExecutionPolicy Bypass -File .\tools\land-rimbob-slice.ps1 `
   -FeatureRef <branch-or-commit> `
-  -ManifestFile <absolute-or-repo-relative-file> `
+  -ManifestFile <absolute-or-repo-relative-file> `   # or: -Manifest path1,path2 (comma- or array-separated)
   -CommitSubject "feat(scope): summary" `
   -CommitBody "Short why/contents." `
   -TaskId <task-id-if-Tasks.md-is-in-manifest> `
   -TaskAnchorId <insert-after-task-id> `
-  -BuildDashboard `
   -RestartHost
+  # -BuildDashboard      # only to FORCE a dashboard build with no Dashboard/* path in the manifest
+  # -SkipDotNetBuild     # docs/skill-only landings that cannot affect compiled code
+  # -SkipTests           # docs/skill-only landings
 ```
 
-The helper must be run from the real `C:\dev\RimBob` checkout. It acquires `.git\rimbob-master.lock`, refuses a dirty index, stages only the manifest, stages `Tasks.md` as a one-line task-id patch when requested, runs `git diff --cached --check`, commits, releases the lock, then optionally builds/tests/restarts Host and verifies health.
+The helper must be run from the real `C:\dev\RimBob` checkout, on `master`. It refuses to start if any manifest path other than `Tasks.md` is already dirty in the main checkout (also checked under `-DryRun`) or if the index already has staged changes. It then stages exactly the manifest under `.git\rimbob-master.lock`, patches only the named `Tasks.md` task line when requested, runs `git diff --cached --check`, and commits. By default it also runs `dotnet build Src\RimBob.sln` and `dotnet test Src\Tests\RimBob.Tests.csproj`; pass `-SkipDotNetBuild` / `-SkipTests` for changes that cannot affect compiled code or runtime behavior.
 
 Use `-DryRun` first when the branch, manifest, or `Tasks.md` task id is uncertain. If the sandbox blocks Git metadata writes, rerun the exact same helper command with approval/escalation instead of rewriting the sequence manually.
 
@@ -44,7 +46,7 @@ Use `-DryRun` first when the branch, manifest, or `Tasks.md` task id is uncertai
    - Pass the exact manifest file or explicit path list.
    - If `Tasks.md` is in the manifest, also pass `-TaskId`; the helper copies only that task line from the feature ref into both the staged blob and working tree.
    - Pass `-TaskAnchorId` when a new task line should be inserted after a known existing task.
-   - Pass `-BuildDashboard` when `Dashboard/` changed.
+   - A `Dashboard/` change in the manifest is auto-built; pass `-BuildDashboard` only to force a build when no `Dashboard/*` path is in the manifest.
    - Pass `-RestartHost` for runtime or dashboard changes that must be visible after landing.
 
 4. If the helper fails:
@@ -63,4 +65,3 @@ Use `-DryRun` first when the branch, manifest, or `Tasks.md` task id is uncertai
 
 - The helper intentionally does not push.
 - The helper intentionally leaves the lock in place after a post-staging failure, because that is safer than letting another agent commit a partial landing.
-- For docs-only or skill-only landings, use `-SkipDotNetBuild -SkipTests` only when the change cannot affect compiled code or runtime behavior.

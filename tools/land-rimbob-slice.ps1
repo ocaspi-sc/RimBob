@@ -111,7 +111,7 @@ function Get-ManifestPaths {
         }
     }
 
-    $unique = @($paths | Select-Object -Unique)
+    $unique = @($paths | Sort-Object -Unique)
     if ($unique.Count -eq 0) {
         throw 'Provide -Manifest or -ManifestFile with at least one path.'
     }
@@ -309,20 +309,11 @@ function Assert-CheckoutPathsClean {
         [string[]]$Paths
     )
 
-    $dirty = New-Object System.Collections.Generic.List[string]
-    foreach ($path in $Paths) {
-        $tracked = @(Invoke-Git @('ls-files', '--', $path))
-        $workingPath = Join-Path $MainRepoRoot ($path.Replace('/', '\'))
-        if ($tracked.Count -eq 0 -and -not (Test-Path -LiteralPath $workingPath)) {
-            continue
-        }
-
-        $status = @(Invoke-Git @('status', '--porcelain', '--', $path))
-        if ($status.Count -gt 0) {
-            $dirty.AddRange($status)
-        }
+    if ($Paths.Count -eq 0) {
+        return
     }
 
+    $dirty = @(Invoke-Git (@('status', '--porcelain', '--') + $Paths))
     if ($dirty.Count -gt 0) {
         throw "Refusing to overwrite dirty main-checkout manifest paths:`n$($dirty -join [Environment]::NewLine)"
     }
@@ -345,8 +336,7 @@ function Invoke-CommandStep {
 }
 
 function Stop-MatchingHost {
-    $hostPath = Join-Path $MainRepoRoot 'Src\ApiHost\bin\Debug\net9.0\RimBob.Host.exe'
-    $processes = @(Get-Process RimBob.Host -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $hostPath })
+    $processes = @(Get-Process RimBob.Host -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $HostExePath })
     foreach ($process in $processes) {
         Stop-Process -Id $process.Id -Force
     }
@@ -354,7 +344,6 @@ function Stop-MatchingHost {
 
 function Verify-Host {
     $baseUrl = 'http://localhost:5000'
-    $hostPath = Join-Path $MainRepoRoot 'Src\ApiHost\bin\Debug\net9.0\RimBob.Host.exe'
     $deadline = (Get-Date).AddSeconds(30)
     $health = $null
     do {
@@ -375,7 +364,7 @@ function Verify-Host {
         throw "Host runtime_root mismatch: $($health.runtime.runtime_root)"
     }
 
-    if ($health.runtime.host_process_path -ne $hostPath) {
+    if ($health.runtime.host_process_path -ne $HostExePath) {
         throw "Host process path mismatch: $($health.runtime.host_process_path)"
     }
 
@@ -387,12 +376,12 @@ function Verify-Host {
     Write-Host "Host verified: $baseUrl build=$($health.version.build_revision_short) assets=$($health.version.dashboard_asset_version)"
 }
 
-$resolvedMain = (Resolve-Path -LiteralPath $MainRepoRoot).Path
-$MainRepoRoot = $resolvedMain
+$MainRepoRoot = (Resolve-Path -LiteralPath $MainRepoRoot).Path
+$HostExePath = Join-Path $MainRepoRoot 'Src\ApiHost\bin\Debug\net9.0\RimBob.Host.exe'
 Set-Location -LiteralPath $MainRepoRoot
 
 $manifestPaths = @(Get-ManifestPaths)
-$manifestPaths = @($manifestPaths | Sort-Object -Unique)
+$tasksInManifest = $manifestPaths -contains 'Tasks.md'
 
 Invoke-Git @('rev-parse', '--verify', "$FeatureRef^{commit}") | Out-Null
 $repoTopRaw = (@(Invoke-Git @('rev-parse', '--show-toplevel')))[0]
@@ -413,7 +402,7 @@ Write-Host "Feature ref: $FeatureRef"
 Write-Host 'Manifest:'
 $manifestPaths | ForEach-Object { Write-Host "  $_" }
 
-if ($manifestPaths -contains 'Tasks.md' -and [string]::IsNullOrWhiteSpace($TaskId)) {
+if ($tasksInManifest -and [string]::IsNullOrWhiteSpace($TaskId)) {
     throw 'Manifest contains Tasks.md. Pass -TaskId so only that task line is staged.'
 }
 
@@ -451,7 +440,7 @@ try {
         Invoke-Git (@('checkout', $FeatureRef, '--') + $checkoutPaths) | Out-Null
     }
 
-    if ($manifestPaths -contains 'Tasks.md') {
+    if ($tasksInManifest) {
         Stage-TasksLine $FeatureRef $TaskId $TaskAnchorId
     }
 
