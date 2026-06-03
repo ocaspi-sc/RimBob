@@ -86,6 +86,7 @@ const manualCommitTitles: Record<string, string> = {
   '512c07cc': 'Advice priority',
   '5358816e': 'Icon strip',
   '55420343': 'Path migration',
+  '568c1b9': 'AGENTS update',
   '582d49d4': 'Food wording',
   '58880b11': 'Advice snapshots',
   '58ca5e0c': 'Durable docs',
@@ -121,6 +122,7 @@ const manualCommitTitles: Record<string, string> = {
   '76bcbc85': 'Slash todo',
   '7751f3cd': 'Prompt boxes',
   '77fa7729': 'Worktree ports',
+  '786d947': 'Welfare table summary',
   '7872fa22': 'Gitignore fix',
   '79a02490': 'Strip styling',
   '7ae7f46f': 'Output plan',
@@ -131,6 +133,7 @@ const manualCommitTitles: Record<string, string> = {
   '803ac1fe': 'RIMAPI gaps',
   '80538019': 'Line endings',
   '81ddb219': 'Food actions',
+  '81ff590': 'Willie all-hits solver',
   '83749294': 'Agenda docs',
   '846ce491': 'Launcher exit',
   '85b084b7': 'Unforbid cleanup',
@@ -143,6 +146,7 @@ const manualCommitTitles: Record<string, string> = {
   '8cd05dce': 'State spine',
   '8cd5553b': 'Rule diagnostics',
   '90502a3e': 'Trace details',
+  '090655a': 'Chef dedup summary',
   '9149f5da': 'Operating notes',
   '93a67b11': 'LLM rules',
   '94ef61db': 'Minister outputs',
@@ -159,6 +163,8 @@ const manualCommitTitles: Record<string, string> = {
   'a18036b5': 'Food vertical',
   'a1f2aa90': 'AI leads',
   'a1f6dee5': 'Storage posture',
+  'a347764': 'All-hits docs',
+  'a917bd0': 'Tray window hide',
   'a2258ee8': 'Food inspector',
   'a2e5e271': 'LLM inspector',
   'a5b75e08': 'Agenda types',
@@ -179,12 +185,15 @@ const manualCommitTitles: Record<string, string> = {
   'b5c46f13': 'Split-screen spacing',
   'b8811bc4': 'Refactoring plan',
   'b88ee785': 'Emoji cues',
+  'b8189f3': 'Welfare rule table',
   'b8f4f639': 'Test inventory',
   'b99f4b57': 'Stale captures',
   'ba76bfcf': 'Agenda bootstrap',
+  'ba1c5bc': 'Willie requests tab',
   'bea9a38a': 'Replay metadata',
   'c0ad97d3': 'Advice bus',
   'c2753ec4': 'Merged diagrams',
+  'c028fe9': 'Landing helper polish',
   'c2bee42d': 'Tray menu',
   'c32fc116': 'Todo skill',
   'c439c922': 'Log paths',
@@ -210,6 +219,7 @@ const manualCommitTitles: Record<string, string> = {
   'cf93b7ce': 'Action rename',
   'd08e52c7': 'Diagnostics widths',
   'd13c8f28': 'Console tabs',
+  'da91efe': 'Rule base summary',
   'd2b80ba7': 'Claude notes',
   'd2cf5f46': 'Style warnings',
   'd620c4ac': 'AGENTS update',
@@ -245,6 +255,34 @@ const manualCommitTitles: Record<string, string> = {
   'fdf202f4': 'Terrain math',
   'fe4f3396': 'Output sync',
   'ff687e0b': 'Warm hardening',
+  'dd6655d': 'Snapshot header',
+  '1de7ff5': 'Minister emoji UI',
+  '2d02576': 'Shared rule base',
+  '2a2740c': 'AGENTS update',
+  '30d3a94': 'Home-area geometry',
+  '319930f': 'Welfare slice B',
+  '48b2a40': 'Willie all-hits summary',
+  '5fdff44': 'Delete concern summary',
+  '6195c89': 'Willie empty copy',
+  '73f3330': 'Landing helper',
+  '074a72d': 'Escalation callout',
+  'af1b462': 'Cooking kitchen request',
+  'af859bc': 'Minister emoji docs',
+  'e62591c': 'Delete concern',
+  'eee91c1': 'Welfare slice A',
+  'e9dd803': 'Starter kitchen request',
+  'add66e7': 'Home-area anchor',
+  '2bb3af6': 'Forbidden meal wording',
+  '3de8016': 'Build request solver',
+  '4e98b52': 'Cabinet run dialog',
+  '4f33f77': 'Solver no-option cause',
+  '9357831': 'Independent Food rules',
+  'b0bfee9': 'Endpoint footer',
+  '12b4243': 'Applied actions visibility',
+  '1458e35': 'Table rules docs',
+  '1aa2bb1': 'Home-area summary',
+  '226ec3d': 'Willie requests summary',
+  '483fa38': 'Chef request dedup',
 };
 export function DevBlogOverview({
   onSelectView,
@@ -1238,6 +1276,66 @@ function featureDisplayInfo(featureKey: string): { title: string; description: s
         description: 'Dashboard request timing telemetry that keeps endpoint latency visible while navigating the console.',
         icon: iconForField('status'),
       };
+    case 'Minister rules table refactor':
+      return {
+        title: '🧪 Rules Table Engine',
+        description: 'One rule-as-data table now drives live evaluation, all-hits output, trace evidence, and the all-rules catalogue.',
+        icon: iconForField('rules'),
+      };
+    case 'Willie construction solver':
+      return {
+        title: '🧱 Willie Placement Solver',
+        description: 'Build requests, home-area fallback anchors, no-option evidence, and multi-request solve behavior for construction advice.',
+        icon: iconForScope('willie'),
+      };
+    case 'Willie requests dashboard':
+      return {
+        title: '📐 Willie Requests Inspector',
+        description: 'A request-by-request dashboard view that joins inbound building requests to placement-solver outcomes.',
+        icon: iconForField('building_requests'),
+      };
+    case 'Welfare Mood & Needs':
+      return {
+        title: '🛏️ Welfare Mood & Needs Rail',
+        description: 'Welfare rules, briefing summaries, and Willie-directed requests for shelter, recreation, comfort, and break-risk pressure.',
+        icon: iconForScope('welfare'),
+      };
+    case 'Advice schema cleanup':
+      return {
+        title: '🧹 Advice Schema Cleanup',
+        description: 'Removed stale concern labels so actions, flags, traces, and validation own the execution-facing meaning.',
+        icon: iconForField('advice_item'),
+      };
+    case 'Minister display polish':
+      return {
+        title: '🎩 Minister Display Polish',
+        description: 'Dashboard and docs now carry stable minister emoji display labels while route keys and raw contracts stay unchanged.',
+        icon: iconForField('minister'),
+      };
+    case 'Snapshot export':
+      return {
+        title: '📸 Static Snapshot Export',
+        description: 'Dashboard snapshot export maintenance, including mobile-safe static pages for sharing the current console state.',
+        icon: iconForScope('dev_blog'),
+      };
+    case 'Master landing workflow':
+      return {
+        title: '🛬 Master Landing Helper',
+        description: 'Tooling and skill docs for exact-manifest landings that preserve unrelated main-checkout work.',
+        icon: iconForField('logs'),
+      };
+    case 'Minister escalation visibility':
+      return {
+        title: '⚠️ Escalation Visibility',
+        description: 'Advice and Rules views surface minister escalation state prominently instead of hiding it in raw traces.',
+        icon: iconForField('rules'),
+      };
+    case 'Cabinet run dialog':
+      return {
+        title: '🧾 Cabinet Run Dialog',
+        description: 'Manual cabinet runs show correlated, backend-authored step progress from trigger through completion or failure.',
+        icon: iconForField('cabinet'),
+      };
     case 'Worktree and branch operations':
       return {
         title: '🌿 Worktree Merge Hygiene',
@@ -1310,6 +1408,46 @@ function featureGroupTitle(title: string): string {
     case 'Refine skill':
     case 'Run skill':
       return 'Agent skill workflows';
+    case 'Landing helper':
+    case 'Landing helper polish':
+      return 'Master landing workflow';
+    case 'Snapshot header':
+      return 'Snapshot export';
+    case 'Minister emoji docs':
+    case 'Minister emoji UI':
+      return 'Minister display polish';
+    case 'Willie all-hits solver':
+    case 'Willie all-hits summary':
+    case 'Home-area anchor':
+    case 'Home-area geometry':
+    case 'Home-area summary':
+    case 'Build request solver':
+    case 'Solver no-option cause':
+    case 'Willie empty copy':
+      return 'Willie construction solver';
+    case 'Willie requests summary':
+    case 'Willie requests tab':
+      return 'Willie requests dashboard';
+    case 'Welfare rule table':
+    case 'Welfare slice A':
+    case 'Welfare slice B':
+    case 'Welfare table summary':
+      return 'Welfare Mood & Needs';
+    case 'All-hits docs':
+    case 'Chef dedup summary':
+    case 'Chef request dedup':
+    case 'Independent Food rules':
+    case 'Rule base summary':
+    case 'Shared rule base':
+    case 'Table rules docs':
+      return 'Minister rules table refactor';
+    case 'Delete concern':
+    case 'Delete concern summary':
+      return 'Advice schema cleanup';
+    case 'Escalation callout':
+      return 'Minister escalation visibility';
+    case 'Cabinet run dialog':
+      return 'Cabinet run dialog';
     case 'Worktree ports':
     case 'Worktree rules':
       return 'Worktree and branch operations';
@@ -1611,7 +1749,15 @@ function featureDomainTitle(featureTitle: string): string {
     case 'Inspector and prompt surfaces':
     case 'Dev Blog analytics':
     case 'Endpoint timing telemetry':
+    case 'Minister display polish':
+    case 'Snapshot export':
+    case 'Cabinet run dialog':
       return 'Dashboard';
+    case 'Willie construction solver':
+    case 'Willie requests dashboard':
+      return 'Construction';
+    case 'Welfare Mood & Needs':
+      return 'Welfare';
     case 'Icon cache and gateway':
     case 'Icon warming and placeholders':
     case 'Terrain and visual thumbnails':
@@ -1628,6 +1774,9 @@ function featureDomainTitle(featureTitle: string): string {
     case 'Repository cleanup and scaffolding':
       return 'Infra';
     case 'RAG retrieval':
+    case 'Advice schema cleanup':
+    case 'Minister escalation visibility':
+    case 'Minister rules table refactor':
       return 'Advice';
     case 'Design docs and roadmap':
     case 'Todo and idea triage':
@@ -1635,6 +1784,7 @@ function featureDomainTitle(featureTitle: string): string {
     case 'Agent rules and coordination':
     case 'Agent skill workflows':
     case 'Codex prompt runner':
+    case 'Master landing workflow':
     case 'Worktree and branch operations':
       return 'Agent Ops';
     default:
@@ -1646,26 +1796,30 @@ function domainOrder(domain: string): number {
   switch (domain) {
     case 'Food':
       return 0;
-    case 'Mayor':
+    case 'Construction':
       return 1;
-    case 'Advice':
+    case 'Welfare':
       return 2;
-    case 'Execution':
+    case 'Mayor':
       return 3;
-    case 'Dashboard':
+    case 'Advice':
       return 4;
-    case 'Icons':
+    case 'Execution':
       return 5;
-    case 'Persistence':
+    case 'Dashboard':
       return 6;
-    case 'Infra':
+    case 'Icons':
       return 7;
-    case 'Design':
+    case 'Persistence':
       return 8;
-    case 'Agent Ops':
+    case 'Infra':
       return 9;
-    default:
+    case 'Design':
       return 10;
+    case 'Agent Ops':
+      return 11;
+    default:
+      return 12;
   }
 }
 
@@ -1675,6 +1829,8 @@ function featureTags(featureKey: string, domain: string): string[] {
   tags.add(domain);
 
   if (domain === 'Food') tags.add('Minister');
+  if (domain === 'Construction') tags.add('Minister');
+  if (domain === 'Welfare') tags.add('Minister');
   if (domain === 'Execution') tags.add('Assisted Apply');
   if (domain === 'Persistence') tags.add('Persistence');
   if (domain === 'Infra') tags.add('Infra');
@@ -1688,14 +1844,20 @@ function featureTags(featureKey: string, domain: string): string[] {
   if (key.includes('inspector') || key.includes('prompt') || key.includes('trace')) tags.add('Inspection');
   if (key.includes('endpoint') || key.includes('timing')) tags.add('Inspection');
   if (key.includes('rules') || key.includes('sorter') || key.includes('shortage')) tags.add('Rules');
+  if (key.includes('rule table') || key.includes('all-hits')) tags.add('Rules System');
   if (key.includes('rag')) tags.add('RAG');
   if (key.includes('bridge') || key.includes('rimapi') || key.includes('apply')) tags.add('RIMAPI');
+  if (key.includes('willie') || key.includes('construction') || key.includes('placement') || key.includes('solver') || key.includes('blueprint')) tags.add('Construction');
+  if (key.includes('welfare') || key.includes('mood') || key.includes('needs') || key.includes('break-risk')) tags.add('Mood & Needs');
   if (key.includes('state') || key.includes('briefing') || key.includes('aggregate') || key.includes('stock') || key.includes('classifier') || key.includes('nutrition')) tags.add('State Store');
   if (key.includes('replay')) tags.add('Replay Corpus');
   if (key.includes('llm') || key.includes('gemini')) tags.add('LLM');
   if (key.includes('design') || key.includes('todo')) tags.add('Docs');
   if (key.includes('agent') || key.includes('worktree')) tags.add('Agents');
   if (key.includes('cleanup') || key.includes('scaffolding') || key.includes('operations')) tags.add('Refactor');
+  if (key.includes('schema')) tags.add('Schema');
+  if (key.includes('snapshot')) tags.add('Snapshot');
+  if (key.includes('cabinet')) tags.add('Cabinet');
   if (key.includes('advice') || key.includes('meal bill') || key.includes('hunt apply')) tags.add('Advice');
   if (key.includes('crop') || key.includes('fertility') || key.includes('forage') || key.includes('prey')) tags.add('Briefing');
 
@@ -1721,6 +1883,25 @@ function featureTags(featureKey: string, domain: string): string[] {
     case 'Advice bus and actions':
       tags.add('AdviceBus');
       break;
+    case 'Minister rules table refactor':
+      tags.add('Rules System');
+      tags.add('Refactor');
+      break;
+    case 'Willie construction solver':
+    case 'Willie requests dashboard':
+      tags.add('Placement Solver');
+      break;
+    case 'Welfare Mood & Needs':
+      tags.add('Mood & Needs');
+      break;
+    case 'Advice schema cleanup':
+      tags.add('Schema');
+      tags.add('Refactor');
+      break;
+    case 'Minister escalation visibility':
+      tags.add('LLM Escalation');
+      tags.add('Inspection');
+      break;
     case 'Design docs and roadmap':
       tags.add('Decision Log');
       break;
@@ -1745,6 +1926,10 @@ function featureTagLabel(tag: string): string {
       return '📋 Briefing';
     case 'Dashboard':
       return '🖥️ Dashboard';
+    case 'Cabinet':
+      return '🧭 Cabinet';
+    case 'Construction':
+      return '🧱 Construction';
     case 'Decision Log':
       return '🧭 Decision Log';
     case 'Design':
@@ -1765,6 +1950,8 @@ function featureTagLabel(tag: string): string {
       return '🔎 Inspection';
     case 'LLM':
       return '✨ LLM';
+    case 'LLM Escalation':
+      return '⚠️ LLM Escalation';
     case 'Mayor':
       return '🏛️ Mayor';
     case 'Mayor Agenda':
@@ -1773,8 +1960,12 @@ function featureTagLabel(tag: string): string {
       return '🎩 Minister';
     case 'Minister Output':
       return '🗃️ Minister Output';
+    case 'Mood & Needs':
+      return '🛏️ Mood & Needs';
     case 'Persistence':
       return '💾 Persistence';
+    case 'Placement Solver':
+      return '📐 Placement Solver';
     case 'RAG':
       return '📖 RAG';
     case 'Refactor':
@@ -1785,12 +1976,20 @@ function featureTagLabel(tag: string): string {
       return '🔌 RIMAPI';
     case 'Rules':
       return '📜 Rules';
+    case 'Rules System':
+      return '🧪 Rules System';
+    case 'Schema':
+      return '🧾 Schema';
+    case 'Snapshot':
+      return '📸 Snapshot';
     case 'SSE':
       return '📡 SSE';
     case 'State Store':
       return '💾 State Store';
     case 'Visualization':
       return '📊 Visualization';
+    case 'Welfare':
+      return '🛏️ Welfare';
     case 'mark_harvest':
       return '🌾 mark_harvest';
     case 'mark_hunt':

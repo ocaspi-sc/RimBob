@@ -80,6 +80,33 @@ public sealed class DevBlogHistoryAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_TagsRecentMinisterDomainsFromPathsAndSubject()
+    {
+        GitCommitRecord commit = new(
+            Hash: "5555555555555555555555555555555555555555",
+            At: DateTimeOffset.Parse("2026-06-03T12:00:00+00:00"),
+            Author: "orca",
+            Subject: "feat(willie): land all-hits rules for welfare requests",
+            Refs: "master",
+            Files:
+            [
+                new("Src/Ministers/Willie/Rules.cs", 8, 2, 30, 6),
+                new("Src/Tests/Welfare/WelfareRulesTests.cs", 5, 1, 20, 3),
+            ]);
+
+        DevBlogHistoryReport report = DevBlogHistoryAnalyzer.Analyze("C:/dev/RimBob", [commit]);
+
+        string[] areas = report.AreaSummaries.Select(area => area.Area).ToArray();
+        areas.Should().Contain("Willie/Construction");
+        areas.Should().Contain("Welfare");
+
+        string[] tags = report.TagSlices.Select(tag => tag.Label).ToArray();
+        tags.Should().Contain("Willie/Construction");
+        tags.Should().Contain("Welfare");
+        tags.Should().Contain("Rules System");
+    }
+
+    [Fact]
     public void Analyze_DedupesCommitsInsideConsolidatedGridLane()
     {
         GitCommitRecord commit = new(

@@ -320,13 +320,15 @@ public sealed class DevBlogHistoryAnalyzer : IDevBlogHistoryReader
             HashSet<string> commitAreas = new(StringComparer.OrdinalIgnoreCase);
             foreach (GitFileChange file in commit.Files)
             {
-                string area = AreaForPath(file.Path);
-                commitAreas.Add(area);
+                foreach (string area in AreasForPath(file.Path))
+                {
+                    commitAreas.Add(area);
 
-                AreaAggregate areaAggregate = GetArea(areas, area);
-                areaAggregate.FileCount++;
-                areaAggregate.Additions += file.Additions;
-                areaAggregate.Deletions += file.Deletions;
+                    AreaAggregate areaAggregate = GetArea(areas, area);
+                    areaAggregate.FileCount++;
+                    areaAggregate.Additions += file.Additions;
+                    areaAggregate.Deletions += file.Deletions;
+                }
             }
 
             foreach (string area in commitAreas)
@@ -609,7 +611,7 @@ public sealed class DevBlogHistoryAnalyzer : IDevBlogHistoryReader
         {
             "Food" or "Assisted Apply" => "Food/Apply",
             "Dashboard" or "Icons" => "Dashboard/Icons",
-            "State/RIMAPI" or "Ministers/Core" or "LLM/RAG" => "State/Core",
+            "State/RIMAPI" or "Ministers/Core" or "LLM/RAG" or "Rules System" or "Welfare" or "Willie/Construction" => "State/Core",
             "Tests" or "Replay" => "Tests/Replay",
             "Infra/Ops" or "Repo/Git" or "Other" => "Infra/Ops",
             _ => area,
@@ -909,6 +911,13 @@ public sealed class DevBlogHistoryAnalyzer : IDevBlogHistoryReader
 
         AddIf(lower, areas, "/food/", "Food");
         AddIf(lower, areas, "food", "Food");
+        AddIf(lower, areas, "willie", "Willie/Construction");
+        AddIf(lower, areas, "construction", "Willie/Construction");
+        AddIf(lower, areas, "placement", "Willie/Construction");
+        AddIf(lower, areas, "solver", "Willie/Construction");
+        AddIf(lower, areas, "blueprint", "Willie/Construction");
+        AddIf(lower, areas, "welfare", "Welfare");
+        AddIf(lower, areas, "mood", "Welfare");
         AddIf(lower, areas, "rimapi", "State/RIMAPI");
         AddIf(lower, areas, "llm", "LLM/RAG");
         AddIf(lower, areas, "rag", "LLM/RAG");
@@ -930,6 +939,16 @@ public sealed class DevBlogHistoryAnalyzer : IDevBlogHistoryReader
         string lower = subject.ToLowerInvariant();
 
         AddIf(lower, areas, "food", "Food");
+        AddIf(lower, areas, "willie", "Willie/Construction");
+        AddIf(lower, areas, "construction", "Willie/Construction");
+        AddIf(lower, areas, "placement", "Willie/Construction");
+        AddIf(lower, areas, "solver", "Willie/Construction");
+        AddIf(lower, areas, "blueprint", "Willie/Construction");
+        AddIf(lower, areas, "welfare", "Welfare");
+        AddIf(lower, areas, "mood", "Welfare");
+        AddIf(lower, areas, "rules", "Rules System");
+        AddIf(lower, areas, "allhits", "Rules System");
+        AddIf(lower, areas, "all-hits", "Rules System");
         AddIf(lower, areas, "dashboard", "Dashboard");
         AddIf(lower, areas, "ui", "Dashboard");
         AddIf(lower, areas, "panel", "Dashboard");
@@ -1015,6 +1034,9 @@ public sealed class DevBlogHistoryAnalyzer : IDevBlogHistoryReader
             "Host/API" => $"Changes Host services, endpoints, payloads, or runtime wiring.",
             "State/RIMAPI" => $"Changes state ingestion, RIMAPI contracts, or live data interpretation.",
             "Ministers/Core" => $"Changes shared minister, coordination, or advice mechanics.",
+            "Rules System" => $"Changes minister rule evaluation, diagnostics, or rule-table mechanics.",
+            "Welfare" => $"Changes Welfare Mood & Needs advice, briefing, rules, or fixtures.",
+            "Willie/Construction" => $"Changes Willie construction advice, build requests, placement, or solver diagnostics.",
             "LLM/RAG" => $"Changes prompt, provider, retrieval, or knowledge behavior.",
             "Assisted Apply" => $"Changes player-confirmed apply behavior or validation.",
             "Icons" => $"Changes icon cache, gateway, or visual asset handling.",
@@ -1075,6 +1097,16 @@ public sealed class DevBlogHistoryAnalyzer : IDevBlogHistoryReader
 
         string subject = commit.Subject.ToLowerInvariant();
         AddIf(subject, tags, "food", "Food");
+        AddIf(subject, tags, "willie", "Willie/Construction");
+        AddIf(subject, tags, "construction", "Willie/Construction");
+        AddIf(subject, tags, "placement", "Willie/Construction");
+        AddIf(subject, tags, "solver", "Willie/Construction");
+        AddIf(subject, tags, "blueprint", "Willie/Construction");
+        AddIf(subject, tags, "welfare", "Welfare");
+        AddIf(subject, tags, "mood", "Welfare");
+        AddIf(subject, tags, "rules", "Rules System");
+        AddIf(subject, tags, "allhits", "Rules System");
+        AddIf(subject, tags, "all-hits", "Rules System");
         AddIf(subject, tags, "mayor", "Mayor/Agenda");
         AddIf(subject, tags, "agenda", "Mayor/Agenda");
         AddIf(subject, tags, "dashboard", "Dashboard");
@@ -1116,6 +1148,16 @@ public sealed class DevBlogHistoryAnalyzer : IDevBlogHistoryReader
     {
         string lower = path.ToLowerInvariant();
         AddIf(lower, tags, "/food/", "Food");
+        AddIf(lower, tags, "willie", "Willie/Construction");
+        AddIf(lower, tags, "construction", "Willie/Construction");
+        AddIf(lower, tags, "placement", "Willie/Construction");
+        AddIf(lower, tags, "solver", "Willie/Construction");
+        AddIf(lower, tags, "blueprint", "Willie/Construction");
+        AddIf(lower, tags, "welfare", "Welfare");
+        AddIf(lower, tags, "mood", "Welfare");
+        AddIf(lower, tags, "rules", "Rules System");
+        AddIf(lower, tags, "allhits", "Rules System");
+        AddIf(lower, tags, "all-hits", "Rules System");
         AddIf(lower, tags, "/mayor/", "Mayor/Agenda");
         AddIf(lower, tags, "agenda", "Mayor/Agenda");
         AddIf(lower, tags, "llm", "LLM/RAG");
