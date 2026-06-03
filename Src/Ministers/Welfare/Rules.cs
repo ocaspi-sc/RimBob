@@ -18,54 +18,81 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
 
     public RulesResult Evaluate(WelfareSourceBriefing briefing, ColonyContext context)
     {
-        IReadOnlyList<RuleEmission> emissions = RuleEmissions(briefing);
-        if (emissions.Count > 0)
-            return DecisionForEmissions(briefing, emissions);
+        DateTimeOffset now = timeProvider.GetUtcNow();
+        IReadOnlyList<MinisterRule<WelfareSourceBriefing>> rules = RuleTable(now);
+        IReadOnlyList<MinisterRuleTraceDescriptor<WelfareSourceBriefing>> fallbackRuleDescriptors = FallbackRuleDescriptors();
+        MinisterRuleTableResult ruleTableResult = MinisterRuleTableEvaluator.EvaluateAllHits(
+            rules,
+            briefing,
+            additionalRuleDescriptors: fallbackRuleDescriptors);
+        if (ruleTableResult.Decision is Decision decision)
+            return decision;
 
         return new Decision(
             [],
             [],
             "needs_stable",
-            DiagnosticsFor(briefing, "needs_stable"));
+            DiagnosticsForFallback(rules, fallbackRuleDescriptors, briefing, "needs_stable"));
     }
 
-    private IReadOnlyList<RuleEmission> RuleEmissions(WelfareSourceBriefing briefing)
-    {
-        DateTimeOffset now = timeProvider.GetUtcNow();
-        List<RuleEmission> emissions = [];
+    private IReadOnlyList<MinisterRule<WelfareSourceBriefing>> RuleTable(DateTimeOffset now) =>
+    [
+        new("break_risk", MatchesBreakRisk, BreakRiskReason, briefing => BreakRiskEmission(briefing, now)),
+        new("shelter_floor", MatchesShelterFloor, ShelterFloorReason, briefing => ShelterFloorEmission(briefing, now)),
+        new("recreation_gap", MatchesRecreationGap, RecreationGapReason, briefing => RecreationGapEmission(briefing, now)),
+        new("comfort_beauty", MatchesComfortBeauty, ComfortBeautyReason, briefing => ComfortBeautyEmission(briefing, now))
+    ];
 
-        if (ShouldEmitBreakRisk(briefing))
-            emissions.Add(BreakRiskEmission(briefing, now));
+    private static bool MatchesBreakRisk(WelfareSourceBriefing briefing) =>
+        briefing.Mood.BreakRiskCount > 0;
 
-        if (ShouldEmitShelterFloor(briefing))
-            emissions.Add(ShelterFloorEmission(briefing, now));
+    private static string BreakRiskReason(WelfareSourceBriefing briefing) =>
+        $"break_risk_count={briefing.Mood.BreakRiskCount}";
 
-        if (ShouldEmitRecreationGap(briefing))
-            emissions.Add(RecreationGapEmission(briefing, now));
-
-        if (ShouldEmitComfortBeauty(briefing))
-            emissions.Add(ComfortBeautyEmission(briefing, now));
-
-        return emissions;
-    }
-
-    private static bool ShouldEmitBreakRisk(WelfareSourceBriefing briefing) =>
-        briefing.ColonistCount > 0 && briefing.Mood.BreakRiskCount > 0;
-
-    private static bool ShouldEmitShelterFloor(WelfareSourceBriefing briefing) =>
+    private static bool MatchesShelterFloor(WelfareSourceBriefing briefing) =>
         briefing.DataCoverage.HasRooms &&
         briefing.ColonistCount > 0 &&
         (briefing.Sleep.BedDeficit > 0 || briefing.Sleep.UnroofedBedroomCount > 0);
 
-    private static bool ShouldEmitRecreationGap(WelfareSourceBriefing briefing) =>
+    private static string ShelterFloorReason(WelfareSourceBriefing briefing)
+    {
+        if (!briefing.DataCoverage.HasRooms)
+            return "room coverage unavailable for shelter floor check";
+
+        if (briefing.ColonistCount <= 0)
+            return "no colonists need sleeping shelter";
+
+        return $"bed_deficit={briefing.Sleep.BedDeficit}; unroofed_bedrooms={briefing.Sleep.UnroofedBedroomCount}";
+    }
+
+    private static bool MatchesRecreationGap(WelfareSourceBriefing briefing) =>
         briefing.DataCoverage.HasNeedLevels &&
         briefing.Recreation.JoyLowCount > 0;
 
-    private static bool ShouldEmitComfortBeauty(WelfareSourceBriefing briefing) =>
+    private static string RecreationGapReason(WelfareSourceBriefing briefing) =>
+        briefing.DataCoverage.HasNeedLevels
+            ? $"joy_low_count={briefing.Recreation.JoyLowCount}"
+            : "need-level coverage unavailable for recreation check";
+
+    private static bool MatchesComfortBeauty(WelfareSourceBriefing briefing) =>
         ThoughtGroup(briefing, ThoughtCategory.ComfortBeauty) is not null ||
         briefing.NeedLows.Any(need =>
             need.Need.Equals("comfort", StringComparison.OrdinalIgnoreCase) ||
             need.Need.Equals("beauty", StringComparison.OrdinalIgnoreCase));
+
+    private static string ComfortBeautyReason(WelfareSourceBriefing briefing)
+    {
+        WelfareThoughtGroup? group = ThoughtGroup(briefing, ThoughtCategory.ComfortBeauty);
+        if (group is not null)
+            return $"thought={group.ExampleLabel}; pawns={group.PawnCount}";
+
+        bool hasComfortOrBeautyNeedLow = briefing.NeedLows.Any(need =>
+            need.Need.Equals("comfort", StringComparison.OrdinalIgnoreCase) ||
+            need.Need.Equals("beauty", StringComparison.OrdinalIgnoreCase));
+        return hasComfortOrBeautyNeedLow
+            ? "comfort_or_beauty_need_low=true"
+            : "comfort_or_beauty_need_low=false";
+    }
 
     private RuleEmission BreakRiskEmission(WelfareSourceBriefing briefing, DateTimeOffset now)
     {
@@ -218,27 +245,6 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
             flags);
     }
 
-    private static Decision DecisionForEmissions(
-        WelfareSourceBriefing briefing,
-        IReadOnlyList<RuleEmission> emissions)
-    {
-        IReadOnlyList<RuleEmission> orderedEmissions = emissions
-            .Select((emission, index) => new { emission, index })
-            .OrderByDescending(row => row.emission.Advice.Priority)
-            .ThenBy(row => row.index)
-            .Select(row => row.emission)
-            .ToList();
-        IReadOnlyList<AdviceItem> advice = orderedEmissions
-            .Select(emission => emission.Advice)
-            .ToList();
-        IReadOnlyList<AgentFlag> flags = orderedEmissions
-            .SelectMany(emission => emission.Flags)
-            .ToList();
-        string trace = CompositeTrace(orderedEmissions);
-        RuleTraceDetails diagnostics = DiagnosticsFor(briefing, trace, orderedEmissions);
-        return new Decision(advice, flags, trace, diagnostics);
-    }
-
     private static RuleEmission EmitAdvice(
         WelfareSourceBriefing briefing,
         DateTimeOffset now,
@@ -330,168 +336,29 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
             ]);
     }
 
-    private static RuleTraceDetails DiagnosticsFor(
+    private static RuleTraceDetails DiagnosticsForFallback(
+        IReadOnlyList<MinisterRule<WelfareSourceBriefing>> rules,
+        IReadOnlyList<MinisterRuleTraceDescriptor<WelfareSourceBriefing>> fallbackRuleDescriptors,
         WelfareSourceBriefing briefing,
-        string selectedRule,
-        IReadOnlyList<RuleEmission>? emissions = null)
-    {
-        List<RuleTraceEntry> matches = RuleMatches(briefing);
-        HashSet<string> emittedRules = emissions is null
-            ? [selectedRule]
-            : emissions.Select(emission => emission.Rule).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        string selectedRule) =>
+        MinisterRuleTableEvaluator.BuildTrace(
+            rules,
+            briefing,
+            selectedRule,
+            emittedEmissions: [],
+            additionalMatchedSignals: [new RuleTraceEntry(selectedRule, "selected", NeedsStableReason(briefing))],
+            additionalRuleDescriptors: fallbackRuleDescriptors);
 
-        if (emissions is null &&
-            !matches.Any(match => string.Equals(match.Rule, selectedRule, StringComparison.OrdinalIgnoreCase)))
-        {
-            matches.Add(new RuleTraceEntry(selectedRule, "selected", "no deterministic Welfare rule matched"));
-        }
+    private static IReadOnlyList<MinisterRuleTraceDescriptor<WelfareSourceBriefing>> FallbackRuleDescriptors() =>
+    [
+        new("needs_stable", NeedsStableReason, (_, selectedRule) => SelectedWhenSelected("needs_stable", selectedRule))
+    ];
 
-        List<RuleTraceEntry> annotated = matches
-            .Select(match => match with
-            {
-                Outcome = emittedRules.Contains(match.Rule) ? "selected" : "matched"
-            })
-            .ToList();
+    private static string NeedsStableReason(WelfareSourceBriefing briefing) =>
+        "no deterministic Welfare rule matched";
 
-        RuleTraceDetails details = new(selectedRule, annotated, [])
-        {
-            AllRules = AllRuleEvaluations(annotated)
-        };
-
-        return emissions is null ? details : WithRuleEmissions(details, emissions);
-    }
-
-    private static RuleTraceDetails WithRuleEmissions(
-        RuleTraceDetails details,
-        IReadOnlyList<RuleEmission> emissions)
-    {
-        List<RuleEmittedAdviceTrace> emittedAdvice = [];
-        List<RuleEmittedActionTrace> emittedActions = [];
-        List<RuleEmittedFlagTrace> emittedFlags = [];
-
-        foreach (RuleEmission emission in emissions)
-        {
-            AdviceItem item = emission.Advice;
-            emittedAdvice.Add(new RuleEmittedAdviceTrace(
-                Source: "rules",
-                Rule: emission.Rule,
-                AdviceId: item.Id,
-                Priority: item.Priority,
-                Title: item.Title,
-                ActionCount: item.Actions.Count));
-
-            for (int i = 0; i < item.Actions.Count; i++)
-            {
-                AdviceAction action = item.Actions[i];
-                emittedActions.Add(new RuleEmittedActionTrace(
-                    Source: "rules",
-                    Rule: emission.Rule,
-                    AdviceId: item.Id,
-                    ActionIndex: i,
-                    Kind: action.Kind,
-                    Instruction: action.Instruction,
-                    ApplyKind: action.Apply?.Kind,
-                    ApplyLabel: action.Apply?.Label,
-                    ApplyTargetSummary: action.Apply?.TargetSummary));
-            }
-
-            foreach (AgentFlag flag in emission.Flags)
-            {
-                emittedFlags.Add(new RuleEmittedFlagTrace(
-                    Source: "rules",
-                    Rule: emission.Rule,
-                    FlagId: flag.Id,
-                    Severity: flag.Severity,
-                    Summary: flag.Summary,
-                    RequestCount:
-                        (flag.BuildingRequests?.Count ?? 0) +
-                        (flag.LaborRequests?.Count ?? 0) +
-                        (flag.ItemRequests?.Count ?? 0) +
-                        (flag.Attention?.Count ?? 0)));
-            }
-        }
-
-        return details with
-        {
-            EmittedAdvice = emittedAdvice,
-            EmittedActions = emittedActions,
-            EmittedFlags = emittedFlags
-        };
-    }
-
-    private static List<RuleTraceEntry> RuleMatches(WelfareSourceBriefing briefing)
-    {
-        List<RuleTraceEntry> matches = [];
-
-        if (ShouldEmitBreakRisk(briefing))
-            matches.Add(Match("break_risk", $"break_risk_count={briefing.Mood.BreakRiskCount}"));
-
-        if (ShouldEmitShelterFloor(briefing))
-        {
-            matches.Add(Match(
-                "shelter_floor",
-                $"bed_deficit={briefing.Sleep.BedDeficit}; unroofed_bedrooms={briefing.Sleep.UnroofedBedroomCount}"));
-        }
-
-        if (ShouldEmitRecreationGap(briefing))
-            matches.Add(Match("recreation_gap", $"joy_low_count={briefing.Recreation.JoyLowCount}"));
-
-        if (ShouldEmitComfortBeauty(briefing))
-        {
-            WelfareThoughtGroup? group = ThoughtGroup(briefing, ThoughtCategory.ComfortBeauty);
-            matches.Add(Match(
-                "comfort_beauty",
-                group is null ? "comfort_or_beauty_need_low=true" : $"thought={group.ExampleLabel}; pawns={group.PawnCount}"));
-        }
-
-        return matches;
-    }
-
-    private static IReadOnlyList<RuleEvaluationTrace> AllRuleEvaluations(IReadOnlyList<RuleTraceEntry> annotated)
-    {
-        Dictionary<string, RuleTraceEntry> outcomes = annotated.ToDictionary(
-            entry => entry.Rule,
-            StringComparer.OrdinalIgnoreCase);
-
-        return
-        [
-            RuleEvaluation("break_risk", outcomes,
-                "colonists > 0 && break_risk_count > 0",
-                "BreakRisk advice; optional live-owner routing flag"),
-            RuleEvaluation("shelter_floor", outcomes,
-                "has_rooms && colonists > 0 && (bed_deficit > 0 || unroofed_bedroom_count > 0)",
-                "ShelterFloor advice; Willie building_request"),
-            RuleEvaluation("recreation_gap", outcomes,
-                "has_need_levels && joy_low_count > 0",
-                "RecreationGap advice; Willie building_request only when building coverage proves no recreation source"),
-            RuleEvaluation("comfort_beauty", outcomes,
-                "comfort/beauty thought category exists || comfort/beauty need low",
-                "ComfortBeauty advice; Willie dining/table building_request when the thought is concrete"),
-            RuleEvaluation("needs_stable", outcomes,
-                "no deterministic Welfare rule matched",
-                "No advice")
-        ];
-    }
-
-    private static RuleEvaluationTrace RuleEvaluation(
-        string rule,
-        IReadOnlyDictionary<string, RuleTraceEntry> outcomes,
-        string conditions,
-        string outputAction)
-    {
-        if (outcomes.TryGetValue(rule, out RuleTraceEntry? trace))
-            return new RuleEvaluationTrace(rule, trace.Outcome, conditions, outputAction, trace.Reason);
-
-        return new RuleEvaluationTrace(rule, "not_matched", conditions, outputAction, null);
-    }
-
-    private static RuleTraceEntry Match(string rule, string reason) =>
-        new(rule, "matched", reason);
-
-    private static string CompositeTrace(IReadOnlyList<RuleEmission> emissions) =>
-        emissions.Count == 1
-            ? emissions[0].Rule
-            : $"rules:{string.Join("+", emissions.Select(emission => emission.Rule))}";
+    private static string SelectedWhenSelected(string rule, string? selectedRule) =>
+        string.Equals(rule, selectedRule, StringComparison.OrdinalIgnoreCase) ? "selected" : "not_matched";
 
     private static string ShelterBody(WelfareSourceBriefing briefing, bool needsBeds, int bedNeed)
     {
@@ -625,11 +492,6 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
         }
         return new string(chars.ToArray());
     }
-
-    private sealed record RuleEmission(
-        string Rule,
-        AdviceItem Advice,
-        IReadOnlyList<AgentFlag> Flags);
 
     private sealed record DominantDriver(
         string Label,

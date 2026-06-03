@@ -43,6 +43,7 @@ public sealed class WelfareRulesTests
         request.Adjacency.Should().BeNull();
 
         decision.Diagnostics.Should().NotBeNull();
+        AssertAllRulesIncludeTableAndStableFallback(decision);
         decision.Diagnostics!.AllRules.Should().Contain(row =>
             row.Rule == "shelter_floor" &&
             row.Outcome == "selected");
@@ -60,6 +61,7 @@ public sealed class WelfareRulesTests
         decision.Advice.Should().BeEmpty();
         decision.Flags.Should().BeEmpty();
         decision.Diagnostics.Should().NotBeNull();
+        AssertAllRulesIncludeTableAndStableFallback(decision);
         decision.Diagnostics!.AllRules.Should().Contain(row =>
             row.Rule == "needs_stable" &&
             row.Outcome == "selected");
@@ -198,6 +200,10 @@ public sealed class WelfareRulesTests
         RulesResult result = new Rules(new FixedTimeProvider(FixedNow)).Evaluate(briefing, ColonyContext.Default);
         return result.Should().BeOfType<Decision>().Subject;
     }
+
+    private static void AssertAllRulesIncludeTableAndStableFallback(Decision decision) =>
+        decision.Diagnostics!.AllRules.Select(row => row.Rule)
+            .Should().Equal("break_risk", "shelter_floor", "recreation_gap", "comfort_beauty", "needs_stable");
 
     private static WelfareSourceBriefing LoadFixture(string name)
     {
