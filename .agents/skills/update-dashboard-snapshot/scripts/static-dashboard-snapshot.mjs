@@ -82,6 +82,14 @@ const fullMinisterViews = [
 const rulesOnlyMinisterViews = [
   { key: "briefing", label: "Briefing" },
   { key: "build_queue", label: "Build Queue" },
+  { key: "solver", label: "Solver" },
+  { key: "requests", label: "Requests" },
+  { key: "rules", label: "Rules" },
+  { key: "advice", label: "Advice" },
+];
+
+const welfareMinisterViews = [
+  { key: "briefing", label: "Briefing" },
   { key: "rules", label: "Rules" },
   { key: "advice", label: "Advice" },
 ];
@@ -91,7 +99,7 @@ const ministerScopes = [
   { key: "food", label: "Chef", kind: "minister", status: "live", views: fullMinisterViews },
   { key: "willie", label: "Willie", kind: "minister", status: "live", views: rulesOnlyMinisterViews },
   { key: "defense", label: "Defense", kind: "minister", status: "planned", views: fullMinisterViews },
-  { key: "welfare", label: "Welfare", kind: "minister", status: "planned", views: fullMinisterViews },
+  { key: "welfare", label: "Welfare", kind: "minister", status: "live", views: welfareMinisterViews },
   { key: "medical", label: "Medical", kind: "minister", status: "planned", views: fullMinisterViews },
   { key: "research", label: "Research", kind: "minister", status: "planned", views: fullMinisterViews },
   { key: "industry", label: "Industry", kind: "minister", status: "planned", views: fullMinisterViews },
@@ -113,6 +121,163 @@ export function dashboardSnapshotPages() {
       relativePath: path.posix.join("pages", scope.key, `${view.key}.html`),
     })),
   );
+}
+
+export async function dashboardSnapshotPagesFromDashboardSource(repoRoot) {
+  if (!repoRoot) {
+    throw new Error("dashboardSnapshotPagesFromDashboardSource requires repoRoot.");
+  }
+
+  const scopesPath = path.join(repoRoot, "Dashboard", "src", "dashboard", "scopes.ts");
+  const source = await fs.readFile(scopesPath, "utf8");
+  const viewArrays = {
+    systemViews: parseDashboardViewArray(source, "systemViews"),
+    infoViews: parseDashboardViewArray(source, "infoViews"),
+    analyticsViews: parseDashboardViewArray(source, "analyticsViews"),
+    devBlogViews: parseDashboardViewArray(source, "devBlogViews"),
+    ministerViews: parseDashboardViewArray(source, "ministerViews"),
+  };
+  const ministerViewByKey = new Map(viewArrays.ministerViews.map((view) => [view.key, view]));
+  const allMinisterViews = viewArrays.ministerViews
+    .filter((view) => !parseAllMinisterViewExclusions(source).includes(view.key));
+  const rulesOnlyMinisterViews = parseStringArrayConstant(source, "rulesOnlyMinisterViews")
+    .map((key) => viewForKey(ministerViewByKey, key, "rulesOnlyMinisterViews"));
+  const welfareMinisterViews = parseStringArrayConstant(source, "welfareMinisterViews")
+    .map((key) => viewForKey(ministerViewByKey, key, "welfareMinisterViews"));
+  const namedViewSets = {
+    systemViews: viewArrays.systemViews,
+    infoViews: viewArrays.infoViews,
+    analyticsViews: viewArrays.analyticsViews,
+    devBlogViews: viewArrays.devBlogViews,
+    allMinisterViews,
+    rulesOnlyMinisterViews,
+    welfareMinisterViews,
+  };
+  const scopes = parseScopeConfigs(source, namedViewSets);
+
+  return scopes.flatMap((scope) =>
+    scope.views.map((view) => ({
+      scope: scope.key,
+      scopeLabel: scope.label,
+      kind: scope.kind,
+      status: scope.status,
+      view: view.key,
+      viewLabel: view.label,
+      relativePath: path.posix.join("pages", scope.key, `${view.key}.html`),
+    })),
+  );
+}
+
+export async function assertSnapshotPageRegistryMatchesDashboard(repoRoot) {
+  const sourcePages = await dashboardSnapshotPagesFromDashboardSource(repoRoot);
+  const fallbackPages = dashboardSnapshotPages();
+  const sourcePaths = sourcePages.map((page) => page.relativePath);
+  const fallbackPaths = fallbackPages.map((page) => page.relativePath);
+  const missing = sourcePaths.filter((relativePath) => !fallbackPaths.includes(relativePath));
+  const extra = fallbackPaths.filter((relativePath) => !sourcePaths.includes(relativePath));
+  if (missing.length > 0 || extra.length > 0 || sourcePaths.length !== fallbackPaths.length) {
+    throw new Error(`Snapshot page registry drifted from Dashboard/src/dashboard/scopes.ts. Missing=${missing.join(", ")} Extra=${extra.join(", ")}`);
+  }
+
+  return {
+    pageCount: sourcePages.length,
+    pages: sourcePages,
+  };
+}
+
+async function resolveDashboardSnapshotPages(sourceRepoRoot) {
+  if (!sourceRepoRoot) {
+    return dashboardSnapshotPages();
+  }
+
+  const scopesPath = path.join(sourceRepoRoot, "Dashboard", "src", "dashboard", "scopes.ts");
+  if (!(await pathExists(scopesPath))) {
+    return dashboardSnapshotPages();
+  }
+
+  return dashboardSnapshotPagesFromDashboardSource(sourceRepoRoot);
+}
+
+function parseDashboardViewArray(source, name) {
+  const match = source.match(new RegExp(`export const ${name}:[^=]*= \\[([\\s\\S]*?)\\];`));
+  if (!match) {
+    throw new Error(`Could not find dashboard view array '${name}' in Dashboard/src/dashboard/scopes.ts.`);
+  }
+
+  const views = Array.from(match[1].matchAll(/\{\s*key:\s*'([^']+)'\s*,\s*label:\s*'([^']+)'\s*\}/g))
+    .map((viewMatch) => ({ key: viewMatch[1], label: viewMatch[2] }));
+  if (views.length === 0) {
+    throw new Error(`Dashboard view array '${name}' did not contain any parseable views.`);
+  }
+
+  return views;
+}
+
+function parseAllMinisterViewExclusions(source) {
+  const match = source.match(/const allMinisterViews[\s\S]*?;/);
+  if (!match) {
+    throw new Error("Could not find allMinisterViews in Dashboard/src/dashboard/scopes.ts.");
+  }
+
+  return Array.from(match[0].matchAll(/view !== '([^']+)'/g)).map((excludeMatch) => excludeMatch[1]);
+}
+
+function parseStringArrayConstant(source, name) {
+  const match = source.match(new RegExp(`const ${name}:[^=]*= \\[([\\s\\S]*?)\\];`));
+  if (!match) {
+    throw new Error(`Could not find string array '${name}' in Dashboard/src/dashboard/scopes.ts.`);
+  }
+
+  return Array.from(match[1].matchAll(/'([^']+)'/g)).map((valueMatch) => valueMatch[1]);
+}
+
+function viewForKey(viewByKey, key, sourceName) {
+  const view = viewByKey.get(key);
+  if (!view) {
+    throw new Error(`Could not resolve view '${key}' from ${sourceName}.`);
+  }
+
+  return view;
+}
+
+function parseScopeConfigs(source, namedViewSets) {
+  const match = source.match(/export const scopeConfigs:[^=]*= \[([\s\S]*?)\];/);
+  if (!match) {
+    throw new Error("Could not find scopeConfigs in Dashboard/src/dashboard/scopes.ts.");
+  }
+
+  const scopes = [];
+  for (const line of match[1].split("\n")) {
+    const scopeMatch = line.match(/\{\s*key:\s*'([^']+)'\s*,\s*label:\s*'([^']+)'\s*,[\s\S]*?kind:\s*'([^']+)'\s*,\s*status:\s*'([^']+)'\s*,\s*enabledViews:\s*([^,}]+)/);
+    if (!scopeMatch) {
+      continue;
+    }
+
+    scopes.push({
+      key: scopeMatch[1],
+      label: scopeMatch[2],
+      kind: scopeMatch[3],
+      status: scopeMatch[4],
+      views: resolveEnabledViews(scopeMatch[5].trim(), namedViewSets),
+    });
+  }
+
+  if (scopes.length === 0) {
+    throw new Error("scopeConfigs did not contain any parseable scope entries.");
+  }
+
+  return scopes;
+}
+
+function resolveEnabledViews(expression, namedViewSets) {
+  const mappedArrayMatch = expression.match(/^([A-Za-z0-9_]+)\.map\(view => view\.key\)$/);
+  const viewSetName = mappedArrayMatch ? mappedArrayMatch[1] : expression;
+  const views = namedViewSets[viewSetName];
+  if (!views) {
+    throw new Error(`Unsupported dashboard enabledViews expression '${expression}'.`);
+  }
+
+  return views;
 }
 
 export async function writeStaticDashboardSnapshot({
@@ -224,9 +389,9 @@ export async function writeStaticDashboardSnapshot({
 
   const imageResult = await embedImages(page.images);
   const html = toStaticHtml(page.html, page.cssText, imageResult.images, capturedAt, dashboardUrl);
-  await fs.writeFile(indexPath, html, "utf8");
-  await fs.writeFile(timestampedPath, html, "utf8");
-  await fs.writeFile(
+  await writeSnapshotText(indexPath, html);
+  await writeSnapshotText(timestampedPath, html);
+  await writeSnapshotText(
     metadataPath,
     `${JSON.stringify({
       captured_at: capturedAt,
@@ -238,7 +403,6 @@ export async function writeStaticDashboardSnapshot({
       health,
       image_counts: imageResult.counts,
     }, null, 2)}\n`,
-    "utf8",
   );
 
   return {
@@ -254,6 +418,7 @@ export async function writeStaticDashboardSnapshot({
 export async function writeStaticDashboardSiteSnapshot({
   tab,
   repoRoot,
+  sourceRepoRoot = repoRoot,
   dashboardUrl,
   health,
   timestamp = new Date(),
@@ -281,7 +446,7 @@ export async function writeStaticDashboardSiteSnapshot({
   await fs.rm(pagesDir, { recursive: true, force: true });
   await fs.mkdir(pagesDir, { recursive: true });
 
-  const pages = dashboardSnapshotPages();
+  const pages = await resolveDashboardSnapshotPages(sourceRepoRoot);
   const capturedPages = [];
   let entryHtml = null;
   let entryPage = null;
@@ -298,7 +463,7 @@ export async function writeStaticDashboardSiteSnapshot({
     });
     const outputPath = path.join(snapshotDir, ...page.relativePath.split("/"));
     await fs.mkdir(path.dirname(outputPath), { recursive: true });
-    await fs.writeFile(outputPath, html, "utf8");
+    await writeSnapshotText(outputPath, html);
 
     if (page.scope === "mayor" && page.view === "advice") {
       entryPage = page;
@@ -326,8 +491,8 @@ export async function writeStaticDashboardSiteSnapshot({
     throw new Error("Could not find Mayor Advice page for snapshot entrypoint.");
   }
 
-  await fs.writeFile(indexPath, entryHtml, "utf8");
-  await fs.writeFile(
+  await writeSnapshotText(indexPath, entryHtml);
+  await writeSnapshotText(
     metadataPath,
     `${JSON.stringify({
       captured_at: capturedAt,
@@ -357,7 +522,6 @@ export async function writeStaticDashboardSiteSnapshot({
         image_counts: page.image_counts,
       })),
     }, null, 2)}\n`,
-    "utf8",
   );
 
   return {
@@ -372,6 +536,7 @@ export async function writeStaticDashboardSiteSnapshot({
 export async function writeStaticDashboardSiteSnapshotBatch({
   tab,
   repoRoot,
+  sourceRepoRoot = repoRoot,
   dashboardUrl,
   health,
   timestamp = new Date(),
@@ -409,7 +574,7 @@ export async function writeStaticDashboardSiteSnapshotBatch({
 
   await fs.mkdir(pagesDir, { recursive: true });
 
-  const pages = dashboardSnapshotPages();
+  const pages = await resolveDashboardSnapshotPages(sourceRepoRoot);
   const partial = reset
     ? { captured_at: requestedCapturedAt, entry_page: null, captured_pages: [] }
     : await readSnapshotPartial(partialPath, requestedCapturedAt);
@@ -426,7 +591,7 @@ export async function writeStaticDashboardSiteSnapshotBatch({
     });
     const outputPath = path.join(snapshotDir, ...page.relativePath.split("/"));
     await fs.mkdir(path.dirname(outputPath), { recursive: true });
-    await fs.writeFile(outputPath, html, "utf8");
+    await writeSnapshotText(outputPath, html);
 
     if (page.scope === "mayor" && page.view === "advice") {
       partial.entry_page = {
@@ -439,7 +604,7 @@ export async function writeStaticDashboardSiteSnapshotBatch({
         currentPage: { ...page, relativePath: "index.html" },
         pages,
       });
-      await fs.writeFile(path.join(snapshotDir, "index.html"), entryHtml, "utf8");
+      await writeSnapshotText(path.join(snapshotDir, "index.html"), entryHtml);
     }
 
     partial.captured_pages = partial.captured_pages.filter((capturedPage) =>
@@ -493,7 +658,7 @@ export async function writeStaticDashboardSiteSnapshotBatch({
         image_counts: capturedPage.image_counts,
       };
     });
-    await fs.writeFile(
+    await writeSnapshotText(
       metadataPath,
       `${JSON.stringify({
         captured_at: capturedAt,
@@ -510,11 +675,10 @@ export async function writeStaticDashboardSiteSnapshotBatch({
         image_counts: imageCounts,
         pages: capturedPages,
       }, null, 2)}\n`,
-      "utf8",
     );
     await fs.rm(partialPath, { force: true });
   } else {
-    await fs.writeFile(partialPath, `${JSON.stringify(partial, null, 2)}\n`, "utf8");
+    await writeSnapshotText(partialPath, `${JSON.stringify(partial, null, 2)}\n`);
   }
 
   return {
@@ -532,11 +696,337 @@ export async function writeStaticDashboardSiteSnapshotBatch({
   };
 }
 
+export async function installStaticDashboardSnapshot({
+  sourceRoot,
+  sourceSnapshotDir,
+  repoRoot,
+  sourceRepoRoot = repoRoot,
+}) {
+  if (!repoRoot) {
+    throw new Error("installStaticDashboardSnapshot requires repoRoot.");
+  }
+
+  const resolvedSourceSnapshotDir = sourceSnapshotDir
+    ?? (sourceRoot ? path.join(sourceRoot, "web", "Snapshot") : null);
+  if (!resolvedSourceSnapshotDir) {
+    throw new Error("installStaticDashboardSnapshot requires sourceRoot or sourceSnapshotDir.");
+  }
+
+  const snapshotDir = path.join(repoRoot, "web", "Snapshot");
+  await fs.rm(snapshotDir, { recursive: true, force: true });
+  await fs.mkdir(path.dirname(snapshotDir), { recursive: true });
+  await fs.cp(resolvedSourceSnapshotDir, snapshotDir, { recursive: true });
+
+  const metadataPath = path.join(snapshotDir, "metadata.json");
+  const metadata = JSON.parse(await fs.readFile(metadataPath, "utf8"));
+  metadata.index_path = path.join(snapshotDir, "index.html");
+  await writeSnapshotText(metadataPath, `${JSON.stringify(metadata, null, 2)}\n`);
+  const normalized = await normalizeStaticDashboardSnapshot({ repoRoot });
+  const verification = await verifyStaticDashboardSnapshot({
+    repoRoot,
+    sourceRepoRoot,
+    expectedRuntimeRoot: sourceRepoRoot,
+  });
+
+  return {
+    snapshotDir,
+    normalized,
+    verification,
+  };
+}
+
+export async function normalizeStaticDashboardSnapshot({ repoRoot }) {
+  if (!repoRoot) {
+    throw new Error("normalizeStaticDashboardSnapshot requires repoRoot.");
+  }
+
+  const snapshotDir = path.join(repoRoot, "web", "Snapshot");
+  const files = await listFilesRecursive(snapshotDir, (filePath) =>
+    /\.(?:html|json)$/i.test(filePath));
+  let changed = 0;
+  for (const filePath of files) {
+    const text = await fs.readFile(filePath, "utf8");
+    const normalized = normalizeSnapshotText(text);
+    if (normalized !== text) {
+      await fs.writeFile(filePath, normalized, "utf8");
+      changed += 1;
+    }
+  }
+
+  return {
+    fileCount: files.length,
+    changed,
+  };
+}
+
+export async function verifyStaticDashboardSnapshot({
+  repoRoot,
+  sourceRepoRoot = repoRoot,
+  expectedRuntimeRoot = sourceRepoRoot,
+  expectedHostProcessPath = null,
+  throwOnFailure = true,
+}) {
+  if (!repoRoot) {
+    throw new Error("verifyStaticDashboardSnapshot requires repoRoot.");
+  }
+
+  const snapshotDir = path.join(repoRoot, "web", "Snapshot");
+  const pagesDir = path.join(snapshotDir, "pages");
+  const metadataPath = path.join(snapshotDir, "metadata.json");
+  const indexPath = path.join(snapshotDir, "index.html");
+  const errors = [];
+  const metadata = await readJsonIfExists(metadataPath);
+  const indexHtml = await readTextIfExists(indexPath);
+  const expectedPages = await resolveDashboardSnapshotPages(sourceRepoRoot);
+  const expectedPagePaths = new Set(expectedPages.map((page) => normalizeRelativePath(page.relativePath)));
+  const pageFiles = await listFilesRecursive(pagesDir, (filePath) => /\.html$/i.test(filePath));
+  const htmlFiles = await listFilesRecursive(snapshotDir, (filePath) => /\.html$/i.test(filePath));
+  const actualPagePaths = new Set(pageFiles.map((filePath) =>
+    normalizeRelativePath(path.relative(snapshotDir, filePath))));
+
+  if (!metadata) {
+    errors.push("metadata.json is missing or invalid.");
+  }
+
+  if (!indexHtml) {
+    errors.push("index.html is missing.");
+  }
+
+  if (metadata?.entry_page?.scope !== "mayor" || metadata?.entry_page?.view !== "advice") {
+    errors.push("metadata entry_page is not mayor/advice.");
+  }
+
+  if (metadata?.page_count !== expectedPages.length) {
+    errors.push(`metadata page_count ${metadata?.page_count} does not match expected ${expectedPages.length}.`);
+  }
+
+  if (pageFiles.length !== expectedPages.length) {
+    errors.push(`page file count ${pageFiles.length} does not match expected ${expectedPages.length}.`);
+  }
+
+  for (const expectedPath of expectedPagePaths) {
+    if (!actualPagePaths.has(expectedPath)) {
+      errors.push(`missing page file ${expectedPath}.`);
+    }
+  }
+
+  for (const actualPath of actualPagePaths) {
+    if (!expectedPagePaths.has(actualPath)) {
+      errors.push(`unexpected page file ${actualPath}.`);
+    }
+  }
+
+  if (indexHtml && !indexHtml.includes("Mayor")) {
+    errors.push("index.html does not contain Mayor content.");
+  }
+
+  if (indexHtml?.includes("All Dashboard Pages")) {
+    errors.push("index.html contains the old sitemap heading.");
+  }
+
+  const missingMetadataFiles = [];
+  for (const page of metadata?.pages ?? []) {
+    const filePath = path.join(snapshotDir, ...String(page.relative_path ?? "").split("/"));
+    if (!(await pathExists(filePath))) {
+      missingMetadataFiles.push(page.relative_path);
+    }
+  }
+
+  if (missingMetadataFiles.length > 0) {
+    errors.push(`metadata lists missing files: ${missingMetadataFiles.join(", ")}.`);
+  }
+
+  let buttonCount = 0;
+  let disabledButtonCount = 0;
+  const missingSnapshotTag = [];
+  const missingMobileCss = [];
+  const scriptFiles = [];
+  const liveSrcFiles = [];
+  const enabledButtonFiles = [];
+  const missingScopeNav = [];
+  const missingViewNav = [];
+
+  for (const filePath of htmlFiles) {
+    const html = await fs.readFile(filePath, "utf8");
+    const relativePath = normalizeRelativePath(path.relative(snapshotDir, filePath));
+    if (!html.includes("snapshot-header-tag")) {
+      missingSnapshotTag.push(relativePath);
+    }
+
+    if (!/max-width:\s*760px/.test(html) || !/orientation:\s*portrait/.test(html) || !/\.dashboard-header\s*\{\s*display:\s*none\s*!important/.test(html)) {
+      missingMobileCss.push(relativePath);
+    }
+
+    if (/<script\b/i.test(html)) {
+      scriptFiles.push(relativePath);
+    }
+
+    if (/\ssrc=["'](?!data:)(?:\/api\/|https?:\/\/localhost)/i.test(html)) {
+      liveSrcFiles.push(relativePath);
+    }
+
+    const buttons = Array.from(html.matchAll(/<button\b[^>]*>/gi)).map((match) => match[0]);
+    buttonCount += buttons.length;
+    const enabledButtons = buttons.filter((button) => !/\bdisabled\b/i.test(button));
+    disabledButtonCount += buttons.length - enabledButtons.length;
+    if (enabledButtons.length > 0) {
+      enabledButtonFiles.push(relativePath);
+    }
+
+    if (!html.includes('data-snapshot-nav="scope"')) {
+      missingScopeNav.push(relativePath);
+    }
+
+    if (!html.includes('data-snapshot-nav="view"')) {
+      missingViewNav.push(relativePath);
+    }
+  }
+
+  if (missingSnapshotTag.length > 0) {
+    errors.push(`missing SNAPSHOT header tag: ${missingSnapshotTag.join(", ")}.`);
+  }
+
+  if (missingMobileCss.length > 0) {
+    errors.push(`missing mobile header CSS: ${missingMobileCss.join(", ")}.`);
+  }
+
+  if (scriptFiles.length > 0) {
+    errors.push(`script tags remain in: ${scriptFiles.join(", ")}.`);
+  }
+
+  if (liveSrcFiles.length > 0) {
+    errors.push(`live src attributes remain in: ${liveSrcFiles.join(", ")}.`);
+  }
+
+  if (enabledButtonFiles.length > 0) {
+    errors.push(`enabled buttons remain in: ${enabledButtonFiles.join(", ")}.`);
+  }
+
+  if (missingScopeNav.length > 0) {
+    errors.push(`missing static scope navigation: ${missingScopeNav.join(", ")}.`);
+  }
+
+  if (missingViewNav.length > 0) {
+    errors.push(`missing static view navigation: ${missingViewNav.join(", ")}.`);
+  }
+
+  if (await pathExists(path.join(snapshotDir, "metadata.partial.json"))) {
+    errors.push("metadata.partial.json still exists.");
+  }
+
+  if (expectedRuntimeRoot && normalizeFilesystemPath(metadata?.health?.runtime?.runtime_root) !== normalizeFilesystemPath(expectedRuntimeRoot)) {
+    errors.push(`health runtime_root '${metadata?.health?.runtime?.runtime_root}' does not match '${expectedRuntimeRoot}'.`);
+  }
+
+  if (expectedHostProcessPath && normalizeFilesystemPath(metadata?.health?.runtime?.host_process_path) !== normalizeFilesystemPath(expectedHostProcessPath)) {
+    errors.push(`health host_process_path '${metadata?.health?.runtime?.host_process_path}' does not match '${expectedHostProcessPath}'.`);
+  }
+
+  const result = {
+    ok: errors.length === 0,
+    errors,
+    entryPage: metadata?.entry_page ?? null,
+    metadataPageCount: metadata?.page_count ?? null,
+    expectedPageCount: expectedPages.length,
+    pageFiles: pageFiles.length,
+    htmlFiles: htmlFiles.length,
+    buttonCount,
+    disabledButtonCount,
+    enabledButtonCount: buttonCount - disabledButtonCount,
+    embeddedImages: metadata?.image_counts?.embedded ?? null,
+    failedImages: metadata?.image_counts?.failed ?? null,
+    runtimeRoot: metadata?.health?.runtime?.runtime_root ?? null,
+    hostProcessPath: metadata?.health?.runtime?.host_process_path ?? null,
+    dashboardUrl: metadata?.dashboard_url ?? null,
+  };
+
+  if (!result.ok && throwOnFailure) {
+    throw new Error(`Static dashboard snapshot verification failed:\n${errors.join("\n")}`);
+  }
+
+  return result;
+}
+
 async function removeOldSinglePageArtifacts(snapshotDir) {
   const entries = await fs.readdir(snapshotDir, { withFileTypes: true });
   await Promise.all(entries
     .filter((entry) => entry.isFile() && /^dashboard-\d{8}-\d{4}\.(?:html|png)$/i.test(entry.name))
     .map((entry) => fs.rm(path.join(snapshotDir, entry.name), { force: true })));
+}
+
+function normalizeSnapshotText(text) {
+  return String(text)
+    .replace(/\r\n/g, "\n")
+    .replace(/[ \t]+(?=\n)/g, "");
+}
+
+async function writeSnapshotText(filePath, text) {
+  await fs.writeFile(filePath, normalizeSnapshotText(text), "utf8");
+}
+
+async function pathExists(filePath) {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function readTextIfExists(filePath) {
+  try {
+    return await fs.readFile(filePath, "utf8");
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
+async function readJsonIfExists(filePath) {
+  const text = await readTextIfExists(filePath);
+  if (text === null) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+async function listFilesRecursive(root, predicate = () => true) {
+  if (!(await pathExists(root))) {
+    return [];
+  }
+
+  const files = [];
+  const entries = await fs.readdir(root, { withFileTypes: true });
+  for (const entry of entries) {
+    const filePath = path.join(root, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...await listFilesRecursive(filePath, predicate));
+    } else if (entry.isFile() && predicate(filePath)) {
+      files.push(filePath);
+    }
+  }
+
+  return files;
+}
+
+function normalizeRelativePath(value) {
+  return String(value).replaceAll("\\", "/");
+}
+
+function normalizeFilesystemPath(value) {
+  if (!value) {
+    return "";
+  }
+
+  return path.resolve(String(value)).toLocaleLowerCase();
 }
 
 async function readSnapshotPartial(partialPath, capturedAt) {

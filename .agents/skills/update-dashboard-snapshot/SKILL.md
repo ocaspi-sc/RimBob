@@ -38,12 +38,18 @@ Capture every first-class RimBob dashboard scope/view route into `web/Snapshot` 
      `RimBob:ListenUrl=http://localhost:<port> RimBob:PingLlmOnStartup=false RimBob:Rag:Enabled=false`.
 5. Wait for `/api/system/health`; do not capture until it reports the current repo root and matching executable path.
 6. Use the Browser skill and the in-app browser to open the dashboard URL.
-7. Import and run `scripts/static-dashboard-snapshot.mjs` from this skill directory in the same browser runtime. Prefer `writeStaticDashboardSiteSnapshot(...)` for normal use. It writes:
+7. Import `scripts/static-dashboard-snapshot.mjs` from this skill directory in the same browser runtime and first run `assertSnapshotPageRegistryMatchesDashboard(repoRoot)`. The exporter derives the route list from `Dashboard/src/dashboard/scopes.ts`; if this assertion fails, update the exporter before capturing so new/removed dashboard views are not silently missed.
+8. Prefer a staged batch capture for the full site:
+   - Pick a temp root such as `$env:TEMP\rimbob-snapshot-<branch>` because the in-app browser runtime may be unable to delete/create files inside the worktree.
+   - Run `writeStaticDashboardSiteSnapshotBatch(...)` with `repoRoot` set to that temp root and `sourceRepoRoot` set to the real repo root. Use `pageLimit` batches until the final batch returns `finalized: true`.
+   - Install the finalized temp artifact into the repo with `installStaticDashboardSnapshot({ sourceRoot: tempRoot, repoRoot, sourceRepoRoot: repoRoot })`. If the browser runtime gets `EPERM` writing the worktree, run the same install helper from a normal shell/Node process or copy the temp `web/Snapshot` tree into the repo and then call `normalizeStaticDashboardSnapshot(...)`.
+   - Run `verifyStaticDashboardSnapshot({ repoRoot, sourceRepoRoot: repoRoot })` after installation and use its returned counts in the report.
+   Use `writeStaticDashboardSiteSnapshot(...)` only when the browser runtime can write the repo and the export is small enough to finish in one call. It writes:
    - `web/Snapshot/index.html` as the static Mayor Advice entrypoint.
    - `web/Snapshot/pages/<scope>/<view>.html` for every first-class dashboard scope/view route.
    - `web/Snapshot/metadata.json` with URL, entry page, health proof, page count, static-navigation flags, per-page paths, and embedded-image counts.
    Use `writeStaticDashboardSnapshot(...)` only when the user explicitly asks for one page.
-8. Confirm the saved files exist and report:
+9. Confirm the saved files exist and report:
    - clickable path to `web/Snapshot/index.html`
    - entry page, page count, embedded-image count, and failed-image count
    - dashboard URL
@@ -60,7 +66,7 @@ After regenerating, inspect files on disk and verify:
 
 - `web/Snapshot/index.html` contains Mayor content and does not contain the old "All Dashboard Pages" sitemap.
 - `web/Snapshot/metadata.json` has `entry_page.scope = "mayor"` and `entry_page.view = "advice"`.
-- There are 87 page files under `web/Snapshot/pages`.
+- Page file count equals `dashboardSnapshotPagesFromDashboardSource(repoRoot).length` (85 in the current dashboard registry).
 - Scope navigation links use `data-snapshot-nav="scope"` and relative `href` values.
 - View navigation links use `data-snapshot-nav="view"` and relative `href` values.
 - Every HTML file has `.snapshot-header-tag`.
@@ -69,6 +75,7 @@ After regenerating, inspect files on disk and verify:
 - No HTML file has `<script>` tags.
 - No HTML file has live `src` attributes such as `/api/...` or `http://localhost:...`.
 - `metadata.json` health proof points at the current repo root and Host process.
+- `verifyStaticDashboardSnapshot(...)` returns `ok: true`.
 
 ## Rules
 
@@ -76,4 +83,6 @@ After regenerating, inspect files on disk and verify:
 - Do not use another worktree's live Host as the snapshot source.
 - Do not save PNG screenshots for this skill unless the user separately asks for an image.
 - Do not stage or commit snapshot files unless the user explicitly asks.
+- Do not hardcode page counts as durable truth. Keep the script aligned with `Dashboard/src/dashboard/scopes.ts`, and let the verifier enforce the current count.
+- Do not leave temp-root paths in `metadata.json`; installing into the repo must rewrite `index_path` to the repo `web/Snapshot/index.html`.
 - Leave a newly-started Host running for inspection unless the user asks for cleanup; if cleaning up, stop only the process started for this snapshot.
