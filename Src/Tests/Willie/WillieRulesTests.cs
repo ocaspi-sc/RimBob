@@ -24,6 +24,7 @@ public sealed class WillieRulesTests
         decision.Diagnostics!.AllRules.Should().Contain(row =>
             row.Rule == "maintain_build_program" &&
             row.Outcome == "selected");
+        AssertAllRulesCatalog(decision);
     }
 
     [Fact]
@@ -196,7 +197,7 @@ public sealed class WillieRulesTests
     }
 
     [Fact]
-    public void InboundFreezingRequest_PreemptsMissingKitchenAndKeepsDiagnostics()
+    public void InboundFreezingRequest_WithMissingKitchen_EmitsRequestAndKitchenAdvice()
     {
         WillieBriefing briefing = StableBriefing() with
         {
@@ -209,16 +210,18 @@ public sealed class WillieRulesTests
             [FreezerRequest()]);
 
         Decision decision = result.Should().BeOfType<Decision>().Subject;
-        decision.Trace.Should().Be(Rules.BuildingRequestActiveTrace);
-        decision.Advice.Should().ContainSingle()
-            .Which.Id.Should().Be("willie_building_request_active");
+        decision.Trace.Should().Be("rules:building_request_active+kitchen_missing");
+        decision.Advice.Select(advice => advice.Id).Should().Equal(
+            "willie_building_request_active",
+            "willie_kitchen_missing");
         decision.Diagnostics.Should().NotBeNull();
-        decision.Diagnostics!.SuppressedCandidates.Should().Contain(row =>
-            row.Rule == "kitchen_missing" &&
-            row.Outcome == "suppressed");
+        decision.Diagnostics!.SuppressedCandidates.Should().BeEmpty();
+        decision.Diagnostics.AllRules.Should().Contain(row =>
+            row.Rule == Rules.BuildingRequestActiveTrace &&
+            row.Outcome == "selected");
         decision.Diagnostics.AllRules.Should().Contain(row =>
             row.Rule == "kitchen_missing" &&
-            row.Outcome == "matched");
+            row.Outcome == "selected");
     }
 
     [Fact]
@@ -244,9 +247,11 @@ public sealed class WillieRulesTests
         decision.Advice.Should().ContainSingle()
             .Which.Id.Should().Be("willie_kitchen_missing");
         decision.Diagnostics.Should().NotBeNull();
-        decision.Diagnostics!.SuppressedCandidates.Should().Contain(row =>
+        decision.Diagnostics!.SuppressedCandidates.Should().BeEmpty();
+        decision.Diagnostics.AllRules.Should().Contain(row =>
             row.Rule == Rules.BuildingRequestActiveTrace &&
-            row.Outcome == "suppressed");
+            row.Outcome == "not_matched" &&
+            row.Conditions.Contains("depends on a missing kitchen"));
         Rules.TryGetPlacementRequest(decision.Trace, briefing, [freezerNearKitchen], out BuildingRequest request)
             .Should().BeTrue();
         request.RoomClass.Should().Be(RoomClass.Kitchen);
@@ -270,18 +275,20 @@ public sealed class WillieRulesTests
             [freezerNearKitchen, KitchenRequest()]);
 
         Decision decision = result.Should().BeOfType<Decision>().Subject;
-        decision.Trace.Should().Be(Rules.BuildingRequestActiveTrace);
-        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
-        advice.Id.Should().Be("willie_building_request_active");
+        decision.Trace.Should().Be("rules:building_request_active+kitchen_missing");
+        AdviceItem advice = decision.Advice.Should()
+            .Contain(item => item.Id == "willie_building_request_active")
+            .Which;
         advice.Title.Should().Be("Kitchen request needs Willie placement");
-        Rules.TryGetPlacementRequest(decision.Trace, briefing, [freezerNearKitchen, KitchenRequest()], out BuildingRequest request)
+        decision.Advice.Should().Contain(item => item.Id == "willie_kitchen_missing");
+        Rules.TryGetPlacementRequest(Rules.BuildingRequestActiveTrace, briefing, [freezerNearKitchen, KitchenRequest()], out BuildingRequest request)
             .Should().BeTrue();
         request.RoomClass.Should().Be(RoomClass.Kitchen);
         request.TargetClass.Should().Be(BuildingClass.ProductionBench);
     }
 
     [Fact]
-    public void HardBuildBlocker_PreemptsInboundFreezingRequest()
+    public void HardBuildBlocker_AndInboundRequestBothEmit()
     {
         WillieBriefing briefing = StableBriefing() with
         {
@@ -298,13 +305,15 @@ public sealed class WillieRulesTests
             [FreezerRequest()]);
 
         Decision decision = result.Should().BeOfType<Decision>().Subject;
-        decision.Trace.Should().Be("backlog_material_gap");
-        decision.Advice.Should().ContainSingle()
-            .Which.Id.Should().Be("willie_backlog_material_gap");
+        decision.Trace.Should().Be("rules:backlog_material_gap+building_request_active");
+        decision.Advice.Select(advice => advice.Id).Should().Equal(
+            "willie_backlog_material_gap",
+            "willie_building_request_active");
         decision.Diagnostics.Should().NotBeNull();
-        decision.Diagnostics!.SuppressedCandidates.Should().Contain(row =>
+        decision.Diagnostics!.SuppressedCandidates.Should().BeEmpty();
+        decision.Diagnostics.AllRules.Should().Contain(row =>
             row.Rule == Rules.BuildingRequestActiveTrace &&
-            row.Outcome == "suppressed");
+            row.Outcome == "selected");
     }
 
     [Fact]
@@ -330,6 +339,23 @@ public sealed class WillieRulesTests
     {
         RulesResult result = new Rules().Evaluate(briefing, ColonyContext.Default);
         return result.Should().BeOfType<Decision>().Subject;
+    }
+
+    private static void AssertAllRulesCatalog(Decision decision)
+    {
+        decision.Diagnostics.Should().NotBeNull();
+        decision.Diagnostics!.AllRules.Should().HaveCount(10);
+        decision.Diagnostics.AllRules.Select(row => row.Rule).Should().Equal(
+            "power_net_deficit",
+            "low_battery_reserve",
+            "backlog_material_gap",
+            "frame_blocked_by_material",
+            Rules.BuildingRequestActiveTrace,
+            "kitchen_missing",
+            "hospital_missing",
+            "storage_room_missing",
+            "cooler_missing",
+            "maintain_build_program");
     }
 
     private static BuildingRequest FreezerRequest() =>

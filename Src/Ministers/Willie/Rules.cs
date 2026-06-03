@@ -28,143 +28,163 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
         ColonyContext context,
         IReadOnlyList<BuildingRequest> inboundBuildingRequests)
     {
-        if (briefing.DataCoverage.HasPower && briefing.PowerStability.NetW < 0)
-            return DecisionFor(
-                briefing,
-                inboundBuildingRequests,
-                "power_net_deficit",
-                AdvicePriority.High,
-                "Power is running negative",
-                $"The colony is drawing {FormatWatts(Math.Abs(briefing.PowerStability.NetW))} more power than it produces.",
-                "A persistent net deficit will shut down critical infrastructure before new construction can rely on powered assets.",
-                [new AdviceAction(AdviceActionKind.PlaceBlueprint, "Add generation, reduce load, or plan batteries before the deficit drains the network.", Owner: MinisterName)],
-                WillieFlagRequests.Empty);
-
-        if (briefing.DataCoverage.HasPower && HasLowBatteryReserve(briefing.PowerStability))
-            return DecisionFor(
-                briefing,
-                inboundBuildingRequests,
-                "low_battery_reserve",
-                AdvicePriority.Medium,
-                "Battery reserve is thin",
-                $"Stored power is {ReserveRatio(briefing.PowerStability):P0} of capacity.",
-                "Low reserve leaves coolers, benches, and defensive loads fragile during eclipse, flare recovery, or generator interruptions.",
-                [new AdviceAction(AdviceActionKind.PlaceBlueprint, "Plan additional battery backup or generation margin for critical powered rooms.", Owner: MinisterName)],
-                WillieFlagRequests.Empty);
-
-        if (briefing.MaterialBottleneck.MissingMaterials.Count > 0)
-            return DecisionFor(
-                briefing,
-                inboundBuildingRequests,
-                "backlog_material_gap",
-                AdvicePriority.High,
-                "Build queue is short on materials",
-                $"Queued construction is missing {FormatMaterials(briefing.MaterialBottleneck.MissingMaterials)}.",
-                "The backlog already reports missing materials, so adding new blueprints will increase queue debt instead of improving the base.",
-                [new AdviceAction(AdviceActionKind.RequestResource, $"Acquire or haul {FormatMaterials(briefing.MaterialBottleneck.MissingMaterials)} before expanding the build queue.", Quantity: briefing.MaterialBottleneck.MissingMaterials.Sum(material => material.Count), Owner: MinisterName)],
-                ItemRequests(briefing.MaterialBottleneck.MissingMaterials, AdvicePriority.High));
-
-        if (briefing.StalledBuilds.BlockedCount > 0)
-            return DecisionFor(
-                briefing,
-                inboundBuildingRequests,
-                "frame_blocked_by_material",
-                AdvicePriority.High,
-                "Construction is blocked",
-                $"{briefing.StalledBuilds.BlockedCount} queued build item{Plural(briefing.StalledBuilds.BlockedCount)} cannot progress.",
-                "Blocked frames and blueprints tie up the plan until materials or access are resolved.",
-                [new AdviceAction(AdviceActionKind.RequestResource, "Unblock the existing frames before placing more construction work.", Quantity: briefing.StalledBuilds.BlockedCount, Owner: MinisterName)],
-                WillieFlagRequests.AttentionRequest(
-                    "unblock current construction queue",
-                    "blocked blueprint/frame count is non-zero",
-                    AdvicePriority.High,
-                    "Player"));
-
-        BuildingRequest? buildingRequest = SelectPlacementRequest(briefing, inboundBuildingRequests);
-        if (buildingRequest is not null && !ShouldDeferToMissingKitchen(briefing, buildingRequest))
-            return BuildingRequestDecision(briefing, inboundBuildingRequests, buildingRequest);
-
-        if (HasFunctionalRoomEvidence(briefing) && MissingRoom(briefing, RoomClass.Kitchen))
-            return MissingRoomDecision(
-                briefing,
-                inboundBuildingRequests,
-                "kitchen_missing",
-                RoomClass.Kitchen,
-                AdvicePriority.Medium,
-                "Kitchen is missing",
-                "No kitchen anchor is visible in the current room inventory.");
-
-        if (HasFunctionalRoomEvidence(briefing) && briefing.ColonistCount >= 3 && MissingRoom(briefing, RoomClass.Hospital))
-            return MissingRoomDecision(
-                briefing,
-                inboundBuildingRequests,
-                "hospital_missing",
-                RoomClass.Hospital,
-                AdvicePriority.Low,
-                "Hospital is missing",
-                "No hospital anchor is visible for a colony large enough to need a treatment room.");
-
-        if (HasFunctionalRoomEvidence(briefing) &&
-            MissingRoom(briefing, RoomClass.Storage) &&
-            briefing.StoragePlacement.StockpileZones == 0)
-        {
-            return MissingRoomDecision(
-                briefing,
-                inboundBuildingRequests,
-                "storage_room_missing",
-                RoomClass.Storage,
-                AdvicePriority.Low,
-                "Storage room is missing",
-                "No storage room anchor or stockpile zone is visible.");
-        }
-
-        if (briefing.DataCoverage.HasBuildings &&
-            briefing.ThermalControl.CoolerCount == 0 &&
-            briefing.ThermalControl.FreezerAnchorCount > 0)
-            return DecisionFor(
-                briefing,
-                inboundBuildingRequests,
-                "cooler_missing",
-                AdvicePriority.Medium,
-                "Freezer has no visible cooler",
-                "A freezer room anchor exists, but no cooler building is visible.",
-                "Freezer rooms only preserve food if the thermal asset exists and is powered.",
-                [new AdviceAction(AdviceActionKind.PlaceBlueprint, "Add or repair a cooler for the freezer room.", Owner: MinisterName)],
-                WillieFlagRequests.Empty);
+        DateTimeOffset now = timeProvider.GetUtcNow();
+        IReadOnlyList<MinisterRule<WillieBriefing>> ruleTable = RuleTable(now, inboundBuildingRequests);
+        IReadOnlyList<MinisterRuleTraceDescriptor<WillieBriefing>> fallbackRuleDescriptors =
+            FallbackRuleDescriptors(inboundBuildingRequests);
+        MinisterRuleTableResult ruleTableResult = MinisterRuleTableEvaluator.EvaluateAllHits(
+            ruleTable,
+            briefing,
+            additionalRuleDescriptors: fallbackRuleDescriptors);
+        if (ruleTableResult.Decision is Decision decision)
+            return decision;
 
         return new Decision(
             [],
             [],
             "maintain_build_program",
-            DiagnosticsFor(briefing, inboundBuildingRequests, "maintain_build_program"));
+            DiagnosticsForFallback(ruleTable, fallbackRuleDescriptors, briefing, inboundBuildingRequests, "maintain_build_program"));
     }
 
-    private Decision MissingRoomDecision(
-        WillieBriefing briefing,
-        IReadOnlyList<BuildingRequest> inboundBuildingRequests,
-        string trace,
-        RoomClass roomClass,
-        AdvicePriority priority,
-        string title,
-        string body) =>
-        DecisionFor(
+    private static IReadOnlyList<MinisterRule<WillieBriefing>> RuleTable(
+        DateTimeOffset now,
+        IReadOnlyList<BuildingRequest> inboundBuildingRequests) =>
+    [
+        new("power_net_deficit", MatchesPowerNetDeficit, PowerNetDeficitReason, briefing => BuildPowerNetDeficit(briefing, now)),
+        new("low_battery_reserve", MatchesLowBatteryReserve, LowBatteryReserveReason, briefing => BuildLowBatteryReserve(briefing, now)),
+        new("backlog_material_gap", MatchesBacklogMaterialGap, BacklogMaterialGapReason, briefing => BuildBacklogMaterialGap(briefing, now)),
+        new("frame_blocked_by_material", MatchesFrameBlockedByMaterial, FrameBlockedByMaterialReason, briefing => BuildFrameBlockedByMaterial(briefing, now)),
+        new(BuildingRequestActiveTrace, briefing => MatchesBuildingRequestActive(briefing, inboundBuildingRequests), briefing => BuildingRequestActiveReason(briefing, inboundBuildingRequests), briefing => BuildBuildingRequestActive(briefing, inboundBuildingRequests, now)),
+        new("kitchen_missing", MatchesKitchenMissing, KitchenMissingReason, briefing => BuildMissingRoom(briefing, now, "kitchen_missing", RoomClass.Kitchen, AdvicePriority.Medium, "Kitchen is missing", "No kitchen anchor is visible in the current room inventory.")),
+        new("hospital_missing", MatchesHospitalMissing, HospitalMissingReason, briefing => BuildMissingRoom(briefing, now, "hospital_missing", RoomClass.Hospital, AdvicePriority.Low, "Hospital is missing", "No hospital anchor is visible for a colony large enough to need a treatment room.")),
+        new("storage_room_missing", MatchesStorageRoomMissing, StorageRoomMissingReason, briefing => BuildMissingRoom(briefing, now, "storage_room_missing", RoomClass.Storage, AdvicePriority.Low, "Storage room is missing", "No storage room anchor or stockpile zone is visible.")),
+        new("cooler_missing", MatchesCoolerMissing, CoolerMissingReason, briefing => BuildCoolerMissing(briefing, now))
+    ];
+
+    private static bool MatchesPowerNetDeficit(WillieBriefing briefing) =>
+        briefing.DataCoverage.HasPower && briefing.PowerStability.NetW < 0;
+
+    private static string PowerNetDeficitReason(WillieBriefing briefing)
+    {
+        if (!briefing.DataCoverage.HasPower)
+            return "power coverage is unavailable";
+
+        return briefing.PowerStability.NetW < 0
+            ? $"net_w={FormatWatts(briefing.PowerStability.NetW)}"
+            : $"net_w={FormatWatts(briefing.PowerStability.NetW)} is not negative";
+    }
+
+    private static RuleEmission BuildPowerNetDeficit(WillieBriefing briefing, DateTimeOffset now) =>
+        EmitAdvice(
             briefing,
-            inboundBuildingRequests,
-            trace,
-            priority,
-            title,
-            body,
-            $"{FormatRoom(roomClass)} work is a built-infrastructure gap; the placement solver owns exact footprint options when map evidence supports them.",
-            [
-                new AdviceAction(AdviceActionKind.PlaceBlueprint, $"Plan a compact {FormatRoom(roomClass)} footprint; solver options attach when a validated footprint is available.", Owner: MinisterName)
-            ],
+            now,
+            "power_net_deficit",
+            AdvicePriority.High,
+            "Power is running negative",
+            $"The colony is drawing {FormatWatts(Math.Abs(briefing.PowerStability.NetW))} more power than it produces.",
+            "A persistent net deficit will shut down critical infrastructure before new construction can rely on powered assets.",
+            [new AdviceAction(AdviceActionKind.PlaceBlueprint, "Add generation, reduce load, or plan batteries before the deficit drains the network.", Owner: MinisterName)],
             WillieFlagRequests.Empty);
 
-    private Decision BuildingRequestDecision(
+    private static bool MatchesLowBatteryReserve(WillieBriefing briefing) =>
+        briefing.DataCoverage.HasPower && HasLowBatteryReserve(briefing.PowerStability);
+
+    private static string LowBatteryReserveReason(WillieBriefing briefing)
+    {
+        if (!briefing.DataCoverage.HasPower)
+            return "power coverage is unavailable";
+
+        if (briefing.PowerStability.CapacityWd <= 0)
+            return "battery capacity is unavailable";
+
+        return HasLowBatteryReserve(briefing.PowerStability)
+            ? $"reserve={ReserveRatio(briefing.PowerStability):P0}"
+            : $"reserve={ReserveRatio(briefing.PowerStability):P0} is at or above the {LowBatteryReserveRatio:P0} threshold";
+    }
+
+    private static RuleEmission BuildLowBatteryReserve(WillieBriefing briefing, DateTimeOffset now) =>
+        EmitAdvice(
+            briefing,
+            now,
+            "low_battery_reserve",
+            AdvicePriority.Medium,
+            "Battery reserve is thin",
+            $"Stored power is {ReserveRatio(briefing.PowerStability):P0} of capacity.",
+            "Low reserve leaves coolers, benches, and defensive loads fragile during eclipse, flare recovery, or generator interruptions.",
+            [new AdviceAction(AdviceActionKind.PlaceBlueprint, "Plan additional battery backup or generation margin for critical powered rooms.", Owner: MinisterName)],
+            WillieFlagRequests.Empty);
+
+    private static bool MatchesBacklogMaterialGap(WillieBriefing briefing) =>
+        briefing.MaterialBottleneck.MissingMaterials.Count > 0;
+
+    private static string BacklogMaterialGapReason(WillieBriefing briefing) =>
+        briefing.MaterialBottleneck.MissingMaterials.Count > 0
+            ? FormatMaterials(briefing.MaterialBottleneck.MissingMaterials)
+            : "construction backlog reports no missing materials";
+
+    private static RuleEmission BuildBacklogMaterialGap(WillieBriefing briefing, DateTimeOffset now) =>
+        EmitAdvice(
+            briefing,
+            now,
+            "backlog_material_gap",
+            AdvicePriority.High,
+            "Build queue is short on materials",
+            $"Queued construction is missing {FormatMaterials(briefing.MaterialBottleneck.MissingMaterials)}.",
+            "The backlog already reports missing materials, so adding new blueprints will increase queue debt instead of improving the base.",
+            [new AdviceAction(AdviceActionKind.RequestResource, $"Acquire or haul {FormatMaterials(briefing.MaterialBottleneck.MissingMaterials)} before expanding the build queue.", Quantity: briefing.MaterialBottleneck.MissingMaterials.Sum(material => material.Count), Owner: MinisterName)],
+            ItemRequests(briefing.MaterialBottleneck.MissingMaterials, AdvicePriority.High));
+
+    private static bool MatchesFrameBlockedByMaterial(WillieBriefing briefing) =>
+        briefing.StalledBuilds.BlockedCount > 0;
+
+    private static string FrameBlockedByMaterialReason(WillieBriefing briefing) =>
+        briefing.StalledBuilds.BlockedCount > 0
+            ? $"blocked_count={briefing.StalledBuilds.BlockedCount}"
+            : "no blocked queued build items are visible";
+
+    private static RuleEmission BuildFrameBlockedByMaterial(WillieBriefing briefing, DateTimeOffset now) =>
+        EmitAdvice(
+            briefing,
+            now,
+            "frame_blocked_by_material",
+            AdvicePriority.High,
+            "Construction is blocked",
+            $"{briefing.StalledBuilds.BlockedCount} queued build item{Plural(briefing.StalledBuilds.BlockedCount)} cannot progress.",
+            "Blocked frames and blueprints tie up the plan until materials or access are resolved.",
+            [new AdviceAction(AdviceActionKind.RequestResource, "Unblock the existing frames before placing more construction work.", Quantity: briefing.StalledBuilds.BlockedCount, Owner: MinisterName)],
+            WillieFlagRequests.AttentionRequest(
+                "unblock current construction queue",
+                "blocked blueprint/frame count is non-zero",
+                AdvicePriority.High,
+                "Player"));
+
+    private static bool MatchesBuildingRequestActive(
+        WillieBriefing briefing,
+        IReadOnlyList<BuildingRequest> inboundBuildingRequests) =>
+        SelectPlacementRequest(briefing, inboundBuildingRequests) is { } request &&
+        !ShouldDeferToMissingKitchen(briefing, request);
+
+    private static string BuildingRequestActiveReason(
+        WillieBriefing briefing,
+        IReadOnlyList<BuildingRequest> inboundBuildingRequests)
+    {
+        BuildingRequest? request = SelectPlacementRequest(briefing, inboundBuildingRequests);
+        if (request is null)
+            return "no inbound Willie building requests are active";
+
+        if (ShouldDeferToMissingKitchen(briefing, request))
+            return $"{request.Request} depends on a missing kitchen, so kitchen_missing owns the prerequisite";
+
+        return $"selected inbound Willie building request: {request.Request}";
+    }
+
+    private static RuleEmission BuildBuildingRequestActive(
         WillieBriefing briefing,
         IReadOnlyList<BuildingRequest> inboundBuildingRequests,
-        BuildingRequest request)
+        DateTimeOffset now)
     {
+        BuildingRequest request = SelectPlacementRequest(briefing, inboundBuildingRequests)
+            ?? throw new InvalidOperationException("building_request_active matched without a selected placement request");
         bool freezing = IsFreezingBuildRequest(request);
         string target = FormatRequestTarget(request);
         string title = freezing
@@ -174,9 +194,9 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
             ? "Chef owns the food-storage need; Willie owns the freezer shell, cooler, power, and eventual placement."
             : $"The requesting minister owns why this build matters; Willie owns the {target} footprint, materials, and placement.";
 
-        return DecisionFor(
+        return EmitAdvice(
             briefing,
-            inboundBuildingRequests,
+            now,
             BuildingRequestActiveTrace,
             request.Priority ?? AdvicePriority.Medium,
             title,
@@ -188,9 +208,109 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
             WillieFlagRequests.Empty);
     }
 
-    private Decision DecisionFor(
+    private static bool MatchesKitchenMissing(WillieBriefing briefing) =>
+        HasFunctionalRoomEvidence(briefing) && MissingRoom(briefing, RoomClass.Kitchen);
+
+    private static string KitchenMissingReason(WillieBriefing briefing)
+    {
+        if (!HasFunctionalRoomEvidence(briefing))
+            return "functional-room evidence is unavailable";
+
+        return MissingRoom(briefing, RoomClass.Kitchen)
+            ? "no kitchen room class anchor"
+            : "a kitchen room class anchor is visible";
+    }
+
+    private static bool MatchesHospitalMissing(WillieBriefing briefing) =>
+        HasFunctionalRoomEvidence(briefing) &&
+        briefing.ColonistCount >= 3 &&
+        MissingRoom(briefing, RoomClass.Hospital);
+
+    private static string HospitalMissingReason(WillieBriefing briefing)
+    {
+        if (!HasFunctionalRoomEvidence(briefing))
+            return "functional-room evidence is unavailable";
+
+        if (briefing.ColonistCount < 3)
+            return $"{briefing.ColonistCount} colonists is below the hospital-room trigger";
+
+        return MissingRoom(briefing, RoomClass.Hospital)
+            ? "no hospital room class anchor"
+            : "a hospital room class anchor is visible";
+    }
+
+    private static bool MatchesStorageRoomMissing(WillieBriefing briefing) =>
+        HasFunctionalRoomEvidence(briefing) &&
+        MissingRoom(briefing, RoomClass.Storage) &&
+        briefing.StoragePlacement.StockpileZones == 0;
+
+    private static string StorageRoomMissingReason(WillieBriefing briefing)
+    {
+        if (!HasFunctionalRoomEvidence(briefing))
+            return "functional-room evidence is unavailable";
+
+        if (!MissingRoom(briefing, RoomClass.Storage))
+            return "a storage room class anchor is visible";
+
+        return briefing.StoragePlacement.StockpileZones == 0
+            ? "no storage anchor or stockpile zone"
+            : $"{briefing.StoragePlacement.StockpileZones} stockpile zone{Plural(briefing.StoragePlacement.StockpileZones)} visible";
+    }
+
+    private static RuleEmission BuildMissingRoom(
         WillieBriefing briefing,
-        IReadOnlyList<BuildingRequest> inboundBuildingRequests,
+        DateTimeOffset now,
+        string trace,
+        RoomClass roomClass,
+        AdvicePriority priority,
+        string title,
+        string body) =>
+        EmitAdvice(
+            briefing,
+            now,
+            trace,
+            priority,
+            title,
+            body,
+            $"{FormatRoom(roomClass)} work is a built-infrastructure gap; the placement solver owns exact footprint options when map evidence supports them.",
+            [
+                new AdviceAction(AdviceActionKind.PlaceBlueprint, $"Plan a compact {FormatRoom(roomClass)} footprint; solver options attach when a validated footprint is available.", Owner: MinisterName)
+            ],
+            WillieFlagRequests.Empty);
+
+    private static bool MatchesCoolerMissing(WillieBriefing briefing) =>
+        briefing.DataCoverage.HasBuildings &&
+        briefing.ThermalControl.CoolerCount == 0 &&
+        briefing.ThermalControl.FreezerAnchorCount > 0;
+
+    private static string CoolerMissingReason(WillieBriefing briefing)
+    {
+        if (!briefing.DataCoverage.HasBuildings)
+            return "building coverage is unavailable";
+
+        if (briefing.ThermalControl.CoolerCount > 0)
+            return $"{briefing.ThermalControl.CoolerCount} cooler{Plural(briefing.ThermalControl.CoolerCount)} visible";
+
+        return briefing.ThermalControl.FreezerAnchorCount > 0
+            ? "freezer anchor exists without visible cooler"
+            : "no freezer anchor currently needs a cooler";
+    }
+
+    private static RuleEmission BuildCoolerMissing(WillieBriefing briefing, DateTimeOffset now) =>
+        EmitAdvice(
+            briefing,
+            now,
+            "cooler_missing",
+            AdvicePriority.Medium,
+            "Freezer has no visible cooler",
+            "A freezer room anchor exists, but no cooler building is visible.",
+            "Freezer rooms only preserve food if the thermal asset exists and is powered.",
+            [new AdviceAction(AdviceActionKind.PlaceBlueprint, "Add or repair a cooler for the freezer room.", Owner: MinisterName)],
+            WillieFlagRequests.Empty);
+
+    private static RuleEmission EmitAdvice(
+        WillieBriefing briefing,
+        DateTimeOffset now,
         string trace,
         AdvicePriority priority,
         string title,
@@ -199,7 +319,6 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
         IReadOnlyList<AdviceAction> actions,
         WillieFlagRequests requests)
     {
-        DateTimeOffset now = timeProvider.GetUtcNow();
         AdviceItem advice = new(
             Id: $"{MinisterName.ToLowerInvariant()}_{trace}",
             Minister: MinisterName,
@@ -231,9 +350,7 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
                 ExpiresAt: now.AddHours(24))]
             : [];
 
-        RuleTraceDetails diagnostics = DiagnosticsFor(briefing, inboundBuildingRequests, trace)
-            .WithEmissions("rules", trace, [advice], flags);
-        return new Decision([advice], flags, trace, diagnostics);
+        return new RuleEmission(trace, advice, flags);
     }
 
     private static WillieFlagRequests ItemRequests(
@@ -255,111 +372,46 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
         return requests;
     }
 
-    private static RuleTraceDetails DiagnosticsFor(
+    private static RuleTraceDetails DiagnosticsForFallback(
+        IReadOnlyList<MinisterRule<WillieBriefing>> rules,
+        IReadOnlyList<MinisterRuleTraceDescriptor<WillieBriefing>> fallbackRuleDescriptors,
         WillieBriefing briefing,
         IReadOnlyList<BuildingRequest> inboundBuildingRequests,
         string selectedRule)
     {
-        IReadOnlyList<RuleTraceEntry> matches = RuleMatches(briefing, inboundBuildingRequests);
-        RuleTraceEntry? selected = matches.FirstOrDefault(match =>
-            string.Equals(match.Rule, selectedRule, StringComparison.OrdinalIgnoreCase));
-        IReadOnlyList<RuleTraceEntry> matchedSignals = selected is null
-            ? [new RuleTraceEntry(selectedRule, "selected", "selected by fallthrough")]
-            : [selected with { Outcome = "selected" }];
-        IReadOnlyList<RuleTraceEntry> suppressed = matches
-            .Where(match => !string.Equals(match.Rule, selectedRule, StringComparison.OrdinalIgnoreCase))
-            .Select(match => match with { Outcome = "suppressed" })
-            .ToList();
-
-        return new RuleTraceDetails(selectedRule, matchedSignals, suppressed)
-        {
-            AllRules = AllRuleEvaluations(matches, selectedRule)
-        };
-    }
-
-    private static IReadOnlyList<RuleEvaluationTrace> AllRuleEvaluations(
-        IReadOnlyList<RuleTraceEntry> matches,
-        string selectedRule)
-    {
-        Dictionary<string, RuleTraceEntry> outcomes = matches
-            .GroupBy(match => match.Rule, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
-
-        return
+        IReadOnlyList<RuleTraceEntry> fallbackSignals =
         [
-            RuleEvaluation("power_net_deficit", outcomes, selectedRule, "has_power && net_w < 0", "place_blueprint"),
-            RuleEvaluation("low_battery_reserve", outcomes, selectedRule, "has_power && capacity_wd > 0 && stored/capacity < 0.25", "place_blueprint"),
-            RuleEvaluation("backlog_material_gap", outcomes, selectedRule, "missing_materials non-empty", "request_resource"),
-            RuleEvaluation("frame_blocked_by_material", outcomes, selectedRule, "blocked_count > 0", "request_resource"),
-            RuleEvaluation(BuildingRequestActiveTrace, outcomes, selectedRule, "inbound Willie building_request", "place_blueprint"),
-            RuleEvaluation("kitchen_missing", outcomes, selectedRule, "room_counts lacks kitchen", "place_blueprint"),
-            RuleEvaluation("hospital_missing", outcomes, selectedRule, "colonists >= 3 && room_counts lacks hospital", "place_blueprint"),
-            RuleEvaluation("storage_room_missing", outcomes, selectedRule, "room_counts lacks storage && stockpile_zones == 0", "place_blueprint"),
-            RuleEvaluation("cooler_missing", outcomes, selectedRule, "has_buildings && cooler_count == 0 && freezer_anchor_count > 0", "place_blueprint"),
-            RuleEvaluation("maintain_build_program", outcomes, selectedRule, "no deterministic Willie rule matched", "none")
+            new(selectedRule, "selected", MaintainBuildProgramTraceReason(briefing, inboundBuildingRequests))
         ];
+        return MinisterRuleTableEvaluator.BuildTrace(
+            rules,
+            briefing,
+            selectedRule,
+            emittedEmissions: [],
+            additionalMatchedSignals: fallbackSignals,
+            additionalRuleDescriptors: fallbackRuleDescriptors);
     }
 
-    private static RuleEvaluationTrace RuleEvaluation(
-        string rule,
-        IReadOnlyDictionary<string, RuleTraceEntry> outcomes,
-        string selectedRule,
-        string conditions,
-        string outputAction)
-    {
-        if (string.Equals(rule, selectedRule, StringComparison.OrdinalIgnoreCase))
-            return new RuleEvaluationTrace(rule, "selected", conditions, outputAction, "selected by rule order");
+    private static IReadOnlyList<MinisterRuleTraceDescriptor<WillieBriefing>> FallbackRuleDescriptors(
+        IReadOnlyList<BuildingRequest> inboundBuildingRequests) =>
+    [
+        new("maintain_build_program", briefing => MaintainBuildProgramTraceReason(briefing, inboundBuildingRequests), (_, selectedRule) => SelectedWhenSelected("maintain_build_program", selectedRule))
+    ];
 
-        if (outcomes.TryGetValue(rule, out RuleTraceEntry? trace))
-            return new RuleEvaluationTrace(rule, "matched", conditions, outputAction, trace.Reason);
-
-        return new RuleEvaluationTrace(rule, "not_matched", conditions, outputAction, null);
-    }
-
-    private static IReadOnlyList<RuleTraceEntry> RuleMatches(
+    private static string MaintainBuildProgramTraceReason(
         WillieBriefing briefing,
-        IReadOnlyList<BuildingRequest> inboundBuildingRequests)
-    {
-        List<RuleTraceEntry> matches = [];
+        IReadOnlyList<BuildingRequest> inboundBuildingRequests) =>
+        AnyTableRuleApplies(briefing, inboundBuildingRequests)
+            ? "one or more Willie rules matched, so maintenance fallback is not selected"
+            : "no deterministic Willie rule matched; build program remains stable";
 
-        if (briefing.DataCoverage.HasPower && briefing.PowerStability.NetW < 0)
-            matches.Add(new RuleTraceEntry("power_net_deficit", "matched", $"net_w={FormatWatts(briefing.PowerStability.NetW)}"));
+    private static bool AnyTableRuleApplies(
+        WillieBriefing briefing,
+        IReadOnlyList<BuildingRequest> inboundBuildingRequests) =>
+        RuleTable(DateTimeOffset.UnixEpoch, inboundBuildingRequests).Any(rule => rule.Matches(briefing));
 
-        if (briefing.DataCoverage.HasPower && HasLowBatteryReserve(briefing.PowerStability))
-            matches.Add(new RuleTraceEntry("low_battery_reserve", "matched", $"reserve={ReserveRatio(briefing.PowerStability):P0}"));
-
-        if (briefing.MaterialBottleneck.MissingMaterials.Count > 0)
-            matches.Add(new RuleTraceEntry("backlog_material_gap", "matched", FormatMaterials(briefing.MaterialBottleneck.MissingMaterials)));
-
-        if (briefing.StalledBuilds.BlockedCount > 0)
-            matches.Add(new RuleTraceEntry("frame_blocked_by_material", "matched", $"blocked_count={briefing.StalledBuilds.BlockedCount}"));
-
-        if (HasFunctionalRoomEvidence(briefing) && MissingRoom(briefing, RoomClass.Kitchen))
-            matches.Add(new RuleTraceEntry("kitchen_missing", "matched", "no kitchen room class anchor"));
-
-        if (HasFunctionalRoomEvidence(briefing) && briefing.ColonistCount >= 3 && MissingRoom(briefing, RoomClass.Hospital))
-            matches.Add(new RuleTraceEntry("hospital_missing", "matched", "no hospital room class anchor"));
-
-        if (HasFunctionalRoomEvidence(briefing) &&
-            MissingRoom(briefing, RoomClass.Storage) &&
-            briefing.StoragePlacement.StockpileZones == 0)
-        {
-            matches.Add(new RuleTraceEntry("storage_room_missing", "matched", "no storage anchor or stockpile zone"));
-        }
-
-        int buildingRequests = inboundBuildingRequests.Count;
-        if (buildingRequests > 0)
-            matches.Add(new RuleTraceEntry(BuildingRequestActiveTrace, "matched", $"building_requests={buildingRequests}"));
-
-        if (briefing.DataCoverage.HasBuildings &&
-            briefing.ThermalControl.CoolerCount == 0 &&
-            briefing.ThermalControl.FreezerAnchorCount > 0)
-        {
-            matches.Add(new RuleTraceEntry("cooler_missing", "matched", "freezer anchor exists without visible cooler"));
-        }
-
-        return matches;
-    }
+    private static string SelectedWhenSelected(string rule, string? selectedRule) =>
+        string.Equals(rule, selectedRule, StringComparison.OrdinalIgnoreCase) ? "selected" : "not_matched";
 
     private static bool HasLowBatteryReserve(WilliePowerStabilitySummary power) =>
         power.CapacityWd > 0 && ReserveRatio(power) < LowBatteryReserveRatio;
@@ -397,7 +449,7 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
         return false;
     }
 
-    private static BuildingRequest? SelectPlacementRequest(
+    public static BuildingRequest? SelectPlacementRequest(
         WillieBriefing briefing,
         IReadOnlyList<BuildingRequest> requests) =>
         requests
@@ -407,7 +459,7 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
             .ThenBy(request => request.Request, StringComparer.OrdinalIgnoreCase)
             .FirstOrDefault();
 
-    private static int MissingKitchenDependencyRank(WillieBriefing briefing, BuildingRequest request)
+    public static int MissingKitchenDependencyRank(WillieBriefing briefing, BuildingRequest request)
     {
         if (!HasFunctionalRoomEvidence(briefing) || !MissingRoom(briefing, RoomClass.Kitchen))
             return 1;
@@ -442,7 +494,7 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
         request.RoomClass == RoomClass.Freezer ||
         request.TargetClass == BuildingClass.Freezer;
 
-    private static bool TryMissingRoomClass(string trace, out RoomClass roomClass)
+    public static bool TryMissingRoomClass(string trace, out RoomClass roomClass)
     {
         roomClass = trace switch
         {
@@ -454,7 +506,7 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
         return trace is "kitchen_missing" or "hospital_missing" or "storage_room_missing";
     }
 
-    private static BuildingRequest MissingRoomRequest(WillieBriefing briefing, RoomClass roomClass)
+    public static BuildingRequest MissingRoomRequest(WillieBriefing briefing, RoomClass roomClass)
     {
         RoomClass? anchorClass = PreferredAnchorClass(briefing, roomClass);
         IReadOnlyList<AdjacencyHint>? adjacency = anchorClass is null

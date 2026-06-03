@@ -224,7 +224,7 @@ public sealed class MinisterOfWillieTests
     }
 
     [Fact]
-    public async Task NonPlacementDecision_RecordsInboundRequestBoard()
+    public async Task AllHitsDecision_RecordsAndSolvesInboundRequestBoard()
     {
         FakePlacementSolver solver = FakePlacementSolver.WithOptions(PlacementOption());
         Harness harness = new(solver);
@@ -234,13 +234,15 @@ public sealed class MinisterOfWillieTests
 
         await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
 
-        solver.CallCount.Should().Be(0);
-        AdviceItem advice = harness.Bus.ActiveAdvice().Should().ContainSingle().Subject;
-        advice.Id.Should().Be("willie_power_net_deficit");
+        solver.CallCount.Should().Be(1);
+        harness.Bus.ActiveAdvice().Select(advice => advice.Id).Should().Equal(
+            "willie_power_net_deficit",
+            "willie_building_request_active");
         WillieRequestBoardRow row = harness.SolverStore.RequestBoard("Willie").Should().ContainSingle().Subject;
         row.Inbound.SourceMinister.Should().Be("Chef");
         row.Inbound.Request.Should().BeEquivalentTo(FreezerFlag().BuildingRequests!.Single());
-        row.Outcome.Should().BeNull();
+        row.Outcome.Should().NotBeNull();
+        row.Outcome!.Status.Should().Be("options");
     }
 
     [Fact]
@@ -301,7 +303,7 @@ public sealed class MinisterOfWillieTests
     }
 
     [Fact]
-    public async Task FreezerFlagWithMissingKitchen_RunsSolverAndPersistsNoFitTrace()
+    public async Task FreezerFlagWithMissingKitchen_SolvesBoardAndMissingRoomTrace()
     {
         FakePlacementSolver solver = FakePlacementSolver.WithNoFit(NoFitReason.NoAnchors);
         CapturingReplayWriter replay = new();
@@ -311,16 +313,77 @@ public sealed class MinisterOfWillieTests
 
         await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
 
-        solver.CallCount.Should().Be(1);
-        AdviceItem advice = harness.Bus.ActiveAdvice().Should().ContainSingle().Subject;
-        advice.Id.Should().Be("willie_building_request_active");
-        advice.Rationale.Should().Contain("no kitchen anchor is available");
-        advice.Options.Should().BeNull();
+        solver.CallCount.Should().Be(2);
+        IReadOnlyList<AdviceItem> advice = harness.Bus.ActiveAdvice();
+        advice.Select(item => item.Id).Should().Equal(
+            "willie_building_request_active",
+            "willie_kitchen_missing");
+        AdviceItem requestAdvice = advice.Should()
+            .Contain(item => item.Id == "willie_building_request_active")
+            .Which;
+        requestAdvice.Rationale.Should().Contain("no kitchen anchor is available");
+        requestAdvice.Options.Should().BeNull();
         MinisterReplayRecord record = replay.Records.Should().ContainSingle().Subject;
-        record.RuleTrace.Should().Be(Rules.BuildingRequestActiveTrace);
+        record.RuleTrace.Should().Be("rules:building_request_active+kitchen_missing");
         record.OutputKind.Should().Be("placement_solver");
         string outputJson = JsonSerializer.Serialize(record.Output);
         outputJson.Should().Contain(nameof(NoFitReason.NoAnchors));
+    }
+
+    [Fact]
+    public async Task MultipleInboundRequests_RecordFreshOutcomeForEachBoardRow()
+    {
+        FakePlacementSolver solver = FakePlacementSolver.WithOptions(PlacementOption());
+        Harness harness = new(solver);
+        harness.SetStableState();
+        harness.Flags.Publish(FreezerFlag());
+        harness.Flags.Publish(WorkshopFlag());
+
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
+
+        solver.CallCount.Should().Be(2);
+        IReadOnlyList<WillieRequestBoardRow> rows = harness.SolverStore.RequestBoard("Willie");
+        rows.Should().HaveCount(2);
+        rows.Should().OnlyContain(row => row.Outcome != null);
+        rows.Select(row => row.Outcome!.Status).Should().Equal("options", "options");
+        solver.Specs.Select(spec => spec.RoomClass).Should().BeEquivalentTo([RoomClass.Freezer, RoomClass.Workshop]);
+    }
+
+    [Fact]
+    public async Task DuplicateInboundRequestKeys_AreSolvedOnce()
+    {
+        FakePlacementSolver solver = FakePlacementSolver.WithOptions(PlacementOption());
+        Harness harness = new(solver);
+        harness.SetStableState();
+        harness.Flags.Publish(DuplicateFreezerFlag());
+
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
+
+        solver.CallCount.Should().Be(1);
+        harness.SolverStore.RequestBoard("Willie").Should().ContainSingle()
+            .Which.Outcome.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task KitchenDependentInboundRequestWithMissingKitchen_FeaturesKitchenPrerequisite()
+    {
+        FakePlacementSolver solver = FakePlacementSolver.WithOptions(PlacementOption("placement_any", "Any placement", 10));
+        Harness harness = new(solver);
+        harness.SetStableStateWithoutKitchen();
+        harness.Flags.Publish(FreezerNearKitchenFlag());
+
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
+
+        IReadOnlyList<AdviceItem> advice = harness.Bus.ActiveAdvice();
+        advice.Should().ContainSingle()
+            .Which.Id.Should().Be("willie_kitchen_missing");
+        advice.Should().NotContain(item => item.Id == "willie_building_request_active");
+        advice[0].Options.Should().ContainSingle();
+        solver.CallCount.Should().Be(2);
+        solver.Specs[0].RoomClass.Should().Be(RoomClass.Kitchen);
+        solver.Specs[1].RoomClass.Should().Be(RoomClass.Freezer);
+        harness.SolverStore.RequestBoard("Willie").Should().ContainSingle()
+            .Which.Outcome.Should().NotBeNull();
     }
 
     [Fact]
@@ -404,6 +467,33 @@ public sealed class MinisterOfWillieTests
                     Priority: AdvicePriority.Medium,
                     RequestedFrom: requestedFrom)
             ]);
+
+    private static AgentFlag FreezerNearKitchenFlag()
+    {
+        BuildingRequest request = FreezerFlag().BuildingRequests!.Single() with
+        {
+            Adjacency = [new AdjacencyHint(AdjacencyRelation.Near, "kitchen")]
+        };
+        return new AgentFlag(
+            Id: "food:freezer_missing",
+            SourceMinister: "Chef",
+            Severity: FlagSeverity.Medium,
+            Domain: "food",
+            Summary: "Food storage needs freezer support",
+            BuildingRequests: [request]);
+    }
+
+    private static AgentFlag DuplicateFreezerFlag()
+    {
+        BuildingRequest request = FreezerFlag().BuildingRequests!.Single();
+        return new AgentFlag(
+            Id: "food:duplicate_freezer_missing",
+            SourceMinister: "Chef",
+            Severity: FlagSeverity.Medium,
+            Domain: "food",
+            Summary: "Food storage needs freezer support",
+            BuildingRequests: [request, request]);
+    }
 
     private static AgentFlag WorkshopFlag(string requestedFrom = "Willie") =>
         new(
@@ -561,6 +651,7 @@ public sealed class MinisterOfWillieTests
         public int CallCount { get; private set; }
         public PlacementSpec? LastSpec { get; private set; }
         public ColonyState? LastState { get; private set; }
+        public List<PlacementSpec> Specs { get; } = [];
 
         public static FakePlacementSolver WithOptions(params AdviceOption[] options) =>
             WithOptions(PlacementReadiness.Ready, PlacementReadiness.Ready, options);
@@ -600,6 +691,7 @@ public sealed class MinisterOfWillieTests
             CallCount++;
             LastSpec = spec;
             LastState = colonyState;
+            Specs.Add(spec);
             if (exception is not null)
                 return Task.FromException<PlacementResult>(exception);
 
