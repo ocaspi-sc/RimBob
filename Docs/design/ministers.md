@@ -21,6 +21,26 @@ What differs by minister is the domain, escalation rate, and advice vocabulary.
 
 ---
 
+## Minister Identity
+
+Every minister has a canonical display emoji. Human-facing UI/docs print it next to the name (`🏛️ Mayor`), never instead of the name. Emoji are display-only; route keys, raw fields, and RimWorld game icons stay unchanged.
+
+| Minister | Emoji | Display label |
+|---|---|---|
+| Mayor | 🏛️ | 🏛️ Mayor |
+| Chef | 🍲 | 🍲 Chef |
+| Willie | 🧱 | 🧱 Willie |
+| Defense | 🛡️ | 🛡️ Defense |
+| Welfare | 🙂 | 🙂 Welfare |
+| Medical | 🩺 | 🩺 Medical |
+| Research | 🔬 | 🔬 Research |
+| Industry | ⚙️ | ⚙️ Industry |
+| Economy | 🪙 | 🪙 Economy |
+| Chief of Staff | 🧭 | 🧭 Chief of Staff |
+| Labor | 🧰 | 🧰 Labor |
+
+---
+
 ## Play Mode
 
 Play mode is live and `Suggest` mode by default. A typed play-cycle context

@@ -161,14 +161,7 @@ Minister scopes use a fixed top tab bar:
 
 Rules-only ministers expose only the subset that is actually wired. Willie starts with Briefing, Build Queue, Solver, Requests, Rules, and Advice; Prompt, RAG, Raw LLM Output, and Infographics are not shown until those backend surfaces exist. Build Queue may show a placement Apply affordance only when the backend emits an explicit action apply payload for that option; otherwise the option stays inspect-only and names the unsupported apply state. The dashboard view tabs and launcher tray deep links must both respect that per-minister enabled-view set.
 
-Use explicit game icons from the Host icon gateway in scope labels, view labels,
-section titles, field labels, compact metric labels, and obvious entity rows
-when they improve scan speed. Generic emoji are fallback-only. Icons annotate
-contract names; they must not replace, rename, or mutate backend field names.
-Player-facing advice prose may also receive deterministic inline icon cues for
-curated game terms, but the dashboard must preserve the original source text.
-This is presentation only: raw LLM output, JSON inspectors, backend payloads,
-and stored advice contracts are not rewritten to include those cues.
+Minister names always render with their fixed emoji in human-facing dashboard labels (`🍲 Chef`). This is display-only: route keys, raw payloads, and debug contract fields stay unchanged. Use Host game icons for view labels, sections, fields, metrics, and entity rows when they improve scan speed; generic emoji are fallback-only for non-minister cues. Icons annotate contract names, but raw LLM output, JSON inspectors, backend payloads, and stored advice contracts are not rewritten.
 
 Large objects use the standard disclosure pattern: a real button header with
 `aria-expanded` / `aria-controls`, plus a conditionally rendered panel in normal
