@@ -207,7 +207,7 @@ before promoting rule, prompt, briefing, or RAG changes.
 
 ## Library Choices
 
-| Concern | Choice | Design reason |
+| Area | Choice | Design reason |
 |---|---|---|
 | LLM calls | Google GenAI SDK | First-party Gemini path for MVP, with a Vertex migration path later |
 | HTTP to RIMAPI | Typed `HttpClient` wrapper | Simple, debuggable integration boundary |
@@ -223,7 +223,7 @@ before promoting rule, prompt, briefing, or RAG changes.
 ## Deferred Auto Epic
 
 The Auto write shim, Labor policy recommender, bulletin board, broad RIMAPI
-write coverage, and per-concern `Auto` execution are deferred until the
+write coverage, and per-minister/action-kind `Auto` execution are deferred until the
 first Auto graduation. Assisted Apply may map a small allowlist earlier, but it
 does not implement the Auto stack. Detailed shape is designed at re-engagement;
 the current design sketches are intentionally thin.
@@ -234,6 +234,6 @@ the current design sketches are intentionally thin.
 
 - [ ] RIMAPI read-endpoint inventory by minister.
 - [ ] Test project organization if the suite grows beyond the current shape.
-- [ ] Per-minister concern catalogues for future autonomy graduation.
+- [ ] Per-minister/action-kind trust gates for future autonomy graduation.
 - [ ] When the guide corpus grows, whether the in-process vector store still
       meets latency and maintenance needs.

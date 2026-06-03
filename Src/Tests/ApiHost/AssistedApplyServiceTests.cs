@@ -374,7 +374,6 @@ public sealed class AssistedApplyServiceTests
         return new AdviceItem(
             Id: id,
             Minister: "Chef",
-            Concern: "harvest_now",
             Priority: AdvicePriority.High,
             Title: "Mature crops are ready",
             Body: "Body",

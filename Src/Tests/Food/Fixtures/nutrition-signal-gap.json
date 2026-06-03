@@ -1,7 +1,7 @@
 {
   "description": "RIMAPI food_total exists but total_nutrition is missing or zero",
-  "expected_advice": ["manage_food_stockpile"],
-  "expected_top_concern": "manage_food_stockpile",
+  "expected_advice_ids": ["chef_nutrition_signal_gap"],
+  "expected_top_rule": "nutrition_signal_gap",
   "expected_priority_min": "Medium",
   "should_escalate": false
 }

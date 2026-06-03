@@ -1,6 +1,6 @@
 {
   "description": "Willie Slice A power deficit fixture.",
   "expected_trace": "power_net_deficit",
-  "expected_concern": "power_stability",
+  "expected_advice_id": "willie_power_net_deficit",
   "expected_priority": "high"
 }

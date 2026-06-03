@@ -155,7 +155,6 @@ const fieldIcons: Record<string, SemanticIconSpec> = {
   active_advice_emitted: common.advice,
   advice: common.advice,
   advice_item: common.advice,
-  concern: common.advice,
   agenda: common.mayor,
   agenda_priorities: common.mayor,
   additions: common.data,

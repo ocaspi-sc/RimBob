@@ -29,7 +29,7 @@ public sealed class MinisterOfWillieTests
 
         AdviceItem advice = harness.Bus.ActiveAdvice().Should().ContainSingle().Subject;
         advice.Minister.Should().Be("Willie");
-        advice.Concern.Should().Be("power_stability");
+        advice.Id.Should().Be("willie_power_net_deficit");
         harness.Bus.ActiveSnapshot().StateSummaries.Should().ContainKey("Willie")
             .WhoseValue.Should().Contain("Power:");
     }
@@ -46,7 +46,7 @@ public sealed class MinisterOfWillieTests
 
         AdviceItem advice = harness.Bus.ActiveAdvice().Should().ContainSingle().Subject;
         advice.Minister.Should().Be("Willie");
-        advice.Concern.Should().Be("thermal_control");
+        advice.Id.Should().Be("willie_building_request_active");
         advice.Actions.Should().HaveCount(2);
         advice.Actions[0].Apply.Should().BeNull();
         AdviceOption option = advice.Options.Should().ContainSingle().Subject;
@@ -173,7 +173,7 @@ public sealed class MinisterOfWillieTests
         await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
 
         AdviceItem advice = harness.Bus.ActiveAdvice().Should().ContainSingle().Subject;
-        advice.Concern.Should().Be("functional_rooms");
+        advice.Id.Should().Be("willie_building_request_active");
         advice.Title.Should().Contain("Workshop request");
         advice.Options.Should().ContainSingle().Which.Id.Should().Be("placement_workshop_20_12");
         advice.Actions.Should().HaveCount(2);
@@ -236,7 +236,7 @@ public sealed class MinisterOfWillieTests
 
         solver.CallCount.Should().Be(0);
         AdviceItem advice = harness.Bus.ActiveAdvice().Should().ContainSingle().Subject;
-        advice.Concern.Should().Be("power_stability");
+        advice.Id.Should().Be("willie_power_net_deficit");
         WillieRequestBoardRow row = harness.SolverStore.RequestBoard("Willie").Should().ContainSingle().Subject;
         row.Inbound.SourceMinister.Should().Be("Chef");
         row.Inbound.Request.Should().BeEquivalentTo(FreezerFlag().BuildingRequests!.Single());
@@ -313,7 +313,7 @@ public sealed class MinisterOfWillieTests
 
         solver.CallCount.Should().Be(1);
         AdviceItem advice = harness.Bus.ActiveAdvice().Should().ContainSingle().Subject;
-        advice.Concern.Should().Be("thermal_control");
+        advice.Id.Should().Be("willie_building_request_active");
         advice.Rationale.Should().Contain("no kitchen anchor is available");
         advice.Options.Should().BeNull();
         MinisterReplayRecord record = replay.Records.Should().ContainSingle().Subject;
@@ -450,7 +450,6 @@ public sealed class MinisterOfWillieTests
         return new AdviceItem(
             Id: "willie_prior_options",
             Minister: "Willie",
-            Concern: "thermal_control",
             Priority: AdvicePriority.Medium,
             Title: "Prior freezer options",
             Body: "Previously solved freezer placement.",

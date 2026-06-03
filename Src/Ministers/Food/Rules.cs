@@ -15,9 +15,9 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
 
     public RulesResult Evaluate(FoodBriefing briefing, ColonyContext context)
     {
-        IReadOnlyList<ConcernEmission> deterministicConcerns = DeterministicConcerns(briefing);
-        if (deterministicConcerns.Count > 0)
-            return DecisionForConcerns(briefing, deterministicConcerns);
+        IReadOnlyList<RuleEmission> ruleEmissions = RuleEmissions(briefing);
+        if (ruleEmissions.Count > 0)
+            return DecisionForEmissions(briefing, ruleEmissions);
 
         if (briefing.EstimatedDaysOfFood is not float days)
             return new Decision([], [], "no_food_signal", DiagnosticsFor(briefing, "no_food_signal"));
@@ -43,10 +43,10 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             DiagnosticsFor(briefing, "unresolved_food_gap"));
     }
 
-    private static IReadOnlyList<ConcernEmission> DeterministicConcerns(FoodBriefing briefing)
+    private static IReadOnlyList<RuleEmission> RuleEmissions(FoodBriefing briefing)
     {
         DateTimeOffset now = DateTimeOffset.UtcNow;
-        List<ConcernEmission> concerns = [];
+        List<RuleEmission> emissions = [];
 
         if (briefing.EstimatedDaysOfFood is null)
         {
@@ -61,8 +61,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 if (forbiddenMealRequest is not null)
                     nutritionGapRequests = nutritionGapRequests.Add(forbiddenMealRequest);
 
-                concerns.Add(ConcernFor(briefing, now, "nutrition_signal_gap",
-                    FoodConcern.ManageFoodStockpile,
+                emissions.Add(EmitAdvice(briefing, now, "nutrition_signal_gap",
                     AdvicePriority.Medium,
                     "Food stockpile categories need verification",
                     FoodRemainderBody(briefing),
@@ -73,8 +72,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             }
             else
             {
-                concerns.Add(ConcernFor(briefing, now, "unknown_food_state",
-                    FoodConcern.FoodSecurity,
+                emissions.Add(EmitAdvice(briefing, now, "unknown_food_state",
                     AdvicePriority.High,
                     "Food state unknown",
                     "No reliable food stockpile signal is available. Treat this as a food-security check, not confirmed starvation.",
@@ -88,7 +86,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                     true));
             }
 
-            return concerns;
+            return emissions;
         }
 
         float days = briefing.EstimatedDaysOfFood.Value;
@@ -96,12 +94,11 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         if (days < 7f)
         {
             AdvicePriority priority = FoodBufferPriority(briefing, days);
-            concerns.Add(ConcernFor(briefing, now, "emergency_food_flag",
-                FoodConcern.FoodSecurity,
+            emissions.Add(EmitAdvice(briefing, now, "emergency_food_flag",
                 priority,
                 "Food crisis within a week",
                 EmergencyBody(briefing, days),
-                "Food below 7 days is an urgent survival risk. Chef flags the survival pressure; separate Food concerns carry each concrete intervention.",
+                "Food below 7 days is an urgent survival risk. Chef flags the survival pressure; separate Food advice cards carry each concrete intervention.",
                 EmergencyActions(briefing, days),
                 EmergencyRequests(briefing, days, priority),
                 true));
@@ -110,8 +107,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         if (briefing.ReadyToHarvest > 0)
         {
             AdvicePriority priority = days < 15f ? AdvicePriority.High : AdvicePriority.Medium;
-            concerns.Add(ConcernFor(briefing, now, "harvest_mature_crops",
-                FoodConcern.HarvestNow,
+            emissions.Add(EmitAdvice(briefing, now, "harvest_mature_crops",
                 priority,
                 "Mature crops are ready",
                 $"{briefing.ReadyToHarvest} crop tiles are ready to harvest. Pull them in before weather, rot, or task drift wastes the buffer.",
@@ -127,8 +123,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         {
             bool needsCookingLabor = ShouldRequestCookingLabor(briefing, days);
             bool needsCookingBuildingSupport = NeedsCookingBuildingSupport(briefing);
-            concerns.Add(ConcernFor(briefing, now, "meals_understocked",
-                FoodConcern.ManageCookBills,
+            emissions.Add(EmitAdvice(briefing, now, "meals_understocked",
                 AdvicePriority.Medium,
                 "Cooked meals are understocked",
                 $"Only {briefing.MealsCount} meals are reported for {briefing.ColonistCount} colonists while raw food exists.",
@@ -141,8 +136,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         if (days < 20f && briefing.WildHarvestCandidates > 0)
         {
             AdvicePriority priority = days < 10f ? AdvicePriority.High : AdvicePriority.Medium;
-            concerns.Add(ConcernFor(briefing, now, "wild_harvest_available",
-                FoodConcern.WildHarvest,
+            emissions.Add(EmitAdvice(briefing, now, "wild_harvest_available",
                 priority,
                 "Forage can extend the buffer",
                 WildHarvestBody(briefing, days),
@@ -155,8 +149,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         if (days < 20f && CanSuggestHunting(briefing))
         {
             AdvicePriority priority = days < 10f ? AdvicePriority.High : AdvicePriority.Medium;
-            concerns.Add(ConcernFor(briefing, now, "hunt_low_risk_animals",
-                FoodConcern.HuntForFood,
+            emissions.Add(EmitAdvice(briefing, now, "hunt_low_risk_animals",
                 priority,
                 "Mark low-risk animals for hunting",
                 HuntingBody(briefing, days),
@@ -170,8 +163,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         if (days < 20f && cropCandidate is not null && ShouldRecommendNewGrowingZone(briefing, cropCandidate))
         {
             AdvicePriority priority = days < 12f ? AdvicePriority.High : AdvicePriority.Medium;
-            concerns.Add(ConcernFor(briefing, now, "expand_growing_capacity",
-                FoodConcern.ExpandGrowingCapacity,
+            emissions.Add(EmitAdvice(briefing, now, "expand_growing_capacity",
                 priority,
                 "Expand food growing capacity",
                 $"Food covers about {days:F1} days and {cropCandidate.Label} still fits the growing window: {cropCandidate.Reason}. Add a compact food crop zone instead of waiting for hunting or trade.",
@@ -192,43 +184,41 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         bool incomingPerishableFood = HasIncomingPerishableFoodPath(briefing);
         if (NeedsFreezerSupport(briefing, days, incomingPerishableFood))
         {
-            concerns.Add(ConcernFor(briefing, now, "freezer_missing",
-                FoodConcern.ManageFreezer,
+            emissions.Add(EmitAdvice(briefing, now, "freezer_missing",
                 FreezerSupportPriority(briefing),
                 "Food storage needs freezer support",
-                FreezerConcernBody(briefing, days, incomingPerishableFood),
+                FreezerAdviceBody(briefing, days, incomingPerishableFood),
                 "Chef owns freezer need; Willie owns the actual build work.",
                 FreezerSupportActions(briefing, days, incomingPerishableFood),
                 FreezerSupportRequests(briefing, days, incomingPerishableFood),
                 true));
         }
 
-        return concerns;
+        return emissions;
     }
 
-    private static Decision DecisionForConcerns(
+    private static Decision DecisionForEmissions(
         FoodBriefing briefing,
-        IReadOnlyList<ConcernEmission> concerns)
+        IReadOnlyList<RuleEmission> emissions)
     {
-        IReadOnlyList<ConcernEmission> orderedConcerns = concerns
-            .OrderByDescending(concern => concern.Advice.Priority)
+        IReadOnlyList<RuleEmission> orderedEmissions = emissions
+            .OrderByDescending(emission => emission.Advice.Priority)
             .ToList();
-        IReadOnlyList<AdviceItem> advice = orderedConcerns
-            .Select(concern => concern.Advice)
+        IReadOnlyList<AdviceItem> advice = orderedEmissions
+            .Select(emission => emission.Advice)
             .ToList();
-        IReadOnlyList<AgentFlag> flags = orderedConcerns
-            .SelectMany(concern => concern.Flags)
+        IReadOnlyList<AgentFlag> flags = orderedEmissions
+            .SelectMany(emission => emission.Flags)
             .ToList();
-        string trace = CompositeTrace(orderedConcerns);
-        RuleTraceDetails diagnostics = DiagnosticsFor(briefing, trace, orderedConcerns);
+        string trace = CompositeTrace(orderedEmissions);
+        RuleTraceDetails diagnostics = DiagnosticsFor(briefing, trace, orderedEmissions);
         return new Decision(advice, flags, trace, diagnostics);
     }
 
-    private static ConcernEmission ConcernFor(
+    private static RuleEmission EmitAdvice(
         FoodBriefing briefing,
         DateTimeOffset now,
         string trace,
-        FoodConcern type,
         AdvicePriority priority,
         string title,
         string body,
@@ -237,11 +227,9 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         FoodFlagRequests requests,
         bool emitFlag)
     {
-        string concern = ToSnakeCase(type.ToString());
         AdviceItem advice = new(
             Id: $"{MinisterName.ToLowerInvariant()}_{trace}",
             Minister: MinisterName,
-            Concern: concern,
             Priority: priority,
             Title: title,
             Body: body,
@@ -271,7 +259,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 ExpiresAt: now.AddHours(24))]
             : [];
 
-        return new ConcernEmission(trace, advice, flags);
+        return new RuleEmission(trace, advice, flags);
     }
 
     private static IReadOnlyList<AdviceAction> ActionsWithCookingBuildingSupport(
@@ -393,7 +381,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         CanSuggestHunting(briefing) ||
         FoodCropMath.Recommend(briefing).BestCandidate is not null;
 
-    private static string FreezerConcernBody(
+    private static string FreezerAdviceBody(
         FoodBriefing briefing,
         float days,
         bool incomingPerishableFood)
@@ -480,15 +468,15 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         return "stored food";
     }
 
-    private static string CompositeTrace(IReadOnlyList<ConcernEmission> concerns) =>
-        concerns.Count == 1
-            ? concerns[0].Rule
-            : $"concerns:{string.Join("+", concerns.Select(concern => concern.Rule))}";
+    private static string CompositeTrace(IReadOnlyList<RuleEmission> emissions) =>
+        emissions.Count == 1
+            ? emissions[0].Rule
+            : $"rules:{string.Join("+", emissions.Select(emission => emission.Rule))}";
 
     private static RuleTraceDetails DiagnosticsFor(
         FoodBriefing briefing,
         string selectedRule,
-        IReadOnlyList<ConcernEmission>? emissions = null)
+        IReadOnlyList<RuleEmission>? emissions = null)
     {
         List<RuleTraceEntry> matches = RuleMatches(briefing);
         HashSet<string> emittedRules = emissions is null
@@ -515,25 +503,24 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             AllRules = AllRuleEvaluations(annotated)
         };
 
-        return emissions is null ? details : WithConcernEmissions(details, emissions);
+        return emissions is null ? details : WithRuleEmissions(details, emissions);
     }
 
-    private static RuleTraceDetails WithConcernEmissions(
+    private static RuleTraceDetails WithRuleEmissions(
         RuleTraceDetails details,
-        IReadOnlyList<ConcernEmission> emissions)
+        IReadOnlyList<RuleEmission> emissions)
     {
         List<RuleEmittedAdviceTrace> emittedAdvice = [];
         List<RuleEmittedActionTrace> emittedActions = [];
         List<RuleEmittedFlagTrace> emittedFlags = [];
 
-        foreach (ConcernEmission emission in emissions)
+        foreach (RuleEmission emission in emissions)
         {
             AdviceItem item = emission.Advice;
             emittedAdvice.Add(new RuleEmittedAdviceTrace(
                 Source: "rules",
                 Rule: emission.Rule,
                 AdviceId: item.Id,
-                Concern: item.Concern,
                 Priority: item.Priority,
                 Title: item.Title,
                 ActionCount: item.Actions.Count));
@@ -804,8 +791,8 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
 
         if (requests.Count == 0)
             requests = requests.Add(new AttentionRequest(
-                "active food-chain concerns",
-                "food buffer is below 7 days; resolve the separate Food concern cards before routine work",
+                "active food-chain advice",
+                "food buffer is below 7 days; resolve the separate Food advice cards before routine work",
                 Priority: priority,
                 RequestedFrom: MinisterName));
 
@@ -834,7 +821,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         if (actions.Count == 0)
             actions.Add(new AdviceAction(
                 AdviceActionKind.RequestResource,
-                "Resolve the active Food concerns before routine work until the buffer is above 7 days.",
+                "Resolve the active Food advice cards before routine work until the buffer is above 7 days.",
                 Owner: MinisterName));
 
         return actions;
@@ -1408,7 +1395,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         return new string(chars.ToArray());
     }
 
-    private sealed record ConcernEmission(
+    private sealed record RuleEmission(
         string Rule,
         AdviceItem Advice,
         IReadOnlyList<AgentFlag> Flags);

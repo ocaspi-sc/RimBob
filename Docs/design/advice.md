@@ -31,7 +31,7 @@ part of MVP.
 `AdviceItem` is the stable player-facing unit. The code owns exact fields and
 serialization; the design-level contract is:
 
-- Identity and source: id, issuing minister, concern.
+- Identity and source: id and issuing minister.
 - Urgency: one `priority` enum.
 - Player content: title, body, rationale.
 - Player/future-execution operations: concrete `actions[]`.
@@ -63,22 +63,11 @@ knobs for advice.
 Flags still use severity because flags are inter-minister routing signals, not
 player-facing advice.
 
-### Concern
+### Identity And Grouping
 
-`concern` is closed per minister. It is also the unit a future autonomy dial
-graduates one at a time. Adding a concern is a design decision for that
-minister.
+Advice identity is the stable id plus issuing minister. Deterministic rules should use stable same-issue ids keyed from the rule trace, and LLM fallback ids should use the minister/domain, game tick, and output index. There is no separate category label field on `AdviceItem`; dashboard grouping and refinement should use minister, priority, title, actions, flags, and trace metadata.
 
-It must stay **granular**: a generic catch-all concern (e.g. `build_structure`) is
-rejected, because the dial graduates one concern at a time and an over-broad concern
-would graduate too much at once. "Build" is an **action** (`place_blueprint`),
-not a concern.
-
-Authorship is split: the LLM emits the advice's judgment fields plus, when a
-build is involved, a compact semantic *intent* — it never authors exact
-placements, payloads, or target ids. Deterministic code computes those (for
-Willie, the **Placement Solver**). This is the same boundary the Assisted
-Apply section enforces. See [`ministers/construction.md`](ministers/construction.md).
+Authorship is split: the LLM emits the advice's judgment fields plus, when a build is involved, a compact semantic *intent* - it never authors exact placements, payloads, or target ids. Deterministic code computes those (for Willie, the **Placement Solver**). This is the same boundary the Assisted Apply section enforces. See [`ministers/construction.md`](ministers/construction.md).
 
 ### Actions
 
@@ -184,11 +173,7 @@ summary is a compact briefing-derived bullet list so it stays factual about
 stores, growing areas, acquisition, storage/kitchen state, and data gaps even
 when the LLM writes its own raw `state_summary`.
 
-Feeder snapshots may also carry a deterministic chain model for the whole
-minister read. This is not an `AdviceItem` field and is not authored by the
-LLM. For Chef, backend code derives the model from `FoodBriefing` plus the
-emitted active advice so the dashboard can show how the current food pressure
-connects to grow, hunt, forage, cook, storage, and meal outcomes.
+Feeder snapshots may also carry a deterministic chain model for the whole minister read. This is not an `AdviceItem` field and is not authored by the LLM. For Chef, backend code derives the model from `FoodBriefing` plus the emitted active advice actions so the dashboard can show how the current food pressure connects to grow, hunt, forage, cook, storage, and meal outcomes. Chain steps are action-derived: apply labels and instruction text distinguish forage from crop harvest and butchering from cooking without a separate advice category field.
 
 If a cycle fails before producing rules output or successful LLM output, keep
 the previous active snapshot rather than clearing it.
@@ -326,10 +311,7 @@ off-target animals are inside that rectangle. Willie blueprint-group placement i
 The exclusion of policy knobs (priorities/zones/broad bills) is a deliberate
 trust call, not a plumbing gap — the RIMAPI write is usually trivial. They are
 persistent and overwrite player intent (high blast radius), whereas the
-allowlisted designations are additive and ephemeral. Every allowlist candidate
-is a targeted designation by that test; policy knobs return only with the Auto
-dial, where Labor recommends them and the player has explicitly consented per
-minister.
+allowlisted designations are additive and ephemeral. Every allowlist candidate is a targeted designation by that test; policy knobs return only with the Auto dial, where Labor recommends them and the player has explicitly consented per minister and action kind.
 
 Apply attempts must be logged with enough context to inspect the advice, target,
 validation decision, RIMAPI result, and read-back state in dashboard/system
@@ -341,15 +323,13 @@ When an apply returns `applied` or `already_satisfied`, the active advice snapsh
 
 ## Autonomy Dial
 
-The future autonomy dial is per minister and concern:
+The future autonomy dial is per minister and action kind:
 
-- **Off:** do not emit this concern.
-- **Suggest:** emit advice; the player decides.
-- **Auto:** emit advice and execute through the re-engaged Auto stack.
+- **Off:** do not expose executable handling for this minister/action-kind pair; the minister may still explain the state in non-executable advice when useful.
+- **Suggest:** emit advice and structured actions; the player decides, including any player-click-gated Assisted Apply handle.
+- **Auto:** emit advice and execute eligible actions through the re-engaged Auto stack after fresh validation.
 
-MVP honors only `Suggest`. Assisted Apply is a manual click path attached to
-`Suggest` advice. `Auto` returns in M7+ after planner, Labor, broad write
-coverage, and per-minister trust gates exist.
+MVP honors only `Suggest`. Assisted Apply is a manual click path attached to `Suggest` advice. `Auto` returns in M7+ after planner, Labor, broad write coverage, and per-minister/action-kind trust gates exist. Build sub-grouping, when building actions become Auto-eligible, keys on `BuildingClass` rather than a minister-specific advice label.
 
 ---
 
@@ -360,7 +340,5 @@ coverage, and per-minister trust gates exist.
 - [ ] Do pushbacks ever expire, or are stale corrections handled by Oracle refinement?
 - [ ] How should tactical advice conflicts be surfaced before a full CoS loop
       exists?
-- [ ] Define exact per-minister concern catalogues in the relevant minister
-      docs.
-- [ ] Calibrate step-kind granularity as feeders and future Auto mapping
+- [ ] Calibrate action-kind and validation granularity as feeders and future Auto mapping
       mature.

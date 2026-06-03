@@ -2,22 +2,6 @@ using System.Text.Json.Serialization;
 
 namespace RimBob.Core.Advice;
 
-[JsonConverter(typeof(SnakeCaseLowerEnumConverter<FoodConcern>))]
-public enum FoodConcern
-{
-    FoodSecurity,
-    ExpandGrowingCapacity,
-    HarvestNow,
-    WildHarvest,
-    HuntForFood,
-    ManageCookBills,
-    ManageButcherBills,
-    ManageFreezer,
-    ManageFoodStockpile,
-    TradeForFood,
-    RecoverFromFoodEvent
-}
-
 public sealed record FoodLlmResponse
 {
     [JsonConstructor]

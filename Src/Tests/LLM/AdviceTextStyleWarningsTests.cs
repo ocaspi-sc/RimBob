@@ -18,7 +18,6 @@ public sealed class AdviceTextStyleWarningsTests
                 new AdviceItem(
                     Id: "wordy_food",
                     Minister: "Chef",
-                    Concern: "food_security",
                     Priority: AdvicePriority.High,
                     Title: "Confirm the reachable indoor stockpile visibility before making meal decisions",
                     Body: "Body can carry context.",
@@ -62,7 +61,6 @@ public sealed class AdviceTextStyleWarningsTests
                 new AdviceItem(
                     Id: "compact_food",
                     Minister: "Chef",
-                    Concern: "food_security",
                     Priority: AdvicePriority.High,
                     Title: "Expose food stockpile",
                     Body: "Body can carry context.",

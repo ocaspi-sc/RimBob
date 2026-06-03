@@ -35,17 +35,17 @@ const traceInspectorConfig: InspectorSurfaceConfig = {
   preferredTables: [
     {
       key: 'advice',
-      preferredColumns: ['id', 'concern', 'priority', 'severity', 'title', 'issued_at'],
+      preferredColumns: ['id', 'priority', 'severity', 'title', 'issued_at'],
     },
     {
       key: 'emittedAdvice',
       title: 'emittedAdvice',
-      preferredColumns: ['id', 'concern', 'priority', 'severity', 'title', 'issued_at'],
+      preferredColumns: ['id', 'priority', 'severity', 'title', 'issued_at'],
     },
     {
       key: 'emitted_advice',
       title: 'emitted_advice',
-      preferredColumns: ['id', 'concern', 'priority', 'severity', 'title', 'issued_at'],
+      preferredColumns: ['id', 'priority', 'severity', 'title', 'issued_at'],
     },
     {
       key: 'flags',
@@ -55,7 +55,6 @@ const traceInspectorConfig: InspectorSurfaceConfig = {
 };
 
 const activeAdviceColumns = [
-  'concern',
   'priority',
   'severity',
   'title',
@@ -239,8 +238,8 @@ function RuleDiagnosticsPanel({ details }: { details: RuleTraceDetails }) {
             <div className="rule-emissions-table rule-emissions-advice-table">
               <DynamicTable
                 rows={emittedAdvice}
-                preferredColumns={['source', 'rule', 'adviceId', 'concern', 'priority', 'title', 'actionCount']}
-                maxColumns={7}
+                preferredColumns={['source', 'rule', 'adviceId', 'priority', 'title', 'actionCount']}
+                maxColumns={6}
               />
             </div>
           )}

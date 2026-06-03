@@ -36,7 +36,7 @@ Likely first advice areas:
 - Weapon readiness below the current threat level.
 - Post-raid repair or medical pressure flagged to owners.
 
-Exact concerns should be defined when the Defense implementation slice
+Exact rule signals should be defined when the Defense implementation slice
 starts.
 
 ---
@@ -66,7 +66,7 @@ reserved for states that can immediately cost colonists or the colony:
 - Active fire spreading toward key structures.
 - Active infestation or breach inside the base.
 
-All other Defense concerns should normally emit High or lower.
+All other Defense advice should normally emit High or lower.
 
 ---
 
@@ -108,7 +108,7 @@ Requests remain advice in MVP; they do not issue RIMAPI writes by themselves.
 
 ## Open Questions / TODO
 
-- [ ] Define first Defense concerns.
+- [ ] Define first Defense rule signals.
 - [ ] Define weapon/readiness scoring from live data.
 - [ ] Define how Defense requests fortification work from Willie.
 - [ ] Decide retreat-vs-hold thresholds.

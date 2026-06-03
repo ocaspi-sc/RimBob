@@ -210,7 +210,7 @@ function OptionGroup({ group }: { group: ProposedOptionGroupModel }) {
       <header>
         <div>
           <span className="eyebrow">
-            <SemanticLabel icon={iconForField(group.item.concern)}><span>{formatLabel(group.item.concern)}</span></SemanticLabel>
+            <SemanticLabel icon={iconForField(group.item.title)}><span>{group.item.title}</span></SemanticLabel>
           </span>
           <h3><IconizedText maxIcons={1} text={group.item.title} /></h3>
         </div>
@@ -258,7 +258,7 @@ function OptionCard({ card }: { card: ProposedOptionModel }) {
           src={iconUrlFor(actionIcon?.ref)}
         />
         <div>
-          <span className="eyebrow">{formatLabel(card.item.concern)}</span>
+          <span className="eyebrow">{card.item.title}</span>
           <h4>{card.option.label}</h4>
         </div>
         <StatusPill tone={priorityTone(card.item.priority)}>{card.item.priority}</StatusPill>

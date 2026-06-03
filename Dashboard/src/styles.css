@@ -2918,14 +2918,14 @@ code {
   align-items: stretch;
 }
 
-.willie-concern-strip {
+.briefing-signal-strip {
   min-width: 0;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 8px;
 }
 
-.willie-concern-tile {
+.briefing-signal-tile {
   min-width: 0;
   min-height: 112px;
   display: grid;
@@ -2937,27 +2937,27 @@ code {
   background: rgba(255, 255, 255, 0.025);
 }
 
-.willie-concern-tile.ok {
+.briefing-signal-tile.ok {
   border-color: rgba(80, 211, 141, 0.34);
   background: linear-gradient(135deg, rgba(80, 211, 141, 0.085), rgba(255, 255, 255, 0.025));
 }
 
-.willie-concern-tile.warn {
+.briefing-signal-tile.warn {
   border-color: rgba(240, 189, 95, 0.35);
   background: linear-gradient(135deg, rgba(240, 189, 95, 0.08), rgba(255, 255, 255, 0.025));
 }
 
-.willie-concern-tile.neutral {
+.briefing-signal-tile.neutral {
   border-color: rgba(176, 190, 197, 0.25);
   background: linear-gradient(135deg, rgba(176, 190, 197, 0.055), rgba(255, 255, 255, 0.025));
 }
 
-.willie-concern-tile.error {
+.briefing-signal-tile.error {
   border-color: rgba(255, 107, 107, 0.42);
   background: linear-gradient(135deg, rgba(255, 107, 107, 0.1), rgba(255, 255, 255, 0.025));
 }
 
-.willie-concern-tile header {
+.briefing-signal-tile header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -2966,24 +2966,24 @@ code {
   font-size: 0.72rem;
 }
 
-.willie-concern-tile header > span:last-child {
+.briefing-signal-tile header > span:last-child {
   flex: 0 0 auto;
   color: var(--dim);
   text-transform: uppercase;
 }
 
-.willie-concern-tile .semantic-label-text {
+.briefing-signal-tile .semantic-label-text {
   overflow-wrap: normal;
 }
 
-.willie-concern-tile strong {
+.briefing-signal-tile strong {
   min-width: 0;
   color: var(--text);
   font-size: 1rem;
   overflow-wrap: anywhere;
 }
 
-.willie-concern-tile small {
+.briefing-signal-tile small {
   min-width: 0;
   color: var(--muted);
   line-height: 1.35;
@@ -5467,7 +5467,7 @@ code {
   }
 
   .willie-hud-strip,
-  .willie-concern-strip,
+  .briefing-signal-strip,
   .willie-briefing-metrics,
   .willie-briefing-panels,
   .welfare-briefing-metrics,

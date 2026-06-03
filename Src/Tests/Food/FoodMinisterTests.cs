@@ -58,7 +58,7 @@ public sealed class FoodMinisterTests
 
         await h.Minister.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
 
-        h.PublishedAdvice.Should().Contain(advice => advice.Concern == "food_security");
+        h.PublishedAdvice.Should().Contain(advice => advice.Id == "chef_emergency_food_flag");
         h.Flags.Active(FlagSeverity.Medium).Should().Contain(flag => flag.Domain == "food");
     }
 
@@ -72,7 +72,7 @@ public sealed class FoodMinisterTests
         h.SetFoodDays(4f);
         await h.Minister.RunPlayCycle(PlayCycleContext.CabinetRefresh, CancellationToken.None);
 
-        h.PublishedAdvice.Should().Contain(advice => advice.Concern == "food_security");
+        h.PublishedAdvice.Should().Contain(advice => advice.Id == "chef_emergency_food_flag");
         h.Bus.ActiveSnapshot().StateSummaries.Should().ContainKey("Chef");
         h.Flags.Active(FlagSeverity.Medium).Should().Contain(flag => flag.Domain == "food");
     }
@@ -102,7 +102,7 @@ public sealed class FoodMinisterTests
         record.WakeupPayload.Should().Be("dashboard");
         record.Briefing.Should().BeOfType<FoodBriefing>();
         record.Context.Should().BeOfType<MinisterBriefingContext>();
-        record.Advice.Should().Contain(advice => advice.Concern == "food_security");
+        record.Advice.Should().Contain(advice => advice.Id == "chef_emergency_food_flag");
         record.Flags.Should().Contain(flag => flag.Domain == "food");
         record.Chain.Should().NotBeNull();
         record.Chain!.Paths.Should().NotBeEmpty();
@@ -245,7 +245,6 @@ public sealed class FoodMinisterTests
     private static AdviceItem FoodAdvice(string id, bool withAction = false) => new(
         Id: id,
         Minister: "Chef",
-        Concern: "hunt_for_food",
         Priority: AdvicePriority.Medium,
         Title: "Hunt carefully",
         Body: "Use safe targets.",

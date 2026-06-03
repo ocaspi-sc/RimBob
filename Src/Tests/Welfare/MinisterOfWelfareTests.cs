@@ -12,7 +12,7 @@ namespace RimBob.Tests.Welfare;
 
 public sealed class MinisterOfWelfareTests
 {
-    private static readonly DateTimeOffset FixedNow = new(2026, 6, 2, 12, 0, 0, TimeSpan.Zero);
+    private static readonly DateTimeOffset FixedNow = new(2036, 6, 2, 12, 0, 0, TimeSpan.Zero);
 
     [Fact]
     public async Task RuleDecision_PublishesAdviceSnapshotFlagAndReplay()
@@ -25,7 +25,7 @@ public sealed class MinisterOfWelfareTests
 
         AdviceItem advice = harness.Bus.ActiveAdvice().Should().ContainSingle().Subject;
         advice.Minister.Should().Be("Welfare");
-        advice.Concern.Should().Be("shelter_floor");
+        advice.Id.Should().Be("welfare_shelter_floor");
         harness.Bus.ActiveSnapshot().StateSummaries.Should().ContainKey("Welfare")
             .WhoseValue.Should().Contain("Shelter:");
         AgentFlag flag = harness.Flags.Active().Should().ContainSingle().Subject;

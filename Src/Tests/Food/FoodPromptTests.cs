@@ -8,7 +8,7 @@ namespace RimBob.Tests.Food;
 public sealed class FoodPromptTests
 {
     [Fact]
-    public void BuildFoodUserMessage_IncludesBriefingContextAndClosedConcerns()
+    public void BuildFoodUserMessage_IncludesBriefingContextWithoutAllowedConcerns()
     {
         PromptBuilder builder = new();
         string json = builder.BuildFoodUserMessage(
@@ -16,8 +16,8 @@ public sealed class FoodPromptTests
             new MinisterBriefingContext(null, "stabilize food", ["food"]),
             []);
 
-        json.Should().Contain("allowed_concerns");
-        json.Should().Contain("FoodSecurity");
+        json.Should().NotContain("allowed_concerns");
+        json.Should().NotContain("FoodSecurity");
         json.Should().Contain("minister_context");
         json.Should().Contain("stabilize food");
         json.Should().Contain("UnclassifiedFoodUnits");

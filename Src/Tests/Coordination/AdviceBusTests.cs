@@ -263,7 +263,6 @@ public sealed class AdviceBusTests
     private static AdviceItem Advice(string id, string minister) => new(
         Id: id,
         Minister: minister,
-        Concern: "food_security",
         Priority: AdvicePriority.High,
         Title: "Food low",
         Body: "Body",
@@ -276,7 +275,6 @@ public sealed class AdviceBusTests
     private static AdviceItem Advice(string id, string minister, IReadOnlyList<AdviceAction> actions) => new(
         Id: id,
         Minister: minister,
-        Concern: "food_security",
         Priority: AdvicePriority.High,
         Title: "Food low",
         Body: "Body",

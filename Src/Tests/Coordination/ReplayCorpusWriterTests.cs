@@ -29,7 +29,6 @@ public sealed class ReplayCorpusWriterTests
             AdviceItem advice = new(
                 Id: "food_test",
                 Minister: "Food",
-                Concern: "food_security",
                 Priority: AdvicePriority.High,
                 Title: "Food test",
                 Body: "Body",

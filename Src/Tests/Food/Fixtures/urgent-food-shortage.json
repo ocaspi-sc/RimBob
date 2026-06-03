@@ -1,7 +1,7 @@
 {
   "description": "Food below 7 days should emit high food_security advice and flag",
-  "expected_advice": ["food_security"],
-  "expected_top_concern": "food_security",
+  "expected_advice_ids": ["chef_emergency_food_flag"],
+  "expected_top_rule": "emergency_food_flag",
   "expected_priority_min": "High",
   "should_escalate": false
 }

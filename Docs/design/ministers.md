@@ -95,7 +95,7 @@ The Oracle is a developer/refinement role, not a play-mode minister and not anot
 Any applied minister-logic change must close with a before/after advice diff on
 the same input corpus. Prefer historic replay records; if they are missing or
 not replayable, use the focused fixture/regression input and label the result
-fixture-only. The diff should show the path taken, concern, priority, title,
+fixture-only. The diff should show the path taken, rule/LLM trace, priority, title,
 resource requests, suggested actions, flags, and whether non-target cases stayed
 unchanged.
 
@@ -146,7 +146,7 @@ nearest clusters, tile counts, and bottleneck signals are preferred over lists
 of every coordinate.
 
 When an LLM is called, it must produce the same execution-facing fields the
-runtime accepts: concern, priority, title/body/rationale, concrete actions,
+runtime accepts: priority, title/body/rationale, concrete actions,
 optional flags, optional scheduled wakeup, and trace notes.
 See [`advice.md`](advice.md) for the advice schema and feedback lifecycle.
 
@@ -157,7 +157,7 @@ actions, and cross-domain requests. The design-level catalogue lives in
 
 LLM rules:
 
-- Concerns are closed per minister.
+- Stable ids and trace notes should identify the rule or LLM path that produced the advice.
 - `priority` is required on every advice item.
 - Feeder ministers emit concrete operational advice, not grand strategy menus.
 - `actions` are the single player-facing action list on advice.

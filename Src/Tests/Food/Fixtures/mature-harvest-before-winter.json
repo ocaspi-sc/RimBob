@@ -1,7 +1,7 @@
 {
   "description": "Mature food crops are ready before winter",
-  "expected_advice": ["harvest_now"],
-  "expected_top_concern": "harvest_now",
+  "expected_advice_ids": ["chef_harvest_mature_crops"],
+  "expected_top_rule": "harvest_mature_crops",
   "expected_priority_min": "Medium",
   "should_escalate": false
 }

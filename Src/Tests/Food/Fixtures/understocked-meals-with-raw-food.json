@@ -1,7 +1,7 @@
 {
   "description": "Raw food exists but cooked meals are below buffer",
-  "expected_advice": ["manage_cook_bills"],
-  "expected_top_concern": "manage_cook_bills",
+  "expected_advice_ids": ["chef_meals_understocked"],
+  "expected_top_rule": "meals_understocked",
   "expected_priority_min": "Medium",
   "should_escalate": false
 }

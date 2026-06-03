@@ -77,7 +77,6 @@ public sealed class FoodReplayCorpusTests
             AdviceItem actualItem = actual[i];
             actualItem.Id.Should().Be(expectedItem.Id, sourceId);
             actualItem.Minister.Should().Be(expectedItem.Minister, sourceId);
-            actualItem.Concern.Should().Be(expectedItem.Concern, sourceId);
             actualItem.Priority.Should().Be(expectedItem.Priority, sourceId);
             actualItem.Title.Should().Be(expectedItem.Title, sourceId);
             actualItem.Body.Should().Be(expectedItem.Body, sourceId);

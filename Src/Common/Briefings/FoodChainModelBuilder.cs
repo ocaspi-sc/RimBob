@@ -283,9 +283,8 @@ public static class FoodChainModelBuilder
             FoodChainActionTargets targets = new();
             foreach (AdviceItem item in advice)
             {
-                targets.AddConcern(item.Concern);
                 foreach (AdviceAction action in item.Actions)
-                    targets.AddAction(item.Concern, action);
+                    targets.AddAction(action);
             }
 
             return targets;
@@ -293,30 +292,12 @@ public static class FoodChainModelBuilder
 
         public bool Has(string step) => _steps.Contains(step);
 
-        private void AddConcern(string concern)
+        private void AddAction(AdviceAction action)
         {
-            string canonical = Canonical(concern);
-            if (canonical == "harvestnow")
-                _steps.Add("grow.harvest");
-            else if (canonical == "wildharvest")
-                _steps.Add("forage.harvest");
-            else if (canonical == "huntforfood")
-                _steps.Add("hunt.hunt");
-            else if (canonical == "expandgrowingcapacity")
-                _steps.Add("grow.zone");
-            else if (canonical is "managecookbills" or "managebutcherbills")
-                _steps.Add("cook");
-            else if (canonical is "managefreezer" or "managefoodstockpile")
-                _steps.Add("store");
-        }
-
-        private void AddAction(string concern, AdviceAction action)
-        {
-            string canonicalConcern = Canonical(concern);
             switch (action.Kind)
             {
                 case AdviceActionKind.MarkHarvest:
-                    _steps.Add(canonicalConcern == "wildharvest" ? "forage.harvest" : "grow.harvest");
+                    _steps.Add(IsForageHarvest(action) ? "forage.harvest" : "grow.harvest");
                     break;
                 case AdviceActionKind.MarkHunt:
                     _steps.Add("hunt.hunt");
@@ -325,10 +306,10 @@ public static class FoodChainModelBuilder
                     _steps.Add("grow.zone");
                     break;
                 case AdviceActionKind.ProductionBill:
-                    _steps.Add(canonicalConcern == "managebutcherbills" ? "hunt.butcher" : "cook");
+                    _steps.Add(IsButcherInstruction(action) ? "hunt.butcher" : "cook");
                     break;
                 case AdviceActionKind.PlaceBlueprint:
-                    AddBlueprintTarget(canonicalConcern, action);
+                    AddBlueprintTarget(action);
                     break;
                 case AdviceActionKind.SetPriority:
                     AddWorkTarget(action.WorkType);
@@ -342,14 +323,32 @@ public static class FoodChainModelBuilder
             }
         }
 
-        private void AddBlueprintTarget(string canonicalConcern, AdviceAction action)
+        private void AddBlueprintTarget(AdviceAction action)
         {
-            if (canonicalConcern == "managefreezer" || IsColdStorageBlueprint(action))
+            if (IsColdStorageBlueprint(action))
                 _steps.Add("store");
-            else if (canonicalConcern == "managebutcherbills" || canonicalConcern == "huntforfood")
+            else if (IsButcherInstruction(action))
                 _steps.Add("hunt.butcher");
             else
                 _steps.Add("cook");
+        }
+
+        private static bool IsForageHarvest(AdviceAction action)
+        {
+            string label = action.Apply?.Label ?? string.Empty;
+            if (label.Contains("forage", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            string text = action.Instruction;
+            return text.Contains("forage", StringComparison.OrdinalIgnoreCase) ||
+                   text.Contains("wild", StringComparison.OrdinalIgnoreCase) ||
+                   text.Contains("edible plant", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsButcherInstruction(AdviceAction action)
+        {
+            string text = $"{action.Instruction} {action.Apply?.Label} {action.Apply?.TargetSummary}";
+            return text.Contains("butcher", StringComparison.OrdinalIgnoreCase);
         }
 
         private static bool IsColdStorageBlueprint(AdviceAction action)
@@ -376,10 +375,5 @@ public static class FoodChainModelBuilder
             }
         }
 
-        private static string Canonical(string value) =>
-            value.Replace("_", "", StringComparison.Ordinal)
-                .Replace("-", "", StringComparison.Ordinal)
-                .Trim()
-                .ToLowerInvariant();
     }
 }

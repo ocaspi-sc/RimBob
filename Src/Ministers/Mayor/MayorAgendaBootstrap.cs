@@ -116,7 +116,7 @@ public static class MayorAgendaBootstrap
         if (foodUnknown)
             direction["food"] = "Prioritize food visibility: stockpiles, harvestables, meal production, and cooking bottlenecks.";
         else if (foodCritical)
-            direction["food"] = "Treat food security as the top cabinet concern until the buffer is above 7 days.";
+            direction["food"] = "Treat food security as the top cabinet priority until the buffer is above 7 days.";
 
         if (activeThreat)
             direction["Defense"] = "Handle active hostile pressure before non-survival work.";

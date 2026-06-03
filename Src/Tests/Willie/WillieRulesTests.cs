@@ -45,7 +45,7 @@ public sealed class WillieRulesTests
 
         decision.Trace.Should().Be("power_net_deficit");
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
-        advice.Concern.Should().Be("power_stability");
+        advice.Id.Should().Be("willie_power_net_deficit");
         advice.Priority.Should().Be(AdvicePriority.High);
         advice.Actions.Should().ContainSingle(action => action.Kind == AdviceActionKind.PlaceBlueprint);
         decision.Diagnostics!.EmittedAdvice.Should().ContainSingle(row =>
@@ -72,7 +72,7 @@ public sealed class WillieRulesTests
 
         decision.Trace.Should().Be("low_battery_reserve");
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
-        advice.Concern.Should().Be("power_stability");
+        advice.Id.Should().Be("willie_low_battery_reserve");
         advice.Priority.Should().Be(AdvicePriority.Medium);
     }
 
@@ -92,7 +92,7 @@ public sealed class WillieRulesTests
 
         decision.Trace.Should().Be("backlog_material_gap");
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
-        advice.Concern.Should().Be("material_bottleneck");
+        advice.Id.Should().Be("willie_backlog_material_gap");
         advice.Actions.Should().ContainSingle(action => action.Kind == AdviceActionKind.RequestResource);
         AgentFlag flag = decision.Flags.Should().ContainSingle().Subject;
         flag.ItemRequests.Should().NotBeNull();
@@ -138,7 +138,7 @@ public sealed class WillieRulesTests
 
         decision.Trace.Should().Be("frame_blocked_by_material");
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
-        advice.Concern.Should().Be("stalled_builds");
+        advice.Id.Should().Be("willie_frame_blocked_by_material");
         decision.Flags.Should().ContainSingle()
             .Which.Attention.Should().ContainSingle()
             .Which.Request.Should().Contain("unblock");
@@ -156,7 +156,7 @@ public sealed class WillieRulesTests
 
         decision.Trace.Should().Be("kitchen_missing");
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
-        advice.Concern.Should().Be("functional_rooms");
+        advice.Id.Should().Be("willie_kitchen_missing");
         advice.Actions.Should().ContainSingle(action => action.Kind == AdviceActionKind.PlaceBlueprint);
     }
 
@@ -171,7 +171,7 @@ public sealed class WillieRulesTests
         Decision decision = result.Should().BeOfType<Decision>().Subject;
         decision.Trace.Should().Be(Rules.BuildingRequestActiveTrace);
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
-        advice.Concern.Should().Be("thermal_control");
+        advice.Id.Should().Be("willie_building_request_active");
         AdviceAction action = advice.Actions.Should().ContainSingle().Subject;
         action.Kind.Should().Be(AdviceActionKind.PlaceBlueprint);
         action.Apply.Should().BeNull();
@@ -188,7 +188,7 @@ public sealed class WillieRulesTests
         Decision decision = result.Should().BeOfType<Decision>().Subject;
         decision.Trace.Should().Be(Rules.BuildingRequestActiveTrace);
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
-        advice.Concern.Should().Be("functional_rooms");
+        advice.Id.Should().Be("willie_building_request_active");
         advice.Title.Should().Be("Workshop request needs Willie placement");
         Rules.TryGetPlacementRequest(decision.Trace, StableBriefing(), [WorkshopRequest()], out BuildingRequest request)
             .Should().BeTrue();
@@ -211,7 +211,7 @@ public sealed class WillieRulesTests
         Decision decision = result.Should().BeOfType<Decision>().Subject;
         decision.Trace.Should().Be(Rules.BuildingRequestActiveTrace);
         decision.Advice.Should().ContainSingle()
-            .Which.Concern.Should().Be("thermal_control");
+            .Which.Id.Should().Be("willie_building_request_active");
         decision.Diagnostics.Should().NotBeNull();
         decision.Diagnostics!.SuppressedCandidates.Should().Contain(row =>
             row.Rule == "kitchen_missing" &&
@@ -242,7 +242,7 @@ public sealed class WillieRulesTests
         Decision decision = result.Should().BeOfType<Decision>().Subject;
         decision.Trace.Should().Be("kitchen_missing");
         decision.Advice.Should().ContainSingle()
-            .Which.Concern.Should().Be("functional_rooms");
+            .Which.Id.Should().Be("willie_kitchen_missing");
         decision.Diagnostics.Should().NotBeNull();
         decision.Diagnostics!.SuppressedCandidates.Should().Contain(row =>
             row.Rule == Rules.BuildingRequestActiveTrace &&
@@ -272,7 +272,7 @@ public sealed class WillieRulesTests
         Decision decision = result.Should().BeOfType<Decision>().Subject;
         decision.Trace.Should().Be(Rules.BuildingRequestActiveTrace);
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
-        advice.Concern.Should().Be("functional_rooms");
+        advice.Id.Should().Be("willie_building_request_active");
         advice.Title.Should().Be("Kitchen request needs Willie placement");
         Rules.TryGetPlacementRequest(decision.Trace, briefing, [freezerNearKitchen, KitchenRequest()], out BuildingRequest request)
             .Should().BeTrue();
@@ -300,7 +300,7 @@ public sealed class WillieRulesTests
         Decision decision = result.Should().BeOfType<Decision>().Subject;
         decision.Trace.Should().Be("backlog_material_gap");
         decision.Advice.Should().ContainSingle()
-            .Which.Concern.Should().Be("material_bottleneck");
+            .Which.Id.Should().Be("willie_backlog_material_gap");
         decision.Diagnostics.Should().NotBeNull();
         decision.Diagnostics!.SuppressedCandidates.Should().Contain(row =>
             row.Rule == Rules.BuildingRequestActiveTrace &&

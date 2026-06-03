@@ -54,7 +54,7 @@ The whole year is one coherent goal: **don't die, build the smallest viable engi
 - **Construction:** hospital corner (sterile tile for surgery infection reduction); prison cell (recruitment is wealth-cheap and skill-flexible); lavish single rooms only for break-risk colonists; beautify the dining/rec room with sculptures — single biggest mood-per-wealth lever available.
 - **Infestation prevention:** if base is mountain-carved, keep any dark enclosed rooms cold (< −17 °C); bugs will not spawn in rooms below that threshold.
 - **Mood:** post-break colonists receive Catharsis (+40 mood) — monitor; minor breaks (sad wander, insulting spree) can pass without intervention; major/extreme breaks (berserk, arson) require immediate drafting of melee colonists to subdue non-lethally.
-- **Defense:** weapon tier transition — chain shotguns are the community-consensus threshold past which wealth concerns relax significantly; first turret line behind chokepoint.
+- **Defense:** weapon tier transition — chain shotguns are the community-consensus threshold past which wealth pressure relaxes significantly; first turret line behind chokepoint.
 - **Labor:** heavy crafting + research; minimal outdoor work; recruit prisoners from fall raids (prisoner is a wealth sunk either way — pick good traits and skills).
 - **Research priority:** Microelectronics → Hydroponics (queued) → Multi-analyzer → tier-2 weapons → Geothermal (if vent exists).
 
@@ -130,7 +130,7 @@ Raid points scale with wealth and colony age. Watching *velocity* (wealth gained
 Three sinks raise effective colony power without raising raid points: research progress, faction goodwill, and consumed goods (food, drugs, fuel, medicine). Prefer these over stockpiled items, decorated furniture, or excess apparel. Gifting surplus to allies is the highest-leverage sink: it removes wealth *and* unlocks call-in support.
 
 ### The chain shotgun threshold
-Community consensus: once every shooter has a chain shotgun (or better), stone walls, and a functional killbox, wealth concerns relax sharply. This is the load-bearing milestone — the difference between reactive and proactive play.
+Community consensus: once every shooter has a chain shotgun (or better), stone walls, and a functional killbox, wealth pressure relaxes sharply. This is the load-bearing milestone — the difference between reactive and proactive play.
 
 ### Mood as currency
 Mood is a continuous resource, not a binary. Beauty in dining + rec + bedroom rooms compounds. A break-risk colonist costs more pawn-hours than a single luxury bedroom. After any mental break, the colonist receives Catharsis (+40 mood) — minor breaks (sad wander, insulting spree) can sometimes pass without intervention. Major/extreme breaks (berserk, arson) must be suppressed immediately with melee.

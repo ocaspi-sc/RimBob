@@ -228,7 +228,6 @@ public sealed class AdviceNormalizationTests
         {
           "advice": [
             {
-              "concern": "HarvestNow",
               "priority": "medium",
               "title": "Harvest rice",
               "body": "Mature rice is ready.",
@@ -263,7 +262,6 @@ public sealed class AdviceNormalizationTests
         BriefingVersion: 1,
         GameTick: 300_000,
         Date: GameTime.Create("5th of Aprimay, 5500, 14h", 300_000, 5500, "Aprimay", 5, 14),
-        DefaultConcern: "food_security",
         DefaultRationale: "Chef LLM escalation selected this recommendation.",
         GuideContext: []);
 }

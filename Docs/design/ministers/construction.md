@@ -84,23 +84,11 @@ Richer storage-distance, fire-risk, frame-age, and base-layout rules wait on
 briefing derivation extensions or fork reads. Wire/persistence changes in this
 area follow the project default: no compat code; wipe-and-regen on upgrade.
 
-### Concerns (defined)
+### Issue Classes
 
-The canonical concern set lives in
-[`willie-advice-types.md`](../../../.plans/willie-advice-types.md). That plan is
-the source of truth for the current eight Willie concerns and the rules-vs-LLM
-split. `basic_shelter` moved to Welfare; survival-floor bedroom/barracks asks
-reach Willie as `functional_rooms` build requests.
-`Src/Common/Advice/WillieConcern.cs` now carries the closed eight-member enum on
-the code side.
+The historical issue-class discussion lives in [`willie-advice-types.md`](../../../.plans/willie-advice-types.md). It remains useful for rule/LLM split and dashboard grouping, but there is no closed Willie advice-category enum or `AdviceItem` field. `basic_shelter` moved to Welfare; survival-floor bedroom/barracks asks reach Willie as `functional_rooms` build requests.
 
-Decisions: `base_topology` is folded into `base_layout` (a dashboard /
-briefing grouping, not its own type); `functional_rooms` and
-`storage_placement` stay separate (room existence/purpose vs material-flow
-placement - different blast radius, must graduate independently). No generic
-`build_structure` concern:
-"build" is an **action** (`place_blueprint`), not a category, because
-`concern` is the autonomy-dial unit and stays granular.
+Decisions: `base_topology` is folded into `base_layout` (a dashboard / briefing grouping, not its own type); `functional_rooms` and `storage_placement` stay separate (room existence/purpose vs material-flow placement - different blast radius, different validation and Auto trust gates). No generic `build_structure` advice category: "build" is an **action** (`place_blueprint`), and future build Auto grouping keys on `BuildingClass`.
 
 ### Placement & Authorship
 
@@ -204,7 +192,7 @@ In MVP these requests remain advice and flags; they never execute writes by them
 
 ## Open Questions / TODO
 
-- [x] Willie concerns defined — see **Concerns (defined)** above and `.plans/willie-advice-types.md`.
+- [x] Willie issue classes documented - see **Issue Classes** above and `.plans/willie-advice-types.md`.
 - [ ] Define room-program derivation in the state store.
 - [ ] Decide how Willie consumes Chef/Welfare/Defense/Medical build requests.
 - [ ] Decide when Research should split from Willie.

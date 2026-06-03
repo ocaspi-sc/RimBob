@@ -1,7 +1,7 @@
 {
   "description": "RIMAPI nutrition is missing while day-one packaged survival meals are forbidden and only visible through UnforbidTargets",
-  "expected_advice": ["manage_food_stockpile"],
-  "expected_top_concern": "manage_food_stockpile",
+  "expected_advice_ids": ["chef_nutrition_signal_gap"],
+  "expected_top_rule": "nutrition_signal_gap",
   "expected_priority_min": "Medium",
   "should_escalate": false,
   "briefing": {

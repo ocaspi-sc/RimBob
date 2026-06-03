@@ -311,7 +311,6 @@ export interface AdviceChainModel {
 export interface AdviceItem {
   id: string;
   minister: string;
-  concern: string;
   priority: AdvicePriority;
   title: string;
   body: string;

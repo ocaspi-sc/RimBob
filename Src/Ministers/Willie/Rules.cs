@@ -33,7 +33,6 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
                 briefing,
                 inboundBuildingRequests,
                 "power_net_deficit",
-                WillieConcern.PowerStability,
                 AdvicePriority.High,
                 "Power is running negative",
                 $"The colony is drawing {FormatWatts(Math.Abs(briefing.PowerStability.NetW))} more power than it produces.",
@@ -46,7 +45,6 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
                 briefing,
                 inboundBuildingRequests,
                 "low_battery_reserve",
-                WillieConcern.PowerStability,
                 AdvicePriority.Medium,
                 "Battery reserve is thin",
                 $"Stored power is {ReserveRatio(briefing.PowerStability):P0} of capacity.",
@@ -59,7 +57,6 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
                 briefing,
                 inboundBuildingRequests,
                 "backlog_material_gap",
-                WillieConcern.MaterialBottleneck,
                 AdvicePriority.High,
                 "Build queue is short on materials",
                 $"Queued construction is missing {FormatMaterials(briefing.MaterialBottleneck.MissingMaterials)}.",
@@ -72,7 +69,6 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
                 briefing,
                 inboundBuildingRequests,
                 "frame_blocked_by_material",
-                WillieConcern.StalledBuilds,
                 AdvicePriority.High,
                 "Construction is blocked",
                 $"{briefing.StalledBuilds.BlockedCount} queued build item{Plural(briefing.StalledBuilds.BlockedCount)} cannot progress.",
@@ -129,7 +125,6 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
                 briefing,
                 inboundBuildingRequests,
                 "cooler_missing",
-                WillieConcern.ThermalControl,
                 AdvicePriority.Medium,
                 "Freezer has no visible cooler",
                 "A freezer room anchor exists, but no cooler building is visible.",
@@ -156,7 +151,6 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
             briefing,
             inboundBuildingRequests,
             trace,
-            WillieConcern.FunctionalRooms,
             priority,
             title,
             body,
@@ -184,7 +178,6 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
             briefing,
             inboundBuildingRequests,
             BuildingRequestActiveTrace,
-            ConcernFor(request),
             request.Priority ?? AdvicePriority.Medium,
             title,
             request.Request,
@@ -199,7 +192,6 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
         WillieBriefing briefing,
         IReadOnlyList<BuildingRequest> inboundBuildingRequests,
         string trace,
-        WillieConcern concern,
         AdvicePriority priority,
         string title,
         string body,
@@ -208,11 +200,9 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
         WillieFlagRequests requests)
     {
         DateTimeOffset now = timeProvider.GetUtcNow();
-        string concernWire = ToSnakeCase(concern.ToString());
         AdviceItem advice = new(
             Id: $"{MinisterName.ToLowerInvariant()}_{trace}",
             Minister: MinisterName,
-            Concern: concernWire,
             Priority: priority,
             Title: title,
             Body: body,
@@ -451,26 +441,6 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
         request.Temperature?.TargetBand == TemperatureBand.Freezing ||
         request.RoomClass == RoomClass.Freezer ||
         request.TargetClass == BuildingClass.Freezer;
-
-    private static WillieConcern ConcernFor(BuildingRequest request)
-    {
-        if (IsFreezingBuildRequest(request))
-            return WillieConcern.ThermalControl;
-
-        if (request.RoomClass == RoomClass.Storage ||
-            request.TargetClass is BuildingClass.Stockpile or BuildingClass.Shelf or BuildingClass.DumpingZone)
-        {
-            return WillieConcern.StoragePlacement;
-        }
-
-        if (request.TargetClass is BuildingClass.PowerGeneration or BuildingClass.Battery or BuildingClass.Conduit)
-            return WillieConcern.PowerStability;
-
-        if (request.RoomClass is not null)
-            return WillieConcern.FunctionalRooms;
-
-        return WillieConcern.BaseLayout;
-    }
 
     private static bool TryMissingRoomClass(string trace, out RoomClass roomClass)
     {

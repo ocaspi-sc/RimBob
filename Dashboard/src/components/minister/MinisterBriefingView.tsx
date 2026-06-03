@@ -163,7 +163,7 @@ function groupBriefing(scope: string, briefing: unknown): BriefingGroup[] {
 
 type HudTone = 'ok' | 'warn' | 'error' | 'neutral';
 
-interface WillieConcernTile {
+interface WillieSignalTile {
   detail: string;
   key: string;
   label: string;
@@ -171,7 +171,7 @@ interface WillieConcernTile {
   value: string;
 }
 
-interface WelfareConcernTile {
+interface WelfareSignalTile {
   detail: string;
   key: string;
   label: string;
@@ -206,7 +206,7 @@ function WelfareBriefingHud({ briefing }: { briefing: Record<string, unknown> })
   const joyLowCount = numberAt(recreation, 'joyLowCount') ?? 0;
   const hasRecreationSource = booleanAt(recreation, 'hasRecreationSource');
   const comfortBeautyGroup = thoughtGroup(thoughtGroups, 'comfort_beauty');
-  const concernTiles = buildWelfareConcernTiles({
+  const signalTiles = buildWelfareSignalTiles({
     bedDeficit,
     breakRiskCount,
     comfortBeautyGroup,
@@ -219,9 +219,9 @@ function WelfareBriefingHud({ briefing }: { briefing: Record<string, unknown> })
   return (
     <section className="welfare-briefing-hud" aria-label="Welfare briefing HUD">
       <div className="willie-hud-strip">
-        <div className="willie-concern-strip welfare-concern-strip" aria-label="Welfare concern severity">
-          {concernTiles.map(tile => (
-            <article key={tile.key} className={`willie-concern-tile ${tile.tone}`}>
+        <div className="briefing-signal-strip welfare-signal-strip" aria-label="Welfare signal severity">
+          {signalTiles.map(tile => (
+            <article key={tile.key} className={`briefing-signal-tile ${tile.tone}`}>
               <header>
                 <SemanticLabel icon={iconForField(tile.key)}><span>{tile.label}</span></SemanticLabel>
                 <span>{humanize(tile.tone)}</span>
@@ -346,7 +346,7 @@ function WillieBriefingHud({ briefing }: { briefing: Record<string, unknown> }) 
   const blockedCount = numberAt(stalled, 'blockedCount') ?? numberAt(material, 'blockedCount') ?? 0;
   const disallowedCount = numberAt(stalled, 'disallowedCount') ?? numberAt(material, 'disallowedCount') ?? 0;
   const roomsMissing = missingExpectedRooms(roomCounts);
-  const concernTiles = buildWillieConcernTiles({
+  const signalTiles = buildWillieSignalTiles({
     baseLayout,
     blockedCount,
     disallowedCount,
@@ -364,9 +364,9 @@ function WillieBriefingHud({ briefing }: { briefing: Record<string, unknown> }) 
   return (
     <section className="willie-briefing-hud" aria-label="Willie briefing HUD">
       <div className="willie-hud-strip">
-        <div className="willie-concern-strip" aria-label="Willie concern severity">
-          {concernTiles.map(tile => (
-            <article key={tile.key} className={`willie-concern-tile ${tile.tone}`}>
+        <div className="briefing-signal-strip" aria-label="Willie signal severity">
+          {signalTiles.map(tile => (
+            <article key={tile.key} className={`briefing-signal-tile ${tile.tone}`}>
               <header>
                 <SemanticLabel icon={iconForField(tile.key)}><span>{tile.label}</span></SemanticLabel>
                 <span>{humanize(tile.tone)}</span>
@@ -568,7 +568,7 @@ function Fact({ label, value }: { label: string; value: string }) {
   );
 }
 
-function buildWillieConcernTiles({
+function buildWillieSignalTiles({
   baseLayout,
   blockedCount,
   disallowedCount,
@@ -594,7 +594,7 @@ function buildWillieConcernTiles({
   roomsMissing: string[];
   storage: Record<string, unknown> | null;
   thermal: Record<string, unknown> | null;
-}): WillieConcernTile[] {
+}): WillieSignalTile[] {
   const stockpileZones = numberAt(storage, 'stockpileZones');
   const stockpileCells = numberAt(storage, 'stockpileCells');
   const coolerCount = numberAt(thermal, 'coolerCount');
@@ -664,7 +664,7 @@ function buildWillieConcernTiles({
   ];
 }
 
-function buildWelfareConcernTiles({
+function buildWelfareSignalTiles({
   bedDeficit,
   breakRiskCount,
   comfortBeautyGroup,
@@ -680,7 +680,7 @@ function buildWelfareConcernTiles({
   recreation: Record<string, unknown> | null;
   sleep: Record<string, unknown> | null;
   unroofedBedroomCount: number;
-}): WelfareConcernTile[] {
+}): WelfareSignalTile[] {
   const hasRecreationSource = booleanAt(recreation, 'hasRecreationSource');
   return [
     {

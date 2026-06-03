@@ -30,9 +30,9 @@ Tame animal welfare is in scope as a living-condition requester, not as global a
 
 ## Implementation Status
 
-Welfare is a rules-only `Suggest`-mode minister. Slice A wired `break_risk` and `shelter_floor`: break risk produces player-facing mood triage, while missing sleeping shelter emits a `building_request` to Willie for a basic barracks with enough beds. Slice B keeps `break_risk`/`shelter_floor`, adds `recreation_gap` and `comfort_beauty`, and converts the rules layer to independent-concern emission so simultaneous mood pressures surface together instead of being hidden behind the first matched rule. Welfare does not own Apply; any eventual `place_blueprint` control belongs to Willie's advice after the Placement Solver produces options.
+Welfare is a rules-only `Suggest`-mode minister. Slice A wired `break_risk` and `shelter_floor`: break risk produces player-facing mood triage, while missing sleeping shelter emits a `building_request` to Willie for a basic barracks with enough beds. Slice B keeps `break_risk`/`shelter_floor`, adds `recreation_gap` and `comfort_beauty`, and converts the rules layer to independent rule emissions so simultaneous mood pressures surface together instead of being hidden behind the first matched rule. Welfare does not own Apply; any eventual `place_blueprint` control belongs to Willie's advice after the Placement Solver produces options.
 
-Live deterministic concerns:
+Live deterministic rule signals:
 
 - Break risk.
 - Sleeping shelter floor: bed deficit or unroofed sleeping rooms.
@@ -119,7 +119,7 @@ Requests remain advice in MVP; they do not issue RIMAPI writes by themselves.
 ## Open Questions / TODO
 
 - [ ] Resolve Welfare/Medical overlap before Medical or deeper Welfare slices.
-- [x] Define first Welfare concerns for Slice A.
+- [x] Define first Welfare rule signals for Slice A.
 - [x] Define first Slice B recreation and comfort/beauty build priorities from live data.
 - [ ] Decide how schedule advice interacts with deferred Labor/Auto.
 - [ ] Define first tame-animal living-condition signals when that implementation starts.

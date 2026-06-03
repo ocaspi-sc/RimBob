@@ -105,7 +105,7 @@ add them deliberately. Suggested areas:
 |---|---|
 | Food | crop tables, food math, freezer/cooking policy |
 | Defense | killboxes, raids, mechanoids, weapons |
-| Willie | power math, room stats, biome-specific build concerns |
+| Willie | power math, room stats, biome-specific build issues |
 | Welfare | Mood & Needs: mood modifiers, thoughts, recreation, schedules, comfort |
 | Mayor | general strategy, wealth pressure, early-game pacing |
 

@@ -2,7 +2,7 @@
 
 > **Living document.** See `AGENTS.md` for update rules.
 > Chef is the first feeder advisor. This doc records domain ownership and
-> design constraints; exact advice enum values, briefing fields, rule names,
+> design constraints; exact briefing fields, rule names,
 > parser behavior, and fixture expectations live in code/tests.
 
 ---
@@ -48,15 +48,11 @@ future Assisted Apply controls on allowlisted Chef actions after a player click.
 
 ---
 
-## Concerns
+## Rule Outputs
 
-Chef concerns are a closed code contract and future autonomy-dial units.
-Adding or removing one is a design decision, but the exact enum list belongs in
-`Src/Common/Advice/FoodAdviceType.cs`.
+Chef advice is identified by stable rule/LLM ids plus action metadata. There is no separate Chef category catalogue and no advice-category field in the wire contract.
 
-Chef concerns should cover food security, growing capacity, harvest,
-forage/edible-plant harvest, hunting, cooking, butchering, freezer/storage, trade/procurement
-pressure, and food-event recovery.
+Chef rule outputs should cover food security, growing capacity, harvest, forage/edible-plant harvest, hunting, cooking, butchering, freezer/storage, trade/procurement pressure, and food-event recovery.
 
 ---
 
@@ -132,8 +128,8 @@ availability.
 Rules should cover obvious food-chain states: safe buffer, unknown or unreliable
 nutrition signal, emergency shortage, mature harvest, understocked meals with raw
 food, forage availability, growing capacity, and missing freezer/storage
-support. Chef deterministic rules evaluate these as independent concerns: every matched deterministic concern emits its own advice item and its own flag in the same snapshot. There is no cap, no dedup, and no freezer/support concern folding in the first independent-concern slice.
-Freezer posture is its own deterministic concern rather than a secondary action folded onto harvest, forage, hunt, cooking, or growing advice. When no cooler is visible and a perishable food path or stored-food buffer needs cold storage, Chef emits a separate freezer concern and Willie-owned building request.
+support. Chef deterministic rules evaluate these as independent rule emissions: every matched deterministic rule emits its own advice item and its own flag in the same snapshot. There is no cap, no dedup, and no freezer/support folding in the first independent-rule slice.
+Freezer posture is its own deterministic rule output rather than a secondary action folded onto harvest, forage, hunt, cooking, or growing advice. When no cooler is visible and a perishable food path or stored-food buffer needs cold storage, Chef emits a separate freezer advice item and Willie-owned building request.
 Cooking capability is also a standing food-chain prerequisite: when the selected food path creates or depends on raw, foraged, hunted, or harvested food and no cooking building is visible, Chef should request a starter kitchen/cooking-station build from Willie rather than relying on Willie's generic missing-room fallback.
 
 Rules should compute priority from live state where possible: days of food,
@@ -151,7 +147,7 @@ Escalate when:
 - Food procurement pressure exists but execution belongs to Economy/Trade or
   Mayor.
 
-Escalation is a terminal fallback for Chef's current play-cycle contract: build the deterministic concern set first, return it if any concern matched, and only consider LLM escalation when no deterministic concern emitted. This keeps routine multi-bottleneck states cheap while preserving LLM judgment for unresolved or ambiguous food states.
+Escalation is a terminal fallback for Chef's current play-cycle contract: build the deterministic rule-emission set first, return it if any rule emitted advice, and only consider LLM escalation when no deterministic rule emitted. This keeps routine multi-bottleneck states cheap while preserving LLM judgment for unresolved or ambiguous food states.
 
 `Critical` should mean immediate starvation evidence, not merely a low buffer.
 

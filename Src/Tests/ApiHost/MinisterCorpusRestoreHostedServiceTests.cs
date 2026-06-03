@@ -200,7 +200,6 @@ public sealed class MinisterCorpusRestoreHostedServiceTests
     private static AdviceItem Advice(string id, IReadOnlyList<AdviceOption> options) => new(
         Id: id,
         Minister: "Willie",
-        Concern: "functional_rooms",
         Priority: AdvicePriority.High,
         Title: "Build a freezer",
         Body: "Body",

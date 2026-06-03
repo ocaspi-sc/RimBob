@@ -18,9 +18,9 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
 
     public RulesResult Evaluate(WelfareSourceBriefing briefing, ColonyContext context)
     {
-        IReadOnlyList<ConcernEmission> concerns = DeterministicConcerns(briefing);
-        if (concerns.Count > 0)
-            return DecisionForConcerns(briefing, concerns);
+        IReadOnlyList<RuleEmission> emissions = RuleEmissions(briefing);
+        if (emissions.Count > 0)
+            return DecisionForEmissions(briefing, emissions);
 
         return new Decision(
             [],
@@ -29,24 +29,24 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
             DiagnosticsFor(briefing, "needs_stable"));
     }
 
-    private IReadOnlyList<ConcernEmission> DeterministicConcerns(WelfareSourceBriefing briefing)
+    private IReadOnlyList<RuleEmission> RuleEmissions(WelfareSourceBriefing briefing)
     {
         DateTimeOffset now = timeProvider.GetUtcNow();
-        List<ConcernEmission> concerns = [];
+        List<RuleEmission> emissions = [];
 
         if (ShouldEmitBreakRisk(briefing))
-            concerns.Add(BreakRiskConcern(briefing, now));
+            emissions.Add(BreakRiskEmission(briefing, now));
 
         if (ShouldEmitShelterFloor(briefing))
-            concerns.Add(ShelterFloorConcern(briefing, now));
+            emissions.Add(ShelterFloorEmission(briefing, now));
 
         if (ShouldEmitRecreationGap(briefing))
-            concerns.Add(RecreationGapConcern(briefing, now));
+            emissions.Add(RecreationGapEmission(briefing, now));
 
         if (ShouldEmitComfortBeauty(briefing))
-            concerns.Add(ComfortBeautyConcern(briefing, now));
+            emissions.Add(ComfortBeautyEmission(briefing, now));
 
-        return concerns;
+        return emissions;
     }
 
     private static bool ShouldEmitBreakRisk(WelfareSourceBriefing briefing) =>
@@ -67,7 +67,7 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
             need.Need.Equals("comfort", StringComparison.OrdinalIgnoreCase) ||
             need.Need.Equals("beauty", StringComparison.OrdinalIgnoreCase));
 
-    private ConcernEmission BreakRiskConcern(WelfareSourceBriefing briefing, DateTimeOffset now)
+    private RuleEmission BreakRiskEmission(WelfareSourceBriefing briefing, DateTimeOffset now)
     {
         AdvicePriority priority = briefing.Mood.BreakRiskCount * 2 >= briefing.ColonistCount
             ? AdvicePriority.Critical
@@ -77,11 +77,10 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
         DominantDriver driver = DominantDriverFor(pawn);
         AgentFlag? routedFlag = BreakRiskDriverFlag(driver, pawnName, priority, now);
 
-        return ConcernFor(
+        return EmitAdvice(
             briefing,
             now,
             "break_risk",
-            WelfareConcern.BreakRisk,
             priority,
             $"{briefing.Mood.BreakRiskCount} colonist{Plural(briefing.Mood.BreakRiskCount)} near mental break",
             $"{pawnName} is the clearest current break-risk example; dominant driver: {driver.Label}.",
@@ -90,7 +89,7 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
             routedFlag is null ? [] : [routedFlag]);
     }
 
-    private ConcernEmission ShelterFloorConcern(WelfareSourceBriefing briefing, DateTimeOffset now)
+    private RuleEmission ShelterFloorEmission(WelfareSourceBriefing briefing, DateTimeOffset now)
     {
         bool needsBeds = briefing.Sleep.BedDeficit > 0;
         int bedNeed = Math.Max(1, briefing.Sleep.BedDeficit);
@@ -121,11 +120,10 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
             now,
             buildingRequests: [request]);
 
-        return ConcernFor(
+        return EmitAdvice(
             briefing,
             now,
             "shelter_floor",
-            WelfareConcern.ShelterFloor,
             priority,
             needsBeds ? "Colonists need more sleeping shelter" : "Sleeping room is not fully roofed",
             ShelterBody(briefing, needsBeds, bedNeed),
@@ -134,7 +132,7 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
             [flag]);
     }
 
-    private ConcernEmission RecreationGapConcern(WelfareSourceBriefing briefing, DateTimeOffset now)
+    private RuleEmission RecreationGapEmission(WelfareSourceBriefing briefing, DateTimeOffset now)
     {
         bool canProveNoSource = briefing.DataCoverage.HasBuildings && !briefing.Recreation.HasRecreationSource;
         AdvicePriority priority = canProveNoSource ? AdvicePriority.Medium : AdvicePriority.Low;
@@ -165,11 +163,10 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
             ? $"Recreation sources visible: {briefing.Recreation.JoySourceBuildingCount} buildings and {briefing.Recreation.RecreationRoomCount} recreation rooms."
             : "Building coverage is missing, so Welfare does not claim the map has no recreation source.";
 
-        return ConcernFor(
+        return EmitAdvice(
             briefing,
             now,
             "recreation_gap",
-            WelfareConcern.RecreationGap,
             priority,
             "Recreation need is falling",
             body,
@@ -178,7 +175,7 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
             flags);
     }
 
-    private ConcernEmission ComfortBeautyConcern(WelfareSourceBriefing briefing, DateTimeOffset now)
+    private RuleEmission ComfortBeautyEmission(WelfareSourceBriefing briefing, DateTimeOffset now)
     {
         WelfareThoughtGroup? thoughtGroup = ThoughtGroup(briefing, ThoughtCategory.ComfortBeauty);
         bool hasConcreteTableThought = thoughtGroup is not null && IsDiningTablePressure(thoughtGroup.ExampleLabel);
@@ -207,11 +204,10 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
             ? $"{thoughtGroup.PawnCount} pawn{Plural(thoughtGroup.PawnCount)} report {thoughtGroup.ExampleLabel}."
             : ComfortBeautyLowNeeds(briefing);
 
-        return ConcernFor(
+        return EmitAdvice(
             briefing,
             now,
             "comfort_beauty",
-            WelfareConcern.ComfortBeauty,
             priority,
             hasConcreteTableThought ? "Colonists need a table" : "Comfort or beauty need is low",
             hasConcreteTableThought
@@ -222,32 +218,31 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
             flags);
     }
 
-    private static Decision DecisionForConcerns(
+    private static Decision DecisionForEmissions(
         WelfareSourceBriefing briefing,
-        IReadOnlyList<ConcernEmission> concerns)
+        IReadOnlyList<RuleEmission> emissions)
     {
-        IReadOnlyList<ConcernEmission> orderedConcerns = concerns
-            .Select((concern, index) => new { concern, index })
-            .OrderByDescending(row => row.concern.Advice.Priority)
+        IReadOnlyList<RuleEmission> orderedEmissions = emissions
+            .Select((emission, index) => new { emission, index })
+            .OrderByDescending(row => row.emission.Advice.Priority)
             .ThenBy(row => row.index)
-            .Select(row => row.concern)
+            .Select(row => row.emission)
             .ToList();
-        IReadOnlyList<AdviceItem> advice = orderedConcerns
-            .Select(concern => concern.Advice)
+        IReadOnlyList<AdviceItem> advice = orderedEmissions
+            .Select(emission => emission.Advice)
             .ToList();
-        IReadOnlyList<AgentFlag> flags = orderedConcerns
-            .SelectMany(concern => concern.Flags)
+        IReadOnlyList<AgentFlag> flags = orderedEmissions
+            .SelectMany(emission => emission.Flags)
             .ToList();
-        string trace = CompositeTrace(orderedConcerns);
-        RuleTraceDetails diagnostics = DiagnosticsFor(briefing, trace, orderedConcerns);
+        string trace = CompositeTrace(orderedEmissions);
+        RuleTraceDetails diagnostics = DiagnosticsFor(briefing, trace, orderedEmissions);
         return new Decision(advice, flags, trace, diagnostics);
     }
 
-    private static ConcernEmission ConcernFor(
+    private static RuleEmission EmitAdvice(
         WelfareSourceBriefing briefing,
         DateTimeOffset now,
         string trace,
-        WelfareConcern concern,
         AdvicePriority priority,
         string title,
         string body,
@@ -258,7 +253,6 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
         AdviceItem advice = new(
             Id: $"{Domain}_{trace}",
             Minister: MinisterName,
-            Concern: ToSnakeCase(concern.ToString()),
             Priority: priority,
             Title: title,
             Body: body,
@@ -271,7 +265,7 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
             ExpiresGameTick: AdviceFreshness.ExpiresGameTick(briefing.GameTick, priority),
             BriefingRef: new BriefingRef(MinisterName, briefing.BriefingVersion, $"welfare:{briefing.BriefingVersion}"));
 
-        return new ConcernEmission(trace, advice, flags);
+        return new RuleEmission(trace, advice, flags);
     }
 
     private static AgentFlag BuildFlag(
@@ -339,7 +333,7 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
     private static RuleTraceDetails DiagnosticsFor(
         WelfareSourceBriefing briefing,
         string selectedRule,
-        IReadOnlyList<ConcernEmission>? emissions = null)
+        IReadOnlyList<RuleEmission>? emissions = null)
     {
         List<RuleTraceEntry> matches = RuleMatches(briefing);
         HashSet<string> emittedRules = emissions is null
@@ -349,7 +343,7 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
         if (emissions is null &&
             !matches.Any(match => string.Equals(match.Rule, selectedRule, StringComparison.OrdinalIgnoreCase)))
         {
-            matches.Add(new RuleTraceEntry(selectedRule, "selected", "no deterministic Welfare concern matched"));
+            matches.Add(new RuleTraceEntry(selectedRule, "selected", "no deterministic Welfare rule matched"));
         }
 
         List<RuleTraceEntry> annotated = matches
@@ -364,25 +358,24 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
             AllRules = AllRuleEvaluations(annotated)
         };
 
-        return emissions is null ? details : WithConcernEmissions(details, emissions);
+        return emissions is null ? details : WithRuleEmissions(details, emissions);
     }
 
-    private static RuleTraceDetails WithConcernEmissions(
+    private static RuleTraceDetails WithRuleEmissions(
         RuleTraceDetails details,
-        IReadOnlyList<ConcernEmission> emissions)
+        IReadOnlyList<RuleEmission> emissions)
     {
         List<RuleEmittedAdviceTrace> emittedAdvice = [];
         List<RuleEmittedActionTrace> emittedActions = [];
         List<RuleEmittedFlagTrace> emittedFlags = [];
 
-        foreach (ConcernEmission emission in emissions)
+        foreach (RuleEmission emission in emissions)
         {
             AdviceItem item = emission.Advice;
             emittedAdvice.Add(new RuleEmittedAdviceTrace(
                 Source: "rules",
                 Rule: emission.Rule,
                 AdviceId: item.Id,
-                Concern: item.Concern,
                 Priority: item.Priority,
                 Title: item.Title,
                 ActionCount: item.Actions.Count));
@@ -495,10 +488,10 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
     private static RuleTraceEntry Match(string rule, string reason) =>
         new(rule, "matched", reason);
 
-    private static string CompositeTrace(IReadOnlyList<ConcernEmission> concerns) =>
-        concerns.Count == 1
-            ? concerns[0].Rule
-            : $"concerns:{string.Join("+", concerns.Select(concern => concern.Rule))}";
+    private static string CompositeTrace(IReadOnlyList<RuleEmission> emissions) =>
+        emissions.Count == 1
+            ? emissions[0].Rule
+            : $"rules:{string.Join("+", emissions.Select(emission => emission.Rule))}";
 
     private static string ShelterBody(WelfareSourceBriefing briefing, bool needsBeds, int bedNeed)
     {
@@ -633,7 +626,7 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
         return new string(chars.ToArray());
     }
 
-    private sealed record ConcernEmission(
+    private sealed record RuleEmission(
         string Rule,
         AdviceItem Advice,
         IReadOnlyList<AgentFlag> Flags);

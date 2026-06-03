@@ -17,7 +17,7 @@
 | M4.5 | Assisted Apply — player-confirmed execution for the safest allowlisted advice actions | Implemented |
 | M5 | Feedback loop — Accept / Dismiss / Pushback wired; each minister owns and persists its own pushback list | Not started |
 | M6 | Oracle refinement loop closes — pushbacks drive the first promoted rule per minister | Not started |
-| M7 (post-MVP) | First Auto graduation — one minister's narrowest concern (e.g. stockpile-zone suggestions) gains an `Auto` mode behind the dial. Scope designed at re-engagement; see DESIGN.md decision "Auto execution delegates to the game's native automation." | Not started |
+| M7 (post-MVP) | First Auto graduation - one minister/action-kind pair gains an `Auto` mode behind the dial. Scope designed at re-engagement; see DESIGN.md decision "Auto execution delegates to the game's native automation." | Not started |
 
 > **Out of MVP scope:** the original "Year 1 survived, no human input" milestone is deprecated under the assisted-gameplay pivot. Equivalent autonomous play is now a long-tail goal reached by graduating multiple ministers to `Auto` over many cycles, not a single milestone.
 
@@ -125,10 +125,10 @@ longer fire a cabinet cycle just to repopulate the dashboard.
 **Demo:** raid scenario — Defense emits Critical flag → tactical alert appears in dashboard immediately; next daily Mayor agenda summarises the incident and proposes follow-up.
 
 **Scope:**
-- Willie, Defense, Welfare ministers + their rules layers, in that order. Willie lands before Defense because Chef's first live dependencies are build/storage/power concerns, not hunt-risk arbitration.
+- Willie, Defense, Welfare ministers + their rules layers, in that order. Willie lands before Defense because Chef's first live dependencies are build/storage/power issues, not hunt-risk arbitration.
 - Their briefings.
 - Mayor-side CoS helper for cross-minister flag arbitration into the Mayor's digest; split into a separate runtime role later only if flag volume justifies it.
-- Tactical-alert concern (`priority >= high`) bypasses the daily-tick cadence.
+- Tactical-alert advice (`priority >= high`) bypasses the daily-tick cadence.
 
 ---
 
@@ -189,7 +189,7 @@ payloads.
 
 ## M7 — First Auto graduation (post-MVP)
 
-**Done when:** the player can flip one narrow concern from `Suggest` to `Auto`. When in `Auto`, the relevant `AdviceItem` is automatically applied without a per-step player click. Player can revert to `Suggest` at any time. Assisted Apply does not satisfy this milestone because it is manual, single-step, and allowlisted.
+**Done when:** the player can flip one narrow minister/action-kind pair from `Suggest` to `Auto`. When in `Auto`, the relevant validated action is automatically applied without a per-step player click. Player can revert to `Suggest` at any time. Assisted Apply does not satisfy this milestone because it is manual, single-step, and allowlisted.
 
 **Execution model:** RimBob writes one validated declarative automation knob
 and RimWorld's job-giver allocates pawns. See [`DESIGN.md`](DESIGN.md) decision
@@ -204,7 +204,7 @@ scope is designed at re-engagement, not now.
 
 ## Post-MVP / later cabinet expansion
 
-- Additional Auto graduations per concern.
+- Additional Auto graduations per minister/action-kind pair.
 - Industry minister.
 - Medical minister.
 - Research minister.

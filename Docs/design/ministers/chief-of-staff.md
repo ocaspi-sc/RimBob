@@ -161,7 +161,7 @@ Freezer risk:
   cooler-backed room.
 - Willie later emits a power/material blocker for the same freezer work.
 - CoS groups them under one issue, chooses Willie as the execution owner
-  but Chef as the reason if nutrition risk is the player-facing concern.
+  but Chef as the reason if nutrition risk is the player-facing issue.
 - Route is digest unless spoilage or heat makes it time-sensitive.
 
 Raid during routine food expansion:

@@ -24,7 +24,6 @@ public sealed class WelfareRulesTests
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
         advice.Id.Should().Be("welfare_shelter_floor");
         advice.Minister.Should().Be("Welfare");
-        advice.Concern.Should().Be("shelter_floor");
         advice.Priority.Should().Be(AdvicePriority.High);
         advice.Body.Should().Contain("All 3 colonists");
         advice.Rationale.Should().Contain("slept on ground");
@@ -73,7 +72,7 @@ public sealed class WelfareRulesTests
 
         decision.Trace.Should().Be("break_risk");
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
-        advice.Concern.Should().Be("break_risk");
+        advice.Id.Should().Be("welfare_break_risk");
         advice.Priority.Should().Be(AdvicePriority.High);
         advice.Body.Should().Contain("Alice");
         advice.Body.Should().Contain("slept on ground");
@@ -133,7 +132,7 @@ public sealed class WelfareRulesTests
 
         decision.Trace.Should().Be("recreation_gap");
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
-        advice.Concern.Should().Be("recreation_gap");
+        advice.Id.Should().Be("welfare_recreation_gap");
         advice.Priority.Should().Be(AdvicePriority.Medium);
         BuildingRequest request = decision.Flags.Should().ContainSingle().Subject
             .BuildingRequests.Should().ContainSingle().Subject;
@@ -150,7 +149,7 @@ public sealed class WelfareRulesTests
 
         decision.Trace.Should().Be("recreation_gap");
         decision.Advice.Should().ContainSingle()
-            .Which.Concern.Should().Be("recreation_gap");
+            .Which.Id.Should().Be("welfare_recreation_gap");
         decision.Flags.Should().BeEmpty();
         decision.Advice[0].Actions.Should().ContainSingle()
             .Which.Kind.Should().Be(AdviceActionKind.Note);
@@ -163,7 +162,7 @@ public sealed class WelfareRulesTests
 
         decision.Trace.Should().Be("comfort_beauty");
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
-        advice.Concern.Should().Be("comfort_beauty");
+        advice.Id.Should().Be("welfare_comfort_beauty");
         advice.Title.Should().Contain("table");
         BuildingRequest request = decision.Flags.Should().ContainSingle().Subject
             .BuildingRequests.Should().ContainSingle().Subject;
@@ -173,13 +172,13 @@ public sealed class WelfareRulesTests
     }
 
     [Fact]
-    public void MultiConcern_EmitsEveryMatchedConcernPrioritySorted()
+    public void MultiRule_EmitsEveryMatchedRulePrioritySorted()
     {
-        Decision decision = Evaluate("multi-concern");
+        Decision decision = Evaluate("multi-rule");
 
-        decision.Trace.Should().Be("concerns:shelter_floor+recreation_gap+comfort_beauty");
-        decision.Advice.Select(advice => advice.Concern)
-            .Should().Equal("shelter_floor", "recreation_gap", "comfort_beauty");
+        decision.Trace.Should().Be("rules:shelter_floor+recreation_gap+comfort_beauty");
+        decision.Advice.Select(advice => advice.Id)
+            .Should().Equal("welfare_shelter_floor", "welfare_recreation_gap", "welfare_comfort_beauty");
         decision.Advice.Select(advice => advice.Priority)
             .Should().Equal(AdvicePriority.High, AdvicePriority.Medium, AdvicePriority.Low);
         decision.Flags.Select(flag => flag.Id)

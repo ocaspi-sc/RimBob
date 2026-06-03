@@ -97,9 +97,8 @@ public sealed class MinisterReplayRecorderTests
             ],
             SuppressedCandidates: []);
         AdviceItem advice = new(
-            Id: "food_emergency_food_flag",
+            Id: "chef_emergency_food_flag",
             Minister: "Food",
-            Concern: "food_security",
             Priority: AdvicePriority.High,
             Title: "Food crisis within a week",
             Body: "Food is low.",
@@ -135,7 +134,7 @@ public sealed class MinisterReplayRecorderTests
         snapshot.RuleDiagnostics.EmittedActions.Should().ContainSingle(row =>
             row.Source == "rules" &&
             row.Rule == "emergency_food_flag" &&
-            row.AdviceId == "food_emergency_food_flag" &&
+            row.AdviceId == "chef_emergency_food_flag" &&
             row.Kind == AdviceActionKind.ProductionBill);
         snapshot.Note.Should().Contain("emergency_food_flag");
     }

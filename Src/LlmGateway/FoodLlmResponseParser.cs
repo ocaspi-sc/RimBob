@@ -45,7 +45,6 @@ public static class FoodLlmResponseParser
             BriefingVersion: briefing.BriefingVersion,
             GameTick: briefing.GameTick,
             Date: briefing.Date,
-            DefaultConcern: nameof(FoodConcern.FoodSecurity),
             DefaultRationale: "Chef LLM escalation selected this recommendation.",
             GuideContext: guideContext);
 
@@ -169,13 +168,12 @@ public static class FoodLlmResponseParser
     private static bool IsStrictFoodResponse(FoodLlmResponse response) =>
         !string.IsNullOrWhiteSpace(response.StateSummary) &&
         response.Advice is not null &&
-        response.Flags is not null &&
-        response.Advice.All(advice =>
-            !string.IsNullOrWhiteSpace(advice.Id) &&
-            !string.IsNullOrWhiteSpace(advice.Minister) &&
-            !string.IsNullOrWhiteSpace(advice.Concern) &&
-            !string.IsNullOrWhiteSpace(advice.Title) &&
-            !string.IsNullOrWhiteSpace(advice.Body) &&
+            response.Flags is not null &&
+            response.Advice.All(advice =>
+                !string.IsNullOrWhiteSpace(advice.Id) &&
+                !string.IsNullOrWhiteSpace(advice.Minister) &&
+                !string.IsNullOrWhiteSpace(advice.Title) &&
+                !string.IsNullOrWhiteSpace(advice.Body) &&
             !string.IsNullOrWhiteSpace(advice.Rationale) &&
             advice.Actions.All(action =>
                 !string.IsNullOrWhiteSpace(action.Instruction)) &&

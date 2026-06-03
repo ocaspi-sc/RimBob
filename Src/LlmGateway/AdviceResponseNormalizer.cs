@@ -12,7 +12,6 @@ internal sealed record LlmAdviceNormalizationContext(
     long BriefingVersion,
     long GameTick,
     GameDate Date,
-    string DefaultConcern,
     string DefaultRationale,
     IReadOnlyList<GuideCitation> GuideContext);
 
@@ -80,17 +79,10 @@ internal static class AdviceResponseNormalizer
         if (strict is not null && node["priority"] is not null && IsCompleteStrictAdvice(strict))
             return NormalizeStrictAdvice(strict);
 
-        string rawConcern = LlmResponseParser.ReadString(node["concern"]) ?? context.DefaultConcern;
         AdvicePriority priority = AdviceJsonCompatibility.ParseAdvicePriority(
             LlmResponseParser.ReadString(node["priority"]) ?? LlmResponseParser.ReadString(node["severity"]),
             node["priority_score"],
             AdvicePriority.Medium);
-        string concern = LlmResponseParser.ToSnakeCase(rawConcern);
-        if (string.IsNullOrWhiteSpace(concern))
-            concern = LlmResponseParser.ToSnakeCase(context.DefaultConcern);
-        string title = LlmResponseParser.ReadString(node["title"]) ?? LlmResponseParser.HumanizeIdentifier(rawConcern);
-        string body = LlmResponseParser.ReadString(node["body"]) ?? LlmResponseParser.ReadString(node["message"]) ?? title;
-        string rationale = LlmResponseParser.ReadString(node["rationale"]) ?? notes ?? context.DefaultRationale;
         IReadOnlyList<AdviceAction> actions = AdviceActionNormalizer.NormalizeOrConvertLegacy(
             node["actions"] ?? node["Actions"],
             node["steps"] ?? node["Steps"],
@@ -99,13 +91,15 @@ internal static class AdviceResponseNormalizer
             priority,
             context,
             json);
+        string title = LlmResponseParser.ReadString(node["title"]) ?? TitleFromFirstAction(actions, context.Minister);
+        string body = LlmResponseParser.ReadString(node["body"]) ?? LlmResponseParser.ReadString(node["message"]) ?? title;
+        string rationale = LlmResponseParser.ReadString(node["rationale"]) ?? notes ?? context.DefaultRationale;
         IReadOnlyList<string> citationIds = NormalizeCitationIds(node, context.GuideContext);
         DateTimeOffset now = DateTimeOffset.UtcNow;
 
         return new AdviceItem(
-            Id: $"{context.Domain}_llm_{concern}_{context.GameTick}_{index + 1}",
+            Id: $"{context.Domain}_llm_{context.GameTick}_{index + 1}",
             Minister: context.Minister,
-            Concern: concern,
             Priority: priority,
             Title: title,
             Body: body,
@@ -119,6 +113,16 @@ internal static class AdviceResponseNormalizer
             ExpiresGameTick: AdviceFreshness.ExpiresGameTick(context.GameTick, priority),
             BriefingRef: new BriefingRef(context.Minister, context.BriefingVersion, $"{context.Domain}:{context.BriefingVersion}")
         );
+    }
+
+    private static string TitleFromFirstAction(IReadOnlyList<AdviceAction> actions, string minister)
+    {
+        string? firstInstruction = actions
+            .Select(action => action.Instruction)
+            .FirstOrDefault(instruction => !string.IsNullOrWhiteSpace(instruction));
+        return string.IsNullOrWhiteSpace(firstInstruction)
+            ? $"{minister} advice"
+            : firstInstruction.Trim();
     }
 
     private static NormalizedFlagResult NormalizeFlag(
