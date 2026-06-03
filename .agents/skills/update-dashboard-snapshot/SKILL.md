@@ -16,6 +16,7 @@ Capture every first-class RimBob dashboard scope/view route into `web/Snapshot` 
 - Rewrite only dashboard scope-rail buttons and view-tab buttons into relative links to cached pages.
 - Disable every remaining `<button>` so the artifact cannot imply live backend actions.
 - Add a prominent `SNAPSHOT` tag beside the dashboard title on every captured page.
+- Hide the dashboard header in generated pages for mobile/narrow or portrait/vertical viewports.
 - Remove scripts and script preload links.
 - Inline same-origin stylesheets.
 - Embed fetchable images as data URLs; replace unfetchable images with inline placeholders that preserve source/error attributes.
@@ -51,7 +52,7 @@ Capture every first-class RimBob dashboard scope/view route into `web/Snapshot` 
 
 ## Static Export Shape
 
-The static snapshot is not a PNG. It is the rendered dashboard DOM after data has loaded. `web/Snapshot/index.html` opens to the cached Mayor Advice page, not a sitemap. Scope-rail and view-tab controls are links because they navigate between cached pages. All other buttons are disabled because the snapshot has no live backend. The dashboard header carries a large `SNAPSHOT` tag. Each page has scripts removed, same-origin CSS inlined, images embedded as data URLs when possible, and unfetchable images replaced by inline placeholders with `data-snapshot-*` source/error attributes.
+The static snapshot is not a PNG. It is the rendered dashboard DOM after data has loaded. `web/Snapshot/index.html` opens to the cached Mayor Advice page, not a sitemap. Scope-rail and view-tab controls are links because they navigate between cached pages. All other buttons are disabled because the snapshot has no live backend. The dashboard header carries a large `SNAPSHOT` tag, but generated pages hide that header on mobile/narrow or portrait/vertical viewports so the cached content gets the available height. Each page has scripts removed, same-origin CSS inlined, images embedded as data URLs when possible, and unfetchable images replaced by inline placeholders with `data-snapshot-*` source/error attributes.
 
 ## Verification Checks
 
@@ -63,6 +64,7 @@ After regenerating, inspect files on disk and verify:
 - Scope navigation links use `data-snapshot-nav="scope"` and relative `href` values.
 - View navigation links use `data-snapshot-nav="view"` and relative `href` values.
 - Every HTML file has `.snapshot-header-tag`.
+- Every HTML file has static CSS that hides `.dashboard-header` at `max-width: 760px` or `orientation: portrait`.
 - Every `<button>` has `disabled`.
 - No HTML file has `<script>` tags.
 - No HTML file has live `src` attributes such as `/api/...` or `http://localhost:...`.

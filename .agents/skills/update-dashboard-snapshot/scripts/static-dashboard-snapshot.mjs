@@ -1063,6 +1063,15 @@ body[data-dashboard-snapshot-static="true"] .snapshot-header-tag {
   text-transform: uppercase;
   box-shadow: 0 0 0 1px rgba(240, 189, 95, 0.22), 0 0 22px rgba(240, 189, 95, 0.18);
 }
+@media (max-width: 760px), (orientation: portrait) {
+  body[data-dashboard-snapshot-static="true"] .dashboard-v2-shell {
+    grid-template-rows: 1fr;
+  }
+
+  body[data-dashboard-snapshot-static="true"] .dashboard-header {
+    display: none !important;
+  }
+}
 body[data-dashboard-snapshot-static="true"] button[disabled][data-snapshot-disabled="true"] {
   cursor: not-allowed;
   opacity: 0.48;
