@@ -442,9 +442,15 @@ public sealed class FoodRulesTests
         advice.Actions.Should().Contain(action =>
             action.Kind == AdviceActionKind.PlaceBlueprint &&
             action.Owner == "Willie");
-        BuildingRequest request = FlagById(decision, "food:meals_understocked").BuildingRequests.Should()
-            .Contain(request => request.Request == "starter kitchen cooking station")
-            .Subject;
+        List<(string FlagId, BuildingRequest Request)> starterKitchenRequests = StarterKitchenRequests(decision);
+        starterKitchenRequests.Should().ContainSingle();
+        starterKitchenRequests[0].FlagId.Should().Be("food:expand_growing_capacity");
+        AgentFlag mealsFlag = FlagById(decision, "food:meals_understocked");
+        mealsFlag.BuildingRequests.Should().BeNull();
+        mealsFlag.LaborRequests.Should().BeNull();
+        mealsFlag.ItemRequests.Should().BeNull();
+        mealsFlag.Attention.Should().BeNull();
+        BuildingRequest request = starterKitchenRequests[0].Request;
         request.TargetClass.Should().Be(BuildingClass.ProductionBench);
         request.TargetDef.Should().Be("Campfire");
         request.RoomClass.Should().Be(RoomClass.Kitchen);
@@ -518,15 +524,74 @@ public sealed class FoodRulesTests
             action.Owner == "Willie" &&
             action.Instruction.Contains("freezer", StringComparison.OrdinalIgnoreCase));
         AgentFlag flag = FlagById(decision, "food:wild_harvest_available");
-        flag.BuildingRequests.Should().Contain(request =>
-            request.TargetClass == BuildingClass.ProductionBench &&
-            request.RoomClass == RoomClass.Kitchen &&
-            request.RequestedFrom == "Willie");
+        flag.BuildingRequests.Should().BeNull();
+        List<(string FlagId, BuildingRequest Request)> starterKitchenRequests = StarterKitchenRequests(decision);
+        starterKitchenRequests.Should().ContainSingle();
+        starterKitchenRequests[0].FlagId.Should().Be("food:expand_growing_capacity");
         FlagById(decision, "food:freezer_missing").BuildingRequests.Should().Contain(request =>
             request.TargetClass == BuildingClass.Freezer &&
             request.RoomClass == RoomClass.Freezer &&
             request.Adjacency != null &&
             request.Adjacency.Any(hint => string.Equals(hint.Target, "kitchen", StringComparison.OrdinalIgnoreCase)));
+    }
+
+    [Fact]
+    public void DuplicateStarterKitchenRequests_AreCarriedOnceByDeterministicFirstFlag()
+    {
+        FoodBriefing briefing = Briefing(days: 12f) with
+        {
+            MealsCount = 20,
+            RawFoodCount = 0,
+            ReadyToHarvest = 0,
+            WildHarvestCandidates = 6,
+            WildHarvestClusters = [new WildHarvestCluster("Plant_Berry", 6, 1f, "nearby to kitchen", "kitchen")],
+            HarvestTargets =
+            [
+                new FoodHarvestTarget("wild", "Plant_Berry", 6, new(30, 40, 32, 41), ["berry-1"], null, "nearby to kitchen", "kitchen")
+            ],
+            WildAnimalCount = 2,
+            WildHuntTargets = [new WildHuntTarget("Hare", 2, "nearby to kitchen", "kitchen")],
+            HuntTargets =
+            [
+                new FoodHuntTarget("Hare", 2, new(40, 50, 41, 50), ["hare-1", "hare-2"], "nearby to kitchen", "kitchen")
+            ],
+            CropBreakdown = [new FoodCropSummary("Plant_Rice", 36, 0.05f)],
+            CropZoneSummaries = [new FoodCropZoneSummary("Plant_Rice", "2", 36, 0.05f, 0, "nearby to storage")],
+            Kitchen = new FoodKitchenSummary(0, 0, false, false)
+        };
+
+        Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
+            .Should().BeOfType<Decision>().Subject;
+
+        decision.Trace.Should().Be("rules:hunt_low_risk_animals+wild_harvest_available");
+        DecisionShouldIncludeRules(decision, "hunt_low_risk_animals", "wild_harvest_available");
+        AdviceByRule(decision, "hunt_low_risk_animals").Actions.Should().Contain(action =>
+            action.Kind == AdviceActionKind.PlaceBlueprint &&
+            action.Owner == "Willie");
+        AdviceByRule(decision, "wild_harvest_available").Actions.Should().Contain(action =>
+            action.Kind == AdviceActionKind.PlaceBlueprint &&
+            action.Owner == "Willie");
+
+        List<(string FlagId, BuildingRequest Request)> starterKitchenRequests = StarterKitchenRequests(decision);
+        starterKitchenRequests.Should().ContainSingle();
+        starterKitchenRequests[0].FlagId.Should().Be("food:hunt_low_risk_animals");
+
+        AgentFlag huntFlag = FlagById(decision, "food:hunt_low_risk_animals");
+        huntFlag.BuildingRequests.Should().ContainSingle(request => IsStarterKitchenRequest(request));
+        huntFlag.LaborRequests.Should().ContainSingle(request =>
+            request.WorkType == WorkType.Hunt &&
+            request.Skill == "Shooting");
+
+        AgentFlag wildHarvestFlag = FlagById(decision, "food:wild_harvest_available");
+        wildHarvestFlag.BuildingRequests.Should().BeNull();
+        wildHarvestFlag.LaborRequests.Should().BeNull();
+        wildHarvestFlag.ItemRequests.Should().BeNull();
+        wildHarvestFlag.Attention.Should().BeNull();
+        decision.Diagnostics.Should().NotBeNull();
+        decision.Diagnostics!.EmittedFlags.Should().ContainSingle(row =>
+            row.Rule == "wild_harvest_available" &&
+            row.FlagId == "food:wild_harvest_available" &&
+            row.RequestCount == 0);
     }
 
     [Fact]
@@ -989,6 +1054,18 @@ public sealed class FoodRulesTests
 
     private static AgentFlag FlagById(Decision decision, string id) =>
         decision.Flags.Should().ContainSingle(flag => flag.Id == id).Subject;
+
+    private static bool IsStarterKitchenRequest(BuildingRequest request) =>
+        request.TargetClass == BuildingClass.ProductionBench &&
+        request.RoomClass == RoomClass.Kitchen &&
+        string.Equals(request.TargetDef, "Campfire", StringComparison.OrdinalIgnoreCase);
+
+    private static List<(string FlagId, BuildingRequest Request)> StarterKitchenRequests(Decision decision) =>
+        decision.Flags
+            .SelectMany(flag => (flag.BuildingRequests ?? [])
+                .Where(IsStarterKitchenRequest)
+                .Select(request => (flag.Id, request)))
+            .ToList();
 
     private static void DecisionShouldIncludeRules(Decision decision, params string[] rules)
     {

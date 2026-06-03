@@ -203,17 +203,99 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
     {
         IReadOnlyList<RuleEmission> orderedEmissions = emissions
             .OrderByDescending(emission => emission.Advice.Priority)
+            .ThenBy(emission => emission.Rule, StringComparer.Ordinal)
+            .ToList();
+        IReadOnlyList<RuleEmission> dedupedEmissions = DeduplicateFlagRequests(orderedEmissions)
             .ToList();
         IReadOnlyList<AdviceItem> advice = orderedEmissions
             .Select(emission => emission.Advice)
             .ToList();
-        IReadOnlyList<AgentFlag> flags = orderedEmissions
+        IReadOnlyList<AgentFlag> flags = dedupedEmissions
             .SelectMany(emission => emission.Flags)
             .ToList();
         string trace = CompositeTrace(orderedEmissions);
-        RuleTraceDetails diagnostics = DiagnosticsFor(briefing, trace, orderedEmissions);
+        RuleTraceDetails diagnostics = DiagnosticsFor(briefing, trace, dedupedEmissions);
         return new Decision(advice, flags, trace, diagnostics);
     }
+
+    private static IReadOnlyList<RuleEmission> DeduplicateFlagRequests(IReadOnlyList<RuleEmission> orderedEmissions)
+    {
+        HashSet<BuildingRequestKey> seenBuildingRequests = [];
+        HashSet<LaborRequestKey> seenLaborRequests = [];
+        HashSet<ItemRequestKey> seenItemRequests = [];
+        HashSet<AttentionRequestKey> seenAttentionRequests = [];
+        List<RuleEmission> dedupedEmissions = [];
+
+        foreach (RuleEmission emission in orderedEmissions)
+        {
+            IReadOnlyList<AgentFlag> dedupedFlags = emission.Flags
+                .Select(flag => DeduplicateFlagRequests(
+                    flag,
+                    seenBuildingRequests,
+                    seenLaborRequests,
+                    seenItemRequests,
+                    seenAttentionRequests))
+                .ToList();
+            dedupedEmissions.Add(emission with { Flags = dedupedFlags });
+        }
+
+        return dedupedEmissions;
+    }
+
+    private static AgentFlag DeduplicateFlagRequests(
+        AgentFlag flag,
+        HashSet<BuildingRequestKey> seenBuildingRequests,
+        HashSet<LaborRequestKey> seenLaborRequests,
+        HashSet<ItemRequestKey> seenItemRequests,
+        HashSet<AttentionRequestKey> seenAttentionRequests)
+    {
+        IReadOnlyList<BuildingRequest> buildingRequests = FilterUnseenRequests(
+            flag.BuildingRequests,
+            seenBuildingRequests,
+            BuildingRequestKey.For);
+        IReadOnlyList<LaborRequest> laborRequests = FilterUnseenRequests(
+            flag.LaborRequests,
+            seenLaborRequests,
+            LaborRequestKey.For);
+        IReadOnlyList<ItemRequest> itemRequests = FilterUnseenRequests(
+            flag.ItemRequests,
+            seenItemRequests,
+            ItemRequestKey.For);
+        IReadOnlyList<AttentionRequest> attentionRequests = FilterUnseenRequests(
+            flag.Attention,
+            seenAttentionRequests,
+            AttentionRequestKey.For);
+
+        return flag with
+        {
+            BuildingRequests = NullIfEmpty(buildingRequests),
+            LaborRequests = NullIfEmpty(laborRequests),
+            ItemRequests = NullIfEmpty(itemRequests),
+            Attention = NullIfEmpty(attentionRequests)
+        };
+    }
+
+    private static IReadOnlyList<TRequest> FilterUnseenRequests<TRequest, TKey>(
+        IReadOnlyList<TRequest>? requests,
+        HashSet<TKey> seenRequests,
+        Func<TRequest, TKey> keyFor)
+        where TKey : notnull
+    {
+        if (requests is null || requests.Count == 0)
+            return [];
+
+        List<TRequest> filtered = [];
+        foreach (TRequest request in requests)
+        {
+            if (seenRequests.Add(keyFor(request)))
+                filtered.Add(request);
+        }
+
+        return filtered;
+    }
+
+    private static IReadOnlyList<T>? NullIfEmpty<T>(IReadOnlyList<T> requests) =>
+        requests.Count == 0 ? null : requests;
 
     private static RuleEmission EmitAdvice(
         FoodBriefing briefing,
@@ -1399,6 +1481,33 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         string Rule,
         AdviceItem Advice,
         IReadOnlyList<AgentFlag> Flags);
+
+    private readonly record struct BuildingRequestKey(BuildingClass TargetClass, RoomClass? RoomClass, string? TargetDef)
+    {
+        public static BuildingRequestKey For(BuildingRequest request) =>
+            new(request.TargetClass, request.RoomClass, NormalizeKeyText(request.TargetDef));
+    }
+
+    private readonly record struct LaborRequestKey(WorkType WorkType, string? Skill)
+    {
+        public static LaborRequestKey For(LaborRequest request) =>
+            new(request.WorkType, NormalizeKeyText(request.Skill));
+    }
+
+    private readonly record struct ItemRequestKey(string? ItemDef)
+    {
+        public static ItemRequestKey For(ItemRequest request) =>
+            new(NormalizeKeyText(request.ItemDef));
+    }
+
+    private readonly record struct AttentionRequestKey(string Request, string? RequestedFrom)
+    {
+        public static AttentionRequestKey For(AttentionRequest request) =>
+            new(NormalizeKeyText(request.Request) ?? "", NormalizeKeyText(request.RequestedFrom));
+    }
+
+    private static string? NormalizeKeyText(string? value) =>
+        value is null ? null : value.ToUpperInvariant();
 
     private sealed record FoodFlagRequests(
         IReadOnlyList<BuildingRequest> BuildingRequests,
