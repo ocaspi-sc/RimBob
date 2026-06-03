@@ -178,54 +178,46 @@ A minister's rules are a single ordered list of rule records, not a cascade of
 hand-written `if` blocks. Each rule declares, in one place:
 
 - a stable id / `trace` (used in logs, traces, replay attribution, and supersession);
-- a human-readable condition and output description, for the diagnostics catalogue;
 - a match predicate over briefing-derived facts;
+- a live `reason` selector — a short human string computed from the briefing (e.g. `break_risk_count=3`), evaluated for matched and non-matched rules alike;
 - a builder that produces the `Decision` (or `Escalate`) when it fires.
 
 Everything that consumes rules derives from that one list: live evaluation, the
-matched/suppressed signal trace, and the "all rules" diagnostics catalogue. This
-is a single-source-of-truth contract — a rule's predicate, id, and description
-sit together and cannot drift apart. The superseded shape wrote each rule three
-times (executable guards, a parallel predicate re-evaluation for the trace, and
-a static string catalogue); keeping the three in sync was manual and silently
-lossy.
+matched/suppressed signal trace, and the "all rules" diagnostics catalogue. There
+is **no static condition or output string** beside the predicate to drift: the
+catalogue derives each rule's explanation from its live `reason` (run for matched
+and non-matched rules) and from the advice/flags the builder actually emits. The
+superseded shape wrote each rule three times (executable guards, a parallel
+predicate re-evaluation for the trace, and a static string catalogue); keeping
+the three in sync was manual and silently lossy.
 
 Exact record fields, the shared base/helpers, and predicate bodies are code
 contracts — see `Src/Common/Ministers/`. Design docs do not mirror them.
 
-### Hit-policy: all-hits by default
+### All-hits evaluation
 
-A cycle can match several rules at once. The rules layer is a decision-table with
-a per-minister **hit-policy**:
+A cycle can match several rules at once. Every minister uses **all-hits**: each
+matching rule emits its advice and flags, and the results aggregate into one
+snapshot — priority-sorted, capped, and same-`trace` deduped. Escalation is
+considered only when no rule matched. There is no first-match policy: suppressing
+a matched rule would also drop its cross-minister flag and hide coexisting
+problems from the inspection dashboard. Mutually-exclusive predicates self-limit,
+so a rule that should win alone simply has a predicate no other rule overlaps.
 
-- **All-hits (default)** — every matching rule emits its advice and flags; the
-  results aggregate into one snapshot, priority-sorted and capped. Escalation is
-  considered only when no rule matched. This is the default because suppressing a
-  matched rule also drops its cross-minister flag and hides coexisting problems
-  from the inspection dashboard. Chef runs all-hits today.
-- **First-match-wins** — ordered rules; the first match builds the decision and
-  evaluation stops. Equivalent to all-hits plus a forced stop after rule one, so
-  it is strictly less general (mutually-exclusive predicates self-limit under
-  all-hits anyway). Retained on Willie and Welfare as **interim sparsity debt**,
-  not the target.
+All-hits needs three things, which live in the shared base:
 
-First-match implicitly does three jobs that all-hits must do explicitly; a
-minister flips from first-match to all-hits only once all three exist for it:
-
-- **priority sort + cap** — rank matched rules and keep the most important few
-  (real sparsity, versus first-match's emit-rule-one blindness);
+- **priority sort + cap** — rank matched rules and keep the most important few;
+  this is how output stays sparse, not by suppressing matches;
 - **same-`trace` dedup/consolidation** — fold rules that map to one issue into a
-  single card instead of emitting near-duplicates;
+  single card instead of near-duplicates;
 - **explicit dominance predicates** — where one rule should suppress another,
   encode it in the predicate (e.g. defer kitchen-dependent placement until a
-  kitchen exists), not in list order.
-
-A minister states its hit-policy in its focused design doc.
+  kitchen exists), never in list order.
 
 ### Authoring rules
 
-- Put the highest-value, highest-frequency rule first. Order is the priority in
-  the first-match shape, and the trace/catalogue order otherwise.
+- Order rules highest-value first; under all-hits this sets trace/catalogue order
+  and the priority-sort tiebreak.
 - Give every rule a stable id so logs and replay records can attribute behavior.
 - Keep escalation as a fallback after deterministic rules, not a parallel path.
 - Treat recurring LLM output as a candidate for a new rule, not a reason to keep

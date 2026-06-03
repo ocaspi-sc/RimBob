@@ -37,23 +37,24 @@ evaluates the table under a per-minister **hit-policy** and derives the match
 trace and all-rules catalogue from the same list. No `concern` field (removed by
 `delete-concern`).
 
-### Hit-policy
+### Evaluation — all-hits only
 
-- **All-hits (default)** — `rules.Where(Matches).Select(Build)` → `Aggregate`
-  (priority sort, cap, same-`trace` dedup/consolidation). Escalate only when no
-  rule matched (alongside any explicit Escalate rule that fired).
-- **First-match** — `rules.FirstOrDefault(Matches)?.Build` else terminal
-  fallback. Interim sparsity debt only; equivalent to all-hits + a forced stop
-  after rule one.
+`rules.Where(Matches).Select(Build)` → `Aggregate` (priority sort, cap,
+same-`trace` dedup/consolidation). Escalate only when no rule matched (alongside
+any explicit Escalate rule that fired). No first-match path and no policy field —
+every minister is all-hits.
 
 ### Shared base (`Src/Common/Ministers`)
 
-- A `MinisterRule<TBriefing>` record: id, conditions, output, `Matches`
-  predicate, `Reason` selector, and a `Build` returning `RulesResult`.
-- A table evaluator: `Evaluate(policy)`, `BuildTrace` → `RuleTraceDetails`
-  (`MatchedSignals` / `SuppressedCandidates` / `AllRules`), and `Aggregate` for
-  all-hits (sort / cap / dedup / consolidate).
-- Generalize Chef's existing `DecisionForConcerns` aggregation into `Aggregate`.
+- A `MinisterRule<TBriefing>` record: id/`trace`, `Matches` predicate, a live
+  `Reason` selector (total — safe to compute for non-matched rules), and a
+  `Build` returning `RulesResult`. **No static condition/output strings.**
+- A table evaluator: `Evaluate`, `BuildTrace` → `RuleTraceDetails`
+  (`MatchedSignals` / `SuppressedCandidates` / `AllRules`), and `Aggregate`
+  (sort / cap / dedup / consolidate). All-hits only — no policy switch.
+- Generalize Chef's existing `DecisionForEmissions` aggregation into `Aggregate`
+  (renamed from `DecisionForConcerns` by the landed `delete-concern`; emissions
+  are `RuleEmission`, built by `EmitAdvice`).
 
 Exact record fields and helper names are code contracts — design docs do not
 mirror them.
@@ -75,7 +76,10 @@ mirror them.
 - **Diagnostics parity.** `RuleTraceDetails` (matched/suppressed, `AllRules`,
   emitted advice/action/flag traces) must stay stable where behavior is
   unchanged; the all-rules catalogue now derives from predicates, not a hand
-  list. This is the main regression surface.
+  list. `RuleEvaluationTrace.Conditions` / `OutputAction` (previously the hand
+  strings) are repurposed: `Conditions` ← live `Reason` (run for every rule),
+  `OutputAction` ← the rule's actual emitted actions/flags — or dropped, with the
+  dashboard Rules tab updated to match. This is the main regression surface.
 
 ---
 
