@@ -47,12 +47,13 @@ public sealed class FoodRulesTests
         decision.Diagnostics.AllRules.Should().Contain(row =>
             row.Rule == "emergency_food_flag" &&
             row.Outcome == "selected" &&
-            row.Conditions.Contains("EstimatedDaysOfFood < 7") &&
-            row.OutputAction.Contains("immediate food-chain actions"));
+            row.Conditions.Contains("below the 7d emergency threshold") &&
+            row.OutputAction.Contains("actions: request_resource") &&
+            row.OutputAction.Contains("flags: 1"));
         decision.Diagnostics.AllRules.Should().Contain(row =>
             row.Rule == "nutrition_signal_gap" &&
             row.Outcome == "not_matched" &&
-            row.Conditions.Contains("UnclassifiedFoodUnits > 0"));
+            row.Conditions.Contains("days-of-food is available"));
         decision.Diagnostics.EmittedAdvice.Should().ContainSingle(row =>
             row.Source == "rules" &&
             row.Rule == "emergency_food_flag" &&
@@ -709,7 +710,7 @@ public sealed class FoodRulesTests
         escalation.Diagnostics.AllRules.Should().Contain(row =>
             row.Rule == "expand_growing_capacity" &&
             row.Outcome == "not_matched" &&
-            row.Conditions.Contains("active matching crop coverage is below candidate tile target"));
+            row.Conditions.Contains("already has 36 active matching crop tiles"));
     }
 
     [Fact]
@@ -815,7 +816,8 @@ public sealed class FoodRulesTests
         escalation.Diagnostics.AllRules.Should().Contain(row =>
             row.Rule == "winter_food_tradeoff" &&
             row.Outcome == "escalated" &&
-            row.OutputAction.Contains("Escalate to LLM"));
+            row.Conditions.Contains("d to winter") &&
+            row.OutputAction == "");
     }
 
     [Fact]
@@ -842,7 +844,8 @@ public sealed class FoodRulesTests
         decision.Diagnostics.Should().NotBeNull();
         decision.Diagnostics!.AllRules.Should().Contain(row =>
             row.Rule == "hunt_targets_blocked_by_risk" &&
-            row.Outcome == "not_matched");
+            row.Outcome == "not_matched" &&
+            row.Conditions.Contains("low-risk hunt target summaries are visible"));
         AdviceItem advice = AdviceByRule(decision, "hunt_low_risk_animals");
         AdviceAction Action = advice.Actions.Should().ContainSingle(action => action.Kind == AdviceActionKind.MarkHunt).Subject;
         Action.Kind.Should().Be(AdviceActionKind.MarkHunt);
@@ -1046,7 +1049,8 @@ public sealed class FoodRulesTests
         escalation.Diagnostics.AllRules.Should().Contain(row =>
             row.Rule == "hunt_targets_blocked_by_risk" &&
             row.Outcome == "escalated" &&
-            row.OutputAction.Contains("hunt safety/risk context"));
+            row.Conditions.Contains("risk calculator found no low-risk hunt target") &&
+            row.OutputAction == "");
     }
 
     private static AdviceItem AdviceByRule(Decision decision, string rule) =>
