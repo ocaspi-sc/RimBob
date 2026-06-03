@@ -590,11 +590,11 @@ function Start-HostNotificationArea {
     Start-Process `
         -FilePath "powershell.exe" `
         -WorkingDirectory $repoRoot `
-        -WindowStyle Minimized `
+        -WindowStyle Hidden `
         -ArgumentList $childArgs
 
     Write-Host ""
-    Write-Host "RimBob host started in a minimized taskbar window and the Windows notification area."
+    Write-Host "RimBob host started. The launcher window is hidden; controls live in the Windows notification area."
     Write-Host "Right-click the RimBob icon to open dashboard views in Chrome or stop the host."
     Write-Host "Use -Foreground to keep the server attached to this terminal for debugging."
 }
