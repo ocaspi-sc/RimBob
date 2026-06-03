@@ -127,7 +127,7 @@ export default function App() {
               />
               <ViewTabs
                 activeView={activeMinisterView}
-                ariaLabel={`${activeScope.label} inspection views`}
+                ariaLabel={`${activeScope.displayLabel} inspection views`}
                 views={activeViews}
                 onSelect={selection.selectView}
               />

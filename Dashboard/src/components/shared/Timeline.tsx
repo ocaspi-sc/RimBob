@@ -1,3 +1,4 @@
+import { displayMinisterName } from '../../dashboard/scopes';
 import type { DashboardEvent } from '../../types/system';
 
 export function Timeline({ events, limit = 10 }: { events: DashboardEvent[]; limit?: number }) {
@@ -12,7 +13,7 @@ export function Timeline({ events, limit = 10 }: { events: DashboardEvent[]; lim
       {visible.map(event => (
         <div className={`timeline-row ${event.severity}`} key={event.id}>
           <time>{formatTime(event.at)}</time>
-          <strong>{event.source}</strong>
+          <strong>{displayMinisterName(event.source)}</strong>
           <span>{event.type}</span>
           <p>{event.summary}</p>
         </div>

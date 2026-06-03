@@ -23,19 +23,23 @@ export function WorkspaceTitle({
   const canRunLlm = canTrigger && scope.canRunLlm === true;
   const canRunRules = canTrigger && scope.canRunRules === true;
   const llmTitle = canRunLlm
-    ? `Run ${scope.label}'s LLM path`
+    ? `Run ${scope.displayLabel}'s LLM path`
     : canTrigger
-      ? `${scope.label} has no LLM trigger wired yet`
-      : `${scope.label} is not wired yet`;
+      ? `${scope.displayLabel} has no LLM trigger wired yet`
+      : `${scope.displayLabel} is not wired yet`;
   const rulesTitle = canRunRules
-    ? `Run ${scope.label}'s deterministic rules path only`
+    ? `Run ${scope.displayLabel}'s deterministic rules path only`
     : canTrigger
-      ? `${scope.label} has no rules-only trigger wired yet`
-      : `${scope.label} is not wired yet`;
+      ? `${scope.displayLabel} has no rules-only trigger wired yet`
+      : `${scope.displayLabel} is not wired yet`;
   return (
     <header className="workspace-title">
       <div>
-        <SemanticIconCue className="scope-title-icon" icon={iconForScope(scope.key)} size="sm" />
+        {scope.emoji ? (
+          <span className="scope-title-emoji" aria-hidden="true">{scope.emoji}</span>
+        ) : (
+          <SemanticIconCue className="scope-title-icon" icon={iconForScope(scope.key)} size="sm" />
+        )}
         <span className="eyebrow">{scope.status === 'live' ? 'Live scope' : 'Planned scope'}</span>
         <h2>{scope.label}</h2>
       </div>

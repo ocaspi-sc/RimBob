@@ -21,7 +21,7 @@ export function MinisterRagView({
   return (
     <div className="minister-view rag-view">
       <header className="view-heading">
-        <span className="eyebrow">{scope.label}</span>
+        <span className="eyebrow">{scope.displayLabel}</span>
         <h2><SemanticLabel icon={iconForView('rag')}><span>RAG</span></SemanticLabel></h2>
         <p>Guide retrieval and citations. Full per-minister retrieval traces are planned.</p>
       </header>
@@ -35,7 +35,7 @@ export function MinisterRagView({
 
       {scope.key !== 'mayor' && (
         <EmptyState code="RAG TRACE NOT EXPOSED">
-          {scope.label} retrieval query and guide chunks need a minister RAG endpoint.
+          {scope.displayLabel} retrieval query and guide chunks need a minister RAG endpoint.
         </EmptyState>
       )}
 

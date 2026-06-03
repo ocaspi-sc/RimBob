@@ -1,3 +1,4 @@
+import { displayMinisterName } from '../../dashboard/scopes';
 import { iconForSection } from '../../dashboard/semanticIcons';
 import type { MinisterTrace } from '../../types/system';
 import { IconizedText } from '../shared/IconizedText';
@@ -9,11 +10,12 @@ export function MinisterEscalationCallout({ trace }: { trace: MinisterTrace | nu
 
   const copy = escalationCopy(trace);
   const completedAt = trace.completedAt ?? trace.startedAt;
+  const ministerName = displayMinisterName(trace.minister);
   const outputCount = formatOutputCount(trace);
 
   return (
     <section
-      aria-label={`${trace.minister} escalation status`}
+      aria-label={`${ministerName} escalation status`}
       className={`minister-escalation-callout ${copy.tone}`}
       role={copy.tone === 'error' ? 'alert' : 'status'}
     >

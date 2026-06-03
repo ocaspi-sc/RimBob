@@ -59,11 +59,15 @@ function ScopeGroup({
           className={`scope-button kind-${scope.kind} ${activeScope === scope.key ? 'active' : ''} ${scope.status}`}
           onClick={() => onSelect(scope.key)}
         >
-          <SemanticIconCue
-            className="scope-icon"
-            icon={iconForScope(scope.key)}
-            size="xs"
-          />
+          {scope.emoji ? (
+            <span className="scope-emoji" aria-hidden="true">{scope.emoji}</span>
+          ) : (
+            <SemanticIconCue
+              className="scope-icon"
+              icon={iconForScope(scope.key)}
+              size="xs"
+            />
+          )}
           <span className="scope-name">{scope.label}</span>
           <small>{scopeStatusLabel(scope)}</small>
         </button>

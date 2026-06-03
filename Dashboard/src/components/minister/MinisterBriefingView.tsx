@@ -16,7 +16,7 @@ export function MinisterBriefingView({ scope }: { scope: ScopeConfig }) {
   const hasSourceBriefing = scope.key === 'welfare';
 
   if (scope.status !== 'live' && !hasSourceBriefing) {
-    return <EmptyState code="BRIEFING NOT WIRED">{scope.label} is planned but has no briefing endpoint yet.</EmptyState>;
+    return <EmptyState code="BRIEFING NOT WIRED">{scope.displayLabel} is planned but has no briefing endpoint yet.</EmptyState>;
   }
 
   if (briefing.loading) {
@@ -37,7 +37,7 @@ export function MinisterBriefingView({ scope }: { scope: ScopeConfig }) {
   return (
     <div className="minister-view briefing-view">
       <header className="view-heading">
-        <span className="eyebrow">{scope.label}</span>
+        <span className="eyebrow">{scope.displayLabel}</span>
         <h2><SemanticLabel icon={iconForView('briefing')} size="sm"><span>Briefing</span></SemanticLabel></h2>
         <p>Readable source data behind this minister's reasoning.</p>
       </header>

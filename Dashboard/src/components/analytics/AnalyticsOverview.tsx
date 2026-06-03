@@ -2,7 +2,7 @@ import type { AdviceItem } from '../../types/advice';
 import type { MayorAgenda } from '../../types/agenda';
 import type { ColonySnapshot } from '../../types/colony';
 import type { DashboardEvent, StreamDiagnostics, SystemHealth } from '../../types/system';
-import type { DashboardViewDefinition, DashboardViewKey } from '../../dashboard/scopes';
+import { displayMinisterName, type DashboardViewDefinition, type DashboardViewKey } from '../../dashboard/scopes';
 import type { SemanticIconSpec } from '../../dashboard/semanticIcons';
 import { iconForActionKind, iconForField, iconForInfoTerm, iconForScope } from '../../dashboard/semanticIcons';
 import { DisclosureSection } from '../shared/DisclosureSection';
@@ -84,7 +84,7 @@ export function AnalyticsOverview({
   const analytics = buildAnalytics(activeAdvice, agenda, health, snapshot);
   const sseAnalytics = buildSseAnalytics(stream, health);
   const priorityCounts = countBy(activeAdvice, item => item.priority);
-  const ministerCounts = countBy(activeAdvice, item => item.minister);
+  const ministerCounts = countBy(activeAdvice, item => displayMinisterName(item.minister));
   const actionKindCounts = countBy(
     activeAdvice.flatMap(item => item.actions),
     action => action.kind,

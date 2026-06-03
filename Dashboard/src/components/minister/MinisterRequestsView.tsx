@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { fetchSolverRequests, type WillieRequestBoardPayload, type WillieRequestRow, type WillieSolverOutputPayload } from '../../api/ministers';
 import { iconUrlFor } from '../../api/icons';
-import type { ScopeConfig } from '../../dashboard/scopes';
+import { displayMinisterName, type ScopeConfig } from '../../dashboard/scopes';
 import { isScopeMinister } from '../../dashboard/selectors';
 import { iconForField, iconForView } from '../../dashboard/semanticIcons';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
@@ -72,7 +72,7 @@ export function MinisterRequestsView({
   return (
     <div className="minister-view willie-requests-view">
       <header className="view-heading">
-        <span className="eyebrow">{scope.label}</span>
+        <span className="eyebrow">{scope.displayLabel}</span>
         <h2><SemanticLabel icon={iconForView('requests')}><span>Requests</span></SemanticLabel></h2>
         <p>Current inbound building requests with each request's latest Placement Solver outcome.</p>
       </header>
@@ -128,7 +128,7 @@ function RequestButton({
         src={iconUrlFor(requestIcon?.ref)}
       />
       <span className="willie-request-button-body">
-        <span className="eyebrow">{row.sourceMinister ?? 'unknown source'} -&gt; Willie</span>
+        <span className="eyebrow">{displayMinisterName(row.sourceMinister)} -&gt; {displayMinisterName('Willie')}</span>
         <strong><IconizedText maxIcons={1} text={request.request} /></strong>
         <span className="willie-request-button-pills">
           <StatusPill tone={priorityTone(request.priority)}>{request.priority ?? 'priority unknown'}</StatusPill>
@@ -147,7 +147,7 @@ function RequestDetail({ row }: { row: WillieRequestRow }) {
     <section className="request-detail-panel" aria-label={`${request.request} details`}>
       <header>
         <div>
-          <span className="eyebrow">{row.sourceMinister ?? 'unknown source'} -&gt; Willie</span>
+          <span className="eyebrow">{displayMinisterName(row.sourceMinister)} -&gt; {displayMinisterName('Willie')}</span>
           <h3><IconizedText maxIcons={1} text={request.request} /></h3>
         </div>
         <StatusPill tone={outcome.tone}>{outcome.label}</StatusPill>

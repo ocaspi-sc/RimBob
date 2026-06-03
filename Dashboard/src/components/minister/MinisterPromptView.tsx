@@ -16,7 +16,7 @@ export function MinisterPromptView({ scope }: { scope: ScopeConfig }) {
   );
 
   if (scope.status !== 'live') {
-    return <EmptyState code="PROMPT NOT WIRED">{scope.label} is a planned minister scope.</EmptyState>;
+    return <EmptyState code="PROMPT NOT WIRED">{scope.displayLabel} is a planned minister scope.</EmptyState>;
   }
 
   if (prompt.loading) {
@@ -26,7 +26,7 @@ export function MinisterPromptView({ scope }: { scope: ScopeConfig }) {
   if (prompt.error || !prompt.data) {
     return (
       <EmptyState code="PROMPT UNAVAILABLE">
-        {prompt.error ?? `${scope.label} prompt endpoint returned no payload.`}
+        {prompt.error ?? `${scope.displayLabel} prompt endpoint returned no payload.`}
       </EmptyState>
     );
   }
@@ -36,7 +36,7 @@ export function MinisterPromptView({ scope }: { scope: ScopeConfig }) {
   return (
     <div className="minister-view prompt-view">
       <header className="view-heading">
-        <span className="eyebrow">{scope.label}</span>
+        <span className="eyebrow">{scope.displayLabel}</span>
         <h2><SemanticLabel icon={iconForView('prompt')}><span>System Prompt</span></SemanticLabel></h2>
         <p>Exact prompt material for the next LLM call where the backend exposes it.</p>
       </header>

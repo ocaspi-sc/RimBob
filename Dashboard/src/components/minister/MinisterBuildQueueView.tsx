@@ -2,9 +2,9 @@ import { useState, type ReactNode } from 'react';
 import { applyAdviceAction } from '../../api/advice';
 import { iconUrlFor } from '../../api/icons';
 import { fetchBriefing } from '../../api/ministers';
+import { displayMinisterName, type ScopeConfig } from '../../dashboard/scopes';
 import { iconForActionKind, iconForField, iconForView } from '../../dashboard/semanticIcons';
 import { isScopeMinister } from '../../dashboard/selectors';
-import type { ScopeConfig } from '../../dashboard/scopes';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
 import type {
   AdviceAction,
@@ -50,7 +50,7 @@ export function MinisterBuildQueueView({
   return (
     <div className="minister-view build-queue-view">
       <header className="view-heading">
-        <span className="eyebrow">{scope.label}</span>
+        <span className="eyebrow">{scope.displayLabel}</span>
         <h2><SemanticLabel icon={iconForView('build_queue')}><span>Build Queue</span></SemanticLabel></h2>
         <p>Requested builds, solver proposals, and placed blueprints or frames in one inspection surface.</p>
       </header>
@@ -188,7 +188,7 @@ function RequestCard({ card }: { card: RequestCardModel }) {
           src={iconUrlFor(requestIcon?.ref)}
         />
         <div>
-          <span className="eyebrow">{card.flag.source_minister} to Willie</span>
+          <span className="eyebrow">{displayMinisterName(card.flag.source_minister)} to {displayMinisterName('Willie')}</span>
           <h4><IconizedText maxIcons={1} text={request.request} /></h4>
         </div>
         <StatusPill tone={priorityTone(request.priority ?? card.flag.severity)}>{request.priority ?? card.flag.severity}</StatusPill>

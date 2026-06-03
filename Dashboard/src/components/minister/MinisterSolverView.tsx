@@ -1,5 +1,5 @@
 import { fetchSolver, type WillieSolverOutputPayload, type WillieSolverPayload } from '../../api/ministers';
-import type { ScopeConfig } from '../../dashboard/scopes';
+import { displayMinisterName, type ScopeConfig } from '../../dashboard/scopes';
 import { isScopeMinister } from '../../dashboard/selectors';
 import { iconForField, iconForView } from '../../dashboard/semanticIcons';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
@@ -71,7 +71,7 @@ export function MinisterSolverView({
   return (
     <div className="minister-view willie-solver-view">
       <header className="view-heading">
-        <span className="eyebrow">{scope.label}</span>
+        <span className="eyebrow">{scope.displayLabel}</span>
         <h2><SemanticLabel icon={iconForView('solver')}><span>Solver</span></SemanticLabel></h2>
         <p>Latest Placement Solver outcome, no-fit stage, and readiness gates.</p>
       </header>
@@ -105,7 +105,7 @@ function SolverSummary({
       <div className="prompt-meta solver-request-meta">
         {request ? (
           <>
-            <span>{request.sourceMinister ?? 'unknown source'} to {request.requestedFrom ?? payload.minister}</span>
+            <span>{displayMinisterName(request.sourceMinister)} to {displayMinisterName(request.requestedFrom ?? payload.minister)}</span>
             <span>{formatLabel(request.targetClass)}</span>
             {request.roomClass && <span>{formatLabel(request.roomClass)}</span>}
             {request.targetDef && <span>{request.targetDef}</span>}

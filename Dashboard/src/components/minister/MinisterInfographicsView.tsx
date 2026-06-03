@@ -13,17 +13,17 @@ export function MinisterInfographicsView({
   scope: ScopeConfig;
 }) {
   if (scope.status !== 'live') {
-    return <EmptyState code="INFOGRAPHICS NOT WIRED">{scope.label} is planned and has no infographic data yet.</EmptyState>;
+    return <EmptyState code="INFOGRAPHICS NOT WIRED">{scope.displayLabel} is planned and has no infographic data yet.</EmptyState>;
   }
 
   if (!chain?.paths.length) {
-    return <EmptyState code="NO INFOGRAPHICS">{scope.label} has not published infographic data in this session.</EmptyState>;
+    return <EmptyState code="NO INFOGRAPHICS">{scope.displayLabel} has not published infographic data in this session.</EmptyState>;
   }
 
   return (
     <div className="minister-view infographics-view">
       <header className="view-heading">
-        <span className="eyebrow">{scope.label}</span>
+        <span className="eyebrow">{scope.displayLabel}</span>
         <h2><SemanticLabel icon={iconForView('infographics')}><span>Infographics</span></SemanticLabel></h2>
         <p>Visual minister evidence from the current snapshot.</p>
       </header>

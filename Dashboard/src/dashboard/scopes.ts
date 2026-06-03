@@ -36,6 +36,8 @@ export interface DashboardViewDefinition {
 export interface ScopeConfig {
   key: ScopeKey;
   label: string;
+  displayLabel: string;
+  emoji?: string;
   kind: ScopeKind;
   status: ScopeStatus;
   enabledViews: DashboardViewKey[];
@@ -95,20 +97,20 @@ const rulesOnlyMinisterViews: DashboardViewKey[] = ['briefing', 'build_queue', '
 const welfareMinisterViews: DashboardViewKey[] = ['briefing', 'rules', 'advice'];
 
 export const scopeConfigs: ScopeConfig[] = [
-  { key: 'system', label: 'SYSTEM', kind: 'system', status: 'live', enabledViews: systemViews.map(view => view.key) },
-  { key: 'info', label: 'INFO', kind: 'info', status: 'reference', enabledViews: infoViews.map(view => view.key) },
-  { key: 'analytics', label: 'ANALYTICS', kind: 'analytics', status: 'live', enabledViews: analyticsViews.map(view => view.key) },
-  { key: 'dev_blog', label: 'DEV BLOG', kind: 'dev_blog', status: 'live', enabledViews: devBlogViews.map(view => view.key) },
-  { key: 'mayor', label: 'Mayor', kind: 'minister', status: 'live', enabledViews: allMinisterViews, canRunLlm: true },
-  { key: 'food', label: 'Chef', kind: 'minister', status: 'live', enabledViews: allMinisterViews, canRunRules: true, canRunLlm: true },
-  { key: 'willie', label: 'Willie', kind: 'minister', status: 'live', enabledViews: rulesOnlyMinisterViews, canRunRules: true },
-  { key: 'defense', label: 'Defense', kind: 'minister', status: 'planned', enabledViews: allMinisterViews },
-  { key: 'welfare', label: 'Welfare', kind: 'minister', status: 'live', enabledViews: welfareMinisterViews, canRunRules: true },
-  { key: 'medical', label: 'Medical', kind: 'minister', status: 'planned', enabledViews: allMinisterViews },
-  { key: 'research', label: 'Research', kind: 'minister', status: 'planned', enabledViews: allMinisterViews },
-  { key: 'industry', label: 'Industry', kind: 'minister', status: 'planned', enabledViews: allMinisterViews },
-  { key: 'economy', label: 'Economy', kind: 'minister', status: 'planned', enabledViews: allMinisterViews },
-  { key: 'chief_of_staff', label: 'Chief of Staff', kind: 'minister', status: 'planned', enabledViews: allMinisterViews },
+  { key: 'system', label: 'SYSTEM', displayLabel: 'SYSTEM', kind: 'system', status: 'live', enabledViews: systemViews.map(view => view.key) },
+  { key: 'info', label: 'INFO', displayLabel: 'INFO', kind: 'info', status: 'reference', enabledViews: infoViews.map(view => view.key) },
+  { key: 'analytics', label: 'ANALYTICS', displayLabel: 'ANALYTICS', kind: 'analytics', status: 'live', enabledViews: analyticsViews.map(view => view.key) },
+  { key: 'dev_blog', label: 'DEV BLOG', displayLabel: 'DEV BLOG', kind: 'dev_blog', status: 'live', enabledViews: devBlogViews.map(view => view.key) },
+  { key: 'mayor', label: 'Mayor', displayLabel: '🏛️ Mayor', emoji: '🏛️', kind: 'minister', status: 'live', enabledViews: allMinisterViews, canRunLlm: true },
+  { key: 'food', label: 'Chef', displayLabel: '🍲 Chef', emoji: '🍲', kind: 'minister', status: 'live', enabledViews: allMinisterViews, canRunRules: true, canRunLlm: true },
+  { key: 'willie', label: 'Willie', displayLabel: '🧱 Willie', emoji: '🧱', kind: 'minister', status: 'live', enabledViews: rulesOnlyMinisterViews, canRunRules: true },
+  { key: 'defense', label: 'Defense', displayLabel: '🛡️ Defense', emoji: '🛡️', kind: 'minister', status: 'planned', enabledViews: allMinisterViews },
+  { key: 'welfare', label: 'Welfare', displayLabel: '🙂 Welfare', emoji: '🙂', kind: 'minister', status: 'live', enabledViews: welfareMinisterViews, canRunRules: true },
+  { key: 'medical', label: 'Medical', displayLabel: '🩺 Medical', emoji: '🩺', kind: 'minister', status: 'planned', enabledViews: allMinisterViews },
+  { key: 'research', label: 'Research', displayLabel: '🔬 Research', emoji: '🔬', kind: 'minister', status: 'planned', enabledViews: allMinisterViews },
+  { key: 'industry', label: 'Industry', displayLabel: '⚙️ Industry', emoji: '⚙️', kind: 'minister', status: 'planned', enabledViews: allMinisterViews },
+  { key: 'economy', label: 'Economy', displayLabel: '🪙 Economy', emoji: '🪙', kind: 'minister', status: 'planned', enabledViews: allMinisterViews },
+  { key: 'chief_of_staff', label: 'Chief of Staff', displayLabel: '🧭 Chief of Staff', emoji: '🧭', kind: 'minister', status: 'planned', enabledViews: allMinisterViews },
 ];
 
 export function findScope(key: ScopeKey): ScopeConfig {
@@ -152,3 +154,27 @@ const allDashboardViews = [
   ...devBlogViews,
   ...ministerViews,
 ];
+
+export function displayMinisterName(value: string | null | undefined): string {
+  if (!value) return 'unknown source';
+
+  const normalized = normalizeMinisterReference(value);
+  const scope = scopeConfigs.find(candidate =>
+    candidate.kind === 'minister' &&
+    ministerAliases(candidate).some(alias => normalizeMinisterReference(alias) === normalized)
+  );
+
+  return scope?.displayLabel ?? value;
+}
+
+function ministerAliases(scope: ScopeConfig): string[] {
+  if (scope.key === 'food') return [scope.key, scope.label, 'Food', 'Chef', 'chef'];
+  if (scope.key === 'willie') return [scope.key, scope.label, 'Construction', 'construction'];
+  if (scope.key === 'welfare') return [scope.key, scope.label, 'Minister of Welfare'];
+  if (scope.key === 'chief_of_staff') return [scope.key, scope.label, 'CoS', 'Chief'];
+  return [scope.key, scope.label];
+}
+
+function normalizeMinisterReference(value: string): string {
+  return value.trim().replace(/[\s-]+/g, '_').toLocaleLowerCase();
+}

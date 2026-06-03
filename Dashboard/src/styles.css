@@ -607,6 +607,15 @@ code {
   white-space: nowrap;
 }
 
+.scope-emoji {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
 .scope-button small {
   color: var(--muted);
   font-size: 0.68rem;
@@ -762,6 +771,16 @@ code {
 .workspace-title .eyebrow,
 .workspace-title h2 {
   grid-column: 2;
+}
+
+.scope-title-emoji {
+  display: inline-grid;
+  grid-row: 1 / span 2;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  font-size: 1.35rem;
+  line-height: 1;
 }
 
 .workspace-actions {

@@ -11,7 +11,7 @@ import type {
   ItemRequest,
   LaborRequest,
 } from '../../types/advice';
-import type { ScopeConfig } from '../../dashboard/scopes';
+import { displayMinisterName, type ScopeConfig } from '../../dashboard/scopes';
 import { isScopeMinister } from '../../dashboard/selectors';
 import { applyAdviceAction } from '../../api/advice';
 import { iconUrlFor } from '../../api/icons';
@@ -70,13 +70,13 @@ export function MinisterAdviceView({
   }
 
   if (scope.status !== 'live') {
-    return <EmptyState code="ADVICE NOT WIRED">{scope.label} is planned and not emitting advice yet.</EmptyState>;
+    return <EmptyState code="ADVICE NOT WIRED">{scope.displayLabel} is planned and not emitting advice yet.</EmptyState>;
   }
 
   const hasEscalation = Boolean(trace.data?.escalationReason?.trim());
 
   if (ministerAdvice.length === 0 && !stateSummary && flags.length === 0 && !hasEscalation) {
-    return <EmptyState code="NO ACTIVE ADVICE">{scope.label} has not emitted active advice in this session.</EmptyState>;
+    return <EmptyState code="NO ACTIVE ADVICE">{scope.displayLabel} has not emitted active advice in this session.</EmptyState>;
   }
 
   const currentStateLines = stateSummary ? splitStateSummary(stateSummary) : [];
@@ -84,7 +84,7 @@ export function MinisterAdviceView({
   return (
     <div className="minister-view advice-view">
       <header className="view-heading">
-        <span className="eyebrow">{scope.label}</span>
+        <span className="eyebrow">{scope.displayLabel}</span>
         <h2><SemanticLabel icon={iconForView('advice')}><span>Advice</span></SemanticLabel></h2>
         <p>Latest feeder minister advice from the persisted SSE snapshot.</p>
       </header>
@@ -93,7 +93,7 @@ export function MinisterAdviceView({
         <section className="advice-state-summary">
           <span className="eyebrow">Current State</span>
           {currentStateLines.length > 0 ? (
-            <table className="state-summary-table" aria-label={`${scope.label} current state summary`}>
+            <table className="state-summary-table" aria-label={`${scope.displayLabel} current state summary`}>
               <tbody>
                 {currentStateLines.map((line, index) => (
                   <tr key={`${scope.key}-state-${index}`}>
@@ -113,7 +113,7 @@ export function MinisterAdviceView({
         </section>
       )}
       {ministerAdvice.length === 0 && (
-        <EmptyState code="NO ADVICE ITEMS">{scope.label} has no advice items in the latest snapshot.</EmptyState>
+        <EmptyState code="NO ADVICE ITEMS">{scope.displayLabel} has no advice items in the latest snapshot.</EmptyState>
       )}
       {flags.length > 0 && <AgentFlagsPanel flags={flags} />}
       <div className="advice-stack">
@@ -180,12 +180,12 @@ function MayorAdvice({
     return (
       <div className="minister-view advice-view mayor-advice">
         <header className="view-heading">
-          <span className="eyebrow">Mayor Advice</span>
+          <span className="eyebrow">{displayMinisterName('Mayor')} Advice</span>
           <h2><SemanticLabel icon={iconForView('advice')}><span>Advice</span></SemanticLabel></h2>
-          <p>Waiting for the Mayor's first agenda update.</p>
+          <p>Waiting for {displayMinisterName('Mayor')}'s first agenda update.</p>
         </header>
         <MinisterEscalationCallout trace={latestTrace} />
-        <EmptyState code="NO AGENDA">Waiting for the Mayor's first agenda update.</EmptyState>
+        <EmptyState code="NO AGENDA">Waiting for {displayMinisterName('Mayor')}'s first agenda update.</EmptyState>
       </div>
     );
   }
@@ -198,7 +198,7 @@ function MayorAdvice({
     <div className="minister-view advice-view mayor-advice">
       <header className="agenda-hero">
         <div>
-          <span className="eyebrow">Mayor Advice</span>
+          <span className="eyebrow">{displayMinisterName('Mayor')} Advice</span>
           <h2><IconizedText maxIcons={3} text={agenda.posture.summary} /></h2>
         </div>
         <div className="agenda-stamps">
@@ -288,7 +288,7 @@ function MayorAdvice({
           <div className="direction-grid">
             {Object.entries(agenda.cabinet_direction).map(([minister, direction]) => (
               <article key={minister}>
-                <SemanticLabel icon={iconForAgendaCategory(minister) ?? iconForField(minister)}><strong>{minister}</strong></SemanticLabel>
+                <SemanticLabel icon={iconForAgendaCategory(minister) ?? iconForField(minister)}><strong>{displayMinisterName(minister)}</strong></SemanticLabel>
                 <p><IconizedText maxIcons={3} text={direction} /></p>
               </article>
             ))}

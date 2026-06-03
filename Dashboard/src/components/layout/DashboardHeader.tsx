@@ -1,6 +1,9 @@
+import { displayMinisterName } from '../../dashboard/scopes';
 import type { RimBobStatus } from '../../types/status';
 import type { RimBobRunningVersion, StreamDiagnostics } from '../../types/system';
 import { StatusPill, type PillTone } from '../shared/StatusPill';
+
+const MayorDisplayName = displayMinisterName('Mayor');
 
 export function DashboardHeader({
   hostProcessPath,
@@ -63,7 +66,7 @@ export function DashboardHeader({
             <StatusPill tone={rimApiState.tone} title={rimApiState.title}>RIMAPI {rimApiState.label}</StatusPill>
             <StatusPill tone={llmState.tone} title={llmState.title}>LLM {llmState.label}</StatusPill>
             <StatusPill tone={streamState.tone} title={streamState.title}>SSE {streamState.label}</StatusPill>
-            <StatusPill tone={mayorState.tone} title={mayorState.title}>Mayor {mayorState.label}</StatusPill>
+            <StatusPill tone={mayorState.tone} title={mayorState.title}>{MayorDisplayName} {mayorState.label}</StatusPill>
           </div>
         </div>
       </div>
@@ -230,7 +233,7 @@ function deriveMayorState(status: RimBobStatus | null, host: HostApiState): Head
     return {
       label: 'unknown',
       tone: 'idle',
-      title: `Mayor status is unknown. Host API is ${host.kind}.`,
+      title: `${MayorDisplayName} status is unknown. Host API is ${host.kind}.`,
     };
   }
 
@@ -239,7 +242,7 @@ function deriveMayorState(status: RimBobStatus | null, host: HostApiState): Head
     return {
       label: `last ${label}`,
       tone: 'idle',
-      title: `Mayor was last known ${label}. Snapshot version: ${status.mayor_snapshot_version ?? 'none'}. Host API is stale, so this is not current.`,
+      title: `${MayorDisplayName} was last known ${label}. Snapshot version: ${status.mayor_snapshot_version ?? 'none'}. Host API is stale, so this is not current.`,
     };
   }
 
@@ -335,18 +338,18 @@ function mayorTone(status: RimBobStatus): PillTone {
 
 function mayorTitle(status: RimBobStatus): string {
   if (status.mayor_last_error) {
-    return `Mayor last error: ${status.mayor_last_error}`;
+    return `${MayorDisplayName} last error: ${status.mayor_last_error}`;
   }
 
   if (status.mayor_running) {
-    return `Mayor is running. Started: ${formatMaybeDate(status.mayor_started_at)}.`;
+    return `${MayorDisplayName} is running. Started: ${formatMaybeDate(status.mayor_started_at)}.`;
   }
 
   if (status.mayor_snapshot_version !== null) {
-    return `Mayor snapshot is loaded. No Mayor run is active. Snapshot version: ${status.mayor_snapshot_version}. Last completed: ${formatMaybeDate(status.mayor_completed_at)}.`;
+    return `${MayorDisplayName} snapshot is loaded. No ${MayorDisplayName} run is active. Snapshot version: ${status.mayor_snapshot_version}. Last completed: ${formatMaybeDate(status.mayor_completed_at)}.`;
   }
 
-  return 'No Mayor snapshot is loaded, and no Mayor run is active.';
+  return `No ${MayorDisplayName} snapshot is loaded, and no ${MayorDisplayName} run is active.`;
 }
 
 function formatBuildDateTime(value: string): string {

@@ -92,7 +92,7 @@ export function MinisterRulesView({
   return (
     <div className="minister-view rules-view">
       <header className="view-heading">
-        <span className="eyebrow">{scope.label}</span>
+        <span className="eyebrow">{scope.displayLabel}</span>
         <h2><SemanticLabel icon={iconForView('rules')}><span>Rules</span></SemanticLabel></h2>
         <p>Wake triggers, rule/LLM path, flags, and recent event context.</p>
       </header>
@@ -125,7 +125,7 @@ export function MinisterRulesView({
         <DynamicTable
           rows={ministerAdvice}
           preferredColumns={activeAdviceColumns}
-          emptyMessage={`${scope.label} has no active advice in the local SSE buffer.`}
+          emptyMessage={`${scope.displayLabel} has no active advice in the local SSE buffer.`}
         />
       </DisclosureSection>
     </div>

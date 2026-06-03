@@ -28,7 +28,7 @@ export function MinisterRawLlmView({
   );
 
   if (scope.status !== 'live') {
-    return <EmptyState code="RAW OUTPUT NOT WIRED">{scope.label} is a planned minister scope.</EmptyState>;
+    return <EmptyState code="RAW OUTPUT NOT WIRED">{scope.displayLabel} is a planned minister scope.</EmptyState>;
   }
 
   if (output.loading) {
@@ -38,7 +38,7 @@ export function MinisterRawLlmView({
   if (output.error || !output.data) {
     return (
       <EmptyState code="RAW OUTPUT UNAVAILABLE">
-        {output.error ?? `${scope.label} raw LLM output endpoint returned no payload.`}
+        {output.error ?? `${scope.displayLabel} raw LLM output endpoint returned no payload.`}
       </EmptyState>
     );
   }
@@ -48,13 +48,13 @@ export function MinisterRawLlmView({
 
   if (output.data.status === 'not_seen_yet') {
     const noOutputReason = latestTrace
-      ? noRawOutputReason(scope.label, latestTrace)
-      : `${scope.label} has not recorded an LLM response since this Host process started.`;
+      ? noRawOutputReason(scope.displayLabel, latestTrace)
+      : `${scope.displayLabel} has not recorded an LLM response since this Host process started.`;
 
     return (
       <div className="minister-view raw-llm-view">
         <header className="view-heading">
-          <span className="eyebrow">{scope.label}</span>
+          <span className="eyebrow">{scope.displayLabel}</span>
           <h2><SemanticLabel icon={iconForView('raw_llm')}><span>Raw LLM Output</span></SemanticLabel></h2>
           <p>Unnormalized model responses before schema parsing, tolerant repair, or advice rendering.</p>
         </header>
@@ -78,7 +78,7 @@ export function MinisterRawLlmView({
   return (
     <div className="minister-view raw-llm-view">
       <header className="view-heading">
-        <span className="eyebrow">{scope.label}</span>
+        <span className="eyebrow">{scope.displayLabel}</span>
         <h2><SemanticLabel icon={iconForView('raw_llm')}><span>Raw LLM Output</span></SemanticLabel></h2>
         <p>Unnormalized model responses before schema parsing, tolerant repair, or advice rendering.</p>
       </header>
@@ -94,7 +94,7 @@ export function MinisterRawLlmView({
 
       {stale && latestTrace && (
         <EmptyState code="STALE RAW OUTPUT">
-          {staleRawOutputReason(scope.label, latestTrace, output.data.capturedAt)}
+          {staleRawOutputReason(scope.displayLabel, latestTrace, output.data.capturedAt)}
         </EmptyState>
       )}
 
