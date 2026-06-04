@@ -111,7 +111,6 @@ function RequestButton({
   row: WillieRequestRow;
 }) {
   const request = row.request;
-  const requestIcon = iconForField(request.target_def ?? request.target_class);
   const outcome = outcomeMeta(row);
 
   return (
@@ -121,14 +120,8 @@ function RequestButton({
       aria-current={active ? 'true' : undefined}
       onClick={onClick}
     >
-      <GameIcon
-        fallback={requestIcon?.fallback ?? 'RQ'}
-        label={requestIcon?.label ?? 'Request icon'}
-        size="xs"
-        src={iconUrlFor(requestIcon?.ref)}
-      />
       <span className="willie-request-button-body">
-        <span className="eyebrow">{displayMinisterName(row.sourceMinister)} -&gt; {displayMinisterName('Willie')}</span>
+        <span className="eyebrow">{displayMinisterName(row.sourceMinister)}</span>
         <strong><IconizedText maxIcons={1} text={request.request} /></strong>
         <span className="willie-request-button-pills">
           <StatusPill tone={priorityTone(request.priority)}>{request.priority ?? 'priority unknown'}</StatusPill>

@@ -3284,10 +3284,10 @@ code {
   width: 100%;
   min-width: 0;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 8px;
-  align-items: flex-start;
-  padding: 9px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+  align-items: stretch;
+  padding: 7px 8px;
   border: 1px solid var(--line-soft);
   border-radius: 6px;
   color: inherit;
@@ -3305,21 +3305,27 @@ code {
 .willie-request-button-body {
   min-width: 0;
   display: grid;
-  gap: 6px;
+  gap: 4px;
 }
 
 .willie-request-button-body strong {
   min-width: 0;
   color: var(--text);
-  font-size: 0.86rem;
-  line-height: 1.25;
+  font-size: 0.84rem;
+  line-height: 1.2;
   overflow-wrap: anywhere;
 }
 
 .willie-request-button-pills {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 5px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.willie-request-button-pills .status-pill {
+  min-width: 0;
 }
 
 .request-detail-panel,
