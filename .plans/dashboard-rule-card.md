@@ -149,7 +149,7 @@ Leaving the redundant `conditions` field on the wire is fine for now (card ignor
 ## 4. Slice 2 — the Rule Card frontend
 
 - **New** `Dashboard/src/components/minister/RuleCard.tsx`: `function RuleCard({ rule, selected }: { rule: RuleEvaluationTrace; selected: boolean })`. Renders the 3-column row (2.1), emissions (2.2), theming (2.3). Minister-agnostic.
-- **Rewire** `RuleDiagnosticsPanel` ([MinisterRulesView.tsx:159](../Dashboard/src/components/minister/MinisterRulesView.tsx)): replace the per-group `DynamicTable` blocks with a `<div className="rule-card-list">` mapping every `allRules` row to `<RuleCard rule={row} selected={row.rule === details.selectedRule} />`, in catalog order (drop the per-outcome table grouping; outcome is now shown on each card, and one-per-row reads top-to-bottom). Keep the `selectedRule` summary field and the disclosure wrappers.
+- **Rewire** `RuleDiagnosticsPanel` ([MinisterRulesView.tsx:159](../Dashboard/src/components/minister/MinisterRulesView.tsx)): replace the per-group `DynamicTable` blocks with a single flat `<div className="rule-card-list">` mapping every `allRules` row to `<RuleCard rule={row} selected={row.rule === details.selectedRule} />`. Drop the per-outcome **table grouping** (the `DynamicTable`s, group headers, and the `groupRuleCatalogByOutcome`/`compareRuleOutcomes`/`ruleOutcomeSortIndex`/`RuleOutcomeGroup`/`formatRuleGroupMeta` helpers it fed); outcome is now shown on each card. **Sort the flat list by outcome rank** (`selected`, `escalated`, `not_matched` — reuse `ruleOutcomeOrder`) then stable catalog order within a rank, so emitting rules sit on top, one per row. Keep the `selectedRule` summary field, the `All rules` count meta, and the disclosure wrappers. Remove helpers left dead by the grouping removal so `tsc`/lint stay clean.
 - **CSS** ([styles.css](../Dashboard/src/styles.css) near ~2591): `.rule-card-list` (stacked full-width rows), `.rule-card` (the internal 3-col `minmax` grid + accent bar), `.rule-card.selected`/`.escalated`/`.not_matched`/`.is-selected` (tones via existing `--text`/`--muted` + the escalation warn palette), `.rule-card-evidence`, `.rule-card-emits`, `.rule-card-emit` (icon+label+chips row). **Retire** `.rule-all-rules-table` (table gone). No `min-width` anywhere → no overflow.
 - Graceful: empty `emissions` → muted `—` and a thin row; unknown `outcome` → neutral.
 
@@ -208,3 +208,24 @@ Leaving the redundant `conditions` field on the wire is fine for now (card ignor
 - Files: `Src/Common/Ministers/RuleTraceDetails.cs`, `Src/Common/Ministers/MinisterRuleTableEvaluator.cs`, `Dashboard/src/types/system.ts`.
 
 **Codex run:** `20260604-215602-dashboard-rule-card-s1` · branch `codex/prompt-20260604-215602-dashboard-rule-card-s1` · build 0/0, 561 tests green (after merging Welfare LLM slice C), Dashboard build green · landed commit `68f2fbb`.
+
+---
+
+## Summary — Slice 2 (landed 2026-06-04)
+
+**Motivation.** The visible payoff: the Rules tab of every minister now renders the all-rules catalog as a **Rule Card** stack — one full-width row per rule — replacing the 1040px horizontal-scroll table. Built directly on the Slice 1 `emissions` wire, so each card shows the rule's **real decisions** (advice titles, typed requests with their RimWorld sprite, routing, priority, escalate reason), not a `"requests: 1"` summary.
+
+**Context.** Consumes `RuleEvaluationTrace.emissions` landed in Slice 1 (`68f2fbb`). Card style mirrors the existing `advice-card`/`agent-flag-card`/`minister-escalation-callout` house patterns and reuses the `GameIcon` + `iconForFieldValue('target_def', …)` game-sprite path from `MinisterAdviceView`.
+
+**Scope (shipped).**
+- New `Dashboard/src/components/minister/RuleCard.tsx` — one full-width band per rule, internal 3-column grid (Identity: outcome badge + rule id `<code>` + priority chip · Evidence: live `reason` via `IconizedText` · Emits: each emission as `[game icon] label [to/priority/workType chips]`). Icons on every element; `request_build`/`request_item` resolve real sprites via `iconForFieldValue`; `escalate` carries a warn tone; empty emissions → muted `—`; unknown outcome tolerated.
+- Rewired `RuleDiagnosticsPanel` (`MinisterRulesView.tsx`) — replaced the per-outcome `DynamicTable` blocks with one flat `.rule-card-list`, sorted by outcome rank (selected → escalated → not_matched) then stable order. Deleted the now-dead grouping helpers; kept the `selectedRule` field, the disclosure wrappers, and an `X selected / N rules` count meta.
+- `styles.css` — added `.rule-card*` (3-col `minmax` grid + outcome tones via existing `--text`/`--muted`/warn vars; `not_matched` dim/thin; `@media(max-width:720px)` stacks to one column, **no fixed min-width**); removed the dead `.rule-all-rules-table*` and `.rule-outcome-group*` rules.
+- Frontend only — no backend/test changes.
+
+**How to verify (human).**
+- Dashboard: any minister → **Rules** tab → `Rule diagnostics` → `All rules`. Now a card-per-row list (selected rules on top), no horizontal scroll. Welfare on a new colony shows `shelter_floor` selected with a `request_build` emission carrying the **bed** sprite, `to Willie`, `High`.
+- Command: `cd Dashboard && npm.cmd run build` (tsc strict + vite, green).
+- Files: `Dashboard/src/components/minister/RuleCard.tsx`, `Dashboard/src/components/minister/MinisterRulesView.tsx`, `Dashboard/src/styles.css`.
+
+**Codex run:** `20260604-232026-dashboard-rule-card-s2` · branch `codex/prompt-20260604-232026-dashboard-rule-card-s2` · Dashboard build green (tsc + vite) · landed commit `9f28044`.
