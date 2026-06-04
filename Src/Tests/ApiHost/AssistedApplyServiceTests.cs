@@ -43,8 +43,7 @@ public sealed class AssistedApplyServiceTests
                 TargetIds: ["plant-1", "plant-2", "plant-3", "plant-4"],
                 TargetCount: 4))) with
         {
-            IssuedGameTick = 1_000,
-            ExpiresGameTick = 2_000
+            Stamp = new AdviceStamp(DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddHours(1), null, 1_000, 2_000)
         });
         ColonyState state = new();
         state.Economy.Update(new EconomyLedger(2_000, 0, "Cassandra", "Playing", false, "5th of Aprimay, 5500, 14h"));
@@ -374,14 +373,13 @@ public sealed class AssistedApplyServiceTests
         return new AdviceItem(
             Id: id,
             Minister: "Chef",
-            Priority: AdvicePriority.High,
+            Priority: Priority.High,
             Title: "Mature crops are ready",
             Body: "Body",
             Rationale: "Rationale",
             Actions: [action],
             GuideCitationIds: [],
-            IssuedAt: now,
-            ExpiresAt: now.AddHours(1));
+            Stamp: new AdviceStamp(now, now.AddHours(1)));
     }
 
     private static void AssertAppliedAction(AdviceBus bus, string status, AdviceApplyKind kind)

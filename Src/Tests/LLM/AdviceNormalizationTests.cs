@@ -19,12 +19,12 @@ public sealed class AdviceNormalizationTests
     {
         JsonNode? score = JsonNode.Parse("8");
 
-        AdvicePriority priority = AdviceJsonCompatibility.ParseAdvicePriority(
+        Priority priority = AdviceJsonCompatibility.ParsePriority(
             raw: null,
             legacyPriorityScore: score,
-            fallback: AdvicePriority.Low);
+            fallback: Priority.Low);
 
-        priority.Should().Be(AdvicePriority.High);
+        priority.Should().Be(Priority.High);
     }
 
     [Fact]
@@ -50,14 +50,14 @@ public sealed class AdviceNormalizationTests
 
         NormalizedFlagRequests requests = ResourceRequestNormalizer.NormalizeLegacyRequests(
             root,
-            AdvicePriority.High,
+            Priority.High,
             Context(),
             Json);
 
         LaborRequest request = requests.LaborRequests.Should().ContainSingle().Subject;
         request.WorkType.Should().Be(WorkType.Cook);
         request.Skill.Should().Be("Cooking");
-        request.Priority.Should().Be(AdvicePriority.High);
+        request.Priority.Should().Be(Priority.High);
         request.RequestedFrom.Should().Be("Labor");
     }
 
@@ -76,13 +76,13 @@ public sealed class AdviceNormalizationTests
 
         NormalizedFlagRequests requests = ResourceRequestNormalizer.NormalizeLegacyRequests(
             root,
-            AdvicePriority.High,
+            Priority.High,
             Context(),
             Json);
 
         BuildingRequest request = requests.BuildingRequests.Should().ContainSingle().Subject;
         request.TargetClass.Should().Be(BuildingClass.Freezer);
-        request.Priority.Should().Be(AdvicePriority.High);
+        request.Priority.Should().Be(Priority.High);
         request.RequestedFrom.Should().Be("Willie");
     }
 
@@ -104,7 +104,7 @@ public sealed class AdviceNormalizationTests
             legacyStepsNode: null,
             resourceRequestsNode: null,
             suggestedActionsNode: root,
-            priority: AdvicePriority.Medium,
+            priority: Priority.Medium,
             context: Context(),
             json: Json);
 
@@ -132,7 +132,7 @@ public sealed class AdviceNormalizationTests
             legacyStepsNode: root,
             resourceRequestsNode: null,
             suggestedActionsNode: null,
-            priority: AdvicePriority.Medium,
+            priority: Priority.Medium,
             context: Context(),
             json: Json);
 

@@ -1,5 +1,6 @@
 using FluentAssertions;
 using RimBob.Coordination;
+using RimBob.Core.Advice;
 using RimBob.Core.Ministers;
 
 namespace RimBob.Tests.Coordination;
@@ -10,11 +11,11 @@ public sealed class FlagChannelTests
     public void Publish_DedupesByIdAndFiltersSeverity()
     {
         FlagChannel channel = new();
-        channel.Publish(new AgentFlag("food:low", "Chef", FlagSeverity.Low, "food", "low"));
-        channel.Publish(new AgentFlag("food:high", "Chef", FlagSeverity.High, "food", "high"));
-        channel.Publish(new AgentFlag("food:high", "Chef", FlagSeverity.Medium, "food", "updated"));
+        channel.Publish(new AgentFlag("food:low", "Chef", Priority.Low, "food", "low"));
+        channel.Publish(new AgentFlag("food:high", "Chef", Priority.High, "food", "high"));
+        channel.Publish(new AgentFlag("food:high", "Chef", Priority.Medium, "food", "updated"));
 
-        channel.Active(FlagSeverity.Medium).Should().ContainSingle()
+        channel.Active(Priority.Medium).Should().ContainSingle()
             .Which.Summary.Should().Be("updated");
     }
 }

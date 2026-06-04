@@ -55,13 +55,7 @@ wire/persistence schema change: no compat code; wipe-and-regen on upgrade.
 
 ### Priority
 
-`priority` is the single urgency field on advice: `low`, `medium`, `high`, or
-`critical`. It drives player display, active-advice sorting, tactical alert
-behavior, and future arbitration. Do not reintroduce separate severity and score
-knobs for advice.
-
-Flags still use severity because flags are inter-minister routing signals, not
-player-facing advice.
+`priority` is the single urgency field on advice and flags: `low`, `medium`, `high`, or `critical`. It drives player display, active-advice sorting, tactical alert behavior, inter-minister routing, and future arbitration. Do not reintroduce separate urgency aliases or score knobs.
 
 ### Identity And Grouping
 

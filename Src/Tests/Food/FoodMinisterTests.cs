@@ -59,7 +59,7 @@ public sealed class FoodMinisterTests
         await h.Minister.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
 
         h.PublishedAdvice.Should().Contain(advice => advice.Id == "chef_emergency_food_flag");
-        h.Flags.Active(FlagSeverity.Medium).Should().Contain(flag => flag.Domain == "food");
+        h.Flags.Active(Priority.Medium).Should().Contain(flag => flag.Domain == "food");
     }
 
     [Fact]
@@ -74,7 +74,7 @@ public sealed class FoodMinisterTests
 
         h.PublishedAdvice.Should().Contain(advice => advice.Id == "chef_emergency_food_flag");
         h.Bus.ActiveSnapshot().StateSummaries.Should().ContainKey("Chef");
-        h.Flags.Active(FlagSeverity.Medium).Should().Contain(flag => flag.Domain == "food");
+        h.Flags.Active(Priority.Medium).Should().Contain(flag => flag.Domain == "food");
     }
 
     [Fact]
@@ -88,12 +88,6 @@ public sealed class FoodMinisterTests
         h.SetFoodDays(4f);
         await h.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
 
-        MinisterReplayRecord bootstrap = replay.Records.Single(r => r.EscalationReason == "bootstrap_first_live_cycle");
-        bootstrap.RuleTraceDetails.Should().NotBeNull();
-        bootstrap.RuleTraceDetails!.SelectedRule.Should().Be("bootstrap_first_live_cycle");
-        bootstrap.RuleTraceDetails.MatchedSignals.Should().ContainSingle(signal =>
-            signal.Rule == "bootstrap_first_live_cycle" &&
-            signal.Outcome == "escalated");
         replay.Records.Should().Contain(r => r.Path == "rules" && (r.RuleTrace ?? "").Contains("emergency_food_flag", StringComparison.OrdinalIgnoreCase));
         MinisterReplayRecord record = replay.Records.Single(r => r.Path == "rules" && (r.RuleTrace ?? "").Contains("emergency_food_flag", StringComparison.OrdinalIgnoreCase));
         record.SchemaVersion.Should().Be(2);
@@ -179,7 +173,7 @@ public sealed class FoodMinisterTests
                 : new FoodLlmResponse(
                     "Food is below target and hunting may be viable.",
                     [FoodAdvice("llm_food", withAction: true)],
-                    [new AgentFlag("food:llm", "Chef", FlagSeverity.Medium, "food", "LLM food flag")]));
+                    [new AgentFlag("food:llm", "Chef", Priority.Medium, "food", "LLM food flag")]));
         }, replay);
         h.SetFoodDays(35f);
 
@@ -197,21 +191,15 @@ public sealed class FoodMinisterTests
         h.Bus.ActiveSnapshot().Chains.Should().ContainKey("Chef");
         stateSummaries["Chef"].Should().Contain("25.0 days");
         stateSummaries["Chef"].Should().NotBe("Food is below target and hunting may be viable.");
-        h.Flags.Active(FlagSeverity.Medium).Should().ContainSingle().Which.Summary.Should().Be("LLM food flag");
+        h.Flags.Active(Priority.Medium).Should().ContainSingle().Which.Summary.Should().Be("LLM food flag");
         MinisterReplayRecord llmRecord = replay.Records.Single(r =>
             r.Path == "llm" &&
             r.Advice.Any(advice => advice.Id == "llm_food"));
         llmRecord.RuleTraceDetails.Should().NotBeNull();
-        llmRecord.RuleTraceDetails!.SelectedRule.Should().Be("winter_food_tradeoff");
-        llmRecord.RuleTraceDetails.EmittedActions.Should().ContainSingle(row =>
-            row.Source == "llm_after_escalation" &&
+        llmRecord.RuleTraceDetails!.SelectedRule!.Value.Value.Should().Be("winter_food_tradeoff");
+        llmRecord.RuleTraceDetails.AllRules.Should().ContainSingle(row =>
             row.Rule == "winter_food_tradeoff" &&
-            row.AdviceId == "llm_food" &&
-            row.Kind == AdviceActionKind.MarkHunt);
-        llmRecord.RuleTraceDetails.EmittedFlags.Should().ContainSingle(row =>
-            row.Source == "llm_after_escalation" &&
-            row.Rule == "winter_food_tradeoff" &&
-            row.FlagId == "food:llm");
+            row.Outcome == RuleOutcome.Escalated);
     }
 
     [Fact]
@@ -245,7 +233,7 @@ public sealed class FoodMinisterTests
     private static AdviceItem FoodAdvice(string id, bool withAction = false) => new(
         Id: id,
         Minister: "Chef",
-        Priority: AdvicePriority.Medium,
+        Priority: Priority.Medium,
         Title: "Hunt carefully",
         Body: "Use safe targets.",
         Rationale: "LLM selected hunting path.",
@@ -255,8 +243,7 @@ public sealed class FoodMinisterTests
                 "Mark a small safe hunting batch.")]
             : [],
         GuideCitationIds: [],
-        IssuedAt: DateTimeOffset.UtcNow,
-        ExpiresAt: DateTimeOffset.UtcNow.AddHours(4));
+        Stamp: new AdviceStamp(DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddHours(4)));
 
     private sealed class Harness
     {

@@ -62,7 +62,7 @@ public sealed class RoomTemplateSetTests
             Temperature: null,
             MaterialsOnHand: [],
             Deadline: null,
-            Priority: AdvicePriority.Medium,
+            Priority: Priority.Medium,
             Source: "test",
             Constraints: []);
 }

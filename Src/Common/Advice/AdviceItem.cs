@@ -13,7 +13,7 @@ public sealed record AdviceItem(
     [property: JsonPropertyName("minister")]
     string Minister,
     [property: JsonPropertyName("priority")]
-    AdvicePriority Priority,
+    Priority Priority,
     [property: JsonPropertyName("title")]
     string Title,
     [property: JsonPropertyName("body")]
@@ -24,24 +24,30 @@ public sealed record AdviceItem(
     IReadOnlyList<AdviceAction> Actions,
     [property: JsonPropertyName("guide_citations")]
     IReadOnlyList<string> GuideCitationIds,
-    [property: JsonPropertyName("issued_at")]
-    DateTimeOffset IssuedAt,
-    [property: JsonPropertyName("expires_at")]
-    DateTimeOffset ExpiresAt,
-    [property: JsonPropertyName("issued_game_date")]
-    GameDate? IssuedGameDate = null,
-    [property: JsonPropertyName("issued_game_tick")]
-    long? IssuedGameTick = null,
-    [property: JsonPropertyName("expires_game_tick")]
-    long? ExpiresGameTick = null,
+    [property: JsonPropertyName("stamp")]
+    AdviceStamp Stamp,
     [property: JsonPropertyName("briefing_ref")]
     BriefingRef? BriefingRef = null,
-    [property: JsonPropertyName("supersedes")]
-    string? Supersedes = null,
     [property: JsonPropertyName("autonomy_at_issue")]
     AutonomyMode AutonomyAtIssue = AutonomyMode.Suggest,
     [property: JsonPropertyName("options")]
-    IReadOnlyList<AdviceOption>? Options = null);
+    IReadOnlyList<AdviceOption>? Options = null)
+{
+    [JsonIgnore]
+    public DateTimeOffset IssuedAt => Stamp.IssuedAt;
+
+    [JsonIgnore]
+    public DateTimeOffset ExpiresAt => Stamp.ExpiresAt;
+
+    [JsonIgnore]
+    public GameDate? IssuedGameDate => Stamp.IssuedGameDate;
+
+    [JsonIgnore]
+    public long? IssuedGameTick => Stamp.IssuedGameTick;
+
+    [JsonIgnore]
+    public long? ExpiresGameTick => Stamp.ExpiresGameTick;
+}
 
 public sealed record BriefingRef(
     [property: JsonPropertyName("minister")]

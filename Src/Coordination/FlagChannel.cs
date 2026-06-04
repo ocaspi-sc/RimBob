@@ -1,3 +1,4 @@
+using RimBob.Core.Advice;
 using RimBob.Core.Ministers;
 
 namespace RimBob.Coordination;
@@ -45,14 +46,14 @@ public sealed class FlagChannel
         }
     }
 
-    public IReadOnlyList<AgentFlag> Active(FlagSeverity minimum = FlagSeverity.Low)
+    public IReadOnlyList<AgentFlag> Active(Priority minimum = Priority.Low)
     {
         lock (_lock)
         {
             PruneExpired(DateTimeOffset.UtcNow);
             return _active.Values
-                .Where(f => f.Severity >= minimum)
-                .OrderByDescending(f => f.Severity)
+                .Where(f => f.Priority >= minimum)
+                .OrderByDescending(f => f.Priority)
                 .ThenBy(f => f.Domain)
                 .ThenBy(f => f.Id)
                 .ToList();

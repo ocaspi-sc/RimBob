@@ -79,10 +79,10 @@ internal static class AdviceResponseNormalizer
         if (strict is not null && node["priority"] is not null && IsCompleteStrictAdvice(strict))
             return NormalizeStrictAdvice(strict);
 
-        AdvicePriority priority = AdviceJsonCompatibility.ParseAdvicePriority(
-            LlmResponseParser.ReadString(node["priority"]) ?? LlmResponseParser.ReadString(node["severity"]),
+        Priority priority = AdviceJsonCompatibility.ParsePriority(
+            LlmResponseParser.ReadString(node["priority"]),
             node["priority_score"],
-            AdvicePriority.Medium);
+            Priority.Medium);
         IReadOnlyList<AdviceAction> actions = AdviceActionNormalizer.NormalizeOrConvertLegacy(
             node["actions"] ?? node["Actions"],
             node["steps"] ?? node["Steps"],
@@ -106,11 +106,12 @@ internal static class AdviceResponseNormalizer
             Rationale: rationale,
             Actions: actions,
             GuideCitationIds: citationIds,
-            IssuedAt: now,
-            ExpiresAt: now.AddHours(priority >= AdvicePriority.High ? 4 : 24),
-            IssuedGameDate: context.Date,
-            IssuedGameTick: context.GameTick,
-            ExpiresGameTick: AdviceFreshness.ExpiresGameTick(context.GameTick, priority),
+            Stamp: new AdviceStamp(
+                now,
+                now.AddHours(priority >= Priority.High ? 4 : 24),
+                context.Date,
+                context.GameTick,
+                AdviceFreshness.ExpiresGameTick(context.GameTick, priority)),
             BriefingRef: new BriefingRef(context.Minister, context.BriefingVersion, $"{context.Domain}:{context.BriefingVersion}")
         );
     }
@@ -136,7 +137,7 @@ internal static class AdviceResponseNormalizer
         {
             NormalizedFlagRequests requests = ResourceRequestNormalizer.NormalizeFlagRequests(
                 node,
-                MapFlagSeverityToAdvicePriority(strict.Severity),
+                strict.Priority,
                 context,
                 json);
             AgentFlag normalized = strict with
@@ -163,7 +164,7 @@ internal static class AdviceResponseNormalizer
         return new NormalizedFlagResult(new AgentFlag(
             Id: id,
             SourceMinister: context.Minister,
-            Severity: InferFlagSeverity(raw),
+            Priority: InferFlagPriority(raw),
             Domain: context.Domain,
             Summary: LlmResponseParser.HumanizeIdentifier(raw),
             Detail: raw,
@@ -184,7 +185,7 @@ internal static class AdviceResponseNormalizer
 
     private static bool HasRequiredFlagEnvelope(JsonNode node, AgentFlag flag) =>
         !string.IsNullOrWhiteSpace(flag.Id) &&
-        node["severity"] is not null &&
+        node["priority"] is not null &&
         !string.IsNullOrWhiteSpace(flag.Domain) &&
         node["domain"] is not null &&
         !string.IsNullOrWhiteSpace(flag.Summary) &&
@@ -227,7 +228,7 @@ internal static class AdviceResponseNormalizer
         return ids;
     }
 
-    private static FlagSeverity InferFlagSeverity(string raw)
+    private static Priority InferFlagPriority(string raw)
     {
         string normalized = LlmResponseParser.NormalizeIdentifier(raw);
         if (normalized.Contains("urgent") ||
@@ -235,18 +236,9 @@ internal static class AdviceResponseNormalizer
             normalized.Contains("shortage") ||
             normalized.Contains("nomeals"))
         {
-            return FlagSeverity.High;
+            return Priority.High;
         }
 
-        return FlagSeverity.Medium;
+        return Priority.Medium;
     }
-
-    private static AdvicePriority MapFlagSeverityToAdvicePriority(FlagSeverity severity) => severity switch
-    {
-        FlagSeverity.Critical => AdvicePriority.Critical,
-        FlagSeverity.High => AdvicePriority.High,
-        FlagSeverity.Medium => AdvicePriority.Medium,
-        _ => AdvicePriority.Low
-    };
-
 }

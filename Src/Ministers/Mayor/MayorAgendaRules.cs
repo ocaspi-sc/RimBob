@@ -28,7 +28,7 @@ public sealed class MayorAgendaRules
         IReadOnlyList<AgentFlag> mediumOrHigher = activeFlags ?? [];
         foreach (AgentFlag flag in mediumOrHigher)
         {
-            directives.Add($"Feeder flag from {flag.SourceMinister} ({flag.Severity}, {flag.Domain}): {flag.Summary}. Reflect this in the matching state_of_the_union category and agenda rationale when relevant.");
+            directives.Add($"Feeder flag from {flag.SourceMinister} ({flag.Priority}, {flag.Domain}): {flag.Summary}. Reflect this in the matching state_of_the_union category and agenda rationale when relevant.");
         }
 
         bool quietDay = mediumOrHigher.Count == 0;

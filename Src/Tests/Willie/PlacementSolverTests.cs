@@ -434,7 +434,7 @@ public sealed class PlacementSolverTests
             Temperature: new TempNeed(TemperatureBand.Freezing, true),
             MaterialsOnHand: [new MaterialHint("BlocksGranite", 100)],
             Deadline: null,
-            Priority: AdvicePriority.Medium,
+            Priority: Priority.Medium,
             Source: "Chef",
             Constraints: []);
 
@@ -483,7 +483,7 @@ public sealed class PlacementSolverTests
             Temperature: null,
             MaterialsOnHand: [new MaterialHint("BlocksGranite", 100)],
             Deadline: null,
-            Priority: AdvicePriority.Medium,
+            Priority: Priority.Medium,
             Source: "Willie",
             Constraints: []);
 

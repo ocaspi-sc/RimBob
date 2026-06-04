@@ -4,281 +4,191 @@ namespace RimBob.Core.Ministers;
 
 public static class MinisterRuleTableEvaluator
 {
-    public static MinisterRuleTableResult EvaluateAllHits<TBriefing>(
+    public static RuleRun EvaluateAllHits<TBriefing>(
         IReadOnlyList<MinisterRule<TBriefing>> rules,
         TBriefing briefing,
         string source = "rules",
         IReadOnlyList<MinisterRuleTraceDescriptor<TBriefing>>? additionalRuleDescriptors = null)
     {
-        List<RuleEmission> matchedEmissions = [];
+        List<Decision> matchedDecisions = [];
+        HashSet<RuleId> matchedRules = [];
         foreach (MinisterRule<TBriefing> rule in rules)
         {
-            if (rule.Matches(briefing))
-                matchedEmissions.Add(rule.Build(briefing));
+            if (!rule.Matches(briefing))
+                continue;
+
+            matchedRules.Add(rule.Id);
+            matchedDecisions.AddRange(rule.Build(briefing));
         }
 
-        if (matchedEmissions.Count == 0)
-        {
-            RuleTraceDetails emptyDiagnostics = BuildTrace(
-                rules,
-                briefing,
-                selectedRule: null,
-                emittedEmissions: [],
-                source: source,
-                additionalRuleDescriptors: additionalRuleDescriptors);
-            return new MinisterRuleTableResult(false, null, emptyDiagnostics);
-        }
-
-        MinisterRuleAggregate aggregate = Aggregate(matchedEmissions);
+        IReadOnlyList<Decision> decisions = Aggregate(matchedDecisions);
         RuleTraceDetails diagnostics = BuildTrace(
             rules,
             briefing,
-            aggregate.Trace,
-            aggregate.DedupedEmissions,
-            source,
-            additionalRuleDescriptors: additionalRuleDescriptors);
-        Decision decision = new(aggregate.Advice, aggregate.Flags, aggregate.Trace, diagnostics);
-        return new MinisterRuleTableResult(true, decision, diagnostics);
+            decisions,
+            matchedRules,
+            additionalRuleDescriptors);
+        return new RuleRun(decisions, diagnostics);
     }
 
-    public static MinisterRuleAggregate Aggregate(IReadOnlyList<RuleEmission> emissions)
+    public static IReadOnlyList<Decision> Aggregate(IReadOnlyList<Decision> decisions)
     {
-        IReadOnlyList<RuleEmission> orderedEmissions = emissions
-            .OrderByDescending(emission => emission.Advice.Priority)
-            .ThenBy(emission => emission.Rule, StringComparer.Ordinal)
+        IReadOnlyList<Decision> ordered = decisions
+            .OrderByDescending(DecisionPriority)
+            .ThenBy(decision => decision.Rule.Value, StringComparer.Ordinal)
+            .ThenBy(DecisionKindOrder)
             .ToList();
-        IReadOnlyList<RuleEmission> dedupedEmissions = DeduplicateFlagRequests(orderedEmissions)
-            .ToList();
-        IReadOnlyList<AdviceItem> advice = orderedEmissions
-            .Select(emission => emission.Advice)
-            .ToList();
-        IReadOnlyList<AgentFlag> flags = dedupedEmissions
-            .SelectMany(emission => emission.Flags)
-            .ToList();
-        string trace = CompositeTrace(orderedEmissions);
-        return new MinisterRuleAggregate(orderedEmissions, dedupedEmissions, advice, flags, trace);
+
+        HashSet<BuildingRequestKey> seenBuildingRequests = [];
+        HashSet<LaborRequestKey> seenLaborRequests = [];
+        HashSet<ItemRequestKey> seenItemRequests = [];
+        HashSet<AttentionRequestKey> seenAttentionRequests = [];
+        List<Decision> deduped = [];
+
+        foreach (Decision decision in ordered)
+        {
+            switch (decision)
+            {
+                case RequestBuild request when seenBuildingRequests.Add(BuildingRequestKey.For(request.Request)):
+                    deduped.Add(request);
+                    break;
+                case RequestLabor request when seenLaborRequests.Add(LaborRequestKey.For(request.Request)):
+                    deduped.Add(request);
+                    break;
+                case RequestItem request when seenItemRequests.Add(ItemRequestKey.For(request.Request)):
+                    deduped.Add(request);
+                    break;
+                case RequestAttention request when seenAttentionRequests.Add(AttentionRequestKey.For(request.Request)):
+                    deduped.Add(request);
+                    break;
+                case Advise or Escalate:
+                    deduped.Add(decision);
+                    break;
+            }
+        }
+
+        return deduped;
     }
 
-    public static string CompositeTrace(IReadOnlyList<RuleEmission> emissions) =>
-        emissions.Count == 1
-            ? emissions[0].Rule
-            : $"rules:{string.Join("+", emissions.Select(emission => emission.Rule))}";
+    public static string CompositeTrace(IReadOnlyList<Decision> decisions)
+    {
+        IReadOnlyList<RuleId> rules = decisions
+            .Select(decision => decision.Rule)
+            .Distinct()
+            .ToList();
+        return rules.Count == 1
+            ? rules[0].Value
+            : $"rules:{string.Join("+", rules.Select(rule => rule.Value))}";
+    }
 
     public static RuleTraceDetails BuildTrace<TBriefing>(
         IReadOnlyList<MinisterRule<TBriefing>> rules,
         TBriefing briefing,
-        string? selectedRule,
-        IReadOnlyList<RuleEmission> emittedEmissions,
-        string source = "rules",
-        IReadOnlyList<RuleTraceEntry>? additionalMatchedSignals = null,
-        IReadOnlyList<MinisterRuleTraceDescriptor<TBriefing>>? additionalRuleDescriptors = null)
+        IReadOnlyList<Decision> decisions,
+        IReadOnlySet<RuleId>? matchedRules = null,
+        IReadOnlyList<MinisterRuleTraceDescriptor<TBriefing>>? additionalRuleDescriptors = null,
+        RuleId? selectedRuleOverride = null)
     {
-        Dictionary<string, RuleEmission> emittedByRule = emittedEmissions.ToDictionary(
-            emission => emission.Rule,
-            StringComparer.OrdinalIgnoreCase);
-        List<RuleTraceEntry> matchedSignals = [];
+        HashSet<RuleId> emittedRules = decisions.Select(decision => decision.Rule).ToHashSet();
+        HashSet<RuleId> selectedRules = matchedRules is null
+            ? emittedRules
+            : matchedRules.ToHashSet();
         List<RuleEvaluationTrace> allRules = [];
 
         foreach (MinisterRule<TBriefing> rule in rules)
         {
-            bool matched = rule.Matches(briefing);
             string reason = rule.Reason(briefing);
-            if (matched)
-                matchedSignals.Add(new RuleTraceEntry(rule.Id, "selected", reason));
+            IReadOnlyList<Decision> ruleDecisions = decisions
+                .Where(decision => decision.Rule == rule.Id)
+                .ToList();
+            RuleOutcome outcome = ruleDecisions.Any(decision => decision is Escalate)
+                ? RuleOutcome.Escalated
+                : selectedRules.Contains(rule.Id)
+                    ? RuleOutcome.Selected
+                    : RuleOutcome.NotMatched;
 
-            bool emitted = emittedByRule.TryGetValue(rule.Id, out RuleEmission? emission);
             allRules.Add(new RuleEvaluationTrace(
                 rule.Id,
-                emitted ? "selected" : "not_matched",
+                outcome,
                 reason,
-                OutputActionFor(emission),
-                emitted ? reason : null));
+                OutputActionFor(ruleDecisions),
+                reason));
         }
-
-        if (additionalMatchedSignals is not null)
-            matchedSignals.AddRange(additionalMatchedSignals);
 
         if (additionalRuleDescriptors is not null)
         {
+            RuleId? selectedRule = selectedRuleOverride ?? SelectedRule(decisions);
             foreach (MinisterRuleTraceDescriptor<TBriefing> descriptor in additionalRuleDescriptors)
             {
                 string reason = descriptor.Reason(briefing);
-                string outcome = descriptor.Outcome(briefing, selectedRule);
+                RuleOutcome outcome = descriptor.Outcome(briefing, selectedRule);
                 allRules.Add(new RuleEvaluationTrace(
                     descriptor.Id,
                     outcome,
                     reason,
                     "",
-                    outcome == "not_matched" ? null : reason));
+                    reason));
             }
         }
 
-        RuleTraceDetails details = new(selectedRule, matchedSignals, [])
+        return new RuleTraceDetails(selectedRuleOverride ?? SelectedRule(decisions), allRules);
+    }
+
+    private static RuleId? SelectedRule(IReadOnlyList<Decision> decisions)
+    {
+        IReadOnlyList<RuleId> rules = decisions
+            .Select(decision => decision.Rule)
+            .Distinct()
+            .ToList();
+        return rules.Count == 1 ? rules[0] : (RuleId?)null;
+    }
+
+    private static Priority DecisionPriority(Decision decision) =>
+        decision switch
         {
-            AllRules = allRules
+            Advise advice => advice.Priority,
+            RequestBuild request => request.Priority,
+            RequestLabor request => request.Priority,
+            RequestItem request => request.Priority,
+            RequestAttention request => request.Priority,
+            Escalate => Priority.Critical,
+            _ => Priority.Low
         };
-        return WithRuleEmissions(details, emittedEmissions, source);
-    }
 
-    private static IReadOnlyList<RuleEmission> DeduplicateFlagRequests(IReadOnlyList<RuleEmission> orderedEmissions)
-    {
-        HashSet<BuildingRequestKey> seenBuildingRequests = [];
-        HashSet<LaborRequestKey> seenLaborRequests = [];
-        HashSet<ItemRequestKey> seenItemRequests = [];
-        HashSet<AttentionRequestKey> seenAttentionRequests = [];
-        List<RuleEmission> dedupedEmissions = [];
-
-        foreach (RuleEmission emission in orderedEmissions)
+    private static int DecisionKindOrder(Decision decision) =>
+        decision switch
         {
-            IReadOnlyList<AgentFlag> dedupedFlags = emission.Flags
-                .Select(flag => DeduplicateFlagRequests(
-                    flag,
-                    seenBuildingRequests,
-                    seenLaborRequests,
-                    seenItemRequests,
-                    seenAttentionRequests))
-                .ToList();
-            dedupedEmissions.Add(emission with { Flags = dedupedFlags });
-        }
-
-        return dedupedEmissions;
-    }
-
-    private static AgentFlag DeduplicateFlagRequests(
-        AgentFlag flag,
-        HashSet<BuildingRequestKey> seenBuildingRequests,
-        HashSet<LaborRequestKey> seenLaborRequests,
-        HashSet<ItemRequestKey> seenItemRequests,
-        HashSet<AttentionRequestKey> seenAttentionRequests)
-    {
-        IReadOnlyList<BuildingRequest> buildingRequests = FilterUnseenRequests(
-            flag.BuildingRequests,
-            seenBuildingRequests,
-            BuildingRequestKey.For);
-        IReadOnlyList<LaborRequest> laborRequests = FilterUnseenRequests(
-            flag.LaborRequests,
-            seenLaborRequests,
-            LaborRequestKey.For);
-        IReadOnlyList<ItemRequest> itemRequests = FilterUnseenRequests(
-            flag.ItemRequests,
-            seenItemRequests,
-            ItemRequestKey.For);
-        IReadOnlyList<AttentionRequest> attentionRequests = FilterUnseenRequests(
-            flag.Attention,
-            seenAttentionRequests,
-            AttentionRequestKey.For);
-
-        return flag with
-        {
-            BuildingRequests = NullIfEmpty(buildingRequests),
-            LaborRequests = NullIfEmpty(laborRequests),
-            ItemRequests = NullIfEmpty(itemRequests),
-            Attention = NullIfEmpty(attentionRequests)
+            Advise => 0,
+            RequestBuild => 1,
+            RequestLabor => 2,
+            RequestItem => 3,
+            RequestAttention => 4,
+            Escalate => 5,
+            _ => 99
         };
-    }
 
-    private static IReadOnlyList<TRequest> FilterUnseenRequests<TRequest, TKey>(
-        IReadOnlyList<TRequest>? requests,
-        HashSet<TKey> seenRequests,
-        Func<TRequest, TKey> keyFor)
-        where TKey : notnull
+    private static string OutputActionFor(IReadOnlyList<Decision> decisions)
     {
-        if (requests is null || requests.Count == 0)
-            return [];
-
-        List<TRequest> filtered = [];
-        foreach (TRequest request in requests)
-        {
-            if (seenRequests.Add(keyFor(request)))
-                filtered.Add(request);
-        }
-
-        return filtered;
-    }
-
-    private static IReadOnlyList<T>? NullIfEmpty<T>(IReadOnlyList<T> requests) =>
-        requests.Count == 0 ? null : requests;
-
-    private static RuleTraceDetails WithRuleEmissions(
-        RuleTraceDetails details,
-        IReadOnlyList<RuleEmission> emissions,
-        string source)
-    {
-        List<RuleEmittedAdviceTrace> emittedAdvice = [];
-        List<RuleEmittedActionTrace> emittedActions = [];
-        List<RuleEmittedFlagTrace> emittedFlags = [];
-
-        foreach (RuleEmission emission in emissions)
-        {
-            AdviceItem item = emission.Advice;
-            emittedAdvice.Add(new RuleEmittedAdviceTrace(
-                Source: source,
-                Rule: emission.Rule,
-                AdviceId: item.Id,
-                Priority: item.Priority,
-                Title: item.Title,
-                ActionCount: item.Actions.Count));
-
-            for (int i = 0; i < item.Actions.Count; i++)
-            {
-                AdviceAction action = item.Actions[i];
-                emittedActions.Add(new RuleEmittedActionTrace(
-                    Source: source,
-                    Rule: emission.Rule,
-                    AdviceId: item.Id,
-                    ActionIndex: i,
-                    Kind: action.Kind,
-                    Instruction: action.Instruction,
-                    ApplyKind: action.Apply?.Kind,
-                    ApplyLabel: action.Apply?.Label,
-                    ApplyTargetSummary: action.Apply?.TargetSummary));
-            }
-
-            foreach (AgentFlag flag in emission.Flags)
-            {
-                emittedFlags.Add(new RuleEmittedFlagTrace(
-                    Source: source,
-                    Rule: emission.Rule,
-                    FlagId: flag.Id,
-                    Severity: flag.Severity,
-                    Summary: flag.Summary,
-                    RequestCount:
-                        (flag.BuildingRequests?.Count ?? 0) +
-                        (flag.LaborRequests?.Count ?? 0) +
-                        (flag.ItemRequests?.Count ?? 0) +
-                        (flag.Attention?.Count ?? 0)));
-            }
-        }
-
-        return details with
-        {
-            EmittedAdvice = emittedAdvice,
-            EmittedActions = emittedActions,
-            EmittedFlags = emittedFlags
-        };
-    }
-
-    private static string OutputActionFor(RuleEmission? emission)
-    {
-        if (emission is null)
+        if (decisions.Count == 0)
             return "";
 
         List<string> parts = [];
-        IReadOnlyList<string> actionKinds = emission.Advice.Actions
+        IReadOnlyList<string> actionKinds = decisions
+            .OfType<Advise>()
+            .SelectMany(advice => advice.Actions)
             .Select(action => ToSnakeCase(action.Kind.ToString()))
             .Distinct(StringComparer.Ordinal)
             .ToList();
         if (actionKinds.Count > 0)
             parts.Add($"actions: {string.Join(", ", actionKinds)}");
 
-        int flagCount = emission.Flags.Count;
-        int requestCount = emission.Flags.Sum(flag =>
-            (flag.BuildingRequests?.Count ?? 0) +
-            (flag.LaborRequests?.Count ?? 0) +
-            (flag.ItemRequests?.Count ?? 0) +
-            (flag.Attention?.Count ?? 0));
-        if (flagCount > 0)
-            parts.Add(requestCount > 0 ? $"flags: {flagCount}; requests: {requestCount}" : $"flags: {flagCount}");
+        int requestCount = decisions.Count(decision =>
+            decision is RequestBuild or RequestLabor or RequestItem or RequestAttention);
+        if (requestCount > 0)
+            parts.Add($"requests: {requestCount}");
+
+        if (decisions.Any(decision => decision is Escalate))
+            parts.Add("escalate");
 
         return string.Join("; ", parts);
     }

@@ -89,7 +89,7 @@ public static class StatusEndpoints
             CancellationToken ct) =>
         {
             MayorBriefing briefing = briefings.GetMayorBriefing();
-            IReadOnlyList<AgentFlag> activeFlags = flags.Active(FlagSeverity.Medium);
+            IReadOnlyList<AgentFlag> activeFlags = flags.Active(Priority.Medium);
             string key = PromptInspectorCache.BuildKey(
                 "mayor",
                 briefing.BriefingVersion,

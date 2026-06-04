@@ -452,7 +452,7 @@ public sealed class MinisterOfWillieTests
         new(
             Id: "food:freezer_missing",
             SourceMinister: "Chef",
-            Severity: FlagSeverity.Medium,
+            Priority: Priority.Medium,
             Domain: "food",
             Summary: "Food storage needs freezer support",
             BuildingRequests:
@@ -464,7 +464,7 @@ public sealed class MinisterOfWillieTests
                     TargetDef: "Cooler",
                     RoomClass: RoomClass.Freezer,
                     Temperature: new TempNeed(TemperatureBand.Freezing, MustHold: true),
-                    Priority: AdvicePriority.Medium,
+                    Priority: Priority.Medium,
                     RequestedFrom: requestedFrom)
             ]);
 
@@ -477,7 +477,7 @@ public sealed class MinisterOfWillieTests
         return new AgentFlag(
             Id: "food:freezer_missing",
             SourceMinister: "Chef",
-            Severity: FlagSeverity.Medium,
+            Priority: Priority.Medium,
             Domain: "food",
             Summary: "Food storage needs freezer support",
             BuildingRequests: [request]);
@@ -489,7 +489,7 @@ public sealed class MinisterOfWillieTests
         return new AgentFlag(
             Id: "food:duplicate_freezer_missing",
             SourceMinister: "Chef",
-            Severity: FlagSeverity.Medium,
+            Priority: Priority.Medium,
             Domain: "food",
             Summary: "Food storage needs freezer support",
             BuildingRequests: [request, request]);
@@ -499,7 +499,7 @@ public sealed class MinisterOfWillieTests
         new(
             Id: "industry:workshop_needed",
             SourceMinister: "Industry",
-            Severity: FlagSeverity.Medium,
+            Priority: Priority.Medium,
             Domain: "industry",
             Summary: "Production needs a workshop",
             BuildingRequests:
@@ -512,7 +512,7 @@ public sealed class MinisterOfWillieTests
                     RoomClass: RoomClass.Workshop,
                     CapacityNeed: new CapacityNeed(CapacityMeasure.WorkSlots, 1),
                     Adjacency: [new AdjacencyHint(AdjacencyRelation.Near, "storage")],
-                    Priority: AdvicePriority.Medium,
+                    Priority: Priority.Medium,
                     RequestedFrom: requestedFrom)
             ]);
 
@@ -540,7 +540,7 @@ public sealed class MinisterOfWillieTests
         return new AdviceItem(
             Id: "willie_prior_options",
             Minister: "Willie",
-            Priority: AdvicePriority.Medium,
+            Priority: Priority.Medium,
             Title: "Prior freezer options",
             Body: "Previously solved freezer placement.",
             Rationale: "Keep this solved placement while live validation is unavailable.",
@@ -558,8 +558,7 @@ public sealed class MinisterOfWillieTests
                         AssetCount: option.BlueprintGroup.Assets.Count))
             ],
             GuideCitationIds: [],
-            IssuedAt: FixedNow,
-            ExpiresAt: FixedNow.AddHours(6),
+            Stamp: new AdviceStamp(FixedNow, FixedNow.AddHours(6)),
             Options: [option]);
     }
 

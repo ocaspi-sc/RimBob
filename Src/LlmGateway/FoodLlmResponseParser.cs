@@ -98,20 +98,21 @@ public static class FoodLlmResponseParser
                     : now;
                 DateTimeOffset expiresAt = IsUsefulExpiry(item.ExpiresAt, now)
                     ? item.ExpiresAt
-                    : now.AddHours(item.Priority >= AdvicePriority.High ? 4 : 24);
+                    : now.AddHours(item.Priority >= Priority.High ? 4 : 24);
 
                 return item with
                 {
                     Minister = "Chef",
-                    IssuedAt = issuedAt,
-                    ExpiresAt = expiresAt,
-                    IssuedGameDate = briefing.Date,
-                    IssuedGameTick = item.IssuedGameTick is > 0
-                        ? item.IssuedGameTick
-                        : briefing.GameTick,
-                    ExpiresGameTick = IsUsefulGameExpiry(item.ExpiresGameTick, briefing.GameTick)
-                        ? item.ExpiresGameTick
-                        : AdviceFreshness.ExpiresGameTick(briefing.GameTick, item.Priority),
+                    Stamp = new AdviceStamp(
+                        issuedAt,
+                        expiresAt,
+                        briefing.Date,
+                        item.IssuedGameTick is > 0
+                            ? item.IssuedGameTick
+                            : briefing.GameTick,
+                        IsUsefulGameExpiry(item.ExpiresGameTick, briefing.GameTick)
+                            ? item.ExpiresGameTick
+                            : AdviceFreshness.ExpiresGameTick(briefing.GameTick, item.Priority)),
                     BriefingRef = item.BriefingRef is null
                         ? new BriefingRef("Chef", briefing.BriefingVersion, $"food:{briefing.BriefingVersion}")
                         : item.BriefingRef with { Minister = "Chef" }
@@ -160,7 +161,7 @@ public static class FoodLlmResponseParser
             item is not JsonObject obj ||
             obj.Count == 0 ||
             item["id"] is not null &&
-            item["severity"] is not null &&
+            item["priority"] is not null &&
             item["domain"] is not null &&
             item["summary"] is not null);
     }
@@ -175,6 +176,7 @@ public static class FoodLlmResponseParser
                 !string.IsNullOrWhiteSpace(advice.Title) &&
                 !string.IsNullOrWhiteSpace(advice.Body) &&
             !string.IsNullOrWhiteSpace(advice.Rationale) &&
+            advice.Stamp is not null &&
             advice.Actions.All(action =>
                 !string.IsNullOrWhiteSpace(action.Instruction)) &&
             response.Flags.All(flag =>

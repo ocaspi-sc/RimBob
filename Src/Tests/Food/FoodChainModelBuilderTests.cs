@@ -121,8 +121,14 @@ public sealed class FoodChainModelBuilderTests
 
     private static IReadOnlyList<AdviceItem> DecisionAdvice(FoodBriefing briefing)
     {
-        Decision decision = new Rules().Evaluate(briefing, ColonyContext.Default)
-            .Should().BeOfType<Decision>().Subject;
+        RuleRun run = new Rules().Evaluate(briefing, ColonyContext.Default);
+        ProjectedRuleRun decision = run.ProjectFor(
+            "Chef",
+            "food",
+            briefing.BriefingVersion,
+            briefing.Date,
+            briefing.GameTick,
+            new DateTimeOffset(2026, 6, 2, 17, 0, 0, TimeSpan.Zero));
         decision.Advice.Should().NotBeEmpty();
         return decision.Advice;
     }

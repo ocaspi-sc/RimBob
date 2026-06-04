@@ -128,7 +128,7 @@ public sealed class WillieSolverStoreTests
             Urgency: Urgency.Soon,
             Deadline: new Deadline(DeadlineKind.ByDay, 4),
             Quantity: 1,
-            Priority: AdvicePriority.Medium,
+            Priority: Priority.Medium,
             RequestedFrom: "Willie");
 
     private static WillieSolverSnapshot Snapshot(

@@ -113,7 +113,7 @@ public sealed class TemplateAnchoredGeneratorTests
             Temperature: new TempNeed(TemperatureBand.Freezing, true),
             MaterialsOnHand: [],
             Deadline: null,
-            Priority: AdvicePriority.Medium,
+            Priority: Priority.Medium,
             Source: "Chef",
             Constraints: []);
 

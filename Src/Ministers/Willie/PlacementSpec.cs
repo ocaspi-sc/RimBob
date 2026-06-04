@@ -14,7 +14,7 @@ public sealed record PlacementSpec(
     TempNeed? Temperature,
     IReadOnlyList<MaterialHint> MaterialsOnHand,
     Deadline? Deadline,
-    AdvicePriority? Priority,
+    Priority? Priority,
     string? Source,
     IReadOnlyList<string> Constraints)
 {

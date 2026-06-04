@@ -95,7 +95,7 @@ public static class MinisterEndpoints
             if (scope.Key == "mayor")
             {
                 MayorBriefing briefing = briefings.GetMayorBriefing();
-                IReadOnlyList<AgentFlag> activeFlags = flags.Active(FlagSeverity.Medium);
+                IReadOnlyList<AgentFlag> activeFlags = flags.Active(Priority.Medium);
                 string key = PromptInspectorCache.BuildKey(
                     scope.Key,
                     briefing.BriefingVersion,

@@ -16,23 +16,19 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
         this.timeProvider = timeProvider ?? TimeProvider.System;
     }
 
-    public RulesResult Evaluate(WelfareSourceBriefing briefing, ColonyContext context)
+    public RuleRun Evaluate(WelfareSourceBriefing briefing, ColonyContext context)
     {
         DateTimeOffset now = timeProvider.GetUtcNow();
         IReadOnlyList<MinisterRule<WelfareSourceBriefing>> rules = RuleTable(now);
         IReadOnlyList<MinisterRuleTraceDescriptor<WelfareSourceBriefing>> fallbackRuleDescriptors = FallbackRuleDescriptors();
-        MinisterRuleTableResult ruleTableResult = MinisterRuleTableEvaluator.EvaluateAllHits(
+        RuleRun ruleRun = MinisterRuleTableEvaluator.EvaluateAllHits(
             rules,
             briefing,
             additionalRuleDescriptors: fallbackRuleDescriptors);
-        if (ruleTableResult.Decision is Decision decision)
-            return decision;
+        if (ruleRun.Decisions.Count > 0)
+            return ruleRun;
 
-        return new Decision(
-            [],
-            [],
-            "needs_stable",
-            DiagnosticsForFallback(rules, fallbackRuleDescriptors, briefing, "needs_stable"));
+        return new RuleRun([], DiagnosticsForFallback(rules, fallbackRuleDescriptors, briefing, "needs_stable"));
     }
 
     private IReadOnlyList<MinisterRule<WelfareSourceBriefing>> RuleTable(DateTimeOffset now) =>
@@ -94,15 +90,15 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
             : "comfort_or_beauty_need_low=false";
     }
 
-    private RuleEmission BreakRiskEmission(WelfareSourceBriefing briefing, DateTimeOffset now)
+    private IReadOnlyList<Decision> BreakRiskEmission(WelfareSourceBriefing briefing, DateTimeOffset now)
     {
-        AdvicePriority priority = briefing.Mood.BreakRiskCount * 2 >= briefing.ColonistCount
-            ? AdvicePriority.Critical
-            : AdvicePriority.High;
+        Priority priority = briefing.Mood.BreakRiskCount * 2 >= briefing.ColonistCount
+            ? Priority.Critical
+            : Priority.High;
         WelfarePawnMood? pawn = WorstAtRiskPawn(briefing);
         string pawnName = pawn?.Name ?? "the worst-risk pawn";
         DominantDriver driver = DominantDriverFor(pawn);
-        AgentFlag? routedFlag = BreakRiskDriverFlag(driver, pawnName, priority, now);
+        IReadOnlyList<Decision> routedRequests = BreakRiskDriverRequests(driver, pawnName, priority);
 
         return EmitAdvice(
             briefing,
@@ -111,16 +107,16 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
             priority,
             $"{briefing.Mood.BreakRiskCount} colonist{Plural(briefing.Mood.BreakRiskCount)} near mental break",
             $"{pawnName} is the clearest current break-risk example; dominant driver: {driver.Label}.",
-            BreakRiskRationale(driver, routedFlag),
+            BreakRiskRationale(driver, routedRequests.Count > 0),
             [new AdviceAction(AdviceActionKind.Note, $"Address {driver.Label} for {pawnName} before a mental break.", Owner: MinisterName)],
-            routedFlag is null ? [] : [routedFlag]);
+            routedRequests);
     }
 
-    private RuleEmission ShelterFloorEmission(WelfareSourceBriefing briefing, DateTimeOffset now)
+    private IReadOnlyList<Decision> ShelterFloorEmission(WelfareSourceBriefing briefing, DateTimeOffset now)
     {
         bool needsBeds = briefing.Sleep.BedDeficit > 0;
         int bedNeed = Math.Max(1, briefing.Sleep.BedDeficit);
-        AdvicePriority priority = AdvicePriority.High;
+        Priority priority = Priority.High;
         BuildingRequest request = needsBeds
             ? new BuildingRequest(
                 Request: $"add {bedNeed} bed{Plural(bedNeed)} in a roofed barracks",
@@ -140,11 +136,9 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
                 CapacityNeed: new CapacityNeed(CapacityMeasure.Occupants, briefing.ColonistCount),
                 Priority: priority,
                 RequestedFrom: "Willie");
-        AgentFlag flag = BuildFlag(
+        IReadOnlyList<Decision> requests = BuildRequestDecisions(
             "shelter_floor",
             priority,
-            needsBeds ? "Sleeping bed capacity needed" : "Sleeping room needs roof",
-            now,
             buildingRequests: [request]);
 
         return EmitAdvice(
@@ -156,19 +150,17 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
             ShelterBody(briefing, needsBeds, bedNeed),
             ShelterRationale(briefing, needsBeds),
             [new AdviceAction(AdviceActionKind.PlaceBlueprint, ShelterAction(briefing, needsBeds, bedNeed), Owner: "Willie")],
-            [flag]);
+            requests);
     }
 
-    private RuleEmission RecreationGapEmission(WelfareSourceBriefing briefing, DateTimeOffset now)
+    private IReadOnlyList<Decision> RecreationGapEmission(WelfareSourceBriefing briefing, DateTimeOffset now)
     {
         bool canProveNoSource = briefing.DataCoverage.HasBuildings && !briefing.Recreation.HasRecreationSource;
-        AdvicePriority priority = canProveNoSource ? AdvicePriority.Medium : AdvicePriority.Low;
-        IReadOnlyList<AgentFlag> flags = canProveNoSource
-            ? [BuildFlag(
+        Priority priority = canProveNoSource ? Priority.Medium : Priority.Low;
+        IReadOnlyList<Decision> requests = canProveNoSource
+            ? BuildRequestDecisions(
                 "recreation_gap",
                 priority,
-                "Starter recreation source needed",
-                now,
                 buildingRequests:
                 [
                     new BuildingRequest(
@@ -180,7 +172,7 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
                         CapacityNeed: new CapacityNeed(CapacityMeasure.Occupants, Math.Max(1, briefing.ColonistCount)),
                         Priority: priority,
                         RequestedFrom: "Willie")
-                ])]
+                ])
             : [];
 
         string body = canProveNoSource
@@ -199,20 +191,18 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
             body,
             rationale,
             [new AdviceAction(canProveNoSource ? AdviceActionKind.PlaceBlueprint : AdviceActionKind.Note, RecreationAction(canProveNoSource), Owner: canProveNoSource ? "Willie" : MinisterName)],
-            flags);
+            requests);
     }
 
-    private RuleEmission ComfortBeautyEmission(WelfareSourceBriefing briefing, DateTimeOffset now)
+    private IReadOnlyList<Decision> ComfortBeautyEmission(WelfareSourceBriefing briefing, DateTimeOffset now)
     {
         WelfareThoughtGroup? thoughtGroup = ThoughtGroup(briefing, ThoughtCategory.ComfortBeauty);
         bool hasConcreteTableThought = thoughtGroup is not null && IsDiningTablePressure(thoughtGroup.ExampleLabel);
-        AdvicePriority priority = AdvicePriority.Low;
-        IReadOnlyList<AgentFlag> flags = hasConcreteTableThought
-            ? [BuildFlag(
+        Priority priority = Priority.Low;
+        IReadOnlyList<Decision> requests = hasConcreteTableThought
+            ? BuildRequestDecisions(
                 "comfort_beauty",
                 priority,
-                "Dining table comfort fix needed",
-                now,
                 buildingRequests:
                 [
                     new BuildingRequest(
@@ -224,7 +214,7 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
                         CapacityNeed: new CapacityNeed(CapacityMeasure.Occupants, Math.Max(1, briefing.ColonistCount)),
                         Priority: priority,
                         RequestedFrom: "Willie")
-                ])]
+                ])
             : [];
 
         string evidence = thoughtGroup is not null
@@ -242,75 +232,73 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
                 : $"{evidence} Improve comfort or beauty only where the fix is concrete.",
             "Comfort/beauty pressure is lower urgency than sleep shelter and break risk, but it is a recurring Mood & Needs drag.",
             [new AdviceAction(hasConcreteTableThought ? AdviceActionKind.PlaceBlueprint : AdviceActionKind.Note, ComfortBeautyAction(hasConcreteTableThought), Owner: hasConcreteTableThought ? "Willie" : MinisterName)],
-            flags);
+            requests);
     }
 
-    private static RuleEmission EmitAdvice(
+    private static IReadOnlyList<Decision> EmitAdvice(
         WelfareSourceBriefing briefing,
         DateTimeOffset now,
         string trace,
-        AdvicePriority priority,
+        Priority priority,
         string title,
         string body,
         string rationale,
         IReadOnlyList<AdviceAction> actions,
-        IReadOnlyList<AgentFlag> flags)
+        IReadOnlyList<Decision> requestDecisions)
     {
-        AdviceItem advice = new(
-            Id: $"{Domain}_{trace}",
-            Minister: MinisterName,
-            Priority: priority,
-            Title: title,
-            Body: body,
-            Rationale: rationale,
-            Actions: actions,
-            GuideCitationIds: [],
-            IssuedAt: now,
-            ExpiresAt: now.AddHours(priority >= AdvicePriority.High ? 4 : 24),
-            IssuedGameTick: briefing.GameTick,
-            ExpiresGameTick: AdviceFreshness.ExpiresGameTick(briefing.GameTick, priority),
-            BriefingRef: new BriefingRef(MinisterName, briefing.BriefingVersion, $"welfare:{briefing.BriefingVersion}"));
-
-        return new RuleEmission(trace, advice, flags);
+        return
+        [
+            new Advise(
+                trace,
+                priority,
+                title,
+                body,
+                rationale,
+                actions),
+            ..requestDecisions
+        ];
     }
 
-    private static AgentFlag BuildFlag(
+    private static IReadOnlyList<Decision> BuildRequestDecisions(
         string trace,
-        AdvicePriority priority,
-        string summary,
-        DateTimeOffset now,
+        Priority priority,
         IReadOnlyList<BuildingRequest>? buildingRequests = null,
         IReadOnlyList<ItemRequest>? itemRequests = null,
-        IReadOnlyList<AttentionRequest>? attention = null) =>
-        new(
-            Id: $"{Domain}:{trace}",
-            SourceMinister: MinisterName,
-            Severity: ToFlagSeverity(priority),
-            Domain: Domain,
-            Summary: summary,
-            BuildingRequests: NullIfEmpty(buildingRequests),
-            ItemRequests: NullIfEmpty(itemRequests),
-            Attention: NullIfEmpty(attention),
-            Detail: trace,
-            ExpiresAt: now.AddHours(24));
+        IReadOnlyList<AttentionRequest>? attention = null)
+    {
+        List<Decision> decisions = [];
+        decisions.AddRange((buildingRequests ?? []).Select(request => new RequestBuild(
+            trace,
+            request,
+            request.RequestedFrom ?? "Willie",
+            request.Priority ?? priority)));
+        decisions.AddRange((itemRequests ?? []).Select(request => new RequestItem(
+            trace,
+            request,
+            request.RequestedFrom ?? "Chief of Staff",
+            request.Priority ?? priority)));
+        decisions.AddRange((attention ?? []).Select(request => new RequestAttention(
+            trace,
+            request,
+            request.RequestedFrom ?? "Chief of Staff",
+            request.Priority ?? priority)));
+        return decisions;
+    }
 
-    private static AgentFlag? BreakRiskDriverFlag(
+    private static IReadOnlyList<Decision> BreakRiskDriverRequests(
         DominantDriver driver,
         string pawnName,
-        AdvicePriority priority,
-        DateTimeOffset now)
+        Priority priority)
     {
         string? owner = WelfareThoughtTaxonomy.SuggestedOwner(driver.Category);
         if (owner is null || !IsLiveOwner(owner))
-            return null;
+            return [];
 
         if (owner.Equals("Chef", StringComparison.OrdinalIgnoreCase))
         {
-            return BuildFlag(
+            return BuildRequestDecisions(
                 "break_risk_chef",
                 priority,
-                "Break-risk food driver needs Chef",
-                now,
                 itemRequests:
                 [
                     new ItemRequest(
@@ -321,11 +309,9 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
                 ]);
         }
 
-        return BuildFlag(
+        return BuildRequestDecisions(
             "break_risk_willie",
             priority,
-            "Break-risk room driver needs Willie",
-            now,
             attention:
             [
                 new AttentionRequest(
@@ -344,10 +330,10 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
         MinisterRuleTableEvaluator.BuildTrace(
             rules,
             briefing,
-            selectedRule,
-            emittedEmissions: [],
-            additionalMatchedSignals: [new RuleTraceEntry(selectedRule, "selected", NeedsStableReason(briefing))],
-            additionalRuleDescriptors: fallbackRuleDescriptors);
+            decisions: [],
+            matchedRules: new HashSet<RuleId> { selectedRule },
+            additionalRuleDescriptors: fallbackRuleDescriptors,
+            selectedRuleOverride: selectedRule);
 
     private static IReadOnlyList<MinisterRuleTraceDescriptor<WelfareSourceBriefing>> FallbackRuleDescriptors() =>
     [
@@ -357,8 +343,8 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
     private static string NeedsStableReason(WelfareSourceBriefing briefing) =>
         "no deterministic Welfare rule matched";
 
-    private static string SelectedWhenSelected(string rule, string? selectedRule) =>
-        string.Equals(rule, selectedRule, StringComparison.OrdinalIgnoreCase) ? "selected" : "not_matched";
+    private static RuleOutcome SelectedWhenSelected(RuleId rule, RuleId? selectedRule) =>
+        selectedRule == rule ? RuleOutcome.Selected : RuleOutcome.NotMatched;
 
     private static string ShelterBody(WelfareSourceBriefing briefing, bool needsBeds, int bedNeed)
     {
@@ -410,10 +396,10 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
             : string.Join("; ", lows.Select(need => $"{need.PawnName} {need.Need} {need.Value:P0}"));
     }
 
-    private static string BreakRiskRationale(DominantDriver driver, AgentFlag? routedFlag)
+    private static string BreakRiskRationale(DominantDriver driver, bool hasRoutedRequest)
     {
         string category = ToSnakeCase(driver.Category.ToString());
-        if (routedFlag is null)
+        if (!hasRoutedRequest)
             return $"The dominant thought maps to {category}; no live owner can take a concrete routed request yet.";
 
         return $"The dominant thought maps to {category}; Welfare routed a compact request to the live owning minister.";
@@ -462,17 +448,6 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
     private static bool IsLiveOwner(string owner) =>
         owner.Equals("Chef", StringComparison.OrdinalIgnoreCase) ||
         owner.Equals("Willie", StringComparison.OrdinalIgnoreCase);
-
-    private static FlagSeverity ToFlagSeverity(AdvicePriority priority) => priority switch
-    {
-        AdvicePriority.Critical => FlagSeverity.Critical,
-        AdvicePriority.High => FlagSeverity.High,
-        AdvicePriority.Medium => FlagSeverity.Medium,
-        _ => FlagSeverity.Low
-    };
-
-    private static IReadOnlyList<T>? NullIfEmpty<T>(IReadOnlyList<T>? values) =>
-        values is null || values.Count == 0 ? null : values;
 
     private static string ThoughtLabel(WelfareMoodThought thought) =>
         string.IsNullOrWhiteSpace(thought.Label)

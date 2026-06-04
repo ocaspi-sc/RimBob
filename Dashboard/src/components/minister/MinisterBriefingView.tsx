@@ -219,7 +219,7 @@ function WelfareBriefingHud({ briefing }: { briefing: Record<string, unknown> })
   return (
     <section className="welfare-briefing-hud" aria-label="Welfare briefing HUD">
       <div className="willie-hud-strip">
-        <div className="briefing-signal-strip welfare-signal-strip" aria-label="Welfare signal severity">
+        <div className="briefing-signal-strip welfare-signal-strip" aria-label="Welfare signal priority">
           {signalTiles.map(tile => (
             <article key={tile.key} className={`briefing-signal-tile ${tile.tone}`}>
               <header>
@@ -364,7 +364,7 @@ function WillieBriefingHud({ briefing }: { briefing: Record<string, unknown> }) 
   return (
     <section className="willie-briefing-hud" aria-label="Willie briefing HUD">
       <div className="willie-hud-strip">
-        <div className="briefing-signal-strip" aria-label="Willie signal severity">
+        <div className="briefing-signal-strip" aria-label="Willie signal priority">
           {signalTiles.map(tile => (
             <article key={tile.key} className={`briefing-signal-tile ${tile.tone}`}>
               <header>

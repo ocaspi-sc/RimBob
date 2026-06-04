@@ -57,7 +57,7 @@ export function MinisterAdviceView({
   const ministerAdvice = advice.filter(item => isScopeMinister(item.minister, scope));
   const ministerEvents = events.filter(event => isScopeMinister(event.source, scope));
   const latestMinisterEventId = ministerEvents[0]?.id ?? 'none';
-  const latestAdviceIssuedAt = ministerAdvice[0]?.issued_at ?? 'none';
+  const latestAdviceIssuedAt = ministerAdvice[0]?.stamp.issued_at ?? 'none';
   const trace = useAsyncResource(signal => fetchTrace(scope.key, signal), [
     scope.key,
     latestMinisterEventId,
@@ -308,14 +308,14 @@ function AgentFlagsPanel({ flags }: { flags: AgentFlag[] }) {
     >
       <div className="agent-flag-stack">
         {flags.map(flag => (
-          <section className={`agent-flag-card ${flag.severity}`} key={flag.id}>
+          <section className={`agent-flag-card ${flag.priority}`} key={flag.id}>
             <header>
               <div>
                 <span className="eyebrow">{flag.domain}</span>
                 <h3><IconizedText maxIcons={2} text={flag.summary} /></h3>
               </div>
               <div className="advice-badges">
-                <span>{flag.severity}</span>
+                <span>{flag.priority}</span>
                 {flag.detail && <span>{flag.detail}</span>}
               </div>
             </header>
@@ -737,9 +737,9 @@ type AdviceExpiryState = {
 const TICKS_PER_GAME_DAY = 60_000;
 
 function adviceExpiryState(item: AdviceItem, currentGameTick: number | null): AdviceExpiryState {
-  if (typeof item.expires_game_tick === 'number') {
+  if (typeof item.stamp.expires_game_tick === 'number') {
     if (typeof currentGameTick === 'number') {
-      const remaining = item.expires_game_tick - currentGameTick;
+      const remaining = item.stamp.expires_game_tick - currentGameTick;
       if (remaining <= 0) {
         return {
           expired: true,
@@ -762,7 +762,7 @@ function adviceExpiryState(item: AdviceItem, currentGameTick: number | null): Ad
     };
   }
 
-  const expiresAtMs = Date.parse(item.expires_at);
+  const expiresAtMs = Date.parse(item.stamp.expires_at);
   if (Number.isNaN(expiresAtMs)) {
     return { expired: false, label: 'freshness unknown', message: null };
   }
@@ -771,7 +771,7 @@ function adviceExpiryState(item: AdviceItem, currentGameTick: number | null): Ad
     return {
       expired: true,
       label: 'expired',
-      message: `Expired by the older wall-clock TTL at ${formatDateTime(item.expires_at)}. Latest persisted advice is shown for inspection.`,
+      message: `Expired by the older wall-clock TTL at ${formatDateTime(item.stamp.expires_at)}. Latest persisted advice is shown for inspection.`,
     };
   }
 
@@ -784,7 +784,7 @@ function adviceExpiryState(item: AdviceItem, currentGameTick: number | null): Ad
 
 function actionKey(item: AdviceItem, actionIndex: number): string {
   const action = item.actions[actionIndex];
-  return `${item.id}:${item.issued_at}:${actionIndex}:${action?.kind ?? 'missing'}:${action?.instruction ?? 'missing'}`;
+  return `${item.id}:${item.stamp.issued_at}:${actionIndex}:${action?.kind ?? 'missing'}:${action?.instruction ?? 'missing'}`;
 }
 
 function isExecutableApply(apply: AdviceActionApply): boolean {

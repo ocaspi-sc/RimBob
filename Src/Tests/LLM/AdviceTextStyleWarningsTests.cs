@@ -18,7 +18,7 @@ public sealed class AdviceTextStyleWarningsTests
                 new AdviceItem(
                     Id: "wordy_food",
                     Minister: "Chef",
-                    Priority: AdvicePriority.High,
+                    Priority: Priority.High,
                     Title: "Confirm the reachable indoor stockpile visibility before making meal decisions",
                     Body: "Body can carry context.",
                     Rationale: "Rationale can carry explanation.",
@@ -29,15 +29,14 @@ public sealed class AdviceTextStyleWarningsTests
                             "Set one reachable indoor stockpile to accept meals. Verify the stored food category.")
                     ],
                     GuideCitationIds: [],
-                    IssuedAt: now,
-                    ExpiresAt: now.AddHours(4))
+                    Stamp: new AdviceStamp(now, now.AddHours(4)))
             ],
             Flags:
             [
                 new AgentFlag(
                     "wordy_flag",
                     "Chef",
-                    FlagSeverity.High,
+                    Priority.High,
                     "food",
                     "Food buffer is below one day while storage visibility and emergency growing coverage both remain blocked")
             ]);
@@ -61,7 +60,7 @@ public sealed class AdviceTextStyleWarningsTests
                 new AdviceItem(
                     Id: "compact_food",
                     Minister: "Chef",
-                    Priority: AdvicePriority.High,
+                    Priority: Priority.High,
                     Title: "Expose food stockpile",
                     Body: "Body can carry context.",
                     Rationale: "Rationale can carry explanation.",
@@ -72,15 +71,14 @@ public sealed class AdviceTextStyleWarningsTests
                             "Set one stockpile to accept food.")
                     ],
                     GuideCitationIds: [],
-                    IssuedAt: now,
-                    ExpiresAt: now.AddHours(4))
+                    Stamp: new AdviceStamp(now, now.AddHours(4)))
             ],
             Flags:
             [
                 new AgentFlag(
                     "compact_flag",
                     "Chef",
-                    FlagSeverity.High,
+                    Priority.High,
                     "food",
                     "Food buffer below one day.")
             ]);

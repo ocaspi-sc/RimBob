@@ -2,7 +2,7 @@ import type { IconRef } from './icons';
 
 import type { GameDate } from './colony';
 
-export type AdvicePriority = 'low' | 'medium' | 'high' | 'critical';
+export type Priority = 'low' | 'medium' | 'high' | 'critical';
 
 export type AdviceApplyKind =
   | 'mark_harvest_area'
@@ -238,7 +238,7 @@ export interface BuildingRequest {
   urgency?: Urgency | null;
   deadline?: Deadline | null;
   quantity?: number | null;
-  priority?: AdvicePriority | null;
+  priority?: Priority | null;
   requested_from?: string | null;
 }
 
@@ -248,7 +248,7 @@ export interface LaborRequest {
   work_type?: string | null;
   skill?: string | null;
   quantity?: number | null;
-  priority?: AdvicePriority | null;
+  priority?: Priority | null;
   requested_from?: string | null;
 }
 
@@ -257,23 +257,21 @@ export interface ItemRequest {
   reason: string;
   item_def?: string | null;
   quantity?: number | null;
-  priority?: AdvicePriority | null;
+  priority?: Priority | null;
   requested_from?: string | null;
 }
 
 export interface AttentionRequest {
   request: string;
   reason: string;
-  priority?: AdvicePriority | null;
+  priority?: Priority | null;
   requested_from?: string | null;
 }
-
-export type FlagSeverity = 'low' | 'medium' | 'high' | 'critical';
 
 export interface AgentFlag {
   id: string;
   source_minister: string;
-  severity: FlagSeverity;
+  priority: Priority;
   domain: string;
   summary: string;
   building_requests?: BuildingRequest[] | null;
@@ -308,10 +306,18 @@ export interface AdviceChainModel {
   paths: AdviceChainPath[];
 }
 
+export interface AdviceStamp {
+  issued_at: string;
+  expires_at: string;
+  issued_game_date?: GameDate | null;
+  issued_game_tick?: number | null;
+  expires_game_tick?: number | null;
+}
+
 export interface AdviceItem {
   id: string;
   minister: string;
-  priority: AdvicePriority;
+  priority: Priority;
   title: string;
   body: string;
   rationale: string;
@@ -319,11 +325,7 @@ export interface AdviceItem {
   options?: AdviceOption[] | null;
   suggested_actions?: SuggestedAction[];
   guide_citations: string[];
-  issued_at: string;
-  expires_at: string;
-  issued_game_date?: GameDate | null;
-  issued_game_tick?: number | null;
-  expires_game_tick?: number | null;
+  stamp: AdviceStamp;
 }
 
 export interface AdviceSnapshot {

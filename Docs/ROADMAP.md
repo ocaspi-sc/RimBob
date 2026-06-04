@@ -13,7 +13,7 @@
 | M1.5 | Live operability — startup briefing, periodic ingestion, sidebar telemetry, manual re-evaluation, run-state + prompt-introspection endpoints | Done |
 | M2 | Grounded reasoning (RAG) — Mayor cites guide passages; measurable agenda-quality improvement before adding feeders | Done |
 | M3 | First feeder advisor (Chef food chain) — sub-briefing into the Mayor; first cross-minister flag | Implemented |
-| M4 | First cabinet wave — Willie, Defense, Welfare feeding the Mayor; flag-severity-gated tactical alerts surface independently of the daily digest | Not started |
+| M4 | First cabinet wave — Willie, Defense, Welfare feeding the Mayor; flag-priority-gated tactical alerts surface independently of the daily digest | Not started |
 | M4.5 | Assisted Apply — player-confirmed execution for the safest allowlisted advice actions | Implemented |
 | M5 | Feedback loop — Accept / Dismiss / Pushback wired; each minister owns and persists its own pushback list | Not started |
 | M6 | Oracle refinement loop closes — pushbacks drive the first promoted rule per minister | Not started |
@@ -112,7 +112,7 @@ longer fire a cabinet cycle just to repopulate the dashboard.
 **Scope:**
 - `IMinisterRules<FoodBriefing>` interface + Food rules layer.
 - Food briefing derivations (`DaysOfFoodRemaining`, etc).
-- Flag channel (in-process, severity-tiered) — Mayor consumes; no other consumer.
+- Flag channel (in-process, priority-tiered) — Mayor consumes; no other consumer.
 - Mayor prompt includes flag digest section.
 - 5 Chef food-chain scenario fixtures (memo-shape expectations, not goals).
 
@@ -120,7 +120,7 @@ longer fire a cabinet cycle just to repopulate the dashboard.
 
 ## M4 — First cabinet wave
 
-**Done when:** Willie, Defense, Welfare each feed sub-briefings + flags into the Mayor; flag-severity-gated **tactical alerts** can surface as their own dashboard items (separate from the daily digest) when a Critical or High flag fires.
+**Done when:** Willie, Defense, Welfare each feed sub-briefings + flags into the Mayor; flag-priority-gated **tactical alerts** can surface as their own dashboard items (separate from the daily digest) when a Critical or High flag fires.
 
 **Demo:** raid scenario — Defense emits Critical flag → tactical alert appears in dashboard immediately; next daily Mayor agenda summarises the incident and proposes follow-up.
 

@@ -11,7 +11,7 @@ internal static class AdviceActionNormalizer
         JsonNode? legacyStepsNode,
         JsonNode? resourceRequestsNode,
         JsonNode? suggestedActionsNode,
-        AdvicePriority priority,
+        Priority priority,
         LlmAdviceNormalizationContext context,
         JsonSerializerOptions json)
     {
@@ -70,7 +70,7 @@ internal static class AdviceActionNormalizer
     private static IReadOnlyList<AdviceAction> ConvertLegacy(
         JsonNode? resourceRequestsNode,
         JsonNode? suggestedActionsNode,
-        AdvicePriority priority,
+        Priority priority,
         LlmAdviceNormalizationContext context,
         JsonSerializerOptions json)
     {

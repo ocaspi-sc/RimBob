@@ -13,41 +13,61 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
     private const string BillRepeatModeTargetCount = "TargetCount";
     private static readonly IReadOnlyList<string> SimpleMealRecipeDefs = ["CookMealSimple", "CookMealSimpleBulk"];
 
-    public RulesResult Evaluate(FoodBriefing briefing, ColonyContext context)
+    public RuleRun Evaluate(FoodBriefing briefing, ColonyContext context)
     {
         DateTimeOffset now = DateTimeOffset.UtcNow;
         IReadOnlyList<MinisterRule<FoodBriefing>> rules = RuleTable(now);
         IReadOnlyList<MinisterRuleTraceDescriptor<FoodBriefing>> fallbackRuleDescriptors = FallbackRuleDescriptors();
-        MinisterRuleTableResult ruleTableResult = MinisterRuleTableEvaluator.EvaluateAllHits(
+        RuleRun ruleRun = MinisterRuleTableEvaluator.EvaluateAllHits(
             rules,
             briefing,
             additionalRuleDescriptors: fallbackRuleDescriptors);
-        if (ruleTableResult.Decision is Decision decision)
-            return decision;
+        if (ruleRun.Decisions.Count > 0)
+            return ruleRun;
 
         if (briefing.EstimatedDaysOfFood is not float days)
-            return new Decision([], [], "no_food_signal", DiagnosticsForFallback(rules, fallbackRuleDescriptors, briefing, "no_food_signal"));
+            return new RuleRun([], DiagnosticsForFallback(rules, fallbackRuleDescriptors, briefing, "no_food_signal"));
 
         if (ShouldEscalateHuntTargetsBlockedByRisk(briefing, days))
-            return new Escalate(
+            return EscalationRun(
+                rules,
+                fallbackRuleDescriptors,
+                briefing,
+                "hunt_targets_blocked_by_risk",
                 "Food below 20 days with visible animals, but the hunting path is blocked by the current safety/risk filters.",
-                new { briefing.WildAnimalCount, briefing.ActiveThreat, LowRiskTargetCount = briefing.WildHuntTargets.Count, briefing.Skills.BestCooking, briefing.HuntRiskSummaries },
-                DiagnosticsForFallback(rules, fallbackRuleDescriptors, briefing, "hunt_targets_blocked_by_risk"));
+                new { briefing.WildAnimalCount, briefing.ActiveThreat, LowRiskTargetCount = briefing.WildHuntTargets.Count, briefing.Skills.BestCooking, briefing.HuntRiskSummaries });
 
         if (briefing.Season.DaysToWinter is < 20 && days < 30f)
-            return new Escalate(
+            return EscalationRun(
+                rules,
+                fallbackRuleDescriptors,
+                briefing,
+                "winter_food_tradeoff",
                 "Winter is close and food buffer is below target; crop/freezer/labor tradeoff needs guide-grounded judgment.",
-                new { briefing.Season.DaysToWinter, DaysOfFood = days, briefing.CropBreakdown },
-                DiagnosticsForFallback(rules, fallbackRuleDescriptors, briefing, "winter_food_tradeoff"));
+                new { briefing.Season.DaysToWinter, DaysOfFood = days, briefing.CropBreakdown });
 
         if (days >= 30f)
-            return new Decision([], [], "maintain_security_threshold", DiagnosticsForFallback(rules, fallbackRuleDescriptors, briefing, "maintain_security_threshold"));
+            return new RuleRun([], DiagnosticsForFallback(rules, fallbackRuleDescriptors, briefing, "maintain_security_threshold"));
 
-        return new Escalate(
+        return EscalationRun(
+            rules,
+            fallbackRuleDescriptors,
+            briefing,
+            "unresolved_food_gap",
             "Food state is below ideal but no deterministic rule cleanly chooses the next action.",
-            new { DaysOfFood = days, briefing.ReadyToHarvest, briefing.WildHarvestCandidates, briefing.WildAnimalCount },
-            DiagnosticsForFallback(rules, fallbackRuleDescriptors, briefing, "unresolved_food_gap"));
+            new { DaysOfFood = days, briefing.ReadyToHarvest, briefing.WildHarvestCandidates, briefing.WildAnimalCount });
     }
+
+    private static RuleRun EscalationRun(
+        IReadOnlyList<MinisterRule<FoodBriefing>> rules,
+        IReadOnlyList<MinisterRuleTraceDescriptor<FoodBriefing>> fallbackRuleDescriptors,
+        FoodBriefing briefing,
+        RuleId rule,
+        string reason,
+        object context) =>
+        new(
+            [new Escalate(rule, reason, context)],
+            DiagnosticsForFallback(rules, fallbackRuleDescriptors, briefing, rule));
 
     private static IReadOnlyList<MinisterRule<FoodBriefing>> RuleTable(DateTimeOffset now) =>
     [
@@ -70,19 +90,19 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             ? $"{briefing.UnclassifiedFoodUnits} unclassified food units exist but days-of-food is unavailable"
             : "days-of-food is available or no unclassified food units need stockpile-category verification";
 
-    private static RuleEmission BuildNutritionSignalGap(FoodBriefing briefing, DateTimeOffset now)
+    private static IReadOnlyList<Decision> BuildNutritionSignalGap(FoodBriefing briefing, DateTimeOffset now)
     {
         FoodFlagRequests nutritionGapRequests = FoodFlagRequests.Building(StockpileVisibilityRequest(
             "reachable food stockpile visibility",
             "food units outside meals/raw-food counts cannot be converted into days-of-food",
             quantity: null,
-            priority: AdvicePriority.Medium));
-        ItemRequest? forbiddenMealRequest = ForbiddenMealItemRequest(briefing, AdvicePriority.Medium);
+            priority: Priority.Medium));
+        ItemRequest? forbiddenMealRequest = ForbiddenMealItemRequest(briefing, Priority.Medium);
         if (forbiddenMealRequest is not null)
             nutritionGapRequests = nutritionGapRequests.Add(forbiddenMealRequest);
 
         return EmitAdvice(briefing, now, "nutrition_signal_gap",
-            AdvicePriority.Medium,
+            Priority.Medium,
             "Food stockpile categories need verification",
             FoodRemainderBody(briefing),
             "Missing nutrition would make days-of-food unreliable; use the fallback counts until upstream data is fixed.",
@@ -99,9 +119,9 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             ? "food units and days-of-food are both unavailable"
             : "food visibility has either a days-of-food signal or unclassified units for the stockpile-category rule";
 
-    private static RuleEmission BuildUnknownFoodState(FoodBriefing briefing, DateTimeOffset now) =>
+    private static IReadOnlyList<Decision> BuildUnknownFoodState(FoodBriefing briefing, DateTimeOffset now) =>
         EmitAdvice(briefing, now, "unknown_food_state",
-            AdvicePriority.High,
+            Priority.High,
             "Food state unknown",
             "No reliable food stockpile signal is available. Treat this as a food-security check, not confirmed starvation.",
             "The food chain cannot safely decide without stockpile visibility.",
@@ -110,7 +130,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 "visible reachable food stockpile",
                 "food_units and nutrition are both unavailable",
                 quantity: null,
-                priority: AdvicePriority.High)),
+                priority: Priority.High)),
             true);
 
     private static bool MatchesEmergencyFoodFlag(FoodBriefing briefing) =>
@@ -123,10 +143,10 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 : $"food buffer {days:F1}d is at or above the 7d emergency threshold"
             : "days-of-food is unavailable for the emergency threshold";
 
-    private static RuleEmission BuildEmergencyFoodFlag(FoodBriefing briefing, DateTimeOffset now)
+    private static IReadOnlyList<Decision> BuildEmergencyFoodFlag(FoodBriefing briefing, DateTimeOffset now)
     {
         float days = RequiredFoodDays(briefing, "emergency_food_flag");
-        AdvicePriority priority = FoodBufferPriority(briefing, days);
+        Priority priority = FoodBufferPriority(briefing, days);
         return EmitAdvice(briefing, now, "emergency_food_flag",
             priority,
             "Food crisis within a week",
@@ -145,10 +165,10 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             ? $"{briefing.ReadyToHarvest} mature crop tiles are ready"
             : "no mature crop tiles are ready";
 
-    private static RuleEmission BuildHarvestMatureCrops(FoodBriefing briefing, DateTimeOffset now)
+    private static IReadOnlyList<Decision> BuildHarvestMatureCrops(FoodBriefing briefing, DateTimeOffset now)
     {
         float days = RequiredFoodDays(briefing, "harvest_mature_crops");
-        AdvicePriority priority = days < 15f ? AdvicePriority.High : AdvicePriority.Medium;
+        Priority priority = days < 15f ? Priority.High : Priority.Medium;
         return EmitAdvice(briefing, now, "harvest_mature_crops",
             priority,
             "Mature crops are ready",
@@ -185,18 +205,18 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         return "meal stock is below target but no cooking intervention is selected";
     }
 
-    private static RuleEmission BuildMealsUnderstocked(FoodBriefing briefing, DateTimeOffset now)
+    private static IReadOnlyList<Decision> BuildMealsUnderstocked(FoodBriefing briefing, DateTimeOffset now)
     {
         float days = RequiredFoodDays(briefing, "meals_understocked");
         bool needsCookingLabor = ShouldRequestCookingLabor(briefing, days);
         bool needsCookingBuildingSupport = NeedsCookingBuildingSupport(briefing);
         return EmitAdvice(briefing, now, "meals_understocked",
-            AdvicePriority.Medium,
+            Priority.Medium,
             "Cooked meals are understocked",
             $"Only {briefing.MealsCount} meals are reported for {briefing.ColonistCount} colonists while raw food exists.",
             "A raw-food buffer still needs cooking throughput to become safe daily nutrition.",
             CookBillActions(briefing, days),
-            RequestsWithCookingBuildingSupport(briefing, CookingLaborIfNeeded(briefing, days, AdvicePriority.Medium), AdvicePriority.Medium),
+            RequestsWithCookingBuildingSupport(briefing, CookingLaborIfNeeded(briefing, days, Priority.Medium), Priority.Medium),
             needsCookingLabor || needsCookingBuildingSupport);
     }
 
@@ -210,10 +230,10 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 : $"food buffer {days:F1}d and {briefing.WildHarvestCandidates} forage candidates do not select forage"
             : "days-of-food is unavailable for forage selection";
 
-    private static RuleEmission BuildWildHarvestAvailable(FoodBriefing briefing, DateTimeOffset now)
+    private static IReadOnlyList<Decision> BuildWildHarvestAvailable(FoodBriefing briefing, DateTimeOffset now)
     {
         float days = RequiredFoodDays(briefing, "wild_harvest_available");
-        AdvicePriority priority = days < 10f ? AdvicePriority.High : AdvicePriority.Medium;
+        Priority priority = days < 10f ? Priority.High : Priority.Medium;
         return EmitAdvice(briefing, now, "wild_harvest_available",
             priority,
             "Forage can extend the buffer",
@@ -234,10 +254,10 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 : $"food buffer {days:F1}d, active threat={briefing.ActiveThreat}, low-risk hunt targets={briefing.WildHuntTargets.Count}"
             : "days-of-food is unavailable for hunting selection";
 
-    private static RuleEmission BuildHuntLowRiskAnimals(FoodBriefing briefing, DateTimeOffset now)
+    private static IReadOnlyList<Decision> BuildHuntLowRiskAnimals(FoodBriefing briefing, DateTimeOffset now)
     {
         float days = RequiredFoodDays(briefing, "hunt_low_risk_animals");
-        AdvicePriority priority = days < 10f ? AdvicePriority.High : AdvicePriority.Medium;
+        Priority priority = days < 10f ? Priority.High : Priority.Medium;
         return EmitAdvice(briefing, now, "hunt_low_risk_animals",
             priority,
             "Mark low-risk animals for hunting",
@@ -275,12 +295,12 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         return $"{cropCandidate.Label} can add about {cropCandidate.ProjectedDaysAdded:F1}d from {cropCandidate.Tiles} tiles";
     }
 
-    private static RuleEmission BuildExpandGrowingCapacity(FoodBriefing briefing, DateTimeOffset now)
+    private static IReadOnlyList<Decision> BuildExpandGrowingCapacity(FoodBriefing briefing, DateTimeOffset now)
     {
         float days = RequiredFoodDays(briefing, "expand_growing_capacity");
         FoodCropCandidate cropCandidate = FoodCropMath.Recommend(briefing).BestCandidate
             ?? throw new InvalidOperationException("expand_growing_capacity matched without a crop candidate");
-        AdvicePriority priority = days < 12f ? AdvicePriority.High : AdvicePriority.Medium;
+        Priority priority = days < 12f ? Priority.High : Priority.Medium;
         return EmitAdvice(briefing, now, "expand_growing_capacity",
             priority,
             "Expand food growing capacity",
@@ -320,7 +340,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             : "no incoming perishable path or stored-food buffer currently needs cold storage";
     }
 
-    private static RuleEmission BuildFreezerMissing(FoodBriefing briefing, DateTimeOffset now)
+    private static IReadOnlyList<Decision> BuildFreezerMissing(FoodBriefing briefing, DateTimeOffset now)
     {
         float days = RequiredFoodDays(briefing, "freezer_missing");
         bool incomingPerishableFood = HasIncomingPerishableFoodPath(briefing);
@@ -344,14 +364,13 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         FoodBriefing briefing,
         string selectedRule)
     {
-        IReadOnlyList<RuleTraceEntry> fallbackSignals = FallbackRuleSignals(briefing, selectedRule);
         return MinisterRuleTableEvaluator.BuildTrace(
             rules,
             briefing,
-            selectedRule,
-            emittedEmissions: [],
-            additionalMatchedSignals: fallbackSignals,
-            additionalRuleDescriptors: fallbackRuleDescriptors);
+            decisions: [],
+            matchedRules: new HashSet<RuleId> { selectedRule },
+            additionalRuleDescriptors: fallbackRuleDescriptors,
+            selectedRuleOverride: selectedRule);
     }
 
     private static IReadOnlyList<MinisterRuleTraceDescriptor<FoodBriefing>> FallbackRuleDescriptors() =>
@@ -432,51 +451,17 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
     private static bool AnyTableRuleApplies(FoodBriefing briefing) =>
         RuleTable(DateTimeOffset.UnixEpoch).Any(rule => rule.Matches(briefing));
 
-    private static string EscalatedWhenSelected(string rule, string? selectedRule) =>
-        string.Equals(rule, selectedRule, StringComparison.OrdinalIgnoreCase) ? "escalated" : "not_matched";
+    private static RuleOutcome EscalatedWhenSelected(RuleId rule, RuleId? selectedRule) =>
+        selectedRule == rule ? RuleOutcome.Escalated : RuleOutcome.NotMatched;
 
-    private static string SelectedWhenSelected(string rule, string? selectedRule) =>
-        string.Equals(rule, selectedRule, StringComparison.OrdinalIgnoreCase) ? "selected" : "not_matched";
+    private static RuleOutcome SelectedWhenSelected(RuleId rule, RuleId? selectedRule) =>
+        selectedRule == rule ? RuleOutcome.Selected : RuleOutcome.NotMatched;
 
-    private static IReadOnlyList<RuleTraceEntry> FallbackRuleSignals(FoodBriefing briefing, string selectedRule)
-    {
-        List<RuleTraceEntry> signals = [];
-        if (briefing.EstimatedDaysOfFood is float days)
-        {
-            if (ShouldEscalateHuntTargetsBlockedByRisk(briefing, days))
-                signals.Add(FallbackSignal("hunt_targets_blocked_by_risk", selectedRule, HuntTargetsBlockedByRiskReason(briefing)));
-
-            if (briefing.Season.DaysToWinter is < 20 && days < 30f)
-                signals.Add(FallbackSignal("winter_food_tradeoff", selectedRule, $"{briefing.Season.DaysToWinter}d to winter with {days:F1}d food"));
-
-            if (days >= 30f)
-                signals.Add(FallbackSignal("maintain_security_threshold", selectedRule, $"food buffer {days:F1}d meets the 30d security threshold"));
-        }
-
-        if (!signals.Any(signal => string.Equals(signal.Rule, selectedRule, StringComparison.OrdinalIgnoreCase)))
-            signals.Add(new RuleTraceEntry(selectedRule, SelectedOutcome(selectedRule), FallbackRuleReason(selectedRule, briefing)));
-
-        return signals;
-    }
-
-    private static RuleTraceEntry FallbackSignal(string rule, string selectedRule, string reason) =>
-        new(rule, string.Equals(rule, selectedRule, StringComparison.OrdinalIgnoreCase) ? SelectedOutcome(rule) : "matched", reason);
-
-    private static string SelectedOutcome(string selectedRule) =>
-        selectedRule is "hunt_targets_blocked_by_risk" or "winter_food_tradeoff" or "unresolved_food_gap"
-            ? "escalated"
-            : "selected";
-
-    private static string FallbackRuleReason(string selectedRule, FoodBriefing briefing) =>
-        selectedRule == "unresolved_food_gap" && briefing.EstimatedDaysOfFood is float days
-            ? $"food buffer {days:F1}d is below target, but no deterministic action predicate matched"
-            : "selected rule did not have a matching predicate entry";
-
-    private static RuleEmission EmitAdvice(
+    private static IReadOnlyList<Decision> EmitAdvice(
         FoodBriefing briefing,
         DateTimeOffset now,
         string trace,
-        AdvicePriority priority,
+        Priority priority,
         string title,
         string body,
         string rationale,
@@ -484,39 +469,21 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         FoodFlagRequests requests,
         bool emitFlag)
     {
-        AdviceItem advice = new(
-            Id: $"{MinisterName.ToLowerInvariant()}_{trace}",
-            Minister: MinisterName,
-            Priority: priority,
-            Title: title,
-            Body: body,
-            Rationale: rationale,
-            Actions: actions,
-            GuideCitationIds: [],
-            IssuedAt: now,
-            ExpiresAt: now.AddHours(priority >= AdvicePriority.High ? 4 : 24),
-            IssuedGameDate: briefing.Date,
-            IssuedGameTick: briefing.GameTick,
-            ExpiresGameTick: AdviceFreshness.ExpiresGameTick(briefing.GameTick, priority),
-            BriefingRef: new BriefingRef(MinisterName, briefing.BriefingVersion, $"food:{briefing.BriefingVersion}")
-        );
+        List<Decision> decisions =
+        [
+            new Advise(
+                trace,
+                priority,
+                title,
+                body,
+                rationale,
+                actions)
+        ];
 
-        IReadOnlyList<AgentFlag> flags = emitFlag
-            ? [new AgentFlag(
-                Id: $"{Domain}:{trace}",
-                SourceMinister: MinisterName,
-                Severity: ToFlagSeverity(priority),
-                Domain: Domain,
-                Summary: title,
-                BuildingRequests: requests.BuildingRequestsOrNull,
-                LaborRequests: requests.LaborRequestsOrNull,
-                ItemRequests: requests.ItemRequestsOrNull,
-                Attention: requests.AttentionOrNull,
-                Detail: trace,
-                ExpiresAt: now.AddHours(24))]
-            : [];
+        if (emitFlag)
+            decisions.AddRange(requests.ToDecisions(trace, priority));
 
-        return new RuleEmission(trace, advice, flags);
+        return decisions;
     }
 
     private static IReadOnlyList<AdviceAction> ActionsWithCookingBuildingSupport(
@@ -532,7 +499,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
     private static FoodFlagRequests RequestsWithCookingBuildingSupport(
         FoodBriefing briefing,
         FoodFlagRequests requests,
-        AdvicePriority priority)
+        Priority priority)
     {
         if (NeedsCookingBuildingSupport(briefing) && !HasKitchenCookingRequest(requests))
             return requests.Add(CookingBuildingRequest(
@@ -598,7 +565,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 Adjacency: [new AdjacencyHint(AdjacencyRelation.Near, "kitchen")],
                 Power: new PowerNeed(NeedsPower: true, ApproxWatts: 200),
                 Temperature: new TempNeed(TemperatureBand.Freezing, MustHold: true),
-                Urgency: FreezerSupportPriority(briefing) >= AdvicePriority.High ? Urgency.BeforeDeadline : Urgency.Soon,
+                Urgency: FreezerSupportPriority(briefing) >= Priority.High ? Urgency.BeforeDeadline : Urgency.Soon,
                 Deadline: FreezerDeadline(briefing, incoming),
                 Priority: FreezerSupportPriority(briefing),
                 RequestedFrom: "Willie"));
@@ -607,7 +574,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
     private static BuildingRequest CookingBuildingRequest(
         string request,
         string reason,
-        AdvicePriority priority) =>
+        Priority priority) =>
         new(
             request,
             reason,
@@ -668,8 +635,8 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
     private static bool SameCropDef(string actual, string expected) =>
         string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase);
 
-    private static AdvicePriority FreezerSupportPriority(FoodBriefing briefing) =>
-        briefing.Season.DaysToWinter is < 20 ? AdvicePriority.High : AdvicePriority.Medium;
+    private static Priority FreezerSupportPriority(FoodBriefing briefing) =>
+        briefing.Season.DaysToWinter is < 20 ? Priority.High : Priority.Medium;
 
     private static Deadline FreezerDeadline(FoodBriefing briefing, string incoming)
     {
@@ -725,20 +692,20 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         return "stored food";
     }
 
-    private static AdvicePriority FoodBufferPriority(FoodBriefing briefing, float days)
+    private static Priority FoodBufferPriority(FoodBriefing briefing, float days)
     {
         bool noImmediateLocalFood = briefing.MealsCount == 0 &&
                                     briefing.RawFoodCount == 0 &&
                                     briefing.ReadyToHarvest == 0 &&
                                     briefing.WildHarvestCandidates == 0;
-        return days < 1f && noImmediateLocalFood ? AdvicePriority.Critical : AdvicePriority.High;
+        return days < 1f && noImmediateLocalFood ? Priority.Critical : Priority.High;
     }
 
     private static BuildingRequest StockpileVisibilityRequest(
         string request,
         string reason,
         int? quantity,
-        AdvicePriority? priority) =>
+        Priority? priority) =>
         new(
             request,
             reason,
@@ -756,7 +723,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             .Select(target => target.Def)
             .FirstOrDefault(def => !string.IsNullOrWhiteSpace(def));
 
-    private static FoodFlagRequests EmergencyRequests(FoodBriefing briefing, float days, AdvicePriority priority)
+    private static FoodFlagRequests EmergencyRequests(FoodBriefing briefing, float days, Priority priority)
     {
         FoodFlagRequests requests = FoodFlagRequests.Empty;
         ItemRequest? forbiddenMealRequest = ForbiddenMealItemRequest(briefing, priority);
@@ -842,7 +809,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
     private static FoodFlagRequests CookingLaborIfNeeded(
         FoodBriefing briefing,
         float days,
-        AdvicePriority priority)
+        Priority priority)
     {
         if (!ShouldRequestCookingLabor(briefing, days))
             return FoodFlagRequests.Empty;
@@ -857,7 +824,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 RequestedFrom: "Labor"));
     }
 
-    private static FoodFlagRequests HuntingRequests(FoodBriefing briefing, AdvicePriority priority)
+    private static FoodFlagRequests HuntingRequests(FoodBriefing briefing, Priority priority)
     {
         FoodFlagRequests requests = FoodFlagRequests.Labor(
             new LaborRequest(
@@ -1243,7 +1210,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             Apply: UnforbidApply(briefing, targets));
     }
 
-    private static ItemRequest? ForbiddenMealItemRequest(FoodBriefing briefing, AdvicePriority priority)
+    private static ItemRequest? ForbiddenMealItemRequest(FoodBriefing briefing, Priority priority)
     {
         int forbiddenMealCount = ForbiddenMealCount(briefing);
         if (forbiddenMealCount <= 0)
@@ -1363,14 +1330,6 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         return string.IsNullOrWhiteSpace(label) ? "cooking station" : label;
     }
 
-    private static FlagSeverity ToFlagSeverity(AdvicePriority priority) => priority switch
-    {
-        AdvicePriority.Critical => FlagSeverity.Critical,
-        AdvicePriority.High => FlagSeverity.High,
-        AdvicePriority.Medium => FlagSeverity.Medium,
-        _ => FlagSeverity.Low
-    };
-
     private static string ToSnakeCase(string value)
     {
         List<char> chars = new(value.Length + 4);
@@ -1412,7 +1371,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             string request,
             string reason,
             int? quantity,
-            AdvicePriority? priority,
+            Priority? priority,
             string? requestedFrom) =>
             Empty.Add(new AttentionRequest(
                 Request: quantity is null ? request : $"{request} ({quantity.Value})",
@@ -1438,6 +1397,32 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
 
         public FoodFlagRequests Add(AttentionRequest request) =>
             this with { Attention = Attention.Append(request).ToArray() };
+
+        public IReadOnlyList<Decision> ToDecisions(RuleId rule, Priority fallbackPriority)
+        {
+            List<Decision> decisions = [];
+            decisions.AddRange(BuildingRequests.Select(request => new RequestBuild(
+                rule,
+                request,
+                request.RequestedFrom ?? "Willie",
+                request.Priority ?? fallbackPriority)));
+            decisions.AddRange(LaborRequests.Select(request => new RequestLabor(
+                rule,
+                request,
+                request.RequestedFrom ?? "Labor",
+                request.Priority ?? fallbackPriority)));
+            decisions.AddRange(ItemRequests.Select(request => new RequestItem(
+                rule,
+                request,
+                request.RequestedFrom ?? "Chief of Staff",
+                request.Priority ?? fallbackPriority)));
+            decisions.AddRange(Attention.Select(request => new RequestAttention(
+                rule,
+                request,
+                request.RequestedFrom ?? "Chief of Staff",
+                request.Priority ?? fallbackPriority)));
+            return decisions;
+        }
 
         private static IReadOnlyList<T>? NullIfEmpty<T>(IReadOnlyList<T> values) =>
             values.Count == 0 ? null : values;

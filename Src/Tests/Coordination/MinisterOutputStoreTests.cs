@@ -143,87 +143,6 @@ public sealed class MinisterOutputStoreTests
     }
 
     [Fact]
-    public async Task LoadAsync_MigratesObsoleteFoodCookPriorityActionIntoFlagRequest()
-    {
-        string root = NewSnapshotRoot();
-        try
-        {
-            Directory.CreateDirectory(root);
-            await File.WriteAllTextAsync(
-                Path.Combine(root, "food.json"),
-                """
-                {
-                  "schema_version": 2,
-                  "minister": "food",
-                  "output_kind": "advice_snapshot",
-                  "persisted_at": "2026-01-01T00:00:00+00:00",
-                  "generation": 1,
-                  "payload": {
-                    "minister": "Food",
-                    "advice": [
-                      {
-                        "id": "old_food",
-                        "minister": "Food",
-                        "priority": "high",
-                        "title": "Food low",
-                        "body": "Body",
-                        "rationale": "Rationale",
-                        "actions": [
-                          {
-                            "kind": "set_priority",
-                            "instruction": "Put the best cook on Cook work until simple meals are stocked.",
-                            "owner": "Labor",
-                            "work_type": "cook",
-                            "skill": "Cooking",
-                            "reason": "raw food must become meals during an urgent shortage",
-                            "icon": { "kind": "item", "id": "MealSimple" }
-                          }
-                        ],
-                        "guide_citation_ids": [],
-                        "issued_at": "2026-01-01T00:00:00+00:00",
-                        "expires_at": "2026-01-01T04:00:00+00:00",
-                        "issued_game_date": {
-                          "raw_rim_world_date": "5th of Aprimay, 5500, 14h",
-                          "rim_world_year": 5500,
-                          "quadrum": "Aprimay",
-                          "quadrum_day": 5,
-                          "hour": 14,
-                          "game_tick": 300000,
-                          "total_days": 5,
-                          "completed_days": 5,
-                          "colony_day": 6,
-                          "colony_year": 1,
-                          "day_of_year": 6,
-                          "label": "Y1 D6, Aprimay 5, 14h"
-                        },
-                        "issued_game_tick": 300000
-                      }
-                    ],
-                    "state_summary": "Stored Food state."
-                  }
-                }
-                """);
-
-            MinisterOutputStore restored = await MinisterOutputStore.LoadAsync(root);
-
-            AdviceSnapshot? snapshot = restored.GetAdviceSnapshot("chef");
-            snapshot.Should().NotBeNull();
-            AdviceItem advice = snapshot!.Advice.Should().ContainSingle().Subject;
-            advice.Minister.Should().Be("Chef");
-            advice.Actions.Should().NotContain(action => action.Kind == AdviceActionKind.SetPriority);
-            snapshot.Flags.Should().ContainSingle()
-                .Which.SourceMinister.Should().Be("Chef");
-            snapshot.Flags.Should().ContainSingle()
-                .Which.LaborRequests.Should().ContainSingle()
-                .Which.WorkType.Should().Be(WorkType.Cook);
-        }
-        finally
-        {
-            CleanupSnapshot(root);
-        }
-    }
-
-    [Fact]
     public async Task CabinetDirection_ReloadsForFeederContext()
     {
         string root = NewSnapshotRoot();
@@ -294,14 +213,13 @@ public sealed class MinisterOutputStoreTests
     private static AdviceItem Advice(string id, string minister) => new(
         Id: id,
         Minister: minister,
-        Priority: AdvicePriority.High,
+        Priority: Priority.High,
         Title: "Food low",
         Body: "Body",
         Rationale: "Rationale",
         Actions: [],
         GuideCitationIds: [],
-        IssuedAt: DateTimeOffset.UtcNow,
-        ExpiresAt: DateTimeOffset.UtcNow.AddHours(1));
+        Stamp: new AdviceStamp(DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddHours(1)));
 
     private static AdviceChainModel Chain() => new(
     [

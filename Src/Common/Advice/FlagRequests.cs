@@ -34,7 +34,7 @@ public sealed record BuildingRequest(
     [property: JsonPropertyName("quantity")]
     int? Quantity = null,
     [property: JsonPropertyName("priority")]
-    AdvicePriority? Priority = null,
+    Priority? Priority = null,
     [property: JsonPropertyName("requested_from")]
     string? RequestedFrom = null);
 
@@ -53,7 +53,7 @@ public sealed record LaborRequest(
     [property: JsonPropertyName("quantity")]
     int? Quantity = null,
     [property: JsonPropertyName("priority")]
-    AdvicePriority? Priority = null,
+    Priority? Priority = null,
     [property: JsonPropertyName("requested_from")]
     string? RequestedFrom = null);
 
@@ -70,7 +70,7 @@ public sealed record ItemRequest(
     [property: JsonPropertyName("quantity")]
     int? Quantity = null,
     [property: JsonPropertyName("priority")]
-    AdvicePriority? Priority = null,
+    Priority? Priority = null,
     [property: JsonPropertyName("requested_from")]
     string? RequestedFrom = null);
 
@@ -83,7 +83,7 @@ public sealed record AttentionRequest(
     [property: JsonPropertyName("reason")]
     string Reason,
     [property: JsonPropertyName("priority")]
-    AdvicePriority? Priority = null,
+    Priority? Priority = null,
     [property: JsonPropertyName("requested_from")]
     string? RequestedFrom = null);
 

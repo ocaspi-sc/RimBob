@@ -73,7 +73,7 @@ Request discipline:
   kind fits yet.
 - Keep `request` and `reason` compact enough to render in a trace table.
 
-### Severity Tiers
+### Priority Tiers
 
 | Tier | Meaning | Typical handling |
 |---|---|---|
@@ -82,13 +82,12 @@ Request discipline:
 | Medium | Digest-worthy pressure | Batched into Mayor synthesis |
 | Low | Background opportunity or cleanup | Deferred until capacity exists |
 
-### Severity Calibration
+### Priority Calibration
 
-- The emitting minister assigns the initial severity.
+- The emitting minister assigns the initial priority.
 - CoS may downgrade with a logged reason; it cannot upgrade.
-- A minister upgrades by emitting a new higher-severity flag, preserving audit
-  history.
-- Flag severity distribution per minister should be visible during Oracle refinement.
+- A minister upgrades by emitting a new higher-priority flag, preserving audit history.
+- Flag priority distribution per minister should be visible during Oracle refinement.
 
 ### Lifecycle
 

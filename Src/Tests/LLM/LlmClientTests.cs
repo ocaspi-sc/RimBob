@@ -67,7 +67,7 @@ public sealed class LlmClientTests
           "summary": "Food is critically low and cooking/freezer paths need attention.",
           "advice": [
             {
-              "severity": "High",
+              "priority": "High",
               "message": "Your colony has 0 meals and only 0.21 days of food remaining. Cook simple meals immediately.",
               "resource_requests": [
                 {
@@ -79,7 +79,7 @@ public sealed class LlmClientTests
               ]
             },
             {
-              "severity": "High",
+              "priority": "High",
               "message": "Your colony has no coolers. Prioritize building at least one cooler.",
               "resource_requests": [
                 {
@@ -121,7 +121,7 @@ public sealed class LlmClientTests
         response.StateSummary.Should().Be("Food is critically low and cooking/freezer paths need attention.");
         response.Advice[0].Id.Should().Be("food_llm_300000_1");
         response.Advice[0].Minister.Should().Be("Chef");
-        response.Advice[0].Priority.Should().Be(AdvicePriority.High);
+        response.Advice[0].Priority.Should().Be(Priority.High);
         response.Advice[0].Title.Should().Be("1 pawn_hours labor capacity");
         response.Advice[0].Body.Should().Contain("Cook simple meals");
         response.Advice[0].Actions.Should().ContainSingle()
@@ -130,7 +130,7 @@ public sealed class LlmClientTests
         response.Advice[0].Actions.Single().Skill.Should().Be("Cooking");
         response.Flags.Should().HaveCount(3);
         response.Flags[0].Id.Should().Be("food:food_shortage_critical");
-        response.Flags[0].Severity.Should().Be(RimBob.Core.Ministers.FlagSeverity.High);
+        response.Flags[0].Priority.Should().Be(Priority.High);
         response.Flags[2].Summary.Should().Be("No Freezer");
     }
 
@@ -174,7 +174,7 @@ public sealed class LlmClientTests
             isStrictValid: _ => false);
 
         AdviceItem advice = response.Advice.Should().ContainSingle().Subject;
-        advice.Priority.Should().Be(AdvicePriority.Critical);
+        advice.Priority.Should().Be(Priority.Critical);
         AdviceAction action = advice.Actions.Should().ContainSingle().Subject;
         action.Kind.Should().Be(AdviceActionKind.RequestResource);
         action.Instruction.Should().Be("labor capacity");
@@ -188,7 +188,7 @@ public sealed class LlmClientTests
         AdviceItem item = new(
             Id: "a1",
             Minister: "Chef",
-            Priority: AdvicePriority.High,
+            Priority: Priority.High,
             Title: "Cook meals",
             Body: "Body",
             Rationale: "Rationale",
@@ -203,8 +203,7 @@ public sealed class LlmClientTests
                     Skill: "Cooking")
             ],
             GuideCitationIds: [],
-            IssuedAt: DateTimeOffset.UnixEpoch,
-            ExpiresAt: DateTimeOffset.UnixEpoch.AddHours(4),
+            Stamp: new AdviceStamp(DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch.AddHours(4)),
             Options:
             [
                 new AdviceOption(
@@ -248,7 +247,7 @@ public sealed class LlmClientTests
         serialized.Should().Contain("\"stuff_def_name\":\"BlocksGranite\"");
         serialized.Should().Contain("\"est_materials\":[");
         roundTripped.Should().NotBeNull();
-        roundTripped!.Priority.Should().Be(AdvicePriority.High);
+        roundTripped!.Priority.Should().Be(Priority.High);
         roundTripped.Actions.Single().Instruction.Should().Be("Put the best cook on Cook work today");
         roundTripped.Actions.Single().WorkType.Should().Be(WorkType.Cook);
         roundTripped.Actions.Single().Skill.Should().Be("Cooking");
@@ -320,15 +319,17 @@ public sealed class LlmClientTests
                 }
               ],
               "guide_citations": [],
-              "issued_at": "5500-04-08T16:00:00Z",
-              "expires_at": "5500-04-09T16:00:00Z"
+              "stamp": {
+                "issued_at": "5500-04-08T16:00:00Z",
+                "expires_at": "5500-04-09T16:00:00Z"
+              }
             }
           ],
           "flags": [
             {
               "id": "manual_flag",
               "source_minister": "Food",
-              "severity": "high",
+              "priority": "high",
               "domain": "food",
               "summary": "Food chain setup needed.",
               "requests": [],
@@ -393,7 +394,7 @@ public sealed class LlmClientTests
           {
             "id": "food:freezer_support",
             "source_minister": "Chef",
-            "severity": "medium",
+            "priority": "medium",
             "domain": "food",
             "summary": "Freezer support needed",
             "building_requests": [
@@ -423,7 +424,7 @@ public sealed class LlmClientTests
           {
             "id": "food:freezer_support",
             "source_minister": "Chef",
-            "severity": "medium",
+            "priority": "medium",
             "domain": "food",
             "summary": "Freezer support needed",
             "building_requests": [

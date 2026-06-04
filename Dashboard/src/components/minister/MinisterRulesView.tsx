@@ -31,36 +31,24 @@ const traceInspectorConfig: InspectorSurfaceConfig = {
     'flag',
     'ruleDiagnostics',
   ],
-  defaultOpenKeys: ['flag', 'flags', 'advice', 'emittedAdvice', 'emitted_advice'],
+  defaultOpenKeys: ['flag', 'flags', 'advice'],
   preferredTables: [
     {
       key: 'advice',
-      preferredColumns: ['id', 'priority', 'severity', 'title', 'issued_at'],
-    },
-    {
-      key: 'emittedAdvice',
-      title: 'emittedAdvice',
-      preferredColumns: ['id', 'priority', 'severity', 'title', 'issued_at'],
-    },
-    {
-      key: 'emitted_advice',
-      title: 'emitted_advice',
-      preferredColumns: ['id', 'priority', 'severity', 'title', 'issued_at'],
+      preferredColumns: ['id', 'priority', 'title', 'stamp'],
     },
     {
       key: 'flags',
-      preferredColumns: ['id', 'source', 'severity', 'kind', 'summary', 'created_at'],
+      preferredColumns: ['id', 'source', 'priority', 'kind', 'summary', 'created_at'],
     },
   ],
 };
 
 const activeAdviceColumns = [
   'priority',
-  'severity',
   'title',
   'id',
-  'issued_at',
-  'expires_at',
+  'stamp',
 ];
 
 export function MinisterRulesView({
@@ -77,7 +65,7 @@ export function MinisterRulesView({
   const ministerAdvice = advice.filter(item => isScopeMinister(item.minister, scope));
   const ministerEvents = events.filter(event => isScopeMinister(event.source, scope));
   const latestMinisterEventId = ministerEvents[0]?.id ?? 'none';
-  const latestAdviceIssuedAt = ministerAdvice[0]?.issued_at ?? 'none';
+  const latestAdviceIssuedAt = ministerAdvice[0]?.stamp.issued_at ?? 'none';
   const trace = useAsyncResource(signal => fetchTrace(scope.key, signal), [
     scope.key,
     latestMinisterEventId,
@@ -169,17 +157,14 @@ function TraceSummaryPanel({ trace }: { trace: MinisterTrace }) {
 }
 
 function RuleDiagnosticsPanel({ details }: { details: RuleTraceDetails }) {
-  const allRules = details.allRules ?? [];
+  const allRules = details.allRules;
   const allRuleGroups = groupRuleCatalogByOutcome(allRules);
-  const emittedAdvice = details.emittedAdvice ?? [];
-  const emittedActions = details.emittedActions ?? [];
-  const emittedFlags = details.emittedFlags ?? [];
 
   return (
     <DisclosureSection
       title={<SemanticLabel icon={iconForView('rules')}><span>Rule diagnostics</span></SemanticLabel>}
       defaultOpen
-      meta={`${emittedActions.length} emitted actions / ${details.matchedSignals.length} matched / ${details.suppressedCandidates.length} suppressed`}
+      meta={formatRuleGroupMeta(allRuleGroups, allRules.length)}
     >
       <div className="inspector-field-grid">
         <div className="inspector-field">
@@ -215,69 +200,6 @@ function RuleDiagnosticsPanel({ details }: { details: RuleTraceDetails }) {
           <EmptyState code="NO RULE CATALOG">No rule catalog was emitted by this run.</EmptyState>
         )}
       </DisclosureSection>
-      <DisclosureSection
-        title={<SemanticLabel icon={iconForView('advice')}><span>Emitted actions by rule</span></SemanticLabel>}
-        defaultOpen
-        meta={`${emittedActions.length} actions`}
-      >
-        <div className="rule-emissions-table rule-emissions-action-table">
-          <DynamicTable
-            rows={emittedActions}
-            preferredColumns={['source', 'rule', 'adviceId', 'actionIndex', 'kind', 'instruction', 'applyKind', 'applyLabel', 'applyTargetSummary']}
-            maxColumns={9}
-            emptyMessage="No actions were emitted by this run."
-          />
-        </div>
-      </DisclosureSection>
-      {(emittedAdvice.length > 0 || emittedFlags.length > 0) && (
-        <DisclosureSection
-          title={<SemanticLabel icon={iconForSection('active_advice_emitted')}><span>Emitted advice and flags</span></SemanticLabel>}
-          meta={`${emittedAdvice.length} advice / ${emittedFlags.length} flags`}
-        >
-          {emittedAdvice.length > 0 && (
-            <div className="rule-emissions-table rule-emissions-advice-table">
-              <DynamicTable
-                rows={emittedAdvice}
-                preferredColumns={['source', 'rule', 'adviceId', 'priority', 'title', 'actionCount']}
-                maxColumns={6}
-              />
-            </div>
-          )}
-          {emittedFlags.length > 0 && (
-            <div className="rule-emissions-table rule-emissions-flag-table">
-              <DynamicTable
-                rows={emittedFlags}
-                preferredColumns={['source', 'rule', 'flagId', 'severity', 'summary', 'requestCount']}
-                maxColumns={6}
-              />
-            </div>
-          )}
-        </DisclosureSection>
-      )}
-      <div className="rule-diagnostics-table">
-        <DynamicTable
-          rows={details.matchedSignals}
-          preferredColumns={['rule', 'reason']}
-          hiddenColumns={['outcome']}
-          maxColumns={2}
-          emptyMessage="No rules matched."
-        />
-      </div>
-      {details.suppressedCandidates.length > 0 && (
-        <DisclosureSection
-          title={<SemanticLabel icon={iconForView('rules')}><span>Suppressed candidates</span></SemanticLabel>}
-          meta={`${details.suppressedCandidates.length} lower-priority matches`}
-        >
-          <div className="rule-diagnostics-table">
-            <DynamicTable
-              rows={details.suppressedCandidates}
-              preferredColumns={['rule', 'reason']}
-              hiddenColumns={['outcome']}
-              maxColumns={2}
-            />
-          </div>
-        </DisclosureSection>
-      )}
     </DisclosureSection>
   );
 }

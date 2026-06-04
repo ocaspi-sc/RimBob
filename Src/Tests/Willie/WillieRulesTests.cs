@@ -14,16 +14,17 @@ public sealed class WillieRulesTests
     [Fact]
     public void StableBuildProgram_ReturnsEmptyDecision()
     {
-        RulesResult result = new Rules().Evaluate(StableBriefing(), ColonyContext.Default);
+        WillieBriefing briefing = StableBriefing();
+        RuleRun result = new Rules().Evaluate(briefing, ColonyContext.Default);
 
-        Decision decision = result.Should().BeOfType<Decision>().Subject;
+        ProjectedRuleRun decision = Project(result, briefing);
         decision.Advice.Should().BeEmpty();
         decision.Flags.Should().BeEmpty();
         decision.Trace.Should().Be("maintain_build_program");
         decision.Diagnostics.Should().NotBeNull();
         decision.Diagnostics!.AllRules.Should().Contain(row =>
             row.Rule == "maintain_build_program" &&
-            row.Outcome == "selected");
+            row.Outcome == RuleOutcome.Selected);
         AssertAllRulesCatalog(decision);
     }
 
@@ -42,16 +43,14 @@ public sealed class WillieRulesTests
                 BatteryCount: 0)
         };
 
-        Decision decision = Evaluate(briefing);
+        ProjectedRuleRun decision = Evaluate(briefing);
 
         decision.Trace.Should().Be("power_net_deficit");
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
         advice.Id.Should().Be("willie_power_net_deficit");
-        advice.Priority.Should().Be(AdvicePriority.High);
+        advice.Priority.Should().Be(Priority.High);
         advice.Actions.Should().ContainSingle(action => action.Kind == AdviceActionKind.PlaceBlueprint);
-        decision.Diagnostics!.EmittedAdvice.Should().ContainSingle(row =>
-            row.Rule == "power_net_deficit" &&
-            row.AdviceId == advice.Id);
+        decision.Effects.OfType<Advise>().Should().ContainSingle(effect => effect.Rule == "power_net_deficit");
     }
 
     [Fact]
@@ -69,12 +68,12 @@ public sealed class WillieRulesTests
                 BatteryCount: 2)
         };
 
-        Decision decision = Evaluate(briefing);
+        ProjectedRuleRun decision = Evaluate(briefing);
 
         decision.Trace.Should().Be("low_battery_reserve");
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
         advice.Id.Should().Be("willie_low_battery_reserve");
-        advice.Priority.Should().Be(AdvicePriority.Medium);
+        advice.Priority.Should().Be(Priority.Medium);
     }
 
     [Fact]
@@ -89,7 +88,7 @@ public sealed class WillieRulesTests
                 DisallowedCount: 0)
         };
 
-        Decision decision = Evaluate(briefing);
+        ProjectedRuleRun decision = Evaluate(briefing);
 
         decision.Trace.Should().Be("backlog_material_gap");
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
@@ -113,9 +112,9 @@ public sealed class WillieRulesTests
         };
         Rules rules = new(new FixedTimeProvider(FixedNow));
 
-        RulesResult result = rules.Evaluate(briefing, ColonyContext.Default);
+        RuleRun result = rules.Evaluate(briefing, ColonyContext.Default);
 
-        Decision decision = result.Should().BeOfType<Decision>().Subject;
+        ProjectedRuleRun decision = Project(result, briefing, FixedNow);
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
         advice.IssuedAt.Should().Be(FixedNow);
         advice.ExpiresAt.Should().Be(FixedNow.AddHours(4));
@@ -135,7 +134,7 @@ public sealed class WillieRulesTests
                 DisallowedCount: 0)
         };
 
-        Decision decision = Evaluate(briefing);
+        ProjectedRuleRun decision = Evaluate(briefing);
 
         decision.Trace.Should().Be("frame_blocked_by_material");
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
@@ -153,7 +152,7 @@ public sealed class WillieRulesTests
             FunctionalRooms = FunctionalRooms(RoomClass.Hospital, RoomClass.Storage)
         };
 
-        Decision decision = Evaluate(briefing);
+        ProjectedRuleRun decision = Evaluate(briefing);
 
         decision.Trace.Should().Be("kitchen_missing");
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
@@ -164,12 +163,13 @@ public sealed class WillieRulesTests
     [Fact]
     public void InboundFreezingRequest_EmitsThermalControlAdviceWithoutApply()
     {
-        RulesResult result = new Rules().Evaluate(
-            StableBriefing(),
+        WillieBriefing briefing = StableBriefing();
+        RuleRun result = new Rules().Evaluate(
+            briefing,
             ColonyContext.Default,
             [FreezerRequest()]);
 
-        Decision decision = result.Should().BeOfType<Decision>().Subject;
+        ProjectedRuleRun decision = Project(result, briefing);
         decision.Trace.Should().Be(Rules.BuildingRequestActiveTrace);
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
         advice.Id.Should().Be("willie_building_request_active");
@@ -181,17 +181,18 @@ public sealed class WillieRulesTests
     [Fact]
     public void InboundNonFreezerRequest_EmitsGeneralBuildingRequestAdvice()
     {
-        RulesResult result = new Rules().Evaluate(
-            StableBriefing(),
+        WillieBriefing briefing = StableBriefing();
+        RuleRun result = new Rules().Evaluate(
+            briefing,
             ColonyContext.Default,
             [WorkshopRequest()]);
 
-        Decision decision = result.Should().BeOfType<Decision>().Subject;
+        ProjectedRuleRun decision = Project(result, briefing);
         decision.Trace.Should().Be(Rules.BuildingRequestActiveTrace);
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
         advice.Id.Should().Be("willie_building_request_active");
         advice.Title.Should().Be("Workshop request needs Willie placement");
-        Rules.TryGetPlacementRequest(decision.Trace, StableBriefing(), [WorkshopRequest()], out BuildingRequest request)
+        Rules.TryGetPlacementRequest(decision.Trace, briefing, [WorkshopRequest()], out BuildingRequest request)
             .Should().BeTrue();
         request.RoomClass.Should().Be(RoomClass.Workshop);
     }
@@ -204,24 +205,23 @@ public sealed class WillieRulesTests
             FunctionalRooms = FunctionalRooms(RoomClass.Hospital, RoomClass.Storage)
         };
 
-        RulesResult result = new Rules().Evaluate(
+        RuleRun result = new Rules().Evaluate(
             briefing,
             ColonyContext.Default,
             [FreezerRequest()]);
 
-        Decision decision = result.Should().BeOfType<Decision>().Subject;
+        ProjectedRuleRun decision = Project(result, briefing);
         decision.Trace.Should().Be("rules:building_request_active+kitchen_missing");
         decision.Advice.Select(advice => advice.Id).Should().Equal(
             "willie_building_request_active",
             "willie_kitchen_missing");
         decision.Diagnostics.Should().NotBeNull();
-        decision.Diagnostics!.SuppressedCandidates.Should().BeEmpty();
         decision.Diagnostics.AllRules.Should().Contain(row =>
             row.Rule == Rules.BuildingRequestActiveTrace &&
-            row.Outcome == "selected");
+            row.Outcome == RuleOutcome.Selected);
         decision.Diagnostics.AllRules.Should().Contain(row =>
             row.Rule == "kitchen_missing" &&
-            row.Outcome == "selected");
+            row.Outcome == RuleOutcome.Selected);
     }
 
     [Fact]
@@ -237,20 +237,19 @@ public sealed class WillieRulesTests
             Adjacency = [new AdjacencyHint(AdjacencyRelation.Near, "kitchen")]
         };
 
-        RulesResult result = new Rules().Evaluate(
+        RuleRun result = new Rules().Evaluate(
             briefing,
             ColonyContext.Default,
             [freezerNearKitchen]);
 
-        Decision decision = result.Should().BeOfType<Decision>().Subject;
+        ProjectedRuleRun decision = Project(result, briefing);
         decision.Trace.Should().Be("kitchen_missing");
         decision.Advice.Should().ContainSingle()
             .Which.Id.Should().Be("willie_kitchen_missing");
         decision.Diagnostics.Should().NotBeNull();
-        decision.Diagnostics!.SuppressedCandidates.Should().BeEmpty();
         decision.Diagnostics.AllRules.Should().Contain(row =>
             row.Rule == Rules.BuildingRequestActiveTrace &&
-            row.Outcome == "not_matched" &&
+            row.Outcome == RuleOutcome.NotMatched &&
             row.Conditions.Contains("depends on a missing kitchen"));
         Rules.TryGetPlacementRequest(decision.Trace, briefing, [freezerNearKitchen], out BuildingRequest request)
             .Should().BeTrue();
@@ -269,12 +268,12 @@ public sealed class WillieRulesTests
             Adjacency = [new AdjacencyHint(AdjacencyRelation.Near, "kitchen")]
         };
 
-        RulesResult result = new Rules().Evaluate(
+        RuleRun result = new Rules().Evaluate(
             briefing,
             ColonyContext.Default,
             [freezerNearKitchen, KitchenRequest()]);
 
-        Decision decision = result.Should().BeOfType<Decision>().Subject;
+        ProjectedRuleRun decision = Project(result, briefing);
         decision.Trace.Should().Be("rules:building_request_active+kitchen_missing");
         AdviceItem advice = decision.Advice.Should()
             .Contain(item => item.Id == "willie_building_request_active")
@@ -299,21 +298,20 @@ public sealed class WillieRulesTests
                 DisallowedCount: 0)
         };
 
-        RulesResult result = new Rules().Evaluate(
+        RuleRun result = new Rules().Evaluate(
             briefing,
             ColonyContext.Default,
             [FreezerRequest()]);
 
-        Decision decision = result.Should().BeOfType<Decision>().Subject;
+        ProjectedRuleRun decision = Project(result, briefing);
         decision.Trace.Should().Be("rules:backlog_material_gap+building_request_active");
         decision.Advice.Select(advice => advice.Id).Should().Equal(
             "willie_backlog_material_gap",
             "willie_building_request_active");
         decision.Diagnostics.Should().NotBeNull();
-        decision.Diagnostics!.SuppressedCandidates.Should().BeEmpty();
         decision.Diagnostics.AllRules.Should().Contain(row =>
             row.Rule == Rules.BuildingRequestActiveTrace &&
-            row.Outcome == "selected");
+            row.Outcome == RuleOutcome.Selected);
     }
 
     [Fact]
@@ -324,7 +322,7 @@ public sealed class WillieRulesTests
             FunctionalRooms = FunctionalRooms(RoomClass.Hospital, RoomClass.Storage)
         };
 
-        Decision decision = Evaluate(briefing);
+        ProjectedRuleRun decision = Evaluate(briefing);
 
         decision.Trace.Should().Be("kitchen_missing");
         Rules.TryGetPlacementRequest(decision.Trace, briefing, [], out BuildingRequest request)
@@ -335,13 +333,16 @@ public sealed class WillieRulesTests
             .Which.Target.Should().Be("storage");
     }
 
-    private static Decision Evaluate(WillieBriefing briefing)
+    private static ProjectedRuleRun Evaluate(WillieBriefing briefing)
     {
-        RulesResult result = new Rules().Evaluate(briefing, ColonyContext.Default);
-        return result.Should().BeOfType<Decision>().Subject;
+        RuleRun result = new Rules().Evaluate(briefing, ColonyContext.Default);
+        return Project(result, briefing);
     }
 
-    private static void AssertAllRulesCatalog(Decision decision)
+    private static ProjectedRuleRun Project(RuleRun run, WillieBriefing briefing, DateTimeOffset? now = null) =>
+        run.ProjectFor("Willie", "construction", briefing.BriefingVersion, briefing.Date, briefing.GameTick, now ?? FixedNow);
+
+    private static void AssertAllRulesCatalog(ProjectedRuleRun decision)
     {
         decision.Diagnostics.Should().NotBeNull();
         decision.Diagnostics!.AllRules.Should().HaveCount(10);
@@ -366,7 +367,7 @@ public sealed class WillieRulesTests
             TargetDef: "Cooler",
             RoomClass: RoomClass.Freezer,
             Temperature: new TempNeed(TemperatureBand.Freezing, MustHold: true),
-            Priority: AdvicePriority.High,
+            Priority: Priority.High,
             RequestedFrom: "Willie");
 
     private static BuildingRequest KitchenRequest() =>
@@ -378,7 +379,7 @@ public sealed class WillieRulesTests
             RoomClass: RoomClass.Kitchen,
             CapacityNeed: new CapacityNeed(CapacityMeasure.WorkSlots, 1),
             Adjacency: [new AdjacencyHint(AdjacencyRelation.Near, "storage")],
-            Priority: AdvicePriority.Medium,
+            Priority: Priority.Medium,
             RequestedFrom: "Willie");
 
     private static BuildingRequest WorkshopRequest() =>
@@ -390,7 +391,7 @@ public sealed class WillieRulesTests
             RoomClass: RoomClass.Workshop,
             CapacityNeed: new CapacityNeed(CapacityMeasure.WorkSlots, 1),
             Adjacency: [new AdjacencyHint(AdjacencyRelation.Near, "storage")],
-            Priority: AdvicePriority.Medium,
+            Priority: Priority.Medium,
             RequestedFrom: "Willie");
 
     private static WillieBriefing StableBriefing() =>

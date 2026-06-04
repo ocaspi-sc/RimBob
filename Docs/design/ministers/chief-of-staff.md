@@ -38,9 +38,7 @@ Inputs:
 
 - Latest Mayor output: posture, ranked priorities, state-of-the-union category
   summaries, and `cabinet_direction` as read-only guidance.
-- Active feeder issue reports, or current-runtime `AgentFlag`s projected from
-  those issues: source minister, severity, domain, summary, detail, expiry, and
-  stable ids.
+- Active feeder issue reports, or current-runtime `AgentFlag`s projected from those issues: source minister, priority, domain, summary, detail, expiry, and stable ids.
 - Structured requests projected from the issue: each `ResourceRequest` says
   what the source minister needs from another subsystem, with `requested_from`
   filled when the owner is known.
@@ -106,16 +104,14 @@ Bad requests:
 
 The first solver can be a pure sequence of deterministic passes:
 
-1. **Collect.** Read active flags at the selected severity threshold, discard
+1. **Collect.** Read active flags at the selected priority threshold, discard
    expired entries, and keep stale/live source metadata visible for tracing.
 2. **Normalize.** Fill missing owner hints from the ownership map when safe,
    normalize request priorities, and mark unresolved owners instead of guessing.
 3. **Group.** Build issue groups by stable flag id, source/domain, request
    target, and obvious same-problem keys such as `food/freezer`,
    `food/cooking`, `defense/raid`, or `construction/power`.
-4. **Calibrate severity.** Respect the emitting minister's severity, allow CoS
-   to downgrade with a reason, and keep upgrades as new minister flags rather
-   than silent CoS edits.
+4. **Calibrate priority.** Respect the emitting minister's priority, allow CoS to downgrade with a reason, and keep upgrades as new minister flags rather than silent CoS edits.
 5. **Choose lead framing.** Pick the player-facing lead by owner, urgency, and
    Mayor posture. The lead framing should answer "what is the one thing the
    player needs to understand first?"

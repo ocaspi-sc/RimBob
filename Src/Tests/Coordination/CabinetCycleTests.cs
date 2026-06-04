@@ -405,7 +405,7 @@ public sealed class CabinetCycleTests
         new(
             Id: "food:freezer",
             SourceMinister: "Chef",
-            Severity: FlagSeverity.High,
+            Priority: Priority.High,
             Domain: "food",
             Summary: "Freezer needed",
             BuildingRequests:
@@ -415,7 +415,7 @@ public sealed class CabinetCycleTests
                     Reason: "Food will spoil without cold storage.",
                     TargetClass: BuildingClass.Freezer,
                     RoomClass: RoomClass.Freezer,
-                    Priority: AdvicePriority.High,
+                    Priority: Priority.High,
                     RequestedFrom: "Willie")
             ]);
 
@@ -423,7 +423,7 @@ public sealed class CabinetCycleTests
         new(
             Id: "welfare:shelter_floor",
             SourceMinister: "Welfare",
-            Severity: FlagSeverity.High,
+            Priority: Priority.High,
             Domain: "welfare",
             Summary: "Starter barracks needed",
             BuildingRequests:
@@ -435,7 +435,7 @@ public sealed class CabinetCycleTests
                     TargetDef: "Bed",
                     RoomClass: RoomClass.Barracks,
                     CapacityNeed: new CapacityNeed(CapacityMeasure.Beds, 3),
-                    Priority: AdvicePriority.High,
+                    Priority: Priority.High,
                     RequestedFrom: "Willie")
             ]);
 

@@ -22,50 +22,37 @@ public sealed class MinisterOfWelfare(
     {
         WelfareSourceBriefing briefing = briefings.GetWelfareBriefing();
         MinisterBriefingContext context = BuildContext(outputStore.CurrentMayorAgenda);
-        RulesResult result = rules.Evaluate(briefing, ColonyContext.Default);
-
-        switch (result)
-        {
-            case Decision decision:
-                string stateSummary = WelfareStateSummary.Build(briefing);
-                PublishSnapshot(decision.Advice, decision.Flags, stateSummary);
-                await PersistReplayAsync(new MinisterReplayEntry(
-                    Minister: Name,
-                    Cycle: cycle,
-                    Path: "rules",
-                    Briefing: briefing,
-                    Context: context,
-                    RuleTrace: decision.Trace,
-                    RuleDiagnostics: decision.Diagnostics,
-                    Advice: decision.Advice,
-                    Flags: decision.Flags,
-                    StateSummary: stateSummary), ct);
-                log.LogInformation(
-                    "Welfare rules decision trace={Trace} advice={AdviceCount} flags={FlagCount}",
-                    decision.Trace,
-                    decision.Advice.Count,
-                    decision.Flags.Count);
-                break;
-
-            case Escalate escalate:
-                string unresolvedSummary = WelfareStateSummary.Build(briefing);
-                PublishSnapshot([], [], unresolvedSummary);
-                await PersistReplayAsync(new MinisterReplayEntry(
-                    Minister: Name,
-                    Cycle: cycle,
-                    Path: "rules",
-                    Briefing: briefing,
-                    Context: context,
-                    RuleTrace: null,
-                    RuleDiagnostics: escalate.Diagnostics,
-                    EscalationReason: escalate.Reason,
-                    EscalationContext: escalate.Context,
-                    Advice: [],
-                    Flags: [],
-                    StateSummary: unresolvedSummary), ct);
-                log.LogInformation("Welfare rules had no deterministic decision. reason={Reason}", escalate.Reason);
-                break;
-        }
+        RuleRun result = rules.Evaluate(briefing, ColonyContext.Default);
+        DecisionProjectionContext projectionContext = new(
+            Minister: Name,
+            Domain: "welfare",
+            BriefingVersion: briefing.BriefingVersion,
+            GameDate: null,
+            GameTick: briefing.GameTick,
+            Now: DateTimeOffset.UtcNow);
+        IReadOnlyList<AdviceItem> advice = DecisionProjection.ProjectAdvice(result.Decisions, projectionContext);
+        IReadOnlyList<AgentFlag> emittedFlags = DecisionProjection.ProjectFlags(result.Decisions, projectionContext);
+        string stateSummary = WelfareStateSummary.Build(briefing);
+        PublishSnapshot(advice, emittedFlags, stateSummary);
+        string? trace = result.Decisions.Count > 0
+            ? MinisterRuleTableEvaluator.CompositeTrace(result.Decisions)
+            : result.Diagnostics.SelectedRule?.Value;
+        await PersistReplayAsync(new MinisterReplayEntry(
+            Minister: Name,
+            Cycle: cycle,
+            Path: "rules",
+            Briefing: briefing,
+            Context: context,
+            RuleTrace: trace,
+            RuleDiagnostics: result.Diagnostics,
+            Advice: advice,
+            Flags: emittedFlags,
+            StateSummary: stateSummary), ct);
+        log.LogInformation(
+            "Welfare rules decision trace={Trace} advice={AdviceCount} flags={FlagCount}",
+            trace,
+            advice.Count,
+            emittedFlags.Count);
     }
 
     public Task RunRefinement(CancellationToken ct) => Task.CompletedTask;

@@ -26,7 +26,7 @@ internal static class ResourceRequestNormalizer
 {
     public static NormalizedFlagRequests NormalizeFlagRequests(
         JsonNode? flagNode,
-        AdvicePriority priority,
+        Priority priority,
         LlmAdviceNormalizationContext context,
         JsonSerializerOptions json)
     {
@@ -45,7 +45,7 @@ internal static class ResourceRequestNormalizer
 
     public static NormalizedFlagRequests NormalizeLegacyRequests(
         JsonNode? requestsNode,
-        AdvicePriority priority,
+        Priority priority,
         LlmAdviceNormalizationContext context,
         JsonSerializerOptions json)
     {
@@ -116,7 +116,7 @@ internal static class ResourceRequestNormalizer
     private static void AddBuildingRequests(
         RequestAccumulator accumulator,
         JsonNode? node,
-        AdvicePriority priority,
+        Priority priority,
         JsonSerializerOptions json)
     {
         JsonArray? array = node?.AsArray();
@@ -132,7 +132,7 @@ internal static class ResourceRequestNormalizer
     private static void AddLaborRequests(
         RequestAccumulator accumulator,
         JsonNode? node,
-        AdvicePriority priority,
+        Priority priority,
         JsonSerializerOptions json)
     {
         JsonArray? array = node?.AsArray();
@@ -149,7 +149,7 @@ internal static class ResourceRequestNormalizer
     private static void AddItemRequests(
         RequestAccumulator accumulator,
         JsonNode? node,
-        AdvicePriority priority,
+        Priority priority,
         JsonSerializerOptions json)
     {
         JsonArray? array = node?.AsArray();
@@ -165,7 +165,7 @@ internal static class ResourceRequestNormalizer
     private static void AddAttentionRequests(
         RequestAccumulator accumulator,
         JsonNode? node,
-        AdvicePriority priority,
+        Priority priority,
         JsonSerializerOptions json)
     {
         JsonArray? array = node?.AsArray();
@@ -181,7 +181,7 @@ internal static class ResourceRequestNormalizer
     private static void AddLegacyRequests(
         RequestAccumulator accumulator,
         JsonNode? node,
-        AdvicePriority priority,
+        Priority priority,
         LlmAdviceNormalizationContext context,
         JsonSerializerOptions json)
     {
@@ -212,7 +212,7 @@ internal static class ResourceRequestNormalizer
     private static void AddLegacyObject(
         RequestAccumulator accumulator,
         JsonObject item,
-        AdvicePriority priority,
+        Priority priority,
         LlmAdviceNormalizationContext context,
         JsonSerializerOptions json)
     {
@@ -225,7 +225,7 @@ internal static class ResourceRequestNormalizer
         string reason = ReadReason(item, $"{context.Minister} LLM requested this resource.");
         string request = ReadRequest(item, FormatResourceRequest(rawType, amount, unit));
         int? quantity = LlmResponseParser.TryReadIntegerQuantity(item["quantity"] ?? item["amount"]);
-        AdvicePriority? requestPriority = ReadPriority(item, priority);
+        Priority? requestPriority = ReadPriority(item, priority);
         string? requestedFrom = CleanOptional(LlmResponseParser.ReadString(item["requested_from"]));
 
         LegacyRequestKind kind = ParseLegacyKind(rawType, request, reason);
@@ -316,7 +316,7 @@ internal static class ResourceRequestNormalizer
 
     private static BuildingRequest? NormalizeBuildingItem(
         JsonNode? item,
-        AdvicePriority priority,
+        Priority priority,
         JsonSerializerOptions json)
     {
         if (item is not JsonObject obj) return null;
@@ -356,7 +356,7 @@ internal static class ResourceRequestNormalizer
 
     private static LaborRequest? NormalizeLaborItem(
         JsonNode? item,
-        AdvicePriority priority,
+        Priority priority,
         JsonSerializerOptions json,
         out AttentionRequest? attention)
     {
@@ -376,7 +376,7 @@ internal static class ResourceRequestNormalizer
         string reason = ReadReason(obj, "labor dependency");
         WorkType? workType = WorkTypeInference.Parse(LlmResponseParser.ReadString(obj["work_type"])) ??
                              WorkTypeInference.Infer(request, reason);
-        AdvicePriority? requestPriority = ReadPriority(obj, priority);
+        Priority? requestPriority = ReadPriority(obj, priority);
 
         if (workType is null)
         {
@@ -401,7 +401,7 @@ internal static class ResourceRequestNormalizer
 
     private static ItemRequest? NormalizeItemItem(
         JsonNode? item,
-        AdvicePriority priority,
+        Priority priority,
         JsonSerializerOptions json)
     {
         if (item is not JsonObject obj) return null;
@@ -428,7 +428,7 @@ internal static class ResourceRequestNormalizer
 
     private static AttentionRequest? NormalizeAttentionItem(
         JsonNode? item,
-        AdvicePriority priority,
+        Priority priority,
         JsonSerializerOptions json)
     {
         if (item is null) return null;
@@ -475,11 +475,11 @@ internal static class ResourceRequestNormalizer
             LlmResponseParser.ReadString(item["why"]),
             fallback);
 
-    private static AdvicePriority? ReadPriority(JsonObject item, AdvicePriority defaultPriority)
+    private static Priority? ReadPriority(JsonObject item, Priority defaultPriority)
     {
         string? raw = LlmResponseParser.ReadString(item["priority"]);
         if (!string.IsNullOrWhiteSpace(raw) &&
-            Enum.TryParse(raw.Replace("_", string.Empty), ignoreCase: true, out AdvicePriority priority))
+            Enum.TryParse(raw.Replace("_", string.Empty), ignoreCase: true, out Priority priority))
         {
             return priority;
         }
@@ -487,8 +487,8 @@ internal static class ResourceRequestNormalizer
         return PriorityIfHigh(defaultPriority);
     }
 
-    private static AdvicePriority? PriorityIfHigh(AdvicePriority priority) =>
-        priority >= AdvicePriority.High ? priority : null;
+    private static Priority? PriorityIfHigh(Priority priority) =>
+        priority >= Priority.High ? priority : null;
 
     private static LegacyRequestKind ParseLegacyKind(string rawType, string request, string reason)
     {

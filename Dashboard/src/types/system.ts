@@ -192,18 +192,7 @@ export interface CabinetRunLogSnapshot {
 
 export interface RuleTraceDetails {
   selectedRule: string | null;
-  matchedSignals: RuleTraceEntry[];
-  suppressedCandidates: RuleTraceEntry[];
-  allRules?: RuleEvaluationTrace[];
-  emittedAdvice?: RuleEmittedAdviceTrace[];
-  emittedActions?: RuleEmittedActionTrace[];
-  emittedFlags?: RuleEmittedFlagTrace[];
-}
-
-export interface RuleTraceEntry {
-  rule: string;
-  outcome: string;
-  reason: string;
+  allRules: RuleEvaluationTrace[];
 }
 
 export interface RuleEvaluationTrace {
@@ -212,36 +201,6 @@ export interface RuleEvaluationTrace {
   conditions: string;
   outputAction: string;
   reason: string | null;
-}
-
-export interface RuleEmittedAdviceTrace {
-  source: string;
-  rule: string;
-  adviceId: string;
-  priority: string;
-  title: string;
-  actionCount: number;
-}
-
-export interface RuleEmittedActionTrace {
-  source: string;
-  rule: string;
-  adviceId: string;
-  actionIndex: number;
-  kind: string;
-  instruction: string;
-  applyKind: string | null;
-  applyLabel: string | null;
-  applyTargetSummary: string | null;
-}
-
-export interface RuleEmittedFlagTrace {
-  source: string;
-  rule: string;
-  flagId: string;
-  severity: string;
-  summary: string;
-  requestCount: number;
 }
 
 export interface AssistedApplyAttempt {

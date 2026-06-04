@@ -12,8 +12,8 @@ public record AgentFlag(
     string Id,
     [property: JsonPropertyName("source_minister")]
     string SourceMinister,
-    [property: JsonPropertyName("severity")]
-    FlagSeverity Severity,
+    [property: JsonPropertyName("priority")]
+    Priority Priority,
     [property: JsonPropertyName("domain")]
     string Domain,
     [property: JsonPropertyName("summary")]
@@ -30,12 +30,3 @@ public record AgentFlag(
     string? Detail = null,
     [property: JsonPropertyName("expires_at")]
     DateTimeOffset? ExpiresAt = null);
-
-[JsonConverter(typeof(SnakeCaseLowerEnumConverter<FlagSeverity>))]
-public enum FlagSeverity
-{
-    Low = 0,
-    Medium = 1,
-    High = 2,
-    Critical = 3  // Only Defense emits Critical; others require CoS approval
-}

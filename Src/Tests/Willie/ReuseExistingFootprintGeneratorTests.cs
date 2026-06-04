@@ -192,7 +192,7 @@ public sealed class ReuseExistingFootprintGeneratorTests
             Temperature: null,
             MaterialsOnHand: [],
             Deadline: null,
-            Priority: AdvicePriority.Medium,
+            Priority: Priority.Medium,
             Source: "Willie",
             Constraints: []);
 
@@ -209,7 +209,7 @@ public sealed class ReuseExistingFootprintGeneratorTests
             Temperature: null,
             MaterialsOnHand: [],
             Deadline: null,
-            Priority: AdvicePriority.Medium,
+            Priority: Priority.Medium,
             Source: "Willie",
             Constraints: []);
 

@@ -191,7 +191,7 @@ function RequestCard({ card }: { card: RequestCardModel }) {
           <span className="eyebrow">{displayMinisterName(card.flag.source_minister)} to {displayMinisterName('Willie')}</span>
           <h4><IconizedText maxIcons={1} text={request.request} /></h4>
         </div>
-        <StatusPill tone={priorityTone(request.priority ?? card.flag.severity)}>{request.priority ?? card.flag.severity}</StatusPill>
+        <StatusPill tone={priorityTone(request.priority ?? card.flag.priority)}>{request.priority ?? card.flag.priority}</StatusPill>
       </header>
       <p><IconizedText maxIcons={2} text={request.reason} /></p>
       {details.length > 0 && (
@@ -465,18 +465,18 @@ function priorityTone(priority: string | null | undefined): PillTone {
 }
 
 function adviceExpiryState(item: AdviceItem, currentGameTick: number | null): AdviceExpiryState {
-  if (typeof item.expires_game_tick === 'number') {
-    if (typeof currentGameTick === 'number' && item.expires_game_tick <= currentGameTick) {
+  if (typeof item.stamp.expires_game_tick === 'number') {
+    if (typeof currentGameTick === 'number' && item.stamp.expires_game_tick <= currentGameTick) {
       return {
         expired: true,
-        message: `Expired at game tick ${formatInteger(item.expires_game_tick)}.`,
+        message: `Expired at game tick ${formatInteger(item.stamp.expires_game_tick)}.`,
       };
     }
 
     return { expired: false, message: null };
   }
 
-  const expiresAt = Date.parse(item.expires_at);
+  const expiresAt = Date.parse(item.stamp.expires_at);
   if (!Number.isNaN(expiresAt) && expiresAt <= Date.now()) {
     return { expired: true, message: 'Expired by wall-clock TTL.' };
   }

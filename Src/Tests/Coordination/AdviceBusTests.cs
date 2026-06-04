@@ -163,29 +163,13 @@ public sealed class AdviceBusTests
         AdviceBus bus = new();
         AdviceItem expired = Advice("old_food", "Food") with
         {
-            ExpiresAt = DateTimeOffset.UtcNow.AddHours(-1)
+            Stamp = Advice("old_food", "Food").Stamp with { ExpiresAt = DateTimeOffset.UtcNow.AddHours(-1) }
         };
 
         bus.Hydrate([new AdviceSnapshot("Food", [expired], "Stored Food state.")]);
 
         bus.ActiveAdvice().Should().ContainSingle().Which.Id.Should().Be("old_food");
         bus.ActiveSnapshot().StateSummaries.Should().ContainKey("Chef").WhoseValue.Should().Be("Stored Food state.");
-    }
-
-    [Fact]
-    public void Hydrate_MigratesObsoleteFoodCookPriorityActionIntoFlagRequest()
-    {
-        AdviceBus bus = new();
-        AdviceItem stale = Advice("old_food", "Food", [CookPriorityAction()]);
-
-        bus.Hydrate([new AdviceSnapshot("Food", [stale], "Stored Food state.")]);
-
-        AdviceItem active = bus.ActiveAdvice().Should().ContainSingle().Subject;
-        active.Actions.Should().NotContain(action => action.Kind == AdviceActionKind.SetPriority);
-        AdviceSnapshot snapshot = bus.ActiveSnapshot();
-        snapshot.Flags.Should().ContainSingle()
-            .Which.LaborRequests.Should().ContainSingle()
-            .Which.WorkType.Should().Be(WorkType.Cook);
     }
 
     [Fact]
@@ -263,26 +247,24 @@ public sealed class AdviceBusTests
     private static AdviceItem Advice(string id, string minister) => new(
         Id: id,
         Minister: minister,
-        Priority: AdvicePriority.High,
+        Priority: Priority.High,
         Title: "Food low",
         Body: "Body",
         Rationale: "Rationale",
         Actions: [],
         GuideCitationIds: [],
-        IssuedAt: DateTimeOffset.UtcNow,
-        ExpiresAt: DateTimeOffset.UtcNow.AddHours(1));
+        Stamp: new AdviceStamp(DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddHours(1)));
 
     private static AdviceItem Advice(string id, string minister, IReadOnlyList<AdviceAction> actions) => new(
         Id: id,
         Minister: minister,
-        Priority: AdvicePriority.High,
+        Priority: Priority.High,
         Title: "Food low",
         Body: "Body",
         Rationale: "Rationale",
         Actions: actions,
         GuideCitationIds: [],
-        IssuedAt: DateTimeOffset.UtcNow,
-        ExpiresAt: DateTimeOffset.UtcNow.AddHours(1));
+        Stamp: new AdviceStamp(DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddHours(1)));
 
     private static AdviceAction Action(string instruction, bool executable = false) =>
         new(
@@ -302,18 +284,10 @@ public sealed class AdviceBusTests
     private static AdviceActionApplyResult ApplyResult(string status) =>
         new(status, status == "applied" ? "Applied." : "Already satisfied.", AdviceApplyKind.UpsertProductionBill, DateTimeOffset.UnixEpoch);
 
-    private static AdviceAction CookPriorityAction() =>
-        new(
-            AdviceActionKind.SetPriority,
-            "Put the best cook on Cook work until simple meals are stocked.",
-            Owner: "Labor",
-            WorkType: WorkType.Cook,
-            Skill: "Cooking");
-
     private static AgentFlag Flag(string id, string minister) => new(
         Id: id,
         SourceMinister: minister,
-        Severity: FlagSeverity.High,
+        Priority: Priority.High,
         Domain: "food",
         Summary: "Food needs work",
         LaborRequests:
@@ -323,7 +297,7 @@ public sealed class AdviceBusTests
                 Reason: "raw food has to become meals",
                 WorkType: WorkType.Cook,
                 Skill: "Cooking",
-                Priority: AdvicePriority.High,
+                Priority: Priority.High,
                 RequestedFrom: "Labor")
         ]);
 

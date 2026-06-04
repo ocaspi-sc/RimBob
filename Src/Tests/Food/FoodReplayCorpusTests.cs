@@ -9,6 +9,7 @@ namespace RimBob.Tests.Food;
 
 public sealed class FoodReplayCorpusTests
 {
+    private static readonly DateTimeOffset ReplayNow = new(2026, 6, 2, 17, 0, 0, TimeSpan.Zero);
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
@@ -24,11 +25,15 @@ public sealed class FoodReplayCorpusTests
         cases.Should().NotBeEmpty();
         foreach (FoodRuleReplayCase replayCase in cases)
         {
-            RulesResult result = new Rules().Evaluate(replayCase.Briefing, ColonyContext.Default);
+            RuleRun result = new Rules().Evaluate(replayCase.Briefing, ColonyContext.Default);
 
-            Decision decision = result.Should()
-                .BeOfType<Decision>($"{replayCase.SourceId} is a saved rules-path replay record")
-                .Subject;
+            ProjectedRuleRun decision = result.ProjectFor(
+                "Chef",
+                "food",
+                replayCase.Briefing.BriefingVersion,
+                replayCase.Briefing.Date,
+                replayCase.Briefing.GameTick,
+                ReplayNow);
 
             decision.Trace.Should().Be(replayCase.RuleTrace, replayCase.SourceId);
             AssertAdviceMatches(replayCase.SourceId, replayCase.ExpectedAdvice, decision.Advice);
@@ -83,9 +88,8 @@ public sealed class FoodReplayCorpusTests
             actualItem.Rationale.Should().Be(expectedItem.Rationale, sourceId);
             actualItem.Actions.Should().BeEquivalentTo(expectedItem.Actions);
             actualItem.GuideCitationIds.Should().Equal(expectedItem.GuideCitationIds);
-            actualItem.IssuedGameDate.Should().Be(expectedItem.IssuedGameDate, sourceId);
+            actualItem.Stamp.Should().Be(expectedItem.Stamp, sourceId);
             actualItem.BriefingRef.Should().Be(expectedItem.BriefingRef, sourceId);
-            actualItem.Supersedes.Should().Be(expectedItem.Supersedes, sourceId);
             actualItem.AutonomyAtIssue.Should().Be(expectedItem.AutonomyAtIssue, sourceId);
         }
     }
@@ -102,7 +106,7 @@ public sealed class FoodReplayCorpusTests
             AgentFlag actualFlag = actual[i];
             actualFlag.Id.Should().Be(expectedFlag.Id, sourceId);
             actualFlag.SourceMinister.Should().Be(expectedFlag.SourceMinister, sourceId);
-            actualFlag.Severity.Should().Be(expectedFlag.Severity, sourceId);
+            actualFlag.Priority.Should().Be(expectedFlag.Priority, sourceId);
             actualFlag.Domain.Should().Be(expectedFlag.Domain, sourceId);
             actualFlag.Summary.Should().Be(expectedFlag.Summary, sourceId);
             actualFlag.Detail.Should().Be(expectedFlag.Detail, sourceId);

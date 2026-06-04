@@ -94,14 +94,13 @@ public sealed class ReplayCorpusOutputReaderTests
     private static AdviceItem Advice(string id, IReadOnlyList<AdviceOption>? options = null) => new(
         Id: id,
         Minister: "Willie",
-        Priority: AdvicePriority.High,
+        Priority: Priority.High,
         Title: "Build a freezer",
         Body: "Body",
         Rationale: "Rationale",
         Actions: [],
         GuideCitationIds: [],
-        IssuedAt: DateTimeOffset.UtcNow,
-        ExpiresAt: DateTimeOffset.UtcNow.AddHours(4),
+        Stamp: new AdviceStamp(DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddHours(4)),
         Options: options);
 
     private static AdviceOption Option(string id) => new(

@@ -18,13 +18,13 @@ public sealed class WelfareRulesTests
     [Fact]
     public void NewColonyWithoutBeds_EmitsShelterFloorAdviceAndWillieRequest()
     {
-        Decision decision = Evaluate("new-colony");
+        ProjectedRuleRun decision = Evaluate("new-colony");
 
         decision.Trace.Should().Be("shelter_floor");
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
         advice.Id.Should().Be("welfare_shelter_floor");
         advice.Minister.Should().Be("Welfare");
-        advice.Priority.Should().Be(AdvicePriority.High);
+        advice.Priority.Should().Be(Priority.High);
         advice.Body.Should().Contain("All 3 colonists");
         advice.Rationale.Should().Contain("slept on ground");
         advice.Actions.Should().ContainSingle(action => action.Kind == AdviceActionKind.PlaceBlueprint);
@@ -32,7 +32,7 @@ public sealed class WelfareRulesTests
         AgentFlag flag = decision.Flags.Should().ContainSingle().Subject;
         flag.Id.Should().Be("welfare:shelter_floor");
         flag.SourceMinister.Should().Be("Welfare");
-        flag.Severity.Should().Be(FlagSeverity.High);
+        flag.Priority.Should().Be(Priority.High);
         BuildingRequest request = flag.BuildingRequests.Should().ContainSingle().Subject;
         request.Request.Should().Be("add 3 beds in a roofed barracks");
         request.TargetClass.Should().Be(BuildingClass.Bed);
@@ -46,16 +46,16 @@ public sealed class WelfareRulesTests
         AssertAllRulesIncludeTableAndStableFallback(decision);
         decision.Diagnostics!.AllRules.Should().Contain(row =>
             row.Rule == "shelter_floor" &&
-            row.Outcome == "selected");
-        decision.Diagnostics.EmittedFlags.Should().ContainSingle(row =>
-            row.FlagId == "welfare:shelter_floor" &&
-            row.RequestCount == 1);
+            row.Outcome == RuleOutcome.Selected);
+        decision.Effects.OfType<RequestBuild>().Should().ContainSingle(effect =>
+            effect.Rule == "shelter_floor" &&
+            effect.Request.TargetClass == BuildingClass.Bed);
     }
 
     [Fact]
     public void HasBedsAndNoBreakRisk_ReturnsEmptyStableDecision()
     {
-        Decision decision = Evaluate("has-beds");
+        ProjectedRuleRun decision = Evaluate("has-beds");
 
         decision.Trace.Should().Be("needs_stable");
         decision.Advice.Should().BeEmpty();
@@ -64,18 +64,18 @@ public sealed class WelfareRulesTests
         AssertAllRulesIncludeTableAndStableFallback(decision);
         decision.Diagnostics!.AllRules.Should().Contain(row =>
             row.Rule == "needs_stable" &&
-            row.Outcome == "selected");
+            row.Outcome == RuleOutcome.Selected);
     }
 
     [Fact]
     public void BreakRisk_EmitsMoodAdviceWithoutBuildFlag()
     {
-        Decision decision = Evaluate("break-risk");
+        ProjectedRuleRun decision = Evaluate("break-risk");
 
-        decision.Trace.Should().Be("break_risk");
+        decision.Trace.Should().Be("rules:break_risk+break_risk_willie");
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
         advice.Id.Should().Be("welfare_break_risk");
-        advice.Priority.Should().Be(AdvicePriority.High);
+        advice.Priority.Should().Be(Priority.High);
         advice.Body.Should().Contain("Alice");
         advice.Body.Should().Contain("slept on ground");
         AgentFlag flag = decision.Flags.Should().ContainSingle().Subject;
@@ -94,16 +94,16 @@ public sealed class WelfareRulesTests
             ColonistCount = 2,
             Mood = new WelfareMoodSummary(0.32f, BreakRiskCount: 1, StressedCount: 1, ContentCount: 0)
         };
-        Decision decision = Evaluate(briefing);
+        ProjectedRuleRun decision = Evaluate(briefing);
 
         decision.Advice.Should().ContainSingle()
-            .Which.Priority.Should().Be(AdvicePriority.Critical);
+            .Which.Priority.Should().Be(Priority.Critical);
     }
 
     [Fact]
     public void GrewPastBeds_RequestsOnlyTheBedDeficit()
     {
-        Decision decision = Evaluate("grew-past-beds");
+        ProjectedRuleRun decision = Evaluate("grew-past-beds");
 
         decision.Trace.Should().Be("shelter_floor");
         BuildingRequest request = decision.Flags.Should().ContainSingle().Subject
@@ -117,7 +117,7 @@ public sealed class WelfareRulesTests
     [Fact]
     public void UnroofedBedroom_RequestsRoofFramingInsteadOfNewBeds()
     {
-        Decision decision = Evaluate("unroofed-bedroom");
+        ProjectedRuleRun decision = Evaluate("unroofed-bedroom");
 
         BuildingRequest request = decision.Flags.Should().ContainSingle().Subject
             .BuildingRequests.Should().ContainSingle().Subject;
@@ -130,12 +130,12 @@ public sealed class WelfareRulesTests
     [Fact]
     public void LowJoyWithoutRecreationSource_EmitsRecreationAdviceAndWillieFlag()
     {
-        Decision decision = Evaluate("low-joy-no-rec");
+        ProjectedRuleRun decision = Evaluate("low-joy-no-rec");
 
         decision.Trace.Should().Be("recreation_gap");
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
         advice.Id.Should().Be("welfare_recreation_gap");
-        advice.Priority.Should().Be(AdvicePriority.Medium);
+        advice.Priority.Should().Be(Priority.Medium);
         BuildingRequest request = decision.Flags.Should().ContainSingle().Subject
             .BuildingRequests.Should().ContainSingle().Subject;
         request.TargetClass.Should().Be(BuildingClass.Recreation);
@@ -147,7 +147,7 @@ public sealed class WelfareRulesTests
     [Fact]
     public void LowJoyWithRecreationSource_EmitsAdviceOnly()
     {
-        Decision decision = Evaluate("low-joy-has-rec");
+        ProjectedRuleRun decision = Evaluate("low-joy-has-rec");
 
         decision.Trace.Should().Be("recreation_gap");
         decision.Advice.Should().ContainSingle()
@@ -160,7 +160,7 @@ public sealed class WelfareRulesTests
     [Fact]
     public void AteWithoutTable_EmitsComfortBeautyDiningRequest()
     {
-        Decision decision = Evaluate("ate-without-table");
+        ProjectedRuleRun decision = Evaluate("ate-without-table");
 
         decision.Trace.Should().Be("comfort_beauty");
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
@@ -176,32 +176,32 @@ public sealed class WelfareRulesTests
     [Fact]
     public void MultiRule_EmitsEveryMatchedRulePrioritySorted()
     {
-        Decision decision = Evaluate("multi-rule");
+        ProjectedRuleRun decision = Evaluate("multi-rule");
 
         decision.Trace.Should().Be("rules:shelter_floor+recreation_gap+comfort_beauty");
         decision.Advice.Select(advice => advice.Id)
             .Should().Equal("welfare_shelter_floor", "welfare_recreation_gap", "welfare_comfort_beauty");
         decision.Advice.Select(advice => advice.Priority)
-            .Should().Equal(AdvicePriority.High, AdvicePriority.Medium, AdvicePriority.Low);
+            .Should().Equal(Priority.High, Priority.Medium, Priority.Low);
         decision.Flags.Select(flag => flag.Id)
             .Should().Equal("welfare:shelter_floor", "welfare:recreation_gap", "welfare:comfort_beauty");
-        decision.Diagnostics!.EmittedAdvice.Select(row => row.Rule)
+        decision.Effects.OfType<Advise>().Select(effect => effect.Rule.Value)
             .Should().Equal("shelter_floor", "recreation_gap", "comfort_beauty");
         decision.Diagnostics.AllRules.Should().Contain(row =>
             row.Rule == "recreation_gap" &&
-            row.Outcome == "selected");
+            row.Outcome == RuleOutcome.Selected);
     }
 
-    private static Decision Evaluate(string fixtureName) =>
+    private static ProjectedRuleRun Evaluate(string fixtureName) =>
         Evaluate(LoadFixture(fixtureName));
 
-    private static Decision Evaluate(WelfareSourceBriefing briefing)
+    private static ProjectedRuleRun Evaluate(WelfareSourceBriefing briefing)
     {
-        RulesResult result = new Rules(new FixedTimeProvider(FixedNow)).Evaluate(briefing, ColonyContext.Default);
-        return result.Should().BeOfType<Decision>().Subject;
+        RuleRun result = new Rules(new FixedTimeProvider(FixedNow)).Evaluate(briefing, ColonyContext.Default);
+        return result.ProjectFor("Welfare", "welfare", briefing.BriefingVersion, null, briefing.GameTick, FixedNow);
     }
 
-    private static void AssertAllRulesIncludeTableAndStableFallback(Decision decision) =>
+    private static void AssertAllRulesIncludeTableAndStableFallback(ProjectedRuleRun decision) =>
         decision.Diagnostics!.AllRules.Select(row => row.Rule)
             .Should().Equal("break_risk", "shelter_floor", "recreation_gap", "comfort_beauty", "needs_stable");
 

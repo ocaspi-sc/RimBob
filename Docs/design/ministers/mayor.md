@@ -68,7 +68,7 @@ obvious recurring issues, but it no longer receives the prior Agenda as a
 continuity input.
 
 Post-M5 tactical alerts may become separate urgent advice items when feeder flag
-severity warrants it. That path is not part of the current Mayor MVP.
+priority warrants it. That path is not part of the current Mayor MVP.
 
 Exact agenda records and prompt parser contracts live in source and tests.
 

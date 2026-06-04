@@ -1,5 +1,7 @@
 using RimBob.Core.Advice;
 
+using RimBob.Core.Ministers;
+
 namespace RimBob.Ministers.Willie;
 
 public sealed record WillieFlagRequests(
@@ -33,7 +35,7 @@ public sealed record WillieFlagRequests(
     public static WillieFlagRequests AttentionRequest(
         string request,
         string reason,
-        AdvicePriority? priority,
+        Priority? priority,
         string? requestedFrom) =>
         Empty.Add(new AttentionRequest(
             Request: request,
@@ -59,6 +61,32 @@ public sealed record WillieFlagRequests(
 
     public WillieFlagRequests Add(AttentionRequest request) =>
         this with { Attention = Attention.Append(request).ToArray() };
+
+    public IReadOnlyList<Decision> ToDecisions(RuleId rule, Priority fallbackPriority)
+    {
+        List<Decision> decisions = [];
+        decisions.AddRange(BuildingRequests.Select(request => new RequestBuild(
+            rule,
+            request,
+            request.RequestedFrom ?? "Willie",
+            request.Priority ?? fallbackPriority)));
+        decisions.AddRange(LaborRequests.Select(request => new RequestLabor(
+            rule,
+            request,
+            request.RequestedFrom ?? "Labor",
+            request.Priority ?? fallbackPriority)));
+        decisions.AddRange(ItemRequests.Select(request => new RequestItem(
+            rule,
+            request,
+            request.RequestedFrom ?? "Chief of Staff",
+            request.Priority ?? fallbackPriority)));
+        decisions.AddRange(Attention.Select(request => new RequestAttention(
+            rule,
+            request,
+            request.RequestedFrom ?? "Chief of Staff",
+            request.Priority ?? fallbackPriority)));
+        return decisions;
+    }
 
     private static IReadOnlyList<T>? NullIfEmpty<T>(IReadOnlyList<T> values) =>
         values.Count == 0 ? null : values;

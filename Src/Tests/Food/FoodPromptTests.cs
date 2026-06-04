@@ -77,7 +77,7 @@ public sealed class FoodPromptTests
         builder.FoodSystemPrompt.Should().Contain("mark_hunt");
         builder.FoodSystemPrompt.Should().Contain("unforbid");
         builder.FoodSystemPrompt.Should().Contain("Flags must be full AgentFlag objects");
-        builder.FoodSystemPrompt.Should().Contain("severity (low, medium, high, or critical)");
+        builder.FoodSystemPrompt.Should().Contain("priority (low, medium, high, or critical)");
         builder.FoodSystemPrompt.Should().Contain("domain \"food\"");
         builder.FoodSystemPrompt.Should().Contain("A flag missing this envelope or using an unknown enum token is dropped");
         builder.FoodSystemPrompt.Should().Contain("building_requests");
