@@ -7,6 +7,7 @@ using RimBob.Core.Ministers;
 using RimBob.Knowledge;
 using RimBob.LLM;
 using RimBob.Ministers.Food;
+using RimBob.Ministers.Welfare;
 using RimBob.Ministers.Willie;
 using RimBob.State;
 
@@ -68,6 +69,7 @@ public static class MinisterEndpoints
             PromptInspectorCache promptCache,
             MayorRagRetriever mayorRetriever,
             FoodRagRetriever foodRetriever,
+            WelfareRagRetriever welfareRetriever,
             FlagChannel flags,
             bool? refresh,
             CancellationToken ct) =>
@@ -134,6 +136,29 @@ public static class MinisterEndpoints
                         string user = prompts.BuildFoodUserMessage(briefing, context, retrieved, cropCandidates);
                         return new PromptInspectorPayload(
                             ReadPromptOrPlaceholder(() => prompts.FoodSystemPrompt),
+                            user);
+                    },
+                    ct);
+                return Results.Ok(payload);
+            }
+
+            if (scope.Key == "welfare")
+            {
+                WelfareSourceBriefing briefing = briefings.GetWelfareBriefing();
+                string key = PromptInspectorCache.BuildKey(
+                    scope.Key,
+                    briefing.BriefingVersion,
+                    outputStore.CurrentMayorAgenda?.Version);
+                PromptInspectorPayload payload = await promptCache.GetOrCreateAsync(
+                    key,
+                    refresh == true,
+                    async cancellationToken =>
+                    {
+                        MinisterBriefingContext context = MinisterOfWelfare.BuildContext(outputStore.CurrentMayorAgenda);
+                        IReadOnlyList<GuideCitation> retrieved = await welfareRetriever.RetrieveAsync(briefing, cancellationToken);
+                        string user = prompts.BuildWelfareUserMessage(briefing, context, retrieved);
+                        return new PromptInspectorPayload(
+                            ReadPromptOrPlaceholder(() => prompts.WelfareSystemPrompt),
                             user);
                     },
                     ct);
@@ -323,6 +348,7 @@ public static class MinisterEndpoints
             MinisterOutputStore outputStore,
             PromptBuilder prompts,
             FoodRagRetriever foodRetriever,
+            WelfareRagRetriever welfareRetriever,
             RawLlmOutputStore outputs,
             MinisterReplayRecorder replay,
             AdviceBus bus,
@@ -344,6 +370,102 @@ public static class MinisterEndpoints
             string text = ReadManualLlmOutputText(body);
             if (string.IsNullOrWhiteSpace(text))
                 return Results.BadRequest(new { error = "Manual LLM output text is required." });
+
+            if (scope.Key == "welfare")
+            {
+                WelfareSourceBriefing welfareBriefing = briefings.GetWelfareBriefing();
+                MinisterBriefingContext welfareContext = MinisterOfWelfare.BuildContext(outputStore.CurrentMayorAgenda);
+                IReadOnlyList<GuideCitation> welfareRetrieved = await welfareRetriever.RetrieveAsync(welfareBriefing, ct);
+                string welfareUser = prompts.BuildWelfareUserMessage(welfareBriefing, welfareContext, welfareRetrieved);
+                string welfareSystem = ReadPromptOrPlaceholder(() => prompts.WelfareSystemPrompt);
+                DateTimeOffset welfareCapturedAt = DateTimeOffset.UtcNow;
+
+                try
+                {
+                    WelfareLlmParseResult parseResult = WelfareLlmResponseParser.Parse(text, welfareBriefing, welfareRetrieved);
+                    IReadOnlyList<string> styleWarnings = ManualLlmStyleWarnings(parseResult);
+                    string stateSummary = WelfareStateSummary.Build(welfareBriefing);
+                    outputs.Record(new RawLlmOutputSnapshot(
+                        Minister: scope.Label,
+                        Provider: "Codex",
+                        Model: "codex-subagent",
+                        ApiKeyIndex: null,
+                        ApiKeyLabel: null,
+                        CapturedAt: welfareCapturedAt,
+                        LatencyMs: 0,
+                        Status: parseResult.Normalized ? "manual_normalized" : "manual_parsed",
+                        ParseMode: parseResult.ParseMode,
+                        SystemPromptChars: welfareSystem.Length,
+                        UserPromptChars: welfareUser.Length,
+                        Text: text));
+                    await replay.RecordAsync(new MinisterReplayEntry(
+                        Minister: scope.Label,
+                        Cycle: PlayCycleContext.ManualTrigger,
+                        Path: "llm",
+                        Briefing: welfareBriefing,
+                        Context: welfareContext,
+                        EscalationReason: "manual_llm_output_endpoint",
+                        EscalationContext: new { endpoint = "/api/ministers/{minister}/llm-output/manual" },
+                        GuideCitations: welfareRetrieved,
+                        Advice: parseResult.Response.Advice,
+                        Flags: parseResult.Response.Flags,
+                        StateSummary: stateSummary,
+                        LlmAttemptStarted: welfareCapturedAt,
+                        OutputKind: "advice_flags",
+                        Output: new { advice = parseResult.Response.Advice, flags = parseResult.Response.Flags, notes = parseResult.Response.Notes }), ct);
+
+                    bus.ReplaceMinisterAdvice(scope.Label, parseResult.Response.Advice, stateSummary, flags: parseResult.Response.Flags);
+                    foreach (AgentFlag flag in parseResult.Response.Flags)
+                        flags.Publish(flag);
+
+                    return Results.Ok(new
+                    {
+                        accepted = true,
+                        minister = scope.Label,
+                        status = parseResult.Normalized ? "manual_normalized" : "manual_parsed",
+                        parse_mode = parseResult.ParseMode,
+                        state_summary = stateSummary,
+                        llm_state_summary = parseResult.Response.StateSummary,
+                        advice_count = parseResult.Response.Advice.Count,
+                        flag_count = parseResult.Response.Flags.Count,
+                        dropped_flag_count = parseResult.DroppedFlagCount,
+                        style_warnings = styleWarnings,
+                        notes = parseResult.Response.Notes
+                    });
+                }
+                catch (JsonException ex)
+                {
+                    outputs.Record(new RawLlmOutputSnapshot(
+                        Minister: scope.Label,
+                        Provider: "Codex",
+                        Model: "codex-subagent",
+                        ApiKeyIndex: null,
+                        ApiKeyLabel: null,
+                        CapturedAt: welfareCapturedAt,
+                        LatencyMs: 0,
+                        Status: "manual_parse_failed",
+                        ParseMode: "strict_json",
+                        SystemPromptChars: welfareSystem.Length,
+                        UserPromptChars: welfareUser.Length,
+                        Text: text));
+                    await replay.RecordAsync(new MinisterReplayEntry(
+                        Minister: scope.Label,
+                        Cycle: PlayCycleContext.ManualTrigger,
+                        Path: "llm_failed",
+                        Briefing: welfareBriefing,
+                        Context: welfareContext,
+                        EscalationReason: "manual_llm_output_endpoint",
+                        EscalationContext: new { endpoint = "/api/ministers/{minister}/llm-output/manual" },
+                        GuideCitations: welfareRetrieved,
+                        Error: new ReplayErrorSummary(ex.GetType().Name, ex.Message),
+                        LlmAttemptStarted: welfareCapturedAt), ct);
+                    return Results.BadRequest(new
+                    {
+                        error = "Manual LLM output could not be parsed as Welfare advice JSON.",
+                        detail = ex.Message
+                    });
+                }
+            }
 
             FoodBriefing briefing = briefings.GetFoodBriefing();
             MinisterBriefingContext context = Chef.BuildContext(outputStore.CurrentMayorAgenda);
@@ -607,10 +729,20 @@ public static class MinisterEndpoints
     private static IReadOnlyList<string> ManualLlmStyleWarnings(FoodLlmParseResult parseResult)
     {
         List<string> warnings = [.. AdviceTextStyleWarnings.ForFood(parseResult.Response)];
-        if (parseResult.DroppedFlagCount > 0)
+        warnings.AddRange(DroppedFlagWarnings(parseResult.DroppedFlagCount));
+        return warnings;
+    }
+
+    private static IReadOnlyList<string> ManualLlmStyleWarnings(WelfareLlmParseResult parseResult) =>
+        DroppedFlagWarnings(parseResult.DroppedFlagCount);
+
+    private static IReadOnlyList<string> DroppedFlagWarnings(int droppedFlagCount)
+    {
+        List<string> warnings = [];
+        if (droppedFlagCount > 0)
         {
-            string plural = parseResult.DroppedFlagCount == 1 ? "" : "s";
-            warnings.Add($"{parseResult.DroppedFlagCount} flag object{plural} dropped during strict AgentFlag parsing; include the envelope and known enum tokens.");
+            string plural = droppedFlagCount == 1 ? "" : "s";
+            warnings.Add($"{droppedFlagCount} flag object{plural} dropped during strict AgentFlag parsing; include the envelope and known enum tokens.");
         }
 
         return warnings;

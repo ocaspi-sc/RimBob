@@ -68,6 +68,38 @@ public sealed class WelfareRulesTests
     }
 
     [Fact]
+    public void SocialPressureWithoutWiredRule_Escalates()
+    {
+        WelfareSourceBriefing briefing = SocialPressureBriefing(LoadFixture("has-beds"));
+        RuleRun result = RawEvaluate(briefing);
+
+        Escalate escalation = result.Decisions.Should().ContainSingle()
+            .Which.Should().BeOfType<Escalate>().Subject;
+        escalation.Rule.Value.Should().Be("unexplained_mood_pressure");
+        escalation.Reason.Should().Contain("dominant_unwired_thought=social");
+        result.Diagnostics.SelectedRule!.Value.Value.Should().Be("unexplained_mood_pressure");
+        result.Diagnostics.AllRules.Should().Contain(row =>
+            row.Rule == "unexplained_mood_pressure" &&
+            row.Outcome == RuleOutcome.Escalated);
+    }
+
+    [Fact]
+    public void WiredRulePresent_DoesNotEscalateForStraySocialThought()
+    {
+        WelfareSourceBriefing briefing = SocialPressureBriefing(LoadFixture("new-colony"));
+        RuleRun result = RawEvaluate(briefing);
+
+        result.Decisions.OfType<Escalate>().Should().BeEmpty();
+        result.Decisions.OfType<Advise>().Should().Contain(advice => advice.Rule == "shelter_floor");
+        result.Diagnostics.AllRules.Should().Contain(row =>
+            row.Rule == "shelter_floor" &&
+            row.Outcome == RuleOutcome.Selected);
+        result.Diagnostics.AllRules.Should().Contain(row =>
+            row.Rule == "unexplained_mood_pressure" &&
+            row.Outcome == RuleOutcome.NotMatched);
+    }
+
+    [Fact]
     public void BreakRisk_EmitsMoodAdviceWithoutBuildFlag()
     {
         ProjectedRuleRun decision = Evaluate("break-risk");
@@ -197,13 +229,48 @@ public sealed class WelfareRulesTests
 
     private static ProjectedRuleRun Evaluate(WelfareSourceBriefing briefing)
     {
-        RuleRun result = new Rules(new FixedTimeProvider(FixedNow)).Evaluate(briefing, ColonyContext.Default);
+        RuleRun result = RawEvaluate(briefing);
         return result.ProjectFor("Welfare", "welfare", briefing.BriefingVersion, null, briefing.GameTick, FixedNow);
     }
 
+    private static RuleRun RawEvaluate(WelfareSourceBriefing briefing) =>
+        new Rules(new FixedTimeProvider(FixedNow)).Evaluate(briefing, ColonyContext.Default);
+
     private static void AssertAllRulesIncludeTableAndStableFallback(ProjectedRuleRun decision) =>
         decision.Diagnostics!.AllRules.Select(row => row.Rule)
-            .Should().Equal("break_risk", "shelter_floor", "recreation_gap", "comfort_beauty", "needs_stable");
+            .Should().Equal("break_risk", "shelter_floor", "recreation_gap", "comfort_beauty", "unexplained_mood_pressure", "needs_stable");
+
+    private static WelfareSourceBriefing SocialPressureBriefing(WelfareSourceBriefing briefing) =>
+        briefing with
+        {
+            Mood = new WelfareMoodSummary(
+                AverageMood: Math.Min(briefing.Mood.AverageMood, 0.58f),
+                BreakRiskCount: 0,
+                StressedCount: 1,
+                ContentCount: briefing.Mood.ContentCount),
+            WorstPawns =
+            [
+                new WelfarePawnMood(
+                    Id: "p1",
+                    Name: "Alice",
+                    Mood: 0.46f,
+                    Sleep: 0.7f,
+                    Comfort: 0.7f,
+                    Beauty: 0.7f,
+                    Joy: 0.7f,
+                    FreshAir: 0.7f,
+                    DrugsDesire: 0f,
+                    TopNegativeThoughts:
+                    [
+                        new WelfareMoodThought("SocialFight", "social fight", -5f, 0)
+                    ])
+            ],
+            ThoughtDigest = new WelfareThoughtDigest(
+            [
+                new WelfareThoughtGroup(ThoughtCategory.Social, 1, -5f, "social fight")
+            ]),
+            DataCoverage = briefing.DataCoverage with { HasMoodThoughts = true }
+        };
 
     private static WelfareSourceBriefing LoadFixture(string name)
     {

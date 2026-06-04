@@ -22,9 +22,11 @@ public sealed class PromptBuilder
 
     private static readonly Lazy<string> _mayorSystemPrompt = new(() => LoadPrompt("mayor.system.md"));
     private static readonly Lazy<string> _foodSystemPrompt = new(() => LoadPrompt("food.system.md"));
+    private static readonly Lazy<string> _welfareSystemPrompt = new(() => LoadPrompt("welfare.system.md"));
 
     public string MayorSystemPrompt => _mayorSystemPrompt.Value;
     public string FoodSystemPrompt => _foodSystemPrompt.Value;
+    public string WelfareSystemPrompt => _welfareSystemPrompt.Value;
 
     public string BuildMayorUserMessage(
         MayorBriefing           briefing,
@@ -59,6 +61,21 @@ public sealed class PromptBuilder
         return JsonSerializer.Serialize(payload, UserMessageJson);
     }
 
+    public string BuildWelfareUserMessage(
+        WelfareSourceBriefing briefing,
+        MinisterBriefingContext context,
+        IReadOnlyList<GuideCitation> guideContext)
+    {
+        IReadOnlyList<GuideContextEntry>? guides = guideContext.Count == 0
+            ? null
+            : [.. guideContext.Select(c => new GuideContextEntry(c.CiteId, c.Heading, c.SourcePath, c.Snippet))];
+        WelfarePromptPayload payload = new(
+            briefing,
+            context,
+            guides);
+        return JsonSerializer.Serialize(payload, UserMessageJson);
+    }
+
     private static string LoadPrompt(string fileName)
     {
         string assemblyDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)
@@ -82,6 +99,12 @@ internal sealed record FoodPromptPayload(
     [property: JsonPropertyName("minister_context")] MinisterBriefingContext Context,
     [property: JsonPropertyName("guide_context")] IReadOnlyList<GuideContextEntry>? GuideContext,
     [property: JsonPropertyName("crop_candidates")] IReadOnlyList<FoodPromptCropCandidate>? CropCandidates
+);
+
+internal sealed record WelfarePromptPayload(
+    [property: JsonPropertyName("briefing")] WelfareSourceBriefing Briefing,
+    [property: JsonPropertyName("minister_context")] MinisterBriefingContext Context,
+    [property: JsonPropertyName("guide_context")] IReadOnlyList<GuideContextEntry>? GuideContext
 );
 
 public sealed record FoodPromptCropCandidate(

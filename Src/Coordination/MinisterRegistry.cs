@@ -26,9 +26,6 @@ public sealed class MinisterRegistry
     private static readonly IReadOnlyList<string> RulesOnlyMinisterViews =
         ["briefing", "build_queue", "solver", "requests", "rules", "advice"];
 
-    private static readonly IReadOnlyList<string> WelfareMinisterViews =
-        ["briefing", "rules", "advice"];
-
     private readonly IReadOnlyList<MinisterDescriptor> scopes =
     [
         new("system", "SYSTEM", "system", true, ["overview"]),
@@ -73,10 +70,15 @@ public sealed class MinisterRegistry
             Label: "Welfare",
             Kind: "minister",
             Ready: true,
-            EnabledViews: WelfareMinisterViews,
+            EnabledViews: MinisterViews,
             CabinetOrder: 12,
             CanManualTrigger: true,
-            CanRunRules: true),
+            CanRunRules: true,
+            CanRunLlm: true,
+            HasPrompt: true,
+            HasRawLlmOutput: true,
+            HasManualLlmOutput: true,
+            HasRag: true),
         new("medical", "Medical", "minister", false, MinisterViews),
         new("research", "Research", "minister", false, MinisterViews),
         new("industry", "Industry", "minister", false, MinisterViews),

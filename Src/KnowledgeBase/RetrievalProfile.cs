@@ -24,6 +24,12 @@ public sealed record RetrievalProfile(
         TopK: 3,
         SnippetMaxChars: 320);
 
+    public static readonly RetrievalProfile Welfare = new(
+        Name: "Welfare",
+        CitationPrefix: "wg",
+        TopK: 3,
+        SnippetMaxChars: 320);
+
     public RetrievalProfile WithConfiguredTopK(int topK) =>
         this with { TopK = topK > 0 ? topK : TopK };
 }

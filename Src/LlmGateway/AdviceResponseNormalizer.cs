@@ -11,7 +11,7 @@ internal sealed record LlmAdviceNormalizationContext(
     string Domain,
     long BriefingVersion,
     long GameTick,
-    GameDate Date,
+    GameDate? Date,
     string DefaultRationale,
     IReadOnlyList<GuideCitation> GuideContext);
 
@@ -27,6 +27,13 @@ internal sealed record NormalizedFlagResult(AgentFlag? Flag, bool Dropped);
 internal static class AdviceResponseNormalizer
 {
     public static FoodLlmResponse NormalizeStrictResponse(FoodLlmResponse response) =>
+        response with
+        {
+            Advice = NormalizeStrictAdviceItems(response.Advice),
+            Flags = NormalizeStrictFlags(response.Flags)
+        };
+
+    public static WelfareLlmResponse NormalizeStrictResponse(WelfareLlmResponse response) =>
         response with
         {
             Advice = NormalizeStrictAdviceItems(response.Advice),

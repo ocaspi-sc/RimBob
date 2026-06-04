@@ -1,6 +1,7 @@
 using RimBob.Core.Advice;
 using RimBob.Core.Briefings;
 using RimBob.Core.Ministers;
+using System.Globalization;
 
 namespace RimBob.Ministers.Welfare;
 
@@ -9,6 +10,8 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
     private const string MinisterName = "Welfare";
     private const string Domain = "welfare";
     private const float BreakRiskMood = 0.35f;
+    private const float EscalationMoodFloor = 0.45f;
+    private const float MaterialThoughtOffset = -3f;
     private readonly TimeProvider timeProvider;
 
     public Rules(TimeProvider? timeProvider = null)
@@ -27,6 +30,14 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
             additionalRuleDescriptors: fallbackRuleDescriptors);
         if (ruleRun.Decisions.Count > 0)
             return ruleRun;
+
+        if (HasUnexplainedMoodPressure(briefing))
+        {
+            string reason = UnexplainedMoodPressureReason(briefing);
+            return new RuleRun(
+                [new Escalate("unexplained_mood_pressure", reason, BuildEscalationContext(briefing))],
+                DiagnosticsForFallback(rules, fallbackRuleDescriptors, briefing, "unexplained_mood_pressure"));
+        }
 
         return new RuleRun([], DiagnosticsForFallback(rules, fallbackRuleDescriptors, briefing, "needs_stable"));
     }
@@ -337,14 +348,89 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
 
     private static IReadOnlyList<MinisterRuleTraceDescriptor<WelfareSourceBriefing>> FallbackRuleDescriptors() =>
     [
+        new("unexplained_mood_pressure", UnexplainedMoodPressureReason, (_, selectedRule) => EscalatedWhenSelected("unexplained_mood_pressure", selectedRule)),
         new("needs_stable", NeedsStableReason, (_, selectedRule) => SelectedWhenSelected("needs_stable", selectedRule))
     ];
 
     private static string NeedsStableReason(WelfareSourceBriefing briefing) =>
         "no deterministic Welfare rule matched";
 
+    private static RuleOutcome EscalatedWhenSelected(RuleId rule, RuleId? selectedRule) =>
+        selectedRule == rule ? RuleOutcome.Escalated : RuleOutcome.NotMatched;
+
     private static RuleOutcome SelectedWhenSelected(RuleId rule, RuleId? selectedRule) =>
         selectedRule == rule ? RuleOutcome.Selected : RuleOutcome.NotMatched;
+
+    private static bool HasUnexplainedMoodPressure(WelfareSourceBriefing briefing)
+    {
+        if (briefing.ColonistCount <= 0)
+            return false;
+
+        return DominantEscalationGroup(briefing) is not null ||
+               briefing.Mood.AverageMood < EscalationMoodFloor;
+    }
+
+    private static WelfareThoughtGroup? DominantEscalationGroup(WelfareSourceBriefing briefing) =>
+        briefing.DataCoverage.HasMoodThoughts
+            ? briefing.ThoughtDigest.ByCategory
+                .Where(group => IsEscalationCategory(group.Category) && group.WorstOffset <= MaterialThoughtOffset)
+                .OrderBy(group => group.WorstOffset)
+                .FirstOrDefault()
+            : null;
+
+    private static bool IsEscalationCategory(ThoughtCategory category) =>
+        category is not ThoughtCategory.ShelterSleep and
+            not ThoughtCategory.Recreation and
+            not ThoughtCategory.ComfortBeauty;
+
+    private static string UnexplainedMoodPressureReason(WelfareSourceBriefing briefing)
+    {
+        WelfareThoughtGroup? group = DominantEscalationGroup(briefing);
+        if (group is not null)
+        {
+            return string.Create(
+                CultureInfo.InvariantCulture,
+                $"dominant_unwired_thought={ToSnakeCase(group.Category.ToString())}; pawns={group.PawnCount}; worst_offset={group.WorstOffset:0.#}; example={group.ExampleLabel}");
+        }
+
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"average_mood={briefing.Mood.AverageMood:0.##} below escalation_floor={EscalationMoodFloor:0.##}");
+    }
+
+    private static object BuildEscalationContext(WelfareSourceBriefing briefing) =>
+        new WelfareEscalationContext(
+            briefing.BriefingVersion,
+            briefing.GameTick,
+            briefing.Mood.AverageMood,
+            briefing.Mood.BreakRiskCount,
+            briefing.Mood.StressedCount,
+            briefing.ThoughtDigest.ByCategory
+                .OrderBy(group => group.WorstOffset)
+                .Take(5)
+                .Select(group => new WelfareEscalationThoughtGroup(
+                    ToSnakeCase(group.Category.ToString()),
+                    group.PawnCount,
+                    group.WorstOffset,
+                    group.ExampleLabel))
+                .ToArray(),
+            briefing.WorstPawns
+                .Take(3)
+                .Select(pawn => new WelfareEscalationPawn(
+                    pawn.Name,
+                    pawn.Mood,
+                    pawn.TopNegativeThoughts
+                        .Take(3)
+                        .Select(thought => new WelfareEscalationThought(
+                            ThoughtLabel(thought),
+                            thought.MoodOffset,
+                            ToSnakeCase(WelfareThoughtTaxonomy.Classify(thought.DefName, thought.Label).ToString())))
+                        .ToArray()))
+                .ToArray(),
+            briefing.NeedLows
+                .Take(5)
+                .Select(need => new WelfareEscalationNeed(need.PawnName, need.Need, need.Value))
+                .ToArray());
 
     private static string ShelterBody(WelfareSourceBriefing briefing, bool needsBeds, int bedNeed)
     {
@@ -471,4 +557,35 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
     private sealed record DominantDriver(
         string Label,
         ThoughtCategory Category);
+
+    private sealed record WelfareEscalationContext(
+        long BriefingVersion,
+        long GameTick,
+        float AverageMood,
+        int BreakRiskCount,
+        int StressedCount,
+        IReadOnlyList<WelfareEscalationThoughtGroup> DominantThoughtGroups,
+        IReadOnlyList<WelfareEscalationPawn> WorstPawns,
+        IReadOnlyList<WelfareEscalationNeed> NeedLows);
+
+    private sealed record WelfareEscalationThoughtGroup(
+        string Category,
+        int PawnCount,
+        float WorstOffset,
+        string ExampleLabel);
+
+    private sealed record WelfareEscalationPawn(
+        string Name,
+        float Mood,
+        IReadOnlyList<WelfareEscalationThought> TopNegativeThoughts);
+
+    private sealed record WelfareEscalationThought(
+        string Label,
+        float MoodOffset,
+        string Category);
+
+    private sealed record WelfareEscalationNeed(
+        string PawnName,
+        string Need,
+        float Value);
 }

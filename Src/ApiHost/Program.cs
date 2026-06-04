@@ -198,6 +198,17 @@ try
             topK: opts.Rag.TopK,
             log: sp.GetRequiredService<ILogger<FoodRagRetriever>>());
     });
+    builder.Services.AddSingleton<WelfareRagRetriever>(sp =>
+    {
+        RimBobOptions opts = sp.GetRequiredService<IOptions<RimBobOptions>>().Value;
+        IEmbedder? embedder = ResolveEmbedder(opts, sp);
+        return new WelfareRagRetriever(
+            kb: sp.GetRequiredService<KnowledgeBase>(),
+            embedder: embedder,
+            enabled: opts.Rag.Enabled,
+            topK: opts.Rag.TopK,
+            log: sp.GetRequiredService<ILogger<WelfareRagRetriever>>());
+    });
     builder.Services.AddSingleton<Ingest>(sp =>
     {
         RimBobOptions opts = sp.GetRequiredService<IOptions<RimBobOptions>>().Value;

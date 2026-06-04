@@ -3,7 +3,10 @@ using Microsoft.Extensions.Logging.Abstractions;
 using RimBob.Coordination;
 using RimBob.Core.Advice;
 using RimBob.Core.Aggregates;
+using RimBob.Core.Briefings;
 using RimBob.Core.Ministers;
+using RimBob.Knowledge;
+using RimBob.LLM;
 using RimBob.Ministers.Welfare;
 using RimBob.State;
 using RimBob.Tests.Infrastructure;
@@ -38,6 +41,95 @@ public sealed class MinisterOfWelfareTests
         record.Flags.Should().ContainSingle().Which.Id.Should().Be("welfare:shelter_floor");
     }
 
+    [Fact]
+    public async Task StartupBootstrap_DoesNotForceLlm()
+    {
+        int calls = 0;
+        Harness harness = new(executor: (_, _, _, _) =>
+        {
+            calls++;
+            return Task.FromResult(new WelfareLlmResponse([], []));
+        });
+        harness.SetNewColonyState();
+
+        await harness.Minister.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
+
+        calls.Should().Be(0);
+        harness.Bus.ActiveAdvice().Should().ContainSingle()
+            .Which.Id.Should().Be("welfare_shelter_floor");
+    }
+
+    [Fact]
+    public async Task ManualForceLlm_CallsLlmEvenWhenRulesWouldDecide()
+    {
+        int calls = 0;
+        Harness harness = new(executor: (_, _, _, _) =>
+        {
+            calls++;
+            return Task.FromResult(new WelfareLlmResponse([WelfareAdvice("forced_welfare_llm")], []));
+        });
+        harness.SetNewColonyState();
+
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualForceLlm, CancellationToken.None);
+
+        calls.Should().Be(1);
+        harness.Bus.ActiveAdvice().Should().ContainSingle()
+            .Which.Id.Should().Be("forced_welfare_llm");
+    }
+
+    [Fact]
+    public async Task ManualRulesOnly_WhenRulesEscalate_DoesNotCallLlm()
+    {
+        CapturingReplayWriter replay = new();
+        int calls = 0;
+        Harness harness = new(replay, (_, _, _, _) =>
+        {
+            calls++;
+            return Task.FromResult(new WelfareLlmResponse([WelfareAdvice("llm_welfare")], []));
+        });
+        harness.SetSocialPressureState();
+
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualRulesOnly, CancellationToken.None);
+
+        calls.Should().Be(0);
+        harness.Bus.ActiveAdvice().Should().BeEmpty();
+        MinisterReplayRecord record = replay.Records.Should().ContainSingle().Subject;
+        record.Path.Should().Be("rules");
+        record.EscalationReason.Should().Contain("dominant_unwired_thought=social");
+        record.Llm.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task EscalationFailure_KeepsPriorSnapshotAndPersistsFailedReplay()
+    {
+        CapturingReplayWriter replay = new();
+        Harness harness = new(replay, (_, _, _, _) => throw new InvalidOperationException("quota exhausted"));
+        harness.SetNewColonyState();
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualRulesOnly, CancellationToken.None);
+        harness.Bus.ActiveAdvice().Should().ContainSingle()
+            .Which.Id.Should().Be("welfare_shelter_floor");
+
+        harness.SetSocialPressureState();
+        await harness.Minister.RunPlayCycle(PlayCycleContext.CabinetRefresh, CancellationToken.None);
+
+        harness.Bus.ActiveAdvice().Should().ContainSingle()
+            .Which.Id.Should().Be("welfare_shelter_floor");
+        MinisterReplayRecord record = replay.Records.Single(r => r.Path == "llm_failed");
+        record.Error.Should().NotBeNull();
+        record.Error!.Message.Should().Be("quota exhausted");
+    }
+
+    private static AdviceItem WelfareAdvice(string id) => new(
+        Id: id,
+        Minister: "Welfare",
+        Priority: Priority.Medium,
+        Title: "Check social tension",
+        Body: "Alice has social mood pressure.",
+        Rationale: "Welfare LLM selected a specific pawn intervention.",
+        Actions: [new AdviceAction(AdviceActionKind.Note, "Check the social conflict before it worsens.")],
+        GuideCitationIds: [],
+        Stamp: new AdviceStamp(DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddHours(4)));
+
     private sealed class Harness
     {
         public ColonyState Colony { get; } = new();
@@ -47,18 +139,31 @@ public sealed class MinisterOfWelfareTests
         public BriefingCache Cache { get; }
         public MinisterOfWelfare Minister { get; }
 
-        public Harness(IReplayCorpusWriter replay)
+        public Harness(
+            IReplayCorpusWriter? replay = null,
+            LlmClient.WelfareCallExecutor? executor = null)
         {
             Bus = new AdviceBus(OutputStore);
             Cache = new BriefingCache(Colony, new TestLogger<BriefingCache>());
+            LlmClient llm = new(
+                NullLogger<LlmClient>.Instance,
+                executor ?? ((_, _, _, _) => Task.FromResult(new WelfareLlmResponse([], []))));
+            WelfareRagRetriever retriever = new(
+                new KnowledgeBase(),
+                null,
+                enabled: false,
+                topK: 0,
+                NullLogger<WelfareRagRetriever>.Instance);
             Minister = new(
                 Cache,
                 new Rules(new FixedTimeProvider(FixedNow)),
                 OutputStore,
                 Bus,
                 Flags,
+                llm,
+                retriever,
                 NullLogger<MinisterOfWelfare>.Instance,
-                new MinisterReplayRecorder(replay));
+                replay is null ? null : new MinisterReplayRecorder(replay));
         }
 
         public void SetNewColonyState()
@@ -73,6 +178,43 @@ public sealed class MinisterOfWelfareTests
                 Colonist("p3", "Cora", 0.8f)
             ]));
             Colony.Rooms.Update(new RoomRegistry([]));
+        }
+
+        public void SetSocialPressureState()
+        {
+            Colony.LastRefreshSource = ColonyStateOrigin.Live;
+            Colony.LastLiveRefreshAt = FixedNow;
+            Colony.Economy.Update(new EconomyLedger(180_000, 0f, "Cassandra", "Playing", false, ""));
+            Colony.Colonists.Update(new ColonistRegistry(
+            [
+                Colonist("p1", "Alice", 0.46f) with
+                {
+                    MoodThoughts =
+                    [
+                        new MoodThoughtRecord("SocialFight", "social fight", -5f, 0)
+                    ]
+                },
+                Colonist("p2", "Bob", 0.66f),
+                Colonist("p3", "Cora", 0.72f)
+            ]));
+            Colony.Rooms.Update(new RoomRegistry(
+            [
+                new RoomRecord(
+                    Id: "bedroom-1",
+                    RoleLabel: "Bedroom",
+                    Temperature: 21f,
+                    CellsCount: 18,
+                    TouchesMapEdge: false,
+                    IsPrisonCell: false,
+                    IsDoorway: false,
+                    OpenRoofCount: 0,
+                    ContainedBedIds: ["b1", "b2", "b3"],
+                    Impressiveness: 30f,
+                    Beauty: 1f,
+                    Cleanliness: 0f,
+                    Space: 18f,
+                    Wealth: 500f)
+            ]));
         }
 
         private static ColonistRecord Colonist(string id, string name, float mood) =>

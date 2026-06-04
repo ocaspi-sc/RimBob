@@ -37,10 +37,17 @@ public sealed class LlmClient
         IReadOnlyList<FoodPromptCropCandidate> cropCandidates,
         CancellationToken ct);
 
+    public delegate Task<WelfareLlmResponse> WelfareCallExecutor(
+        WelfareSourceBriefing briefing,
+        MinisterBriefingContext context,
+        IReadOnlyList<GuideCitation> guideContext,
+        CancellationToken ct);
+
     private readonly IReadOnlyList<Client>                         _clients;
     private readonly Func<CancellationToken, Task<string?>>?       _pingExecutor;
     private readonly MayorCallExecutor?                            _mayorExecutor;
     private readonly FoodCallExecutor?                             _foodExecutor;
+    private readonly WelfareCallExecutor?                          _welfareExecutor;
     private readonly PromptBuilder                                 _prompts;
     private readonly ILogger<LlmClient>                            _log;
     private readonly RawLlmOutputStore?                            _rawOutputs;
@@ -71,6 +78,7 @@ public sealed class LlmClient
         _pingExecutor = null;
         _mayorExecutor = null;
         _foodExecutor = null;
+        _welfareExecutor = null;
     }
 
     // Test-only ctor: simulates the no Gemini keys configured case.
@@ -80,7 +88,9 @@ public sealed class LlmClient
         _prompts      = null!;
         _clients      = [];
         _pingExecutor = null;
+        _mayorExecutor = null;
         _foodExecutor = null;
+        _welfareExecutor = null;
         _rawOutputs   = null;
     }
 
@@ -93,6 +103,7 @@ public sealed class LlmClient
         _pingExecutor = pingExecutor;
         _mayorExecutor = null;
         _foodExecutor = null;
+        _welfareExecutor = null;
         _rawOutputs   = null;
     }
 
@@ -105,6 +116,7 @@ public sealed class LlmClient
         _pingExecutor  = null;
         _mayorExecutor = mayorExecutor;
         _foodExecutor  = null;
+        _welfareExecutor = null;
         _rawOutputs    = null;
     }
 
@@ -116,6 +128,19 @@ public sealed class LlmClient
         _pingExecutor = null;
         _mayorExecutor = null;
         _foodExecutor = foodExecutor;
+        _welfareExecutor = null;
+        _rawOutputs = null;
+    }
+
+    internal LlmClient(ILogger<LlmClient> log, WelfareCallExecutor welfareExecutor)
+    {
+        _log          = log;
+        _prompts      = null!;
+        _clients      = [];
+        _pingExecutor = null;
+        _mayorExecutor = null;
+        _foodExecutor = null;
+        _welfareExecutor = welfareExecutor;
         _rawOutputs = null;
     }
 
@@ -366,6 +391,105 @@ public sealed class LlmClient
             _log.LogWarning(
                 "Chef response normalized from non-strict schema: advice={AdviceCount} flags={FlagCount}",
                 parsed.Advice.Count, parsed.Flags.Count);
+
+        return parsed;
+    }
+
+    public async Task<WelfareLlmResponse> CallWelfareAsync(
+        WelfareSourceBriefing briefing,
+        MinisterBriefingContext context,
+        IReadOnlyList<GuideCitation> guideContext,
+        CancellationToken ct)
+    {
+        if (_welfareExecutor is not null)
+            return await _welfareExecutor(briefing, context, guideContext, ct);
+
+        if (_clients.Count == 0)
+            throw new InvalidOperationException("No Gemini API keys configured - cannot call Welfare LLM.");
+
+        string userMessage = _prompts.BuildWelfareUserMessage(briefing, context, guideContext);
+        GenerateContentConfig config = new()
+        {
+            SystemInstruction = new Content { Parts = [new Part { Text = _prompts.WelfareSystemPrompt }] },
+            ResponseMimeType  = "application/json",
+            Temperature       = 0.3f
+        };
+
+        Stopwatch sw = Stopwatch.StartNew();
+        GenerateContentResult result;
+        try
+        {
+            result = await GenerateContentWithFallbackAsync(
+                "Welfare",
+                client => client.Models.GenerateContentAsync(
+                    model:             DefaultModel,
+                    contents:          userMessage,
+                    config:            config,
+                    cancellationToken: ct));
+            sw.Stop();
+        }
+        catch (Exception ex)
+        {
+            sw.Stop();
+            RecordRawOutput(
+                minister: "Welfare",
+                userMessage: userMessage,
+                systemPrompt: _prompts.WelfareSystemPrompt,
+                latencyMs: sw.ElapsedMilliseconds,
+                status: "request_failed",
+                parseMode: "not_applicable",
+                apiKeyIndex: null,
+                text: FormatRequestFailure(ex));
+            throw;
+        }
+
+        string? text = result.Response.Candidates?.FirstOrDefault()?.Content?.Parts?.FirstOrDefault()?.Text;
+        if (string.IsNullOrWhiteSpace(text))
+            throw new InvalidOperationException("Gemini returned empty response for Welfare call.");
+
+        WelfareLlmResponse parsed;
+        string parseMode = "strict_json";
+        bool normalized = false;
+        int droppedFlagCount = 0;
+        try
+        {
+            WelfareLlmParseResult parseResult = WelfareLlmResponseParser.Parse(text, briefing, guideContext);
+            parsed = parseResult.Response;
+            parseMode = parseResult.ParseMode;
+            normalized = parseResult.Normalized;
+            droppedFlagCount = parseResult.DroppedFlagCount;
+        }
+        catch (JsonException parseEx)
+        {
+            RecordRawOutput(
+                minister: "Welfare",
+                userMessage: userMessage,
+                systemPrompt: _prompts.WelfareSystemPrompt,
+                latencyMs: sw.ElapsedMilliseconds,
+                status: "parse_failed",
+                parseMode: parseMode,
+                apiKeyIndex: result.ApiKeyIndex,
+                text: text);
+            _log.LogError(parseEx, "Failed to parse Welfare response as JSON. Raw text:\n{Text}", text);
+            throw;
+        }
+
+        RecordRawOutput(
+            minister: "Welfare",
+            userMessage: userMessage,
+            systemPrompt: _prompts.WelfareSystemPrompt,
+            latencyMs: sw.ElapsedMilliseconds,
+            status: normalized ? "normalized" : "parsed",
+            parseMode: parseMode,
+            apiKeyIndex: result.ApiKeyIndex,
+            text: text);
+        _log.LogInformation(
+            "Welfare LLM call complete: latency={LatencyMs}ms advice={AdviceCount} flags={FlagCount}",
+            sw.ElapsedMilliseconds, parsed.Advice.Count, parsed.Flags.Count);
+        if (normalized)
+            _log.LogWarning(
+                "Welfare response normalized from non-strict schema: advice={AdviceCount} flags={FlagCount} dropped_flags={DroppedFlagCount}",
+                parsed.Advice.Count, parsed.Flags.Count, droppedFlagCount);
 
         return parsed;
     }

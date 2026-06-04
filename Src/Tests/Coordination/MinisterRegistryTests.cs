@@ -66,9 +66,13 @@ public sealed class MinisterRegistryTests
         sut.FindMinister("mayor")!.CanRunRules.Should().BeFalse();
         sut.FindMinister("food")!.CanRunLlm.Should().BeTrue();
         sut.FindMinister("food")!.CanRunRules.Should().BeTrue();
-        sut.FindMinister("welfare")!.CanRunLlm.Should().BeFalse();
+        sut.FindMinister("welfare")!.CanRunLlm.Should().BeTrue();
         sut.FindMinister("welfare")!.CanRunRules.Should().BeTrue();
-        sut.FindMinister("welfare")!.EnabledViews.Should().Equal("briefing", "rules", "advice");
+        sut.FindMinister("welfare")!.HasPrompt.Should().BeTrue();
+        sut.FindMinister("welfare")!.HasRag.Should().BeTrue();
+        sut.FindMinister("welfare")!.HasRawLlmOutput.Should().BeTrue();
+        sut.FindMinister("welfare")!.HasManualLlmOutput.Should().BeTrue();
+        sut.FindMinister("welfare")!.EnabledViews.Should().Equal("prompt", "briefing", "rag", "rules", "raw_llm", "advice");
         sut.FindMinister("willie")!.CanRunLlm.Should().BeFalse();
         sut.FindMinister("willie")!.CanRunRules.Should().BeTrue();
         sut.FindMinister("willie")!.EnabledViews.Should().Equal("briefing", "build_queue", "solver", "requests", "rules", "advice");

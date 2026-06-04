@@ -1,7 +1,7 @@
 # Minister of Welfare - Minister Design
 
 > **Living document.** See `AGENTS.md` for update rules.
-> Welfare is a rules-only feeder advisor. This doc records durable scope and open boundaries, not final enum values or implementation rules.
+> Welfare is a feeder advisor with deterministic rules and LLM escalation for Mood & Needs judgment calls. This doc records durable scope and open boundaries, not final enum values or implementation rules.
 
 ---
 
@@ -30,7 +30,7 @@ Tame animal welfare is in scope as a living-condition requester, not as global a
 
 ## Implementation Status
 
-Welfare is a rules-only `Suggest`-mode minister. Slice A wired `break_risk` and `shelter_floor`: break risk produces player-facing mood triage, while missing sleeping shelter emits a `building_request` to Willie for a basic barracks with enough beds. Slice B keeps `break_risk`/`shelter_floor`, adds `recreation_gap` and `comfort_beauty`, and converts the rules layer to independent rule emissions so simultaneous mood pressures surface together instead of being hidden behind the first matched rule. Welfare does not own Apply; any eventual `place_blueprint` control belongs to Willie's advice after the Placement Solver produces options.
+Welfare is a `Suggest`-mode minister with deterministic rules first and LLM escalation second. Slice A wired `break_risk` and `shelter_floor`: break risk produces player-facing mood triage, while missing sleeping shelter emits a `building_request` to Willie for a basic barracks with enough beds. Slice B keeps `break_risk`/`shelter_floor`, adds `recreation_gap` and `comfort_beauty`, and converts the rules layer to independent rule emissions so simultaneous mood pressures surface together instead of being hidden behind the first matched rule. Slice C adds the Welfare LLM path: when no deterministic rule matched but material unwired mood pressure remains, Welfare emits `Escalate("unexplained_mood_pressure")`; `Run LLM` forces the same path; `Run Rules` stops before provider work and records the escalation context. Welfare does not own Apply; any eventual `place_blueprint` control belongs to Willie's advice after the Placement Solver produces options.
 
 Live deterministic rule signals:
 
@@ -45,7 +45,7 @@ Likely follow-on advice areas: schedule problems that are visible and actionable
 
 ## Available Source Signals
 
-The source briefing is now consumed by Welfare's rules-only Slice A and remains visible through `GET /api/briefings/welfare/latest` and the dashboard's Welfare > Briefing view. LLM triggers and Welfare-owned Apply actions are still not implemented.
+The source briefing is consumed by Welfare's rules and LLM path and remains visible through `GET /api/briefings/welfare/latest` and the dashboard's Welfare > Briefing view. Welfare prompt, RAG, raw LLM output, and manual LLM ingestion surfaces are wired. Welfare-owned Apply actions are still not implemented.
 
 Available signals:
 
@@ -79,7 +79,7 @@ New exact fields belong in code/tests once their slice ships.
 
 ## Escalation Boundaries
 
-Rules should handle obvious mood thresholds and missing basic recreation/sleep signals. Escalate for:
+Rules handle obvious mood thresholds and missing basic recreation/sleep signals. The current fallback escalates as `unexplained_mood_pressure` only after no deterministic rule matched and there is material non-wired thought pressure or low average mood. Escalate for:
 
 - Specific pawn intervention choices.
 - Complex relationship/social conflicts.

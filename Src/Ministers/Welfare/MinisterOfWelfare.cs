@@ -3,6 +3,8 @@ using RimBob.Coordination;
 using RimBob.Core.Advice;
 using RimBob.Core.Briefings;
 using RimBob.Core.Ministers;
+using RimBob.Knowledge;
+using RimBob.LLM;
 using RimBob.State;
 
 namespace RimBob.Ministers.Welfare;
@@ -13,6 +15,8 @@ public sealed class MinisterOfWelfare(
     MinisterOutputStore outputStore,
     AdviceBus bus,
     FlagChannel flags,
+    LlmClient llm,
+    WelfareRagRetriever retriever,
     ILogger<MinisterOfWelfare> log,
     MinisterReplayRecorder? replay = null) : IMinister
 {
@@ -22,7 +26,54 @@ public sealed class MinisterOfWelfare(
     {
         WelfareSourceBriefing briefing = briefings.GetWelfareBriefing();
         MinisterBriefingContext context = BuildContext(outputStore.CurrentMayorAgenda);
+
+        if (cycle.RunMode == MinisterRunMode.ForceLlm)
+        {
+            await RunEscalationAsync(
+                cycle,
+                briefing,
+                context,
+                new Escalate(
+                    "manual_llm_trigger",
+                    "dashboard Run LLM forces Welfare's LLM path",
+                    new { briefing.BriefingVersion, briefing.GameTick }),
+                RuleTraceDetails.Escalated(
+                    "manual_llm_trigger",
+                    "dashboard Run LLM forces Welfare's LLM path"),
+                ct);
+            return;
+        }
+
         RuleRun result = rules.Evaluate(briefing, ColonyContext.Default);
+        Escalate? escalation = result.Decisions.OfType<Escalate>().SingleOrDefault();
+        if (escalation is not null && result.Decisions.Count == 1)
+        {
+            if (cycle.RunMode == MinisterRunMode.RulesOnly)
+            {
+                string unresolvedSummary = WelfareStateSummary.Build(briefing);
+                PublishSnapshot([], [], unresolvedSummary);
+                await PersistReplayAsync(new MinisterReplayEntry(
+                    Minister: Name,
+                    Cycle: cycle,
+                    Path: "rules",
+                    Briefing: briefing,
+                    Context: context,
+                    RuleTrace: null,
+                    RuleDiagnostics: result.Diagnostics,
+                    EscalationReason: escalation.Reason,
+                    EscalationContext: escalation.Context,
+                    GuideCitations: null,
+                    Advice: [],
+                    Flags: [],
+                    StateSummary: unresolvedSummary), ct);
+                log.LogInformation("Welfare rules-only trigger stopped before LLM escalation. reason={Reason}", escalation.Reason);
+                return;
+            }
+
+            await RunEscalationAsync(cycle, briefing, context, escalation, result.Diagnostics, ct);
+            return;
+        }
+
         DecisionProjectionContext projectionContext = new(
             Minister: Name,
             Domain: "welfare",
@@ -57,6 +108,66 @@ public sealed class MinisterOfWelfare(
 
     public Task RunRefinement(CancellationToken ct) => Task.CompletedTask;
 
+    private async Task<bool> RunEscalationAsync(
+        PlayCycleContext cycle,
+        WelfareSourceBriefing briefing,
+        MinisterBriefingContext context,
+        Escalate escalate,
+        RuleTraceDetails diagnostics,
+        CancellationToken ct)
+    {
+        DateTimeOffset llmAttemptStarted = DateTimeOffset.UtcNow;
+        IReadOnlyList<GuideCitation> citations = [];
+        try
+        {
+            citations = await retriever.RetrieveAsync(briefing, ct);
+            WelfareLlmResponse response = await llm.CallWelfareAsync(briefing, context, citations, ct);
+            string stateSummary = WelfareStateSummary.Build(briefing);
+            RuleTraceDetails ruleDiagnostics = DiagnosticsWithLlmEmissions(escalate, diagnostics);
+            PublishSnapshot(response.Advice, response.Flags, stateSummary);
+            await PersistReplayAsync(new MinisterReplayEntry(
+                Minister: Name,
+                Cycle: cycle,
+                Path: "llm",
+                Briefing: briefing,
+                Context: context,
+                RuleTrace: null,
+                RuleDiagnostics: ruleDiagnostics,
+                EscalationReason: escalate.Reason,
+                EscalationContext: escalate.Context,
+                GuideCitations: citations,
+                Advice: response.Advice,
+                Flags: response.Flags,
+                StateSummary: stateSummary,
+                LlmAttemptStarted: llmAttemptStarted,
+                OutputKind: "advice_flags",
+                Output: new { advice = response.Advice, flags = response.Flags, notes = response.Notes }), ct);
+            log.LogInformation(
+                "Welfare escalation reason={Reason} advice={AdviceCount} flags={FlagCount}",
+                escalate.Reason, response.Advice.Count, response.Flags.Count);
+            return true;
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            await PersistReplayAsync(new MinisterReplayEntry(
+                Minister: Name,
+                Cycle: cycle,
+                Path: "llm_failed",
+                Briefing: briefing,
+                Context: context,
+                RuleTrace: null,
+                RuleDiagnostics: diagnostics,
+                EscalationReason: escalate.Reason,
+                EscalationContext: escalate.Context,
+                GuideCitations: citations,
+                Error: new ReplayErrorSummary(ex.GetType().Name, ex.Message),
+                LlmAttemptStarted: llmAttemptStarted), ct);
+            log.LogWarning(ex, "Welfare escalation failed; no advice emitted this cycle. reason={Reason}", escalate.Reason);
+            return false;
+        }
+    }
+
     public static MinisterBriefingContext BuildContext(MayorAgenda? agenda)
     {
         if (agenda is null) return MinisterBriefingContext.Empty;
@@ -82,6 +193,13 @@ public sealed class MinisterOfWelfare(
 
     private Task PersistReplayAsync(MinisterReplayEntry entry, CancellationToken ct) =>
         replay?.RecordAsync(entry, ct) ?? Task.CompletedTask;
+
+    private static RuleTraceDetails DiagnosticsWithLlmEmissions(Escalate escalate, RuleTraceDetails diagnostics)
+    {
+        return diagnostics.AllRules.Count == 0
+            ? RuleTraceDetails.Escalated(escalate.Rule, escalate.Reason)
+            : diagnostics;
+    }
 
     private void PublishSnapshot(
         IReadOnlyList<AdviceItem> advice,
