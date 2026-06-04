@@ -12,6 +12,8 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
     private const float BreakRiskMood = 0.35f;
     private const float EscalationMoodFloor = 0.45f;
     private const float MaterialThoughtOffset = -3f;
+    private const float TemperatureThoughtOffset = -3f;     // match threshold; tunable from R7 telemetry
+    private const float TemperatureComfortSevereOffset = -8f;
     private readonly TimeProvider timeProvider;
 
     public Rules(TimeProvider? timeProvider = null)
@@ -47,7 +49,8 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
         new("break_risk", MatchesBreakRisk, BreakRiskReason, briefing => BreakRiskEmission(briefing, now)),
         new("shelter_floor", MatchesShelterFloor, ShelterFloorReason, briefing => ShelterFloorEmission(briefing, now)),
         new("recreation_gap", MatchesRecreationGap, RecreationGapReason, briefing => RecreationGapEmission(briefing, now)),
-        new("comfort_beauty", MatchesComfortBeauty, ComfortBeautyReason, briefing => ComfortBeautyEmission(briefing, now))
+        new("comfort_beauty", MatchesComfortBeauty, ComfortBeautyReason, briefing => ComfortBeautyEmission(briefing, now)),
+        new("temperature_comfort", MatchesTemperatureComfort, TemperatureComfortReason, briefing => TemperatureComfortEmission(briefing, now))
     ];
 
     private static bool MatchesBreakRisk(WelfareSourceBriefing briefing) =>
@@ -246,6 +249,100 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
             requests);
     }
 
+    private static bool MatchesTemperatureComfort(WelfareSourceBriefing briefing)
+    {
+        if (!briefing.DataCoverage.HasMoodThoughts)
+            return false;
+        WelfareThoughtGroup? group = ThoughtGroup(briefing, ThoughtCategory.Temperature);
+        return group is not null && group.WorstOffset <= TemperatureThoughtOffset;
+    }
+
+    private static string TemperatureComfortReason(WelfareSourceBriefing briefing)
+    {
+        WelfareThoughtGroup? group = ThoughtGroup(briefing, ThoughtCategory.Temperature);
+        return group is not null
+            ? string.Create(CultureInfo.InvariantCulture, $"thought={group.ExampleLabel}; pawns={group.PawnCount}; worst_offset={group.WorstOffset:0.#}")
+            : "temperature thought coverage unavailable";
+    }
+
+    private IReadOnlyList<Decision> TemperatureComfortEmission(WelfareSourceBriefing briefing, DateTimeOffset now)
+    {
+        WelfareThoughtGroup group = ThoughtGroup(briefing, ThoughtCategory.Temperature)!;
+        Priority priority = group.WorstOffset <= TemperatureComfortSevereOffset || group.PawnCount > 1
+            ? Priority.High
+            : Priority.Medium;
+        TemperatureDirection direction = SniffTemperatureDirection(group.ExampleLabel);
+
+        string bodyDetail = string.Create(
+            CultureInfo.InvariantCulture,
+            $"{group.PawnCount} pawn{Plural(group.PawnCount)} report {group.ExampleLabel}; worst mood offset {group.WorstOffset:0.#}.");
+
+        if (direction == TemperatureDirection.Ambiguous)
+        {
+            return EmitAdvice(
+                briefing, now, "temperature_comfort", priority,
+                "Colonists have temperature discomfort",
+                $"{bodyDetail} Check whether the affected area needs heating or cooling.",
+                "Temperature direction is ambiguous; Welfare cannot determine whether a heater or cooler is needed without more specific thought labels.",
+                [new AdviceAction(AdviceActionKind.Note, "Review temperature control for the affected room.", Owner: MinisterName)],
+                BuildRequestDecisions(
+                    "temperature_comfort",
+                    priority,
+                    attention:
+                    [
+                        new AttentionRequest(
+                            Request: "review temperature control for the affected room",
+                            Reason: $"temperature thought pressure is ambiguous: {group.ExampleLabel} ({group.PawnCount} pawn{Plural(group.PawnCount)})",
+                            Priority: priority,
+                            RequestedFrom: "Willie")
+                    ]));
+        }
+
+        BuildingClass targetClass = direction == TemperatureDirection.Cold ? BuildingClass.Heater : BuildingClass.Cooler;
+        string targetDef = direction == TemperatureDirection.Cold ? "Heater" : "Cooler";
+        string applianceName = direction == TemperatureDirection.Cold ? "heater" : "cooler";
+        string title = direction == TemperatureDirection.Cold ? "Colonists are too cold" : "Colonists are overheating";
+
+        IReadOnlyList<Decision> requests = BuildRequestDecisions(
+            "temperature_comfort",
+            priority,
+            buildingRequests:
+            [
+                new BuildingRequest(
+                    Request: $"add a {applianceName} to the affected sleeping/work area",
+                    Reason: $"temperature thought pressure: {group.ExampleLabel} ({group.PawnCount} pawn{Plural(group.PawnCount)})",
+                    TargetClass: targetClass,
+                    TargetDef: targetDef,
+                    RoomClass: RoomClass.Barracks,
+                    CapacityNeed: new CapacityNeed(CapacityMeasure.Occupants, Math.Max(1, briefing.ColonistCount)),
+                    Priority: priority,
+                    RequestedFrom: "Willie")
+            ]);
+
+        return EmitAdvice(
+            briefing, now, "temperature_comfort", priority,
+            title,
+            $"{bodyDetail} Add a {applianceName} to the affected sleeping or work area.",
+            $"Temperature comfort pressure triggers when pawns report cold or heat thoughts; physical fix is a {applianceName} in the affected room.",
+            [new AdviceAction(AdviceActionKind.PlaceBlueprint, $"Ask Willie to add a {applianceName} to the affected area.", Owner: "Willie")],
+            requests);
+    }
+
+    private static TemperatureDirection SniffTemperatureDirection(string label)
+    {
+        string normalized = label.ToLowerInvariant().Replace(" ", "", StringComparison.Ordinal);
+        bool isCold = ContainsAnyToken(normalized, "cold", "snap", "freez", "hypothermia");
+        bool isHot = ContainsAnyToken(normalized, "hot", "heat", "wave", "heatstroke");
+        if (isCold && !isHot) return TemperatureDirection.Cold;
+        if (isHot && !isCold) return TemperatureDirection.Hot;
+        return TemperatureDirection.Ambiguous;
+    }
+
+    private static bool ContainsAnyToken(string normalized, params string[] tokens) =>
+        tokens.Any(token => normalized.Contains(token, StringComparison.Ordinal));
+
+    private enum TemperatureDirection { Cold, Hot, Ambiguous }
+
     private static IReadOnlyList<Decision> EmitAdvice(
         WelfareSourceBriefing briefing,
         DateTimeOffset now,
@@ -381,7 +478,8 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
     private static bool IsEscalationCategory(ThoughtCategory category) =>
         category is not ThoughtCategory.ShelterSleep and
             not ThoughtCategory.Recreation and
-            not ThoughtCategory.ComfortBeauty;
+            not ThoughtCategory.ComfortBeauty and
+            not ThoughtCategory.Temperature;        // temperature is now a wired rule
 
     private static string UnexplainedMoodPressureReason(WelfareSourceBriefing briefing)
     {

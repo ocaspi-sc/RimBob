@@ -1,0 +1,49 @@
+{
+  "BriefingVersion": 33,
+  "GameTick": 760000,
+  "ColonistCount": 3,
+  "Mood": {
+    "AverageMood": 0.68,
+    "BreakRiskCount": 0,
+    "StressedCount": 0,
+    "ContentCount": 2
+  },
+  "WorstPawns": [],
+  "NeedLows": [],
+  "Rooms": {
+    "Count": 1,
+    "BedroomCount": 1,
+    "PrisonCellCount": 0,
+    "AverageImpressiveness": 20,
+    "WorstRooms": []
+  },
+  "Sleep": {
+    "BedCount": 3,
+    "ColonistCount": 3,
+    "BedDeficit": 0,
+    "UnroofedBedroomCount": 0
+  },
+  "Recreation": {
+    "JoyLowCount": 0,
+    "RecreationRoomCount": 0,
+    "JoySourceBuildingCount": 0,
+    "HasRecreationSource": false
+  },
+  "ThoughtDigest": {
+    "ByCategory": [
+      {
+        "Category": "temperature",
+        "PawnCount": 1,
+        "WorstOffset": -1,
+        "ExampleLabel": "slightly cold"
+      }
+    ]
+  },
+  "DataCoverage": {
+    "HasNeedLevels": true,
+    "HasMoodThoughts": true,
+    "HasRooms": true,
+    "HasRoomQuality": false,
+    "HasBuildings": false
+  }
+}

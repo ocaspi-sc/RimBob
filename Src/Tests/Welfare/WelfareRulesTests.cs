@@ -238,6 +238,128 @@ public sealed class WelfareRulesTests
             row.Outcome == RuleOutcome.Selected);
     }
 
+    [Fact]
+    public void TooCold_EmitsTemperatureComfortAdviceAndHeaterRequest()
+    {
+        ProjectedRuleRun decision = Evaluate("too-cold");
+
+        decision.Trace.Should().Be("temperature_comfort");
+        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        advice.Id.Should().Be("welfare_temperature_comfort");
+        advice.Priority.Should().Be(Priority.High); // 2 pawns > 1 → High
+        advice.Title.Should().Contain("cold");
+        advice.Body.Should().Contain("slept in cold");
+        advice.Actions.Should().ContainSingle(action => action.Kind == AdviceActionKind.PlaceBlueprint);
+
+        AgentFlag flag = decision.Flags.Should().ContainSingle().Subject;
+        flag.Id.Should().Be("welfare:temperature_comfort");
+        BuildingRequest request = flag.BuildingRequests.Should().ContainSingle().Subject;
+        request.TargetClass.Should().Be(BuildingClass.Heater);
+        request.TargetDef.Should().Be("Heater");
+        request.RoomClass.Should().Be(RoomClass.Barracks);
+        request.RequestedFrom.Should().Be("Willie");
+
+        decision.Effects.OfType<Escalate>().Should().BeEmpty();
+        AssertAllRulesIncludeTableAndStableFallback(decision);
+    }
+
+    [Fact]
+    public void TooHot_EmitsTemperatureComfortAdviceAndCoolerRequest()
+    {
+        ProjectedRuleRun decision = Evaluate("too-hot");
+
+        decision.Trace.Should().Be("temperature_comfort");
+        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        advice.Id.Should().Be("welfare_temperature_comfort");
+        advice.Priority.Should().Be(Priority.High); // 2 pawns > 1 → High
+        advice.Title.Should().Contain("heat");
+        advice.Actions.Should().ContainSingle(action => action.Kind == AdviceActionKind.PlaceBlueprint);
+
+        AgentFlag flag = decision.Flags.Should().ContainSingle().Subject;
+        flag.Id.Should().Be("welfare:temperature_comfort");
+        BuildingRequest request = flag.BuildingRequests.Should().ContainSingle().Subject;
+        request.TargetClass.Should().Be(BuildingClass.Cooler);
+        request.TargetDef.Should().Be("Cooler");
+        request.RequestedFrom.Should().Be("Willie");
+
+        decision.Effects.OfType<Escalate>().Should().BeEmpty();
+    }
+
+    [Fact]
+    public void AmbiguousTemperature_EmitsRequestAttentionNoRequestBuild()
+    {
+        ProjectedRuleRun decision = Evaluate("temperature-ambiguous");
+
+        decision.Trace.Should().Be("temperature_comfort");
+        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        advice.Id.Should().Be("welfare_temperature_comfort");
+        advice.Actions.Should().ContainSingle(action => action.Kind == AdviceActionKind.Note);
+
+        AgentFlag flag = decision.Flags.Should().ContainSingle().Subject;
+        flag.Id.Should().Be("welfare:temperature_comfort");
+        flag.BuildingRequests.Should().BeNullOrEmpty();
+        flag.Attention.Should().ContainSingle()
+            .Which.RequestedFrom.Should().Be("Willie");
+
+        decision.Effects.OfType<Escalate>().Should().BeEmpty();
+    }
+
+    [Fact]
+    public void MildTemperature_ProducesNoRuleNoEscalate()
+    {
+        // Offset -1 is above match threshold (-3) so temperature_comfort doesn't fire.
+        // After WD2 Temperature is excluded from escalation, so it also doesn't escalate.
+        ProjectedRuleRun decision = Evaluate("mild-temperature");
+
+        decision.Trace.Should().Be("needs_stable");
+        decision.Advice.Should().BeEmpty();
+        decision.Flags.Should().BeEmpty();
+        decision.Effects.OfType<Escalate>().Should().BeEmpty();
+    }
+
+    [Fact]
+    public void SocialOnlyWithoutTemperature_StillEscalates()
+    {
+        // Social stays LLM-served; confirms temperature exclusion doesn't bleed into social.
+        RuleRun result = RawEvaluate(LoadFixture("social-only"));
+
+        Escalate escalation = result.Decisions.Should().ContainSingle()
+            .Which.Should().BeOfType<Escalate>().Subject;
+        escalation.Rule.Value.Should().Be("unexplained_mood_pressure");
+        escalation.Reason.Should().Contain("dominant_unwired_thought=social");
+    }
+
+    [Fact]
+    public void ShelterGapAndCold_EmitsBothRules()
+    {
+        ProjectedRuleRun decision = Evaluate("cold-with-shelter-gap");
+
+        decision.Trace.Should().Be("rules:shelter_floor+temperature_comfort");
+        decision.Advice.Select(advice => advice.Id)
+            .Should().Equal("welfare_shelter_floor", "welfare_temperature_comfort");
+        decision.Flags.Select(flag => flag.Id)
+            .Should().Equal("welfare:shelter_floor", "welfare:temperature_comfort");
+        decision.Flags[0].BuildingRequests.Should().ContainSingle(r => r.TargetClass == BuildingClass.Bed);
+        decision.Flags[1].BuildingRequests.Should().ContainSingle(r => r.TargetClass == BuildingClass.Heater);
+        decision.Effects.OfType<Escalate>().Should().BeEmpty();
+    }
+
+    [Fact]
+    public void TemperatureComfort_SeverityDeterminesPriority()
+    {
+        WelfareThoughtDigest coldDigest(int pawns, float offset) =>
+            new([new WelfareThoughtGroup(ThoughtCategory.Temperature, pawns, offset, "slept in cold")]);
+        WelfareSourceBriefing base_ = LoadFixture("too-cold");
+
+        // single pawn, non-severe offset → Medium
+        ProjectedRuleRun medium = Evaluate(base_ with { ThoughtDigest = coldDigest(1, -5f) });
+        medium.Advice.Should().ContainSingle().Which.Priority.Should().Be(Priority.Medium);
+
+        // single pawn, severe offset (≤ -8) → High
+        ProjectedRuleRun severe = Evaluate(base_ with { ThoughtDigest = coldDigest(1, -9f) });
+        severe.Advice.Should().ContainSingle().Which.Priority.Should().Be(Priority.High);
+    }
+
     private static ProjectedRuleRun Evaluate(string fixtureName) =>
         Evaluate(LoadFixture(fixtureName));
 
@@ -252,7 +374,7 @@ public sealed class WelfareRulesTests
 
     private static void AssertAllRulesIncludeTableAndStableFallback(ProjectedRuleRun decision) =>
         decision.Diagnostics!.AllRules.Select(row => row.Rule)
-            .Should().Equal("break_risk", "shelter_floor", "recreation_gap", "comfort_beauty", "unexplained_mood_pressure", "needs_stable");
+            .Should().Equal("break_risk", "shelter_floor", "recreation_gap", "comfort_beauty", "temperature_comfort", "unexplained_mood_pressure", "needs_stable");
 
     private static WelfareSourceBriefing SocialPressureBriefing(WelfareSourceBriefing briefing) =>
         briefing with

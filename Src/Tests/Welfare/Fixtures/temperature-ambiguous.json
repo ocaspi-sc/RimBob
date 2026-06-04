@@ -1,0 +1,69 @@
+{
+  "BriefingVersion": 32,
+  "GameTick": 740000,
+  "ColonistCount": 3,
+  "Mood": {
+    "AverageMood": 0.57,
+    "BreakRiskCount": 0,
+    "StressedCount": 1,
+    "ContentCount": 1
+  },
+  "WorstPawns": [
+    {
+      "Id": "p1",
+      "Name": "Carol",
+      "Mood": 0.51,
+      "Sleep": 0.7,
+      "Comfort": 0.6,
+      "Beauty": 0.6,
+      "Joy": 0.6,
+      "FreshAir": 0.7,
+      "DrugsDesire": 0,
+      "TopNegativeThoughts": [
+        {
+          "DefName": "SoakingWet",
+          "Label": "soaking wet",
+          "MoodOffset": -4,
+          "StageIndex": 0
+        }
+      ]
+    }
+  ],
+  "NeedLows": [],
+  "Rooms": {
+    "Count": 1,
+    "BedroomCount": 1,
+    "PrisonCellCount": 0,
+    "AverageImpressiveness": 20,
+    "WorstRooms": []
+  },
+  "Sleep": {
+    "BedCount": 3,
+    "ColonistCount": 3,
+    "BedDeficit": 0,
+    "UnroofedBedroomCount": 0
+  },
+  "Recreation": {
+    "JoyLowCount": 0,
+    "RecreationRoomCount": 0,
+    "JoySourceBuildingCount": 0,
+    "HasRecreationSource": false
+  },
+  "ThoughtDigest": {
+    "ByCategory": [
+      {
+        "Category": "temperature",
+        "PawnCount": 2,
+        "WorstOffset": -4,
+        "ExampleLabel": "soaking wet"
+      }
+    ]
+  },
+  "DataCoverage": {
+    "HasNeedLevels": true,
+    "HasMoodThoughts": true,
+    "HasRooms": true,
+    "HasRoomQuality": false,
+    "HasBuildings": false
+  }
+}
