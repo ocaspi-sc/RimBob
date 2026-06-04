@@ -105,7 +105,7 @@ band. Every header marker/chip should carry a terse
 explanatory tooltip with the current/last value. Avoid normal header tooltips
 that are just route names, implementation URLs, or raw field names; those
 details belong in SYSTEM/debug panels.
-The browser document title mirrors compact runtime identity for tab/window scanning: effective serving port, running version or commit, and local clock time; detailed asset fingerprints still belong in SYSTEM/runtime details.
+The browser document title mirrors compact runtime identity for tab/window scanning: effective serving port, Git commit when exposed, and local clock time; detailed asset fingerprints still belong in SYSTEM/runtime details.
 The header also exposes `Run Cabinet Now`. Minister workspaces expose `Run LLM` and `Run Rules` beside the selected minister's last-run time. The selected view is already visible in the tab bar and should not be repeated beside the run buttons. Planned ministers and missing mode capabilities show disabled/not-wired controls.
 
 ### Scopes

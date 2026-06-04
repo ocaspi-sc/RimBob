@@ -32,7 +32,7 @@ function buildDashboardTitle(
 ): string {
   return [
     `RimBob ${formatPort(location)}`,
-    formatVersion(version),
+    formatBuildIdentity(version),
     clockLabel,
   ].join(' | ');
 }
@@ -45,17 +45,13 @@ function formatPort(location: Location): string {
   return location.host || location.protocol.replace(':', '') || UnknownValue;
 }
 
-function formatVersion(version: RimBobRunningVersion | null): string {
-  if (!version) return 'version checking';
+function formatBuildIdentity(version: RimBobRunningVersion | null): string {
+  if (!version) return 'commit checking';
 
-  const runningVersion = cleanVersionPart(version.running_version);
   const revision = cleanVersionPart(version.build_revision_short);
-  const buildVersion = cleanVersionPart(version.build_version);
-  const primary = runningVersion ? prefixVersion(runningVersion) : 'version unknown';
 
-  if (revision) return `${primary} @${revision}`;
-  if (buildVersion) return `${primary} build ${buildVersion}`;
-  return primary;
+  if (revision) return `commit ${revision}`;
+  return 'commit unknown';
 }
 
 function cleanVersionPart(value: string | null): string | null {
@@ -63,10 +59,6 @@ function cleanVersionPart(value: string | null): string | null {
   const trimmed = value.trim();
   if (!trimmed || trimmed.toLowerCase() === UnknownValue) return null;
   return trimmed;
-}
-
-function prefixVersion(value: string): string {
-  return value.toLowerCase().startsWith('v') ? value : `v${value}`;
 }
 
 function formatClock(value: Date): string {
