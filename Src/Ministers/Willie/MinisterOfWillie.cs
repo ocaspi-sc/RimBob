@@ -30,12 +30,14 @@ public sealed class MinisterOfWillie(
         MinisterBriefingContext context = BuildContext(outputStore.CurrentMayorAgenda);
         IReadOnlyList<AgentFlag> activeFlags = flags.Active();
         IReadOnlyList<BuildingRequest> inboundRequests = ActiveWillieBuildingRequests(activeFlags, cycle.Flag);
-        IReadOnlyList<WillieInboundRequest> inboundBoard = inboundRequests
-            .Select(request => new WillieInboundRequest(
-                request,
-                SourceMinisterForRequest(request, activeFlags, cycle.Flag),
-                WillieSolverStore.RequestKey(request)))
-            .ToList();
+        IReadOnlyList<WillieInboundRequest> inboundBoard = InboundBoardForRequests(
+            AllActiveWillieBuildingRequests(activeFlags, cycle.Flag),
+            activeFlags,
+            cycle.Flag);
+        IReadOnlyList<WillieInboundRequest> solveBoard = InboundBoardForRequests(
+            inboundRequests,
+            activeFlags,
+            cycle.Flag);
         solverStore.RecordInbound(Name, inboundBoard);
 
         RuleRun result = rules.Evaluate(briefing, ColonyContext.Default, inboundRequests);
@@ -102,7 +104,7 @@ public sealed class MinisterOfWillie(
             }
         }
 
-        foreach (WillieInboundRequest inbound in inboundBoard)
+        foreach (WillieInboundRequest inbound in solveBoard)
         {
             if (drivingBoardRequest is not null &&
                 string.Equals(inbound.RequestKey, WillieSolverStore.RequestKey(drivingBoardRequest), StringComparison.OrdinalIgnoreCase))
@@ -181,21 +183,30 @@ public sealed class MinisterOfWillie(
         if (directRequests is { Count: > 0 })
             return directRequests;
 
-        List<AgentFlag> flagsToRead = [.. activeFlags];
-        if (directFlag is not null &&
-            flagsToRead.All(flag => !string.Equals(flag.Id, directFlag.Id, StringComparison.OrdinalIgnoreCase)))
-        {
-            flagsToRead.Add(directFlag);
-        }
+        return AllActiveWillieBuildingRequests(activeFlags, directFlag);
+    }
 
-        return flagsToRead
+    private static IReadOnlyList<BuildingRequest> AllActiveWillieBuildingRequests(
+        IReadOnlyList<AgentFlag> activeFlags,
+        AgentFlag? directFlag) =>
+        FlagsToRead(activeFlags, directFlag)
             .SelectMany(flag => flag.BuildingRequests ?? [])
             .Where(IsRequestedFromWillie)
             .ToList();
-    }
 
     private static bool IsRequestedFromWillie(BuildingRequest request) =>
         string.Equals(request.RequestedFrom, "Willie", StringComparison.OrdinalIgnoreCase);
+
+    private static IReadOnlyList<WillieInboundRequest> InboundBoardForRequests(
+        IReadOnlyList<BuildingRequest> requests,
+        IReadOnlyList<AgentFlag> activeFlags,
+        AgentFlag? directFlag) =>
+        requests
+            .Select(request => new WillieInboundRequest(
+                request,
+                SourceMinisterForRequest(request, activeFlags, directFlag),
+                WillieSolverStore.RequestKey(request)))
+            .ToList();
 
     private static string? SourceMinisterForRequest(
         BuildingRequest request,
@@ -209,6 +220,16 @@ public sealed class MinisterOfWillie(
             return directFlag.SourceMinister;
         }
 
+        return FlagsToRead(activeFlags, directFlag).FirstOrDefault(flag =>
+                (flag.BuildingRequests ?? []).Any(candidate =>
+                    IsRequestedFromWillie(candidate) && candidate == request))
+            ?.SourceMinister;
+    }
+
+    private static IReadOnlyList<AgentFlag> FlagsToRead(
+        IReadOnlyList<AgentFlag> activeFlags,
+        AgentFlag? directFlag)
+    {
         List<AgentFlag> flagsToRead = [.. activeFlags];
         if (directFlag is not null &&
             flagsToRead.All(flag => !string.Equals(flag.Id, directFlag.Id, StringComparison.OrdinalIgnoreCase)))
@@ -216,10 +237,7 @@ public sealed class MinisterOfWillie(
             flagsToRead.Add(directFlag);
         }
 
-        return flagsToRead.FirstOrDefault(flag =>
-                (flag.BuildingRequests ?? []).Any(candidate =>
-                    IsRequestedFromWillie(candidate) && candidate == request))
-            ?.SourceMinister;
+        return flagsToRead;
     }
 
     private async Task<PlacementSolveAttempt> SolveAndRecordPlacementAsync(

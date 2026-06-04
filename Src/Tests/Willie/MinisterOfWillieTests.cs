@@ -350,6 +350,58 @@ public sealed class MinisterOfWillieTests
     }
 
     [Fact]
+    public async Task FlagFiredCycle_RecordsFullInboundBoard_NotJustTriggeringFlag()
+    {
+        FakePlacementSolver solver = FakePlacementSolver.WithOptions(PlacementOption());
+        Harness harness = new(solver);
+        harness.SetStableState();
+        AgentFlag freezerFlag = FreezerFlag();
+        AgentFlag workshopFlag = WorkshopFlag();
+        harness.Flags.Publish(freezerFlag);
+        harness.Flags.Publish(workshopFlag);
+
+        await harness.Minister.RunPlayCycle(
+            new PlayCycleContext(PlayCycleTrigger.FlagFired, Flag: freezerFlag),
+            CancellationToken.None);
+
+        solver.CallCount.Should().Be(1);
+        IReadOnlyList<WillieRequestBoardRow> rows = harness.SolverStore.RequestBoard("Willie");
+        rows.Should().HaveCount(2);
+        rows.Select(row => row.Inbound.Request.Request).Should().Equal(
+            "starter freezer near kitchen",
+            "starter workshop near storage");
+        rows.Single(row => row.Inbound.Request.Request == "starter freezer near kitchen")
+            .Outcome.Should().NotBeNull();
+        rows.Single(row => row.Inbound.Request.Request == "starter workshop near storage")
+            .Outcome.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task FlagFiredCycles_KeepFullInboundBoardAcrossPerFlagRuns()
+    {
+        FakePlacementSolver solver = FakePlacementSolver.WithOptions(PlacementOption());
+        Harness harness = new(solver);
+        harness.SetStableState();
+        AgentFlag freezerFlag = FreezerFlag();
+        AgentFlag workshopFlag = WorkshopFlag();
+        harness.Flags.Publish(freezerFlag);
+        harness.Flags.Publish(workshopFlag);
+
+        await harness.Minister.RunPlayCycle(
+            new PlayCycleContext(PlayCycleTrigger.FlagFired, Flag: freezerFlag),
+            CancellationToken.None);
+        await harness.Minister.RunPlayCycle(
+            new PlayCycleContext(PlayCycleTrigger.FlagFired, Flag: workshopFlag),
+            CancellationToken.None);
+
+        solver.CallCount.Should().Be(2);
+        IReadOnlyList<WillieRequestBoardRow> rows = harness.SolverStore.RequestBoard("Willie");
+        rows.Should().HaveCount(2);
+        rows.Should().OnlyContain(row => row.Outcome != null);
+        rows.Select(row => row.Outcome!.Status).Should().Equal("options", "options");
+    }
+
+    [Fact]
     public async Task DuplicateInboundRequestKeys_AreSolvedOnce()
     {
         FakePlacementSolver solver = FakePlacementSolver.WithOptions(PlacementOption());
