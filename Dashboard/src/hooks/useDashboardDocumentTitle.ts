@@ -31,26 +31,27 @@ function buildDashboardTitle(
   location: Location,
 ): string {
   return [
-    `RimBob ${formatPort(location)}`,
-    formatBuildIdentity(version),
+    'RimBob',
+    formatPort(location),
     clockLabel,
+    formatCommitHash(version),
   ].join(' | ');
 }
 
 function formatPort(location: Location): string {
-  if (location.port) return `:${location.port}`;
-  if (location.protocol === 'http:') return ':80';
-  if (location.protocol === 'https:') return ':443';
+  if (location.port) return location.port;
+  if (location.protocol === 'http:') return '80';
+  if (location.protocol === 'https:') return '443';
   if (location.protocol === 'file:') return 'file';
   return location.host || location.protocol.replace(':', '') || UnknownValue;
 }
 
-function formatBuildIdentity(version: RimBobRunningVersion | null): string {
+function formatCommitHash(version: RimBobRunningVersion | null): string {
   if (!version) return 'commit checking';
 
   const revision = cleanVersionPart(version.build_revision_short);
 
-  if (revision) return `commit ${revision}`;
+  if (revision) return revision;
   return 'commit unknown';
 }
 
