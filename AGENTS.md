@@ -127,6 +127,7 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 - After build verification, run RimBob again and verify the Host is reachable, especially if a live `RimBob.Host` process was stopped.
 - Prefer `.\run-rimbob.ps1` after builds. The launcher starts the already-built Host by default; use positive build/setup flags only when needed (`-BuildHost`, `-BuildDashboard`, `-InstallDashboard`, `-Restore`). Use `.\run-rimbob.ps1 -Foreground` when terminal output must stay attached.
 - Port `5000` is reserved for the main `C:\dev\RimBob` checkout. When running RimBob from any worktree, use a different `-ListenUrl` / port, then verify `/api/system/health` and the `RimBob.Host.exe` process path before calling the worktree build live.
+- After landing a change in a worktree, launch RimBob from that worktree on its own non-`5000` port and give me the worktree's dashboard URL, so I can verify the change visually against that worktree's build before it merges to master.
 - Use manual `npm.cmd run build` / `dotnet run` only when debugging one side of the stack.
 - When adding backend logs, replay corpus files, prompt dumps, traces, or diagnostics, update dashboard-visible metadata in the same turn. If intentionally hidden, add a concrete `Tasks.md` follow-up and mention it in the final response.
 
