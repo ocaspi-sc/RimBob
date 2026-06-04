@@ -200,7 +200,11 @@ hand-written `if` blocks. Each rule declares, in one place:
 - a stable id / `trace` (used in logs, traces, replay attribution, and supersession);
 - a match predicate over briefing-derived facts;
 - a live `reason` selector — a short human string computed from the briefing (e.g. `break_risk_count=3`), evaluated for matched and non-matched rules alike;
-- a builder that produces the `Decision` (or `Escalate`) when it fires.
+- a builder that produces the rule's **effects** when it fires (see _Rule output
+  is a list of typed effects_ below).
+
+The stable id is one typed `RuleId` carried once; the wire `AdviceItem.Id` is
+derived from it at the publish boundary, never reverse-parsed from a prefix.
 
 Everything that consumes rules derives from that one list: live evaluation, the
 matched/suppressed signal trace, and the "all rules" diagnostics catalogue. There
@@ -214,10 +218,46 @@ the three in sync was manual and silently lossy.
 Exact record fields, the shared base/helpers, and predicate bodies are code
 contracts — see `Src/Common/Ministers/`. Design docs do not mirror them.
 
+### Rule output is a list of typed effects
+
+A rule emits a flat list of typed **effect decisions**, not a single
+advice-plus-flags bundle. The effect kinds are:
+
+- **Advise** — one advice card's authored content (priority, title, body,
+  rationale, actions). The card is a composite value: it is not atomized into
+  smaller effects, and its player-clickable apply actions stay inside the card
+  (the human-confirmed lane), never promoted to an automatic effect.
+- **Request*** — an inter-minister need (build, labor, item, attention) carrying
+  the target minister and a priority. These are first-class effects, replacing
+  `AgentFlag`'s parallel request sub-lists.
+- **Escalate** — a terminal "no deterministic path" effect. An empty effect list
+  is a benign no-op; an `Escalate` effect is a deliberate hand-off to the LLM
+  (so there is no separate decision/escalate wrapper union).
+
+Co-occurring outputs are separate list entries — a concern that both advises and
+requests a build emits an `Advise` and a `RequestBuild` sharing one `RuleId`, so
+an effect's kind is its type and there is no bundle to unpack. A new cross-minister
+capability (e.g. `unforbid`) is a new effect record plus one executor, not another
+nullable sub-list on a flag.
+
+The runner folds effects by kind at the boundary: `Advise` content is stamped
+with lifecycle, owning minister, and qualified id into the wire `AdviceItem`;
+`Request*` effects are grouped per concern (`RuleId`) into the `AgentFlag` the
+FlagChannel publishes, with the concern's priority preserved as the flag priority that
+Mayor filters on; `Escalate` routes to the LLM. Rules author neither timestamps
+nor flags nor wire ids — the boundary projects them, so the rule table needs no
+clock. Advice and flags share one underlying `Priority` enum carried by
+the concern; the wire uses `priority` for both `AdviceItem` and `AgentFlag`.
+
+Diagnostics derive from the same effect list: the all-rules catalogue (every rule
+with its outcome and live reason) plus the emitted effects, with no separate
+hand-maintained emitted-advice/flag collections and no dead "suppressed" set
+(all-hits dedups, it never suppresses).
+
 ### All-hits evaluation
 
 A cycle can match several rules at once. Every minister uses **all-hits**: each
-matching rule emits its advice and flags, and the results aggregate into one
+matching rule emits its effects, and the results aggregate into one
 snapshot — priority-sorted, capped, and same-`trace` deduped. Escalation is
 considered only when no rule matched. There is no first-match policy: suppressing
 a matched rule would also drop its cross-minister flag and hide coexisting
@@ -358,7 +398,7 @@ surface an apply handle for a narrow action.
 | Relationships, social fights, ideology mood pressure | Welfare | Mayor | Split later only if complexity justifies it |
 | Guest lodging, comfort, and hospitality social pressure | Welfare | Economy, Willie | Economy owns visitor trade/diplomacy purpose; Willie owns room work; Defense owns threats |
 | Tame animal living-condition pressure | Welfare | Chef, Economy, Defense, Medical | Requests Willie for pens, barns, beds, shelter, or rest-area fixes; does not own feed, herd economics, combat, or treatment |
-| Triage, tending, disease monitoring, surgery, hospital readiness | Medical | Welfare, Willie, Industry | Split from Welfare because cadence/severity differ |
+| Triage, tending, disease monitoring, surgery, hospital readiness | Medical | Welfare, Willie, Industry | Split from Welfare because cadence/urgency differ |
 | Medicine stock, hospital beds, sterile room, vitals risk | Medical | Willie, Industry, Economy | Medical owns readiness |
 
 ### Strategy, Research, And Economy
