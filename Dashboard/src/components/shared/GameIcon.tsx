@@ -32,6 +32,7 @@ export function GameIcon({
       ? usableFallbackSrc
       : null;
   const showImage = Boolean(activeSrc);
+  const fallbackIsEmoji = isEmojiFallback(fallback);
 
   return (
     <span
@@ -55,8 +56,12 @@ export function GameIcon({
           }}
         />
       ) : (
-        <span aria-hidden="true" className="game-icon-fallback">{fallback}</span>
+        <span aria-hidden="true" className={`game-icon-fallback ${fallbackIsEmoji ? 'emoji' : ''}`}>{fallback}</span>
       )}
     </span>
   );
+}
+
+function isEmojiFallback(value: string): boolean {
+  return /\p{Extended_Pictographic}/u.test(value);
 }

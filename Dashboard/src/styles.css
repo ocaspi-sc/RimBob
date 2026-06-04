@@ -5199,6 +5199,24 @@ code {
   line-height: 1;
 }
 
+.game-icon-fallback.emoji {
+  color: inherit;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.game-icon.xs .game-icon-fallback.emoji {
+  font-size: 0.95rem;
+}
+
+.game-icon.sm .game-icon-fallback.emoji {
+  font-size: 1.08rem;
+}
+
+.game-icon.md .game-icon-fallback.emoji {
+  font-size: 1.5rem;
+}
+
 .resource-quantity,
 .resource-quantity-list {
   min-width: 0;

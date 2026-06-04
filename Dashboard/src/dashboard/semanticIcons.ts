@@ -2,9 +2,10 @@ import type { IconRef } from '../types/icons';
 import type { JsonValue } from '../components/shared/JsonTree';
 
 export interface SemanticIconSpec {
+  emoji?: string;
   fallback: string;
   label: string;
-  ref: IconRef;
+  ref?: IconRef;
 }
 
 type JsonRecord = { [key: string]: JsonValue };
@@ -21,38 +22,42 @@ function pawn(id: string, label: string, fallback = 'P'): SemanticIconSpec {
   return { fallback, label, ref: { kind: 'pawn', id } };
 }
 
+function emoji(symbol: string, label: string): SemanticIconSpec {
+  return { emoji: symbol, fallback: symbol, label };
+}
+
 const common = {
-  advice: item('CommsConsole', 'Advice icon', 'AD'),
-  analytics: item('SimpleResearchBench', 'Analytics icon', 'AN'),
-  briefing: item('TextBook', 'Briefing icon', 'BR'),
-  component: item('ComponentIndustrial', 'System component icon', 'SY'),
-  construction: item('Wall', 'Construction icon', 'CO'),
-  data: item('ComponentIndustrial', 'Data coverage icon', 'DA'),
-  defense: item('Gun_Revolver', 'Defense icon', 'DE'),
-  devBlog: item('TextBook', 'Dev Blog icon', 'DB'),
-  economy: item('Silver', 'Economy icon', 'EC'),
-  food: item('MealSimple', 'Food icon', 'FO'),
+  advice: emoji('💡', 'Advice icon'),
+  analytics: emoji('📊', 'Analytics icon'),
+  briefing: emoji('📋', 'Briefing icon'),
+  component: emoji('🖥️', 'System component icon'),
+  construction: emoji('🧱', 'Construction icon'),
+  data: emoji('📊', 'Data coverage icon'),
+  defense: emoji('🛡️', 'Defense icon'),
+  devBlog: emoji('🗒️', 'Dev Blog icon'),
+  economy: emoji('🪙', 'Economy icon'),
+  food: emoji('🍲', 'Food icon'),
   harvest: item('Plant_Rice', 'Forage harvest icon', 'HA'),
-  info: item('TextBook', 'Info icon', 'IN'),
-  industry: item('ElectricSmithy', 'Industry icon', 'ID'),
-  infographics: item('SimpleResearchBench', 'Infographics icon', 'IG'),
+  info: emoji('ℹ️', 'Info icon'),
+  industry: emoji('⚙️', 'Industry icon'),
+  infographics: emoji('📈', 'Infographics icon'),
   kitchen: item('ElectricStove', 'Kitchen icon', 'KI'),
-  labor: item('Steel', 'Labor icon', 'LA'),
-  logs: item('CommsConsole', 'Raw output icon', 'LO'),
-  mayor: item('CommsConsole', 'Mayor icon', 'MY'),
-  medical: item('MedicineIndustrial', 'Medical icon', 'ME'),
-  people: item('Bed', 'People icon', 'PE'),
-  power: item('ComponentIndustrial', 'Power icon', 'PW'),
-  prompt: item('SimpleResearchBench', 'Prompt icon', 'PR'),
-  rag: item('TextBook', 'RAG icon', 'RG'),
-  raw: item('ComponentIndustrial', 'Raw payload icon', 'RW'),
-  research: item('SimpleResearchBench', 'Research icon', 'RE'),
-  rules: item('Steel', 'Rules icon', 'RU'),
-  season: item('Plant_Rice', 'Season icon', 'SE'),
-  storage: item('WoodLog', 'Storage icon', 'ST'),
-  threat: item('Gun_Revolver', 'Threat icon', 'TH'),
-  weather: item('WoodLog', 'Weather icon', 'WE'),
-  welfare: item('Bed', 'Welfare icon', 'WF'),
+  labor: emoji('🛠️', 'Labor icon'),
+  logs: emoji('🧾', 'Raw output icon'),
+  mayor: emoji('🏛️', 'Mayor icon'),
+  medical: emoji('🩺', 'Medical icon'),
+  people: emoji('👥', 'People icon'),
+  power: emoji('⚡', 'Power icon'),
+  prompt: emoji('🧠', 'Prompt icon'),
+  rag: emoji('📚', 'RAG icon'),
+  raw: emoji('🧾', 'Raw payload icon'),
+  research: emoji('🔬', 'Research icon'),
+  rules: emoji('📏', 'Rules icon'),
+  season: emoji('📅', 'Season icon'),
+  storage: emoji('📦', 'Storage icon'),
+  threat: emoji('⚠️', 'Threat icon'),
+  weather: emoji('🌦️', 'Weather icon'),
+  welfare: emoji('🙂', 'Welfare icon'),
 };
 
 const scopeIcons: Record<string, SemanticIconSpec> = {
@@ -64,13 +69,13 @@ const scopeIcons: Record<string, SemanticIconSpec> = {
   food: common.food,
   willie: common.construction,
   construction: common.construction,
-  defense: item('Barricade', 'Defense icon', 'DE'),
+  defense: common.defense,
   welfare: common.welfare,
   medical: common.medical,
   research: common.research,
   industry: common.industry,
   economy: common.economy,
-  chief_of_staff: item('OrbitalTradeBeacon', 'Chief of Staff icon', 'CS'),
+  chief_of_staff: emoji('🧭', 'Chief of Staff icon'),
 };
 
 const viewIcons: Record<string, SemanticIconSpec> = {
@@ -166,18 +171,18 @@ const fieldIcons: Record<string, SemanticIconSpec> = {
   food_briefing_version: common.food,
   willie_briefing_version: common.construction,
   welfare_briefing_version: common.welfare,
-  power_stability: item('PowerConduit', 'Power stability icon', 'PW'),
-  thermal_control: item('Cooler', 'Thermal control icon', 'TH'),
-  functional_rooms: item('Bed', 'Functional rooms icon', 'RM'),
-  storage_placement: item('Shelf', 'Storage placement icon', 'ST'),
+  power_stability: common.power,
+  thermal_control: emoji('🌡️', 'Thermal control icon'),
+  functional_rooms: emoji('🛏️', 'Functional rooms icon'),
+  storage_placement: common.storage,
   build_queue: common.construction,
-  buildable_region: item('Wall', 'Buildable region / Home area icon', 'HA'),
+  buildable_region: emoji('🏠', 'Buildable region / Home area icon'),
   material_bottleneck: common.storage,
   stalled_builds: common.construction,
   construction_backlog: common.construction,
   anchor_inventory: common.construction,
   base_layout: common.construction,
-  fire_risk: item('TorchLamp', 'Fire risk icon', 'FR'),
+  fire_risk: emoji('🔥', 'Fire risk icon'),
   building_requests: common.construction,
   buildings: common.construction,
   cabinet: common.mayor,
@@ -231,7 +236,7 @@ const fieldIcons: Record<string, SemanticIconSpec> = {
   has_trade_availability: item('OrbitalTradeBeacon', 'Trade availability icon', 'TA'),
   has_work_priorities: common.labor,
   has_zone_cells: item('Plant_Rice', 'Zone cells icon', 'ZC'),
-  home_area: item('Wall', 'Home area icon', 'HA'),
+  home_area: emoji('🏠', 'Home area icon'),
   harvest_nutrition: common.harvest,
   health: common.medical,
   host: common.component,

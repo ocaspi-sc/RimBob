@@ -162,7 +162,7 @@ Minister scopes use a fixed top tab bar:
 
 Rules-only ministers expose only the subset that is actually wired. Willie starts with Briefing, Build Queue, Solver, Requests, Rules, and Advice; Prompt, RAG, Raw LLM Output, and Infographics are not shown until those backend surfaces exist. Build Queue may show a placement Apply affordance only when the backend emits an explicit action apply payload for that option; otherwise the option stays inspect-only and names the unsupported apply state. The dashboard view tabs and launcher tray deep links must both respect that per-minister enabled-view set.
 
-Minister names always render with their fixed emoji in human-facing dashboard labels (`🍲 Chef`). This is display-only: route keys, raw payloads, and debug contract fields stay unchanged. Use Host game icons for view labels, sections, fields, metrics, and entity rows when they improve scan speed; generic emoji are fallback-only for non-minister cues. Icons annotate contract names, but raw LLM output, JSON inspectors, backend payloads, and stored advice contracts are not rewritten.
+Minister names always render with their fixed emoji in human-facing dashboard labels (`🍲 Chef`). This is display-only: route keys, raw payloads, and debug contract fields stay unchanged. Prefer generic emoji for dashboard semantic cues such as views, sections, fields, metrics, status, advice, power, weather, runtime, rules, logs, and analytics. Use Host game icons for specific RimWorld things: concrete item/building/terrain/pawn defs, explicit backend `icon` refs, entity rows, resource quantities, construction assets, and other cases where real in-game art helps the player inspect game state. Icons annotate contract names, but raw LLM output, JSON inspectors, backend payloads, and stored advice contracts are not rewritten.
 
 Large objects use the standard disclosure pattern: a real button header with
 `aria-expanded` / `aria-controls`, plus a conditionally rendered panel in normal
@@ -539,6 +539,8 @@ The dashboard may render an icon only when it has an explicit source:
   fields such as scope, view, section, advice action kind, agenda category, and
   INFO glossary tag.
 
+Semantic cue maps should prefer emoji by default. They should switch to Host game icons only for specific RimWorld objects or game-state entities where an actual def/pawn/terrain/item/building image carries more meaning than a symbol.
+
 Do not infer icons from prose in raw/debug views, titles, bodies, reasons, or
 instructions. Mayor's player-facing Agenda cards may use a small deterministic
 domain cue for priority text and may strip leading LLM-emitted emoji/symbols in
@@ -755,6 +757,7 @@ metrics, and endpoint coverage.
 - Advice action cards render `kind` plus `instruction`, with quantity, owner,
   work/skill, and reason as secondary detail; do not introduce generic `what`
   labels in the dashboard or new raw minister output.
+- Prefer emoji for abstract dashboard semantics; reserve RimWorld game art for specific in-game things.
 - Avoid decorative hero sections, oversized empty cards, and one-note color
   themes.
 

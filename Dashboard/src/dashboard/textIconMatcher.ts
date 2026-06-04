@@ -16,6 +16,10 @@ function item(id: string, label: string, fallback = id.slice(0, 2).toUpperCase()
   return { fallback, label, ref: { kind: 'item', id } };
 }
 
+function emoji(symbol: string, label: string): SemanticIconSpec {
+  return { emoji: symbol, fallback: symbol, label };
+}
+
 const textIconCues: TextIconCue[] = [
   cue(item('MealSimple', 'Food icon', 'FO'), [
     'simple meals',
@@ -61,13 +65,17 @@ const textIconCues: TextIconCue[] = [
     'steel',
     'materials',
   ]),
-  cue(item('ComponentIndustrial', 'Component and power icon', 'CP'), [
+  cue(emoji('⚡', 'Power icon'), [
+    'power',
+    'electricity',
+  ]),
+  cue(emoji('🔋', 'Battery icon'), [
+    'batteries',
+    'battery',
+  ]),
+  cue(item('ComponentIndustrial', 'Component icon', 'CP'), [
     'components',
     'component',
-    'power',
-    'battery',
-    'batteries',
-    'electricity',
   ]),
   cue(item('Wall', 'Construction icon', 'CO'), [
     'willie',
@@ -199,5 +207,7 @@ function isTokenBoundary(char: string | undefined): boolean {
 }
 
 function iconKey(icon: SemanticIconSpec): string {
+  if (icon.emoji) return `${icon.label}:emoji:${icon.emoji}`.toLowerCase();
+  if (!icon.ref) return `${icon.label}:fallback:${icon.fallback}`.toLowerCase();
   return `${icon.label}:${icon.ref.kind}:${icon.ref.id}`.toLowerCase();
 }
