@@ -18,6 +18,7 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 
 ## Coding
 
+- Write SOLID code
 - We don't care about legacy or breaking changes or compatibility. Be brave.
   - **No legacy/compat code paths.** Concretely forbidden:
     - tolerant parsers whose only job is to swallow a removed shape
