@@ -112,7 +112,8 @@ public static class MinisterRuleTableEvaluator
                 outcome,
                 reason,
                 OutputActionFor(ruleDecisions),
-                reason));
+                reason,
+                EmissionsFor(ruleDecisions)));
         }
 
         if (additionalRuleDescriptors is not null)
@@ -127,7 +128,8 @@ public static class MinisterRuleTableEvaluator
                     outcome,
                     reason,
                     "",
-                    reason));
+                    reason,
+                    []));
             }
         }
 
@@ -165,6 +167,57 @@ public static class MinisterRuleTableEvaluator
             RequestAttention => 4,
             Escalate => 5,
             _ => 99
+        };
+
+    private static IReadOnlyList<RuleEmission> EmissionsFor(IReadOnlyList<Decision> decisions) =>
+        decisions.Select(EmissionFor).ToList();
+
+    private static RuleEmission EmissionFor(Decision decision) =>
+        decision switch
+        {
+            Advise advice => new RuleEmission(
+                "advise",
+                advice.Priority,
+                advice.Title,
+                null,
+                null,
+                null),
+            RequestBuild request => new RuleEmission(
+                "request_build",
+                request.Priority,
+                request.Request.Request,
+                request.To,
+                request.Request.TargetDef,
+                null),
+            RequestLabor request => new RuleEmission(
+                "request_labor",
+                request.Priority,
+                request.Request.Request,
+                request.To,
+                null,
+                request.Request.WorkType.ToString()),
+            RequestItem request => new RuleEmission(
+                "request_item",
+                request.Priority,
+                request.Request.Request,
+                request.To,
+                request.Request.ItemDef,
+                null),
+            RequestAttention request => new RuleEmission(
+                "request_attention",
+                request.Priority,
+                request.Request.Request,
+                request.To,
+                null,
+                null),
+            Escalate escalate => new RuleEmission(
+                "escalate",
+                null,
+                escalate.Reason,
+                null,
+                null,
+                null),
+            _ => throw new ArgumentOutOfRangeException(nameof(decision), decision, "Unknown rule decision type.")
         };
 
     private static string OutputActionFor(IReadOnlyList<Decision> decisions)

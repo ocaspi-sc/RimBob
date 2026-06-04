@@ -208,7 +208,7 @@ function formatTracePath(path: string): string {
   return path.replace(/_/g, ' ');
 }
 
-const ruleOutcomeOrder = ['selected', 'escalated', 'matched', 'suppressed', 'not_matched'];
+const ruleOutcomeOrder = ['selected', 'escalated', 'not_matched'];
 
 interface RuleOutcomeGroup {
   outcome: string;

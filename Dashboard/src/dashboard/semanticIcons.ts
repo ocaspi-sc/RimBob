@@ -331,10 +331,8 @@ const fieldIcons: Record<string, SemanticIconSpec> = {
 
 const ruleOutcomeIcons: Record<string, SemanticIconSpec> = {
   escalated: common.prompt,
-  matched: common.rules,
   not_matched: common.data,
   selected: common.advice,
-  suppressed: common.threat,
 };
 
 const agendaCategoryIcons: Record<string, SemanticIconSpec> = {

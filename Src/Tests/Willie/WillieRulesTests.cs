@@ -96,7 +96,21 @@ public sealed class WillieRulesTests
         advice.Actions.Should().ContainSingle(action => action.Kind == AdviceActionKind.RequestResource);
         AgentFlag flag = decision.Flags.Should().ContainSingle().Subject;
         flag.ItemRequests.Should().NotBeNull();
-        flag.ItemRequests!.Should().Contain(request => request.ItemDef == "Steel" && request.Quantity == 80);
+        ItemRequest request = flag.ItemRequests!.Should().Contain(request => request.ItemDef == "Steel" && request.Quantity == 80).Subject;
+        RuleEvaluationTrace trace = decision.Diagnostics!.AllRules.Should().Contain(row =>
+            row.Rule == "backlog_material_gap" &&
+            row.Outcome == RuleOutcome.Selected).Subject;
+        trace.Emissions.Should().Contain(emission =>
+            emission.Kind == "advise" &&
+            emission.Label == advice.Title &&
+            emission.Priority == Priority.High);
+        trace.Emissions.Should().Contain(emission =>
+            emission.Kind == "request_item" &&
+            emission.Label == request.Request &&
+            emission.Priority == Priority.High &&
+            emission.To == "Industry" &&
+            emission.TargetDef == "Steel" &&
+            emission.WorkType == null);
     }
 
     [Fact]

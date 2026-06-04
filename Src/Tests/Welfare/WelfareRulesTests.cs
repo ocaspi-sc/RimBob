@@ -47,6 +47,20 @@ public sealed class WelfareRulesTests
         decision.Diagnostics!.AllRules.Should().Contain(row =>
             row.Rule == "shelter_floor" &&
             row.Outcome == RuleOutcome.Selected);
+        RuleEvaluationTrace shelterTrace = decision.Diagnostics.AllRules.Should().Contain(row =>
+            row.Rule == "shelter_floor" &&
+            row.Outcome == RuleOutcome.Selected).Subject;
+        shelterTrace.Emissions.Should().Contain(emission =>
+            emission.Kind == "advise" &&
+            emission.Label == advice.Title &&
+            emission.Priority == Priority.High);
+        shelterTrace.Emissions.Should().Contain(emission =>
+            emission.Kind == "request_build" &&
+            emission.Label == request.Request &&
+            emission.Priority == Priority.High &&
+            emission.To == "Willie" &&
+            emission.TargetDef == "Bed" &&
+            emission.WorkType == null);
         decision.Effects.OfType<RequestBuild>().Should().ContainSingle(effect =>
             effect.Rule == "shelter_floor" &&
             effect.Request.TargetClass == BuildingClass.Bed);

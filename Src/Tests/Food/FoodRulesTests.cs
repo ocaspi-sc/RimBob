@@ -195,8 +195,22 @@ public sealed class FoodRulesTests
         advice.Priority.Should().Be(Priority.Medium);
         advice.Actions.Should().ContainSingle().Which.Kind.Should().Be(AdviceActionKind.PlaceBlueprint);
         advice.Actions.Single().Owner.Should().Be("Willie");
-        FlagById(decision, "food:freezer_missing").BuildingRequests.Should()
-            .Contain(r => r.TargetClass == BuildingClass.Freezer && r.RequestedFrom == "Willie");
+        BuildingRequest request = FlagById(decision, "food:freezer_missing").BuildingRequests.Should()
+            .Contain(r => r.TargetClass == BuildingClass.Freezer && r.RequestedFrom == "Willie").Subject;
+        RuleEvaluationTrace trace = decision.Diagnostics!.AllRules.Should().Contain(row =>
+            row.Rule == "freezer_missing" &&
+            row.Outcome == RuleOutcome.Selected).Subject;
+        trace.Emissions.Should().Contain(emission =>
+            emission.Kind == "advise" &&
+            emission.Label == advice.Title &&
+            emission.Priority == Priority.Medium);
+        trace.Emissions.Should().Contain(emission =>
+            emission.Kind == "request_build" &&
+            emission.Label == request.Request &&
+            emission.Priority == Priority.Medium &&
+            emission.To == "Willie" &&
+            emission.TargetDef == "Cooler" &&
+            emission.WorkType == null);
     }
 
     [Fact]

@@ -195,12 +195,22 @@ export interface RuleTraceDetails {
   allRules: RuleEvaluationTrace[];
 }
 
+export interface RuleEmission {
+  kind: string;
+  priority?: string | null;
+  label: string;
+  to?: string | null;
+  targetDef?: string | null;
+  workType?: string | null;
+}
+
 export interface RuleEvaluationTrace {
   rule: string;
   outcome: string;
   conditions: string;
   outputAction: string;
   reason: string | null;
+  emissions: RuleEmission[];
 }
 
 export interface AssistedApplyAttempt {

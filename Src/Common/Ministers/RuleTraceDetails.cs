@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using RimBob.Core.Advice;
 
 namespace RimBob.Core.Ministers;
 
@@ -22,9 +23,18 @@ public sealed record RuleTraceDetails(
                     RuleOutcome.Escalated,
                     reason,
                     "escalate",
-                    reason)
+                    reason,
+                    [new RuleEmission("escalate", null, reason, null, null, null)])
             ]);
 }
+
+public sealed record RuleEmission(
+    string Kind,
+    Priority? Priority,
+    string Label,
+    string? To,
+    string? TargetDef,
+    string? WorkType);
 
 public sealed record RuleTraceEntry(
     RuleId Rule,
@@ -36,4 +46,8 @@ public sealed record RuleEvaluationTrace(
     RuleOutcome Outcome,
     string Conditions,
     string OutputAction,
-    string? Reason);
+    string? Reason,
+    IReadOnlyList<RuleEmission>? Emissions = null)
+{
+    public IReadOnlyList<RuleEmission> Emissions { get; init; } = Emissions ?? [];
+}

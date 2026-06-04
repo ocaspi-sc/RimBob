@@ -13,6 +13,29 @@ namespace RimBob.Tests.Coordination;
 public sealed class ReplayCorpusWriterTests
 {
     [Fact]
+    public void RuleEvaluationTrace_DeserializesMissingEmissionsAsEmpty()
+    {
+        JsonSerializerOptions json = new()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+        };
+
+        RuleEvaluationTrace trace = JsonSerializer.Deserialize<RuleEvaluationTrace>(
+            """
+            {
+              "rule": "emergency_food_flag",
+              "outcome": "selected",
+              "conditions": "food buffer low",
+              "output_action": "mark_hunt",
+              "reason": "food buffer low"
+            }
+            """,
+            json) ?? throw new InvalidOperationException("Trace row should deserialize.");
+
+        trace.Emissions.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task WriteAsync_AppendsSnakeCaseJsonlUnderMinisterDatePath()
     {
         string directory = Path.Combine(Path.GetTempPath(), "rimbob-replay-tests", Guid.NewGuid().ToString("N"));
@@ -64,7 +87,11 @@ public sealed class ReplayCorpusWriterTests
                         Outcome: RuleOutcome.Selected,
                         Conditions: "food buffer 4.0d is below the 7d emergency threshold",
                         OutputAction: "mark_hunt",
-                        Reason: "food buffer 4.0d is below the 7d emergency threshold")
+                        Reason: "food buffer 4.0d is below the 7d emergency threshold",
+                        Emissions:
+                        [
+                            new RuleEmission("advise", Priority.High, "Food test", null, null, null)
+                        ])
                 ]);
 
             MinisterReplayRecord record = new(
@@ -125,6 +152,10 @@ public sealed class ReplayCorpusWriterTests
             rule.GetProperty("rule").GetString().Should().Be("emergency_food_flag");
             rule.GetProperty("outcome").GetString().Should().Be("selected");
             rule.GetProperty("output_action").GetString().Should().Be("mark_hunt");
+            JsonElement emission = rule.GetProperty("emissions")[0];
+            emission.GetProperty("kind").GetString().Should().Be("advise");
+            emission.GetProperty("priority").GetString().Should().Be("high");
+            emission.GetProperty("label").GetString().Should().Be("Food test");
             root.GetProperty("guide_citations").GetArrayLength().Should().Be(1);
             root.GetProperty("guide_citations")[0].GetProperty("cite_id").GetString().Should().Be("food-guide-1");
             root.GetProperty("state_summary").GetString().Should().Be("Food is low and needs action.");
