@@ -27,6 +27,21 @@ export function useDashboardSelection(): DashboardSelection {
   const [selectedView, setSelectedView] = useState<DashboardViewKey>(() => initialSelection.view);
 
   useEffect(() => {
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
+
+    const handlePopState = () => {
+      const nextSelection = readInitialSelection();
+      setSelectedScope(nextSelection.scope);
+      setSelectedView(nextSelection.view);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  useEffect(() => {
     writeStoredValue(SelectedScopeStorageKey, selectedScope);
   }, [selectedScope]);
 
@@ -35,15 +50,27 @@ export function useDashboardSelection(): DashboardSelection {
   }, [selectedView]);
 
   const selectScope = (scope: ScopeKey) => {
-    setSelectedScope(scope);
-    setSelectedView(defaultViewForScope(findScope(scope)));
+    const nextScope = findScope(scope);
+    const nextView = defaultViewForScope(nextScope);
+
+    setSelectedScope(nextScope.key);
+    setSelectedView(nextView);
+    writeSelectionUrl(nextScope.key, nextView);
+  };
+
+  const selectView = (view: DashboardViewKey) => {
+    const nextScope = findScope(selectedScope);
+    const nextView = viewForScope(nextScope, view);
+
+    setSelectedView(nextView);
+    writeSelectionUrl(nextScope.key, nextView);
   };
 
   return {
     selectedScope,
     selectedView,
     selectScope,
-    selectView: view => setSelectedView(viewForScope(findScope(selectedScope), view)),
+    selectView,
   };
 }
 
@@ -110,6 +137,27 @@ function writeStoredValue(key: string, value: string) {
     window.localStorage.setItem(key, value);
   } catch {
     // Storage can be unavailable in restricted browser contexts; dashboard state can still be session-only.
+  }
+}
+
+function writeSelectionUrl(scope: ScopeKey, view: DashboardViewKey) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    const url = new URL(window.location.href);
+    url.searchParams.set(ScopeQueryKey, scope);
+    url.searchParams.set(ViewQueryKey, view);
+
+    const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+    const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+
+    if (nextUrl !== currentUrl) {
+      window.history.replaceState(window.history.state, '', nextUrl);
+    }
+  } catch {
+    // URL history can be unavailable in restricted browser contexts; storage still preserves the selection.
   }
 }
 
