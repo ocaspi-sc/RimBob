@@ -13,6 +13,7 @@ const SelectedScopeStorageKey = 'rimbob.dashboard.selectedScope';
 const SelectedViewStorageKey = 'rimbob.dashboard.selectedView';
 const ScopeQueryKey = 'scope';
 const ViewQueryKey = 'view';
+type SelectionUrlMode = 'push' | 'replace';
 
 export interface DashboardSelection {
   selectedScope: ScopeKey;
@@ -30,6 +31,8 @@ export function useDashboardSelection(): DashboardSelection {
     if (typeof window === 'undefined') {
       return undefined;
     }
+
+    writeSelectionUrl(selectedScope, selectedView, 'replace');
 
     const handlePopState = () => {
       const nextSelection = readInitialSelection();
@@ -55,7 +58,7 @@ export function useDashboardSelection(): DashboardSelection {
 
     setSelectedScope(nextScope.key);
     setSelectedView(nextView);
-    writeSelectionUrl(nextScope.key, nextView);
+    writeSelectionUrl(nextScope.key, nextView, 'push');
   };
 
   const selectView = (view: DashboardViewKey) => {
@@ -63,7 +66,7 @@ export function useDashboardSelection(): DashboardSelection {
     const nextView = viewForScope(nextScope, view);
 
     setSelectedView(nextView);
-    writeSelectionUrl(nextScope.key, nextView);
+    writeSelectionUrl(nextScope.key, nextView, 'push');
   };
 
   return {
@@ -140,7 +143,7 @@ function writeStoredValue(key: string, value: string) {
   }
 }
 
-function writeSelectionUrl(scope: ScopeKey, view: DashboardViewKey) {
+function writeSelectionUrl(scope: ScopeKey, view: DashboardViewKey, mode: SelectionUrlMode) {
   if (typeof window === 'undefined') {
     return;
   }
@@ -154,7 +157,11 @@ function writeSelectionUrl(scope: ScopeKey, view: DashboardViewKey) {
     const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
 
     if (nextUrl !== currentUrl) {
-      window.history.replaceState(window.history.state, '', nextUrl);
+      if (mode === 'push') {
+        window.history.pushState({}, '', nextUrl);
+      } else {
+        window.history.replaceState(window.history.state, '', nextUrl);
+      }
     }
   } catch {
     // URL history can be unavailable in restricted browser contexts; storage still preserves the selection.
