@@ -5199,6 +5199,37 @@ code {
   line-height: 1;
 }
 
+.resource-quantity,
+.resource-quantity-list {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+}
+
+.resource-quantity {
+  vertical-align: middle;
+}
+
+.resource-quantity .resource-quantity-icon.game-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+}
+
+.resource-quantity-count {
+  color: var(--text);
+  font-size: 0.78rem;
+  line-height: 1.1;
+}
+
+.resource-quantity-label {
+  min-width: 0;
+  color: inherit;
+  overflow-wrap: anywhere;
+}
+
 .colony-sidebar {
   padding: 12px;
   overflow: auto;
@@ -5253,7 +5284,7 @@ code {
 }
 
 .resource-icon-row {
-  grid-template-columns: 24px minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   min-height: 30px;
   padding: 5px 6px;
   border: 1px solid var(--line-soft);
@@ -5261,7 +5292,18 @@ code {
   background: rgba(0, 0, 0, 0.13);
 }
 
-.resource-icon-row span {
+.resource-icon-row .resource-quantity {
+  display: grid;
+  grid-template-columns: 24px auto minmax(0, 1fr);
+  gap: 7px;
+}
+
+.resource-icon-row .resource-quantity .game-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.resource-icon-row .resource-quantity-label {
   min-width: 0;
   overflow: hidden;
   color: var(--muted);
@@ -5270,7 +5312,7 @@ code {
   white-space: nowrap;
 }
 
-.resource-icon-row strong {
+.resource-icon-row .resource-quantity-count {
   color: var(--text);
   font-size: 0.78rem;
 }

@@ -20,6 +20,7 @@ import { EmptyState } from '../shared/EmptyState';
 import { GameIcon } from '../shared/GameIcon';
 import { IconizedText } from '../shared/IconizedText';
 import { DynamicTable } from '../shared/Inspector';
+import { ResourceQuantity, ResourceQuantityList } from '../shared/ResourceQuantity';
 import { StatusPill, type PillTone } from '../shared/StatusPill';
 import { SemanticLabel } from '../shared/SemanticIcon';
 import { BlueprintFootprintThumbnail } from './BlueprintFootprintThumbnail';
@@ -110,6 +111,11 @@ type RequestCardModel = {
   request: BuildingRequest;
 };
 
+type RequestDetailChip = {
+  content: ReactNode;
+  key: string;
+};
+
 type ProposedOptionModel = {
   actionMatch: OptionActionMatch | null;
   expired: AdviceExpiryState;
@@ -196,7 +202,7 @@ function RequestCard({ card }: { card: RequestCardModel }) {
       <p><IconizedText maxIcons={2} text={request.reason} /></p>
       {details.length > 0 && (
         <div className="build-request-tags">
-          {details.map(detail => <span key={detail}>{detail}</span>)}
+          {details.map(detail => <span key={detail.key}>{detail.content}</span>)}
         </div>
       )}
       {card.flag.summary && <small><IconizedText maxIcons={1} text={card.flag.summary} /></small>}
@@ -281,7 +287,7 @@ function OptionCard({ card }: { card: ProposedOptionModel }) {
           <span>No material estimate.</span>
         ) : (
           card.option.est_materials.map(material => (
-            <span key={`${card.option.id}-${material.def_name}`}>{formatInteger(material.count)} {material.def_name}</span>
+            <ResourceQuantity defName={material.def_name} key={`${card.option.id}-${material.def_name}`} quantity={material.count} />
           ))
         )}
       </div>
@@ -421,16 +427,24 @@ function isWillieRequest(request: BuildingRequest): boolean {
   return stringEquals(request.requested_from, 'Willie');
 }
 
-function formatRequestDetails(request: BuildingRequest): string[] {
+function formatRequestDetails(request: BuildingRequest): RequestDetailChip[] {
   return [
-    request.target_class ? `class ${formatLabel(request.target_class)}` : null,
-    request.target_def ? `def ${request.target_def}` : null,
-    request.room_class ? `room ${formatLabel(request.room_class)}` : null,
-    formatCapacity(request),
-    formatAdjacency(request),
-    request.urgency ? `urgency ${formatLabel(request.urgency)}` : null,
-    formatMaterials(request),
-  ].filter((value): value is string => Boolean(value));
+    request.target_class ? chip('target-class', `class ${formatLabel(request.target_class)}`) : null,
+    request.target_def ? chip('target-def', `def ${request.target_def}`) : null,
+    request.room_class ? chip('room-class', `room ${formatLabel(request.room_class)}`) : null,
+    textChip('capacity', formatCapacity(request)),
+    textChip('adjacency', formatAdjacency(request)),
+    request.urgency ? chip('urgency', `urgency ${formatLabel(request.urgency)}`) : null,
+    materialChip(request),
+  ].filter((value): value is RequestDetailChip => value !== null);
+}
+
+function chip(key: string, content: ReactNode): RequestDetailChip {
+  return { key, content };
+}
+
+function textChip(key: string, value: string | null): RequestDetailChip | null {
+  return value ? chip(key, value) : null;
 }
 
 function formatCapacity(request: BuildingRequest): string | null {
@@ -449,11 +463,21 @@ function formatAdjacency(request: BuildingRequest): string | null {
   return `near ${request.adjacency.map(hint => `${formatLabel(hint.relation)} ${hint.target}`).join(', ')}`;
 }
 
-function formatMaterials(request: BuildingRequest): string | null {
+function materialChip(request: BuildingRequest): RequestDetailChip | null {
   if (!request.materials_on_hand || request.materials_on_hand.length === 0) return null;
-  return `materials ${request.materials_on_hand
-    .map(material => `${material.material}${material.approx_qty ? ` ${formatInteger(material.approx_qty)}` : ''}`)
-    .join(', ')}`;
+  return chip(
+    'materials',
+    <>
+      <span>materials</span>
+      <ResourceQuantityList
+        items={request.materials_on_hand.map(material => ({
+          approx: material.approx_qty !== null && material.approx_qty !== undefined,
+          defName: material.material,
+          quantity: material.approx_qty,
+        }))}
+      />
+    </>,
+  );
 }
 
 function priorityTone(priority: string | null | undefined): PillTone {

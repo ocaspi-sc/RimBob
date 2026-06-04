@@ -109,6 +109,8 @@ Actions may include an optional explicit `icon` ref when the emitter knows the
 game def or id. Icon refs are rendering hints only; they are not execution
 inputs and should not be inferred from prose.
 
+When an action includes a structured RimWorld item/resource quantity, the emitter should preserve the def name or explicit icon ref alongside the numeric quantity so the dashboard can render the required icon-led quantity. The dashboard may still show a generic resource cue for bounded semantic keys, but it must not derive a resource icon by fuzzy-matching prose instructions.
+
 Actions may also carry an explicit executable handle when the backend can map
 that action to an Assisted Apply operation. The handle is produced by
 deterministic code or accepted from model output only after strict validation;
@@ -126,6 +128,8 @@ Flag requests state what a minister needs from another subsystem to resolve an
 issue: tiles, work-type-qualified labor, items, buildings, bills, stockpile
 space, attention, or trade capacity. They are advisory in MVP and do not
 allocate pawns, reserve tiles, create bills, or write to RIMAPI.
+
+Item, material, and building-material requests should keep resource quantities structured enough for icon-led dashboard rendering. A bare prose phrase such as "some steel" is acceptable only when no count exists; once a quantity is known, the resource def/label and quantity travel together.
 
 Tolerant parsing may still accept legacy advice payloads with `steps[]`,
 `resource_requests[]`, and `suggested_actions[]`, but new prompts/specs should

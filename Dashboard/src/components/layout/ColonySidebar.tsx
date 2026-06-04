@@ -1,10 +1,11 @@
 import type { ColonySnapshot, PawnLine } from '../../types/colony';
 import type { ColonySnapshotMetadata } from '../../types/system';
-import { itemIconUrl, pawnPortraitUrl } from '../../api/icons';
+import { pawnPortraitUrl } from '../../api/icons';
 import { iconForField, iconForSection } from '../../dashboard/semanticIcons';
 import { EmptyState } from '../shared/EmptyState';
 import { GameIcon } from '../shared/GameIcon';
 import { MetricCard } from '../shared/MetricCard';
+import { ResourceQuantity, formatResourceLabel } from '../shared/ResourceQuantity';
 import { SemanticLabel } from '../shared/SemanticIcon';
 
 export function ColonySidebar({
@@ -156,14 +157,7 @@ function ResourceIconRows({ snapshot }: { snapshot: ColonySnapshot }) {
       <div className="resource-icon-list">
         {rows.map(row => (
           <div className="resource-icon-row" key={`${row.label}-${row.def}`}>
-            <GameIcon
-              fallback={row.def.slice(0, 1).toUpperCase()}
-              label={`${row.def} icon`}
-              size="xs"
-              src={itemIconUrl(row.def)}
-            />
-            <span>{formatDef(row.def)}</span>
-            <strong>{row.count.toLocaleString()}</strong>
+            <ResourceQuantity defName={row.def} label={formatResourceLabel(row.def)} quantity={row.count} />
           </div>
         ))}
       </div>
@@ -183,12 +177,6 @@ function initials(name: string): string {
   const trimmed = name.trim();
   if (!trimmed) return '?';
   return trimmed.slice(0, 1).toUpperCase();
-}
-
-function formatDef(value: string): string {
-  return value
-    .replace(/_/g, ' ')
-    .replace(/([a-z])([A-Z])/g, '$1 $2');
 }
 
 function formatDate(snapshot: ColonySnapshot): string {

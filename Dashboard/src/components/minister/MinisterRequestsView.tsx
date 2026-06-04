@@ -10,6 +10,7 @@ import type { MinisterTrace, SystemHealth } from '../../types/system';
 import { EmptyState } from '../shared/EmptyState';
 import { GameIcon } from '../shared/GameIcon';
 import { IconizedText } from '../shared/IconizedText';
+import { ResourceQuantity, ResourceQuantityList } from '../shared/ResourceQuantity';
 import { SemanticLabel } from '../shared/SemanticIcon';
 import { StatusPill, type PillTone } from '../shared/StatusPill';
 import { BlueprintFootprintThumbnail } from './BlueprintFootprintThumbnail';
@@ -259,7 +260,7 @@ function ReadOnlyOptionCard({
           <span>No material estimate.</span>
         ) : (
           option.est_materials.map(material => (
-            <span key={`${option.id}-${material.def_name}`}>{formatInteger(material.count)} {material.def_name}</span>
+            <ResourceQuantity defName={material.def_name} key={`${option.id}-${material.def_name}`} quantity={material.count} />
           ))
         )}
       </div>
@@ -388,11 +389,17 @@ function formatTemperature(temperature: BuildingRequest['temperature']): string 
   return `${formatLabel(temperature.target_band)}, must_hold=${temperature.must_hold}`;
 }
 
-function formatMaterials(materials: BuildingRequest['materials_on_hand']): string {
+function formatMaterials(materials: BuildingRequest['materials_on_hand']): ReactNode {
   if (!materials || materials.length === 0) return '-';
-  return materials
-    .map(material => `${material.material}${material.approx_qty ? ` ${formatInteger(material.approx_qty)}` : ''}`)
-    .join(', ');
+  return (
+    <ResourceQuantityList
+      items={materials.map(material => ({
+        approx: material.approx_qty !== null && material.approx_qty !== undefined,
+        defName: material.material,
+        quantity: material.approx_qty,
+      }))}
+    />
+  );
 }
 
 function formatDeadline(deadline: BuildingRequest['deadline']): string {

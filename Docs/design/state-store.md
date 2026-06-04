@@ -170,6 +170,7 @@ Briefing design rules:
 - Include uncertainty and coverage gaps when source data is missing.
 - Keep spatial data aggregated: nearest clusters, proximity buckets, tile
   counts, distances, and bottleneck signals.
+- Preserve item/resource def names beside counts when the value may become player-facing dashboard language; the UI needs that explicit resource key to render the required game icon next to quantities.
 - Do not serialize raw plant, animal, building, pawn, or tile lists unless a
   specific rule proves it needs that detail.
 - Exact field lists live in the briefing records and derivation tests.

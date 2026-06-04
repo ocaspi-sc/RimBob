@@ -196,6 +196,7 @@ should summarize concrete food situation facts such as stored
 meals/raw/unclassified food, days-of-food, growing areas and crop progress,
 acquisition opportunities, kitchen/storage/freezer signals, and confidence data
 gaps; individual advice items expose one concrete `actions[]` list for the player.
+When Chef output names player-facing quantities of meals, raw food, crops, medicine, ingredients, or requested items, it should preserve the item/resource key with the count so the dashboard can render the matching game icon beside the quantity.
 
 Chef exposes deterministic hunt-risk diagnostics for the dashboard
 Infographics view. The Host derives this model from live `ColonyState` animal

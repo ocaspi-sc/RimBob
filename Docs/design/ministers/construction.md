@@ -119,6 +119,7 @@ the normalized 0-1 values used for ranking. Status facts such as `draftable`,
 stay booleans/enums rather than fake unit-bearing metrics.
 
 Material shortage is advisory for blueprint placement: `materials_ready` can be blocked while `apply_ready` stays ready when the footprint is validated, because pawns haul materials after the blueprint group exists.
+Any Willie dashboard surface that shows a material or building-ingredient count should render the resource icon with the quantity. Solver traces and raw payload inspectors keep exact source fields, but Build Queue, Requests, Briefing HUD chips, and Advice/flag request rows use icon-led material quantities.
 
 The executable Apply (place a chosen layout) renders in **Willie's own
 dashboard scope** for options where Willie emits an explicit action apply

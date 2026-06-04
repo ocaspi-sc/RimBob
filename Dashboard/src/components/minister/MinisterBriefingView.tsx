@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { fetchBriefing } from '../../api/ministers';
 import type { ScopeConfig } from '../../dashboard/scopes';
 import { iconForField, iconForSection, iconForView } from '../../dashboard/semanticIcons';
@@ -8,6 +9,7 @@ import { EmptyState } from '../shared/EmptyState';
 import { DynamicTable } from '../shared/Inspector';
 import { JsonTree, summarizeValue } from '../shared/JsonTree';
 import { MetricCard } from '../shared/MetricCard';
+import { ResourceQuantity } from '../shared/ResourceQuantity';
 import { SemanticLabel } from '../shared/SemanticIcon';
 import { FoodCropMathPanel } from './FoodCropMathPanel';
 
@@ -797,11 +799,11 @@ function firstThoughtLabel(pawn: Record<string, unknown>): string | null {
   return stringAt(first, 'label') ?? stringAt(first, 'defName');
 }
 
-function formatMaterial(value: unknown): string {
+function formatMaterial(value: unknown): ReactNode {
   if (!isRecord(value)) return 'unknown material';
   const defName = typeof value.defName === 'string' ? value.defName : 'unknown';
   const count = numberFromUnknown(value.count) ?? numberFromUnknown(value.missing) ?? numberFromUnknown(value.required);
-  return count === null ? defName : `${formatInteger(count)} ${defName}`;
+  return <ResourceQuantity defName={defName} quantity={count} />;
 }
 
 function missingExpectedRooms(roomCounts: Record<string, unknown> | null): string[] {

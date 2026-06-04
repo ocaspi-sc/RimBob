@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { MayorAgenda, AgendaPriority } from '../../types/agenda';
 import { fetchTrace } from '../../api/ministers';
 import type {
@@ -30,6 +30,7 @@ import { DisclosureSection } from '../shared/DisclosureSection';
 import { EmptyState } from '../shared/EmptyState';
 import { GameIcon } from '../shared/GameIcon';
 import { IconizedText } from '../shared/IconizedText';
+import { ResourceQuantity, ResourceQuantityList } from '../shared/ResourceQuantity';
 import { SemanticIconCue, SemanticLabel } from '../shared/SemanticIcon';
 import { MinisterEscalationCallout } from './MinisterEscalationCallout';
 
@@ -392,7 +393,7 @@ type FlagRequestGroup = {
 };
 
 type FlagRequestRow = {
-  detail: string;
+  detail: ReactNode[];
   iconKey: string;
   owner?: string | null;
   priority?: string | null;
@@ -401,16 +402,14 @@ type FlagRequestRow = {
   workSkill?: string | null;
 };
 
-function FlagRequestDetails({ detail }: { detail: string }) {
-  const details = splitFlagRequestDetail(detail);
-
-  if (details.length === 0) {
+function FlagRequestDetails({ detail }: { detail: ReactNode[] }) {
+  if (detail.length === 0) {
     return <span className="flag-request-detail is-empty">-</span>;
   }
 
   return (
     <span className="flag-request-detail">
-      {details.map(item => <small key={item}>{item}</small>)}
+      {detail.map((item, index) => <small key={index}>{item}</small>)}
     </span>
   );
 }
@@ -431,11 +430,6 @@ function FlagRequestRouting({ row }: { row: FlagRequestRow }) {
       {chips.map(chip => <small key={chip}>{chip}</small>)}
     </span>
   );
-}
-
-function splitFlagRequestDetail(detail: string): string[] {
-  if (!detail || detail === '-') return [];
-  return detail.split(' | ').map(part => part.trim()).filter(Boolean);
 }
 
 function countFlagRequests(flag: AgentFlag): number {
@@ -492,7 +486,7 @@ function buildingRequestRow(request: BuildingRequest): FlagRequestRow {
 
 function laborRequestRow(request: LaborRequest): FlagRequestRow {
   return {
-    detail: formatQuantity(request.quantity),
+    detail: detailList(formatQuantityDetail(request.quantity)),
     iconKey: 'labor_requests',
     owner: request.requested_from,
     priority: request.priority,
@@ -504,9 +498,7 @@ function laborRequestRow(request: LaborRequest): FlagRequestRow {
 
 function itemRequestRow(request: ItemRequest): FlagRequestRow {
   return {
-    detail: [request.item_def, formatQuantityDetail(request.quantity)]
-      .filter((value): value is string => Boolean(value))
-      .join(' / ') || '-',
+    detail: itemRequestDetails(request),
     iconKey: request.item_def ?? 'item_requests',
     owner: request.requested_from,
     priority: request.priority,
@@ -516,9 +508,27 @@ function itemRequestRow(request: ItemRequest): FlagRequestRow {
   };
 }
 
+function detailList(...items: Array<ReactNode | null | undefined | false>): ReactNode[] {
+  return items.filter((item): item is ReactNode => item !== null && item !== undefined && item !== false && item !== '');
+}
+
+function itemRequestDetails(request: ItemRequest): ReactNode[] {
+  if (request.item_def) {
+    return [
+      <ResourceQuantity
+        defName={request.item_def}
+        key="item"
+        quantity={request.quantity}
+      />,
+    ];
+  }
+
+  return detailList(formatQuantityDetail(request.quantity));
+}
+
 function attentionRequestRow(request: AttentionRequest): FlagRequestRow {
   return {
-    detail: '-',
+    detail: [],
     iconKey: 'attention',
     owner: request.requested_from,
     priority: request.priority,
@@ -528,7 +538,7 @@ function attentionRequestRow(request: AttentionRequest): FlagRequestRow {
   };
 }
 
-function formatBuildingDetail(request: BuildingRequest): string {
+function formatBuildingDetail(request: BuildingRequest): ReactNode[] {
   const details = [
     request.target_class ? `Class: ${formatLabel(request.target_class)}` : null,
     request.target_def ? `Def: ${request.target_def}` : null,
@@ -541,9 +551,9 @@ function formatBuildingDetail(request: BuildingRequest): string {
     request.urgency ? `Urgency: ${formatLabel(request.urgency)}` : null,
     formatDeadline(request.deadline),
     formatQuantityDetail(request.quantity),
-  ].filter((value): value is string => Boolean(value));
+  ].filter((value): value is ReactNode => value !== null && value !== undefined && value !== '');
 
-  return details.length > 0 ? details.join(' | ') : '-';
+  return details;
 }
 
 function formatCapacityNeed(capacity: BuildingRequest['capacity_need']): string | null {
@@ -557,11 +567,20 @@ function formatAdjacency(adjacency: BuildingRequest['adjacency']): string | null
   return `Adjacency: ${adjacency.map(hint => `${formatLabel(hint.relation)} ${hint.target}`).join(', ')}`;
 }
 
-function formatMaterials(materials: BuildingRequest['materials_on_hand']): string | null {
+function formatMaterials(materials: BuildingRequest['materials_on_hand']): ReactNode | null {
   if (!materials || materials.length === 0) return null;
-  return `Materials: ${materials
-    .map(material => `${material.material}${material.approx_qty ? ` ~${formatInteger(material.approx_qty)}` : ''}`)
-    .join(', ')}`;
+  return (
+    <>
+      <span>Materials:</span>
+      <ResourceQuantityList
+        items={materials.map(material => ({
+          approx: material.approx_qty !== null && material.approx_qty !== undefined,
+          defName: material.material,
+          quantity: material.approx_qty,
+        }))}
+      />
+    </>
+  );
 }
 
 function formatDeadline(deadline: BuildingRequest['deadline']): string | null {
@@ -889,10 +908,6 @@ function formatLabel(value: string | null | undefined): string {
   return value
     .replace(/_/g, ' ')
     .replace(/\b\w/g, char => char.toUpperCase());
-}
-
-function formatQuantity(value: number | null | undefined): string {
-  return value === null || value === undefined ? '-' : value.toLocaleString();
 }
 
 function formatQuantityDetail(value: number | null | undefined): string | null {
