@@ -30,133 +30,122 @@ public sealed class MinisterOfWillie(
         MinisterBriefingContext context = BuildContext(outputStore.CurrentMayorAgenda);
         IReadOnlyList<AgentFlag> activeFlags = flags.Active();
         IReadOnlyList<BuildingRequest> inboundRequests = ActiveWillieBuildingRequests(activeFlags, cycle.Flag);
-        IReadOnlyList<WillieInboundRequest> inboundBoard = inboundRequests
-            .Select(request => new WillieInboundRequest(
-                request,
-                SourceMinisterForRequest(request, activeFlags, cycle.Flag),
-                WillieSolverStore.RequestKey(request)))
-            .ToList();
+        IReadOnlyList<WillieInboundRequest> inboundBoard = InboundBoardForRequests(
+            AllActiveWillieBuildingRequests(activeFlags, cycle.Flag),
+            activeFlags,
+            cycle.Flag);
+        IReadOnlyList<WillieInboundRequest> solveBoard = InboundBoardForRequests(
+            inboundRequests,
+            activeFlags,
+            cycle.Flag);
         solverStore.RecordInbound(Name, inboundBoard);
 
-        RulesResult result = rules.Evaluate(briefing, ColonyContext.Default, inboundRequests);
-        switch (result)
+        RuleRun result = rules.Evaluate(briefing, ColonyContext.Default, inboundRequests);
+        DecisionProjectionContext projectionContext = new(
+            Minister: Name,
+            Domain: "construction",
+            BriefingVersion: briefing.BriefingVersion,
+            GameDate: briefing.Date,
+            GameTick: briefing.GameTick,
+            Now: DateTimeOffset.UtcNow);
+        PlacementSolverReplayOutput? placementReplayOutput = null;
+        IReadOnlyList<AdviceItem> advice = DecisionProjection.ProjectAdvice(result.Decisions, projectionContext);
+        IReadOnlyList<AgentFlag> emittedFlags = DecisionProjection.ProjectFlags(result.Decisions, projectionContext);
+        Dictionary<string, PlacementSolveAttempt> attemptsByRequestKey = new(StringComparer.OrdinalIgnoreCase);
+        IReadOnlyList<RuleId> emittedRuleIds = EmittedAdviceRuleIds(result.Decisions);
+        BuildingRequest? drivingBoardRequest = ContainsRule(emittedRuleIds, Rules.BuildingRequestActiveTrace)
+            ? Rules.SelectPlacementRequest(briefing, inboundRequests)
+            : null;
+
+        if (drivingBoardRequest is not null)
         {
-            case Decision decision:
-                PlacementSolverReplayOutput? placementReplayOutput = null;
-                IReadOnlyList<AdviceItem> advice = decision.Advice;
-                Dictionary<string, PlacementSolveAttempt> attemptsByRequestKey = new(StringComparer.OrdinalIgnoreCase);
-                IReadOnlyList<string> emittedRuleTraces = EmittedRuleTraces(decision);
-                BuildingRequest? drivingBoardRequest = ContainsTrace(emittedRuleTraces, Rules.BuildingRequestActiveTrace)
-                    ? Rules.SelectPlacementRequest(briefing, inboundRequests)
-                    : null;
+            PlacementSolveAttempt attempt = await SolveAndRecordPlacementAsync(
+                drivingBoardRequest,
+                SourceMinisterForRequest(drivingBoardRequest, activeFlags, cycle.Flag),
+                briefing,
+                attemptsByRequestKey,
+                ct);
+            advice = EnrichSolverAdvice(
+                advice,
+                attempt,
+                AdviceIdForRule(Rules.BuildingRequestActiveTrace),
+                removeFallbackWhenApplyReady: false);
+            placementReplayOutput = attempt.ReplayOutput;
 
-                if (drivingBoardRequest is not null)
-                {
-                    PlacementSolveAttempt attempt = await SolveAndRecordPlacementAsync(
-                        drivingBoardRequest,
-                        SourceMinisterForRequest(drivingBoardRequest, activeFlags, cycle.Flag),
-                        briefing,
-                        attemptsByRequestKey,
-                        ct);
-                    advice = EnrichSolverAdvice(
-                        advice,
-                        attempt,
-                        DrivingAdviceId(Rules.BuildingRequestActiveTrace),
-                        removeFallbackWhenApplyReady: false);
-                    placementReplayOutput = attempt.ReplayOutput;
-
-                    if (attempt.SolverOffline)
-                    {
-                        await PreserveSolverOfflineReplayAsync(decision, cycle, briefing, context, advice, attempt.ReplayOutput, ct);
-                        return;
-                    }
-                }
-
-                foreach (string trace in emittedRuleTraces.Where(IsMissingRoomTrace))
-                {
-                    if (!Rules.TryGetPlacementRequest(trace, briefing, inboundRequests, out BuildingRequest missingRoomRequest))
-                        continue;
-
-                    PlacementSolveAttempt attempt = await SolveAndRecordPlacementAsync(
-                        missingRoomRequest,
-                        Name,
-                        briefing,
-                        attemptsByRequestKey,
-                        ct);
-                    advice = EnrichSolverAdvice(
-                        advice,
-                        attempt,
-                        DrivingAdviceId(trace),
-                        removeFallbackWhenApplyReady: true);
-                    placementReplayOutput ??= attempt.ReplayOutput;
-
-                    if (attempt.SolverOffline)
-                    {
-                        await PreserveSolverOfflineReplayAsync(decision, cycle, briefing, context, advice, attempt.ReplayOutput, ct);
-                        return;
-                    }
-                }
-
-                foreach (WillieInboundRequest inbound in inboundBoard)
-                {
-                    if (drivingBoardRequest is not null &&
-                        string.Equals(inbound.RequestKey, WillieSolverStore.RequestKey(drivingBoardRequest), StringComparison.OrdinalIgnoreCase))
-                    {
-                        continue;
-                    }
-
-                    PlacementSolveAttempt attempt = await SolveAndRecordPlacementAsync(
-                        inbound.Request,
-                        inbound.SourceMinister,
-                        briefing,
-                        attemptsByRequestKey,
-                        ct);
-                    if (attempt.SolverOffline)
-                    {
-                        await PreserveSolverOfflineReplayAsync(decision, cycle, briefing, context, advice, attempt.ReplayOutput, ct);
-                        return;
-                    }
-                }
-
-                string stateSummary = WillieStateSummary.Build(briefing);
-                RuleTraceDetails? diagnostics = decision.Diagnostics?.WithEmissions("rules", decision.Trace, advice, decision.Flags);
-                PublishSnapshot(advice, decision.Flags, stateSummary);
-                await PersistReplayAsync(new MinisterReplayEntry(
-                    Minister: Name,
-                    Cycle: cycle,
-                    Path: "rules",
-                    Briefing: briefing,
-                    Context: context,
-                    RuleTrace: decision.Trace,
-                    RuleDiagnostics: diagnostics,
-                    Advice: advice,
-                    Flags: decision.Flags,
-                    StateSummary: stateSummary,
-                    OutputKind: placementReplayOutput is null ? null : "placement_solver",
-                    Output: placementReplayOutput), ct);
-                log.LogInformation(
-                    "Willie rules decision trace={Trace} advice={AdviceCount} flags={FlagCount}",
-                    decision.Trace, advice.Count, decision.Flags.Count);
-                break;
-
-            case Escalate escalate:
-                string unresolvedSummary = WillieStateSummary.Build(briefing);
-                PublishSnapshot([], [], unresolvedSummary);
-                await PersistReplayAsync(new MinisterReplayEntry(
-                    Minister: Name,
-                    Cycle: cycle,
-                    Path: "rules",
-                    Briefing: briefing,
-                    Context: context,
-                    RuleTrace: null,
-                    RuleDiagnostics: escalate.Diagnostics,
-                    EscalationReason: escalate.Reason,
-                    Advice: [],
-                    Flags: [],
-                    StateSummary: unresolvedSummary), ct);
-                log.LogInformation("Willie rules had no deterministic decision. reason={Reason}", escalate.Reason);
-                break;
+            if (attempt.SolverOffline)
+            {
+                await PreserveSolverOfflineReplayAsync(result, cycle, briefing, context, advice, emittedFlags, attempt.ReplayOutput, ct);
+                return;
+            }
         }
+
+        foreach (RuleId rule in emittedRuleIds.Where(IsMissingRoomRule))
+        {
+            if (!Rules.TryGetPlacementRequest(rule, briefing, inboundRequests, out BuildingRequest missingRoomRequest))
+                continue;
+
+            PlacementSolveAttempt attempt = await SolveAndRecordPlacementAsync(
+                missingRoomRequest,
+                Name,
+                briefing,
+                attemptsByRequestKey,
+                ct);
+            advice = EnrichSolverAdvice(
+                advice,
+                attempt,
+                AdviceIdForRule(rule),
+                removeFallbackWhenApplyReady: true);
+            placementReplayOutput ??= attempt.ReplayOutput;
+
+            if (attempt.SolverOffline)
+            {
+                await PreserveSolverOfflineReplayAsync(result, cycle, briefing, context, advice, emittedFlags, attempt.ReplayOutput, ct);
+                return;
+            }
+        }
+
+        foreach (WillieInboundRequest inbound in solveBoard)
+        {
+            if (drivingBoardRequest is not null &&
+                string.Equals(inbound.RequestKey, WillieSolverStore.RequestKey(drivingBoardRequest), StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            PlacementSolveAttempt attempt = await SolveAndRecordPlacementAsync(
+                inbound.Request,
+                inbound.SourceMinister,
+                briefing,
+                attemptsByRequestKey,
+                ct);
+            if (attempt.SolverOffline)
+            {
+                await PreserveSolverOfflineReplayAsync(result, cycle, briefing, context, advice, emittedFlags, attempt.ReplayOutput, ct);
+                return;
+            }
+        }
+
+        string stateSummary = WillieStateSummary.Build(briefing);
+        string? trace = result.Decisions.Count > 0
+            ? MinisterRuleTableEvaluator.CompositeTrace(result.Decisions)
+            : result.Diagnostics.SelectedRule?.Value;
+        PublishSnapshot(advice, emittedFlags, stateSummary);
+        await PersistReplayAsync(new MinisterReplayEntry(
+            Minister: Name,
+            Cycle: cycle,
+            Path: "rules",
+            Briefing: briefing,
+            Context: context,
+            RuleTrace: trace,
+            RuleDiagnostics: result.Diagnostics,
+            Advice: advice,
+            Flags: emittedFlags,
+            StateSummary: stateSummary,
+            OutputKind: placementReplayOutput is null ? null : "placement_solver",
+            Output: placementReplayOutput), ct);
+        log.LogInformation(
+            "Willie rules decision trace={Trace} advice={AdviceCount} flags={FlagCount}",
+            trace, advice.Count, emittedFlags.Count);
     }
 
     public Task RunRefinement(CancellationToken ct) => Task.CompletedTask;
@@ -188,30 +177,36 @@ public sealed class MinisterOfWillie(
         IReadOnlyList<AgentFlag> activeFlags,
         AgentFlag? directFlag)
     {
-        List<BuildingRequest> requests = [];
-        if (directFlag is not null)
-        {
-            requests.AddRange((directFlag.BuildingRequests ?? [])
-                .Where(IsRequestedFromWillie));
-        }
+        IReadOnlyList<BuildingRequest>? directRequests = directFlag?.BuildingRequests?
+            .Where(IsRequestedFromWillie)
+            .ToList();
+        if (directRequests is { Count: > 0 })
+            return directRequests;
 
-        foreach (AgentFlag flag in activeFlags)
-        {
-            if (directFlag is not null &&
-                string.Equals(flag.Id, directFlag.Id, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            requests.AddRange((flag.BuildingRequests ?? [])
-                .Where(IsRequestedFromWillie));
-        }
-
-        return requests;
+        return AllActiveWillieBuildingRequests(activeFlags, directFlag);
     }
+
+    private static IReadOnlyList<BuildingRequest> AllActiveWillieBuildingRequests(
+        IReadOnlyList<AgentFlag> activeFlags,
+        AgentFlag? directFlag) =>
+        FlagsToRead(activeFlags, directFlag)
+            .SelectMany(flag => flag.BuildingRequests ?? [])
+            .Where(IsRequestedFromWillie)
+            .ToList();
 
     private static bool IsRequestedFromWillie(BuildingRequest request) =>
         string.Equals(request.RequestedFrom, "Willie", StringComparison.OrdinalIgnoreCase);
+
+    private static IReadOnlyList<WillieInboundRequest> InboundBoardForRequests(
+        IReadOnlyList<BuildingRequest> requests,
+        IReadOnlyList<AgentFlag> activeFlags,
+        AgentFlag? directFlag) =>
+        requests
+            .Select(request => new WillieInboundRequest(
+                request,
+                SourceMinisterForRequest(request, activeFlags, directFlag),
+                WillieSolverStore.RequestKey(request)))
+            .ToList();
 
     private static string? SourceMinisterForRequest(
         BuildingRequest request,
@@ -225,6 +220,16 @@ public sealed class MinisterOfWillie(
             return directFlag.SourceMinister;
         }
 
+        return FlagsToRead(activeFlags, directFlag).FirstOrDefault(flag =>
+                (flag.BuildingRequests ?? []).Any(candidate =>
+                    IsRequestedFromWillie(candidate) && candidate == request))
+            ?.SourceMinister;
+    }
+
+    private static IReadOnlyList<AgentFlag> FlagsToRead(
+        IReadOnlyList<AgentFlag> activeFlags,
+        AgentFlag? directFlag)
+    {
         List<AgentFlag> flagsToRead = [.. activeFlags];
         if (directFlag is not null &&
             flagsToRead.All(flag => !string.Equals(flag.Id, directFlag.Id, StringComparison.OrdinalIgnoreCase)))
@@ -232,10 +237,7 @@ public sealed class MinisterOfWillie(
             flagsToRead.Add(directFlag);
         }
 
-        return flagsToRead.FirstOrDefault(flag =>
-                (flag.BuildingRequests ?? []).Any(candidate =>
-                    IsRequestedFromWillie(candidate) && candidate == request))
-            ?.SourceMinister;
+        return flagsToRead;
     }
 
     private async Task<PlacementSolveAttempt> SolveAndRecordPlacementAsync(
@@ -262,33 +264,36 @@ public sealed class MinisterOfWillie(
     }
 
     private async Task PreserveSolverOfflineReplayAsync(
-        Decision decision,
+        RuleRun ruleRun,
         PlayCycleContext cycle,
         WillieBriefing briefing,
         MinisterBriefingContext context,
         IReadOnlyList<AdviceItem> advice,
+        IReadOnlyList<AgentFlag> emittedFlags,
         PlacementSolverReplayOutput replayOutput,
         CancellationToken ct)
     {
         string preservedStateSummary = WillieStateSummary.Build(briefing);
-        RuleTraceDetails? preservedDiagnostics = decision.Diagnostics?.WithEmissions("rules", decision.Trace, advice, decision.Flags);
+        string? trace = ruleRun.Decisions.Count > 0
+            ? MinisterRuleTableEvaluator.CompositeTrace(ruleRun.Decisions)
+            : ruleRun.Diagnostics.SelectedRule?.Value;
         await PersistReplayAsync(new MinisterReplayEntry(
             Minister: Name,
             Cycle: cycle,
             Path: "rules",
             Briefing: briefing,
             Context: context,
-            RuleTrace: decision.Trace,
-            RuleDiagnostics: preservedDiagnostics,
+            RuleTrace: trace,
+            RuleDiagnostics: ruleRun.Diagnostics,
             Advice: advice,
-            Flags: decision.Flags,
+            Flags: emittedFlags,
             StateSummary: preservedStateSummary,
             OutputKind: "placement_solver",
             Output: replayOutput), ct);
         traces.Complete(Name, SolverOfflineTraceNote);
         log.LogInformation(
             "Willie placement solver offline for trace={Trace}; preserved prior advice snapshot",
-            decision.Trace);
+            trace);
     }
 
     private async Task<PlacementSolveAttempt> TrySolvePlacementAsync(
@@ -355,34 +360,15 @@ public sealed class MinisterOfWillie(
     private static bool IsDrivingAdvice(AdviceItem item, string drivingAdviceId) =>
         string.Equals(item.Id, drivingAdviceId, StringComparison.OrdinalIgnoreCase);
 
-    private static IReadOnlyList<string> EmittedRuleTraces(Decision decision)
-    {
-        if (decision.Diagnostics?.EmittedAdvice is { Count: > 0 } emittedAdvice)
-        {
-            return emittedAdvice
-                .Select(trace => trace.Rule)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
-        }
-
-        return decision.Advice
-            .Select(item => TraceFromAdviceId(item.Id))
-            .Where(trace => !string.IsNullOrWhiteSpace(trace))
-            .Cast<string>()
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+    private static IReadOnlyList<RuleId> EmittedAdviceRuleIds(IReadOnlyList<Decision> decisions) =>
+        decisions
+            .OfType<Advise>()
+            .Select(advice => advice.Rule)
+            .Distinct()
             .ToList();
-    }
 
-    private static bool ContainsTrace(IReadOnlyList<string> traces, string trace) =>
-        traces.Any(candidate => string.Equals(candidate, trace, StringComparison.OrdinalIgnoreCase));
-
-    private static string? TraceFromAdviceId(string adviceId)
-    {
-        const string Prefix = "willie_";
-        return adviceId.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase)
-            ? adviceId[Prefix.Length..]
-            : null;
-    }
+    private static bool ContainsRule(IReadOnlyList<RuleId> rules, RuleId rule) =>
+        rules.Contains(rule);
 
     private static AdviceItem EnrichAdviceItem(
         AdviceItem item,
@@ -481,11 +467,11 @@ public sealed class MinisterOfWillie(
         _ => $"no validated {RequestRoomLabel(request)} option was emitted"
     };
 
-    private static string DrivingAdviceId(string trace) =>
-        $"willie_{trace}";
+    private static string AdviceIdForRule(RuleId rule) =>
+        $"willie_{rule.Value}";
 
-    private static bool IsMissingRoomTrace(string trace) =>
-        trace is "kitchen_missing" or "hospital_missing" or "storage_room_missing";
+    private static bool IsMissingRoomRule(RuleId rule) =>
+        rule.Value is "kitchen_missing" or "hospital_missing" or "storage_room_missing";
 
     private static string RequestRoomLabel(BuildingRequest request) =>
         request.RoomClass is not null
