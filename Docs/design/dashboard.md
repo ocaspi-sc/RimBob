@@ -105,6 +105,7 @@ band. Every header marker/chip should carry a terse
 explanatory tooltip with the current/last value. Avoid normal header tooltips
 that are just route names, implementation URLs, or raw field names; those
 details belong in SYSTEM/debug panels.
+The browser document title mirrors compact runtime identity for tab/window scanning: effective serving port, running version or commit, and local clock time; detailed asset fingerprints still belong in SYSTEM/runtime details.
 The header also exposes `Run Cabinet Now`. Minister workspaces expose `Run LLM` and `Run Rules` beside the selected minister's last-run time. The selected view is already visible in the tab bar and should not be repeated beside the run buttons. Planned ministers and missing mode capabilities show disabled/not-wired controls.
 
 ### Scopes
@@ -161,7 +162,7 @@ Minister scopes use a fixed top tab bar:
 
 Rules-only ministers expose only the subset that is actually wired. Willie starts with Briefing, Build Queue, Solver, Requests, Rules, and Advice; Prompt, RAG, Raw LLM Output, and Infographics are not shown until those backend surfaces exist. Build Queue may show a placement Apply affordance only when the backend emits an explicit action apply payload for that option; otherwise the option stays inspect-only and names the unsupported apply state. The dashboard view tabs and launcher tray deep links must both respect that per-minister enabled-view set.
 
-Minister names always render with their fixed emoji in human-facing dashboard labels (`🍲 Chef`). This is display-only: route keys, raw payloads, and debug contract fields stay unchanged. Use Host game icons for view labels, sections, fields, metrics, and entity rows when they improve scan speed; generic emoji are fallback-only for non-minister cues. Curated dashboard surfaces that show quantities of RimWorld resources, items, crops, materials, medicine, weapons, or building ingredients must render the matching game icon beside the quantity and resource label. Icons annotate contract names, but raw LLM output, JSON inspectors, backend payloads, and stored advice contracts are not rewritten.
+Minister names always render with their fixed emoji in human-facing dashboard labels (`🍲 Chef`). This is display-only: route keys, raw payloads, and debug contract fields stay unchanged. Use Host game icons for view labels, sections, fields, metrics, and entity rows when they improve scan speed; generic emoji are fallback-only for non-minister cues. Icons annotate contract names, but raw LLM output, JSON inspectors, backend payloads, and stored advice contracts are not rewritten.
 
 Large objects use the standard disclosure pattern: a real button header with
 `aria-expanded` / `aria-controls`, plus a conditionally rendered panel in normal
@@ -538,8 +539,6 @@ The dashboard may render an icon only when it has an explicit source:
   fields such as scope, view, section, advice action kind, agenda category, and
   INFO glossary tag.
 
-Resource-quantity displays are a required curated surface: if the UI shows a player-facing count for a RimWorld item/material/resource and has a def name, explicit icon ref, or bounded semantic resource key, it renders a stable-size game icon next to the count and label. If the explicit icon fails, the row keeps the same dimensions and shows a fallback glyph; it should not silently fall back to bare text. Dashboard code should route these displays through one shared renderer so Advice, Build Queue, Requests, Briefing HUDs, and the colony sidebar cannot drift into different language.
-
 Do not infer icons from prose in raw/debug views, titles, bodies, reasons, or
 instructions. Mayor's player-facing Agenda cards may use a small deterministic
 domain cue for priority text and may strip leading LLM-emitted emoji/symbols in
@@ -629,7 +628,7 @@ classification confidence inspectable without digging through prompt JSON.
 
 ### Build Queue
 
-Willie's Build Queue view is the construction work-order surface. It uses three stacked collapsible sections backed by existing data: Requested reads active `AgentFlag.building_requests[]` where `requested_from` is Willie, Proposed reads Willie `AdviceItem.options[]` grouped by the emitting advice item, and Placed reads `constructionBacklog.groups[]` plus stalled-build counts from the Willie briefing. Placed means blueprints or frames already on the map, not completed buildings. Proposed option cards render a small SVG footprint from `blueprint_group.assets[]`, icon-led material chips, readiness pills, tradeoff text, and an Apply state. Do not add a Done section until Host exposes completed-build history. Do not infer option placement from prose; if `options[]` or an action apply payload is missing, show an explicit empty or unsupported state instead.
+Willie's Build Queue view is the construction work-order surface. It uses three stacked collapsible sections backed by existing data: Requested reads active `AgentFlag.building_requests[]` where `requested_from` is Willie, Proposed reads Willie `AdviceItem.options[]` grouped by the emitting advice item, and Placed reads `constructionBacklog.groups[]` plus stalled-build counts from the Willie briefing. Placed means blueprints or frames already on the map, not completed buildings. Proposed option cards render a small SVG footprint from `blueprint_group.assets[]`, material chips, readiness pills, tradeoff text, and an Apply state. Do not add a Done section until Host exposes completed-build history. Do not infer option placement from prose; if `options[]` or an action apply payload is missing, show an explicit empty or unsupported state instead.
 
 ### Solver
 
@@ -725,7 +724,6 @@ actions.
 
 These rows may render real game icons only from explicit `icon` refs. The
 dashboard does not fuzzy-match reason or instruction text to asset names.
-When an action or flag-request row includes a structured resource or item quantity, the curated row should use the shared resource-quantity renderer rather than formatting a bare string.
 
 ---
 

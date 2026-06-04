@@ -16,6 +16,7 @@ import { MinisterWorkspace } from './components/minister/MinisterWorkspace';
 import { SystemOverview } from './components/system/SystemOverview';
 import { useAdviceFeed } from './hooks/useAdviceFeed';
 import { useDashboardSelection } from './hooks/useDashboardSelection';
+import { useDashboardDocumentTitle } from './hooks/useDashboardDocumentTitle';
 import { useDashboardReloadOnVersionChange } from './hooks/useDashboardReloadOnVersionChange';
 import { useManualTriggers } from './hooks/useManualTriggers';
 import { usePollingResource } from './hooks/usePollingResource';
@@ -31,6 +32,7 @@ export default function App() {
   const systemHealth = usePollingResource(fetchSystemHealth, SystemHealthPollMs);
   const feed = useAdviceFeed();
   const triggers = useManualTriggers(feed.cabinetRuns);
+  useDashboardDocumentTitle(systemHealth.data, feed.runningVersion);
   useDashboardReloadOnVersionChange(systemHealth.data, feed.runningVersion);
 
   const activeScope = findScope(selection.selectedScope);
