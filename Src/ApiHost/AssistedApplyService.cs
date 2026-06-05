@@ -270,7 +270,7 @@ public sealed class AssistedApplyService(
             .ToList();
         IReadOnlyList<PlantRecord> readyInRect = currentTargets
             .Where(plant => plant.Position is not null &&
-                            plant.Growth >= 0.85f &&
+                            PlantHarvest.IsReady(plant) &&
                             IsInside(apply.Rect, plant.Position))
             .ToList();
         int missing = apply.TargetIds.Count - currentTargets.Count;

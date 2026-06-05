@@ -213,6 +213,21 @@ public sealed record PlantRecord(
     bool? IsHarvestable = null
 );
 
+/// <summary>
+/// Single source of truth for "is this plant harvest-ready right now". Briefing derivation
+/// (advice generation) and assisted-apply validation must agree, or forageable wild plants
+/// that report <see cref="PlantRecord.IsHarvestable"/> below <see cref="DefaultHarvestMinGrowth"/>
+/// growth get selected as targets but then rejected as stale.
+/// </summary>
+public static class PlantHarvest
+{
+    /// <summary>Fallback growth threshold used only when RIMAPI did not report a live harvestable flag.</summary>
+    public const float DefaultHarvestMinGrowth = 0.85f;
+
+    public static bool IsReady(PlantRecord plant) =>
+        plant.IsHarvestable ?? plant.Growth >= DefaultHarvestMinGrowth;
+}
+
 public sealed record ThingRegistry(IReadOnlyList<ThingRecord> Things);
 
 public sealed record ThingRecord(

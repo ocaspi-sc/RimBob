@@ -489,7 +489,7 @@ public static class FoodBriefingDerivation
             .ToList();
 
     private static bool IsHarvestReady(PlantRecord plant) =>
-        plant.IsHarvestable ?? plant.Growth >= 0.85f;
+        PlantHarvest.IsReady(plant);
 
     private static IReadOnlyList<WildHuntTarget> DeriveWildHuntTargets(
         ColonyState s,

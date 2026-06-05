@@ -102,6 +102,82 @@ public sealed class AssistedApplyServiceTests
     }
 
     [Fact]
+    public async Task ApplyAsync_WhenForageTargetsAreHarvestableBelowGrowthThreshold_PostsHarvestDesignation()
+    {
+        // Forageable wild plants (berries, etc.) report is_harvestable=true well below 0.85 growth.
+        // Generator selects them via IsHarvestable; the validator must agree, or "Apply Mark Forage"
+        // wrongly reports stale. Here only 1 of 4 is >= 0.85 growth, so the old growth-only gate would
+        // count 3 stale (> AllowedMissing(4)=1) and fail. PlantHarvest.IsReady honors is_harvestable.
+        AdviceBus bus = new();
+        bus.Publish(Advice("food_wild_harvest_available", new AdviceAction(
+            AdviceActionKind.MarkHarvest,
+            "Mark forage.",
+            Apply: new MarkHarvestAreaApply(
+                "Mark forage",
+                "4 berry plants",
+                MapId: 1,
+                Rect: new MapRect(10, 20, 13, 20),
+                TargetIds: ["berry-1", "berry-2", "berry-3", "berry-4"],
+                TargetCount: 4))));
+        MinimalRefreshHandler handler = new()
+        {
+            MapPlantsJson = """
+                {"success":true,"data":[
+                  {"id":"berry-1","def":"Plant_Berry","growth":0.9,"is_crop":false,"is_harvestable":true,"position":{"x":10,"y":0,"z":20}},
+                  {"id":"berry-2","def":"Plant_Berry","growth":0.45,"is_crop":false,"is_harvestable":true,"position":{"x":11,"y":0,"z":20}},
+                  {"id":"berry-3","def":"Plant_Berry","growth":0.45,"is_crop":false,"is_harvestable":true,"position":{"x":12,"y":0,"z":20}},
+                  {"id":"berry-4","def":"Plant_Berry","growth":0.45,"is_crop":false,"is_harvestable":true,"position":{"x":13,"y":0,"z":20}}
+                ],"errors":null}
+                """
+        };
+        AssistedApplyService service = Service(bus, new ColonyState(), handler);
+
+        AssistedApplyResponse response = await service.ApplyAsync("food_wild_harvest_available", 0);
+
+        response.Status.Should().Be("applied");
+        response.Kind.Should().Be(AdviceApplyKind.MarkHarvestArea);
+        response.Message.Should().Contain("Harvest designation");
+        AssertAppliedAction(bus, "applied", AdviceApplyKind.MarkHarvestArea);
+        handler.DesignatePosted.Should().BeTrue();
+        handler.LastDesignateBody.Should().Contain("\"designation\":\"Harvest\"");
+    }
+
+    [Fact]
+    public async Task ApplyAsync_WhenForageTargetsReportNotHarvestable_DoesNotPostHarvestDesignation()
+    {
+        // is_harvestable=false must still gate: a plant flagged not-harvestable is not ready even if
+        // some other readiness heuristic might pass. All four are unready -> none ready in rect.
+        AdviceBus bus = new();
+        bus.Publish(Advice("food_wild_harvest_available", new AdviceAction(
+            AdviceActionKind.MarkHarvest,
+            "Mark forage.",
+            Apply: new MarkHarvestAreaApply(
+                "Mark forage",
+                "4 berry plants",
+                MapId: 1,
+                Rect: new MapRect(10, 20, 13, 20),
+                TargetIds: ["berry-1", "berry-2", "berry-3", "berry-4"],
+                TargetCount: 4))));
+        MinimalRefreshHandler handler = new()
+        {
+            MapPlantsJson = """
+                {"success":true,"data":[
+                  {"id":"berry-1","def":"Plant_Berry","growth":0.45,"is_crop":false,"is_harvestable":false,"position":{"x":10,"y":0,"z":20}},
+                  {"id":"berry-2","def":"Plant_Berry","growth":0.45,"is_crop":false,"is_harvestable":false,"position":{"x":11,"y":0,"z":20}},
+                  {"id":"berry-3","def":"Plant_Berry","growth":0.45,"is_crop":false,"is_harvestable":false,"position":{"x":12,"y":0,"z":20}},
+                  {"id":"berry-4","def":"Plant_Berry","growth":0.45,"is_crop":false,"is_harvestable":false,"position":{"x":13,"y":0,"z":20}}
+                ],"errors":null}
+                """
+        };
+        AssistedApplyService service = Service(bus, new ColonyState(), handler);
+
+        AssistedApplyResponse response = await service.ApplyAsync("food_wild_harvest_available", 0);
+
+        response.Status.Should().Be("already_satisfied");
+        handler.DesignatePosted.Should().BeFalse();
+    }
+
+    [Fact]
     public async Task ApplyAsync_WhenHuntTargetsRemainLowRisk_PostsHuntDesignation()
     {
         AdviceBus bus = new();
@@ -589,6 +665,14 @@ public sealed class AssistedApplyServiceTests
         public string BlueprintGroupPlaceJson { get; init; } = BlueprintGroupPlaceResponseJson("placed");
         public string MapAnimalsJson { get; init; } = """{"success":true,"data":[],"errors":null}""";
         public string MapBuildingsJson { get; init; } = """{"success":true,"data":[],"errors":null}""";
+        public string MapPlantsJson { get; init; } = """
+            {"success":true,"data":[
+              {"id":"plant-1","def":"Plant_Rice","growth":0.9,"is_crop":true,"position":{"x":10,"y":0,"z":20}},
+              {"id":"plant-2","def":"Plant_Rice","growth":0.4,"is_crop":true,"position":{"x":11,"y":0,"z":20}},
+              {"id":"plant-3","def":"Plant_Rice","growth":0.4,"is_crop":true,"position":{"x":12,"y":0,"z":20}},
+              {"id":"plant-4","def":"Plant_Rice","growth":0.4,"is_crop":true,"position":{"x":13,"y":0,"z":20}}
+            ],"errors":null}
+            """;
         public string RecipesJson { get; init; } = """
             {"success":true,"data":[
               {"def_name":"CookMealSimple","label":"cook simple meal","description":"Cook a simple meal.","work_amount":300,"work_skill":"Cooking","products":[{"thing_def":"MealSimple","count":1}],"ingredients":[]}
@@ -645,14 +729,7 @@ public sealed class AssistedApplyServiceTests
             if (path.Contains("map/farm/summary", StringComparison.OrdinalIgnoreCase))
                 return JsonResponse("""{"success":true,"data":{"total_crops":4,"avg_growth":0.5,"ready_to_harvest":1,"crop_breakdown":[{"def":"Plant_Rice","count":4,"avg_growth":0.5}]},"errors":null}""");
             if (path.Contains("map/plants", StringComparison.OrdinalIgnoreCase))
-                return JsonResponse("""
-                    {"success":true,"data":[
-                      {"id":"plant-1","def":"Plant_Rice","growth":0.9,"is_crop":true,"position":{"x":10,"y":0,"z":20}},
-                      {"id":"plant-2","def":"Plant_Rice","growth":0.4,"is_crop":true,"position":{"x":11,"y":0,"z":20}},
-                      {"id":"plant-3","def":"Plant_Rice","growth":0.4,"is_crop":true,"position":{"x":12,"y":0,"z":20}},
-                      {"id":"plant-4","def":"Plant_Rice","growth":0.4,"is_crop":true,"position":{"x":13,"y":0,"z":20}}
-                    ],"errors":null}
-                    """);
+                return JsonResponse(MapPlantsJson);
             if (path.Contains("map/things", StringComparison.OrdinalIgnoreCase))
                 return JsonResponse("""{"success":true,"data":[],"errors":null}""");
             if (path.Contains("map/work-tables", StringComparison.OrdinalIgnoreCase))
