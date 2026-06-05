@@ -22,6 +22,7 @@ export interface MinisterViewContext {
   llmPending: boolean;
   manualTriggerTarget: string | null;
   onRunLlm: () => void;
+  onSelectView: (view: MinisterViewKey) => void;
   previousAgenda: MayorAgenda | null;
   scope: ScopeConfig;
   stateSummaries: Record<string, string>;
@@ -50,15 +51,13 @@ const ministerViewRenderers: Record<MinisterViewKey, MinisterViewRenderer> = {
   ),
   solver: ({ scope, systemHealth }) => <MinisterSolverView scope={scope} systemHealth={systemHealth} />,
   requests: ({ scope, systemHealth }) => <MinisterRequestsView scope={scope} systemHealth={systemHealth} />,
-  rules: ({ activeAdvice, events, llmPending, manualTriggerTarget, onRunLlm, scope, triggerDisabled }) => (
+  rules: ({ activeAdvice, events, manualTriggerTarget, onSelectView, scope }) => (
     <MinisterRulesView
       scope={scope}
       events={events}
       advice={activeAdvice}
-      llmPending={llmPending}
       manualTriggerTarget={manualTriggerTarget}
-      onRunLlm={onRunLlm}
-      triggerDisabled={triggerDisabled}
+      onSelectView={onSelectView}
     />
   ),
   infographics: ({ chains, scope }) => (

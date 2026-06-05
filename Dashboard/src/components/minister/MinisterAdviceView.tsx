@@ -641,7 +641,7 @@ function AdviceCard({
   };
 
   return (
-    <article className={`advice-card v2 ${item.priority} ${expiry.expired ? 'expired' : ''}`}>
+    <article className={`advice-card v2 ${item.priority} ${expiry.expired ? 'expired' : ''}`} id={item.id}>
       <header>
         <div>
           <span className="eyebrow">

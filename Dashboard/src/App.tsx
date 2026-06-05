@@ -158,6 +158,7 @@ export default function App() {
                 llmPending={triggers.triggerState.target === `${activeScope.key}:llm`}
                 manualTriggerTarget={triggers.triggerState.target}
                 onRunLlm={() => void triggers.triggerMinisterLlm(activeScope)}
+                onSelectView={selection.selectView}
                 previousAgenda={feed.previousAgenda}
                 scope={activeScope}
                 selectedView={activeMinisterView}

@@ -196,11 +196,7 @@ tables for uniform arrays, object sections, and YAML-like source trees backed by
 the original JSON payload. Field labels may include semantic icon cues before or
 after the contract name, but raw/debug data keeps the original field names.
 
-The minister Rules view should expose a compact all-rules table when the backend
-trace provides one. Group the catalog by outcome with semantic rule/outcome icon
-cues, and keep each row showing the rule name, outcome, condition summary,
-output action, and live evidence/reason so non-selected rules are inspectable
-without reading source.
+The minister Rules view should expose the rule-card list when the backend trace provides one. Render one compact card per rule: row 1 is plain rule title text, inline Advice provenance when the rule emitted advice, a compact no-emits marker when the rule emitted nothing, and priority; row 2 is one plain Evidence label plus evidence text; row 3 is the emits table when the rule emitted action/flag-style rows. Advice provenance is not an action or flag and does not belong in the emits table. Empty rules do not render a body `No emissions` row or table header. The emits table uses the same visible columns for every action/flag-style emitting rule: Type, Apply, ToMinister, Target, Work, and Details. Priority renders as a narrow colored bar at the left of each emitted row rather than as a text column, and Cost is not shown until the backend exposes a real estimate. Advice navigation in the title row is a link emoji button with a tooltip. Rules Apply buttons in the emits table execute the matching backend-allowlisted advice action when one exists; otherwise the cell stays muted. Sort selected and escalated rows ahead of not-matched rows, but express the outcome through row tone and selected styling rather than a visible `selected` / `not matched` label.
 
 Player-facing views stay curated. Advice, Mayor Agenda, and the colony sidebar
 may keep hand-shaped layouts because they are read during play.
@@ -642,7 +638,9 @@ Willie's Requests view is a read-only master-detail diagnostic surface for inbou
 
 The Rules view answers: "Why did RimBob say this now?"
 
-Show trigger, rules-vs-LLM path, selected rule or escalation reason, matched signals, suppressed lower-priority candidates, relevant flag or wakeup payload, emitted advice/flags, briefing version/tick when available, and last error. Rules trace/replay diagnostics should also include emitted action provenance so the operator can see which rule or dashboard-confirmed LLM path produced each action row. Keep that provenance in trace/replay diagnostics; raw `actions[]` remains the player-facing action contract.
+The Rules view body is the rule-card list itself: one compact card per rule, with title/priority plus inline Advice provenance, one evidence line, a same-column emits table for action/flag emissions, selected styling, muted not-matched rows, and emitted decision provenance. Do not wrap it in extra "Rule diagnostics" or "All rules" containers, do not render visible `selected` / `not matched` labels, and do not render the raw `selectedRule` one-liner. Do not duplicate the trigger summary, raw trace inspector, recent scope events, or active advice sections here; those belong in SYSTEM, Advice, SSE/event diagnostics, or the raw trace surfaces. Rules trace/replay diagnostics should still include emitted action provenance so the operator can see which rule or dashboard-confirmed LLM path produced each action row. Keep that provenance in trace/replay diagnostics; raw `actions[]` remains the player-facing action contract.
+
+Rules-to-Advice navigation must match rule advice IDs through minister aliases, not only the dashboard scope key. For example, Chef's dashboard scope is `food`, but Chef rule advice IDs may use the `chef_<rule>` prefix.
 
 ### Infographics
 

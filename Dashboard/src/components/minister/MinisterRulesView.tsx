@@ -1,73 +1,27 @@
 import { fetchTrace } from '../../api/ministers';
 import type { ScopeConfig } from '../../dashboard/scopes';
+import type { MinisterViewKey } from '../../dashboard/scopes';
 import { isScopeMinister } from '../../dashboard/selectors';
-import { iconForSection, iconForView } from '../../dashboard/semanticIcons';
+import { iconForView } from '../../dashboard/semanticIcons';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
 import type { AdviceItem } from '../../types/advice';
-import type { DashboardEvent, MinisterTrace, RuleTraceDetails } from '../../types/system';
-import { DisclosureSection } from '../shared/DisclosureSection';
+import type { DashboardEvent, RuleTraceDetails } from '../../types/system';
 import { EmptyState } from '../shared/EmptyState';
-import { DynamicTable, InspectorSurface, UnknownValue, type InspectorSurfaceConfig } from '../shared/Inspector';
 import { SemanticLabel } from '../shared/SemanticIcon';
-import { Timeline } from '../shared/Timeline';
-import { MinisterEscalationCallout } from './MinisterEscalationCallout';
 import { RuleCard } from './RuleCard';
-
-const traceInspectorConfig: InspectorSurfaceConfig = {
-  hiddenKeys: [
-    'minister',
-    'trigger',
-    'status',
-    'path',
-    'startedAt',
-    'completedAt',
-    'ruleFired',
-    'escalationReason',
-    'errorType',
-    'errorMessage',
-    'adviceCount',
-    'flagCount',
-    'wakeupPayload',
-    'note',
-    'flag',
-    'ruleDiagnostics',
-  ],
-  defaultOpenKeys: ['flag', 'flags', 'advice'],
-  preferredTables: [
-    {
-      key: 'advice',
-      preferredColumns: ['id', 'priority', 'title', 'stamp'],
-    },
-    {
-      key: 'flags',
-      preferredColumns: ['id', 'source', 'priority', 'kind', 'summary', 'created_at'],
-    },
-  ],
-};
-
-const activeAdviceColumns = [
-  'priority',
-  'title',
-  'id',
-  'stamp',
-];
 
 export function MinisterRulesView({
   advice,
   events,
-  llmPending,
   manualTriggerTarget,
-  onRunLlm,
+  onSelectView,
   scope,
-  triggerDisabled,
 }: {
   advice: AdviceItem[];
   events: DashboardEvent[];
-  llmPending: boolean;
   manualTriggerTarget: string | null;
-  onRunLlm: () => void;
+  onSelectView: (view: MinisterViewKey) => void;
   scope: ScopeConfig;
-  triggerDisabled: boolean;
 }) {
   const ministerAdvice = advice.filter(item => isScopeMinister(item.minister, scope));
   const ministerEvents = events.filter(event => isScopeMinister(event.source, scope));
@@ -89,90 +43,44 @@ export function MinisterRulesView({
       <header className="view-heading">
         <span className="eyebrow">{scope.displayLabel}</span>
         <h2><SemanticLabel icon={iconForView('rules')}><span>Rules</span></SemanticLabel></h2>
-        <p>Wake triggers, rule/LLM path, flags, and recent event context.</p>
       </header>
 
       {trace.error || !trace.data ? (
         <EmptyState code="TRACE NOT EXPOSED">{trace.error ?? 'No trace returned.'}</EmptyState>
-      ) : (
-        <>
-          <MinisterEscalationCallout
-            canConfirmLlm={scope.canRunLlm === true}
-            confirmDisabled={triggerDisabled}
-            confirmPending={llmPending}
-            onConfirmLlm={onRunLlm}
-            trace={trace.data}
-          />
-          <TraceSummaryPanel trace={trace.data} />
-          {trace.data.ruleDiagnostics && (
-            <RuleDiagnosticsPanel details={trace.data.ruleDiagnostics} />
-          )}
-          <InspectorSurface value={trace.data} config={traceInspectorConfig} />
-        </>
-      )}
-
-      <DisclosureSection
-        title={<SemanticLabel icon={iconForSection('recent_scope_events')}><span>Recent scope events</span></SemanticLabel>}
-        defaultOpen
-        meta={`${ministerEvents.length} local events`}
-      >
-        <Timeline events={ministerEvents} limit={12} />
-      </DisclosureSection>
-
-      <DisclosureSection
-        title={<SemanticLabel icon={iconForSection('active_advice_emitted')}><span>Active advice emitted</span></SemanticLabel>}
-        meta={`${ministerAdvice.length} active`}
-      >
-        <DynamicTable
-          rows={ministerAdvice}
-          preferredColumns={activeAdviceColumns}
-          emptyMessage={`${scope.displayLabel} has no active advice in the local SSE buffer.`}
+      ) : trace.data.ruleDiagnostics ? (
+        <RuleDiagnosticsPanel
+          advice={ministerAdvice}
+          details={trace.data.ruleDiagnostics}
+          onSelectView={onSelectView}
+          scope={scope}
         />
-      </DisclosureSection>
+      ) : (
+        <EmptyState code="NO RULE DIAGNOSTICS">No rule diagnostics were emitted by this trace.</EmptyState>
+      )}
     </div>
   );
 }
 
-function TraceSummaryPanel({ trace }: { trace: MinisterTrace }) {
-  const candidateFields: Array<[string, unknown]> = [
-    ['minister', trace.minister],
-    ['trigger', trace.trigger],
-    ['status', trace.status],
-    ['path', trace.path],
-    ['ruleFired', trace.ruleFired],
-    ['escalationReason', trace.escalationReason],
-    ['errorType', trace.errorType],
-    ['errorMessage', trace.errorMessage],
-    ['adviceCount', trace.adviceCount],
-    ['flagCount', trace.flagCount],
-    ['startedAt', trace.startedAt],
-    ['completedAt', trace.completedAt],
-    ['note', trace.note],
-  ];
-  const fields = candidateFields.filter(([, value]) => value !== null && value !== '');
-
-  return (
-    <DisclosureSection
-      title={<SemanticLabel icon={iconForSection('trigger')}><span>Trigger summary</span></SemanticLabel>}
-      defaultOpen
-      meta={`${trace.status} / ${formatTracePath(trace.path)}`}
-    >
-      <div className="inspector-field-grid">
-        {fields.map(([key, value]) => (
-          <div className="inspector-field" key={key}>
-            <SemanticLabel className="inspector-field-name" icon={iconForSection(key)}><code>{key}</code></SemanticLabel>
-            <UnknownValue value={value} fieldKey={key} />
-          </div>
-        ))}
-      </div>
-    </DisclosureSection>
-  );
-}
-
-function RuleDiagnosticsPanel({ details }: { details: RuleTraceDetails }) {
+function RuleDiagnosticsPanel({
+  advice,
+  details,
+  onSelectView,
+  scope,
+}: {
+  advice: AdviceItem[];
+  details: RuleTraceDetails;
+  onSelectView: (view: MinisterViewKey) => void;
+  scope: ScopeConfig;
+}) {
   const allRules = details.allRules;
-  const selectedCount = allRules.filter(row => row.outcome.trim() === 'selected').length;
-  const ruleMeta = `${selectedCount} selected / ${allRules.length} rules`;
+  const adviceByRule = mapAdviceByRule(advice, scope);
+  const openAdvice = (adviceId: string) => {
+    prepareAdviceAnchor(adviceId);
+    onSelectView('advice');
+    window.setTimeout(() => {
+      document.getElementById(adviceId)?.scrollIntoView({ block: 'start' });
+    }, 75);
+  };
   const outcomeRanks = new Map(ruleOutcomeOrder.map((outcome, index) => [outcome, index]));
   const sortedRules = allRules
     .map((row, index) => ({ index, row }))
@@ -186,43 +94,74 @@ function RuleDiagnosticsPanel({ details }: { details: RuleTraceDetails }) {
     })
     .map(item => item.row);
 
+  if (sortedRules.length === 0) {
+    return <EmptyState code="NO RULE CATALOG">No rule catalog was emitted by this run.</EmptyState>;
+  }
+
   return (
-    <DisclosureSection
-      title={<SemanticLabel icon={iconForView('rules')}><span>Rule diagnostics</span></SemanticLabel>}
-      defaultOpen
-      meta={ruleMeta}
-    >
-      <div className="inspector-field-grid">
-        <div className="inspector-field">
-          <SemanticLabel className="inspector-field-name" icon={iconForView('rules')}><code>selectedRule</code></SemanticLabel>
-          <span>{details.selectedRule ?? 'none'}</span>
-        </div>
-      </div>
-      <DisclosureSection
-        title={<SemanticLabel icon={iconForView('rules')}><span>All rules</span></SemanticLabel>}
-        defaultOpen
-        meta={ruleMeta}
-      >
-        {sortedRules.length > 0 ? (
-          <div className="rule-card-list">
-            {sortedRules.map(row => (
-              <RuleCard
-                key={row.rule}
-                rule={row}
-                selected={row.rule === details.selectedRule}
-              />
-            ))}
-          </div>
-        ) : (
-          <EmptyState code="NO RULE CATALOG">No rule catalog was emitted by this run.</EmptyState>
-        )}
-      </DisclosureSection>
-    </DisclosureSection>
+    <div className="rule-card-list">
+      {sortedRules.map(row => (
+        <RuleCard
+          advice={adviceByRule.get(row.rule)}
+          key={row.rule}
+          onOpenAdvice={openAdvice}
+          rule={row}
+          selected={row.rule === details.selectedRule}
+        />
+      ))}
+    </div>
   );
 }
 
-function formatTracePath(path: string): string {
-  return path.replace(/_/g, ' ');
+function mapAdviceByRule(advice: AdviceItem[], scope: ScopeConfig): Map<string, AdviceItem> {
+  const prefixes = ruleAdviceIdPrefixes(scope);
+  const byRule = new Map<string, AdviceItem>();
+
+  for (const item of advice) {
+    for (const prefix of prefixes) {
+      if (item.id.startsWith(prefix)) {
+        byRule.set(item.id.slice(prefix.length), item);
+        break;
+      }
+    }
+  }
+
+  return byRule;
+}
+
+function ruleAdviceIdPrefixes(scope: ScopeConfig): string[] {
+  const normalized = [
+    scope.key,
+    scope.label,
+    scope.displayLabel,
+  ]
+    .map(value => normalizeAdviceIdPrefix(value))
+    .filter((value): value is string => value !== null);
+
+  return [...new Set(normalized)].map(value => `${value}_`);
+}
+
+function normalizeAdviceIdPrefix(value: string): string | null {
+  const normalized = value
+    .toLocaleLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+  return normalized.length > 0 ? normalized : null;
+}
+
+function prepareAdviceAnchor(adviceId: string) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    const url = new URL(window.location.href);
+    url.hash = adviceId;
+    window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
+  } catch {
+    // URL history can be unavailable in restricted browser contexts; selecting the Advice tab still works.
+  }
 }
 
 const ruleOutcomeOrder = ['selected', 'escalated', 'not_matched'];
