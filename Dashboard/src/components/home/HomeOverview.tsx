@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { applyAdviceAction } from '../../api/advice';
 import { formatMaybeDate } from '../../dashboard/connectivityStatus';
 import { formatLastRun, isScopeMinister, valueForScope } from '../../dashboard/selectors';
 import {
@@ -19,6 +20,7 @@ import {
 import type { MayorAgenda } from '../../types/agenda';
 import type {
   AdviceAction,
+  AdviceApplyResponse,
   AdviceItem,
   AgentFlag,
   AttentionRequest,
@@ -70,10 +72,49 @@ type HomeActionApplyStatus = {
   tooltip: string;
 };
 
+type HomePossibleAction = {
+  actionIndex: number;
+  adviceId: string;
+  applyLabel: string;
+  applyTarget: string;
+  iconKey: string | null;
+  key: string;
+  ministerScope: ScopeConfig;
+  priority: Priority;
+  title: string;
+  tooltip: string;
+};
+
+type HomeAppliedAction = {
+  actionIndex: number;
+  adviceId: string;
+  iconKey: string | null;
+  key: string;
+  ministerScope: ScopeConfig;
+  priority: Priority;
+  recordedAt: string;
+  recordedAtMs: number;
+  resultMessage: string;
+  resultStatus: string;
+  title: string;
+  tooltip: string;
+};
+
 type HomeAdviceExpiryState = {
   expired: boolean;
   message: string | null;
 };
+
+type HomePossibleActionApplyState = {
+  error: string | null;
+  response: AdviceApplyResponse | null;
+  status: 'idle' | 'pending' | 'done' | 'error';
+};
+
+type HomeAppliedActionFilter = 'all' | 'day' | 'fresh';
+
+const AppliedActionHistoryStorageKey = 'rimbob.dashboard.cabinet.appliedActions';
+const AppliedActionHistoryLimit = 100;
 
 export function HomeOverview({
   advice,
@@ -110,7 +151,34 @@ export function HomeOverview({
 }) {
   const latestCabinetRun = recentCabinetRuns[0] ?? null;
   const liveMinisters = scopeConfigs.filter(scope => scope.kind === 'minister' && scope.status === 'live');
+  const currentGameTick = snapshot?.gameTick ?? null;
+  const possibleActions = possibleApplyActions(advice, liveMinisters, currentGameTick);
+  const observedAppliedActions = appliedActionsFromAdvice(advice, liveMinisters);
+  const observedAppliedActionSignature = observedAppliedActions
+    .map(action => `${action.key}:${action.resultStatus}:${action.recordedAt}`)
+    .join('|');
+  const latestRegenAt = latestAdviceIssuedAt(advice);
+  const [appliedActionHistory, setAppliedActionHistory] = useState<Record<string, HomeAppliedAction>>(
+    loadAppliedActionHistory,
+  );
+  const recentlyAppliedActions = Object.values(appliedActionHistory)
+    .sort((left, right) => right.recordedAtMs - left.recordedAtMs || left.title.localeCompare(right.title));
+  const cabinetGeneratedLabel = formatGeneratedAtLabel(health?.generated_at ?? null);
   const disableCabinetControls = cabinetBusy || !hostApiLive;
+
+  useEffect(() => {
+    if (observedAppliedActions.length === 0) return;
+
+    setAppliedActionHistory(current => mergeAppliedActionHistory(current, observedAppliedActions));
+  }, [observedAppliedActionSignature]);
+
+  useEffect(() => {
+    saveAppliedActionHistory(appliedActionHistory);
+  }, [appliedActionHistory]);
+
+  const onCabinetActionApplied = (action: HomeAppliedAction) => {
+    setAppliedActionHistory(current => mergeAppliedActionHistory(current, [action]));
+  };
 
   return (
     <div className="home-overview">
@@ -120,7 +188,7 @@ export function HomeOverview({
             <SemanticIconCue icon={iconForScope('home')} size="xs" />
             CABINET
           </span>
-          <h2>RimBob Command Summary</h2>
+          <h2>RimBob Cabinet Summary - Generated at {cabinetGeneratedLabel}</h2>
         </div>
         <div className="home-command-actions">
           <button
@@ -147,6 +215,28 @@ export function HomeOverview({
           </button>
           {triggerError && <span className="trigger-error" role="status">{triggerError}</span>}
         </div>
+      </section>
+
+      <section className="home-section" aria-label="Possible actions">
+        <SectionHeading iconKey="assisted_apply" title="Possible actions" meta={`${possibleActions.length} ready now`} />
+        <PossibleActionsPanel
+          actions={possibleActions}
+          onActionApplied={onCabinetActionApplied}
+          onSelectMinisterView={onSelectMinisterView}
+        />
+      </section>
+
+      <section className="home-section" aria-label="Recently applied actions">
+        <SectionHeading
+          iconKey="assisted_apply"
+          title="Recently Applied Actions"
+          meta={`${recentlyAppliedActions.length} recorded`}
+        />
+        <RecentlyAppliedActionsPanel
+          actions={recentlyAppliedActions}
+          latestRegenAt={latestRegenAt}
+          onSelectMinisterView={onSelectMinisterView}
+        />
       </section>
 
       <section className="home-section" aria-label="Pipeline vitals">
@@ -192,7 +282,7 @@ export function HomeOverview({
               flags={flags}
               health={health}
               hostApiLive={hostApiLive}
-              currentGameTick={snapshot?.gameTick ?? null}
+              currentGameTick={currentGameTick}
               key={scope.key}
               onSelectMinisterView={onSelectMinisterView}
               scope={scope}
@@ -205,7 +295,7 @@ export function HomeOverview({
   );
 }
 
-function SectionHeading({ iconKey, title }: { iconKey: string; title: string }) {
+function SectionHeading({ iconKey, meta, title }: { iconKey: string; meta?: string; title: string }) {
   return (
     <div className="home-section-heading">
       <h3>
@@ -213,6 +303,7 @@ function SectionHeading({ iconKey, title }: { iconKey: string; title: string }) 
           <span>{title}</span>
         </SemanticLabel>
       </h3>
+      {meta && <small className="home-section-meta">{meta}</small>}
     </div>
   );
 }
@@ -222,6 +313,243 @@ function MetricLabel({ children, iconKey }: { children: ReactNode; iconKey: stri
     <SemanticLabel icon={iconForField(iconKey)}>
       <span>{children}</span>
     </SemanticLabel>
+  );
+}
+
+function PossibleActionsPanel({
+  actions,
+  onActionApplied,
+  onSelectMinisterView,
+}: {
+  actions: HomePossibleAction[];
+  onActionApplied: (action: HomeAppliedAction) => void;
+  onSelectMinisterView: (scope: ScopeKey, view: DashboardViewKey) => void;
+}) {
+  const [applyState, setApplyState] = useState<Record<string, HomePossibleActionApplyState>>({});
+
+  const onApplyAction = async (action: HomePossibleAction) => {
+    setApplyState(current => ({
+      ...current,
+      [action.key]: { status: 'pending', response: null, error: null },
+    }));
+
+    try {
+      const response = await applyAdviceAction(action.adviceId, action.actionIndex);
+      setApplyState(current => ({
+        ...current,
+        [action.key]: { status: 'done', response, error: null },
+      }));
+      if (isApplySuccess(response.status)) {
+        onActionApplied(appliedActionFromPossibleAction(action, response));
+      }
+    } catch (error) {
+      setApplyState(current => ({
+        ...current,
+        [action.key]: { status: 'error', response: null, error: String(error) },
+      }));
+    }
+  };
+
+  if (actions.length === 0) {
+    return (
+      <div className="home-possible-actions-empty" role="status">
+        <SemanticIconCue icon={iconForField('assisted_apply')} size="xs" />
+        <span>No apply-ready actions</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="home-possible-actions-table-shell">
+      <table className="home-possible-actions-table">
+        <colgroup>
+          <col className="home-possible-actions-minister-col" />
+          <col className="home-possible-actions-title-col" />
+          <col className="home-possible-actions-subtitle-col" />
+          <col className="home-possible-actions-apply-col" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th scope="col">Minister</th>
+            <th scope="col">Title</th>
+            <th scope="col">Subtitle</th>
+            <th scope="col">Apply</th>
+          </tr>
+        </thead>
+        <tbody>
+          {actions.map(action => {
+            const state = applyState[action.key] ?? { status: 'idle' as const, response: null, error: null };
+            const success = isApplySuccess(state.response?.status);
+            const resultMessage = state.response?.message ?? state.error ?? null;
+            const resultStatus = state.response?.status ?? state.status;
+            const disabled = state.status === 'pending' || success;
+
+            return (
+              <tr
+                className={`home-possible-action-row priority-${action.priority}`}
+                key={action.key}
+                title={action.tooltip}
+              >
+                <td className="home-possible-action-minister">
+                  <span>
+                    {action.ministerScope.emoji ? (
+                      <span className="scope-title-emoji" aria-hidden="true">{action.ministerScope.emoji}</span>
+                    ) : (
+                      <SemanticIconCue icon={iconForScope(action.ministerScope.key)} size="xs" />
+                    )}
+                    <strong>{action.ministerScope.displayLabel}</strong>
+                  </span>
+                </td>
+                <td className="home-possible-action-title">
+                  <span>
+                    <SemanticIconCue
+                      icon={iconForActionKind(action.iconKey) ?? iconForField(action.iconKey ?? 'actions')}
+                      size="xs"
+                    />
+                    <strong>{shortTitle(action.title, 48)}</strong>
+                  </span>
+                </td>
+                <td
+                  className="home-possible-action-subtitle"
+                  title={`${action.applyLabel}: ${action.applyTarget}`}
+                >
+                  <span>{shortTitle(action.applyTarget, 72)}</span>
+                  {resultMessage && (
+                    <small className={`home-possible-action-result ${resultStatus}`}>
+                      {resultMessage}
+                    </small>
+                  )}
+                </td>
+                <td className="home-possible-action-apply">
+                  <button
+                    aria-label={`Apply ${action.title} from ${action.ministerScope.displayLabel}`}
+                    className="home-possible-action-apply-button"
+                    disabled={disabled}
+                    onClick={() => void onApplyAction(action)}
+                    title={`${action.applyLabel}: ${action.applyTarget}`}
+                    type="button"
+                  >
+                    <SemanticIconCue icon={iconForField('assisted_apply')} size="xs" />
+                    <span>{possibleActionApplyLabel(action, state)}</span>
+                  </button>
+                  <button
+                    aria-label={`Open ${action.ministerScope.displayLabel} Advice`}
+                    className="home-possible-action-open-button"
+                    onClick={() => onSelectMinisterView(action.ministerScope.key, 'advice')}
+                    title={`Open ${action.ministerScope.displayLabel} Advice.`}
+                    type="button"
+                  >
+                    <SemanticIconCue icon={iconForView('advice')} size="xs" />
+                  </button>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function RecentlyAppliedActionsPanel({
+  actions,
+  latestRegenAt,
+  onSelectMinisterView,
+}: {
+  actions: HomeAppliedAction[];
+  latestRegenAt: Date | null;
+  onSelectMinisterView: (scope: ScopeKey, view: DashboardViewKey) => void;
+}) {
+  const [filter, setFilter] = useState<HomeAppliedActionFilter>('all');
+  const filteredActions = filteredAppliedActions(actions, filter, latestRegenAt);
+
+  return (
+    <div className="home-applied-actions-panel">
+      <div className="home-applied-action-filters" role="group" aria-label="Recently applied action filters">
+        {(['all', 'day', 'fresh'] as HomeAppliedActionFilter[]).map(option => (
+          <button
+            aria-pressed={filter === option}
+            className={filter === option ? 'active' : undefined}
+            key={option}
+            onClick={() => setFilter(option)}
+            title={appliedActionFilterTitle(option, latestRegenAt)}
+            type="button"
+          >
+            {appliedActionFilterLabel(option)}
+          </button>
+        ))}
+      </div>
+      {filteredActions.length === 0 ? (
+        <div className="home-possible-actions-empty" role="status">
+          <SemanticIconCue icon={iconForField('assisted_apply')} size="xs" />
+          <span>No applied actions for this filter</span>
+        </div>
+      ) : (
+        <div className="home-possible-actions-table-shell">
+          <table className="home-possible-actions-table home-applied-actions-table">
+            <colgroup>
+              <col className="home-possible-actions-minister-col" />
+              <col className="home-possible-actions-title-col" />
+              <col className="home-applied-actions-result-col" />
+              <col className="home-applied-actions-time-col" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th scope="col">Minister</th>
+                <th scope="col">Title</th>
+                <th scope="col">Result</th>
+                <th scope="col">Applied</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredActions.map(action => (
+                <tr
+                  className={`home-possible-action-row priority-${action.priority}`}
+                  key={action.key}
+                  title={action.tooltip}
+                >
+                  <td className="home-possible-action-minister">
+                    <span>
+                      {action.ministerScope.emoji ? (
+                        <span className="scope-title-emoji" aria-hidden="true">{action.ministerScope.emoji}</span>
+                      ) : (
+                        <SemanticIconCue icon={iconForScope(action.ministerScope.key)} size="xs" />
+                      )}
+                      <strong>{action.ministerScope.displayLabel}</strong>
+                    </span>
+                  </td>
+                  <td className="home-possible-action-title">
+                    <span>
+                      <SemanticIconCue
+                        icon={iconForActionKind(action.iconKey) ?? iconForField(action.iconKey ?? 'actions')}
+                        size="xs"
+                      />
+                      <strong>{shortTitle(action.title, 48)}</strong>
+                    </span>
+                  </td>
+                  <td className="home-applied-action-result">
+                    <span>{shortTitle(action.resultMessage, 72)}</span>
+                  </td>
+                  <td className="home-applied-action-time">
+                    <span>{formatMaybeDate(action.recordedAt)}</span>
+                    <small>{formatAgeSince(new Date(action.recordedAt))} ago</small>
+                    <button
+                      aria-label={`Open ${action.ministerScope.displayLabel} Advice`}
+                      className="home-possible-action-open-button"
+                      onClick={() => onSelectMinisterView(action.ministerScope.key, 'advice')}
+                      title={`Open ${action.ministerScope.displayLabel} Advice.`}
+                      type="button"
+                    >
+                      <SemanticIconCue icon={iconForView('advice')} size="xs" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -388,6 +716,273 @@ function formatLabel(value: string | null | undefined): string {
     .replace(/[_-]+/g, ' ')
     .trim()
     .replace(/\w\S*/g, word => `${word.charAt(0).toLocaleUpperCase()}${word.slice(1)}`);
+}
+
+function formatGeneratedAtLabel(value: string | null): string {
+  if (!value) return 'loading';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return `${formatMaybeDate(value)} (${formatAgeSince(date)} ago)`;
+}
+
+function formatAgeSince(date: Date): string {
+  const ageSeconds = Math.max(0, Math.round((Date.now() - date.getTime()) / 1000));
+  if (ageSeconds < 60) return `${ageSeconds}s`;
+
+  const ageMinutes = Math.round(ageSeconds / 60);
+  if (ageMinutes < 60) return `${ageMinutes}m`;
+
+  const ageHours = Math.round(ageMinutes / 60);
+  if (ageHours < 48) return `${ageHours}h`;
+
+  return `${Math.round(ageHours / 24)}d`;
+}
+
+function possibleActionApplyLabel(
+  action: HomePossibleAction,
+  state: HomePossibleActionApplyState,
+): string {
+  if (state.status === 'pending') return 'Applying';
+  if (isApplySuccess(state.response?.status)) return 'Applied';
+  if (state.status === 'error') return 'Retry';
+  if (state.status === 'done') return 'Retry';
+  return action.applyLabel;
+}
+
+function isApplySuccess(status: string | null | undefined): boolean {
+  return status === 'applied' || status === 'already_satisfied';
+}
+
+function appliedActionFromPossibleAction(
+  action: HomePossibleAction,
+  response: AdviceApplyResponse,
+): HomeAppliedAction {
+  const recordedAt = new Date().toISOString();
+  return {
+    actionIndex: action.actionIndex,
+    adviceId: action.adviceId,
+    iconKey: action.iconKey,
+    key: appliedActionKey(action.adviceId, action.actionIndex),
+    ministerScope: action.ministerScope,
+    priority: action.priority,
+    recordedAt,
+    recordedAtMs: Date.parse(recordedAt),
+    resultMessage: response.message,
+    resultStatus: response.status,
+    title: action.title,
+    tooltip: tooltipText(action.title, action.priority, response.message),
+  };
+}
+
+function appliedActionsFromAdvice(advice: AdviceItem[], liveMinisters: ScopeConfig[]): HomeAppliedAction[] {
+  return advice.flatMap(item => {
+    const ministerScope = liveMinisters.find(scope => isScopeMinister(item.minister, scope));
+    if (!ministerScope) return [];
+
+    return item.actions.flatMap((action, index) => {
+      const result = action.apply_result ?? null;
+      if (!result || !isApplySuccess(result.status)) return [];
+
+      const recordedAtMs = Date.parse(result.recorded_at);
+      if (Number.isNaN(recordedAtMs)) return [];
+
+      const display = actionDisplay(action, item);
+      const detail = [
+        result.message,
+        action.instruction,
+        action.apply?.target_summary ? `Apply: ${action.apply.target_summary}` : null,
+      ].filter((value): value is string => Boolean(value)).join(' | ');
+
+      return [{
+        actionIndex: index,
+        adviceId: item.id,
+        iconKey: display.iconKey ?? action.kind,
+        key: appliedActionKey(item.id, index),
+        ministerScope,
+        priority: item.priority,
+        recordedAt: result.recorded_at,
+        recordedAtMs,
+        resultMessage: result.message,
+        resultStatus: result.status,
+        title: display.title,
+        tooltip: tooltipText(display.title, item.priority, detail),
+      }];
+    });
+  });
+}
+
+function appliedActionKey(adviceId: string, actionIndex: number): string {
+  return `${adviceId}:applied:${actionIndex}`;
+}
+
+function mergeAppliedActionHistory(
+  current: Record<string, HomeAppliedAction>,
+  additions: HomeAppliedAction[],
+): Record<string, HomeAppliedAction> {
+  let changed = false;
+  const next = { ...current };
+
+  for (const action of additions) {
+    const existing = next[action.key];
+    if (!existing || existing.recordedAt !== action.recordedAt || existing.resultStatus !== action.resultStatus) {
+      next[action.key] = action;
+      changed = true;
+    }
+  }
+
+  return changed ? pruneAppliedActionHistory(next) : current;
+}
+
+function pruneAppliedActionHistory(history: Record<string, HomeAppliedAction>): Record<string, HomeAppliedAction> {
+  const entries = Object.values(history)
+    .sort((left, right) => right.recordedAtMs - left.recordedAtMs)
+    .slice(0, AppliedActionHistoryLimit);
+
+  return entries.reduce<Record<string, HomeAppliedAction>>((next, action) => {
+    next[action.key] = action;
+    return next;
+  }, {});
+}
+
+function loadAppliedActionHistory(): Record<string, HomeAppliedAction> {
+  if (typeof window === 'undefined') return {};
+
+  try {
+    const raw = window.localStorage.getItem(AppliedActionHistoryStorageKey);
+    if (!raw) return {};
+
+    const parsed = JSON.parse(raw) as Record<string, HomeAppliedAction>;
+    const validEntries = Object.values(parsed).filter(isValidAppliedActionRecord);
+    return pruneAppliedActionHistory(validEntries.reduce<Record<string, HomeAppliedAction>>((next, action) => {
+      next[action.key] = action;
+      return next;
+    }, {}));
+  } catch {
+    return {};
+  }
+}
+
+function saveAppliedActionHistory(history: Record<string, HomeAppliedAction>): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    window.localStorage.setItem(AppliedActionHistoryStorageKey, JSON.stringify(pruneAppliedActionHistory(history)));
+  } catch {
+    // Best-effort UI history only; losing it must not affect Assisted Apply behavior.
+  }
+}
+
+function isValidAppliedActionRecord(value: HomeAppliedAction): boolean {
+  return typeof value?.key === 'string'
+    && typeof value.adviceId === 'string'
+    && typeof value.actionIndex === 'number'
+    && typeof value.recordedAt === 'string'
+    && Number.isFinite(value.recordedAtMs)
+    && typeof value.resultMessage === 'string'
+    && typeof value.resultStatus === 'string'
+    && typeof value.title === 'string'
+    && Boolean(value.ministerScope?.key);
+}
+
+function latestAdviceIssuedAt(advice: AdviceItem[]): Date | null {
+  let latestTime = Number.NEGATIVE_INFINITY;
+
+  for (const item of advice) {
+    const issuedAt = Date.parse(item.stamp.issued_at);
+    if (!Number.isNaN(issuedAt) && issuedAt > latestTime) {
+      latestTime = issuedAt;
+    }
+  }
+
+  return Number.isFinite(latestTime) ? new Date(latestTime) : null;
+}
+
+function filteredAppliedActions(
+  actions: HomeAppliedAction[],
+  filter: HomeAppliedActionFilter,
+  latestRegenAt: Date | null,
+): HomeAppliedAction[] {
+  if (filter === 'all') return actions;
+
+  const threshold = filter === 'day'
+    ? Date.now() - 24 * 60 * 60 * 1000
+    : latestRegenAt?.getTime() ?? Number.POSITIVE_INFINITY;
+
+  return actions.filter(action => action.recordedAtMs >= threshold);
+}
+
+function appliedActionFilterLabel(filter: HomeAppliedActionFilter): string {
+  if (filter === 'day') return '1 day';
+  if (filter === 'fresh') return 'Fresh';
+  return 'All';
+}
+
+function appliedActionFilterTitle(filter: HomeAppliedActionFilter, latestRegenAt: Date | null): string {
+  if (filter === 'day') return 'Show actions applied in the last 24 hours.';
+  if (filter === 'fresh') {
+    return latestRegenAt
+      ? `Show actions applied since latest advice regeneration: ${formatMaybeDate(latestRegenAt.toISOString())}.`
+      : 'Show actions applied since latest advice regeneration.';
+  }
+
+  return 'Show all applied actions observed by this dashboard session.';
+}
+
+function possibleApplyActions(
+  advice: AdviceItem[],
+  liveMinisters: ScopeConfig[],
+  currentGameTick: number | null,
+): HomePossibleAction[] {
+  return advice
+    .flatMap(item => {
+      const ministerScope = liveMinisters.find(scope => isScopeMinister(item.minister, scope));
+      if (!ministerScope) return [];
+
+      return item.actions.flatMap((action, index) => {
+        if (!isApplyReadyNow(item, action, currentGameTick)) return [];
+
+        const display = actionDisplay(action, item);
+        const detail = [
+          `Minister: ${ministerScope.displayLabel}`,
+          action.apply.label,
+          action.apply.target_summary,
+          action.instruction,
+        ].filter((value): value is string => Boolean(value)).join(' | ');
+
+        return [{
+          actionIndex: index,
+          adviceId: item.id,
+          applyLabel: action.apply.label,
+          applyTarget: action.apply.target_summary,
+          iconKey: display.iconKey ?? action.kind,
+          key: `${item.id}:possible:${index}`,
+          ministerScope,
+          priority: item.priority,
+          title: display.title,
+          tooltip: tooltipText(display.title, item.priority, detail),
+        }];
+      });
+    })
+    .sort((left, right) =>
+      priorityRank(right.priority) - priorityRank(left.priority)
+      || left.ministerScope.displayLabel.localeCompare(right.ministerScope.displayLabel)
+      || left.title.localeCompare(right.title)
+    );
+}
+
+function isApplyReadyNow(
+  item: AdviceItem,
+  action: AdviceAction,
+  currentGameTick: number | null,
+): action is AdviceAction & { apply: NonNullable<AdviceAction['apply']> } {
+  const persistedResult = action.apply_result ?? null;
+  if (persistedResult?.status === 'applied' || persistedResult?.status === 'already_satisfied') return false;
+  if (adviceExpiryState(item, currentGameTick).expired) return false;
+  if (!action.apply) return false;
+
+  return isExecutableApply(action.apply);
 }
 
 function activeAdviceForScope(scope: ScopeConfig, advice: AdviceItem[]): AdviceItem[] {

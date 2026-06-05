@@ -942,10 +942,303 @@ code {
   letter-spacing: 0;
 }
 
+.home-section-meta {
+  color: var(--dim);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
 .home-vitals-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 8px;
+}
+
+.home-possible-actions-table-shell {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.home-possible-actions-table {
+  width: 100%;
+  min-width: 620px;
+  border-collapse: separate;
+  border-spacing: 0 5px;
+  table-layout: fixed;
+}
+
+.home-possible-actions-minister-col {
+  width: 18%;
+}
+
+.home-possible-actions-title-col {
+  width: 31%;
+}
+
+.home-possible-actions-subtitle-col {
+  width: auto;
+}
+
+.home-possible-actions-apply-col {
+  width: 148px;
+}
+
+.home-applied-actions-result-col {
+  width: auto;
+}
+
+.home-applied-actions-time-col {
+  width: 210px;
+}
+
+.home-possible-actions-table th {
+  padding: 0 8px 1px;
+  color: var(--dim);
+  font-size: 0.64rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.home-possible-actions-table th:last-child {
+  text-align: right;
+}
+
+.home-possible-actions-table td {
+  min-width: 0;
+  border-top: 1px solid var(--line-soft);
+  border-bottom: 1px solid var(--line-soft);
+  background: rgba(8, 11, 13, 0.32);
+  padding: 7px 8px;
+  vertical-align: middle;
+}
+
+.home-possible-actions-table td:first-child {
+  position: relative;
+  border-left: 1px solid var(--line-soft);
+  border-radius: 7px 0 0 7px;
+  padding-left: 15px;
+}
+
+.home-possible-actions-table td:first-child::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 6px;
+  width: 2px;
+  border-radius: 999px;
+  background: var(--dim);
+}
+
+.home-possible-action-row.priority-medium td:first-child::before {
+  background: var(--cyan);
+}
+
+.home-possible-action-row.priority-high td:first-child::before {
+  background: var(--warn);
+}
+
+.home-possible-action-row.priority-critical td:first-child::before {
+  background: var(--error);
+}
+
+.home-possible-actions-table td:last-child {
+  border-right: 1px solid var(--line-soft);
+  border-radius: 0 7px 7px 0;
+  text-align: right;
+}
+
+.home-possible-action-minister span,
+.home-possible-action-title span {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.home-possible-action-minister strong,
+.home-possible-action-title strong,
+.home-possible-action-subtitle span {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-possible-action-minister strong {
+  color: var(--text);
+  font-size: 0.76rem;
+}
+
+.home-possible-action-title strong {
+  color: var(--text);
+  font-size: 0.8rem;
+  line-height: 1.1;
+}
+
+.home-possible-action-subtitle span,
+.home-possible-action-result,
+.home-applied-action-result span {
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.home-possible-action-result {
+  display: block;
+  margin-top: 2px;
+  color: var(--dim);
+  font-size: 0.66rem;
+}
+
+.home-possible-action-result.applied,
+.home-possible-action-result.already_satisfied {
+  color: var(--ok);
+}
+
+.home-possible-action-result.error {
+  color: var(--error);
+}
+
+.home-possible-action-apply {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.home-possible-action-apply-button,
+.home-possible-action-open-button {
+  min-height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  font-size: 0.7rem;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.home-possible-action-apply-button {
+  min-width: 86px;
+  border: 1px solid rgba(80, 211, 141, 0.38);
+  background: rgba(80, 211, 141, 0.08);
+  color: var(--ok);
+  padding: 4px 7px;
+}
+
+.home-possible-action-open-button {
+  width: 28px;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--cyan);
+  padding: 4px;
+}
+
+.home-possible-action-apply-button:hover:not(:disabled),
+.home-possible-action-apply-button:focus-visible:not(:disabled) {
+  border-color: rgba(80, 211, 141, 0.72);
+  background: rgba(80, 211, 141, 0.14);
+  color: var(--text);
+  outline: none;
+}
+
+.home-possible-action-open-button:hover,
+.home-possible-action-open-button:focus-visible {
+  border-color: rgba(98, 216, 230, 0.68);
+  background: rgba(98, 216, 230, 0.11);
+  color: var(--text);
+  outline: none;
+}
+
+.home-possible-action-apply-button:disabled {
+  cursor: default;
+  opacity: 0.66;
+}
+
+.home-applied-actions-panel {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.home-applied-action-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.home-applied-action-filters button {
+  min-height: 24px;
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--muted);
+  padding: 4px 8px;
+  font-size: 0.68rem;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.home-applied-action-filters button:hover,
+.home-applied-action-filters button:focus-visible,
+.home-applied-action-filters button.active {
+  border-color: rgba(98, 216, 230, 0.58);
+  background: rgba(98, 216, 230, 0.1);
+  color: var(--text);
+  outline: none;
+}
+
+.home-applied-action-result span {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-applied-action-time {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2px 6px;
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.home-applied-action-time > span,
+.home-applied-action-time > small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-applied-action-time > small {
+  color: var(--dim);
+}
+
+.home-applied-action-time .home-possible-action-open-button {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
+.home-possible-actions-empty {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  background: rgba(8, 11, 13, 0.26);
+  color: var(--muted);
+  padding: 7px 9px;
+  font-size: 0.76rem;
+  font-weight: 750;
 }
 
 .home-minister-grid {
@@ -6250,6 +6543,10 @@ code {
     display: grid;
     grid-template-columns: 1fr;
     justify-content: stretch;
+  }
+
+  .home-possible-actions-table {
+    min-width: 560px;
   }
 
   .home-minister-title-row {
