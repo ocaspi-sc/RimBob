@@ -49,6 +49,34 @@ public sealed class RoomTemplateSetTests
             .Should().BeOfType<StorageTemplate>();
     }
 
+    [Fact]
+    public void Default_ResolvesHeaterByTargetClass()
+    {
+        RoomTemplateSet.Default.ForSpec(Spec(BuildingClass.Heater, roomClass: null))
+            .Should().BeOfType<HeaterTemplate>();
+    }
+
+    [Fact]
+    public void Default_ResolvesCoolerByTargetClass()
+    {
+        RoomTemplateSet.Default.ForSpec(Spec(BuildingClass.Cooler, roomClass: null))
+            .Should().BeOfType<CoolerTemplate>();
+    }
+
+    [Fact]
+    public void Default_HeaterTargetClassOverridesBarracksRoomClass()
+    {
+        RoomTemplateSet.Default.ForSpec(Spec(BuildingClass.Heater, RoomClass.Barracks))
+            .Should().BeOfType<HeaterTemplate>();
+    }
+
+    [Fact]
+    public void Default_BarracksStillResolvesForBedRequest()
+    {
+        RoomTemplateSet.Default.ForSpec(Spec(BuildingClass.Bed, RoomClass.Barracks))
+            .Should().BeOfType<BarracksTemplate>();
+    }
+
     private static PlacementSpec Spec(BuildingClass targetClass, RoomClass? roomClass) =>
         new(
             Request: "test",
