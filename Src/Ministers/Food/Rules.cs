@@ -653,7 +653,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
 
         if (briefing.ReadyToHarvest >= briefing.ColonistCount * 6 ||
             briefing.WildHarvestCandidates >= briefing.ColonistCount * 6 ||
-            briefing.FoodUnits >= briefing.ColonistCount * 20)
+            (briefing.MealsCount + briefing.RawFoodCount) >= briefing.ColonistCount * 20)
             return "surplus freezer";
 
         return days >= 20f ? "buffer freezer" : "starter freezer";
@@ -666,7 +666,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
 
         if (days >= 20f ||
             briefing.ReadyToHarvest >= briefing.ColonistCount * 6 ||
-            briefing.FoodUnits >= briefing.ColonistCount * 20)
+            (briefing.MealsCount + briefing.RawFoodCount) >= briefing.ColonistCount * 20)
             return 30;
 
         return 20;
