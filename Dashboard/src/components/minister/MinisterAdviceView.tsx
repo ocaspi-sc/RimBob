@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import type { MayorAgenda, AgendaPriority } from '../../types/agenda';
 import { fetchTrace } from '../../api/ministers';
 import type {
@@ -89,11 +89,10 @@ export function MinisterAdviceView({
   const currentStateLines = stateSummary ? splitStateSummary(stateSummary) : [];
 
   return (
-    <div className="minister-view advice-view">
+    <div className="minister-view advice-view compact-advice-view">
       <header className="view-heading">
         <span className="eyebrow">{scope.displayLabel}</span>
         <h2><SemanticLabel icon={iconForView('advice')}><span>Advice</span></SemanticLabel></h2>
-        <p>Latest feeder minister advice from the persisted SSE snapshot.</p>
       </header>
       <MinisterEscalationCallout
         canConfirmLlm={scope.canRunLlm === true}
@@ -106,20 +105,18 @@ export function MinisterAdviceView({
         <section className="advice-state-summary">
           <span className="eyebrow">Current State</span>
           {currentStateLines.length > 0 ? (
-            <table className="state-summary-table" aria-label={`${scope.displayLabel} current state summary`}>
-              <tbody>
+            <div className="state-summary-strip" aria-label={`${scope.displayLabel} current state summary`}>
                 {currentStateLines.map((line, index) => (
-                  <tr key={`${scope.key}-state-${index}`}>
-                    <th scope="row">
+                  <div className="state-summary-chip" key={`${scope.key}-state-${index}`}>
+                    <strong>
                       <SemanticLabel icon={iconForStateSummaryLine(line.label, line.detail) ?? iconForField(line.iconKey)}>
                         <span>{line.label ?? 'State'}</span>
                       </SemanticLabel>
-                    </th>
-                    <td><IconizedText maxIcons={3} text={line.detail} /></td>
-                  </tr>
+                    </strong>
+                    <span><IconizedText maxIcons={3} text={line.detail} /></span>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+            </div>
           ) : (
             <p><IconizedText maxIcons={3} text={stateSummary} /></p>
           )}
@@ -316,7 +313,6 @@ function AgentFlagsPanel({ flags }: { flags: AgentFlag[] }) {
   return (
     <DisclosureSection
       title={<SemanticLabel icon={iconForField('flags')}><span>Agent Flags</span></SemanticLabel>}
-      defaultOpen
       meta={`${flags.length} flag${flags.length === 1 ? '' : 's'}`}
     >
       <div className="agent-flag-stack">
@@ -643,11 +639,13 @@ function AdviceCard({
   return (
     <article className={`advice-card v2 ${item.priority} ${expiry.expired ? 'expired' : ''}`} id={item.id}>
       <header>
-        <div>
-          <span className="eyebrow">
-            <SemanticLabel icon={iconForField(item.title)}><span>{item.title}</span></SemanticLabel>
-          </span>
+        <div className="advice-card-title">
           <h3><IconizedText maxIcons={1} text={item.title} /></h3>
+          <small>
+            <SemanticLabel icon={iconForField(item.title)}>
+              <span>{formatTime(item.stamp.issued_at)}</span>
+            </SemanticLabel>
+          </small>
         </div>
         <div className="advice-badges">
           <span>{item.priority}</span>
@@ -659,11 +657,22 @@ function AdviceCard({
           {expiry.message}
         </p>
       )}
-      <p><IconizedText maxIcons={3} text={item.body} /></p>
-      <blockquote><IconizedText maxIcons={3} text={item.rationale} /></blockquote>
+      {item.body && <p className="advice-body"><IconizedText maxIcons={3} text={item.body} /></p>}
+      {item.rationale && (
+        <InlineDisclosure
+          title={<SemanticLabel icon={iconForField('rationale')}><span>Why</span></SemanticLabel>}
+          meta="rationale"
+        >
+          <p><IconizedText maxIcons={3} text={item.rationale} /></p>
+        </InlineDisclosure>
+      )}
       {item.actions.length > 0 && (
-        <DisclosureSection title={<SemanticLabel icon={iconForField('actions')}><span>Actions</span></SemanticLabel>} defaultOpen meta={`${item.actions.length} actions`}>
-          <div className="action-list">
+        <section className="compact-action-section">
+          <div className="compact-section-heading">
+            <h4><SemanticLabel icon={iconForField('actions')}><span>Actions</span></SemanticLabel></h4>
+            <small>{item.actions.length}</small>
+          </div>
+          <div className="compact-action-list">
             {item.actions.map((action, index) => {
               const key = actionKey(item, index);
               const state = applyState[key] ?? { status: 'idle' as const, response: null, error: null };
@@ -678,7 +687,7 @@ function AdviceCard({
               const disabled = state.status === 'pending' || success || expiry.expired;
               const actionIcon = iconForActionKind(action.kind);
               return (
-                <div key={`${item.id}-action-${index}`}>
+                <div className="compact-action-row" key={`${item.id}-action-${index}`}>
                   <GameIcon
                     fallback={actionIcon?.fallback ?? '-'}
                     label={actionIcon?.label ?? `${formatLabel(action.kind)} icon`}
@@ -720,20 +729,20 @@ function AdviceCard({
               );
             })}
           </div>
-        </DisclosureSection>
+        </section>
       )}
       {(item.suggested_actions?.length ?? 0) > 0 && (
-        <DisclosureSection
-          title={<SemanticLabel icon={iconForField('suggested_actions')}><span>Suggested actions</span></SemanticLabel>}
-          defaultOpen
-          meta={`${item.suggested_actions?.length ?? 0} actions`}
-        >
-          <div className="action-list">
+        <section className="compact-action-section">
+          <div className="compact-section-heading">
+            <h4><SemanticLabel icon={iconForField('suggested_actions')}><span>Suggested actions</span></SemanticLabel></h4>
+            <small>{item.suggested_actions?.length ?? 0}</small>
+          </div>
+          <div className="compact-action-list">
             {item.suggested_actions?.map((action, index) => {
               const actionIcon = iconForActionKind(action.kind);
               const fallbackIconUrl = action.icon ? iconUrlFor(actionIcon?.ref) : null;
               return (
-                <div key={`${item.id}-action-${index}`}>
+                <div className="compact-action-row" key={`${item.id}-action-${index}`}>
                   <GameIcon
                     fallbackSrc={fallbackIconUrl}
                     fallback={actionIcon?.fallback ?? '-'}
@@ -747,9 +756,52 @@ function AdviceCard({
               );
             })}
           </div>
-        </DisclosureSection>
+        </section>
       )}
     </article>
+  );
+}
+
+function InlineDisclosure({
+  children,
+  defaultOpen = false,
+  meta,
+  title,
+}: {
+  children: ReactNode;
+  defaultOpen?: boolean;
+  meta?: string;
+  title: ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  const buttonId = useId();
+  const panelId = useId();
+
+  return (
+    <section className={`inline-disclosure ${open ? 'open' : ''}`}>
+      <h4>
+        <button
+          id={buttonId}
+          type="button"
+          aria-controls={panelId}
+          aria-expanded={open}
+          onClick={() => setOpen(value => !value)}
+        >
+          <span>{title}</span>
+          <small>{open ? 'hide' : meta ?? 'show'}</small>
+        </button>
+      </h4>
+      {open && (
+        <div
+          id={panelId}
+          className="inline-disclosure-panel"
+          role="region"
+          aria-labelledby={buttonId}
+        >
+          {children}
+        </div>
+      )}
+    </section>
   );
 }
 
