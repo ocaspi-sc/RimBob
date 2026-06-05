@@ -699,7 +699,6 @@ function MinisterTabLinks({
 }
 
 function shortTabLabel(view: DashboardViewDefinition): string {
-  if (view.key === 'build_queue') return 'Queue';
   if (view.key === 'infographics') return 'Info';
   return view.label;
 }

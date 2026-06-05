@@ -41,10 +41,8 @@ const ministerViewRenderers: Record<MinisterViewKey, MinisterViewRenderer> = {
   prompt: ({ agenda, scope, systemHealth }) => <MinisterPromptView scope={scope} agenda={agenda} systemHealth={systemHealth} />,
   briefing: ({ scope }) => <MinisterBriefingView scope={scope} />,
   solver: ({ scope, systemHealth }) => <MinisterSolverView scope={scope} systemHealth={systemHealth} />,
-  requests: ({ activeAdvice, scope, systemHealth }) => (
+  requests: ({ scope, systemHealth }) => (
     <MinisterRequestsView
-      advice={activeAdvice}
-      currentGameTick={systemHealth?.colony_snapshot.game_tick ?? null}
       scope={scope}
       systemHealth={systemHealth}
     />
