@@ -130,6 +130,7 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 - Port `5000` is reserved for the main `C:\dev\RimBob` checkout. When running RimBob from any worktree, use a different `-ListenUrl` / port, then verify `/api/system/health` and the `RimBob.Host.exe` process path before calling the worktree build live.
 - After landing a change in a worktree, launch RimBob from that worktree on its own non-`5000` port and give me the worktree's dashboard URL, so I can verify the change visually against that worktree's build before it merges to master.
 - Use manual `npm.cmd run build` / `dotnet run` only when debugging one side of the stack.
+- After rebuilding or replacing the RIMAPI fork DLL, restart RimWorld before live verification. RimWorld does not hot-reload mod assemblies; verify `/api/v1/dev/endpoints` after restart before diagnosing RimBob.
 - When adding backend logs, replay corpus files, prompt dumps, traces, or diagnostics, update dashboard-visible metadata in the same turn. If intentionally hidden, add a concrete `Tasks.md` follow-up and mention it in the final response.
 
 ## Minister Output / Log Inspection
