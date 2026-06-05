@@ -4,6 +4,7 @@ using RimBob.Core.Aggregates;
 using RimBob.Core.Briefings;
 using RimBob.Core.Ministers;
 using RimBob.Core.Placement;
+using RimBob.Host;
 using RimBob.Ministers.Willie;
 using RimBob.State;
 using RimBob.Tests.Infrastructure;
@@ -106,12 +107,26 @@ public sealed class AdviceForNewColony1Tests
     {
         NewColonyScenario scenario = await Scenario.Value;
 
-        AdviceItem advice = AdviceById(scenario.FoodDecision, "chef_wild_harvest_available");
-        AdviceAction action = advice.Actions.Should().ContainSingle(action => action.Kind == AdviceActionKind.MarkHarvest).Subject;
+        AdviceAction action = HarvestActionByAdviceId(scenario.FoodDecision, "chef_wild_harvest_available");
         action.Instruction.Should().Contain("Plant_Berry");
         MarkHarvestAreaApply apply = action.Apply.Should().BeOfType<MarkHarvestAreaApply>().Subject;
         apply.TargetIds.Should().NotBeEmpty();
         apply.TargetCount.Should().BeLessThanOrEqualTo(6);
+    }
+
+    [Fact]
+    public async Task Chef_NewColony1_ForageApplyVerdictIsReady()
+    {
+        NewColonyScenario scenario = await Scenario.Value;
+
+        AdviceAction action = HarvestActionByAdviceId(scenario.FoodDecision, "chef_wild_harvest_available");
+        MarkHarvestAreaApply apply = action.Apply.Should().BeOfType<MarkHarvestAreaApply>().Subject;
+        HarvestApplyAssessment assessment = AssistedApplyService.AssessHarvest(scenario.State, apply);
+
+        assessment.Outcome.Should().Be(HarvestApplyOutcome.Ready);
+        assessment.ReadyCount.Should().Be(apply.TargetIds.Count);
+        assessment.MissingCount.Should().Be(0);
+        assessment.StaleCount.Should().Be(0);
     }
 
     [Fact]
@@ -276,6 +291,9 @@ public sealed class AdviceForNewColony1Tests
 
     private static AdviceItem AdviceById(ProjectedRuleRun decision, string id) =>
         decision.Advice.Should().ContainSingle(advice => advice.Id == id).Subject;
+
+    private static AdviceAction HarvestActionByAdviceId(ProjectedRuleRun decision, string id) =>
+        AdviceById(decision, id).Actions.Should().ContainSingle(action => action.Kind == AdviceActionKind.MarkHarvest).Subject;
 
     private static IReadOnlyList<BuildingRequest> WillieBuildingRequests(params ProjectedRuleRun[] decisions) =>
         decisions

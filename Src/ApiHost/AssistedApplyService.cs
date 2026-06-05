@@ -39,6 +39,74 @@ public sealed class AssistedApplyService(
         }
     }
 
+    public static HarvestApplyAssessment AssessHarvest(ColonyState state, MarkHarvestAreaApply apply)
+    {
+        if (apply.TargetIds.Count > AssistedApplyLimits.MaxHarvestTargets ||
+            apply.Rect.Area <= 0 ||
+            apply.Rect.Area > AssistedApplyLimits.MaxHarvestRectArea)
+        {
+            return new HarvestApplyAssessment(
+                HarvestApplyOutcome.TooBroad,
+                ReadyCount: 0,
+                MissingCount: 0,
+                StaleCount: apply.TargetIds.Count);
+        }
+
+        if (apply.MapId != state.Map.Value.Id)
+        {
+            return new HarvestApplyAssessment(
+                HarvestApplyOutcome.WrongMap,
+                ReadyCount: 0,
+                MissingCount: 0,
+                StaleCount: 0);
+        }
+
+        HashSet<string> targetIds = apply.TargetIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        IReadOnlyList<PlantRecord> currentTargets = state.Plants.Value.Plants
+            .Where(plant => targetIds.Contains(plant.Id))
+            .ToList();
+        IReadOnlyList<PlantRecord> readyInRect = currentTargets
+            .Where(plant => plant.Position is not null &&
+                            PlantHarvest.IsReady(plant) &&
+                            IsInside(apply.Rect, plant.Position))
+            .ToList();
+
+        int missing = apply.TargetIds.Count - currentTargets.Count;
+        int stale = apply.TargetIds.Count - readyInRect.Count;
+        if (missing > AllowedMissing(apply.TargetIds.Count))
+        {
+            return new HarvestApplyAssessment(
+                HarvestApplyOutcome.StaleMissing,
+                readyInRect.Count,
+                missing,
+                stale);
+        }
+
+        if (readyInRect.Count == 0)
+        {
+            return new HarvestApplyAssessment(
+                HarvestApplyOutcome.AlreadySatisfied,
+                0,
+                missing,
+                stale);
+        }
+
+        if (stale > AllowedMissing(apply.TargetIds.Count))
+        {
+            return new HarvestApplyAssessment(
+                HarvestApplyOutcome.StaleNotReady,
+                readyInRect.Count,
+                missing,
+                stale);
+        }
+
+        return new HarvestApplyAssessment(
+            HarvestApplyOutcome.Ready,
+            readyInRect.Count,
+            missing,
+            stale);
+    }
+
     public async Task<AssistedApplyResponse> ApplyAsync(
         string adviceId,
         int actionIndex,
@@ -261,27 +329,17 @@ public sealed class AssistedApplyService(
         if (refreshFailure is not null)
             return refreshFailure;
 
-        if (apply.MapId != state.Map.Value.Id)
+        HarvestApplyAssessment assessment = AssessHarvest(state, apply);
+        if (assessment.Outcome == HarvestApplyOutcome.WrongMap)
             return Response("stale_advice", "Advice targets a different map than the current colony map.", apply.Kind, adviceId, actionIndex);
 
-        HashSet<string> targetIds = apply.TargetIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        IReadOnlyList<PlantRecord> currentTargets = state.Plants.Value.Plants
-            .Where(plant => targetIds.Contains(plant.Id))
-            .ToList();
-        IReadOnlyList<PlantRecord> readyInRect = currentTargets
-            .Where(plant => plant.Position is not null &&
-                            PlantHarvest.IsReady(plant) &&
-                            IsInside(apply.Rect, plant.Position))
-            .ToList();
-        int missing = apply.TargetIds.Count - currentTargets.Count;
-        if (missing > AllowedMissing(apply.TargetIds.Count))
+        if (assessment.Outcome == HarvestApplyOutcome.StaleMissing)
             return Response("stale_advice", "Too many harvest targets changed since this advice was issued.", apply.Kind, adviceId, actionIndex);
 
-        if (readyInRect.Count == 0)
+        if (assessment.Outcome == HarvestApplyOutcome.AlreadySatisfied)
             return Response("already_satisfied", "No targeted plants are currently harvest-ready.", apply.Kind, adviceId, actionIndex);
 
-        int stale = apply.TargetIds.Count - readyInRect.Count;
-        if (stale > AllowedMissing(apply.TargetIds.Count))
+        if (assessment.Outcome == HarvestApplyOutcome.StaleNotReady)
             return Response("stale_advice", "Too many harvest targets are no longer ready in the original area.", apply.Kind, adviceId, actionIndex);
 
         try
@@ -312,11 +370,11 @@ public sealed class AssistedApplyService(
 
         return Response(
             "applied",
-            $"Harvest designation submitted for {readyInRect.Count} plant target{(readyInRect.Count == 1 ? "" : "s")}.",
+            $"Harvest designation submitted for {assessment.ReadyCount} plant target{(assessment.ReadyCount == 1 ? "" : "s")}.",
             apply.Kind,
             adviceId,
             actionIndex,
-            new { target_count = readyInRect.Count, rect = apply.Rect });
+            new { target_count = assessment.ReadyCount, rect = apply.Rect });
     }
 
     private async Task<AssistedApplyResponse> ApplyHuntAsync(
@@ -816,5 +874,21 @@ public sealed record AssistedApplyAttempt(
     string AdviceId,
     [property: JsonPropertyName("action_index")]
     int ActionIndex);
+
+public enum HarvestApplyOutcome
+{
+    Ready,
+    AlreadySatisfied,
+    StaleMissing,
+    StaleNotReady,
+    WrongMap,
+    TooBroad
+}
+
+public readonly record struct HarvestApplyAssessment(
+    HarvestApplyOutcome Outcome,
+    int ReadyCount,
+    int MissingCount,
+    int StaleCount);
 
 internal sealed record CurrentThingTarget(string Def, bool IsForbidden, MapPosition Position);

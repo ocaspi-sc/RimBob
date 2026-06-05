@@ -79,6 +79,100 @@ public sealed class AssistedApplyServiceTests
     }
 
     [Fact]
+    public void AssessHarvest_WhenForageTargetsAreHarvestableBelowGrowthThreshold_ReturnsReady()
+    {
+        ColonyState state = StateWithHarvestPlants(
+            new PlantRecord("berry-1", "Plant_Berry", 0.90f, false, null, new MapPosition(10, 0, 20), IsHarvestable: true),
+            new PlantRecord("berry-2", "Plant_Berry", 0.45f, false, null, new MapPosition(11, 0, 20), IsHarvestable: true),
+            new PlantRecord("berry-3", "Plant_Berry", 0.45f, false, null, new MapPosition(12, 0, 20), IsHarvestable: true),
+            new PlantRecord("berry-4", "Plant_Berry", 0.45f, false, null, new MapPosition(13, 0, 20), IsHarvestable: true));
+
+        HarvestApplyAssessment assessment = AssistedApplyService.AssessHarvest(state, HarvestApply());
+
+        assessment.Outcome.Should().Be(HarvestApplyOutcome.Ready);
+        assessment.ReadyCount.Should().Be(4);
+        assessment.MissingCount.Should().Be(0);
+        assessment.StaleCount.Should().Be(0);
+    }
+
+    [Fact]
+    public void AssessHarvest_WhenNoTargetsAreReady_ReturnsAlreadySatisfied()
+    {
+        ColonyState state = StateWithHarvestPlants(
+            new PlantRecord("berry-1", "Plant_Berry", 0.45f, false, null, new MapPosition(10, 0, 20), IsHarvestable: false),
+            new PlantRecord("berry-2", "Plant_Berry", 0.45f, false, null, new MapPosition(11, 0, 20), IsHarvestable: false),
+            new PlantRecord("berry-3", "Plant_Berry", 0.45f, false, null, new MapPosition(12, 0, 20), IsHarvestable: false),
+            new PlantRecord("berry-4", "Plant_Berry", 0.45f, false, null, new MapPosition(13, 0, 20), IsHarvestable: false));
+
+        HarvestApplyAssessment assessment = AssistedApplyService.AssessHarvest(state, HarvestApply());
+
+        assessment.Outcome.Should().Be(HarvestApplyOutcome.AlreadySatisfied);
+        assessment.ReadyCount.Should().Be(0);
+        assessment.MissingCount.Should().Be(0);
+        assessment.StaleCount.Should().Be(4);
+    }
+
+    [Fact]
+    public void AssessHarvest_WhenTargetsAreMissingBeyondTolerance_ReturnsStaleMissing()
+    {
+        ColonyState state = StateWithHarvestPlants(
+            new PlantRecord("berry-1", "Plant_Berry", 0.90f, false, null, new MapPosition(10, 0, 20), IsHarvestable: true),
+            new PlantRecord("berry-2", "Plant_Berry", 0.90f, false, null, new MapPosition(11, 0, 20), IsHarvestable: true));
+
+        HarvestApplyAssessment assessment = AssistedApplyService.AssessHarvest(state, HarvestApply());
+
+        assessment.Outcome.Should().Be(HarvestApplyOutcome.StaleMissing);
+        assessment.ReadyCount.Should().Be(2);
+        assessment.MissingCount.Should().Be(2);
+        assessment.StaleCount.Should().Be(2);
+    }
+
+    [Fact]
+    public void AssessHarvest_WhenTargetsAreNotReadyBeyondTolerance_ReturnsStaleNotReady()
+    {
+        ColonyState state = StateWithHarvestPlants(
+            new PlantRecord("berry-1", "Plant_Berry", 0.90f, false, null, new MapPosition(10, 0, 20), IsHarvestable: true),
+            new PlantRecord("berry-2", "Plant_Berry", 0.90f, false, null, new MapPosition(11, 0, 20), IsHarvestable: true),
+            new PlantRecord("berry-3", "Plant_Berry", 0.45f, false, null, new MapPosition(12, 0, 20), IsHarvestable: false),
+            new PlantRecord("berry-4", "Plant_Berry", 0.45f, false, null, new MapPosition(13, 0, 20), IsHarvestable: false));
+
+        HarvestApplyAssessment assessment = AssistedApplyService.AssessHarvest(state, HarvestApply());
+
+        assessment.Outcome.Should().Be(HarvestApplyOutcome.StaleNotReady);
+        assessment.ReadyCount.Should().Be(2);
+        assessment.MissingCount.Should().Be(0);
+        assessment.StaleCount.Should().Be(2);
+    }
+
+    [Fact]
+    public void AssessHarvest_WhenAdviceTargetsDifferentMap_ReturnsWrongMap()
+    {
+        ColonyState state = StateWithHarvestPlants(
+            new PlantRecord("berry-1", "Plant_Berry", 0.90f, false, null, new MapPosition(10, 0, 20), IsHarvestable: true));
+        state.Map.Update(new MapInfoSnapshot(2, "test"));
+
+        HarvestApplyAssessment assessment = AssistedApplyService.AssessHarvest(state, HarvestApply());
+
+        assessment.Outcome.Should().Be(HarvestApplyOutcome.WrongMap);
+        assessment.ReadyCount.Should().Be(0);
+        assessment.MissingCount.Should().Be(0);
+        assessment.StaleCount.Should().Be(0);
+    }
+
+    [Fact]
+    public void AssessHarvest_WhenTargetAreaIsTooBroad_ReturnsTooBroad()
+    {
+        HarvestApplyAssessment assessment = AssistedApplyService.AssessHarvest(
+            new ColonyState(),
+            HarvestApply(rect: new MapRect(0, 0, 20, 20)));
+
+        assessment.Outcome.Should().Be(HarvestApplyOutcome.TooBroad);
+        assessment.ReadyCount.Should().Be(0);
+        assessment.MissingCount.Should().Be(0);
+        assessment.StaleCount.Should().Be(4);
+    }
+
+    [Fact]
     public async Task ApplyAsync_WhenMostHarvestTargetsAreNoLongerReady_ReturnsStaleWithoutPosting()
     {
         AdviceBus bus = new();
@@ -578,6 +672,29 @@ public sealed class AssistedApplyServiceTests
                 RecipeSelectorKey: "simple_meal",
                 RepeatMode: "TargetCount",
                 TargetCount: targetCount));
+
+    private static MarkHarvestAreaApply HarvestApply(
+        IReadOnlyList<string>? targetIds = null,
+        MapRect? rect = null,
+        int mapId = 1)
+    {
+        IReadOnlyList<string> ids = targetIds ?? ["berry-1", "berry-2", "berry-3", "berry-4"];
+        return new MarkHarvestAreaApply(
+            "Mark forage",
+            $"{ids.Count} berry plants",
+            mapId,
+            rect ?? new MapRect(10, 20, 13, 20),
+            ids,
+            ids.Count);
+    }
+
+    private static ColonyState StateWithHarvestPlants(params PlantRecord[] plants)
+    {
+        ColonyState state = new();
+        state.Map.Update(new MapInfoSnapshot(1, "test"));
+        state.Plants.Update(new PlantRegistry(plants));
+        return state;
+    }
 
     private static AdviceAction HuntAction(IReadOnlyList<string>? targetIds = null) =>
         new(
