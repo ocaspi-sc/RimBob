@@ -17,7 +17,8 @@ Chef currently emits the `expand_growing_capacity` dependency as an `attention[]
 - Do **not** force growing zones into `BuildingRequest`. A growing zone is a map zone/designation, not a room, bench, cooler, wall, or other constructed asset.
 - Add `ZoneRequest` and `AgentFlag.zone_requests[]`; keep `attention[]` as the fallback only for dependencies that still have no typed request kind.
 - Chef owns the food-chain reason, crop choice, tile count, and urgency. Willie owns spatial placement proposals when a zone request is routed to `requested_from: "Willie"`.
-- Player-facing Apply for a Willie-authored zone placement lives in Willie's scope, not on Chef's outbound request. Chef may keep a plain `designate_zone` advice action until Willie returns a concrete zone option.
+- Player-facing Apply for a Willie-authored zone placement lives in Willie's scope, not on Chef's outbound request. Chef may keep a plain `designate_zone_req` advice action until Willie returns a concrete zone option.
+- Rename Chef's player-facing advice action token `designate_zone` → `designate_zone_req` (the `AdviceActionKind.DesignateZone` wire string). It marks a request stub, not a placed zone; the concrete placed write stays Willie's `create_growing_zone` apply. This wire-token change falls under the no-compat rule below. **Scope: only the action token changes** — the typed request family stays named `ZoneRequest` / `zone_requests[]` / `ZoneClass`.
 - This is a wire/persistence shape change: **no compat code; wipe-and-regen on upgrade.** Persisted minister snapshots and replay corpus records that contain old `attention[]` growing-zone requests should be regenerated instead of read through a legacy branch.
 
 ---
@@ -89,7 +90,7 @@ Worked flag row:
 
 ## Slice 1 - Typed Request Wire
 
-Add `ZoneRequest` and `ZoneClass` to `Src/Common/Advice/FlagRequests.cs`; add nullable `ZoneRequests` to `AgentFlag`; add `RequestZone` to `Decision`; teach `DecisionProjection` to project it into `zone_requests`; teach `MinisterRuleTableEvaluator` to sort, dedupe, and emit `request_zone` traces.
+Add `ZoneRequest` and `ZoneClass` to `Src/Common/Advice/FlagRequests.cs`; add nullable `ZoneRequests` to `AgentFlag`; add `RequestZone` to `Decision`; teach `DecisionProjection` to project it into `zone_requests` — add the `RequestZone` case to the request switch **and** to the `IsRequest` and `RequestPriority` helper switches (`Src/Common/Ministers/DecisionProjection.cs:126`/`:129`), else zone requests are never grouped or prioritized; teach `MinisterRuleTableEvaluator` to sort, dedupe, and emit `request_zone` traces.
 
 Update `ResourceRequestNormalizer` and strict LLM parsing so model-authored flags can emit `zone_requests[]`; update `food.system.md` and `welfare.system.md` flag instructions to list `zone_requests` as a valid typed request array and to keep old vague spatial asks out of `attention[]` when the request is a real zone dependency.
 
@@ -101,7 +102,7 @@ Tests: projection tests for `RequestZone`; normalizer/parser tests for strict `z
 
 ## Slice 2 - Chef Producer
 
-Change `Src/Ministers/Food/Rules.cs` `BuildExpandGrowingCapacity` so the grow-tile dependency uses `FoodFlagRequests.Zone(...)` instead of `FoodFlagRequests.AttentionRequest(...)`. Keep the existing player-facing `designate_zone` advice action for now; this slice only promotes the cross-minister request shape.
+Change `Src/Ministers/Food/Rules.cs` `BuildExpandGrowingCapacity` so the grow-tile dependency uses `FoodFlagRequests.Zone(...)` instead of `FoodFlagRequests.AttentionRequest(...)`. Keep the existing player-facing advice action for now (renamed `designate_zone` → `designate_zone_req`; emitted by `GrowingZoneAction` in `Src/Ministers/Food/Rules.cs`); this slice only promotes the cross-minister request shape.
 
 The emitted request should carry `ZoneClass.Growing`, `PlantDef = cropCandidate.CropDef`, `TileCount = cropCandidate.Tiles`, `Terrain.MustSupportGrowing = true`, `Terrain.PreferredFertility = cropCandidate.TerrainFertility`, `Priority = priority`, and `RequestedFrom = "Willie"`. Existing cooking-building support stays as `building_requests[]`; this slice should not weaken starter-kitchen/freezer build requests.
 
@@ -112,6 +113,8 @@ Expected dashboard result after Slice 2: the current live count of "attentions" 
 ---
 
 ## Slice 3 - Willie Routing and Board Visibility
+
+**Sequencing dependency:** Slices 3-5 touch Willie solver/apply/normalizer code currently in flight in worktrees `willie-freezer-apply-readiness` and `willie-nonfreezer-solver-wiring` (`PlacementSolver.cs`, `AssistedApplyService.cs`, `ResourceRequestNormalizer.cs`, `MinisterOfWillie.cs`). Land or rebase on those first; do not branch 3-5 off a master that predates them.
 
 Teach `CabinetCycle` to wake Willie for `zone_requests[]` where `requested_from` is `Willie`, analogous to the current building-request follow-up path. This should be a same-cycle `FlagFired` rules-only follow-up, so the operator does not need to click `Run Rules`.
 
@@ -125,9 +128,11 @@ Tests: cabinet cycle wakes Willie on a `ZoneRequest` routed to Willie; zone boar
 
 ## Slice 4 - Grow-Zone Placement Solver
 
-Add spatial terrain evidence first. Current `TerrainSnapshot` has only per-def counts, so Willie cannot choose exact cells. Options: preserve `TerrainGridDto` in state as a coordinate-addressable grid, or add a bounded buildability/fertility read through the RIMAPI fork. The existing `rimapi-buildability-layers-read` task is the richer long-term fit, but a first slice can use the already represented terrain grid if it contains enough cell-level terrain data.
+Add spatial terrain evidence first. Current `TerrainSnapshot` (`Src/Common/Aggregates/Snapshots.cs:280`) has only per-def cell counts and terrain defs — **no cell coordinates** — so there is no usable terrain grid in state today. `TerrainGridDto` does not exist on master, and `LargestEmptyRectangleGenerator` already records `terrain_affordance=unknown`. Drop the "first slice can use the already represented terrain grid" fallback: it is not available. Slice 4 hard-depends on cell-level growable/fertility data landing first, via either the `rimapi-buildability-layers-read` task or new coordinate-addressable terrain ingestion. Do not start the solver until one lands.
 
 Add `GrowZonePlacementSolver` or a small zone-specific solver under Willie. Input: `ZoneRequest`, map id, terrain grid, existing growing zones, stockpile/room/building occupancy, Home/buildable-region bounds, and anchor inventory. Output: 1-3 `ZoneOption`s with rect/cells, plant def, tile count, score trace, and validation/readiness fields.
+
+**Algorithm reuse:** reuse the `AnchorResolver` (near storage/kitchen) and `PlacementEvidence` spine, the largest-empty-rectangle search (`evidence.FreeRects` + ranking in `LargestEmptyRectangleGenerator`), and the NoFit/trace plumbing — but feed the rect search a **growable+unzoned+unoccupied** mask instead of the buildable mask, and strip the `RoomTemplate`/`RoomShell`/`BlueprintAsset` parts (a zone has no walls, doors, or materials). Do **not** use the building `PlacementSolver` directly, and do **not** use WFC (`.plans/wfc-variant-generator.md`): a grow zone is a homogeneous one-crop field with no inter-tile constraints, so there is nothing for WFC to collapse, and its `supports(spec)` would return `[]` for a zone spec anyway.
 
 Scoring should favor growable fertile terrain, compact rectangles, proximity to storage/kitchen or the buildable-region anchor, avoiding existing zones and occupied buildings, and staying inside Home/buildable-region bounds when available. Do not invent path-cost precision unless the live data supports it; if path-cost is used, label it as measured.
 
@@ -139,9 +144,11 @@ Tests: solver picks high-fertility growable cells over low-fertility cells; reje
 
 ## Slice 5 - Assisted Apply for Growing Zones
 
-Add a new apply payload, for example `create_growing_zone`, with `map_id`, `plant_def`, `rect` or explicit cells, `target_count`, `label`, and `target_summary`. Do not reuse `place_blueprint_group`; this is a zone write, not a blueprint group.
+Add a new apply payload, for example `create_growing_zone`, with `map_id`, `plant_def`, `rect` (`point_a`/`point_b`), `target_count`, `label`, and `target_summary`. `RimApiClient.CreateGrowZoneAsync` accepts a **rect only** (`point_a`/`point_b`), not an explicit cell list — drop the cell-list option unless you also add a new client method. Do not reuse `place_blueprint_group`; this is a zone write, not a blueprint group.
 
 Use the existing `RimApiClient.CreateGrowZoneAsync` only after adding fresh validation in `AssistedApplyService`: live RIMAPI reachable, loaded map, rect bounds valid, plant def supported, target cells still growable, target cells still sufficiently unoccupied/unzoned, and request/advice not stale. After the write, read back zones or refresh state and record `apply_result`.
+
+**Ownership retag:** `CreateGrowZoneAsync` is documented `Owned by Chef. Only call via the HTN planner primitive` (`Src/GameStateSync/RimApiClient.cs:531`). This slice moves the player-confirmed call to Willie via `AssistedApplyService` (not HTN). Update that doc comment to Willie/assisted-apply ownership, or the code contradicts the Locked Decision that Apply lives in Willie's scope.
 
 Update dashboard Apply rendering for the new apply kind, with the Apply button only in Willie's emitted zone option/advice surface. Chef's outbound request should remain inspect-only.
 
@@ -186,6 +193,6 @@ Live proof for Slice 5: click the Willie-authored grow-zone Apply, confirm `/api
 ## Open Questions
 
 - Should the first Willie zone surface be a separate Zone Requests tab or a mixed request table inside the existing Requests tab?
-- Should `ZoneRequest` use `tile_count` only, or also carry a typed `capacity_need` for future non-growing zones?
+- ~~Should `ZoneRequest` use `tile_count` only, or also carry a typed `capacity_need`?~~ **Resolved:** `tile_count` only. Locked Decisions forbid broadening `ZoneClass` past `Growing`, so a general `capacity_need` is premature; defer until a second zone class proves the need.
 - Should grow-zone placement require the RIMAPI fork buildability-layer read before any Apply path ships, or is terrain grid plus occupancy enough for the first player-confirmed write?
-- Should Chef's existing `designate_zone` action remain visible once Willie returns a concrete zone option, or should the Willie option supersede it to avoid duplicate player instructions?
+- Should Chef's existing `designate_zone_req` action remain visible once Willie returns a concrete zone option, or should the Willie option supersede it to avoid duplicate player instructions?
