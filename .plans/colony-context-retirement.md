@@ -74,3 +74,25 @@ Test calls in WillieRulesTests that pass only `(briefing, ColonyContext.Default)
 ## No compat
 
 No wire/persistence change. No wipe-and-regen needed. Pure interface cleanup.
+
+---
+
+## Summary (landed 2026-06-05)
+
+**Motivation.** `ColonyContext` was a phantom parameter — every call site passed `ColonyContext.Default` and no `Evaluate` implementation read any field from it (Mayor's `MayorAgendaRules` named the param `_`). It predated `PlayCycleContext` and agenda-derived briefings, which now carry real colony posture. ~60 call sites of pure noise.
+
+**Scope.**
+- `IMinisterRules<T>` — removed `ColonyContext context` parameter
+- `Food/Rules.cs`, `Welfare/Rules.cs`, `Willie/Rules.cs` (both overloads), `MayorAgendaRules.cs` — removed param from all `Evaluate` signatures
+- `Chef.cs`, `MinisterOfWelfare.cs`, `MinisterOfWillie.cs`, `Mayor.cs`, `AgendaBootstrapHostedService.cs` — dropped `ColonyContext.Default` argument
+- All test files (~60 call sites) — dropped `ColonyContext.Default` argument
+- `ColonyContext.cs` — deleted entirely
+
+**How to verify (human).**
+- `dotnet build Src/RimBob.sln` → 0 errors
+- `dotnet test Src/Tests/RimBob.Tests.csproj` → 575 pass
+- `rg "ColonyContext" Src` → no matches
+
+**Note.** `IMayorAgendaRules` does not exist in the codebase — Mayor has no separate rules interface, so nothing extra to update there.
+
+**Codex run:** 20260605-151912-colony-context-retirement · branch `codex/prompt-20260605-151912-colony-context-retirement` · landed commit `654684e5e3df824d0bd78bce5c79b5bf568d0e76`

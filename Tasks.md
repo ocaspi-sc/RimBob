@@ -155,7 +155,7 @@
 - [ ] minister-promotion-criteria Candidate minister promotion criteria (CMO, Research, Trade, Treasury).
 - [ ] memo-cadence-calibration Memo cadence calibration: flag-severity-gated tactical alerts vs. strict daily.
 - [ ] dashboard-notification-ux Dashboard: notification UX (in-page only vs. browser notifications).
-- [ ] colonycontext-retirement Retire or narrow legacy `ColonyContext` on the rules path now that minister wake reasons moved to `PlayCycleContext` and feeder ministers use agenda-derived briefing context. **Confirmed dead: every call site passes `.Default`, no impl reads fields.** [plan](.plans/colony-context-retirement.md)
+- [x] colonycontext-retirement **LANDED `654684e5`.** Deleted `ColonyContext.cs`; removed phantom param from `IMinisterRules<T>`, all 4 feeder `Rules.Evaluate()` impls, all callers and ~60 test call sites. [plan](.plans/colony-context-retirement.md)
 
 ### Auto epic (M7 - defer until then)
 
