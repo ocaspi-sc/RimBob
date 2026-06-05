@@ -303,6 +303,7 @@ function iconForEmission(emission: RuleEmission, kind: string): SemanticIconSpec
   if (kind === 'request_build') return iconForFieldValue('target_def', emission.targetDef ?? '') ?? iconForField('building_requests');
   if (kind === 'request_labor') return iconForField('labor_requests');
   if (kind === 'request_item') return iconForFieldValue('item_def', emission.targetDef ?? '') ?? iconForField('item_requests');
+  if (kind === 'request_zone') return iconForFieldValue('plant_def', emission.targetDef ?? '') ?? iconForField('zone_requests');
   if (kind === 'request_attention') return iconForField('attention');
   if (kind === 'escalate') return iconForField('llm_escalation');
   return iconForField(kind) ?? iconForField('outputs');
@@ -353,8 +354,12 @@ function actionMatchesEmission(action: AdviceAction, emission: RuleEmission): bo
     return action.apply?.kind === 'unforbid_things' || actionKind === 'unforbid';
   }
 
-  if (emissionKind === 'request_attention') {
+  if (emissionKind === 'request_zone') {
     return actionKind === 'designate_zone';
+  }
+
+  if (emissionKind === 'request_attention') {
+    return false;
   }
 
   if (emissionKind === 'request_build') {

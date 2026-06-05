@@ -29,6 +29,7 @@ import type {
   LaborRequest,
   Priority,
   SuggestedAction,
+  ZoneRequest,
 } from '../../types/advice';
 import type { ColonySnapshot } from '../../types/colony';
 import type { CabinetRunLogSnapshot, MinisterTrace, SystemHealth } from '../../types/system';
@@ -698,6 +699,7 @@ function MinisterTabLinks({
 }
 
 function shortTabLabel(view: DashboardViewDefinition): string {
+  if (view.key === 'build_queue') return 'Queue';
   if (view.key === 'infographics') return 'Info';
   return view.label;
 }
@@ -1008,6 +1010,7 @@ function ministerOutputSections(
     outputSection('building_requests', 'Build reqs', 'building_requests', buildingRequestItems(flags)),
     outputSection('labor_requests', 'Labor reqs', 'labor_requests', laborRequestItems(flags)),
     outputSection('item_requests', 'Item reqs', 'item_requests', itemRequestItems(flags)),
+    outputSection('zone_requests', 'Zone reqs', 'zone_requests', zoneRequestItems(flags)),
     outputSection('attention', 'Attention', 'attention', attentionRequestItems(flags)),
   ].filter(section => section.items.length > 0);
 }
@@ -1090,10 +1093,10 @@ function actionApplyStatus(
 
   if (!isExecutableApply(action.apply)) {
     return {
-      ariaLabel: 'Apply routed to Requests',
-      label: 'REQ',
+      ariaLabel: 'Apply routed to Build Queue',
+      label: 'BQ',
       tone: 'queued',
-      tooltip: `Pick and apply the option from Willie Requests: ${action.apply.target_summary}`,
+      tooltip: `Apply from Build Queue: ${action.apply.target_summary}`,
     };
   }
 
@@ -1538,6 +1541,51 @@ function itemRequestTitle(request: ItemRequest): string {
   }
 
   return request.request;
+}
+
+function zoneRequestItems(flags: AgentFlag[]): HomeOutputItem[] {
+  return flags.flatMap(flag =>
+    (flag.zone_requests ?? []).map((request, index) => zoneRequestItem(flag, request, index))
+  );
+}
+
+function zoneRequestItem(flag: AgentFlag, request: ZoneRequest, index: number): HomeOutputItem {
+  const title = zoneRequestTitle(request);
+  const priority = request.priority ?? flag.priority;
+  const detail = [
+    request.request !== title ? request.request : null,
+    request.reason,
+    request.zone_class ? `Zone: ${formatLabel(request.zone_class)}` : null,
+    request.plant_def ? `Plant: ${request.plant_def}` : null,
+    request.tile_count !== null && request.tile_count !== undefined ? `Tiles: ${formatInteger(request.tile_count)}` : null,
+    request.terrain?.preferred_fertility !== null && request.terrain?.preferred_fertility !== undefined
+      ? `Fertility: ${request.terrain.preferred_fertility.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+      : null,
+    request.requested_from ? `Owner: ${request.requested_from}` : null,
+  ].filter((value): value is string => Boolean(value)).join(' | ');
+
+  return {
+    iconKey: request.plant_def ?? 'zone_requests',
+    key: `${flag.id}:zone:${index}`,
+    priority,
+    title,
+    tooltip: tooltipText(title, priority, detail),
+  };
+}
+
+function zoneRequestTitle(request: ZoneRequest): string {
+  const plant = request.plant_def ? plantDefLabel(request.plant_def) : formatLabel(request.zone_class);
+  const tiles = request.tile_count !== null && request.tile_count !== undefined
+    ? `${formatInteger(request.tile_count)} `
+    : '';
+  return `${tiles}${plant} zone`;
+}
+
+function plantDefLabel(def: string): string {
+  const trimmed = def.trim().replace(/^Plant_/i, '');
+  return trimmed
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, char => char.toUpperCase());
 }
 
 function attentionRequestItems(flags: AgentFlag[]): HomeOutputItem[] {

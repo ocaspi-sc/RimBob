@@ -184,6 +184,7 @@ public sealed class AggregateMapperTests
 
         MapAreaRegistry areas = MapAggregateMapper.FromAreas(zones);
         StockpileLedger stockpiles = MapAggregateMapper.FromStockpiles(zones);
+        MapZoneRegistry allZones = MapAggregateMapper.FromZones(zones);
 
         MapArea home = areas.Areas.Should().ContainSingle().Subject;
         home.Id.Should().Be("0");
@@ -192,6 +193,40 @@ public sealed class AggregateMapperTests
         home.CellCount.Should().Be(2);
         home.Bounds.Should().Be(new MapRect(10, 20, 14, 22));
         home.Centroid.Should().Be(new MapPosition(12, 0, 21));
-        stockpiles.Zones.Should().ContainSingle().Which.Id.Should().Be("stockpile-1");
+        home.Cells.Should().Equal(new MapPosition(10, 0, 20), new MapPosition(14, 0, 22));
+        StockpileZone stockpile = stockpiles.Zones.Should().ContainSingle().Subject;
+        stockpile.Id.Should().Be("stockpile-1");
+        stockpile.Cells.Should().Equal(new MapPosition(1, 0, 1));
+        allZones.Zones.Should().HaveCount(4);
+        MapZoneRecord growing = allZones.Zones.Single(zone => zone.Id == "grow-1");
+        growing.IsGrowing.Should().BeTrue();
+        growing.PlantDef.Should().Be("Plant_Rice");
+        growing.Cells.Should().Equal(new MapPosition(4, 0, 4));
+    }
+
+    [Fact]
+    public void MapMapper_FromTerrain_DecodesCoordinateCellsWithFertility()
+    {
+        TerrainGridDto terrain = new(
+            Width: 3,
+            Height: 2,
+            Palette: ["Soil", "SoilRich", "Sand"],
+            Grid: [2, 0, 2, 1, 2, 2]);
+        IReadOnlyList<TerrainDefDto> defs =
+        [
+            new("Soil", "soil", 1f, ["Walkable", "GrowSoil"]),
+            new("SoilRich", "rich soil", 1.4f, ["Walkable", "GrowSoil"]),
+            new("Sand", "sand", 0.1f, ["Walkable"])
+        ];
+
+        TerrainSnapshot snapshot = MapAggregateMapper.FromTerrain(terrain, defs);
+
+        snapshot.CellCountsByDef.Should().ContainKey("Soil").WhoseValue.Should().Be(2);
+        snapshot.CellCountsByDef.Should().ContainKey("SoilRich").WhoseValue.Should().Be(2);
+        snapshot.Cells.Should().HaveCount(6);
+        snapshot.Cells[0].Should().Be(new TerrainCellRecord(0, 0, "Soil", 1f, true));
+        snapshot.Cells[2].Should().Be(new TerrainCellRecord(2, 0, "SoilRich", 1.4f, true));
+        snapshot.Cells[5].Should().Be(new TerrainCellRecord(2, 1, "Sand", 0.1f, false));
+        snapshot.HasCoordinateGrid.Should().BeTrue();
     }
 }

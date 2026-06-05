@@ -9,6 +9,7 @@ namespace RimBob.Ministers.Willie;
 public sealed class Rules : IMinisterRules<WillieBriefing>
 {
     public const string BuildingRequestActiveTrace = "building_request_active";
+    public const string ZoneRequestActiveTrace = "zone_request_active";
 
     private const string MinisterName = "Willie";
     private const string Domain = "construction";
@@ -21,16 +22,24 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
     }
 
     public RuleRun Evaluate(WillieBriefing briefing) =>
-        Evaluate(briefing, []);
+        Evaluate(briefing, [], []);
 
     public RuleRun Evaluate(
         WillieBriefing briefing,
         IReadOnlyList<BuildingRequest> inboundBuildingRequests)
     {
+        return Evaluate(briefing, inboundBuildingRequests, []);
+    }
+
+    public RuleRun Evaluate(
+        WillieBriefing briefing,
+        IReadOnlyList<BuildingRequest> inboundBuildingRequests,
+        IReadOnlyList<ZoneRequest> inboundZoneRequests)
+    {
         DateTimeOffset now = timeProvider.GetUtcNow();
-        IReadOnlyList<MinisterRule<WillieBriefing>> ruleTable = RuleTable(now, inboundBuildingRequests);
+        IReadOnlyList<MinisterRule<WillieBriefing>> ruleTable = RuleTable(now, inboundBuildingRequests, inboundZoneRequests);
         IReadOnlyList<MinisterRuleTraceDescriptor<WillieBriefing>> fallbackRuleDescriptors =
-            FallbackRuleDescriptors(inboundBuildingRequests);
+            FallbackRuleDescriptors(inboundBuildingRequests, inboundZoneRequests);
         RuleRun ruleRun = MinisterRuleTableEvaluator.EvaluateAllHits(
             ruleTable,
             briefing,
@@ -40,18 +49,20 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
 
         return new RuleRun(
             [],
-            DiagnosticsForFallback(ruleTable, fallbackRuleDescriptors, briefing, inboundBuildingRequests, "maintain_build_program"));
+            DiagnosticsForFallback(ruleTable, fallbackRuleDescriptors, briefing, inboundBuildingRequests, inboundZoneRequests, "maintain_build_program"));
     }
 
     private static IReadOnlyList<MinisterRule<WillieBriefing>> RuleTable(
         DateTimeOffset now,
-        IReadOnlyList<BuildingRequest> inboundBuildingRequests) =>
+        IReadOnlyList<BuildingRequest> inboundBuildingRequests,
+        IReadOnlyList<ZoneRequest> inboundZoneRequests) =>
     [
         new("power_net_deficit", MatchesPowerNetDeficit, PowerNetDeficitReason, briefing => BuildPowerNetDeficit(briefing, now)),
         new("low_battery_reserve", MatchesLowBatteryReserve, LowBatteryReserveReason, briefing => BuildLowBatteryReserve(briefing, now)),
         new("backlog_material_gap", MatchesBacklogMaterialGap, BacklogMaterialGapReason, briefing => BuildBacklogMaterialGap(briefing, now)),
         new("frame_blocked_by_material", MatchesFrameBlockedByMaterial, FrameBlockedByMaterialReason, briefing => BuildFrameBlockedByMaterial(briefing, now)),
         new(BuildingRequestActiveTrace, briefing => MatchesBuildingRequestActive(briefing, inboundBuildingRequests), briefing => BuildingRequestActiveReason(briefing, inboundBuildingRequests), briefing => BuildBuildingRequestActive(briefing, inboundBuildingRequests, now)),
+        new(ZoneRequestActiveTrace, _ => MatchesZoneRequestActive(inboundZoneRequests), _ => ZoneRequestActiveReason(inboundZoneRequests), briefing => BuildZoneRequestActive(briefing, inboundZoneRequests, now)),
         new("kitchen_missing", MatchesKitchenMissing, KitchenMissingReason, briefing => BuildMissingRoom(briefing, now, "kitchen_missing", RoomClass.Kitchen, Priority.Medium, "Kitchen is missing", "No kitchen anchor is visible in the current room inventory.")),
         new("hospital_missing", MatchesHospitalMissing, HospitalMissingReason, briefing => BuildMissingRoom(briefing, now, "hospital_missing", RoomClass.Hospital, Priority.Low, "Hospital is missing", "No hospital anchor is visible for a colony large enough to need a treatment room.")),
         new("storage_room_missing", MatchesStorageRoomMissing, StorageRoomMissingReason, briefing => BuildMissingRoom(briefing, now, "storage_room_missing", RoomClass.Storage, Priority.Low, "Storage room is missing", "No storage room anchor or stockpile zone is visible.")),
@@ -205,6 +216,45 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
             WillieFlagRequests.Empty);
     }
 
+    private static bool MatchesZoneRequestActive(IReadOnlyList<ZoneRequest> inboundZoneRequests) =>
+        inboundZoneRequests.Count > 0;
+
+    private static string ZoneRequestActiveReason(IReadOnlyList<ZoneRequest> inboundZoneRequests)
+    {
+        ZoneRequest? request = SelectZoneRequest(inboundZoneRequests);
+        return request is null
+            ? "no inbound Willie zone requests are active"
+            : $"selected inbound Willie zone request: {request.Request}";
+    }
+
+    private static IReadOnlyList<Decision> BuildZoneRequestActive(
+        WillieBriefing briefing,
+        IReadOnlyList<ZoneRequest> inboundZoneRequests,
+        DateTimeOffset now)
+    {
+        ZoneRequest request = SelectZoneRequest(inboundZoneRequests)
+            ?? throw new InvalidOperationException("zone_request_active matched without a selected zone request");
+        string zone = FormatZone(request);
+        string tilePrefix = request.TileCount is null ? "" : $"{request.TileCount.Value} tile ";
+        string plant = FormatPlant(request.PlantDef);
+
+        return EmitAdvice(
+            briefing,
+            now,
+            ZoneRequestActiveTrace,
+            request.Priority ?? Priority.Medium,
+            $"{TitleCase(zone)} request needs Willie placement",
+            $"{request.Request}. Willie records the zone request and computes grow-zone placement options when coordinate-addressable terrain and occupancy evidence are available.",
+            "The requesting minister owns crop, size, and food-chain reason; Willie owns spatial placement. Zone writes remain player-click-gated and are not attached until the create-zone apply path ships.",
+            [
+                new AdviceAction(
+                    AdviceActionKind.DesignateZone,
+                    $"Review Willie placement options for a {tilePrefix}{plant}growing zone; no zone Apply action is attached yet.",
+                    Owner: MinisterName)
+            ],
+            WillieFlagRequests.Empty);
+    }
+
     private static bool MatchesKitchenMissing(WillieBriefing briefing) =>
         HasFunctionalRoomEvidence(briefing) && MissingRoom(briefing, RoomClass.Kitchen);
 
@@ -354,6 +404,7 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
         IReadOnlyList<MinisterRuleTraceDescriptor<WillieBriefing>> fallbackRuleDescriptors,
         WillieBriefing briefing,
         IReadOnlyList<BuildingRequest> inboundBuildingRequests,
+        IReadOnlyList<ZoneRequest> inboundZoneRequests,
         string selectedRule)
     {
         return MinisterRuleTableEvaluator.BuildTrace(
@@ -366,22 +417,25 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
     }
 
     private static IReadOnlyList<MinisterRuleTraceDescriptor<WillieBriefing>> FallbackRuleDescriptors(
-        IReadOnlyList<BuildingRequest> inboundBuildingRequests) =>
+        IReadOnlyList<BuildingRequest> inboundBuildingRequests,
+        IReadOnlyList<ZoneRequest> inboundZoneRequests) =>
     [
-        new("maintain_build_program", briefing => MaintainBuildProgramTraceReason(briefing, inboundBuildingRequests), (_, selectedRule) => SelectedWhenSelected("maintain_build_program", selectedRule))
+        new("maintain_build_program", briefing => MaintainBuildProgramTraceReason(briefing, inboundBuildingRequests, inboundZoneRequests), (_, selectedRule) => SelectedWhenSelected("maintain_build_program", selectedRule))
     ];
 
     private static string MaintainBuildProgramTraceReason(
         WillieBriefing briefing,
-        IReadOnlyList<BuildingRequest> inboundBuildingRequests) =>
-        AnyTableRuleApplies(briefing, inboundBuildingRequests)
+        IReadOnlyList<BuildingRequest> inboundBuildingRequests,
+        IReadOnlyList<ZoneRequest> inboundZoneRequests) =>
+        AnyTableRuleApplies(briefing, inboundBuildingRequests, inboundZoneRequests)
             ? "one or more Willie rules matched, so maintenance fallback is not selected"
             : "no deterministic Willie rule matched; build program remains stable";
 
     private static bool AnyTableRuleApplies(
         WillieBriefing briefing,
-        IReadOnlyList<BuildingRequest> inboundBuildingRequests) =>
-        RuleTable(DateTimeOffset.UnixEpoch, inboundBuildingRequests).Any(rule => rule.Matches(briefing));
+        IReadOnlyList<BuildingRequest> inboundBuildingRequests,
+        IReadOnlyList<ZoneRequest> inboundZoneRequests) =>
+        RuleTable(DateTimeOffset.UnixEpoch, inboundBuildingRequests, inboundZoneRequests).Any(rule => rule.Matches(briefing));
 
     private static RuleOutcome SelectedWhenSelected(RuleId rule, RuleId? selectedRule) =>
         selectedRule == rule ? RuleOutcome.Selected : RuleOutcome.NotMatched;
@@ -429,6 +483,14 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
             .OrderByDescending(request => MissingKitchenDependencyRank(briefing, request))
             .ThenByDescending(request => (int)(request.Priority ?? Priority.Medium))
             .ThenBy(request => FormatRequestTarget(request), StringComparer.OrdinalIgnoreCase)
+            .ThenBy(request => request.Request, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault();
+
+    public static ZoneRequest? SelectZoneRequest(IReadOnlyList<ZoneRequest> requests) =>
+        requests
+            .OrderByDescending(request => (int)(request.Priority ?? Priority.Medium))
+            .ThenBy(request => request.ZoneClass.ToString(), StringComparer.OrdinalIgnoreCase)
+            .ThenBy(request => request.PlantDef, StringComparer.OrdinalIgnoreCase)
             .ThenBy(request => request.Request, StringComparer.OrdinalIgnoreCase)
             .FirstOrDefault();
 
@@ -568,6 +630,20 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
         request.RoomClass is not null
             ? FormatRoom(request.RoomClass.Value)
             : ToSnakeCase(request.TargetClass.ToString()).Replace('_', ' ');
+
+    private static string FormatZone(ZoneRequest request) =>
+        ToSnakeCase(request.ZoneClass.ToString()).Replace('_', ' ');
+
+    private static string FormatPlant(string? plantDef)
+    {
+        if (string.IsNullOrWhiteSpace(plantDef))
+            return "crop ";
+
+        string text = plantDef.Trim();
+        if (text.StartsWith("Plant_", StringComparison.OrdinalIgnoreCase))
+            text = text["Plant_".Length..];
+        return $"{text.Replace('_', ' ').ToLowerInvariant()} ";
+    }
 
     private static string TitleCase(string value) =>
         CultureInfo.InvariantCulture.TextInfo.ToTitleCase(value);

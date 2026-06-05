@@ -192,6 +192,7 @@ public static class FoodLlmResponseParser
         Complete(flag.BuildingRequests, request => request.Request, request => request.Reason) &&
         Complete(flag.LaborRequests, request => request.Request, request => request.Reason) &&
         Complete(flag.ItemRequests, request => request.Request, request => request.Reason) &&
+        Complete(flag.ZoneRequests, request => request.Request, request => request.Reason) &&
         Complete(flag.Attention, request => request.Request, request => request.Reason);
 
     private static bool Complete<T>(

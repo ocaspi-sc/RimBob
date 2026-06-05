@@ -152,6 +152,7 @@ internal static class AdviceResponseNormalizer
                 BuildingRequests = requests.BuildingRequestsOrNull,
                 LaborRequests = requests.LaborRequestsOrNull,
                 ItemRequests = requests.ItemRequestsOrNull,
+                ZoneRequests = requests.ZoneRequestsOrNull,
                 Attention = requests.AttentionOrNull
             };
             return new NormalizedFlagResult(normalized, Dropped: false);

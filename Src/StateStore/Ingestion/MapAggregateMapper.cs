@@ -133,11 +133,13 @@ public static class MapAggregateMapper
                 },
                 StringComparer.OrdinalIgnoreCase);
 
+        DecodedTerrain decoded = DecodeTerrain(terrain, defsByName);
         return new TerrainSnapshot(
             Width: terrain.Width,
             Height: terrain.Height,
-            CellCountsByDef: DecodeTerrainCounts(terrain),
-            DefsByName: defsByName);
+            CellCountsByDef: decoded.CellCountsByDef,
+            DefsByName: defsByName,
+            Cells: decoded.Cells);
     }
 
     public static StoredResourceRegistry FromStoredResources(StoredResourcesDto stored)
@@ -244,13 +246,29 @@ public static class MapAggregateMapper
                 zone.Type,
                 zone.Label,
                 zone.Cells?.Count ?? zone.CellsCount ?? 0,
-                CenterOf(zone.Cells)))
+                CenterOf(zone.Cells),
+                (zone.Cells ?? []).Select(MapPosition).OfType<MapPosition>().ToList()))
             .ToList();
 
         return new StockpileLedger(
             stockpileZones,
             storedResources?.CountByDef ?? new Dictionary<string, int>());
     }
+
+    public static MapZoneRegistry FromZones(IReadOnlyList<ZoneDto> zones) =>
+        new(zones
+            .Where(zone => !string.IsNullOrWhiteSpace(zone.Type))
+            .OrderBy(zone => zone.Id, StringComparer.OrdinalIgnoreCase)
+            .Select(zone => new MapZoneRecord(
+                zone.Id,
+                zone.Type,
+                zone.Label,
+                zone.Cells?.Count ?? zone.CellsCount ?? 0,
+                zone.PlantDef,
+                BoundsOf(zone.Cells),
+                CenterOf(zone.Cells),
+                (zone.Cells ?? []).Select(MapPosition).OfType<MapPosition>().ToList()))
+            .ToList());
 
     public static MapAreaRegistry FromAreas(IReadOnlyList<ZoneDto> zones)
     {
@@ -263,7 +281,8 @@ public static class MapAggregateMapper
                 zone.Label,
                 zone.Cells?.Count ?? zone.CellsCount ?? 0,
                 BoundsOf(zone.Cells),
-                CenterOf(zone.Cells)))
+                CenterOf(zone.Cells),
+                (zone.Cells ?? []).Select(MapPosition).OfType<MapPosition>().ToList()))
             .ToList();
 
         return new MapAreaRegistry(areas);
@@ -409,14 +428,20 @@ public static class MapAggregateMapper
             Z2: cells.Max(cell => cell.Z));
     }
 
-    private static IReadOnlyDictionary<string, int> DecodeTerrainCounts(TerrainGridDto terrain)
+    private static DecodedTerrain DecodeTerrain(
+        TerrainGridDto terrain,
+        IReadOnlyDictionary<string, TerrainDefRecord> defsByName)
     {
         IReadOnlyList<string> palette = terrain.Palette ?? [];
         IReadOnlyList<int> grid = terrain.Grid ?? [];
         Dictionary<string, int> counts = new(StringComparer.OrdinalIgnoreCase);
+        List<TerrainCellRecord> cells = [];
 
         if (palette.Count == 0 || grid.Count == 0)
-            return counts;
+            return new DecodedTerrain(counts, cells);
+
+        if (terrain.Width <= 0 || terrain.Height <= 0)
+            throw new InvalidOperationException("RIMAPI schema drift at /map/terrain: terrain grid dimensions must be positive when grid data is present.");
 
         if (grid.Count % 2 != 0)
             throw new InvalidOperationException("RIMAPI schema drift at /map/terrain: grid RLE length must be even.");
@@ -433,6 +458,22 @@ public static class MapAggregateMapper
 
             string def = palette[paletteIndex];
             counts[def] = counts.TryGetValue(def, out int current) ? current + runLength : runLength;
+            for (int runOffset = 0; runOffset < runLength; runOffset++)
+            {
+                int cellIndex = totalCells + runOffset;
+                int x = cellIndex % terrain.Width;
+                int z = cellIndex / terrain.Width;
+                TerrainDefRecord? record = defsByName.TryGetValue(def, out TerrainDefRecord? found)
+                    ? found
+                    : null;
+                cells.Add(new TerrainCellRecord(
+                    X: x,
+                    Z: z,
+                    TerrainDef: def,
+                    Fertility: record?.Fertility ?? 0f,
+                    SupportsGrowing: record?.SupportsGrowing ?? false));
+            }
+
             totalCells += runLength;
         }
 
@@ -440,6 +481,10 @@ public static class MapAggregateMapper
         if (expectedCells > 0 && totalCells != expectedCells)
             throw new InvalidOperationException($"RIMAPI schema drift at /map/terrain: decoded {totalCells} cells, expected {expectedCells}.");
 
-        return counts;
+        return new DecodedTerrain(counts, cells);
     }
+
+    private sealed record DecodedTerrain(
+        IReadOnlyDictionary<string, int> CellCountsByDef,
+        IReadOnlyList<TerrainCellRecord> Cells);
 }

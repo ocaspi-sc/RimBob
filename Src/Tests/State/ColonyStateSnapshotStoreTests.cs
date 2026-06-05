@@ -39,6 +39,7 @@ public sealed class ColonyStateSnapshotStoreTests
             snapshot.AggregateVersions.Should().ContainKey("AnimalDefs").WhoseValue.Should().Be(1);
             snapshot.AggregateVersions.Should().ContainKey("Research").WhoseValue.Should().Be(1);
             snapshot.AggregateVersions.Should().ContainKey("Rooms").WhoseValue.Should().Be(1);
+            snapshot.AggregateVersions.Should().ContainKey("Zones").WhoseValue.Should().Be(1);
             snapshot.AggregateVersions.Should().ContainKey("Areas").WhoseValue.Should().Be(1);
             snapshot.AggregateVersions.Should().ContainKey("WillieBacklog").WhoseValue.Should().Be(1);
             snapshot.Rooms.Rooms.Should().ContainSingle()
@@ -54,12 +55,14 @@ public sealed class ColonyStateSnapshotStoreTests
             restored.Terrain.Value.Should().BeEquivalentTo(original.Terrain.Value);
             restored.AnimalDefs.Value.Should().BeEquivalentTo(original.AnimalDefs.Value);
             restored.Stockpiles.Value.Should().BeEquivalentTo(original.Stockpiles.Value);
+            restored.Zones.Value.Should().BeEquivalentTo(original.Zones.Value);
             restored.Areas.Value.Should().BeEquivalentTo(original.Areas.Value);
             restored.Colonists.Value.Should().BeEquivalentTo(original.Colonists.Value);
             restored.Rooms.Value.Should().BeEquivalentTo(original.Rooms.Value);
             restored.WillieBacklog.Value.Should().BeEquivalentTo(original.WillieBacklog.Value);
             restored.Terrain.Version.Should().Be(1);
             restored.Stockpiles.Version.Should().Be(1);
+            restored.Zones.Version.Should().Be(1);
             restored.Areas.Version.Should().Be(1);
             restored.Colonists.Version.Should().Be(1);
             restored.Rooms.Version.Should().Be(1);
@@ -214,6 +217,17 @@ public sealed class ColonyStateSnapshotStoreTests
                 Bounds: new MapRect(10, 10, 13, 13),
                 Centroid: new MapPosition(12, 0, 12))
         ]));
+        state.Zones.Update(new MapZoneRegistry([
+            new MapZoneRecord(
+                Id: "grow-1",
+                Type: "GrowingZone",
+                Label: "rice",
+                CellCount: 1,
+                PlantDef: "Plant_Rice",
+                Bounds: new MapRect(15, 22, 15, 22),
+                Centroid: new MapPosition(15, 0, 22),
+                Cells: [new MapPosition(15, 0, 22)])
+        ]));
         state.Buildings.Update(new BuildingRegistry([
             new BuildingRecord("stove-1", "FueledStove", 1f, true, true, new MapPosition(11, 0, 19), "fueled stove"),
             new BuildingRecord("cooler-1", "Cooler", 1f, true, true, new MapPosition(14, 0, 20), "cooler")
@@ -257,7 +271,13 @@ public sealed class ColonyStateSnapshotStoreTests
             {
                 ["Soil"] = new("Soil", "soil", 1f, ["Walkable", "GrowSoil"]),
                 ["Sand"] = new("Sand", "sand", 0.1f, ["Walkable"])
-            }));
+            },
+            Cells:
+            [
+                new TerrainCellRecord(0, 0, "Soil", 1f, true),
+                new TerrainCellRecord(1, 0, "Soil", 1f, true),
+                new TerrainCellRecord(2, 0, "Sand", 0.1f, false)
+            ]));
         state.StoredResources.Update(new StoredResourceRegistry(
             [
                 new StoredResourceRecord("food_meals", "meal-1", "MealSurvivalPack", "packaged survival meal", 12, false, new MapPosition(12, 0, 20), 216f),

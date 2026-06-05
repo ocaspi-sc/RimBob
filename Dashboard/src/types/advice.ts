@@ -192,6 +192,7 @@ export type AdjacencyRelation = 'near' | 'inside' | 'connected_to' | 'away_from'
 export type TemperatureBand = 'freezing' | 'cold' | 'room' | 'sterile_warm' | string;
 export type Urgency = 'when_convenient' | 'soon' | 'before_deadline' | 'blocking_now' | string;
 export type DeadlineKind = 'by_day' | 'by_season' | 'before_event' | string;
+export type ZoneClass = 'growing' | string;
 
 export interface CapacityNeed {
   measure: CapacityMeasure;
@@ -217,6 +218,12 @@ export interface TempNeed {
 export interface MaterialHint {
   material: string;
   approx_qty?: number | null;
+}
+
+export interface TerrainNeed {
+  must_support_growing: boolean;
+  preferred_fertility?: number | null;
+  preferred_terrain_defs?: string[] | null;
 }
 
 export interface Deadline {
@@ -261,6 +268,20 @@ export interface ItemRequest {
   requested_from?: string | null;
 }
 
+export interface ZoneRequest {
+  request: string;
+  reason: string;
+  zone_class: ZoneClass;
+  plant_def?: string | null;
+  tile_count?: number | null;
+  adjacency?: AdjacencyHint[] | null;
+  terrain?: TerrainNeed | null;
+  urgency?: Urgency | null;
+  deadline?: Deadline | null;
+  priority?: Priority | null;
+  requested_from?: string | null;
+}
+
 export interface AttentionRequest {
   request: string;
   reason: string;
@@ -277,6 +298,7 @@ export interface AgentFlag {
   building_requests?: BuildingRequest[] | null;
   labor_requests?: LaborRequest[] | null;
   item_requests?: ItemRequest[] | null;
+  zone_requests?: ZoneRequest[] | null;
   attention?: AttentionRequest[] | null;
   detail?: string | null;
   expires_at?: string | null;

@@ -32,6 +32,12 @@ public sealed record RequestItem(
     string To,
     Priority Priority) : Decision(Rule);
 
+public sealed record RequestZone(
+    RuleId Rule,
+    ZoneRequest Request,
+    string To,
+    Priority Priority) : Decision(Rule);
+
 public sealed record RequestAttention(
     RuleId Rule,
     AttentionRequest Request,

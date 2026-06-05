@@ -75,6 +75,33 @@ public sealed record ItemRequest(
     string? RequestedFrom = null);
 
 /// <summary>
+/// Map zone or designation dependency that needs spatial ownership without pretending it is construction.
+/// </summary>
+public sealed record ZoneRequest(
+    [property: JsonPropertyName("request")]
+    string Request,
+    [property: JsonPropertyName("reason")]
+    string Reason,
+    [property: JsonPropertyName("zone_class")]
+    ZoneClass ZoneClass,
+    [property: JsonPropertyName("plant_def")]
+    string? PlantDef = null,
+    [property: JsonPropertyName("tile_count")]
+    int? TileCount = null,
+    [property: JsonPropertyName("adjacency")]
+    IReadOnlyList<AdjacencyHint>? Adjacency = null,
+    [property: JsonPropertyName("terrain")]
+    TerrainNeed? Terrain = null,
+    [property: JsonPropertyName("urgency")]
+    Urgency? Urgency = null,
+    [property: JsonPropertyName("deadline")]
+    Deadline? Deadline = null,
+    [property: JsonPropertyName("priority")]
+    Priority? Priority = null,
+    [property: JsonPropertyName("requested_from")]
+    string? RequestedFrom = null);
+
+/// <summary>
 /// Catch-all for real dependencies that do not have a typed request array yet.
 /// </summary>
 public sealed record AttentionRequest(
@@ -119,6 +146,14 @@ public sealed record MaterialHint(
     [property: JsonPropertyName("approx_qty")]
     int? ApproxQty = null);
 
+public sealed record TerrainNeed(
+    [property: JsonPropertyName("must_support_growing")]
+    bool MustSupportGrowing,
+    [property: JsonPropertyName("preferred_fertility")]
+    float? PreferredFertility = null,
+    [property: JsonPropertyName("preferred_terrain_defs")]
+    IReadOnlyList<string>? PreferredTerrainDefs = null);
+
 public sealed record Deadline(
     [property: JsonPropertyName("kind")]
     DeadlineKind Kind,
@@ -152,6 +187,12 @@ public enum BuildingClass
     Recreation,
     Table,
     TurretPlatform
+}
+
+[JsonConverter(typeof(SnakeCaseLowerEnumConverter<ZoneClass>))]
+public enum ZoneClass
+{
+    Growing
 }
 
 [JsonConverter(typeof(SnakeCaseLowerEnumConverter<RoomClass>))]

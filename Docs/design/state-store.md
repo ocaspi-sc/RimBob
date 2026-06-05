@@ -143,9 +143,9 @@ Current implementation may batch-refresh needed endpoints before all cadence
 tiers exist. The design requirement is that cadence becomes finer only when a
 consumer needs it.
 
-Food consumes terrain as compact fertility context for crop selection. The state
-store keeps this as a derived summary from RIMAPI terrain/definition inputs; it
-does not expose raw tile dumps to minister prompts.
+Food consumes terrain as compact fertility context for crop selection. The state store keeps this as a derived summary from RIMAPI terrain/definition inputs; it does not expose raw tile dumps to minister prompts.
+
+Code-only spatial consumers may read bounded coordinate evidence from aggregates instead of prompts. `TerrainSnapshot` keeps decoded terrain/fertility cells when RIMAPI supplies a rectangular grid, `MapZoneRegistry` keeps existing zone cells and growing-zone metadata, and stockpile/Home-area aggregates preserve cells when available. Willie uses that evidence for inspect-only grow-zone placement options; prompts still receive compact summaries unless a future rule proves raw cells are necessary.
 
 ### Event-Diff Signals
 
@@ -208,10 +208,11 @@ Current derived surfaces:
   missing material totals.
 - Room anchors keyed by `RoomClass` for future room-program and placement work.
 - Home-area buildable-region anchors as fallback-only placement loci when no room anchor resolves; positive `cells_count` without area cells still produces an approximate map-bounds fallback anchor instead of dead-ending at `NoAnchors`.
+- Coordinate terrain, existing zone cells, and stockpile/Home area cell masks for code-authored grow-zone placement diagnostics.
 - Willie data-coverage flags so rules can distinguish missing evidence from
   healthy state.
 
-`WillieBacklog` and `MapAreaRegistry` are latest-state only and participate in the persisted `ColonyState` snapshot. Snapshot schema changes for these aggregates use no compat code; wipe-and-regen on upgrade.
+`WillieBacklog`, `MapAreaRegistry`, `MapZoneRegistry`, and coordinate terrain evidence are latest-state only and participate in the persisted `ColonyState` snapshot. Snapshot schema changes for these aggregates use no compat code; wipe-and-regen on upgrade.
 
 ### Future Briefings
 

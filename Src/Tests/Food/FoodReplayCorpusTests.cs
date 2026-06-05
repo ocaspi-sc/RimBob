@@ -113,6 +113,9 @@ public sealed class FoodReplayCorpusTests
             (actualFlag.BuildingRequests ?? []).Should().Equal(expectedFlag.BuildingRequests ?? []);
             (actualFlag.LaborRequests ?? []).Should().Equal(expectedFlag.LaborRequests ?? []);
             (actualFlag.ItemRequests ?? []).Should().Equal(expectedFlag.ItemRequests ?? []);
+            (actualFlag.ZoneRequests ?? []).Should().BeEquivalentTo(
+                expectedFlag.ZoneRequests ?? [],
+                options => options.WithStrictOrdering());
             (actualFlag.Attention ?? []).Should().Equal(expectedFlag.Attention ?? []);
         }
     }

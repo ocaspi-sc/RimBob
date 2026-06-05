@@ -353,13 +353,14 @@ public sealed class WillieRulesTests
     private static void AssertAllRulesCatalog(ProjectedRuleRun decision)
     {
         decision.Diagnostics.Should().NotBeNull();
-        decision.Diagnostics!.AllRules.Should().HaveCount(10);
+        decision.Diagnostics!.AllRules.Should().HaveCount(11);
         decision.Diagnostics.AllRules.Select(row => row.Rule).Should().Equal(
             "power_net_deficit",
             "low_battery_reserve",
             "backlog_material_gap",
             "frame_blocked_by_material",
             Rules.BuildingRequestActiveTrace,
+            Rules.ZoneRequestActiveTrace,
             "kitchen_missing",
             "hospital_missing",
             "storage_room_missing",

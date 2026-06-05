@@ -1,5 +1,5 @@
 import type { ScopeKey } from '../dashboard/scopes';
-import type { AdviceOption, BuildingRequest } from '../types/advice';
+import type { AdviceOption, BuildingRequest, ZoneRequest } from '../types/advice';
 import type { GameDate } from '../types/colony';
 import type { CabinetRunLogSnapshot, MinisterTrace } from '../types/system';
 import { postJson, readJson } from './http';
@@ -154,6 +154,22 @@ export interface WillieRequestBoardPayload {
   requests: WillieRequestRow[];
 }
 
+export interface WillieZoneRequestRow {
+  request: ZoneRequest;
+  sourceMinister: string | null;
+  status: string;
+  message: string;
+  gameTick: number | null;
+  capturedAt: string | null;
+  output: WillieSolverOutputPayload | null;
+  options: AdviceOption[];
+}
+
+export interface WillieZoneRequestBoardPayload {
+  minister: string;
+  requests: WillieZoneRequestRow[];
+}
+
 export async function fetchBriefing(scope: ScopeKey, signal?: AbortSignal): Promise<unknown> {
   return await readJson<unknown>(`/api/briefings/${scope}/latest`, signal);
 }
@@ -176,6 +192,10 @@ export async function fetchSolver(scope: ScopeKey, signal?: AbortSignal): Promis
 
 export async function fetchSolverRequests(scope: ScopeKey, signal?: AbortSignal): Promise<WillieRequestBoardPayload> {
   return await readJson<WillieRequestBoardPayload>(`/api/ministers/${scope}/solver/requests`, signal);
+}
+
+export async function fetchZoneRequests(scope: ScopeKey, signal?: AbortSignal): Promise<WillieZoneRequestBoardPayload> {
+  return await readJson<WillieZoneRequestBoardPayload>(`/api/ministers/${scope}/zone-requests`, signal);
 }
 
 export async function fetchTrace(scope: ScopeKey, signal?: AbortSignal): Promise<MinisterTrace> {

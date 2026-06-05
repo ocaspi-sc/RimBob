@@ -46,5 +46,10 @@ public enum NoFitReason
     NoDrafts,
     HardGateRejected,
     NoReachablePath,
-    ValidationRejected
+    ValidationRejected,
+    UnsupportedZoneClass,
+    NoTerrainGrid,
+    NoGrowableCells,
+    AllZoneCellsBlocked,
+    NoZoneRectangle
 }

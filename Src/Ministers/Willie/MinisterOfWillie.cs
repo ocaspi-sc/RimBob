@@ -11,6 +11,7 @@ public sealed class MinisterOfWillie(
     BriefingCache briefings,
     Rules rules,
     IPlacementSolver placementSolver,
+    IGrowZonePlacementSolver growZonePlacementSolver,
     ColonyState colonyState,
     WillieSolverStore solverStore,
     MinisterOutputStore outputStore,
@@ -30,17 +31,27 @@ public sealed class MinisterOfWillie(
         MinisterBriefingContext context = BuildContext(outputStore.CurrentMayorAgenda);
         IReadOnlyList<AgentFlag> activeFlags = flags.Active();
         IReadOnlyList<BuildingRequest> inboundRequests = ActiveWillieBuildingRequests(activeFlags, cycle.Flag);
+        IReadOnlyList<ZoneRequest> inboundZoneRequests = ActiveWillieZoneRequests(activeFlags, cycle.Flag);
         IReadOnlyList<WillieInboundRequest> inboundBoard = InboundBoardForRequests(
             AllActiveWillieBuildingRequests(activeFlags, cycle.Flag),
+            activeFlags,
+            cycle.Flag);
+        IReadOnlyList<WillieInboundZoneRequest> inboundZoneBoard = InboundBoardForZoneRequests(
+            AllActiveWillieZoneRequests(activeFlags, cycle.Flag),
             activeFlags,
             cycle.Flag);
         IReadOnlyList<WillieInboundRequest> solveBoard = InboundBoardForRequests(
             inboundRequests,
             activeFlags,
             cycle.Flag);
+        IReadOnlyList<WillieInboundZoneRequest> zoneSolveBoard = InboundBoardForZoneRequests(
+            inboundZoneRequests,
+            activeFlags,
+            cycle.Flag);
         solverStore.RecordInbound(Name, inboundBoard);
+        solverStore.RecordZoneInbound(Name, inboundZoneBoard);
 
-        RuleRun result = rules.Evaluate(briefing, inboundRequests);
+        RuleRun result = rules.Evaluate(briefing, inboundRequests, inboundZoneRequests);
         DecisionProjectionContext projectionContext = new(
             Minister: Name,
             Domain: "construction",
@@ -52,9 +63,13 @@ public sealed class MinisterOfWillie(
         IReadOnlyList<AdviceItem> advice = DecisionProjection.ProjectAdvice(result.Decisions, projectionContext);
         IReadOnlyList<AgentFlag> emittedFlags = DecisionProjection.ProjectFlags(result.Decisions, projectionContext);
         Dictionary<string, PlacementSolveAttempt> attemptsByRequestKey = new(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, PlacementSolveAttempt> zoneAttemptsByRequestKey = new(StringComparer.OrdinalIgnoreCase);
         IReadOnlyList<RuleId> emittedRuleIds = EmittedAdviceRuleIds(result.Decisions);
         BuildingRequest? drivingBoardRequest = ContainsRule(emittedRuleIds, Rules.BuildingRequestActiveTrace)
             ? Rules.SelectPlacementRequest(briefing, inboundRequests)
+            : null;
+        ZoneRequest? drivingZoneRequest = ContainsRule(emittedRuleIds, Rules.ZoneRequestActiveTrace)
+            ? Rules.SelectZoneRequest(inboundZoneRequests)
             : null;
 
         if (drivingBoardRequest is not null)
@@ -123,6 +138,39 @@ public sealed class MinisterOfWillie(
                 await PreserveSolverOfflineReplayAsync(result, cycle, briefing, context, advice, emittedFlags, attempt.ReplayOutput, ct);
                 return;
             }
+        }
+
+        if (drivingZoneRequest is not null)
+        {
+            PlacementSolveAttempt attempt = await SolveAndRecordZonePlacementAsync(
+                drivingZoneRequest,
+                SourceMinisterForRequest(drivingZoneRequest, activeFlags, cycle.Flag),
+                briefing,
+                zoneAttemptsByRequestKey,
+                ct);
+            advice = EnrichSolverAdvice(
+                advice,
+                attempt,
+                AdviceIdForRule(Rules.ZoneRequestActiveTrace),
+                removeFallbackWhenApplyReady: false);
+            placementReplayOutput ??= attempt.ReplayOutput;
+        }
+
+        foreach (WillieInboundZoneRequest inbound in zoneSolveBoard)
+        {
+            if (drivingZoneRequest is not null &&
+                string.Equals(inbound.RequestKey, WillieSolverStore.RequestKey(drivingZoneRequest), StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            PlacementSolveAttempt attempt = await SolveAndRecordZonePlacementAsync(
+                inbound.Request,
+                inbound.SourceMinister,
+                briefing,
+                zoneAttemptsByRequestKey,
+                ct);
+            placementReplayOutput ??= attempt.ReplayOutput;
         }
 
         string stateSummary = WillieStateSummary.Build(briefing);
@@ -197,12 +245,47 @@ public sealed class MinisterOfWillie(
     private static bool IsRequestedFromWillie(BuildingRequest request) =>
         string.Equals(request.RequestedFrom, "Willie", StringComparison.OrdinalIgnoreCase);
 
+    private static IReadOnlyList<ZoneRequest> ActiveWillieZoneRequests(
+        IReadOnlyList<AgentFlag> activeFlags,
+        AgentFlag? directFlag)
+    {
+        IReadOnlyList<ZoneRequest>? directRequests = directFlag?.ZoneRequests?
+            .Where(IsRequestedFromWillie)
+            .ToList();
+        if (directRequests is { Count: > 0 })
+            return directRequests;
+
+        return AllActiveWillieZoneRequests(activeFlags, directFlag);
+    }
+
+    private static IReadOnlyList<ZoneRequest> AllActiveWillieZoneRequests(
+        IReadOnlyList<AgentFlag> activeFlags,
+        AgentFlag? directFlag) =>
+        FlagsToRead(activeFlags, directFlag)
+            .SelectMany(flag => flag.ZoneRequests ?? [])
+            .Where(IsRequestedFromWillie)
+            .ToList();
+
+    private static bool IsRequestedFromWillie(ZoneRequest request) =>
+        string.Equals(request.RequestedFrom, "Willie", StringComparison.OrdinalIgnoreCase);
+
     private static IReadOnlyList<WillieInboundRequest> InboundBoardForRequests(
         IReadOnlyList<BuildingRequest> requests,
         IReadOnlyList<AgentFlag> activeFlags,
         AgentFlag? directFlag) =>
         requests
             .Select(request => new WillieInboundRequest(
+                request,
+                SourceMinisterForRequest(request, activeFlags, directFlag),
+                WillieSolverStore.RequestKey(request)))
+            .ToList();
+
+    private static IReadOnlyList<WillieInboundZoneRequest> InboundBoardForZoneRequests(
+        IReadOnlyList<ZoneRequest> requests,
+        IReadOnlyList<AgentFlag> activeFlags,
+        AgentFlag? directFlag) =>
+        requests
+            .Select(request => new WillieInboundZoneRequest(
                 request,
                 SourceMinisterForRequest(request, activeFlags, directFlag),
                 WillieSolverStore.RequestKey(request)))
@@ -222,6 +305,24 @@ public sealed class MinisterOfWillie(
 
         return FlagsToRead(activeFlags, directFlag).FirstOrDefault(flag =>
                 (flag.BuildingRequests ?? []).Any(candidate =>
+                    IsRequestedFromWillie(candidate) && candidate == request))
+            ?.SourceMinister;
+    }
+
+    private static string? SourceMinisterForRequest(
+        ZoneRequest request,
+        IReadOnlyList<AgentFlag> activeFlags,
+        AgentFlag? directFlag)
+    {
+        if (directFlag is not null &&
+            (directFlag.ZoneRequests ?? []).Any(candidate =>
+                IsRequestedFromWillie(candidate) && candidate == request))
+        {
+            return directFlag.SourceMinister;
+        }
+
+        return FlagsToRead(activeFlags, directFlag).FirstOrDefault(flag =>
+                (flag.ZoneRequests ?? []).Any(candidate =>
                     IsRequestedFromWillie(candidate) && candidate == request))
             ?.SourceMinister;
     }
@@ -256,6 +357,29 @@ public sealed class MinisterOfWillie(
         solverStore.Record(new WillieSolverSnapshot(
             Minister: Name,
             Request: WillieSolverRequestSnapshot.FromRequest(request, sourceMinister),
+            GameTick: briefing.GameTick,
+            CapturedAt: DateTimeOffset.UtcNow,
+            Output: attempt.ReplayOutput,
+            Options: attempt.Result?.Options ?? []));
+        return attempt;
+    }
+
+    private async Task<PlacementSolveAttempt> SolveAndRecordZonePlacementAsync(
+        ZoneRequest request,
+        string? sourceMinister,
+        WillieBriefing briefing,
+        Dictionary<string, PlacementSolveAttempt> attemptsByRequestKey,
+        CancellationToken ct)
+    {
+        string requestKey = WillieSolverStore.RequestKey(request);
+        if (attemptsByRequestKey.TryGetValue(requestKey, out PlacementSolveAttempt? cached))
+            return cached;
+
+        PlacementSolveAttempt attempt = await TrySolveZonePlacementAsync(request, briefing, ct);
+        attemptsByRequestKey[requestKey] = attempt;
+        solverStore.RecordZoneOutcome(new WillieZoneSolverSnapshot(
+            Minister: Name,
+            Request: WillieZoneRequestSnapshot.FromRequest(request, sourceMinister),
             GameTick: briefing.GameTick,
             CapturedAt: DateTimeOffset.UtcNow,
             Output: attempt.ReplayOutput,
@@ -327,6 +451,27 @@ public sealed class MinisterOfWillie(
         {
             log.LogWarning(ex, "Willie placement solver failed for request={Request}", request.Request);
             return PlacementSolveAttempt.FromFailure(ex);
+        }
+    }
+
+    private async Task<PlacementSolveAttempt> TrySolveZonePlacementAsync(
+        ZoneRequest request,
+        WillieBriefing briefing,
+        CancellationToken ct)
+    {
+        try
+        {
+            PlacementResult result = await growZonePlacementSolver.SolveAsync(request, briefing, colonyState, ct);
+            return PlacementSolveAttempt.FromZoneResult(result, request);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            log.LogWarning(ex, "Willie grow-zone placement solver failed for request={Request}", request.Request);
+            return PlacementSolveAttempt.FromZoneFailure(ex);
         }
     }
 
@@ -447,6 +592,19 @@ public sealed class MinisterOfWillie(
         return $"Placement solver no-fit: {reason}.";
     }
 
+    private static string NoteFor(PlacementResult result, ZoneRequest request)
+    {
+        if (result.Options.Count > 0)
+        {
+            return $"Grow-zone solver: {result.Options.Count} inspected option{Plural(result.Options.Count)}; apply_ready={ReadinessWire(result.ApplyReady)} until create_growing_zone apply validation ships.";
+        }
+
+        string reason = result.NoFit is null
+            ? "no validated growing-zone option was emitted"
+            : NoFitNote(result.NoFit.Value, request);
+        return $"Grow-zone solver no-fit: {reason}.";
+    }
+
     private static string? AdviceBodyNoteFor(PlacementResult result, BuildingRequest request)
     {
         if (result.Options.Count > 0) return null;
@@ -457,6 +615,17 @@ public sealed class MinisterOfWillie(
         return $"Placement solver could not suggest layout options because {reason}.";
     }
 
+    private static string? AdviceBodyNoteFor(PlacementResult result, ZoneRequest request)
+    {
+        if (result.Options.Count > 0)
+            return $"Grow-zone solver found {result.Options.Count} coordinate option{Plural(result.Options.Count)} below; Apply is deferred until validated zone writes ship.";
+
+        string reason = result.NoFit is null
+            ? "no validated growing-zone option was emitted"
+            : NoFitNote(result.NoFit.Value, request);
+        return $"Grow-zone solver could not suggest zone options because {reason}.";
+    }
+
     private static string NoFitNote(NoFitReason reason, BuildingRequest request) => reason switch
     {
         NoFitReason.NoAnchors => $"no {RequestAnchorLabel(request)} anchor is available in the Willie briefing",
@@ -465,6 +634,16 @@ public sealed class MinisterOfWillie(
         NoFitReason.NoReachablePath => $"no walkable route to a {RequestAnchorLabel(request)} anchor",
         NoFitReason.ValidationRejected => $"no buildable footprint near the {RequestAnchorLabel(request)} passed fork validation",
         _ => $"no validated {RequestRoomLabel(request)} option was emitted"
+    };
+
+    private static string NoFitNote(NoFitReason reason, ZoneRequest request) => reason switch
+    {
+        NoFitReason.UnsupportedZoneClass => $"{request.ZoneClass} is not supported by the grow-zone solver",
+        NoFitReason.NoTerrainGrid => "cell-level terrain is unavailable in the current state snapshot",
+        NoFitReason.NoGrowableCells => "no growable terrain cells were found inside the Home/buildable bounds",
+        NoFitReason.AllZoneCellsBlocked => "all growable cells were blocked by existing zones or occupancy",
+        NoFitReason.NoZoneRectangle => "no compact unoccupied growable rectangle matched the requested tile count",
+        _ => "no validated growing-zone option was emitted"
     };
 
     private static string AdviceIdForRule(RuleId rule) =>
@@ -558,6 +737,14 @@ public sealed class MinisterOfWillie(
                 PlacementSolverReplayOutput.FromResult(result),
                 SolverOffline: false);
 
+        public static PlacementSolveAttempt FromZoneResult(PlacementResult result, ZoneRequest request) =>
+            new(
+                result,
+                NoteFor(result, request),
+                AdviceBodyNoteFor(result, request),
+                PlacementSolverReplayOutput.FromResult(result),
+                SolverOffline: false);
+
         public static PlacementSolveAttempt FromFailure(Exception ex)
         {
             string errorType = ex.GetType().Name;
@@ -582,6 +769,19 @@ public sealed class MinisterOfWillie(
                 bodyNote,
                 PlacementSolverReplayOutput.FromOffline(errorType, ex.Message),
                 SolverOffline: true);
+        }
+
+        public static PlacementSolveAttempt FromZoneFailure(Exception ex)
+        {
+            string errorType = ex.GetType().Name;
+            string note = $"Grow-zone solver unavailable: {errorType}. Keeping prose advice.";
+            string bodyNote = $"Grow-zone solver could not suggest zone options because it hit {errorType} before scoring completed.";
+            return new PlacementSolveAttempt(
+                null,
+                note,
+                bodyNote,
+                PlacementSolverReplayOutput.FromFailure(errorType, ex.Message),
+                SolverOffline: false);
         }
     }
 }

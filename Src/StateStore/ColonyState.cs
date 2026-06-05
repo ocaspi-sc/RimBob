@@ -22,6 +22,7 @@ public sealed class ColonyState
     public Versioned<ColonistRegistry> Colonists  { get; } = new(AggregateDefaults.Colonists);
     public Versioned<RoomRegistry>     Rooms      { get; } = new(AggregateDefaults.Rooms);
     public Versioned<StockpileLedger>  Stockpiles { get; } = new(AggregateDefaults.Stockpiles);
+    public Versioned<MapZoneRegistry>  Zones      { get; } = new(AggregateDefaults.Zones);
     public Versioned<MapAreaRegistry>  Areas      { get; } = new(AggregateDefaults.Areas);
     public Versioned<BuildingRegistry> Buildings  { get; } = new(AggregateDefaults.Buildings);
     public Versioned<WorkTableRegistry> WorkTables { get; } = new(AggregateDefaults.WorkTables);
@@ -52,13 +53,13 @@ public sealed class ColonyState
         ["Map", "Economy", "Colonists", "Stockpiles", "Buildings", "Power", "Threats", "Weather", "Farm", "Things", "ThingDefs", "StoredResources", "Resources", "Research"];
 
     public static readonly string[] FoodBriefingAggregateNames =
-        ["Economy", "Colonists", "Stockpiles", "Buildings", "WorkTables", "Power", "Threats", "Weather", "Farm", "Plants", "Things", "ThingDefs", "AnimalDefs", "Terrain", "StoredResources", "Animals", "Resources"];
+        ["Economy", "Colonists", "Stockpiles", "Zones", "Buildings", "WorkTables", "Power", "Threats", "Weather", "Farm", "Plants", "Things", "ThingDefs", "AnimalDefs", "Terrain", "StoredResources", "Animals", "Resources"];
 
     public static readonly string[] WelfareBriefingAggregateNames =
         ["Economy", "Colonists", "Rooms"];
 
     public static readonly string[] WillieBriefingAggregateNames =
-        ["Map", "Economy", "Colonists", "Rooms", "Stockpiles", "Areas", "Buildings", "Power", "WillieBacklog"];
+        ["Map", "Economy", "Colonists", "Rooms", "Stockpiles", "Zones", "Areas", "Buildings", "Power", "WillieBacklog"];
 
     /// <summary>
     /// Versions of every aggregate the MayorBriefing reads, in canonical order.
@@ -73,7 +74,7 @@ public sealed class ColonyState
 
     public long[] GetVersionsForFoodBriefing() =>
     [
-        Economy.Version, Colonists.Version, Stockpiles.Version, Buildings.Version,
+        Economy.Version, Colonists.Version, Stockpiles.Version, Zones.Version, Buildings.Version,
         WorkTables.Version, Power.Version, Threats.Version, Weather.Version, Farm.Version, Plants.Version,
         Things.Version, ThingDefs.Version, AnimalDefs.Version, Terrain.Version, StoredResources.Version, Animals.Version,
         Resources.Version
@@ -87,6 +88,6 @@ public sealed class ColonyState
     public long[] GetVersionsForWillieBriefing() =>
     [
         Map.Version, Economy.Version, Colonists.Version, Rooms.Version, Stockpiles.Version,
-        Areas.Version, Buildings.Version, Power.Version, WillieBacklog.Version
+        Zones.Version, Areas.Version, Buildings.Version, Power.Version, WillieBacklog.Version
     ];
 }

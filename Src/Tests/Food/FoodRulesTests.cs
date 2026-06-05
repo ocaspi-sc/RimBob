@@ -119,9 +119,17 @@ public sealed class FoodRulesTests
         advice.Actions.Should().NotContain(s => s.Kind == AdviceActionKind.Note);
         AgentFlag flag = FlagById(decision, "food:emergency_food_flag");
         flag.Priority.Should().Be(Priority.Critical);
-        FlagById(decision, "food:expand_growing_capacity").Attention.Should().Contain(r => r.Request.Contains("growing tiles", StringComparison.OrdinalIgnoreCase));
-        FlagById(decision, "food:expand_growing_capacity").BuildingRequests.Should().Contain(r => r.TargetClass == BuildingClass.ProductionBench);
-        FlagById(decision, "food:expand_growing_capacity").Attention.Should().Contain(r => r.Request.Contains("growing tiles", StringComparison.OrdinalIgnoreCase));
+        AgentFlag growFlag = FlagById(decision, "food:expand_growing_capacity");
+        ZoneRequest growRequest = growFlag.ZoneRequests.Should().ContainSingle().Subject;
+        growRequest.Request.Contains("growing tiles", StringComparison.OrdinalIgnoreCase).Should().BeTrue();
+        growRequest.ZoneClass.Should().Be(ZoneClass.Growing);
+        growRequest.PlantDef.Should().Be("Plant_Rice");
+        growRequest.TileCount.Should().BeGreaterThan(0);
+        growRequest.Terrain.Should().NotBeNull();
+        growRequest.Terrain!.MustSupportGrowing.Should().BeTrue();
+        growRequest.RequestedFrom.Should().Be("Willie");
+        growFlag.Attention.Should().BeNull();
+        growFlag.BuildingRequests.Should().Contain(r => r.TargetClass == BuildingClass.ProductionBench);
     }
 
     [Fact]
@@ -152,8 +160,14 @@ public sealed class FoodRulesTests
         flag.BuildingRequests.Should().Contain(r =>
             r.TargetClass == BuildingClass.Stockpile &&
             r.Quantity == 46);
-        FlagById(decision, "food:expand_growing_capacity").Attention.Should().Contain(r => r.Request.Contains("growing tiles", StringComparison.OrdinalIgnoreCase));
-        FlagById(decision, "food:expand_growing_capacity").BuildingRequests.Should().Contain(r => r.TargetClass == BuildingClass.ProductionBench);
+        AgentFlag growFlag = FlagById(decision, "food:expand_growing_capacity");
+        growFlag.ZoneRequests.Should().ContainSingle(r =>
+            r.ZoneClass == ZoneClass.Growing &&
+            r.PlantDef == "Plant_Rice" &&
+            r.Request.Contains("growing tiles", StringComparison.OrdinalIgnoreCase) &&
+            r.RequestedFrom == "Willie");
+        growFlag.Attention.Should().BeNull();
+        growFlag.BuildingRequests.Should().Contain(r => r.TargetClass == BuildingClass.ProductionBench);
     }
 
     [Fact]

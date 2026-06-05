@@ -24,6 +24,8 @@ public record AgentFlag(
     IReadOnlyList<LaborRequest>? LaborRequests = null,
     [property: JsonPropertyName("item_requests")]
     IReadOnlyList<ItemRequest>? ItemRequests = null,
+    [property: JsonPropertyName("zone_requests")]
+    IReadOnlyList<ZoneRequest>? ZoneRequests = null,
     [property: JsonPropertyName("attention")]
     IReadOnlyList<AttentionRequest>? Attention = null,
     [property: JsonPropertyName("detail")]

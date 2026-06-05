@@ -365,6 +365,9 @@ public sealed class IngestionDispatcherTests
         area.Type.Should().Be("Area_Home");
         area.CellCount.Should().Be(2);
         area.Centroid.Should().Be(new MapPosition(12, 0, 12));
+        s.Zones.Value.Zones.Should().HaveCount(2);
+        s.Zones.Value.Zones.Single(row => row.Type == "Area_Home")
+            .Cells.Should().Equal(new MapPosition(10, 0, 10), new MapPosition(14, 0, 14));
     }
 
     [Fact]

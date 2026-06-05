@@ -78,6 +78,7 @@ public sealed class IngestionDispatcher(
         state.Rooms.Update(MapAggregateMapper.FromRooms(roomsTask.Result));
 
         state.Stockpiles.Update(MapAggregateMapper.FromStockpiles(zonesTask.Result, storedResources));
+        state.Zones.Update(MapAggregateMapper.FromZones(zonesTask.Result));
         state.Areas.Update(MapAggregateMapper.FromAreas(zonesTask.Result));
 
         BuildingRegistry buildings = MapAggregateMapper.FromBuildings(buildingsTask.Result, workTablesTask.Result);

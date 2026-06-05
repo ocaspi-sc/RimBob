@@ -141,7 +141,7 @@ public sealed class CabinetCycle(
             log.LogInformation("Cabinet cycle: running {Minister}", descriptor.Label);
             long flagSequenceBeforeRun = flags.CurrentSequence;
             await RunResolvedMinisterAsync(minister, descriptor, cycle, usedRestoredSnapshot, ct, cabinetRunId);
-            IReadOnlyList<string> followUpKeys = await RunWillieBuildingRequestFollowUpsAsync(
+            IReadOnlyList<string> followUpKeys = await RunWillieRequestFollowUpsAsync(
                 descriptor,
                 flagSequenceBeforeRun,
                 usedRestoredSnapshot,
@@ -176,7 +176,7 @@ public sealed class CabinetCycle(
 
         long flagSequenceBeforeRun = flags.CurrentSequence;
         await RunResolvedMinisterAsync(minister, descriptor, cycle, usedRestoredSnapshot, ct);
-        await RunWillieBuildingRequestFollowUpsAsync(
+        await RunWillieRequestFollowUpsAsync(
             descriptor,
             flagSequenceBeforeRun,
             usedRestoredSnapshot,
@@ -375,7 +375,7 @@ public sealed class CabinetCycle(
         }
     }
 
-    private async Task<IReadOnlyList<string>> RunWillieBuildingRequestFollowUpsAsync(
+    private async Task<IReadOnlyList<string>> RunWillieRequestFollowUpsAsync(
         MinisterDescriptor sourceDescriptor,
         long flagSequenceBeforeRun,
         bool usedRestoredSnapshot,
@@ -385,7 +385,7 @@ public sealed class CabinetCycle(
         List<AgentFlag> requestFlags = flags.PublishedAfter(flagSequenceBeforeRun)
             .Select(entry => entry.Flag)
             .Where(flag => IsFlagFromDescriptor(flag, sourceDescriptor))
-            .Where(HasWillieBuildingRequest)
+            .Where(HasWillieRequest)
             .GroupBy(flag => flag.Id, StringComparer.OrdinalIgnoreCase)
             .Select(group => group.Last())
             .ToList();
@@ -402,13 +402,14 @@ public sealed class CabinetCycle(
         foreach (AgentFlag requestFlag in requestFlags)
         {
             log.LogInformation(
-                "Cabinet cycle: running Willie for build request flag {FlagId} from {SourceMinister}",
+                "Cabinet cycle: running Willie for routed request flag {FlagId} from {SourceMinister}",
                 requestFlag.Id,
                 requestFlag.SourceMinister);
+            string wakeupPayload = WillieWakeupPayload(requestFlag);
             PlayCycleContext requestCycle = new(
                 PlayCycleTrigger.FlagFired,
                 Flag: requestFlag,
-                WakeupPayload: $"building_request:{requestFlag.Id}",
+                WakeupPayload: wakeupPayload,
                 RunMode: MinisterRunMode.RulesOnly);
             await RunResolvedMinisterAsync(minister, willie, requestCycle, usedRestoredSnapshot, ct, cabinetRunId);
         }
@@ -423,9 +424,25 @@ public sealed class CabinetCycle(
                source.Equals(MinisterRegistry.NormalizeKey(descriptor.Label), StringComparison.OrdinalIgnoreCase);
     }
 
+    private static bool HasWillieRequest(AgentFlag flag) =>
+        HasWillieBuildingRequest(flag) ||
+        HasWillieZoneRequest(flag);
+
     private static bool HasWillieBuildingRequest(AgentFlag flag) =>
         (flag.BuildingRequests ?? [])
         .Any(request => string.Equals(request.RequestedFrom, "Willie", StringComparison.OrdinalIgnoreCase));
+
+    private static bool HasWillieZoneRequest(AgentFlag flag) =>
+        (flag.ZoneRequests ?? [])
+        .Any(request => string.Equals(request.RequestedFrom, "Willie", StringComparison.OrdinalIgnoreCase));
+
+    private static string WillieWakeupPayload(AgentFlag flag)
+    {
+        bool hasBuildingRequest = HasWillieBuildingRequest(flag);
+        bool hasZoneRequest = HasWillieZoneRequest(flag);
+        if (hasBuildingRequest && hasZoneRequest) return $"willie_request:{flag.Id}";
+        return hasZoneRequest ? $"zone_request:{flag.Id}" : $"building_request:{flag.Id}";
+    }
 
     private IMinister? ResolveMinister(MinisterDescriptor descriptor) =>
         ministers.FirstOrDefault(m =>

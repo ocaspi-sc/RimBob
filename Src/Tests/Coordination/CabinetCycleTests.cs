@@ -247,6 +247,34 @@ public sealed class CabinetCycleTests
     }
 
     [Fact]
+    public async Task TriggerMinisterAsync_WhenSourcePublishesWillieZoneRequest_RunsWillieFollowUp()
+    {
+        FlagChannel flags = new();
+        AgentFlag growZoneRequest = WillieZoneRequestFlag();
+        flags.Publish(growZoneRequest);
+        FakeMinister chef = new("Chef", flags: flags, emittedFlags: [growZoneRequest]);
+        FakeMinister willie = new("Willie");
+        CabinetCycle sut = BuildCycle(
+            new NoopRefresher(),
+            new ColonyState(),
+            new ColonyStateSnapshotStore(),
+            new MinisterTraceStore(),
+            [chef, willie],
+            flags: flags);
+
+        MinisterTriggerResult result = await sut.TriggerMinisterAsync("food", MinisterRunMode.RulesOnly, CancellationToken.None)
+            ?? throw new InvalidOperationException("Expected Chef trigger result.");
+
+        result.Scope.Should().Be("food");
+        chef.WakeCount.Should().Be(1);
+        willie.WakeCount.Should().Be(1);
+        willie.Triggers.Should().Equal(PlayCycleTrigger.FlagFired);
+        willie.RunModes.Should().Equal(MinisterRunMode.RulesOnly);
+        willie.WakeupPayloads.Should().Equal("zone_request:food:growing");
+        willie.FlagIds.Should().Equal("food:growing");
+    }
+
+    [Fact]
     public async Task TriggerMinisterAsync_WhenWelfarePublishesWillieBuildRequest_RunsWillieFollowUp()
     {
         FlagChannel flags = new();
@@ -508,6 +536,26 @@ public sealed class CabinetCycleTests
                     TargetDef: "Bed",
                     RoomClass: RoomClass.Barracks,
                     CapacityNeed: new CapacityNeed(CapacityMeasure.Beds, 3),
+                    Priority: Priority.High,
+                    RequestedFrom: "Willie")
+            ]);
+
+    private static AgentFlag WillieZoneRequestFlag() =>
+        new(
+            Id: "food:growing",
+            SourceMinister: "Chef",
+            Priority: Priority.High,
+            Domain: "food",
+            Summary: "Growing zone needed",
+            ZoneRequests:
+            [
+                new ZoneRequest(
+                    Request: "36 rice growing tiles near storage",
+                    Reason: "food buffer is low",
+                    ZoneClass: ZoneClass.Growing,
+                    PlantDef: "Plant_Rice",
+                    TileCount: 36,
+                    Terrain: new TerrainNeed(MustSupportGrowing: true),
                     Priority: Priority.High,
                     RequestedFrom: "Willie")
             ]);

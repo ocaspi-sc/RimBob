@@ -91,6 +91,64 @@ public sealed class WillieSolverStoreTests
     }
 
     [Fact]
+    public void ZoneRequestBoard_ReturnsCurrentInboundZoneRows()
+    {
+        WillieSolverStore sut = new();
+        ZoneRequest request = ZoneRequest("36 rice growing tiles near storage");
+        WillieInboundZoneRequest inbound = ZoneInbound(request, "Chef");
+
+        sut.RecordZoneInbound("Willie", [inbound]);
+
+        WillieZoneRequestBoardRow row = sut.ZoneRequestBoard("Willie").Should().ContainSingle().Subject;
+        row.Inbound.Should().Be(inbound);
+        row.Outcome.Should().BeNull();
+    }
+
+    [Fact]
+    public void RecordZoneInbound_CollapsesDuplicateRequestKeys()
+    {
+        WillieSolverStore sut = new();
+        ZoneRequest request = ZoneRequest("36 rice growing tiles near storage");
+
+        sut.RecordZoneInbound("Willie", [ZoneInbound(request, "Chef"), ZoneInbound(request, "Welfare")]);
+
+        WillieZoneRequestBoardRow row = sut.ZoneRequestBoard("Willie").Should().ContainSingle().Subject;
+        row.Inbound.SourceMinister.Should().Be("Chef");
+        row.Outcome.Should().BeNull();
+    }
+
+    [Fact]
+    public void RecordZoneOutcome_JoinsLatestOutcomeToZoneBoard()
+    {
+        WillieSolverStore sut = new();
+        ZoneRequest request = ZoneRequest("36 rice growing tiles near storage");
+        sut.RecordZoneInbound("Willie", [ZoneInbound(request, "Chef")]);
+        WillieZoneRequestSnapshot snapshot = WillieZoneRequestSnapshot.FromRequest(request, "Chef");
+
+        sut.RecordZoneOutcome(new WillieZoneSolverSnapshot(
+            Minister: "Willie",
+            Request: snapshot,
+            GameTick: 300_000,
+            CapturedAt: DateTimeOffset.UnixEpoch,
+            Output: new PlacementSolverReplayOutput(
+                Status: "no_fit",
+                NoFit: nameof(NoFitReason.NoTerrainGrid),
+                Draftable: "Blocked",
+                PlacementValid: "Blocked",
+                MaterialsReady: "Ready",
+                ApplyReady: "Blocked",
+                Trace: null,
+                ErrorType: null,
+                ErrorMessage: null),
+            Options: []));
+
+        WillieZoneRequestBoardRow row = sut.ZoneRequestBoard("Willie").Should().ContainSingle().Subject;
+        row.Outcome.Should().NotBeNull();
+        row.Outcome!.Status.Should().Be("no_fit");
+        row.Outcome.NoFit.Should().Be(nameof(NoFitReason.NoTerrainGrid));
+    }
+
+    [Fact]
     public void RequestKey_MatchesFullRequestAndReducedSnapshot()
     {
         BuildingRequest request = Request(
@@ -104,6 +162,12 @@ public sealed class WillieSolverStoreTests
     }
 
     private static WillieInboundRequest Inbound(BuildingRequest request, string sourceMinister) =>
+        new(
+            request,
+            SourceMinister: sourceMinister,
+            RequestKey: WillieSolverStore.RequestKey(request));
+
+    private static WillieInboundZoneRequest ZoneInbound(ZoneRequest request, string sourceMinister) =>
         new(
             request,
             SourceMinister: sourceMinister,
@@ -129,6 +193,18 @@ public sealed class WillieSolverStoreTests
             Deadline: new Deadline(DeadlineKind.ByDay, 4),
             Quantity: 1,
             Priority: Priority.Medium,
+            RequestedFrom: "Willie");
+
+    private static ZoneRequest ZoneRequest(string request) =>
+        new(
+            Request: request,
+            Reason: "test",
+            ZoneClass: ZoneClass.Growing,
+            PlantDef: "Plant_Rice",
+            TileCount: 36,
+            Adjacency: [new AdjacencyHint(AdjacencyRelation.Near, "storage")],
+            Terrain: new TerrainNeed(MustSupportGrowing: true),
+            Priority: Priority.High,
             RequestedFrom: "Willie");
 
     private static WillieSolverSnapshot Snapshot(

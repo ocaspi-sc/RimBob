@@ -1,20 +1,19 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { applyAdviceAction } from '../../api/advice';
-import { fetchSolverRequests, type WillieRequestBoardPayload, type WillieRequestRow, type WillieSolverOutputPayload } from '../../api/ministers';
+import {
+  fetchSolverRequests,
+  fetchZoneRequests,
+  type WillieRequestBoardPayload,
+  type WillieRequestRow,
+  type WillieSolverOutputPayload,
+  type WillieZoneRequestBoardPayload,
+  type WillieZoneRequestRow,
+} from '../../api/ministers';
 import { iconUrlFor } from '../../api/icons';
 import { displayMinisterName, type ScopeConfig } from '../../dashboard/scopes';
 import { isScopeMinister } from '../../dashboard/selectors';
 import { iconForField, iconForView } from '../../dashboard/semanticIcons';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
-import type {
-  AdviceAction,
-  AdviceApplyResponse,
-  AdviceItem,
-  AdviceOption,
-  AdviceOptionReadiness,
-  BlueprintGroup,
-  BuildingRequest,
-} from '../../types/advice';
+import type { AdviceOption, AdviceOptionReadiness, BuildingRequest, ZoneRequest } from '../../types/advice';
 import type { MinisterTrace, SystemHealth } from '../../types/system';
 import { EmptyState } from '../shared/EmptyState';
 import { GameIcon } from '../shared/GameIcon';
@@ -26,13 +25,9 @@ import { BlueprintFootprintThumbnail } from './BlueprintFootprintThumbnail';
 import { readinessTone } from './readiness';
 
 export function MinisterRequestsView({
-  advice,
-  currentGameTick,
   scope,
   systemHealth,
 }: {
-  advice: AdviceItem[];
-  currentGameTick: number | null;
   scope: ScopeConfig;
   systemHealth: SystemHealth | null;
 }) {
@@ -46,8 +41,16 @@ export function MinisterRequestsView({
       : Promise.resolve(null),
     [scope.key, traceKey],
   );
+  const zoneBoard = useAsyncResource<WillieZoneRequestBoardPayload | null>(
+    signal => scope.key === 'willie'
+      ? fetchZoneRequests(scope.key, signal)
+      : Promise.resolve(null),
+    [scope.key, traceKey],
+  );
   const rows = board.data?.requests ?? [];
+  const zoneRows = zoneBoard.data?.requests ?? [];
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [selectedZoneKey, setSelectedZoneKey] = useState<string | null>(null);
 
   useEffect(() => {
     if (rows.length === 0) {
@@ -61,57 +64,180 @@ export function MinisterRequestsView({
     }
   }, [rows, selectedKey]);
 
+  useEffect(() => {
+    if (zoneRows.length === 0) {
+      setSelectedZoneKey(null);
+      return;
+    }
+
+    const keys = zoneRows.map(row => zoneRequestKey(row.request));
+    if (!selectedZoneKey || !keys.includes(selectedZoneKey)) {
+      setSelectedZoneKey(keys[0]);
+    }
+  }, [zoneRows, selectedZoneKey]);
+
   if (scope.key !== 'willie') {
     return <EmptyState code="REQUESTS NOT WIRED">Requests is a Willie-only construction view.</EmptyState>;
   }
 
-  if (board.loading) {
-    return <EmptyState code="REQUESTS">Loading current Willie building requests.</EmptyState>;
+  if (board.loading || zoneBoard.loading) {
+    return <EmptyState code="REQUESTS">Loading current Willie requests.</EmptyState>;
   }
 
-  if (board.error || !board.data) {
+  if ((board.error || !board.data) && (zoneBoard.error || !zoneBoard.data)) {
     return (
       <EmptyState code="REQUESTS UNAVAILABLE">
-        {board.error ?? 'Willie requests endpoint returned no payload.'}
+        {board.error ?? zoneBoard.error ?? 'Willie requests endpoints returned no payload.'}
       </EmptyState>
     );
   }
 
-  if (rows.length === 0) {
-    return <EmptyState code="NO REQUESTS SEEN YET">Willie has not seen any inbound building requests in this Host process.</EmptyState>;
+  if (rows.length === 0 && zoneRows.length === 0) {
+    return <EmptyState code="NO REQUESTS SEEN YET">Willie has not seen any inbound building or zone requests in this Host process.</EmptyState>;
   }
 
-  const selected = rows.find(row => requestKey(row.request) === selectedKey) ?? rows[0];
+  const selected = rows.length > 0
+    ? rows.find(row => requestKey(row.request) === selectedKey) ?? rows[0]
+    : null;
 
   return (
     <div className="minister-view willie-requests-view">
       <header className="view-heading">
         <span className="eyebrow">{scope.displayLabel}</span>
         <h2><SemanticLabel icon={iconForView('requests')}><span>Requests</span></SemanticLabel></h2>
-        <p>Current inbound building requests with solver outcomes and Apply controls for validated options.</p>
+        <p>Current inbound building and zone requests. Building rows join to Placement Solver outcomes; zone rows join to grow-zone placement outcomes.</p>
       </header>
 
-      <div className="willie-requests-layout">
-        <aside className="feature-filter-sidebar willie-request-sidebar" aria-label="Willie building requests">
-          <div className="feature-filter-sidebar-heading">
-            <strong>Building requests</strong>
-            <small>{formatInteger(rows.length)}</small>
-          </div>
-          <div className="willie-request-list">
-            {rows.map(row => (
-              <RequestButton
-                active={requestKey(row.request) === requestKey(selected.request)}
-                key={requestKey(row.request)}
-                onClick={() => setSelectedKey(requestKey(row.request))}
-                row={row}
-              />
-            ))}
-          </div>
-        </aside>
+      {zoneRows.length > 0 && (
+        <ZoneRequestsPanel
+          onSelect={setSelectedZoneKey}
+          rows={zoneRows}
+          selectedKey={selectedZoneKey}
+        />
+      )}
 
-        <RequestDetail advice={advice} currentGameTick={currentGameTick} row={selected} scope={scope} />
-      </div>
+      {selected ? (
+        <div className="willie-requests-layout">
+          <aside className="feature-filter-sidebar willie-request-sidebar" aria-label="Willie building requests">
+            <div className="feature-filter-sidebar-heading">
+              <strong>Building requests</strong>
+              <small>{formatInteger(rows.length)}</small>
+            </div>
+            <div className="willie-request-list">
+              {rows.map(row => (
+                <RequestButton
+                  active={requestKey(row.request) === requestKey(selected.request)}
+                  key={requestKey(row.request)}
+                  onClick={() => setSelectedKey(requestKey(row.request))}
+                  row={row}
+                />
+              ))}
+            </div>
+          </aside>
+
+          <RequestDetail row={selected} />
+        </div>
+      ) : (
+        <EmptyState code="NO BUILDING REQUESTS">No inbound building requests are active; zone requests are listed above.</EmptyState>
+      )}
     </div>
+  );
+}
+
+function ZoneRequestsPanel({
+  onSelect,
+  rows,
+  selectedKey,
+}: {
+  onSelect: (key: string) => void;
+  rows: WillieZoneRequestRow[];
+  selectedKey: string | null;
+}) {
+  const selected = rows.find(row => zoneRequestKey(row.request) === selectedKey) ?? rows[0];
+
+  return (
+    <div className="willie-requests-layout zone-request-layout">
+      <aside className="feature-filter-sidebar willie-request-sidebar" aria-label="Willie zone requests">
+        <div className="feature-filter-sidebar-heading">
+          <strong>Zone requests</strong>
+          <small>{formatInteger(rows.length)}</small>
+        </div>
+        <div className="willie-request-list">
+          {rows.map(row => (
+            <ZoneRequestButton
+              active={zoneRequestKey(row.request) === zoneRequestKey(selected.request)}
+              key={zoneRequestKey(row.request)}
+              onClick={() => onSelect(zoneRequestKey(row.request))}
+              row={row}
+            />
+          ))}
+        </div>
+      </aside>
+
+      <ZoneRequestDetail row={selected} />
+    </div>
+  );
+}
+
+function ZoneRequestButton({
+  active,
+  onClick,
+  row,
+}: {
+  active: boolean;
+  onClick: () => void;
+  row: WillieZoneRequestRow;
+}) {
+  const request = row.request;
+
+  return (
+    <button
+      type="button"
+      className={`willie-request-button ${active ? 'active' : ''}`}
+      aria-current={active ? 'true' : undefined}
+      onClick={onClick}
+    >
+      <span className="willie-request-button-body">
+        <span className="eyebrow">{displayMinisterName(row.sourceMinister)}</span>
+        <strong><IconizedText maxIcons={1} text={request.request} /></strong>
+        <span className="willie-request-button-pills">
+          <StatusPill tone={priorityTone(request.priority)}>{request.priority ?? 'priority unknown'}</StatusPill>
+          <StatusPill tone={statusTone(row.status)}>{formatLabel(row.status)}</StatusPill>
+        </span>
+      </span>
+    </button>
+  );
+}
+
+function ZoneRequestDetail({ row }: { row: WillieZoneRequestRow }) {
+  const request = row.request;
+
+  return (
+    <section className="request-detail-panel" aria-label={`${request.request} details`}>
+      <header>
+        <div>
+          <span className="eyebrow">{displayMinisterName(row.sourceMinister)} -&gt; {displayMinisterName('Willie')}</span>
+          <h3><IconizedText maxIcons={1} text={request.request} /></h3>
+        </div>
+        <StatusPill tone={statusTone(row.status)}>{formatLabel(row.status)}</StatusPill>
+      </header>
+
+      <div className="request-field-grid" aria-label="Zone request fields">
+        <Field label="reason" value={<IconizedText maxIcons={2} text={request.reason} />} />
+        <Field label="zone_class" value={formatLabel(request.zone_class)} />
+        <Field label="plant_def" value={request.plant_def ?? '-'} />
+        <Field label="tile_count" value={request.tile_count ?? '-'} />
+        <Field label="adjacency" value={formatAdjacency(request.adjacency)} />
+        <Field label="terrain" value={formatTerrain(request.terrain)} />
+        <Field label="urgency" value={formatLabel(request.urgency)} />
+        <Field label="deadline" value={formatDeadline(request.deadline)} />
+        <Field label="priority" value={request.priority ?? '-'} />
+        <Field label="requested_from" value={request.requested_from ?? '-'} />
+        <Field label="source_minister" value={row.sourceMinister ?? '-'} />
+      </div>
+
+      <ZoneSolverOutcome row={row} />
+    </section>
   );
 }
 
@@ -146,17 +272,7 @@ function RequestButton({
   );
 }
 
-function RequestDetail({
-  advice,
-  currentGameTick,
-  row,
-  scope,
-}: {
-  advice: AdviceItem[];
-  currentGameTick: number | null;
-  row: WillieRequestRow;
-  scope: ScopeConfig;
-}) {
+function RequestDetail({ row }: { row: WillieRequestRow }) {
   const request = row.request;
   const outcome = outcomeMeta(row);
 
@@ -188,7 +304,7 @@ function RequestDetail({
         <Field label="source_minister" value={row.sourceMinister ?? '-'} />
       </div>
 
-      <SolverOutcome advice={advice} currentGameTick={currentGameTick} row={row} scope={scope} />
+      <SolverOutcome row={row} />
     </section>
   );
 }
@@ -202,17 +318,7 @@ function Field({ label, value }: { label: string; value: ReactNode }) {
   );
 }
 
-function SolverOutcome({
-  advice,
-  currentGameTick,
-  row,
-  scope,
-}: {
-  advice: AdviceItem[];
-  currentGameTick: number | null;
-  row: WillieRequestRow;
-  scope: ScopeConfig;
-}) {
+function SolverOutcome({ row }: { row: WillieRequestRow }) {
   const output = row.output;
 
   if (!output) {
@@ -240,12 +346,7 @@ function SolverOutcome({
       {options.length > 0 ? (
         <div className="build-option-grid request-option-grid">
           {options.map(option => (
-            <RequestOptionCard
-              actionMatch={findBlueprintAction(advice, option, scope, currentGameTick)}
-              key={option.id}
-              option={option}
-              output={output}
-            />
+            <ReadOnlyOptionCard key={option.id} option={option} output={output} />
           ))}
         </div>
       ) : output.status === 'options' ? (
@@ -255,37 +356,57 @@ function SolverOutcome({
   );
 }
 
-function RequestOptionCard({
-  actionMatch,
+function ZoneSolverOutcome({ row }: { row: WillieZoneRequestRow }) {
+  const output = row.output;
+
+  if (!output) {
+    return (
+      <section className="request-solver-outcome">
+        <header>
+          <h4><SemanticLabel icon={iconForField('zone_requests')}><span>Zone placement</span></SemanticLabel></h4>
+          <StatusPill tone="idle">awaiting</StatusPill>
+        </header>
+        <p><IconizedText maxIcons={2} text={row.message} /></p>
+      </section>
+    );
+  }
+
+  const status = zoneStatusLabel(output);
+  const options = output.status === 'options' ? row.options : [];
+
+  return (
+    <section className="request-solver-outcome">
+      <header>
+        <h4><SemanticLabel icon={iconForField('zone_requests')}><span>Zone placement</span></SemanticLabel></h4>
+        <StatusPill tone={statusTone(output.status)}>{status.label}</StatusPill>
+      </header>
+      {status.note && <p><IconizedText maxIcons={2} text={status.note} /></p>}
+      {options.length > 0 ? (
+        <div className="build-option-grid request-option-grid">
+          {options.map(option => (
+            <ReadOnlyOptionCard key={option.id} option={option} output={output} />
+          ))}
+        </div>
+      ) : output.status === 'options' ? (
+        <p>Grow-zone solver reported options, but no live option payloads are attached to this request.</p>
+      ) : null}
+    </section>
+  );
+}
+
+function ReadOnlyOptionCard({
   option,
   output,
 }: {
-  actionMatch: OptionActionMatch | null;
   option: AdviceOption;
   output: WillieSolverOutputPayload;
 }) {
-  const [applyState, setApplyState] = useState<ActionApplyState>({ status: 'idle', response: null, error: null });
-  const optionIcon = iconForField('place_blueprint');
+  const isZoneOption = option.blueprint_group.assets.some(asset => asset.role === 'zone_cell');
+  const optionIcon = iconForField(isZoneOption ? 'zone_requests' : 'place_blueprint');
   const readiness = option.readiness ?? readinessFromOutput(output);
-  const success = applyState.response?.status === 'applied' || applyState.response?.status === 'already_satisfied';
-  const disabled = actionMatch === null || actionMatch.expired.expired || applyState.status === 'pending' || success;
-  const disabledReason = actionMatch === null
-    ? 'No place_blueprint_group action payload is attached to this option yet.'
-    : actionMatch.expired.message;
-
-  const onApply = async () => {
-    if (!actionMatch || disabled) return;
-    setApplyState({ status: 'pending', response: null, error: null });
-    try {
-      const response = await applyAdviceAction(actionMatch.item.id, actionMatch.actionIndex);
-      setApplyState({ status: 'done', response, error: null });
-    } catch (error) {
-      setApplyState({ status: 'error', response: null, error: String(error) });
-    }
-  };
 
   return (
-    <article className={`build-option-card request-option-card ${actionMatch?.item.priority ?? ''}`}>
+    <article className="build-option-card request-option-card">
       <header>
         <GameIcon
           fallback={optionIcon?.fallback ?? 'BP'}
@@ -294,10 +415,10 @@ function RequestOptionCard({
           src={iconUrlFor(optionIcon?.ref)}
         />
         <div>
-          <span className="eyebrow">placement option</span>
+          <span className="eyebrow">{isZoneOption ? 'read-only zone option' : 'read-only option'}</span>
           <h4>{option.label}</h4>
         </div>
-        <StatusPill tone={priorityTone(actionMatch?.item.priority)}>{actionMatch?.item.priority ?? 'no apply'}</StatusPill>
+        <StatusPill tone="info">{isZoneOption ? 'no apply yet' : 'diagnostic'}</StatusPill>
       </header>
 
       <BlueprintFootprintThumbnail group={option.blueprint_group} />
@@ -314,7 +435,7 @@ function RequestOptionCard({
 
       <div className="build-option-materials">
         {option.est_materials.length === 0 ? (
-          <span>No material estimate.</span>
+          <span>{isZoneOption ? 'No materials; zone write not wired yet.' : 'No material estimate.'}</span>
         ) : (
           option.est_materials.map(material => (
             <ResourceQuantity defName={material.def_name} key={`${option.id}-${material.def_name}`} quantity={material.count} />
@@ -323,41 +444,10 @@ function RequestOptionCard({
       </div>
 
       {option.tradeoff_note && <blockquote><IconizedText maxIcons={1} text={option.tradeoff_note} /></blockquote>}
-
-      <div className="action-apply request-option-apply">
-        <button
-          disabled={disabled}
-          onClick={() => void onApply()}
-          title={actionMatch?.action.apply?.target_summary ?? disabledReason ?? 'Apply this blueprint option'}
-          type="button"
-        >
-          {buttonLabel(actionMatch, applyState, success)}
-        </button>
-        <small className={`action-apply-result ${applyState.response?.status ?? applyState.status}`}>
-          {applyState.response?.message ?? applyState.error ?? disabledReason ?? actionMatch?.action.apply?.target_summary}
-        </small>
-      </div>
+      {/* TODO: Keep Apply in Build Queue until this diagnostic view is deliberately promoted into an action surface. */}
     </article>
   );
 }
-
-type ActionApplyState = {
-  error: string | null;
-  response: AdviceApplyResponse | null;
-  status: 'idle' | 'pending' | 'done' | 'error';
-};
-
-type AdviceExpiryState = {
-  expired: boolean;
-  message: string | null;
-};
-
-type OptionActionMatch = {
-  action: AdviceAction;
-  actionIndex: number;
-  expired: AdviceExpiryState;
-  item: AdviceItem;
-};
 
 function findTrace(systemHealth: SystemHealth | null, scope: ScopeConfig): MinisterTrace | null {
   return systemHealth?.traces.find(trace => isScopeMinister(trace.minister, scope)) ?? null;
@@ -376,7 +466,7 @@ function statusLabel(output: WillieSolverOutputPayload): { label: string; note?:
   if (output.status === 'options') {
     return {
       label: 'options',
-      note: 'Validated options are attached below. Pick one option and apply it from this request.',
+      note: 'Validated options are attached below. Apply remains in the Build Queue tab.',
     };
   }
 
@@ -398,6 +488,31 @@ function statusLabel(output: WillieSolverOutputPayload): { label: string; note?:
     return {
       label: `offline: ${output.errorType ?? 'unknown'}`,
       note: output.errorMessage ?? 'Live map validation was unavailable.',
+    };
+  }
+
+  return { label: output.status.replace(/_/g, ' ') };
+}
+
+function zoneStatusLabel(output: WillieSolverOutputPayload): { label: string; note?: string } {
+  if (output.status === 'options') {
+    return {
+      label: 'options',
+      note: 'Grow-zone coordinate options are attached below. Apply is deferred until validated zone writes ship.',
+    };
+  }
+
+  if (output.status === 'no_fit') {
+    return {
+      label: `no-fit: ${formatLabel(output.noFit ?? 'unknown')}`,
+      note: 'No compact growable zone rectangle reached this request.',
+    };
+  }
+
+  if (output.status === 'error') {
+    return {
+      label: `error: ${output.errorType ?? 'unknown'}`,
+      note: output.errorMessage ?? 'Grow-zone solver failed before returning a trace.',
     };
   }
 
@@ -428,72 +543,20 @@ function readinessWire(value: string): string {
   return value.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
 }
 
-function findBlueprintAction(
-  advice: AdviceItem[],
-  option: AdviceOption,
-  scope: ScopeConfig,
-  currentGameTick: number | null,
-): OptionActionMatch | null {
-  for (const item of advice) {
-    if (!isScopeMinister(item.minister, scope)) continue;
-    const expired = adviceExpiryState(item, currentGameTick);
-
-    for (let actionIndex = 0; actionIndex < item.actions.length; actionIndex += 1) {
-      const action = item.actions[actionIndex];
-      const apply = action.apply;
-      if (apply?.kind === 'place_blueprint_group' && sameBlueprintGroup(apply.blueprint_group, option.blueprint_group)) {
-        return { action, actionIndex, expired, item };
-      }
-    }
-  }
-
-  return null;
-}
-
-function sameBlueprintGroup(left: BlueprintGroup, right: BlueprintGroup): boolean {
-  return left.map_id === right.map_id &&
-    (left.label === right.label || blueprintFingerprint(left) === blueprintFingerprint(right));
-}
-
-function blueprintFingerprint(group: BlueprintGroup): string {
-  return group.assets
-    .map(asset => `${asset.role}:${asset.def_name}:${asset.stuff_def_name ?? ''}:${asset.cell.x}:${asset.cell.z}:${asset.rotation}`)
-    .sort()
-    .join('|');
-}
-
-function buttonLabel(match: OptionActionMatch | null, state: ActionApplyState, success: boolean): string {
-  if (match?.expired.expired) return 'Expired';
-  if (state.status === 'pending') return 'Applying';
-  if (success) return 'Applied';
-  return match?.action.apply?.label ?? 'Apply not wired';
-}
-
-function adviceExpiryState(item: AdviceItem, currentGameTick: number | null): AdviceExpiryState {
-  if (typeof item.stamp.expires_game_tick === 'number') {
-    if (typeof currentGameTick === 'number' && item.stamp.expires_game_tick <= currentGameTick) {
-      return {
-        expired: true,
-        message: `Expired at game tick ${formatInteger(item.stamp.expires_game_tick)}.`,
-      };
-    }
-
-    return { expired: false, message: null };
-  }
-
-  const expiresAt = Date.parse(item.stamp.expires_at);
-  if (!Number.isNaN(expiresAt) && expiresAt <= Date.now()) {
-    return { expired: true, message: 'Expired by wall-clock TTL.' };
-  }
-
-  return { expired: false, message: null };
-}
-
 function requestKey(request: BuildingRequest): string {
   return [
     request.target_class,
     request.target_def,
     request.room_class,
+    request.request,
+  ].map(keyPart).join('|');
+}
+
+function zoneRequestKey(request: ZoneRequest): string {
+  return [
+    request.zone_class,
+    request.plant_def,
+    request.tile_count === null || request.tile_count === undefined ? null : String(request.tile_count),
     request.request,
   ].map(keyPart).join('|');
 }
@@ -524,6 +587,20 @@ function formatAdjacency(adjacency: BuildingRequest['adjacency']): string {
   return adjacency
     .map(hint => `${formatLabel(hint.relation)} ${hint.target}`)
     .join(', ');
+}
+
+function formatTerrain(terrain: ZoneRequest['terrain']): string {
+  if (!terrain) return '-';
+  const parts = [
+    terrain.must_support_growing ? 'must_support_growing=true' : 'must_support_growing=false',
+    terrain.preferred_fertility === null || terrain.preferred_fertility === undefined
+      ? null
+      : `preferred_fertility=${formatNumber(terrain.preferred_fertility)}`,
+    terrain.preferred_terrain_defs && terrain.preferred_terrain_defs.length > 0
+      ? `preferred_terrain_defs=${terrain.preferred_terrain_defs.join(', ')}`
+      : null,
+  ].filter((value): value is string => Boolean(value));
+  return parts.join(', ');
 }
 
 function formatPower(power: BuildingRequest['power']): string {

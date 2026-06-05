@@ -9,13 +9,15 @@ internal sealed record NormalizedFlagRequests(
     IReadOnlyList<BuildingRequest> BuildingRequests,
     IReadOnlyList<LaborRequest> LaborRequests,
     IReadOnlyList<ItemRequest> ItemRequests,
+    IReadOnlyList<ZoneRequest> ZoneRequests,
     IReadOnlyList<AttentionRequest> Attention)
 {
-    public static NormalizedFlagRequests Empty => new([], [], [], []);
+    public static NormalizedFlagRequests Empty => new([], [], [], [], []);
 
     public IReadOnlyList<BuildingRequest>? BuildingRequestsOrNull => NullIfEmpty(BuildingRequests);
     public IReadOnlyList<LaborRequest>? LaborRequestsOrNull => NullIfEmpty(LaborRequests);
     public IReadOnlyList<ItemRequest>? ItemRequestsOrNull => NullIfEmpty(ItemRequests);
+    public IReadOnlyList<ZoneRequest>? ZoneRequestsOrNull => NullIfEmpty(ZoneRequests);
     public IReadOnlyList<AttentionRequest>? AttentionOrNull => NullIfEmpty(Attention);
 
     private static IReadOnlyList<T>? NullIfEmpty<T>(IReadOnlyList<T> values) =>
@@ -37,6 +39,7 @@ internal static class ResourceRequestNormalizer
         AddBuildingRequests(accumulator, flag["building_requests"], priority, json);
         AddLaborRequests(accumulator, flag["labor_requests"], priority, json);
         AddItemRequests(accumulator, flag["item_requests"], priority, json);
+        AddZoneRequests(accumulator, flag["zone_requests"], priority, json);
         AddAttentionRequests(accumulator, flag["attention"], priority, json);
         AddLegacyRequests(accumulator, flag["requests"], priority, context, json);
 
@@ -60,6 +63,7 @@ internal static class ResourceRequestNormalizer
             BuildingRequests = NullIfEmpty(flag.BuildingRequests?.Select(request => Normalize(request)).ToArray()),
             LaborRequests = NullIfEmpty(flag.LaborRequests?.Select(request => Normalize(request)).ToArray()),
             ItemRequests = NullIfEmpty(flag.ItemRequests?.Select(request => Normalize(request)).ToArray()),
+            ZoneRequests = NullIfEmpty(flag.ZoneRequests?.Select(request => Normalize(request)).ToArray()),
             Attention = NullIfEmpty(flag.Attention?.Select(request => Normalize(request)).ToArray())
         };
 
@@ -103,6 +107,28 @@ internal static class ResourceRequestNormalizer
             Reason = CleanRequired(request.Reason, "item dependency"),
             ItemDef = CleanOptional(request.ItemDef),
             RequestedFrom = CleanOptional(request.RequestedFrom)
+        };
+
+    public static ZoneRequest Normalize(ZoneRequest request) =>
+        request with
+        {
+            Request = CleanRequired(request.Request, "zone request"),
+            Reason = CleanRequired(request.Reason, "zone dependency"),
+            PlantDef = CleanOptional(request.PlantDef),
+            Adjacency = NullIfEmpty(request.Adjacency?
+                .Where(hint => !string.IsNullOrWhiteSpace(hint.Target))
+                .Select(hint => hint with { Target = hint.Target.Trim() })
+                .ToArray()),
+            Terrain = request.Terrain is null
+                ? null
+                : request.Terrain with
+                {
+                    PreferredTerrainDefs = NullIfEmpty(request.Terrain.PreferredTerrainDefs?
+                        .Where(def => !string.IsNullOrWhiteSpace(def))
+                        .Select(def => def.Trim())
+                        .ToArray())
+                },
+            RequestedFrom = CleanOptional(request.RequestedFrom) ?? "Willie"
         };
 
     public static AttentionRequest Normalize(AttentionRequest request) =>
@@ -159,6 +185,22 @@ internal static class ResourceRequestNormalizer
         {
             ItemRequest? request = NormalizeItemItem(item, priority, json);
             if (request is not null) accumulator.ItemRequests.Add(request);
+        }
+    }
+
+    private static void AddZoneRequests(
+        RequestAccumulator accumulator,
+        JsonNode? node,
+        Priority priority,
+        JsonSerializerOptions json)
+    {
+        JsonArray? array = node?.AsArray();
+        if (array is null) return;
+
+        foreach (JsonNode? item in array)
+        {
+            ZoneRequest? request = NormalizeZoneItem(item, priority, json);
+            if (request is not null) accumulator.ZoneRequests.Add(request);
         }
     }
 
@@ -426,6 +468,52 @@ internal static class ResourceRequestNormalizer
             RequestedFrom: CleanOptional(LlmResponseParser.ReadString(obj["requested_from"]))));
     }
 
+    private static ZoneRequest? NormalizeZoneItem(
+        JsonNode? item,
+        Priority priority,
+        JsonSerializerOptions json)
+    {
+        if (item is not JsonObject obj) return null;
+
+        ZoneRequest? strict = LlmResponseParser.TryDeserialize<ZoneRequest>(item, json);
+        if (strict is not null &&
+            obj["zone_class"] is not null &&
+            !string.IsNullOrWhiteSpace(strict.Request) &&
+            !string.IsNullOrWhiteSpace(strict.Reason))
+        {
+            return Normalize(strict with
+            {
+                PlantDef = strict.PlantDef ??
+                           InferPlantDef(
+                               LlmResponseParser.ReadString(obj["zone_class"]),
+                               strict.Request,
+                               strict.Reason),
+                TileCount = strict.TileCount ??
+                            LlmResponseParser.TryReadIntegerQuantity(obj["quantity"] ?? obj["amount"]),
+                Priority = strict.Priority ?? PriorityIfHigh(priority)
+            });
+        }
+
+        string request = ReadRequest(obj, "zone request");
+        string reason = ReadReason(obj, "zone dependency");
+        string classificationText = $"{LlmResponseParser.ReadString(obj["zone_class"])} {LlmResponseParser.ReadString(obj["plant_def"])} {request} {reason}";
+
+        return Normalize(new ZoneRequest(
+            request,
+            reason,
+            ParseZoneClass(LlmResponseParser.ReadString(obj["zone_class"])) ??
+                InferZoneClass(classificationText),
+            PlantDef: CleanOptional(LlmResponseParser.ReadString(obj["plant_def"])) ??
+                      InferPlantDef(classificationText, request, reason),
+            TileCount: LlmResponseParser.TryReadIntegerQuantity(obj["tile_count"] ?? obj["quantity"] ?? obj["amount"]),
+            Adjacency: TryDeserialize<IReadOnlyList<AdjacencyHint>>(obj["adjacency"], json),
+            Terrain: TryDeserialize<TerrainNeed>(obj["terrain"], json),
+            Urgency: ParseUrgency(LlmResponseParser.ReadString(obj["urgency"])),
+            Deadline: TryDeserialize<Deadline>(obj["deadline"], json),
+            Priority: ReadPriority(obj, priority),
+            RequestedFrom: CleanOptional(LlmResponseParser.ReadString(obj["requested_from"]))));
+    }
+
     private static AttentionRequest? NormalizeAttentionItem(
         JsonNode? item,
         Priority priority,
@@ -573,6 +661,28 @@ internal static class ResourceRequestNormalizer
         return null;
     }
 
+    private static ZoneClass? ParseZoneClass(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+        string normalized = LlmResponseParser.NormalizeIdentifier(raw);
+        foreach (ZoneClass value in Enum.GetValues<ZoneClass>())
+        {
+            if (LlmResponseParser.NormalizeIdentifier(value.ToString()) == normalized)
+                return value;
+        }
+
+        return null;
+    }
+
+    private static ZoneClass InferZoneClass(string text)
+    {
+        string normalized = LlmResponseParser.NormalizeIdentifier(text);
+        if (normalized.Contains("grow") || normalized.Contains("crop") || normalized.Contains("plant"))
+            return ZoneClass.Growing;
+
+        return ZoneClass.Growing;
+    }
+
     private static Urgency? ParseUrgency(string? raw)
     {
         if (string.IsNullOrWhiteSpace(raw)) return null;
@@ -593,6 +703,15 @@ internal static class ResourceRequestNormalizer
         if (normalized.Contains("campfire")) return "Campfire";
         if (normalized.Contains("stove")) return "FueledStove";
         if (normalized.Contains("butchertable")) return "TableButcher";
+        return null;
+    }
+
+    private static string? InferPlantDef(string? rawType, string request, string reason)
+    {
+        string normalized = LlmResponseParser.NormalizeIdentifier($"{rawType} {request} {reason}");
+        if (normalized.Contains("rice")) return "Plant_Rice";
+        if (normalized.Contains("corn")) return "Plant_Corn";
+        if (normalized.Contains("potato")) return "Plant_Potato";
         return null;
     }
 
@@ -632,10 +751,11 @@ internal static class ResourceRequestNormalizer
         public List<BuildingRequest> BuildingRequests { get; } = [];
         public List<LaborRequest> LaborRequests { get; } = [];
         public List<ItemRequest> ItemRequests { get; } = [];
+        public List<ZoneRequest> ZoneRequests { get; } = [];
         public List<AttentionRequest> Attention { get; } = [];
 
         public NormalizedFlagRequests ToRequests() =>
-            new(BuildingRequests, LaborRequests, ItemRequests, Attention);
+            new(BuildingRequests, LaborRequests, ItemRequests, ZoneRequests, Attention);
     }
 
     private enum LegacyRequestKind

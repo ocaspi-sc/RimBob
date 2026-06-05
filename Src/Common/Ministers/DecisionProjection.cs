@@ -64,6 +64,7 @@ public static class DecisionProjection
             List<BuildingRequest> buildingRequests = [];
             List<LaborRequest> laborRequests = [];
             List<ItemRequest> itemRequests = [];
+            List<ZoneRequest> zoneRequests = [];
             List<AttentionRequest> attentionRequests = [];
             Priority priority = group.Select(RequestPriority).DefaultIfEmpty(Priority.Low).Max();
 
@@ -92,6 +93,13 @@ public static class DecisionProjection
                             RequestedFrom = CleanTo(request.To)
                         });
                         break;
+                    case RequestZone request:
+                        zoneRequests.Add(request.Request with
+                        {
+                            Priority = request.Request.Priority ?? request.Priority,
+                            RequestedFrom = CleanTo(request.To)
+                        });
+                        break;
                     case RequestAttention request:
                         attentionRequests.Add(request.Request with
                         {
@@ -115,6 +123,7 @@ public static class DecisionProjection
                 BuildingRequests: NullIfEmpty(buildingRequests),
                 LaborRequests: NullIfEmpty(laborRequests),
                 ItemRequests: NullIfEmpty(itemRequests),
+                ZoneRequests: NullIfEmpty(zoneRequests),
                 Attention: NullIfEmpty(attentionRequests),
                 Detail: group.Key.Value,
                 ExpiresAt: context.Now.AddHours(24)));
@@ -124,7 +133,7 @@ public static class DecisionProjection
     }
 
     private static bool IsRequest(Decision decision) =>
-        decision is RequestBuild or RequestLabor or RequestItem or RequestAttention;
+        decision is RequestBuild or RequestLabor or RequestItem or RequestZone or RequestAttention;
 
     private static Priority RequestPriority(Decision decision) =>
         decision switch
@@ -132,6 +141,7 @@ public static class DecisionProjection
             RequestBuild request => request.Priority,
             RequestLabor request => request.Priority,
             RequestItem request => request.Priority,
+            RequestZone request => request.Priority,
             RequestAttention request => request.Priority,
             _ => Priority.Low
         };

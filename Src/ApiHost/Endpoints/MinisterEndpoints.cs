@@ -56,6 +56,10 @@ public static class MinisterEndpoints
             "/api/ministers/willie/solver/requests",
             "available",
             "Current Willie building-request board joined with each request's latest live Placement Solver outcome and options.");
+        coverage.Register(
+            "/api/ministers/willie/zone-requests",
+            "available",
+            "Current Willie zone-request board. Initial growing-zone rows are read-only and placement-pending until cell-level zone solving lands.");
 
         app.MapGet("/api/ministers", (MinisterRegistry registry) =>
             Results.Ok(registry.Scopes.Select(MinisterScopeInfo.FromDescriptor)));
@@ -263,6 +267,20 @@ public static class MinisterEndpoints
             return Results.Ok(new WillieRequestBoardPayload(
                 Minister: scope.Label,
                 Requests: board.Select(WillieRequestRowPayload.FromRow).ToList()));
+        });
+
+        app.MapGet("/api/ministers/willie/zone-requests", (
+            MinisterRegistry registry,
+            WillieSolverStore solverStore) =>
+        {
+            MinisterDescriptor? scope = registry.FindMinister("willie");
+            if (scope is null)
+                return Results.NotFound(new { error = "Willie minister scope is not registered." });
+
+            IReadOnlyList<WillieZoneRequestBoardRow> board = solverStore.ZoneRequestBoard(scope.Label);
+            return Results.Ok(new WillieZoneRequestBoardPayload(
+                Minister: scope.Label,
+                Requests: board.Select(WillieZoneRequestRowPayload.FromRow).ToList()));
         });
 
         app.MapGet("/api/ministers/{minister}/snapshot", (
@@ -835,6 +853,52 @@ public static class MinisterEndpoints
                 CapturedAt: row.Outcome?.CapturedAt,
                 Output: row.Outcome?.Output,
                 Options: options);
+        }
+    }
+
+    private sealed record WillieZoneRequestBoardPayload(
+        string Minister,
+        IReadOnlyList<WillieZoneRequestRowPayload> Requests);
+
+    private sealed record WillieZoneRequestRowPayload(
+        ZoneRequest Request,
+        string? SourceMinister,
+        string Status,
+        string Message,
+        long? GameTick,
+        DateTimeOffset? CapturedAt,
+        PlacementSolverReplayOutput? Output,
+        IReadOnlyList<AdviceOption> Options)
+    {
+        public static WillieZoneRequestRowPayload FromRow(WillieZoneRequestBoardRow row)
+        {
+            IReadOnlyList<AdviceOption> options = row.Outcome is not null &&
+                string.Equals(row.Outcome.Status, "options", StringComparison.OrdinalIgnoreCase)
+                    ? row.Outcome.Options
+                    : [];
+            string status = row.Outcome?.Status ?? "awaiting_solve";
+            return new WillieZoneRequestRowPayload(
+                Request: row.Inbound.Request,
+                SourceMinister: row.Inbound.SourceMinister,
+                Status: status,
+                Message: MessageFor(row.Outcome),
+                GameTick: row.Outcome?.GameTick,
+                CapturedAt: row.Outcome?.CapturedAt,
+                Output: row.Outcome?.Output,
+                Options: options);
+        }
+
+        private static string MessageFor(WillieZoneSolverSnapshot? outcome)
+        {
+            if (outcome is null)
+                return "Zone request recorded; awaiting grow-zone placement solve.";
+            if (string.Equals(outcome.Status, "options", StringComparison.OrdinalIgnoreCase))
+                return $"Grow-zone solver produced {outcome.Options.Count} coordinate option(s). Apply remains deferred until the create_growing_zone write path ships.";
+            if (string.Equals(outcome.Status, "no_fit", StringComparison.OrdinalIgnoreCase))
+                return $"Grow-zone solver found no fit: {outcome.NoFit ?? "unknown"}.";
+            if (string.Equals(outcome.Status, "error", StringComparison.OrdinalIgnoreCase))
+                return $"Grow-zone solver failed: {outcome.Output.ErrorType ?? "unknown"}.";
+            return $"Grow-zone solver status: {outcome.Status}.";
         }
     }
 

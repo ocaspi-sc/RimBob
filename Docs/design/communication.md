@@ -48,7 +48,7 @@ Design-level flag fields:
 - Source minister.
 - Severity.
 - Domain/summary/detail.
-- Optional resource requests.
+- Optional typed requests: `building_requests`, `labor_requests`, `item_requests`, `zone_requests`, and catch-all `attention`.
 - Expiry/supersession metadata.
 
 Exact shape lives in `Src/Common/Ministers/AgentFlag.cs`.
@@ -69,8 +69,9 @@ Request discipline:
 - Keep player-facing actions on advice `actions[]`; do not duplicate them as
   CoS requests unless they also need cross-minister routing.
 - Fill `requested_from` when the owner is known from the ownership map.
-- Use `Attention` only when the dependency is real but no more specific request
-  kind fits yet.
+- Use `zone_requests[]` for real map-zone/designation dependencies, including grow-zone placement requests. A grow-zone request is not a building request.
+- A Willie-routed grow-zone request asks Willie for spatial options or a no-fit reason; it is not itself a player Apply action.
+- Use `Attention` only when the dependency is real but no more specific request kind fits yet.
 - Keep `request` and `reason` compact enough to render in a trace table.
 
 ### Priority Tiers

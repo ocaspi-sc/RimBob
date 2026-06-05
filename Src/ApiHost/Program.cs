@@ -97,6 +97,8 @@ try
     builder.Services.AddSingleton<IPlacementScorer, WalkablePathCostScorer>();
     builder.Services.AddSingleton<PlacementSolver>();
     builder.Services.AddSingleton<IPlacementSolver>(sp => sp.GetRequiredService<PlacementSolver>());
+    builder.Services.AddSingleton<GrowZonePlacementSolver>();
+    builder.Services.AddSingleton<IGrowZonePlacementSolver>(sp => sp.GetRequiredService<GrowZonePlacementSolver>());
     builder.Services.AddSingleton<IconCacheService>(sp =>
     {
         RimBobOptions opts = sp.GetRequiredService<IOptions<RimBobOptions>>().Value;

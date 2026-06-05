@@ -9,7 +9,11 @@ public sealed class WillieSolverStore
         new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, IReadOnlyList<WillieInboundRequest>> _board =
         new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, IReadOnlyList<WillieInboundZoneRequest>> _zoneBoard =
+        new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Dictionary<string, WillieSolverSnapshot>> _byRequest =
+        new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Dictionary<string, WillieZoneSolverSnapshot>> _zoneByRequest =
         new(StringComparer.OrdinalIgnoreCase);
 
     public void Record(WillieSolverSnapshot snapshot)
@@ -53,6 +57,44 @@ public sealed class WillieSolverStore
         }
     }
 
+    public void RecordZoneInbound(string minister, IReadOnlyList<WillieInboundZoneRequest> board)
+    {
+        lock (_lock)
+        {
+            IReadOnlyList<WillieInboundZoneRequest> snapshot = board
+                .GroupBy(row => row.RequestKey, StringComparer.OrdinalIgnoreCase)
+                .Select(group => group.First())
+                .ToList();
+            _zoneBoard[minister] = snapshot;
+
+            if (!_zoneByRequest.TryGetValue(minister, out Dictionary<string, WillieZoneSolverSnapshot>? snapshots))
+                return;
+
+            HashSet<string> currentKeys = snapshot
+                .Select(row => row.RequestKey)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            IReadOnlyList<string> staleKeys = snapshots.Keys
+                .Where(key => !currentKeys.Contains(key))
+                .ToList();
+            foreach (string staleKey in staleKeys)
+                snapshots.Remove(staleKey);
+        }
+    }
+
+    public void RecordZoneOutcome(WillieZoneSolverSnapshot snapshot)
+    {
+        lock (_lock)
+        {
+            if (!_zoneByRequest.TryGetValue(snapshot.Minister, out Dictionary<string, WillieZoneSolverSnapshot>? snapshots))
+            {
+                snapshots = new Dictionary<string, WillieZoneSolverSnapshot>(StringComparer.OrdinalIgnoreCase);
+                _zoneByRequest[snapshot.Minister] = snapshots;
+            }
+
+            snapshots[RequestKey(snapshot.Request)] = snapshot;
+        }
+    }
+
     public WillieSolverSnapshot? Latest(string minister)
     {
         lock (_lock)
@@ -84,6 +126,24 @@ public sealed class WillieSolverStore
         }
     }
 
+    public IReadOnlyList<WillieZoneRequestBoardRow> ZoneRequestBoard(string minister)
+    {
+        lock (_lock)
+        {
+            _zoneByRequest.TryGetValue(minister, out Dictionary<string, WillieZoneSolverSnapshot>? snapshots);
+            return _zoneBoard.TryGetValue(minister, out IReadOnlyList<WillieInboundZoneRequest>? board)
+                ? board.Select(row =>
+                {
+                    WillieZoneSolverSnapshot? outcome = snapshots is not null &&
+                        snapshots.TryGetValue(row.RequestKey, out WillieZoneSolverSnapshot? stored)
+                            ? stored
+                            : null;
+                    return new WillieZoneRequestBoardRow(row, outcome);
+                }).ToList()
+                : [];
+        }
+    }
+
     public static string RequestKey(BuildingRequest request) =>
         RequestKey(
             request.TargetClass.ToString(),
@@ -93,6 +153,22 @@ public sealed class WillieSolverStore
 
     public static string RequestKey(WillieSolverRequestSnapshot request) =>
         RequestKey(request.TargetClass, request.TargetDef, request.RoomClass, request.Request);
+
+    public static string RequestKey(ZoneRequest request) =>
+        string.Join(
+            "|",
+            NormalizeKeyPart(request.ZoneClass.ToString()),
+            NormalizeKeyPart(request.PlantDef),
+            request.TileCount?.ToString() ?? "-",
+            NormalizeKeyPart(request.Request));
+
+    public static string RequestKey(WillieZoneRequestSnapshot request) =>
+        string.Join(
+            "|",
+            NormalizeKeyPart(request.ZoneClass),
+            NormalizeKeyPart(request.PlantDef),
+            request.TileCount?.ToString() ?? "-",
+            NormalizeKeyPart(request.Request));
 
     public static string RequestKey(
         string targetClass,
@@ -164,9 +240,55 @@ public sealed record WillieInboundRequest(
     string? SourceMinister,
     string RequestKey);
 
+public sealed record WillieInboundZoneRequest(
+    ZoneRequest Request,
+    string? SourceMinister,
+    string RequestKey);
+
 public sealed record WillieRequestBoardRow(
     WillieInboundRequest Inbound,
     WillieSolverSnapshot? Outcome);
+
+public sealed record WillieZoneRequestBoardRow(
+    WillieInboundZoneRequest Inbound,
+    WillieZoneSolverSnapshot? Outcome);
+
+public sealed record WillieZoneSolverSnapshot(
+    string Minister,
+    WillieZoneRequestSnapshot Request,
+    long? GameTick,
+    DateTimeOffset CapturedAt,
+    PlacementSolverReplayOutput Output,
+    IReadOnlyList<AdviceOption> Options)
+{
+    public string Status => Output.Status;
+
+    public string? NoFit => Output.NoFit;
+}
+
+public sealed record WillieZoneRequestSnapshot(
+    string Request,
+    string Reason,
+    string ZoneClass,
+    string? PlantDef,
+    int? TileCount,
+    string? RequestedFrom,
+    string? SourceMinister,
+    string? Priority)
+{
+    public static WillieZoneRequestSnapshot FromRequest(
+        ZoneRequest request,
+        string? sourceMinister) =>
+        new(
+            Request: request.Request,
+            Reason: request.Reason,
+            ZoneClass: request.ZoneClass.ToString(),
+            PlantDef: request.PlantDef,
+            TileCount: request.TileCount,
+            RequestedFrom: request.RequestedFrom,
+            SourceMinister: sourceMinister,
+            Priority: request.Priority?.ToString());
+}
 
 public sealed record WillieSolverRequestSnapshot(
     string Request,

@@ -185,6 +185,35 @@ public sealed class MinisterOfWillieTests
     }
 
     [Fact]
+    public async Task InboundZoneFlag_RunsGrowZoneSolverAndRecordsZoneBoardOutcome()
+    {
+        FakePlacementSolver solver = FakePlacementSolver.WithOptions(PlacementOption());
+        FakeGrowZonePlacementSolver growZoneSolver = FakeGrowZonePlacementSolver.WithNoFit(NoFitReason.NoTerrainGrid);
+        Harness harness = new(solver, growZoneSolver);
+        harness.SetStableState();
+        harness.Flags.Publish(ZoneFlag());
+
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
+
+        AdviceItem advice = harness.Bus.ActiveAdvice().Should().ContainSingle().Subject;
+        advice.Id.Should().Be("willie_zone_request_active");
+        advice.Title.Should().Contain("Growing request");
+        advice.Body.Should().Contain("Grow-zone solver could not suggest zone options");
+        AdviceAction action = advice.Actions.Should().ContainSingle().Subject;
+        action.Kind.Should().Be(AdviceActionKind.DesignateZone);
+        action.Apply.Should().BeNull();
+        solver.CallCount.Should().Be(0);
+        growZoneSolver.CallCount.Should().Be(1);
+        WillieZoneRequestBoardRow row = harness.SolverStore.ZoneRequestBoard("Willie").Should().ContainSingle().Subject;
+        row.Inbound.SourceMinister.Should().Be("Chef");
+        row.Inbound.Request.Should().BeEquivalentTo(ZoneFlag().ZoneRequests!.Single());
+        row.Outcome.Should().NotBeNull();
+        row.Outcome!.Status.Should().Be("no_fit");
+        row.Outcome.NoFit.Should().Be(nameof(NoFitReason.NoTerrainGrid));
+        harness.SolverStore.RequestBoard("Willie").Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task InboundFreezerFlag_WhenMaterialsAreShort_AttachesApplyPayload()
     {
         FakePlacementSolver solver = FakePlacementSolver.WithOptions(
@@ -264,7 +293,7 @@ public sealed class MinisterOfWillieTests
     {
         FakePlacementSolver solver = FakePlacementSolver.WithNoFit(NoFitReason.NoReachablePath);
         CapturingReplayWriter replay = new();
-        Harness harness = new(solver, replay);
+        Harness harness = new(solver, replay: replay);
         harness.SetStableState();
         harness.Flags.Publish(FreezerFlag());
 
@@ -307,7 +336,7 @@ public sealed class MinisterOfWillieTests
     {
         FakePlacementSolver solver = FakePlacementSolver.WithNoFit(NoFitReason.NoAnchors);
         CapturingReplayWriter replay = new();
-        Harness harness = new(solver, replay);
+        Harness harness = new(solver, replay: replay);
         harness.SetStableStateWithoutKitchen();
         harness.Flags.Publish(FreezerFlag());
 
@@ -466,7 +495,7 @@ public sealed class MinisterOfWillieTests
     {
         FakePlacementSolver solver = FakePlacementSolver.Throwing(solverException);
         CapturingReplayWriter replay = new();
-        Harness harness = new(solver, replay);
+        Harness harness = new(solver, replay: replay);
         harness.SetStableState();
         AdviceItem priorAdvice = PriorOptionsAdvice();
         harness.Bus.ReplaceMinisterAdvice("Willie", [priorAdvice], "Prior Willie options.");
@@ -568,6 +597,27 @@ public sealed class MinisterOfWillieTests
                     RequestedFrom: requestedFrom)
             ]);
 
+    private static AgentFlag ZoneFlag(string requestedFrom = "Willie") =>
+        new(
+            Id: "food:expand_growing_capacity",
+            SourceMinister: "Chef",
+            Priority: Priority.High,
+            Domain: "food",
+            Summary: "Expand food growing capacity",
+            ZoneRequests:
+            [
+                new ZoneRequest(
+                    Request: "36 rice growing tiles near storage",
+                    Reason: "rice fits the season and food buffer is low",
+                    ZoneClass: ZoneClass.Growing,
+                    PlantDef: "Plant_Rice",
+                    TileCount: 36,
+                    Adjacency: [new AdjacencyHint(AdjacencyRelation.Near, "storage")],
+                    Terrain: new TerrainNeed(MustSupportGrowing: true, PreferredFertility: 1.4f),
+                    Priority: Priority.High,
+                    RequestedFrom: requestedFrom)
+            ]);
+
     private static AdviceOption PlacementOption(
         string id = "placement_freezer_10_12",
         string label = "Compact freezer",
@@ -625,7 +675,10 @@ public sealed class MinisterOfWillieTests
         public WillieSolverStore SolverStore { get; } = new();
         public MinisterTraceStore Traces { get; } = new();
 
-        public Harness(IPlacementSolver? solver = null, IReplayCorpusWriter? replay = null)
+        public Harness(
+            IPlacementSolver? solver = null,
+            IGrowZonePlacementSolver? growZoneSolver = null,
+            IReplayCorpusWriter? replay = null)
         {
             Bus = new AdviceBus(OutputStore);
             Cache = new BriefingCache(Colony, new TestLogger<BriefingCache>());
@@ -633,6 +686,7 @@ public sealed class MinisterOfWillieTests
                 Cache,
                 new Rules(new FixedTimeProvider(FixedNow)),
                 solver ?? FakePlacementSolver.WithNoFit(NoFitReason.NoDrafts),
+                growZoneSolver ?? FakeGrowZonePlacementSolver.WithNoFit(NoFitReason.NoTerrainGrid),
                 Colony,
                 SolverStore,
                 OutputStore,
@@ -761,6 +815,63 @@ public sealed class MinisterOfWillieTests
                         Metrics: [])
                 ],
                 ["test_note"]);
+    }
+
+    private sealed class FakeGrowZonePlacementSolver(PlacementResult? result, Exception? exception = null) : IGrowZonePlacementSolver
+    {
+        public int CallCount { get; private set; }
+
+        public ZoneRequest? LastRequest { get; private set; }
+
+        public static FakeGrowZonePlacementSolver WithOptions(params AdviceOption[] options) =>
+            new(new PlacementResult(
+                Options: options,
+                Trace: Trace(),
+                NoFit: null,
+                Draftable: PlacementReadiness.Ready,
+                PlacementValid: PlacementReadiness.Ready,
+                MaterialsReady: PlacementReadiness.Ready,
+                ApplyReady: PlacementReadiness.Blocked));
+
+        public static FakeGrowZonePlacementSolver WithNoFit(NoFitReason reason) =>
+            new(new PlacementResult(
+                Options: [],
+                Trace: Trace(),
+                NoFit: reason,
+                Draftable: PlacementReadiness.Ready,
+                PlacementValid: PlacementReadiness.Blocked,
+                MaterialsReady: PlacementReadiness.Ready,
+                ApplyReady: PlacementReadiness.Blocked));
+
+        public static FakeGrowZonePlacementSolver Throwing(Exception exception) =>
+            new(null, exception);
+
+        public Task<PlacementResult> SolveAsync(
+            ZoneRequest request,
+            WillieBriefing briefing,
+            ColonyState colonyState,
+            CancellationToken ct = default)
+        {
+            CallCount++;
+            LastRequest = request;
+            if (exception is not null)
+                return Task.FromException<PlacementResult>(exception);
+
+            return Task.FromResult(result ?? throw new InvalidOperationException("Fake grow-zone solver has no result."));
+        }
+
+        private static PlacementTrace Trace() =>
+            new(
+                "grow_zone_placement_solver",
+                [
+                    new PlacementDraftTrace(
+                        GeneratorId: "grow_zone_rect",
+                        AnchorRoomId: "stockpile:1",
+                        Status: "selected",
+                        Reason: null,
+                        Metrics: [])
+                ],
+                ["zone_test_note"]);
     }
 
     private sealed class CapturingReplayWriter : IReplayCorpusWriter

@@ -113,6 +113,8 @@ optimization remain out of the current Suggest-mode scope. Chef LLM escalation
 receives the compact computed candidate table and must treat it as the source of
 truth for crop math.
 
+Chef owns the grow-zone need, not the map coordinates. For `expand_growing_capacity`, Chef chooses the crop, tile count, urgency, and food-chain reason, then emits a typed `zone_requests[]` row routed to Willie for spatial placement. Willie may now return inspect-only zone options or a no-fit reason, but Chef's outbound flag must stay read-only and must not bury grow-zone placement in `attention[]`.
+
 The implemented briefing can be narrower than the target. Use
 `FoodBriefing`, `FoodBriefingDerivation`, and Food briefing tests for current
 fields.
@@ -234,6 +236,8 @@ Freezer requests should carry a compact capacity class instead of a vague
 "build freezer" ask: starter, buffer, winter, or surplus. The target is cold
 storage capacity for a colony-days buffer or incoming harvest/hunt/cooking
 surplus; Willie turns that requirement into exact blueprints.
+
+Growing-capacity requests should carry a typed `ZoneRequest` with `zone_class: growing`, crop def, tile count, terrain growability need, priority, and `requested_from: Willie`. Chef owns why and how much food crop is needed; Willie owns whether there is a valid place to put it.
 
 In MVP advice actions and flag requests are rendered by default. Assisted Apply may later execute a narrow allowlist of Chef actions after player confirmation, such as `unforbid` known food stacks, `mark_harvest` on validated safe plant clusters, or one idempotent simple-meal cook-bill upsert when exactly one cooking workbench is known. `mark_hunt` is eligible only for deterministic low-risk animal batches with exact ids and fresh validation that each target is still present and low-risk; apply designates those animal ids directly, while the rect is only a dashboard/locality hint and a batch sanity bound. Broad bill editing, zones, pawn work priorities, and pawn assignment remain outside the Chef apply slice. In Auto, actions become inputs to the deferred planner/Labor/RIMAPI path, while flag requests remain the cross-minister coordination signal.
 

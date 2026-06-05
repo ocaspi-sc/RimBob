@@ -309,12 +309,18 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             ActionsWithCookingBuildingSupport(briefing, [GrowingZoneAction(cropCandidate)]),
             RequestsWithCookingBuildingSupport(
                 briefing,
-                FoodFlagRequests.AttentionRequest(
-                    $"{cropCandidate.Tiles} {cropCandidate.Label} growing tiles near fertile soil and food storage",
-                    cropCandidate.Reason,
-                    quantity: cropCandidate.Tiles,
-                    priority: priority,
-                    requestedFrom: "Willie"),
+                FoodFlagRequests.Zone(new ZoneRequest(
+                    Request: $"{cropCandidate.Tiles} {cropCandidate.Label} growing tiles near fertile soil and food storage",
+                    Reason: cropCandidate.Reason,
+                    ZoneClass: ZoneClass.Growing,
+                    PlantDef: cropCandidate.CropDef,
+                    TileCount: cropCandidate.Tiles,
+                    Adjacency: [new AdjacencyHint(AdjacencyRelation.Near, "storage")],
+                    Terrain: new TerrainNeed(
+                        MustSupportGrowing: true,
+                        PreferredFertility: cropCandidate.TerrainFertility),
+                    Priority: priority,
+                    RequestedFrom: "Willie")),
                 priority),
             true);
     }
@@ -1346,25 +1352,31 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         IReadOnlyList<BuildingRequest> BuildingRequests,
         IReadOnlyList<LaborRequest> LaborRequests,
         IReadOnlyList<ItemRequest> ItemRequests,
+        IReadOnlyList<ZoneRequest> ZoneRequests,
         IReadOnlyList<AttentionRequest> Attention)
     {
-        public static FoodFlagRequests Empty => new([], [], [], []);
+        public static FoodFlagRequests Empty => new([], [], [], [], []);
 
         public int Count =>
             BuildingRequests.Count +
             LaborRequests.Count +
             ItemRequests.Count +
+            ZoneRequests.Count +
             Attention.Count;
 
         public IReadOnlyList<BuildingRequest>? BuildingRequestsOrNull => NullIfEmpty(BuildingRequests);
         public IReadOnlyList<LaborRequest>? LaborRequestsOrNull => NullIfEmpty(LaborRequests);
         public IReadOnlyList<ItemRequest>? ItemRequestsOrNull => NullIfEmpty(ItemRequests);
+        public IReadOnlyList<ZoneRequest>? ZoneRequestsOrNull => NullIfEmpty(ZoneRequests);
         public IReadOnlyList<AttentionRequest>? AttentionOrNull => NullIfEmpty(Attention);
 
         public static FoodFlagRequests Building(BuildingRequest request) =>
             Empty.Add(request);
 
         public static FoodFlagRequests Labor(LaborRequest request) =>
+            Empty.Add(request);
+
+        public static FoodFlagRequests Zone(ZoneRequest request) =>
             Empty.Add(request);
 
         public static FoodFlagRequests AttentionRequest(
@@ -1384,6 +1396,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 BuildingRequests.Concat(other.BuildingRequests).ToArray(),
                 LaborRequests.Concat(other.LaborRequests).ToArray(),
                 ItemRequests.Concat(other.ItemRequests).ToArray(),
+                ZoneRequests.Concat(other.ZoneRequests).ToArray(),
                 Attention.Concat(other.Attention).ToArray());
 
         public FoodFlagRequests Add(BuildingRequest request) =>
@@ -1394,6 +1407,9 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
 
         public FoodFlagRequests Add(ItemRequest request) =>
             this with { ItemRequests = ItemRequests.Append(request).ToArray() };
+
+        public FoodFlagRequests Add(ZoneRequest request) =>
+            this with { ZoneRequests = ZoneRequests.Append(request).ToArray() };
 
         public FoodFlagRequests Add(AttentionRequest request) =>
             this with { Attention = Attention.Append(request).ToArray() };
@@ -1415,6 +1431,11 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 rule,
                 request,
                 request.RequestedFrom ?? "Chief of Staff",
+                request.Priority ?? fallbackPriority)));
+            decisions.AddRange(ZoneRequests.Select(request => new RequestZone(
+                rule,
+                request,
+                request.RequestedFrom ?? "Willie",
                 request.Priority ?? fallbackPriority)));
             decisions.AddRange(Attention.Select(request => new RequestAttention(
                 rule,

@@ -82,6 +82,7 @@ const scopeIcons: Record<string, SemanticIconSpec> = {
 const viewIcons: Record<string, SemanticIconSpec> = {
   prompt: common.prompt,
   briefing: common.briefing,
+  build_queue: common.construction,
   rag: common.rag,
   rules: common.rules,
   raw_llm: common.logs,
@@ -351,6 +352,8 @@ const fieldIcons: Record<string, SemanticIconSpec> = {
   wild_harvest_clusters: common.harvest,
   winter_window: common.season,
   work_type: common.labor,
+  zone_class: item('Plant_Rice', 'Zone class icon', 'ZC'),
+  zone_requests: item('Plant_Rice', 'Zone requests icon', 'ZR'),
 };
 
 const ruleOutcomeIcons: Record<string, SemanticIconSpec> = {

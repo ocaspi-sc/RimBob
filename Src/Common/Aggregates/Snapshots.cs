@@ -103,7 +103,39 @@ public sealed record StockpileLedger(
     IReadOnlyDictionary<string, int> ItemsByDef
 );
 
-public sealed record StockpileZone(string Id, string Type, string? Label, int CellCount, MapPosition? Center = null);
+public sealed record StockpileZone(
+    string Id,
+    string Type,
+    string? Label,
+    int CellCount,
+    MapPosition? Center = null,
+    IReadOnlyList<MapPosition>? Cells = null)
+{
+    public IReadOnlyList<MapPosition> Cells { get; init; } = Cells ?? [];
+}
+
+public sealed record MapZoneRegistry(IReadOnlyList<MapZoneRecord> Zones)
+{
+    public static MapZoneRegistry Empty { get; } = new([]);
+}
+
+public sealed record MapZoneRecord(
+    string Id,
+    string Type,
+    string? Label,
+    int CellCount,
+    string? PlantDef = null,
+    MapRect? Bounds = null,
+    MapPosition? Centroid = null,
+    IReadOnlyList<MapPosition>? Cells = null)
+{
+    public IReadOnlyList<MapPosition> Cells { get; init; } = Cells ?? [];
+
+    public bool IsGrowing =>
+        string.Equals(Type, "GrowingZone", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(Type, "Zone_Growing", StringComparison.OrdinalIgnoreCase) ||
+        Type.Contains("Growing", StringComparison.OrdinalIgnoreCase);
+}
 
 public sealed record MapAreaRegistry(IReadOnlyList<MapArea> Areas)
 {
@@ -116,7 +148,11 @@ public sealed record MapArea(
     string? Label,
     int CellCount,
     MapRect? Bounds = null,
-    MapPosition? Centroid = null);
+    MapPosition? Centroid = null,
+    IReadOnlyList<MapPosition>? Cells = null)
+{
+    public IReadOnlyList<MapPosition> Cells { get; init; } = Cells ?? [];
+}
 
 public sealed record BuildingRegistry(IReadOnlyList<BuildingRecord> Buildings);
 
@@ -281,8 +317,20 @@ public sealed record TerrainSnapshot(
     int Width,
     int Height,
     IReadOnlyDictionary<string, int> CellCountsByDef,
-    IReadOnlyDictionary<string, TerrainDefRecord> DefsByName
-);
+    IReadOnlyDictionary<string, TerrainDefRecord> DefsByName,
+    IReadOnlyList<TerrainCellRecord>? Cells = null)
+{
+    public IReadOnlyList<TerrainCellRecord> Cells { get; init; } = Cells ?? [];
+
+    public bool HasCoordinateGrid => Width > 0 && Height > 0 && Cells.Count == Width * Height;
+}
+
+public sealed record TerrainCellRecord(
+    int X,
+    int Z,
+    string TerrainDef,
+    float Fertility,
+    bool SupportsGrowing);
 
 public sealed record TerrainDefRecord(
     string Def,
@@ -392,6 +440,7 @@ public static class AggregateDefaults
     public static readonly ColonistRegistry  Colonists   = new([]);
     public static readonly RoomRegistry      Rooms       = new([]);
     public static readonly StockpileLedger   Stockpiles  = new([], new Dictionary<string, int>());
+    public static readonly MapZoneRegistry   Zones       = MapZoneRegistry.Empty;
     public static readonly MapAreaRegistry   Areas       = MapAreaRegistry.Empty;
     public static readonly BuildingRegistry  Buildings   = new([]);
     public static readonly WorkTableRegistry WorkTables  = new([]);
@@ -403,7 +452,7 @@ public static class AggregateDefaults
     public static readonly ThingRegistry     Things      = new([]);
     public static readonly ThingDefRegistry  ThingDefs   = new(new Dictionary<string, ThingDefRecord>());
     public static readonly AnimalDefRegistry AnimalDefs  = new(new Dictionary<string, AnimalDefRecord>());
-    public static readonly TerrainSnapshot   Terrain     = new(0, 0, new Dictionary<string, int>(), new Dictionary<string, TerrainDefRecord>());
+    public static readonly TerrainSnapshot   Terrain     = new(0, 0, new Dictionary<string, int>(), new Dictionary<string, TerrainDefRecord>(), []);
     public static readonly StoredResourceRegistry StoredResources = new([], new Dictionary<string, int>(), new Dictionary<string, int>());
     public static readonly AnimalRegistry    Animals     = new([]);
     public static readonly ResourceSummary   Resources   = new(0, 0f, 0, 0f, 0, 0, 0, 0, 0f);

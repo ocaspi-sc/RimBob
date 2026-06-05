@@ -42,6 +42,7 @@ public static class MinisterRuleTableEvaluator
         HashSet<BuildingRequestKey> seenBuildingRequests = [];
         HashSet<LaborRequestKey> seenLaborRequests = [];
         HashSet<ItemRequestKey> seenItemRequests = [];
+        HashSet<ZoneRequestKey> seenZoneRequests = [];
         HashSet<AttentionRequestKey> seenAttentionRequests = [];
         List<Decision> deduped = [];
 
@@ -56,6 +57,9 @@ public static class MinisterRuleTableEvaluator
                     deduped.Add(request);
                     break;
                 case RequestItem request when seenItemRequests.Add(ItemRequestKey.For(request.Request)):
+                    deduped.Add(request);
+                    break;
+                case RequestZone request when seenZoneRequests.Add(ZoneRequestKey.For(request.Request)):
                     deduped.Add(request);
                     break;
                 case RequestAttention request when seenAttentionRequests.Add(AttentionRequestKey.For(request.Request)):
@@ -152,6 +156,7 @@ public static class MinisterRuleTableEvaluator
             RequestBuild request => request.Priority,
             RequestLabor request => request.Priority,
             RequestItem request => request.Priority,
+            RequestZone request => request.Priority,
             RequestAttention request => request.Priority,
             Escalate => Priority.Critical,
             _ => Priority.Low
@@ -164,8 +169,9 @@ public static class MinisterRuleTableEvaluator
             RequestBuild => 1,
             RequestLabor => 2,
             RequestItem => 3,
-            RequestAttention => 4,
-            Escalate => 5,
+            RequestZone => 4,
+            RequestAttention => 5,
+            Escalate => 6,
             _ => 99
         };
 
@@ -203,6 +209,13 @@ public static class MinisterRuleTableEvaluator
                 request.To,
                 request.Request.ItemDef,
                 null),
+            RequestZone request => new RuleEmission(
+                "request_zone",
+                request.Priority,
+                request.Request.Request,
+                request.To,
+                request.Request.PlantDef,
+                null),
             RequestAttention request => new RuleEmission(
                 "request_attention",
                 request.Priority,
@@ -236,7 +249,7 @@ public static class MinisterRuleTableEvaluator
             parts.Add($"actions: {string.Join(", ", actionKinds)}");
 
         int requestCount = decisions.Count(decision =>
-            decision is RequestBuild or RequestLabor or RequestItem or RequestAttention);
+            decision is RequestBuild or RequestLabor or RequestItem or RequestZone or RequestAttention);
         if (requestCount > 0)
             parts.Add($"requests: {requestCount}");
 
@@ -276,6 +289,12 @@ public static class MinisterRuleTableEvaluator
     {
         public static ItemRequestKey For(ItemRequest request) =>
             new(NormalizeKeyText(request.ItemDef));
+    }
+
+    private readonly record struct ZoneRequestKey(ZoneClass ZoneClass, string? PlantDef, int? TileCount, string? RequestedFrom)
+    {
+        public static ZoneRequestKey For(ZoneRequest request) =>
+            new(request.ZoneClass, NormalizeKeyText(request.PlantDef), request.TileCount, NormalizeKeyText(request.RequestedFrom));
     }
 
     private readonly record struct AttentionRequestKey(string Request, string? RequestedFrom)

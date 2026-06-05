@@ -87,6 +87,74 @@ public sealed class AdviceNormalizationTests
     }
 
     [Fact]
+    public void ResourceRequestNormalizer_MapsStrictZoneRequests()
+    {
+        JsonNode? root = JsonNode.Parse("""
+        {
+          "zone_requests": [
+            {
+              "request": "36 rice growing tiles near storage",
+              "reason": "crop math selected rice",
+              "zone_class": "crop zone",
+              "plant_def": "Plant_Rice",
+              "tile_count": 36,
+              "adjacency": [{ "relation": "near", "target": "storage" }],
+              "terrain": { "must_support_growing": true, "preferred_fertility": 1.4 },
+              "requested_from": "Willie"
+            }
+          ]
+        }
+        """);
+
+        NormalizedFlagRequests requests = ResourceRequestNormalizer.NormalizeFlagRequests(
+            root,
+            Priority.High,
+            Context(),
+            Json);
+
+        ZoneRequest request = requests.ZoneRequests.Should().ContainSingle().Subject;
+        request.ZoneClass.Should().Be(ZoneClass.Growing);
+        request.PlantDef.Should().Be("Plant_Rice");
+        request.TileCount.Should().Be(36);
+        request.Adjacency.Should().ContainSingle()
+            .Which.Target.Should().Be("storage");
+        request.Terrain.Should().BeEquivalentTo(new TerrainNeed(MustSupportGrowing: true, PreferredFertility: 1.4f));
+        request.Priority.Should().Be(Priority.High);
+        request.RequestedFrom.Should().Be("Willie");
+        requests.Attention.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ResourceRequestNormalizer_NormalizesZoneRequestsWithQuantityAlias()
+    {
+        JsonNode? root = JsonNode.Parse("""
+        {
+          "zone_requests": [
+            {
+              "request": "36 rice growing tiles near storage",
+              "reason": "food buffer is low",
+              "zone_class": "growing",
+              "quantity": 36
+            }
+          ]
+        }
+        """);
+
+        NormalizedFlagRequests requests = ResourceRequestNormalizer.NormalizeFlagRequests(
+            root,
+            Priority.High,
+            Context(),
+            Json);
+
+        ZoneRequest request = requests.ZoneRequests.Should().ContainSingle().Subject;
+        request.ZoneClass.Should().Be(ZoneClass.Growing);
+        request.PlantDef.Should().Be("Plant_Rice");
+        request.TileCount.Should().Be(36);
+        request.RequestedFrom.Should().Be("Willie");
+        requests.Attention.Should().BeEmpty();
+    }
+
+    [Fact]
     public void AdviceActionNormalizer_ConvertsLegacyActionsAndTextFallback()
     {
         JsonNode? root = JsonNode.Parse("""

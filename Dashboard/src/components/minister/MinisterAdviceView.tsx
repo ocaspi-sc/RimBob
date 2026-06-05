@@ -10,6 +10,7 @@ import type {
   BuildingRequest,
   ItemRequest,
   LaborRequest,
+  ZoneRequest,
 } from '../../types/advice';
 import { displayMinisterName, type ScopeConfig } from '../../dashboard/scopes';
 import { isScopeMinister } from '../../dashboard/selectors';
@@ -395,7 +396,7 @@ function FlagRequestGroups({
 }
 
 type FlagRequestGroup = {
-  key: 'building_requests' | 'labor_requests' | 'item_requests' | 'attention';
+  key: 'building_requests' | 'labor_requests' | 'item_requests' | 'zone_requests' | 'attention';
   label: string;
   rows: FlagRequestRow[];
 };
@@ -444,6 +445,7 @@ function countFlagRequests(flag: AgentFlag): number {
   return (flag.building_requests?.length ?? 0) +
     (flag.labor_requests?.length ?? 0) +
     (flag.item_requests?.length ?? 0) +
+    (flag.zone_requests?.length ?? 0) +
     (flag.attention?.length ?? 0);
 }
 
@@ -470,6 +472,13 @@ function flagRequestGroups(flag: AgentFlag): FlagRequestGroup[] {
       rows: flag.item_requests!.map(itemRequestRow),
     });
   }
+  if ((flag.zone_requests?.length ?? 0) > 0) {
+    groups.push({
+      key: 'zone_requests',
+      label: 'Zone',
+      rows: flag.zone_requests!.map(zoneRequestRow),
+    });
+  }
   if ((flag.attention?.length ?? 0) > 0) {
     groups.push({
       key: 'attention',
@@ -484,6 +493,18 @@ function buildingRequestRow(request: BuildingRequest): FlagRequestRow {
   return {
     detail: formatBuildingDetail(request),
     iconKey: request.target_def ? request.target_def : request.target_class,
+    owner: request.requested_from,
+    priority: request.priority,
+    reason: request.reason,
+    request: request.request,
+    workSkill: null,
+  };
+}
+
+function zoneRequestRow(request: ZoneRequest): FlagRequestRow {
+  return {
+    detail: formatZoneDetail(request),
+    iconKey: request.plant_def ?? 'zone_requests',
     owner: request.requested_from,
     priority: request.priority,
     reason: request.reason,
@@ -562,6 +583,34 @@ function formatBuildingDetail(request: BuildingRequest): ReactNode[] {
   ].filter((value): value is ReactNode => value !== null && value !== undefined && value !== '');
 
   return details;
+}
+
+function formatZoneDetail(request: ZoneRequest): ReactNode[] {
+  return detailList(
+    request.zone_class ? `Zone: ${formatLabel(request.zone_class)}` : null,
+    request.plant_def ? <ResourceQuantity defName={request.plant_def} key="plant" quantity={request.tile_count} /> : formatTileCount(request.tile_count),
+    formatAdjacency(request.adjacency),
+    formatTerrainNeed(request.terrain),
+    request.urgency ? `Urgency: ${formatLabel(request.urgency)}` : null,
+    formatDeadline(request.deadline));
+}
+
+function formatTileCount(value: number | null | undefined): string | null {
+  return value === null || value === undefined ? null : `Tiles: ${value.toLocaleString()}`;
+}
+
+function formatTerrainNeed(terrain: ZoneRequest['terrain']): string | null {
+  if (!terrain) return null;
+  const parts = [
+    terrain.must_support_growing ? 'growable' : null,
+    terrain.preferred_fertility === null || terrain.preferred_fertility === undefined
+      ? null
+      : `fertility ${terrain.preferred_fertility.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+    terrain.preferred_terrain_defs && terrain.preferred_terrain_defs.length > 0
+      ? terrain.preferred_terrain_defs.join(', ')
+      : null,
+  ].filter(Boolean);
+  return parts.length === 0 ? null : `Terrain: ${parts.join(', ')}`;
 }
 
 function formatCapacityNeed(capacity: BuildingRequest['capacity_need']): string | null {
