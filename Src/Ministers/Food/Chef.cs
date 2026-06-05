@@ -35,11 +35,11 @@ public sealed class Chef(
                 context,
                 new Escalate(
                     "manual_llm_trigger",
-                    "dashboard Run LLM forces Chef's LLM path",
+                    "dashboard Run LLM confirms Chef's LLM path",
                     new { briefing.BriefingVersion, briefing.GameTick }),
                 RuleTraceDetails.Escalated(
                     "manual_llm_trigger",
-                    "dashboard Run LLM forces Chef's LLM path"),
+                    "dashboard Run LLM confirms Chef's LLM path"),
                 ct);
             return;
         }
@@ -68,31 +68,27 @@ public sealed class Chef(
         Escalate? escalation = result.Decisions.OfType<Escalate>().SingleOrDefault();
         if (escalation is not null && result.Decisions.Count == 1)
         {
-            if (cycle.RunMode == MinisterRunMode.RulesOnly)
-            {
-                string unresolvedSummary = FoodStateSummary.Build(briefing);
-                AdviceChainModel emptyChain = FoodChainModelBuilder.Build(briefing, []);
-                PublishSnapshot([], [], unresolvedSummary, emptyChain);
-                await PersistReplayAsync(new MinisterReplayEntry(
-                    Minister: Name,
-                    Cycle: cycle,
-                    Path: "rules",
-                    Briefing: briefing,
-                    Context: context,
-                    RuleTrace: null,
-                    RuleDiagnostics: result.Diagnostics,
-                    EscalationReason: escalation.Reason,
-                    EscalationContext: BuildEscalationContext(escalation.Context, BuildCropCandidates(briefing)),
-                    GuideCitations: null,
-                    Advice: [],
-                    Flags: [],
-                    StateSummary: unresolvedSummary,
-                    Chain: emptyChain), ct);
-                log.LogInformation("Chef rules-only trigger stopped before LLM escalation. reason={Reason}", escalation.Reason);
-                return;
-            }
-
-            await RunEscalationAsync(cycle, briefing, context, escalation, result.Diagnostics, ct);
+            string unresolvedSummary = FoodStateSummary.Build(briefing);
+            AdviceChainModel emptyChain = FoodChainModelBuilder.Build(briefing, []);
+            PublishSnapshot([], [], unresolvedSummary, emptyChain);
+            await PersistReplayAsync(new MinisterReplayEntry(
+                Minister: Name,
+                Cycle: cycle,
+                Path: "rules",
+                Briefing: briefing,
+                Context: context,
+                RuleTrace: null,
+                RuleDiagnostics: result.Diagnostics,
+                EscalationReason: escalation.Reason,
+                EscalationContext: BuildEscalationContext(escalation.Context, BuildCropCandidates(briefing)),
+                GuideCitations: null,
+                Advice: [],
+                Flags: [],
+                StateSummary: unresolvedSummary,
+                Chain: emptyChain), ct);
+            log.LogInformation(
+                "Chef rules path requested LLM escalation and is awaiting dashboard confirmation. reason={Reason}",
+                escalation.Reason);
             return;
         }
 

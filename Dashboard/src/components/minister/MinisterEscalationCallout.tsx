@@ -4,7 +4,19 @@ import type { MinisterTrace } from '../../types/system';
 import { IconizedText } from '../shared/IconizedText';
 import { SemanticLabel } from '../shared/SemanticIcon';
 
-export function MinisterEscalationCallout({ trace }: { trace: MinisterTrace | null }) {
+export function MinisterEscalationCallout({
+  canConfirmLlm = false,
+  confirmDisabled = false,
+  confirmPending = false,
+  onConfirmLlm,
+  trace,
+}: {
+  canConfirmLlm?: boolean;
+  confirmDisabled?: boolean;
+  confirmPending?: boolean;
+  onConfirmLlm?: () => void;
+  trace: MinisterTrace | null;
+}) {
   const reason = trace?.escalationReason?.trim();
   if (!trace || !reason) return null;
 
@@ -12,6 +24,7 @@ export function MinisterEscalationCallout({ trace }: { trace: MinisterTrace | nu
   const completedAt = trace.completedAt ?? trace.startedAt;
   const ministerName = displayMinisterName(trace.minister);
   const outputCount = formatOutputCount(trace);
+  const showConfirmation = trace.path === 'rules' && canConfirmLlm && onConfirmLlm !== undefined;
 
   return (
     <section
@@ -31,6 +44,21 @@ export function MinisterEscalationCallout({ trace }: { trace: MinisterTrace | nu
           <IconizedText maxIcons={2} text={reason} />
         </p>
         <small>{copy.detail}</small>
+        {showConfirmation && (
+          <div className="minister-escalation-actions">
+            <button
+              type="button"
+              className="trigger-button"
+              disabled={confirmDisabled || confirmPending}
+              aria-busy={confirmPending}
+              onClick={onConfirmLlm}
+            >
+              <SemanticLabel icon={iconForSection('llm_escalation')}>
+                <span>{confirmPending ? 'Running LLM...' : 'Confirm LLM'}</span>
+              </SemanticLabel>
+            </button>
+          </div>
+        )}
       </div>
       <dl className="minister-escalation-meta">
         <div>
@@ -63,7 +91,7 @@ export function MinisterEscalationCallout({ trace }: { trace: MinisterTrace | nu
 function escalationCopy(trace: MinisterTrace): { detail: string; kicker: string; title: string; tone: 'error' | 'ok' | 'warn' } {
   if (trace.path === 'rules') {
     return {
-      detail: 'The deterministic rules path could not finish the decision. In rules-only mode, provider work is intentionally skipped.',
+      detail: 'The deterministic rules path requested provider judgment; the LLM path is paused until the player confirms it from the dashboard.',
       kicker: 'Rules requested escalation',
       title: 'Needs LLM judgment',
       tone: 'warn',

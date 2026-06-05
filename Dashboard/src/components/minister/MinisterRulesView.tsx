@@ -55,13 +55,19 @@ const activeAdviceColumns = [
 export function MinisterRulesView({
   advice,
   events,
+  llmPending,
   manualTriggerTarget,
+  onRunLlm,
   scope,
+  triggerDisabled,
 }: {
   advice: AdviceItem[];
   events: DashboardEvent[];
+  llmPending: boolean;
   manualTriggerTarget: string | null;
+  onRunLlm: () => void;
   scope: ScopeConfig;
+  triggerDisabled: boolean;
 }) {
   const ministerAdvice = advice.filter(item => isScopeMinister(item.minister, scope));
   const ministerEvents = events.filter(event => isScopeMinister(event.source, scope));
@@ -90,7 +96,13 @@ export function MinisterRulesView({
         <EmptyState code="TRACE NOT EXPOSED">{trace.error ?? 'No trace returned.'}</EmptyState>
       ) : (
         <>
-          <MinisterEscalationCallout trace={trace.data} />
+          <MinisterEscalationCallout
+            canConfirmLlm={scope.canRunLlm === true}
+            confirmDisabled={triggerDisabled}
+            confirmPending={llmPending}
+            onConfirmLlm={onRunLlm}
+            trace={trace.data}
+          />
           <TraceSummaryPanel trace={trace.data} />
           {trace.data.ruleDiagnostics && (
             <RuleDiagnosticsPanel details={trace.data.ruleDiagnostics} />

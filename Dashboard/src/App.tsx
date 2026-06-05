@@ -139,12 +139,15 @@ export default function App() {
                 chains={feed.feed.chains}
                 events={feed.events}
                 flags={feed.feed.flags}
+                llmPending={triggers.triggerState.target === `${activeScope.key}:llm`}
                 manualTriggerTarget={triggers.triggerState.target}
+                onRunLlm={() => void triggers.triggerMinisterLlm(activeScope)}
                 previousAgenda={feed.previousAgenda}
                 scope={activeScope}
                 selectedView={activeMinisterView}
                 stateSummaries={feed.feed.stateSummaries}
                 systemHealth={systemHealth.data}
+                triggerDisabled={triggers.triggerState.target !== null || !hostApiLive}
               />
             </>
           )}

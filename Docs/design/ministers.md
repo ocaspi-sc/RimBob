@@ -43,9 +43,7 @@ Every minister has a canonical display emoji. Human-facing UI/docs print it next
 
 ## Play Mode
 
-Play mode is live and `Suggest` mode by default. A typed play-cycle context
-wakes a minister; the minister reads its briefing, evaluates deterministic rules
-first, and either emits advice/flags or escalates to the LLM.
+Play mode is live and `Suggest` mode by default. A typed play-cycle context wakes a minister; the minister reads its briefing, evaluates deterministic rules first, and either emits advice/flags or records a pending LLM escalation for dashboard confirmation.
 
 The durable trigger vocabulary is:
 
@@ -61,7 +59,7 @@ refresh and manual dashboard triggers; `StartupBootstrap` remains a vocabulary
 value for explicitly labeled first-run/bootstrap flows, not a Host-rebuild
 cabinet wake.
 
-Manual dashboard minister triggers also carry a run mode: `Run Rules` means deterministic rules only and must stop before provider work, while `Run LLM` means a forced LLM path and is only enabled for ministers with a wired LLM implementation.
+Manual dashboard minister triggers also carry a run mode: `Run Rules` means deterministic rules only and must stop before provider work, while `Run LLM` is the user-confirmed provider path and is only enabled for ministers with a wired LLM implementation. A rule-authored `Escalate` effect records the reason and waits for that dashboard confirmation instead of calling the provider automatically.
 
 Flag-carried requests can also wake an owning rules-only minister. In particular, a newly published Willie-owned `building_request` immediately runs Willie in `FlagFired` / rules-only mode so the deterministic Placement Solver handles the request without an extra manual Willie trigger.
 
@@ -69,10 +67,10 @@ Flag-carried requests can also wake an owning rules-only minister. In particular
 
 There is no first-cycle special case. A newly introduced feeder runs the **same
 rules-first evaluation on its first live cycle as on every other**: evaluate
-deterministic rules, emit advice/flags on a match, and reach the LLM only through
+deterministic rules, emit advice/flags on a match, and request LLM judgment only through
 the normal escalation triggers (chiefly "no rule matches the current briefing
 state"). A genuinely ambiguous first cycle therefore still escalates — by the
-ordinary path, not a forced bootstrap.
+ordinary pending-confirmation path, not a forced bootstrap.
 
 Rationale:
 
@@ -230,9 +228,7 @@ advice-plus-flags bundle. The effect kinds are:
 - **Request*** — an inter-minister need (build, labor, item, attention) carrying
   the target minister and a priority. These are first-class effects, replacing
   `AgentFlag`'s parallel request sub-lists.
-- **Escalate** — a terminal "no deterministic path" effect. An empty effect list
-  is a benign no-op; an `Escalate` effect is a deliberate hand-off to the LLM
-  (so there is no separate decision/escalate wrapper union).
+- **Escalate** — a terminal "no deterministic path" effect. An empty effect list is a benign no-op; an `Escalate` effect is a deliberate request for dashboard-confirmed LLM judgment (so there is no separate decision/escalate wrapper union).
 
 Co-occurring outputs are separate list entries — a concern that both advises and
 requests a build emits an `Advise` and a `RequestBuild` sharing one `RuleId`, so
@@ -244,7 +240,7 @@ The runner folds effects by kind at the boundary: `Advise` content is stamped
 with lifecycle, owning minister, and qualified id into the wire `AdviceItem`;
 `Request*` effects are grouped per concern (`RuleId`) into the `AgentFlag` the
 FlagChannel publishes, with the concern's priority preserved as the flag priority that
-Mayor filters on; `Escalate` routes to the LLM. Rules author neither timestamps
+Mayor filters on; `Escalate` records an LLM-needed trace and waits for dashboard confirmation before provider work. Rules author neither timestamps
 nor flags nor wire ids — the boundary projects them, so the rule table needs no
 clock. Advice and flags share one underlying `Priority` enum carried by
 the concern; the wire uses `priority` for both `AdviceItem` and `AgentFlag`.

@@ -24,7 +24,7 @@ public static class CabinetEndpoints
         coverage.Register(
             "/api/ministers/{minister}/trigger/llm",
             _ => "partial",
-            context => $"Manual forced-LLM dashboard trigger for LLM-backed ministers: {context.CapabilityNames(descriptor => descriptor.CanRunLlm)}. Non-LLM scopes stay disabled.");
+            context => $"Manual user-confirmed LLM dashboard trigger for LLM-backed ministers: {context.CapabilityNames(descriptor => descriptor.CanRunLlm)}. Non-LLM scopes stay disabled.");
 
         app.MapPost("/api/cabinet/trigger", async (
             HttpRequest request,

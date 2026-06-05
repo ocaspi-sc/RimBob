@@ -35,11 +35,11 @@ public sealed class MinisterOfWelfare(
                 context,
                 new Escalate(
                     "manual_llm_trigger",
-                    "dashboard Run LLM forces Welfare's LLM path",
+                    "dashboard Run LLM confirms Welfare's LLM path",
                     new { briefing.BriefingVersion, briefing.GameTick }),
                 RuleTraceDetails.Escalated(
                     "manual_llm_trigger",
-                    "dashboard Run LLM forces Welfare's LLM path"),
+                    "dashboard Run LLM confirms Welfare's LLM path"),
                 ct);
             return;
         }
@@ -48,29 +48,25 @@ public sealed class MinisterOfWelfare(
         Escalate? escalation = result.Decisions.OfType<Escalate>().SingleOrDefault();
         if (escalation is not null && result.Decisions.Count == 1)
         {
-            if (cycle.RunMode == MinisterRunMode.RulesOnly)
-            {
-                string unresolvedSummary = WelfareStateSummary.Build(briefing);
-                PublishSnapshot([], [], unresolvedSummary);
-                await PersistReplayAsync(new MinisterReplayEntry(
-                    Minister: Name,
-                    Cycle: cycle,
-                    Path: "rules",
-                    Briefing: briefing,
-                    Context: context,
-                    RuleTrace: null,
-                    RuleDiagnostics: result.Diagnostics,
-                    EscalationReason: escalation.Reason,
-                    EscalationContext: escalation.Context,
-                    GuideCitations: null,
-                    Advice: [],
-                    Flags: [],
-                    StateSummary: unresolvedSummary), ct);
-                log.LogInformation("Welfare rules-only trigger stopped before LLM escalation. reason={Reason}", escalation.Reason);
-                return;
-            }
-
-            await RunEscalationAsync(cycle, briefing, context, escalation, result.Diagnostics, ct);
+            string unresolvedSummary = WelfareStateSummary.Build(briefing);
+            PublishSnapshot([], [], unresolvedSummary);
+            await PersistReplayAsync(new MinisterReplayEntry(
+                Minister: Name,
+                Cycle: cycle,
+                Path: "rules",
+                Briefing: briefing,
+                Context: context,
+                RuleTrace: null,
+                RuleDiagnostics: result.Diagnostics,
+                EscalationReason: escalation.Reason,
+                EscalationContext: escalation.Context,
+                GuideCitations: null,
+                Advice: [],
+                Flags: [],
+                StateSummary: unresolvedSummary), ct);
+            log.LogInformation(
+                "Welfare rules path requested LLM escalation and is awaiting dashboard confirmation. reason={Reason}",
+                escalation.Reason);
             return;
         }
 

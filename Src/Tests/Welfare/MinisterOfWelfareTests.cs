@@ -100,7 +100,29 @@ public sealed class MinisterOfWelfareTests
     }
 
     [Fact]
-    public async Task EscalationFailure_KeepsPriorSnapshotAndPersistsFailedReplay()
+    public async Task RulesFirst_WhenRulesEscalate_AwaitsDashboardConfirmation()
+    {
+        CapturingReplayWriter replay = new();
+        int calls = 0;
+        Harness harness = new(replay, (_, _, _, _) =>
+        {
+            calls++;
+            return Task.FromResult(new WelfareLlmResponse([WelfareAdvice("llm_welfare")], []));
+        });
+
+        harness.SetSocialPressureState();
+        await harness.Minister.RunPlayCycle(PlayCycleContext.CabinetRefresh, CancellationToken.None);
+
+        calls.Should().Be(0);
+        harness.Bus.ActiveAdvice().Should().BeEmpty();
+        MinisterReplayRecord record = replay.Records.Should().ContainSingle().Subject;
+        record.Path.Should().Be("rules");
+        record.EscalationReason.Should().Contain("dominant_unwired_thought=social");
+        record.Llm.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ManualForceLlmFailure_KeepsPriorSnapshotAndPersistsFailedReplay()
     {
         CapturingReplayWriter replay = new();
         Harness harness = new(replay, (_, _, _, _) => throw new InvalidOperationException("quota exhausted"));
@@ -109,12 +131,13 @@ public sealed class MinisterOfWelfareTests
         harness.Bus.ActiveAdvice().Should().ContainSingle()
             .Which.Id.Should().Be("welfare_shelter_floor");
 
-        harness.SetSocialPressureState();
-        await harness.Minister.RunPlayCycle(PlayCycleContext.CabinetRefresh, CancellationToken.None);
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualForceLlm, CancellationToken.None);
 
         harness.Bus.ActiveAdvice().Should().ContainSingle()
             .Which.Id.Should().Be("welfare_shelter_floor");
         MinisterReplayRecord record = replay.Records.Single(r => r.Path == "llm_failed");
+        record.WakeupPayload.Should().Be("dashboard:llm");
+        record.EscalationReason.Should().Contain("dashboard Run LLM");
         record.Error.Should().NotBeNull();
         record.Error!.Message.Should().Be("quota exhausted");
     }

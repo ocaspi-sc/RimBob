@@ -21,11 +21,14 @@ export interface MinisterViewContext {
   chains: Record<string, AdviceChainModel>;
   events: DashboardEvent[];
   flags: Record<string, AgentFlag[]>;
+  llmPending: boolean;
   manualTriggerTarget: string | null;
+  onRunLlm: () => void;
   previousAgenda: MayorAgenda | null;
   scope: ScopeConfig;
   stateSummaries: Record<string, string>;
   systemHealth: SystemHealth | null;
+  triggerDisabled: boolean;
 }
 
 type MinisterViewRenderer = (context: MinisterViewContext) => ReactElement;
@@ -53,8 +56,16 @@ const ministerViewRenderers: Record<MinisterViewKey, MinisterViewRenderer> = {
   rag: ({ agenda, scope, systemHealth }) => (
     <MinisterRagView scope={scope} agenda={agenda} systemHealth={systemHealth} />
   ),
-  rules: ({ activeAdvice, events, manualTriggerTarget, scope }) => (
-    <MinisterRulesView scope={scope} events={events} advice={activeAdvice} manualTriggerTarget={manualTriggerTarget} />
+  rules: ({ activeAdvice, events, llmPending, manualTriggerTarget, onRunLlm, scope, triggerDisabled }) => (
+    <MinisterRulesView
+      scope={scope}
+      events={events}
+      advice={activeAdvice}
+      llmPending={llmPending}
+      manualTriggerTarget={manualTriggerTarget}
+      onRunLlm={onRunLlm}
+      triggerDisabled={triggerDisabled}
+    />
   ),
   infographics: ({ chains, scope }) => (
     <MinisterInfographicsView
@@ -62,7 +73,7 @@ const ministerViewRenderers: Record<MinisterViewKey, MinisterViewRenderer> = {
       scope={scope}
     />
   ),
-  advice: ({ activeAdvice, agenda, events, flags, manualTriggerTarget, previousAgenda, scope, stateSummaries, systemHealth }) => (
+  advice: ({ activeAdvice, agenda, events, flags, llmPending, manualTriggerTarget, onRunLlm, previousAgenda, scope, stateSummaries, systemHealth, triggerDisabled }) => (
     <MinisterAdviceView
       scope={scope}
       agenda={agenda}
@@ -71,8 +82,11 @@ const ministerViewRenderers: Record<MinisterViewKey, MinisterViewRenderer> = {
       currentGameTick={systemHealth?.colony_snapshot.game_tick ?? null}
       events={events}
       flags={valueForScope(flags, scope) ?? []}
+      llmPending={llmPending}
       manualTriggerTarget={manualTriggerTarget}
+      onRunLlm={onRunLlm}
       stateSummary={valueForScope(stateSummaries, scope) ?? null}
+      triggerDisabled={triggerDisabled}
     />
   ),
 };

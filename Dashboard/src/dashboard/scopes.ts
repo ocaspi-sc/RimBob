@@ -94,7 +94,6 @@ const allMinisterViews = ministerViews
   .map(view => view.key)
   .filter(view => view !== 'build_queue' && view !== 'solver' && view !== 'requests');
 const rulesOnlyMinisterViews: DashboardViewKey[] = ['briefing', 'build_queue', 'solver', 'requests', 'rules', 'advice'];
-const welfareMinisterViews: DashboardViewKey[] = ['briefing', 'rules', 'advice'];
 
 export const scopeConfigs: ScopeConfig[] = [
   { key: 'system', label: 'SYSTEM', displayLabel: 'SYSTEM', kind: 'system', status: 'live', enabledViews: systemViews.map(view => view.key) },
@@ -105,7 +104,7 @@ export const scopeConfigs: ScopeConfig[] = [
   { key: 'food', label: 'Chef', displayLabel: '🍲 Chef', emoji: '🍲', kind: 'minister', status: 'live', enabledViews: allMinisterViews, canRunRules: true, canRunLlm: true },
   { key: 'willie', label: 'Willie', displayLabel: '🧱 Willie', emoji: '🧱', kind: 'minister', status: 'live', enabledViews: rulesOnlyMinisterViews, canRunRules: true },
   { key: 'defense', label: 'Defense', displayLabel: '🛡️ Defense', emoji: '🛡️', kind: 'minister', status: 'planned', enabledViews: allMinisterViews },
-  { key: 'welfare', label: 'Welfare', displayLabel: '🙂 Welfare', emoji: '🙂', kind: 'minister', status: 'live', enabledViews: welfareMinisterViews, canRunRules: true },
+  { key: 'welfare', label: 'Welfare', displayLabel: '🙂 Welfare', emoji: '🙂', kind: 'minister', status: 'live', enabledViews: allMinisterViews, canRunRules: true, canRunLlm: true },
   { key: 'medical', label: 'Medical', displayLabel: '🩺 Medical', emoji: '🩺', kind: 'minister', status: 'planned', enabledViews: allMinisterViews },
   { key: 'research', label: 'Research', displayLabel: '🔬 Research', emoji: '🔬', kind: 'minister', status: 'planned', enabledViews: allMinisterViews },
   { key: 'industry', label: 'Industry', displayLabel: '⚙️ Industry', emoji: '⚙️', kind: 'minister', status: 'planned', enabledViews: allMinisterViews },

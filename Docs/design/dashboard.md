@@ -504,10 +504,10 @@ high-priority endpoint groups, and should be updated when `RimApiClient` or
 
 Manual triggers are RimBob evaluation controls, not game controls:
 
-- Cabinet trigger: refresh live state, then run wired live ministers in the dependency order. If live refresh fails while Host is serving a restored `ColonyState` snapshot because RIMAPI is unreachable or no colony map is loaded yet, the trigger may still run read-only evaluation against that stale snapshot and must report that fallback in the response and trace.
+- Cabinet trigger: refresh live state, then run wired live ministers in the dependency order. If a feeder rule requests LLM escalation, the trace records the reason and stops before provider work until the player confirms the LLM path in the dashboard. If live refresh fails while Host is serving a restored `ColonyState` snapshot because RIMAPI is unreachable or no colony map is loaded yet, the trigger may still run read-only evaluation against that stale snapshot and must report that fallback in the response and trace.
 - Cabinet trigger responses include a run-scoped, in-memory step log, and the dashboard opens a compact run-step dialog immediately when `Run Cabinet Now` is clicked. The dashboard generates a `run_id` before posting so `/api/advice/stream` `cabinet_run` events can reconcile progress before the POST returns. Rows come from backend instrumentation around actual work: request accepted, live-state refresh, restored-snapshot fallback when used, Chef run, Willie run, Mayor run, and final complete or failed. Closing the dialog does not cancel the backend run, and the trigger remains a `Suggest`-mode evaluation control with no RIMAPI writes.
 - Minister `Run Rules`: refresh live state, then run only the selected wired minister's deterministic rules path through `POST /api/ministers/{minister}/trigger/rules`. This mode must not call an LLM; if rules return an escalation, the trace records the escalation reason and stops before provider work.
-- Minister `Run LLM`: refresh live state, then run only the selected wired minister's forced LLM path through `POST /api/ministers/{minister}/trigger/llm`. This button is disabled for scopes without an LLM path, such as Willie until a construction LLM path is implemented.
+- Minister `Run LLM`: refresh live state, then run only the selected wired minister's user-confirmed LLM path through `POST /api/ministers/{minister}/trigger/llm`. The button also confirms a pending rule escalation surfaced by the Rules/Advice callout. This button is disabled for scopes without an LLM path, such as Willie until a construction LLM path is implemented.
 - Willie-owned `building_request`s are request follow-ups, not separate operator chores: when a run publishes a flag containing a Willie `building_request`, the Host immediately wakes Willie in rules-only `FlagFired` mode so the Placement Solver can compute options without waiting for the Willie workspace `Run Rules` button.
 - Do not keep legacy trigger aliases unless a current dashboard or script consumer requires them.
 
@@ -517,7 +517,7 @@ running" with a short recovery instruction; the dashboard shows that problem
 detail directly instead of route names, HTTP status codes, or generic internal
 server errors. Logs remain the place for stack traces and low-level diagnostics.
 
-Manual trigger traces must be visible in the dashboard. The current trigger should remain a `Suggest`-mode evaluation control and must not call RIMAPI write endpoints. Minister workspace headers show two explicit mode controls, `Run LLM` and `Run Rules`, so operators can tell whether they are testing provider judgment or deterministic rules. Disabled buttons should stay visible with a scope-specific not-wired tooltip instead of hiding the missing capability.
+Manual trigger traces must be visible in the dashboard. The current trigger should remain a `Suggest`-mode evaluation control and must not call RIMAPI write endpoints. Minister workspace headers show two explicit mode controls, `Run LLM` and `Run Rules`, so operators can tell whether they are testing provider judgment or deterministic rules. When a rules trace carries an escalation reason, Advice and Rules show a prominent confirmation action that runs the LLM path only after the user clicks it. Disabled buttons should stay visible with a scope-specific not-wired tooltip instead of hiding the missing capability.
 
 ### Icon Rendering
 
@@ -650,13 +650,7 @@ degraded or not-exposed coverage states.
 
 The Rules view answers: "Why did RimBob say this now?"
 
-Show trigger, rules-vs-LLM path, selected rule or escalation reason, matched
-signals, suppressed lower-priority candidates, relevant flag or wakeup payload,
-emitted advice/flags, briefing version/tick when available, and last error.
-Rules trace/replay diagnostics should also include emitted action provenance so
-the operator can see which rule or LLM-after-escalation path produced each
-action row. Keep that provenance in trace/replay diagnostics; raw `actions[]`
-remains the player-facing action contract.
+Show trigger, rules-vs-LLM path, selected rule or escalation reason, matched signals, suppressed lower-priority candidates, relevant flag or wakeup payload, emitted advice/flags, briefing version/tick when available, and last error. Rules trace/replay diagnostics should also include emitted action provenance so the operator can see which rule or dashboard-confirmed LLM path produced each action row. Keep that provenance in trace/replay diagnostics; raw `actions[]` remains the player-facing action contract.
 
 ### Infographics
 

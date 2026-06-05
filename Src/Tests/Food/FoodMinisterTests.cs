@@ -159,7 +159,7 @@ public sealed class FoodMinisterTests
     }
 
     [Fact]
-    public async Task Escalation_UsesFoodLlmResponse_AfterBootstrap()
+    public async Task RulesFirst_WhenRulesEscalate_AwaitsDashboardConfirmation()
     {
         CapturingReplayWriter replay = new();
         int calls = 0;
@@ -181,47 +181,38 @@ public sealed class FoodMinisterTests
         h.SetFoodDays(25f, wildAnimals: 2, dateTimeRaw: "5th of Decembary, 5500, 14h", animalDef: "Wolf");
         await h.Minister.RunPlayCycle(PlayCycleContext.CabinetRefresh, CancellationToken.None);
 
-        h.PublishedAdvice.Should().ContainSingle().Which.Id.Should().Be("llm_food");
-        candidateCalls.Should().HaveCount(2);
-        candidateCalls[1].Should().Contain(candidate => candidate.CropDef == "Plant_Rice");
-        candidateCalls[1].Should().Contain(candidate => candidate.CropDef == "Plant_Corn");
+        calls.Should().Be(1);
+        h.PublishedAdvice.Should().BeEmpty();
+        candidateCalls.Should().ContainSingle();
         IReadOnlyDictionary<string, string> stateSummaries = h.Bus.ActiveSnapshot().StateSummaries!;
         stateSummaries.Should().ContainKey("Chef")
             .WhoseValue.Should().Contain("Stores:");
         h.Bus.ActiveSnapshot().Chains.Should().ContainKey("Chef");
         stateSummaries["Chef"].Should().Contain("25.0 days");
-        stateSummaries["Chef"].Should().NotBe("Food is below target and hunting may be viable.");
-        h.Flags.Active(Priority.Medium).Should().ContainSingle().Which.Summary.Should().Be("LLM food flag");
-        MinisterReplayRecord llmRecord = replay.Records.Single(r =>
-            r.Path == "llm" &&
-            r.Advice.Any(advice => advice.Id == "llm_food"));
-        llmRecord.RuleTraceDetails.Should().NotBeNull();
-        llmRecord.RuleTraceDetails!.SelectedRule!.Value.Value.Should().Be("winter_food_tradeoff");
-        llmRecord.RuleTraceDetails.AllRules.Should().ContainSingle(row =>
+        h.Flags.Active(Priority.Medium).Should().BeEmpty();
+        MinisterReplayRecord pendingRecord = replay.Records.Single(r =>
+            r.Path == "rules" &&
+            !string.IsNullOrWhiteSpace(r.EscalationReason));
+        pendingRecord.RuleTraceDetails.Should().NotBeNull();
+        pendingRecord.RuleTraceDetails!.SelectedRule!.Value.Value.Should().Be("winter_food_tradeoff");
+        pendingRecord.RuleTraceDetails.AllRules.Should().ContainSingle(row =>
             row.Rule == "winter_food_tradeoff" &&
             row.Outcome == RuleOutcome.Escalated);
+        pendingRecord.Llm.Should().BeNull();
     }
 
     [Fact]
-    public async Task EscalationFailure_PersistsFailedReplayRecord()
+    public async Task ManualForceLlmFailure_PersistsFailedReplayRecord()
     {
         CapturingReplayWriter replay = new();
-        int calls = 0;
-        Harness h = new((_, _, _, _, _) =>
-        {
-            calls++;
-            if (calls == 1) return Task.FromResult(new FoodLlmResponse([], []));
-            throw new InvalidOperationException("quota exhausted");
-        }, replay);
-        h.SetFoodDays(35f);
-
-        await h.Minister.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
+        Harness h = new((_, _, _, _, _) => throw new InvalidOperationException("quota exhausted"), replay);
         h.SetFoodDays(12f, wildAnimals: 2, dateTimeRaw: "5th of Decembary, 5500, 14h", animalDef: "Wolf");
-        await h.Minister.RunPlayCycle(PlayCycleContext.CabinetRefresh, CancellationToken.None);
+        await h.Minister.RunPlayCycle(PlayCycleContext.ManualForceLlm, CancellationToken.None);
 
         replay.Records.Should().Contain(r => r.Path == "llm_failed");
         MinisterReplayRecord record = replay.Records.Single(r => r.Path == "llm_failed");
-        record.EscalationReason.Should().Contain("hunting path");
+        record.WakeupPayload.Should().Be("dashboard:llm");
+        record.EscalationReason.Should().Contain("dashboard Run LLM");
         record.Error.Should().NotBeNull();
         record.Error!.Type.Should().Be(nameof(InvalidOperationException));
         record.Error.Message.Should().Be("quota exhausted");

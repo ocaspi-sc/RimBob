@@ -2720,6 +2720,13 @@ code {
   line-height: 1.35;
 }
 
+.minister-escalation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
 .rule-card-chip .semantic-icon.game-icon {
   width: 18px;
   height: 18px;

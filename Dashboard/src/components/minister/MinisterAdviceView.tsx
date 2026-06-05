@@ -40,20 +40,26 @@ export function MinisterAdviceView({
   currentGameTick,
   events,
   flags,
+  llmPending,
   manualTriggerTarget,
+  onRunLlm,
   previousAgenda,
   scope,
   stateSummary,
+  triggerDisabled,
 }: {
   advice: AdviceItem[];
   agenda: MayorAgenda | null;
   currentGameTick: number | null;
   events: DashboardEvent[];
   flags: AgentFlag[];
+  llmPending: boolean;
   manualTriggerTarget: string | null;
+  onRunLlm: () => void;
   previousAgenda: MayorAgenda | null;
   scope: ScopeConfig;
   stateSummary: string | null;
+  triggerDisabled: boolean;
 }) {
   const ministerAdvice = advice.filter(item => isScopeMinister(item.minister, scope));
   const ministerEvents = events.filter(event => isScopeMinister(event.source, scope));
@@ -89,7 +95,13 @@ export function MinisterAdviceView({
         <h2><SemanticLabel icon={iconForView('advice')}><span>Advice</span></SemanticLabel></h2>
         <p>Latest feeder minister advice from the persisted SSE snapshot.</p>
       </header>
-      <MinisterEscalationCallout trace={trace.data} />
+      <MinisterEscalationCallout
+        canConfirmLlm={scope.canRunLlm === true}
+        confirmDisabled={triggerDisabled}
+        confirmPending={llmPending}
+        onConfirmLlm={onRunLlm}
+        trace={trace.data}
+      />
       {stateSummary && (
         <section className="advice-state-summary">
           <span className="eyebrow">Current State</span>
