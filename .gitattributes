@@ -146,3 +146,4 @@ Docs/guides/Base/reference-layout-pack/single-room/061-anyone-use-barbs-and-moat
 Docs/guides/Base/reference-layout-pack/single-room/063-looking-for-tipis-on-how-to-fortify-my-colony-before-putting-the-diffi.png filter=lfs diff=lfs merge=lfs -text
 Docs/guides/Base/reference-layout-pack/single-room/064-world-got-currupt-so-i-had-to-restart.png filter=lfs diff=lfs merge=lfs -text
 Docs/guides/Base/reference-layout-pack/single-room/066-please-help-me-with-a-killbox-for-mechanoids.png filter=lfs diff=lfs merge=lfs -text
+Src/Tests/NewColony/Fixtures/*.colony-state.json filter=lfs diff=lfs merge=lfs -text
