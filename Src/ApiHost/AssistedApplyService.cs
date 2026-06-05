@@ -418,9 +418,6 @@ public sealed class AssistedApplyService(
         if (missing > AllowedMissing(apply.TargetIds.Count))
             return Response("stale_advice", "Too many hunt targets changed since this advice was issued.", apply.Kind, adviceId, actionIndex);
 
-        if (currentTargets.Count == 0)
-            return Response("already_satisfied", "No targeted animals are currently available for hunting.", apply.Kind, adviceId, actionIndex);
-
         try
         {
             await rimApi.DesignateHuntThingsAsync(
