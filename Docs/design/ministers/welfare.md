@@ -30,7 +30,7 @@ Tame animal welfare is in scope as a living-condition requester, not as global a
 
 ## Implementation Status
 
-Welfare is a `Suggest`-mode minister with deterministic rules first and dashboard-confirmed LLM escalation second. Slice A wired `break_risk` and `shelter_floor`: break risk produces player-facing mood triage, while missing sleeping shelter emits a `building_request` to Willie for a basic barracks with enough beds. Slice B keeps `break_risk`/`shelter_floor`, adds `recreation_gap` and `comfort_beauty`, and converts the rules layer to independent rule emissions so simultaneous mood pressures surface together instead of being hidden behind the first matched rule. Slice C adds the Welfare LLM path: when no deterministic rule matched but material unwired mood pressure remains, Welfare emits `Escalate("unexplained_mood_pressure")`; the rules trace records that pending escalation, and `Run LLM` is the dashboard confirmation that runs provider work. Welfare does not own Apply; any eventual `place_blueprint` control belongs to Willie's advice after the Placement Solver produces options.
+Welfare is a `Suggest`-mode minister with deterministic rules first and dashboard-confirmed LLM escalation second. Slice A wired `break_risk` and `shelter_floor`: break risk produces player-facing mood triage, while missing sleeping shelter emits a `building_request` to Willie for a basic barracks with enough beds. Slice B keeps `break_risk`/`shelter_floor`, adds `recreation_gap` and `comfort_beauty`, and converts the rules layer to independent rule emissions so simultaneous mood pressures surface together instead of being hidden behind the first matched rule. Slice C adds the Welfare LLM path: when no deterministic rule matched but material unwired mood pressure remains, Welfare emits `Escalate("unexplained_mood_pressure")`; the rules trace records that pending escalation, and `Run LLM` is the dashboard confirmation that runs provider work. Slice D adds the `temperature_comfort` rule: a `Temperature` thought group past the offset floor emits a cold/hot-routed `Heater`/`Cooler` `building_request` to Willie (ambiguous labels request player attention instead of guessing the appliance), and `Temperature` is excluded from the escalation bucket so mild weather no longer escalates. Welfare does not own Apply; any eventual `place_blueprint` control belongs to Willie's advice after the Placement Solver produces options.
 
 Live deterministic rule signals:
 
@@ -38,6 +38,7 @@ Live deterministic rule signals:
 - Sleeping shelter floor: bed deficit or unroofed sleeping rooms.
 - Recreation coverage and low-joy pressure.
 - Comfort/beauty pressure, including table/dining setup requests for concrete table thoughts.
+- Temperature comfort: cold or hot mood-thought pressure, routed to Willie `Heater`/`Cooler` builds (ambiguous labels request player attention).
 
 Likely follow-on advice areas: schedule problems that are visible and actionable; apparel warmth risk when live data supports it; social conflict, guest, animal, or ideology pressure only when it creates clear advice.
 
@@ -79,7 +80,7 @@ New exact fields belong in code/tests once their slice ships.
 
 ## Escalation Boundaries
 
-Rules handle obvious mood thresholds and missing basic recreation/sleep signals. The current fallback escalates as `unexplained_mood_pressure` only after no deterministic rule matched and there is material non-wired thought pressure or low average mood. Escalate for:
+Rules handle obvious mood thresholds and missing basic recreation, sleep, and temperature signals. The current fallback escalates as `unexplained_mood_pressure` only after no deterministic rule matched and there is material non-wired thought pressure (outside shelter, recreation, comfort, and temperature — i.e. social, ideology, health, or other) or low average mood. Escalate for:
 
 - Specific pawn intervention choices.
 - Complex relationship/social conflicts.
