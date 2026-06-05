@@ -1,4 +1,5 @@
 import { fetchRawLlmOutput } from '../../api/ministers';
+import type { ReactNode } from 'react';
 import type { ScopeConfig } from '../../dashboard/scopes';
 import { isScopeMinister } from '../../dashboard/selectors';
 import { iconForField, iconForView } from '../../dashboard/semanticIcons';
@@ -8,8 +9,9 @@ import { DisclosureSection } from '../shared/DisclosureSection';
 import { EmptyState } from '../shared/EmptyState';
 import { JsonTree, tryParseJson } from '../shared/JsonTree';
 import { SemanticLabel } from '../shared/SemanticIcon';
+import { LlmInputPanel } from './LlmInputPanel';
 
-export function MinisterRawLlmView({
+export function MinisterRawLlmInputsSection({
   scope,
   systemHealth,
 }: {
@@ -28,18 +30,24 @@ export function MinisterRawLlmView({
   );
 
   if (scope.status !== 'live') {
-    return <EmptyState code="RAW OUTPUT NOT WIRED">{scope.displayLabel} is a planned minister scope.</EmptyState>;
+    return null;
   }
 
   if (output.loading) {
-    return <EmptyState code="RAW OUTPUT">Loading latest raw model output.</EmptyState>;
+    return (
+      <RawLlmPanel>
+        <EmptyState code="RAW OUTPUT">Loading latest raw model output.</EmptyState>
+      </RawLlmPanel>
+    );
   }
 
   if (output.error || !output.data) {
     return (
-      <EmptyState code="RAW OUTPUT UNAVAILABLE">
-        {output.error ?? `${scope.displayLabel} raw LLM output endpoint returned no payload.`}
-      </EmptyState>
+      <RawLlmPanel meta="unavailable">
+        <EmptyState code="RAW OUTPUT UNAVAILABLE">
+          {output.error ?? `${scope.displayLabel} raw LLM output endpoint returned no payload.`}
+        </EmptyState>
+      </RawLlmPanel>
     );
   }
 
@@ -52,13 +60,7 @@ export function MinisterRawLlmView({
       : `${scope.displayLabel} has not recorded an LLM response since this Host process started.`;
 
     return (
-      <div className="minister-view raw-llm-view">
-        <header className="view-heading">
-          <span className="eyebrow">{scope.displayLabel}</span>
-          <h2><SemanticLabel icon={iconForView('raw_llm')}><span>Raw LLM Output</span></SemanticLabel></h2>
-          <p>Unnormalized model responses before schema parsing, tolerant repair, or advice rendering.</p>
-        </header>
-
+      <RawLlmPanel meta="no output yet">
         <EmptyState code="NO RAW OUTPUT YET">
           {noOutputReason}
         </EmptyState>
@@ -68,7 +70,7 @@ export function MinisterRawLlmView({
             <JsonTree value={traceMetadata(latestTrace, stale)} />
           </DisclosureSection>
         )}
-      </div>
+      </RawLlmPanel>
     );
   }
 
@@ -76,13 +78,7 @@ export function MinisterRawLlmView({
   const apiKeyLabel = formatApiKey(output.data.apiKeyLabel, output.data.apiKeyIndex);
 
   return (
-    <div className="minister-view raw-llm-view">
-      <header className="view-heading">
-        <span className="eyebrow">{scope.displayLabel}</span>
-        <h2><SemanticLabel icon={iconForView('raw_llm')}><span>Raw LLM Output</span></SemanticLabel></h2>
-        <p>Unnormalized model responses before schema parsing, tolerant repair, or advice rendering.</p>
-      </header>
-
+    <RawLlmPanel meta={stale ? 'stale' : output.data.status.replace(/_/g, ' ')}>
       <div className="prompt-meta">
         <span>{output.data.provider}</span>
         <span>{output.data.model}</span>
@@ -131,7 +127,24 @@ export function MinisterRawLlmView({
           }}
         />
       </DisclosureSection>
-    </div>
+    </RawLlmPanel>
+  );
+}
+
+function RawLlmPanel({
+  children,
+  meta,
+}: {
+  children: ReactNode;
+  meta?: string;
+}) {
+  return (
+    <LlmInputPanel icon={iconForView('raw_llm')} title="Raw Output" meta={meta}>
+      <header className="section-heading">
+        <p className="notes-copy">Unnormalized model responses before schema parsing, tolerant repair, or advice rendering.</p>
+      </header>
+      {children}
+    </LlmInputPanel>
   );
 }
 

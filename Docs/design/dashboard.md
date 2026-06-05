@@ -36,8 +36,7 @@ treat the previous UI as reference only.
   Assisted Apply controls are separate from Run controls.
 - Localhost-only: Host binds loopback and serves the dashboard plus `/api/*`.
 - Dense second-monitor operations console, not a landing page.
-- Explanation-first: every recommendation needs an inspection path for prompt,
-  briefing, RAG, rules/trace, raw LLM output, and current advice.
+- Explanation-first: every recommendation needs an inspection path for LLM material (prompt, RAG retrieval context, and raw provider output), briefing, rules/trace, and current advice.
 - Debug-first: preserve backend contract language except in explicitly
   player-facing advice views.
 - Latest advice stays visible: expired or stale persisted minister advice is
@@ -158,15 +157,13 @@ CABINET is the dashboard landing scope, served by the stable `home` route key. I
 
 Minister scopes use a fixed top tab bar:
 
-- System Prompt
+- LLM
 - Briefing
-- RAG
 - Rules
-- Raw LLM Output
 - Infographics
 - Advice
 
-Rules-only ministers expose only the subset that is actually wired. Willie starts with Briefing, Build Queue, Solver, Requests, Rules, and Advice; Prompt, RAG, Raw LLM Output, and Infographics are not shown until those backend surfaces exist. Build Queue may show a placement Apply affordance only when the backend emits an explicit action apply payload for that option; otherwise the option stays inspect-only and names the unsupported apply state. The dashboard view tabs and launcher tray deep links must both respect that per-minister enabled-view set.
+Rules-only ministers expose only the subset that is actually wired. Willie starts with Briefing, Build Queue, Solver, Requests, Rules, and Advice; LLM and Infographics are not shown until those backend surfaces exist. Build Queue may show a placement Apply affordance only when the backend emits an explicit action apply payload for that option; otherwise the option stays inspect-only and names the unsupported apply state. The dashboard view tabs and launcher tray deep links must both respect that per-minister enabled-view set.
 
 Minister names always render with their fixed emoji in human-facing dashboard labels (`🍲 Chef`). This is display-only: route keys, raw payloads, and debug contract fields stay unchanged. Prefer generic emoji for dashboard semantic cues such as views, sections, fields, metrics, status, advice, power, weather, runtime, rules, logs, and analytics. Use Host game icons for specific RimWorld things: concrete item/building/terrain/pawn defs, explicit backend `icon` refs, entity rows, resource quantities, construction assets, and other cases where real in-game art helps the player inspect game state. Icons annotate contract names, but raw LLM output, JSON inspectors, backend payloads, and stored advice contracts are not rewritten.
 
@@ -193,8 +190,7 @@ or the full registered view list inside the normal minister workspace.
 
 ### Dynamic Debug Surfaces
 
-Rules, RAG, Raw LLM Output, endpoint coverage, traces, logs, and unknown future
-minister data should render through shared inspector primitives where practical.
+Rules, LLM material, endpoint coverage, traces, logs, and unknown future minister data should render through shared inspector primitives where practical.
 The inspector layer may infer useful display from payload shape: summary fields,
 tables for uniform arrays, object sections, and YAML-like source trees backed by
 the original JSON payload. Field labels may include semantic icon cues before or
@@ -396,7 +392,7 @@ Design-level endpoint families:
 - Advice SSE stream.
 - Manual cabinet/minister triggers.
 - Typed minister snapshot reads for the Mayor and feeder active advice.
-- Latest minister prompt, briefing, RAG, trace, and raw LLM output.
+- Latest minister LLM material, briefing, and trace.
 - Colony snapshot/sidebar data.
 - Bounded log and replay-corpus metadata.
 - Read-only developer Git-history analytics for the DEV BLOG scope.
@@ -551,7 +547,7 @@ Semantic cue maps should prefer emoji by default. They should switch to Host gam
 Do not infer icons from prose in raw/debug views, titles, bodies, reasons, or
 instructions. Mayor's player-facing Agenda cards may use a small deterministic
 domain cue for priority text and may strip leading LLM-emitted emoji/symbols in
-the rendered card; Raw LLM Output and JSON inspectors keep the source text
+the rendered card; raw output and JSON inspectors keep the source text
 unchanged. If the explicit icon fails or is missing, render a stable-size
 fallback without resizing the row or card.
 
@@ -581,16 +577,11 @@ Design event types:
 
 ## Minister View Detail
 
-### System Prompt
+### LLM
 
-Shows the exact prompt material available for the selected minister. Future
-ministers should use generalized read-only prompt inspection when wired. Until a
-minister exposes prompt data, render a clear not-exposed state.
+Shows the exact prompt material plus collapsible RAG and Raw Output panels for retrieval status, guide context, citations, snippets, cache/embedding status, and captured raw provider output available for the selected minister. Future ministers should use generalized read-only LLM inspection when wired. Until a minister exposes prompt, dedicated RAG data, or raw output data, render clear not-exposed coverage states inside this view instead of adding separate retrieval or raw-output tabs.
 
-### Raw LLM Output
-
-Shows captured provider output before schema parsing, tolerant repair,
-normalization, or advice rendering. This is a developer/debug view.
+The raw output section shows captured provider output before schema parsing, tolerant repair, normalization, or advice rendering. This is developer/debug content inside the LLM view.
 
 Do not rename fields, paraphrase values, collapse keys, or replace the captured
 payload in this tab. Syntax highlighting, indentation, and copy controls are
@@ -601,7 +592,7 @@ If no LLM call has happened in the current Host process, render "no raw output
 yet" rather than an error. If a request fails before provider text arrives,
 surface the failure state so the view explains why no raw response exists.
 
-Raw LLM Output is a latest-capture inspector, not proof that the latest
+The raw output section is a latest-capture inspector, not proof that the latest
 minister run used the LLM. Compare the capture timestamp with the latest
 minister trace. If a newer run completed without a newer raw response, mark the
 raw output as stale and explain that the latest run did not record an LLM
@@ -646,12 +637,6 @@ Willie's Solver view is a latest-only diagnostic surface for the Placement Solve
 ### Requests
 
 Willie's Requests view is a read-only master-detail diagnostic surface for inbound building requests aimed at Willie. It reads `/api/ministers/willie/solver/requests`, lists the current building-request board in a sidebar, and shows the selected request's full `BuildingRequest` fields plus the latest per-request Placement Solver outcome. Requests with validated options render read-only footprint cards; no-fit, error, and offline outcomes show the concrete solver message; unsolved requests show an awaiting-solve state. Apply stays in Build Queue only.
-
-### RAG
-
-Shows retrieval status, guide context, citations, snippets, and cache/embedding
-status when exposed. Until a minister has dedicated RAG data, render explicit
-degraded or not-exposed coverage states.
 
 ### Rules
 

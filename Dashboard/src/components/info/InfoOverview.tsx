@@ -236,7 +236,7 @@ const scopeGuide = [
   {
     name: 'Mayor / Chef / Cabinet',
     tag: 'Inspection',
-    description: 'Minister-specific prompt, briefing, RAG, rules, raw LLM output, infographics, and advice evidence.',
+    description: 'Minister-specific LLM material, briefing, rules, infographics, and advice evidence.',
   },
 ];
 

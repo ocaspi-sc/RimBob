@@ -17,7 +17,7 @@ export type ScopeKey =
 
 export type ScopeKind = 'home' | 'system' | 'info' | 'analytics' | 'dev_blog' | 'minister';
 export type ScopeStatus = 'live' | 'planned' | 'reference';
-export type MinisterViewKey = 'prompt' | 'raw_llm' | 'briefing' | 'build_queue' | 'solver' | 'requests' | 'rag' | 'rules' | 'infographics' | 'advice';
+export type MinisterViewKey = 'prompt' | 'briefing' | 'build_queue' | 'solver' | 'requests' | 'rules' | 'infographics' | 'advice';
 export type HomeViewKey = 'overview';
 export type SystemViewKey = 'runtime' | 'connectivity' | 'storage' | 'coverage' | 'events';
 export type InfoViewKey = 'overview' | 'glossary' | 'contracts' | 'data_sources' | 'algorithms';
@@ -85,14 +85,12 @@ export const devBlogViews: DashboardViewDefinition[] = [
 ];
 
 export const ministerViews: Array<{ key: MinisterViewKey; label: string }> = [
-  { key: 'prompt', label: 'System Prompt' },
+  { key: 'prompt', label: 'LLM' },
   { key: 'briefing', label: 'Briefing' },
   { key: 'build_queue', label: 'Build Queue' },
   { key: 'solver', label: 'Solver' },
   { key: 'requests', label: 'Requests' },
-  { key: 'rag', label: 'RAG' },
   { key: 'rules', label: 'Rules' },
-  { key: 'raw_llm', label: 'Raw LLM Output' },
   { key: 'infographics', label: 'Infographics' },
   { key: 'advice', label: 'Advice' },
 ];

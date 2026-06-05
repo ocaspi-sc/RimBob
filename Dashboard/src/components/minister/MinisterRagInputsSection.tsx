@@ -6,8 +6,9 @@ import { DisclosureSection } from '../shared/DisclosureSection';
 import { EmptyState } from '../shared/EmptyState';
 import { MetricCard } from '../shared/MetricCard';
 import { SemanticLabel } from '../shared/SemanticIcon';
+import { LlmInputPanel } from './LlmInputPanel';
 
-export function MinisterRagView({
+export function MinisterRagInputsSection({
   agenda,
   scope,
   systemHealth,
@@ -19,11 +20,13 @@ export function MinisterRagView({
   const citations = scope.key === 'mayor' ? agenda?.guide_citations ?? [] : [];
 
   return (
-    <div className="minister-view rag-view">
-      <header className="view-heading">
-        <span className="eyebrow">{scope.displayLabel}</span>
-        <h2><SemanticLabel icon={iconForView('rag')}><span>RAG</span></SemanticLabel></h2>
-        <p>Guide retrieval and citations. Full per-minister retrieval traces are planned.</p>
+    <LlmInputPanel
+      icon={iconForView('rag')}
+      title="RAG"
+      meta={`${systemHealth?.rag.chunk_count ?? 'n/a'} chunks`}
+    >
+      <header className="section-heading">
+        <p className="notes-copy">Guide retrieval and citations. Full per-minister retrieval traces are planned.</p>
       </header>
 
       <div className="metric-grid">
@@ -55,6 +58,6 @@ export function MinisterRagView({
           <p className="citation-snippet">{citation.snippet}</p>
         </DisclosureSection>
       ))}
-    </div>
+    </LlmInputPanel>
   );
 }

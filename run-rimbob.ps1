@@ -72,11 +72,9 @@ $dashboardConsoleScopes = @(
 )
 
 $dashboardMinisterViews = @(
-    [pscustomobject]@{ Label = "System Prompt"; View = "prompt" },
+    [pscustomobject]@{ Label = "LLM"; View = "prompt" },
     [pscustomobject]@{ Label = "Briefing"; View = "briefing" },
-    [pscustomobject]@{ Label = "RAG"; View = "rag" },
     [pscustomobject]@{ Label = "Rules"; View = "rules" },
-    [pscustomobject]@{ Label = "Raw LLM Output"; View = "raw_llm" },
     [pscustomobject]@{ Label = "Infographics"; View = "infographics" },
     [pscustomobject]@{ Label = "Advice"; View = "advice" }
 )

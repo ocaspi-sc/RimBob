@@ -1391,6 +1391,53 @@ code {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.llm-input-panel {
+  min-width: 0;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.llm-input-panel h3 {
+  margin: 0;
+}
+
+.llm-input-panel h3 button {
+  width: 100%;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text);
+  padding: 11px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.llm-input-panel h3 button:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.llm-input-panel h3 button > span:first-child {
+  min-width: 0;
+}
+
+.llm-input-panel h3 small {
+  color: var(--muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.llm-input-panel-body {
+  min-width: 0;
+  border-top: 1px solid var(--line-soft);
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
 .metric-card {
   min-width: 0;
   padding: 10px;
