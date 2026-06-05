@@ -174,6 +174,7 @@ document flow.
 The dashboard persists the last selected scope and view in browser storage.
 Stored values are validated against known registries and fall back safely when
 stale.
+When the operator switches scopes, the dashboard reuses the current view key when the destination scope exposes that view, then falls back to the destination default only when the view is not supported.
 
 Dashboard links may include `scope` and `view` query parameters so the local
 Windows launcher can jump directly to a console scope or minister inspection

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import {
-  defaultViewForScope,
   findScope,
   isDashboardViewKey,
   scopeConfigs,
@@ -55,7 +54,7 @@ export function useDashboardSelection(): DashboardSelection {
 
   const selectScope = (scope: ScopeKey) => {
     const nextScope = findScope(scope);
-    const nextView = defaultViewForScope(nextScope);
+    const nextView = viewForScope(nextScope, selectedView);
 
     setSelectedScope(nextScope.key);
     setSelectedView(nextView);
