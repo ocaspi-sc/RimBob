@@ -66,7 +66,7 @@ After regenerating, inspect files on disk and verify:
 
 - `web/Snapshot/index.html` contains Mayor content and does not contain the old "All Dashboard Pages" sitemap.
 - `web/Snapshot/metadata.json` has `entry_page.scope = "mayor"` and `entry_page.view = "advice"`.
-- Page file count equals `dashboardSnapshotPagesFromDashboardSource(repoRoot).length` (85 in the current dashboard registry).
+- Page file count equals `dashboardSnapshotPagesFromDashboardSource(repoRoot).length`; do not hardcode the current count.
 - Scope navigation links use `data-snapshot-nav="scope"` and relative `href` values.
 - View navigation links use `data-snapshot-nav="view"` and relative `href` values.
 - Every HTML file has `.snapshot-header-tag`.

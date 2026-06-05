@@ -16,6 +16,15 @@ function toTimestamp(value) {
 
 const consoleScopes = [
   {
+    key: "home",
+    label: "CABINET",
+    kind: "home",
+    status: "live",
+    views: [
+      { key: "overview", label: "Overview" },
+    ],
+  },
+  {
     key: "system",
     label: "SYSTEM",
     kind: "system",
@@ -70,11 +79,9 @@ const consoleScopes = [
 ];
 
 const fullMinisterViews = [
-  { key: "prompt", label: "System Prompt" },
+  { key: "prompt", label: "LLM" },
   { key: "briefing", label: "Briefing" },
-  { key: "rag", label: "RAG" },
   { key: "rules", label: "Rules" },
-  { key: "raw_llm", label: "Raw LLM Output" },
   { key: "infographics", label: "Infographics" },
   { key: "advice", label: "Advice" },
 ];
@@ -88,18 +95,12 @@ const rulesOnlyMinisterViews = [
   { key: "advice", label: "Advice" },
 ];
 
-const welfareMinisterViews = [
-  { key: "briefing", label: "Briefing" },
-  { key: "rules", label: "Rules" },
-  { key: "advice", label: "Advice" },
-];
-
 const ministerScopes = [
   { key: "mayor", label: "Mayor", kind: "minister", status: "live", views: fullMinisterViews },
   { key: "food", label: "Chef", kind: "minister", status: "live", views: fullMinisterViews },
   { key: "willie", label: "Willie", kind: "minister", status: "live", views: rulesOnlyMinisterViews },
   { key: "defense", label: "Defense", kind: "minister", status: "planned", views: fullMinisterViews },
-  { key: "welfare", label: "Welfare", kind: "minister", status: "live", views: welfareMinisterViews },
+  { key: "welfare", label: "Welfare", kind: "minister", status: "live", views: fullMinisterViews },
   { key: "medical", label: "Medical", kind: "minister", status: "planned", views: fullMinisterViews },
   { key: "research", label: "Research", kind: "minister", status: "planned", views: fullMinisterViews },
   { key: "industry", label: "Industry", kind: "minister", status: "planned", views: fullMinisterViews },
@@ -131,6 +132,7 @@ export async function dashboardSnapshotPagesFromDashboardSource(repoRoot) {
   const scopesPath = path.join(repoRoot, "Dashboard", "src", "dashboard", "scopes.ts");
   const source = await fs.readFile(scopesPath, "utf8");
   const viewArrays = {
+    homeViews: parseDashboardViewArray(source, "homeViews"),
     systemViews: parseDashboardViewArray(source, "systemViews"),
     infoViews: parseDashboardViewArray(source, "infoViews"),
     analyticsViews: parseDashboardViewArray(source, "analyticsViews"),
@@ -142,16 +144,14 @@ export async function dashboardSnapshotPagesFromDashboardSource(repoRoot) {
     .filter((view) => !parseAllMinisterViewExclusions(source).includes(view.key));
   const rulesOnlyMinisterViews = parseStringArrayConstant(source, "rulesOnlyMinisterViews")
     .map((key) => viewForKey(ministerViewByKey, key, "rulesOnlyMinisterViews"));
-  const welfareMinisterViews = parseStringArrayConstant(source, "welfareMinisterViews")
-    .map((key) => viewForKey(ministerViewByKey, key, "welfareMinisterViews"));
   const namedViewSets = {
+    homeViews: viewArrays.homeViews,
     systemViews: viewArrays.systemViews,
     infoViews: viewArrays.infoViews,
     analyticsViews: viewArrays.analyticsViews,
     devBlogViews: viewArrays.devBlogViews,
     allMinisterViews,
     rulesOnlyMinisterViews,
-    welfareMinisterViews,
   };
   const scopes = parseScopeConfigs(source, namedViewSets);
 
@@ -779,6 +779,10 @@ export async function verifyStaticDashboardSnapshot({
   const indexHtml = await readTextIfExists(indexPath);
   const expectedPages = await resolveDashboardSnapshotPages(sourceRepoRoot);
   const expectedPagePaths = new Set(expectedPages.map((page) => normalizeRelativePath(page.relativePath)));
+  const expectedScopeViewCounts = expectedPages.reduce((counts, page) => {
+    counts.set(page.scope, (counts.get(page.scope) ?? 0) + 1);
+    return counts;
+  }, new Map());
   const pageFiles = await listFilesRecursive(pagesDir, (filePath) => /\.html$/i.test(filePath));
   const htmlFiles = await listFilesRecursive(snapshotDir, (filePath) => /\.html$/i.test(filePath));
   const actualPagePaths = new Set(pageFiles.map((filePath) =>
@@ -877,7 +881,9 @@ export async function verifyStaticDashboardSnapshot({
       missingScopeNav.push(relativePath);
     }
 
-    if (!html.includes('data-snapshot-nav="view"')) {
+    const scopeMatch = relativePath.match(/^pages\/([^/]+)\//);
+    const scopeViewCount = scopeMatch ? (expectedScopeViewCounts.get(scopeMatch[1]) ?? 0) : 0;
+    if (scopeViewCount > 1 && !html.includes('data-snapshot-nav="view"')) {
       missingViewNav.push(relativePath);
     }
   }
@@ -1115,7 +1121,7 @@ async function captureRenderedDashboardPage(tab, pageUrl, capturedAt, settleMill
 async function waitForDashboardMarkers(tab, pageUrl) {
   let latest = { hasDashboardTitle: false, hasSystemScope: false, isKnownLoadingState: false, rootChildren: 0, text: "" };
   for (let pass = 0; pass < 2; pass += 1) {
-    for (let attempt = 0; attempt < 24; attempt += 1) {
+    for (let attempt = 0; attempt < 80; attempt += 1) {
       latest = await tab.playwright.evaluate(() => {
         const text = document.body?.innerText ?? "";
         return {

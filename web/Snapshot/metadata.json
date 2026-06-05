@@ -1,8 +1,8 @@
 {
-  "captured_at": "2026-06-03T21:56:09.443Z",
-  "snapshot_id": "20260604-0056",
-  "dashboard_url": "http://localhost:5000",
-  "index_path": "C:\\dev\\RimBob\\web\\Snapshot\\index.html",
+  "captured_at": "2026-06-05T14:39:21.409Z",
+  "snapshot_id": "20260605-1739",
+  "dashboard_url": "http://localhost:5014",
+  "index_path": "C:\\Users\\orca\\.codex\\worktrees\\f326\\RimBob\\web\\Snapshot\\index.html",
   "entry_page": {
     "scope": "mayor",
     "view": "advice",
@@ -10,36 +10,36 @@
     "source_relative_path": "pages/mayor/advice.html"
   },
   "health": {
-    "generated_at": "2026-06-03T21:56:09.4415663+00:00",
+    "generated_at": "2026-06-05T14:39:20.6360615+00:00",
     "version": {
       "product": "RimBob",
       "rim_bob_version": "1.0.0",
-      "running_version": "0.0.1231",
-      "build_number": "0.0.1231",
-      "build_datetime": "2026-06-03T21:33:31.737Z",
+      "running_version": "0.0.1000",
+      "build_number": "0.0.1000",
+      "build_datetime": "2026-06-05T14:29:34.415Z",
       "build_version": "1.0.0.0",
-      "build_informational_version": "1.0.0+c7246ac0eb505087bebbc6be0ae1c4b77e6d9167",
-      "build_revision": "c7246ac0eb505087bebbc6be0ae1c4b77e6d9167",
-      "build_revision_short": "c7246ac0",
-      "dashboard_asset_version": "index-OzZ0zjzb.js|index-kChPSjT-.css",
-      "reload_token": "1.0.0+c7246ac0eb505087bebbc6be0ae1c4b77e6d9167|0.0.1231|2026-06-03T21:33:31.737Z|index-OzZ0zjzb.js|index-kChPSjT-.css",
-      "host_started_at": "2026-06-03T21:33:58.4622056+00:00",
-      "host_instance_id": "e7f916eb41414152a60ef903c99e5df1"
+      "build_informational_version": "1.0.0+4a61551c3ab7430f6568d57fe48f87efc56d2bb0",
+      "build_revision": "4a61551c3ab7430f6568d57fe48f87efc56d2bb0",
+      "build_revision_short": "4a61551c",
+      "dashboard_asset_version": "index-CFfxLZdD.js|index-CcjjYAJl.css",
+      "reload_token": "1.0.0+4a61551c3ab7430f6568d57fe48f87efc56d2bb0|0.0.1000|2026-06-05T14:29:34.415Z|index-CFfxLZdD.js|index-CcjjYAJl.css",
+      "host_started_at": "2026-06-05T14:31:41.3528577+00:00",
+      "host_instance_id": "0d3be11a524545ef984ba2cb191af836"
     },
     "runtime": {
       "server": "ok",
-      "host_started_at": "2026-06-03T21:33:58.4622056+00:00",
-      "host_instance_id": "e7f916eb41414152a60ef903c99e5df1",
+      "host_started_at": "2026-06-05T14:31:41.3528577+00:00",
+      "host_instance_id": "0d3be11a524545ef984ba2cb191af836",
       "rim_bob_version": "1.0.0",
-      "running_version": "0.0.1231",
-      "build_number": "0.0.1231",
-      "build_datetime": "2026-06-03T21:33:31.737Z",
+      "running_version": "0.0.1000",
+      "build_number": "0.0.1000",
+      "build_datetime": "2026-06-05T14:29:34.415Z",
       "build_version": "1.0.0.0",
-      "build_informational_version": "1.0.0+c7246ac0eb505087bebbc6be0ae1c4b77e6d9167",
-      "dashboard_asset_version": "index-OzZ0zjzb.js|index-kChPSjT-.css",
-      "host_process_path": "C:\\dev\\RimBob\\Src\\ApiHost\\bin\\Debug\\net9.0\\RimBob.Host.exe",
-      "content_root": "C:\\dev\\RimBob\\Src\\ApiHost",
-      "runtime_root": "C:\\dev\\RimBob",
+      "build_informational_version": "1.0.0+4a61551c3ab7430f6568d57fe48f87efc56d2bb0",
+      "dashboard_asset_version": "index-CFfxLZdD.js|index-CcjjYAJl.css",
+      "host_process_path": "C:\\Users\\orca\\.codex\\worktrees\\f326\\RimBob\\Src\\ApiHost\\bin\\Debug\\net9.0\\RimBob.Host.exe",
+      "content_root": "C:\\Users\\orca\\.codex\\worktrees\\f326\\RimBob\\Src\\ApiHost",
+      "runtime_root": "C:\\Users\\orca\\.codex\\worktrees\\f326\\RimBob",
       "rimapi_reachable": true,
       "rimapi_last_error": null,
       "rimworld": {
@@ -56,9 +56,9 @@
       "food_briefing_version": 1,
       "willie_briefing_version": 1,
       "welfare_briefing_version": 1,
-      "mayor_snapshot_version": 14,
-      "active_advice_count": 6,
-      "active_flag_count": 1,
+      "mayor_snapshot_version": 4,
+      "active_advice_count": 8,
+      "active_flag_count": 4,
       "mayor_running": false,
       "mayor_started_at": null,
       "mayor_completed_at": null,
@@ -79,8 +79,8 @@
           "minister": "chef",
           "output_kind": "advice_snapshot",
           "path": "C:\\Users\\orca\\AppData\\Local\\RimBob\\ministers\\chef.json",
-          "generation": 31,
-          "persisted_at": "2026-06-02T22:11:33.1638231+00:00",
+          "generation": 12,
+          "persisted_at": "2026-06-05T14:27:15.5175766+00:00",
           "state": "available",
           "last_error": null
         },
@@ -88,8 +88,8 @@
           "minister": "mayor",
           "output_kind": "mayor_agenda",
           "path": "C:\\Users\\orca\\AppData\\Local\\RimBob\\ministers\\mayor.json",
-          "generation": 14,
-          "persisted_at": "2026-06-02T22:11:53.3698785+00:00",
+          "generation": 4,
+          "persisted_at": "2026-06-04T20:57:22.5918043+00:00",
           "state": "available",
           "last_error": null
         },
@@ -97,8 +97,8 @@
           "minister": "welfare",
           "output_kind": "advice_snapshot",
           "path": "C:\\Users\\orca\\AppData\\Local\\RimBob\\ministers\\welfare.json",
-          "generation": 2,
-          "persisted_at": "2026-06-02T22:11:35.9953818+00:00",
+          "generation": 9,
+          "persisted_at": "2026-06-05T14:21:33.7768795+00:00",
           "state": "available",
           "last_error": null
         },
@@ -106,8 +106,8 @@
           "minister": "willie",
           "output_kind": "advice_snapshot",
           "path": "C:\\Users\\orca\\AppData\\Local\\RimBob\\ministers\\willie.json",
-          "generation": 59,
-          "persisted_at": "2026-06-03T18:59:31.1804274+00:00",
+          "generation": 46,
+          "persisted_at": "2026-06-05T14:27:15.5996688+00:00",
           "state": "available",
           "last_error": null
         }
@@ -116,9 +116,9 @@
     "colony_snapshot": {
       "path": "C:\\Users\\orca\\AppData\\Local\\RimBob\\state\\latest-colony-state.json",
       "has_snapshot": true,
-      "snapshot_id": "e392579339104a82b685486b39151506",
-      "captured_at": "2026-06-03T18:59:30.9803768+00:00",
-      "age_seconds": 10598.5,
+      "snapshot_id": "a7933547e705455c9e2814942d9bbb17",
+      "captured_at": "2026-06-05T14:27:15.3139568+00:00",
+      "age_seconds": 725.3,
       "game_tick": 538,
       "game_date": {
         "rawRimWorldDate": "2nd of Aprimay, 5500, 6h",
@@ -147,7 +147,20 @@
           "minister": "Chef",
           "flags": {
             "restoredFromCorpus": true,
-            "capturedAt": "2026-05-31T20:26:55.079154+00:00",
+            "capturedAt": "2026-06-05T14:27:15.52058+00:00",
+            "restoredCount": 3
+          },
+          "advice": {
+            "restoredFromCorpus": false,
+            "capturedAt": null,
+            "restoredCount": 0
+          }
+        },
+        {
+          "minister": "Welfare",
+          "flags": {
+            "restoredFromCorpus": true,
+            "capturedAt": "2026-06-05T14:21:33.7770292+00:00",
             "restoredCount": 1
           },
           "advice": {
@@ -169,24 +182,24 @@
       "token_usage": "not_exposed_yet"
     },
     "rag": {
-      "enabled": true,
+      "enabled": false,
       "top_k": 3,
       "embedding_model": "gemini-embedding-001",
-      "guides_root": "C:\\dev\\RimBob\\Src\\ApiHost\\../../Docs/guides",
+      "guides_root": "C:\\Users\\orca\\.codex\\worktrees\\f326\\RimBob\\Src\\ApiHost\\../../Docs/guides",
       "cache_root": "C:\\Users\\orca\\AppData\\Local\\RimBob\\embeddings",
-      "chunk_count": 191,
+      "chunk_count": 0,
       "last_ingest_error": "not_exposed_yet"
     },
     "sse": {
-      "activeConnections": 1,
-      "totalConnections": 2,
-      "eventCount": 105,
+      "activeConnections": 0,
+      "totalConnections": 18,
+      "eventCount": 198,
       "errorCount": 0,
-      "lastConnectedAt": "2026-06-03T21:34:22.1989483+00:00",
-      "lastDisconnectedAt": "2026-06-03T21:34:22.1460874+00:00",
-      "lastEventAt": "2026-06-03T21:56:07.863495+00:00",
-      "lastEventType": "ping",
-      "lastEventId": null,
+      "lastConnectedAt": "2026-06-05T14:38:16.8108795+00:00",
+      "lastDisconnectedAt": "2026-06-05T14:38:23.1267027+00:00",
+      "lastEventAt": "2026-06-05T14:38:16.8124688+00:00",
+      "lastEventType": "advice",
+      "lastEventId": "chef_freezer_missing",
       "lastErrorAt": null,
       "lastError": null
     },
@@ -198,171 +211,80 @@
         "directory": "C:\\Users\\orca\\AppData\\Local\\RimBob\\logs\\replay",
         "pattern": "C:\\Users\\orca\\AppData\\Local\\RimBob\\logs\\replay\\*-*.jsonl",
         "exists": true,
-        "file_count": 26,
-        "total_bytes": 2622643,
-        "latest_write_at": "2026-06-03T18:59:31.2097777+00:00",
+        "file_count": 7,
+        "total_bytes": 1171811,
+        "latest_write_at": "2026-06-05T14:27:15.5996824+00:00",
         "files": [
           {
             "minister": "willie",
-            "name": "willie-20260603.jsonl",
-            "path": "C:\\Users\\orca\\AppData\\Local\\RimBob\\logs\\replay\\willie-20260603.jsonl",
-            "size_bytes": 6318,
-            "last_write_at": "2026-06-03T18:59:31.2097777+00:00"
+            "name": "willie-20260605.jsonl",
+            "path": "C:\\Users\\orca\\AppData\\Local\\RimBob\\logs\\replay\\willie-20260605.jsonl",
+            "size_bytes": 181224,
+            "last_write_at": "2026-06-05T14:27:15.5996824+00:00"
           },
           {
-            "minister": "mayor",
-            "name": "mayor-20260602.jsonl",
-            "path": "C:\\Users\\orca\\AppData\\Local\\RimBob\\logs\\replay\\mayor-20260602.jsonl",
-            "size_bytes": 31087,
-            "last_write_at": "2026-06-02T22:11:53.3685172+00:00"
-          },
-          {
-            "minister": "willie",
-            "name": "willie-20260602.jsonl",
-            "path": "C:\\Users\\orca\\AppData\\Local\\RimBob\\logs\\replay\\willie-20260602.jsonl",
-            "size_bytes": 182747,
-            "last_write_at": "2026-06-02T22:11:36.6998442+00:00"
+            "minister": "chef",
+            "name": "chef-20260605.jsonl",
+            "path": "C:\\Users\\orca\\AppData\\Local\\RimBob\\logs\\replay\\chef-20260605.jsonl",
+            "size_bytes": 562678,
+            "last_write_at": "2026-06-05T14:27:15.5436426+00:00"
           },
           {
             "minister": "welfare",
-            "name": "welfare-20260602.jsonl",
-            "path": "C:\\Users\\orca\\AppData\\Local\\RimBob\\logs\\replay\\welfare-20260602.jsonl",
-            "size_bytes": 12416,
-            "last_write_at": "2026-06-02T22:11:36.004523+00:00"
-          },
-          {
-            "minister": "chef",
-            "name": "chef-20260602.jsonl",
-            "path": "C:\\Users\\orca\\AppData\\Local\\RimBob\\logs\\replay\\chef-20260602.jsonl",
-            "size_bytes": 44776,
-            "last_write_at": "2026-06-02T22:11:33.1923433+00:00"
-          },
-          {
-            "minister": "chef",
-            "name": "chef-20260601.jsonl",
-            "path": "C:\\Users\\orca\\AppData\\Local\\RimBob\\logs\\replay\\chef-20260601.jsonl",
-            "size_bytes": 191623,
-            "last_write_at": "2026-06-01T21:36:16.184134+00:00"
-          },
-          {
-            "minister": "mayor",
-            "name": "mayor-20260601.jsonl",
-            "path": "C:\\Users\\orca\\AppData\\Local\\RimBob\\logs\\replay\\mayor-20260601.jsonl",
-            "size_bytes": 62622,
-            "last_write_at": "2026-06-01T21:30:03.5559938+00:00"
+            "name": "welfare-20260605.jsonl",
+            "path": "C:\\Users\\orca\\AppData\\Local\\RimBob\\logs\\replay\\welfare-20260605.jsonl",
+            "size_bytes": 24379,
+            "last_write_at": "2026-06-05T14:21:33.7842107+00:00"
           },
           {
             "minister": "willie",
-            "name": "willie-20260601.jsonl",
-            "path": "C:\\Users\\orca\\AppData\\Local\\RimBob\\logs\\replay\\willie-20260601.jsonl",
-            "size_bytes": 80080,
-            "last_write_at": "2026-06-01T21:29:52.1024148+00:00"
+            "name": "willie-20260604.jsonl",
+            "path": "C:\\Users\\orca\\AppData\\Local\\RimBob\\logs\\replay\\willie-20260604.jsonl",
+            "size_bytes": 172901,
+            "last_write_at": "2026-06-04T21:01:18.5500954+00:00"
           },
           {
-            "minister": "chef",
-            "name": "chef-20260531.jsonl",
-            "path": "C:\\Users\\orca\\AppData\\Local\\RimBob\\logs\\replay\\chef-20260531.jsonl",
-            "size_bytes": 239130,
-            "last_write_at": "2026-05-31T20:26:55.0814498+00:00"
-          },
-          {
-            "minister": "willie",
-            "name": "willie-20260531.jsonl",
-            "path": "C:\\Users\\orca\\AppData\\Local\\RimBob\\logs\\replay\\willie-20260531.jsonl",
-            "size_bytes": 195256,
-            "last_write_at": "2026-05-31T19:43:25.2887566+00:00"
+            "minister": "welfare",
+            "name": "welfare-20260604.jsonl",
+            "path": "C:\\Users\\orca\\AppData\\Local\\RimBob\\logs\\replay\\welfare-20260604.jsonl",
+            "size_bytes": 49113,
+            "last_write_at": "2026-06-04T21:01:18.4805778+00:00"
           },
           {
             "minister": "mayor",
-            "name": "mayor-20260531.jsonl",
-            "path": "C:\\Users\\orca\\AppData\\Local\\RimBob\\logs\\replay\\mayor-20260531.jsonl",
-            "size_bytes": 21093,
-            "last_write_at": "2026-05-31T19:34:07.1868236+00:00"
-          },
-          {
-            "minister": "willie",
-            "name": "willie-20260530.jsonl",
-            "path": "C:\\Users\\orca\\AppData\\Local\\RimBob\\logs\\replay\\willie-20260530.jsonl",
-            "size_bytes": 301878,
-            "last_write_at": "2026-05-30T22:26:55.3687207+00:00"
-          },
-          {
-            "minister": "mayor",
-            "name": "mayor-20260530.jsonl",
-            "path": "C:\\Users\\orca\\AppData\\Local\\RimBob\\logs\\replay\\mayor-20260530.jsonl",
-            "size_bytes": 39800,
-            "last_write_at": "2026-05-30T21:54:17.8364129+00:00"
+            "name": "mayor-20260604.jsonl",
+            "path": "C:\\Users\\orca\\AppData\\Local\\RimBob\\logs\\replay\\mayor-20260604.jsonl",
+            "size_bytes": 50655,
+            "last_write_at": "2026-06-04T20:57:22.5900135+00:00"
           },
           {
             "minister": "chef",
-            "name": "chef-20260530.jsonl",
-            "path": "C:\\Users\\orca\\AppData\\Local\\RimBob\\logs\\replay\\chef-20260530.jsonl",
-            "size_bytes": 53156,
-            "last_write_at": "2026-05-30T21:54:04.9116344+00:00"
-          },
-          {
-            "minister": "willie",
-            "name": "willie-20260529.jsonl",
-            "path": "C:\\Users\\orca\\AppData\\Local\\RimBob\\logs\\replay\\willie-20260529.jsonl",
-            "size_bytes": 52295,
-            "last_write_at": "2026-05-29T23:11:54.477776+00:00"
-          },
-          {
-            "minister": "willie",
-            "name": "willie-20260528.jsonl",
-            "path": "C:\\Users\\orca\\AppData\\Local\\RimBob\\logs\\replay\\willie-20260528.jsonl",
-            "size_bytes": 54411,
-            "last_write_at": "2026-05-28T19:59:49.8042353+00:00"
-          },
-          {
-            "minister": "mayor",
-            "name": "mayor-20260528.jsonl",
-            "path": "C:\\Users\\orca\\AppData\\Local\\RimBob\\logs\\replay\\mayor-20260528.jsonl",
-            "size_bytes": 13711,
-            "last_write_at": "2026-05-28T16:16:57.0968472+00:00"
-          },
-          {
-            "minister": "chef",
-            "name": "chef-20260528.jsonl",
-            "path": "C:\\Users\\orca\\AppData\\Local\\RimBob\\logs\\replay\\chef-20260528.jsonl",
-            "size_bytes": 17649,
-            "last_write_at": "2026-05-28T16:16:45.1120947+00:00"
-          },
-          {
-            "minister": "mayor",
-            "name": "mayor-20260525.jsonl",
-            "path": "C:\\Users\\orca\\AppData\\Local\\RimBob\\logs\\replay\\mayor-20260525.jsonl",
-            "size_bytes": 26385,
-            "last_write_at": "2026-05-25T20:08:10.8644534+00:00"
-          },
-          {
-            "minister": "chef",
-            "name": "chef-20260525.jsonl",
-            "path": "C:\\Users\\orca\\AppData\\Local\\RimBob\\logs\\replay\\chef-20260525.jsonl",
-            "size_bytes": 34544,
-            "last_write_at": "2026-05-25T20:07:59.1649857+00:00"
+            "name": "chef-20260604.jsonl",
+            "path": "C:\\Users\\orca\\AppData\\Local\\RimBob\\logs\\replay\\chef-20260604.jsonl",
+            "size_bytes": 130861,
+            "last_write_at": "2026-06-04T20:57:10.0879534+00:00"
           }
         ]
       },
       "recent_endpoint": "not_exposed_yet"
     },
     "tests": {
-      "directory": "C:\\dev\\RimBob\\Src\\Tests",
-      "project": "C:\\dev\\RimBob\\Src\\Tests\\RimBob.Tests.csproj",
+      "directory": "C:\\Users\\orca\\.codex\\worktrees\\f326\\RimBob\\Src\\Tests",
+      "project": "C:\\Users\\orca\\.codex\\worktrees\\f326\\RimBob\\Src\\Tests\\RimBob.Tests.csproj",
       "exists": true,
-      "total_count": 519,
-      "file_count": 77,
+      "total_count": 544,
+      "file_count": 78,
       "source": "declared xUnit [Fact]/[Theory] methods grouped by Src/Tests folder",
       "scan_error": null,
       "categories": [
         {
           "category": "ApiHost",
-          "count": 60,
+          "count": 62,
           "file_count": 9
         },
         {
           "category": "Coordination",
-          "count": 59,
+          "count": 60,
           "file_count": 11
         },
         {
@@ -377,7 +299,7 @@
         },
         {
           "category": "Knowledge",
-          "count": 13,
+          "count": 14,
           "file_count": 3
         },
         {
@@ -402,12 +324,12 @@
         },
         {
           "category": "Welfare",
-          "count": 13,
-          "file_count": 3
+          "count": 28,
+          "file_count": 4
         },
         {
           "category": "Willie",
-          "count": 116,
+          "count": 122,
           "file_count": 18
         }
       ]
@@ -1168,6 +1090,11 @@
         "note": "Manual dashboard trigger for all live ministers; returns a run-scoped step log and remains suggest-only, no RIMAPI writes."
       },
       {
+        "endpoint": "/api/cabinet/trigger/rules",
+        "state": "available",
+        "note": "Manual rules-only cabinet trigger for wired rules-capable ministers; skips the LLM-only Mayor, returns a run-scoped step log, and remains suggest-only with no RIMAPI writes."
+      },
+      {
         "endpoint": "/api/ministers/{minister}/trigger/rules",
         "state": "partial",
         "note": "Manual rules-only dashboard trigger for wired ministers: Chef and Willie and Welfare. Planned scopes are not wired yet."
@@ -1175,7 +1102,7 @@
       {
         "endpoint": "/api/ministers/{minister}/trigger/llm",
         "state": "partial",
-        "note": "Manual forced-LLM dashboard trigger for LLM-backed ministers: Mayor and Chef. Non-LLM scopes stay disabled."
+        "note": "Manual user-confirmed LLM dashboard trigger for LLM-backed ministers: Mayor and Chef and Welfare. Non-LLM scopes stay disabled."
       },
       {
         "endpoint": "/api/advice/stream",
@@ -1225,17 +1152,17 @@
       {
         "endpoint": "/api/ministers/{minister}/prompt",
         "state": "partial",
-        "note": "Generalized prompt inspector for Mayor and Chef."
+        "note": "Generalized prompt inspector for Mayor and Chef and Welfare."
       },
       {
         "endpoint": "/api/ministers/{minister}/llm-output/latest",
         "state": "partial",
-        "note": "Latest raw Gemini response for Mayor and Chef after an LLM call occurs."
+        "note": "Latest raw Gemini response for Mayor and Chef and Welfare after an LLM call occurs."
       },
       {
         "endpoint": "/api/ministers/{minister}/llm-output/manual",
         "state": "partial",
-        "note": "Developer manual raw LLM ingestion for Chef."
+        "note": "Developer manual raw LLM ingestion for Chef and Welfare."
       },
       {
         "endpoint": "/api/ministers/{minister}/snapshot",
@@ -1676,25 +1603,37 @@
       ]
     }
   },
-  "page_count": 85,
+  "page_count": 72,
   "static_navigation": {
     "scope_rail_links": true,
     "view_tab_links": true
   },
   "image_counts": {
-    "embedded": 3021,
-    "failed": 13
+    "embedded": 600,
+    "failed": 14
   },
   "pages": [
+    {
+      "scope": "home",
+      "view": "overview",
+      "label": "CABINET / Overview",
+      "status": "live",
+      "url": "http://localhost:5014/?scope=home&view=overview",
+      "relative_path": "pages/home/overview.html",
+      "image_counts": {
+        "embedded": 21,
+        "failed": 0
+      }
+    },
     {
       "scope": "system",
       "view": "runtime",
       "label": "SYSTEM / Runtime",
       "status": "live",
-      "url": "http://localhost:5000/?scope=system&view=runtime",
+      "url": "http://localhost:5014/?scope=system&view=runtime",
       "relative_path": "pages/system/runtime.html",
       "image_counts": {
-        "embedded": 20,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -1703,10 +1642,10 @@
       "view": "connectivity",
       "label": "SYSTEM / Connectivity",
       "status": "live",
-      "url": "http://localhost:5000/?scope=system&view=connectivity",
+      "url": "http://localhost:5014/?scope=system&view=connectivity",
       "relative_path": "pages/system/connectivity.html",
       "image_counts": {
-        "embedded": 29,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -1715,10 +1654,10 @@
       "view": "storage",
       "label": "SYSTEM / Storage",
       "status": "live",
-      "url": "http://localhost:5000/?scope=system&view=storage",
+      "url": "http://localhost:5014/?scope=system&view=storage",
       "relative_path": "pages/system/storage.html",
       "image_counts": {
-        "embedded": 20,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -1727,10 +1666,10 @@
       "view": "coverage",
       "label": "SYSTEM / Coverage",
       "status": "live",
-      "url": "http://localhost:5000/?scope=system&view=coverage",
+      "url": "http://localhost:5014/?scope=system&view=coverage",
       "relative_path": "pages/system/coverage.html",
       "image_counts": {
-        "embedded": 22,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -1739,10 +1678,10 @@
       "view": "events",
       "label": "SYSTEM / Events",
       "status": "live",
-      "url": "http://localhost:5000/?scope=system&view=events",
+      "url": "http://localhost:5014/?scope=system&view=events",
       "relative_path": "pages/system/events.html",
       "image_counts": {
-        "embedded": 23,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -1751,10 +1690,10 @@
       "view": "overview",
       "label": "INFO / Overview",
       "status": "reference",
-      "url": "http://localhost:5000/?scope=info&view=overview",
+      "url": "http://localhost:5014/?scope=info&view=overview",
       "relative_path": "pages/info/overview.html",
       "image_counts": {
-        "embedded": 29,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -1763,10 +1702,10 @@
       "view": "glossary",
       "label": "INFO / Glossary",
       "status": "reference",
-      "url": "http://localhost:5000/?scope=info&view=glossary",
+      "url": "http://localhost:5014/?scope=info&view=glossary",
       "relative_path": "pages/info/glossary.html",
       "image_counts": {
-        "embedded": 34,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -1775,10 +1714,10 @@
       "view": "contracts",
       "label": "INFO / Contracts",
       "status": "reference",
-      "url": "http://localhost:5000/?scope=info&view=contracts",
+      "url": "http://localhost:5014/?scope=info&view=contracts",
       "relative_path": "pages/info/contracts.html",
       "image_counts": {
-        "embedded": 25,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -1787,10 +1726,10 @@
       "view": "data_sources",
       "label": "INFO / Data Sources",
       "status": "reference",
-      "url": "http://localhost:5000/?scope=info&view=data_sources",
+      "url": "http://localhost:5014/?scope=info&view=data_sources",
       "relative_path": "pages/info/data_sources.html",
       "image_counts": {
-        "embedded": 25,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -1799,10 +1738,10 @@
       "view": "algorithms",
       "label": "INFO / Algorithms",
       "status": "reference",
-      "url": "http://localhost:5000/?scope=info&view=algorithms",
+      "url": "http://localhost:5014/?scope=info&view=algorithms",
       "relative_path": "pages/info/algorithms.html",
       "image_counts": {
-        "embedded": 19,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -1811,10 +1750,10 @@
       "view": "session",
       "label": "ANALYTICS / Session",
       "status": "live",
-      "url": "http://localhost:5000/?scope=analytics&view=session",
+      "url": "http://localhost:5014/?scope=analytics&view=session",
       "relative_path": "pages/analytics/session.html",
       "image_counts": {
-        "embedded": 28,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -1823,10 +1762,10 @@
       "view": "colony",
       "label": "ANALYTICS / Colony",
       "status": "live",
-      "url": "http://localhost:5000/?scope=analytics&view=colony",
+      "url": "http://localhost:5014/?scope=analytics&view=colony",
       "relative_path": "pages/analytics/colony.html",
       "image_counts": {
-        "embedded": 28,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -1835,10 +1774,10 @@
       "view": "advice",
       "label": "ANALYTICS / Advice",
       "status": "live",
-      "url": "http://localhost:5000/?scope=analytics&view=advice",
+      "url": "http://localhost:5014/?scope=analytics&view=advice",
       "relative_path": "pages/analytics/advice.html",
       "image_counts": {
-        "embedded": 29,
+        "embedded": 8,
         "failed": 0
       }
     },
@@ -1847,10 +1786,10 @@
       "view": "sse",
       "label": "ANALYTICS / SSE",
       "status": "live",
-      "url": "http://localhost:5000/?scope=analytics&view=sse",
+      "url": "http://localhost:5014/?scope=analytics&view=sse",
       "relative_path": "pages/analytics/sse.html",
       "image_counts": {
-        "embedded": 31,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -1859,10 +1798,10 @@
       "view": "candidates",
       "label": "ANALYTICS / Candidates",
       "status": "live",
-      "url": "http://localhost:5000/?scope=analytics&view=candidates",
+      "url": "http://localhost:5014/?scope=analytics&view=candidates",
       "relative_path": "pages/analytics/candidates.html",
       "image_counts": {
-        "embedded": 24,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -1871,10 +1810,10 @@
       "view": "features",
       "label": "DEV BLOG / Features",
       "status": "live",
-      "url": "http://localhost:5000/?scope=dev_blog&view=features",
+      "url": "http://localhost:5014/?scope=dev_blog&view=features",
       "relative_path": "pages/dev_blog/features.html",
       "image_counts": {
-        "embedded": 314,
+        "embedded": 15,
         "failed": 0
       }
     },
@@ -1883,10 +1822,10 @@
       "view": "churn",
       "label": "DEV BLOG / Churn",
       "status": "live",
-      "url": "http://localhost:5000/?scope=dev_blog&view=churn",
+      "url": "http://localhost:5014/?scope=dev_blog&view=churn",
       "relative_path": "pages/dev_blog/churn.html",
       "image_counts": {
-        "embedded": 21,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -1895,10 +1834,10 @@
       "view": "commits",
       "label": "DEV BLOG / Commits",
       "status": "live",
-      "url": "http://localhost:5000/?scope=dev_blog&view=commits",
+      "url": "http://localhost:5014/?scope=dev_blog&view=commits",
       "relative_path": "pages/dev_blog/commits.html",
       "image_counts": {
-        "embedded": 23,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -1907,10 +1846,10 @@
       "view": "topics",
       "label": "DEV BLOG / Topics",
       "status": "live",
-      "url": "http://localhost:5000/?scope=dev_blog&view=topics",
+      "url": "http://localhost:5014/?scope=dev_blog&view=topics",
       "relative_path": "pages/dev_blog/topics.html",
       "image_counts": {
-        "embedded": 22,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -1919,22 +1858,22 @@
       "view": "suggestions",
       "label": "DEV BLOG / Suggestions",
       "status": "live",
-      "url": "http://localhost:5000/?scope=dev_blog&view=suggestions",
+      "url": "http://localhost:5014/?scope=dev_blog&view=suggestions",
       "relative_path": "pages/dev_blog/suggestions.html",
       "image_counts": {
-        "embedded": 27,
+        "embedded": 3,
         "failed": 0
       }
     },
     {
       "scope": "mayor",
       "view": "prompt",
-      "label": "Mayor / System Prompt",
+      "label": "Mayor / LLM",
       "status": "live",
-      "url": "http://localhost:5000/?scope=mayor&view=prompt",
+      "url": "http://localhost:5014/?scope=mayor&view=prompt",
       "relative_path": "pages/mayor/prompt.html",
       "image_counts": {
-        "embedded": 132,
+        "embedded": 11,
         "failed": 0
       }
     },
@@ -1943,22 +1882,10 @@
       "view": "briefing",
       "label": "Mayor / Briefing",
       "status": "live",
-      "url": "http://localhost:5000/?scope=mayor&view=briefing",
+      "url": "http://localhost:5014/?scope=mayor&view=briefing",
       "relative_path": "pages/mayor/briefing.html",
       "image_counts": {
-        "embedded": 49,
-        "failed": 0
-      }
-    },
-    {
-      "scope": "mayor",
-      "view": "rag",
-      "label": "Mayor / RAG",
-      "status": "live",
-      "url": "http://localhost:5000/?scope=mayor&view=rag",
-      "relative_path": "pages/mayor/rag.html",
-      "image_counts": {
-        "embedded": 28,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -1967,22 +1894,10 @@
       "view": "rules",
       "label": "Mayor / Rules",
       "status": "live",
-      "url": "http://localhost:5000/?scope=mayor&view=rules",
+      "url": "http://localhost:5014/?scope=mayor&view=rules",
       "relative_path": "pages/mayor/rules.html",
       "image_counts": {
-        "embedded": 32,
-        "failed": 0
-      }
-    },
-    {
-      "scope": "mayor",
-      "view": "raw_llm",
-      "label": "Mayor / Raw LLM Output",
-      "status": "live",
-      "url": "http://localhost:5000/?scope=mayor&view=raw_llm",
-      "relative_path": "pages/mayor/raw_llm.html",
-      "image_counts": {
-        "embedded": 39,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -1991,10 +1906,10 @@
       "view": "infographics",
       "label": "Mayor / Infographics",
       "status": "live",
-      "url": "http://localhost:5000/?scope=mayor&view=infographics",
+      "url": "http://localhost:5014/?scope=mayor&view=infographics",
       "relative_path": "pages/mayor/infographics.html",
       "image_counts": {
-        "embedded": 22,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -2003,23 +1918,23 @@
       "view": "advice",
       "label": "Mayor / Advice",
       "status": "live",
-      "url": "http://localhost:5000/?scope=mayor&view=advice",
+      "url": "http://localhost:5014/?scope=mayor&view=advice",
       "relative_path": "pages/mayor/advice.html",
       "image_counts": {
-        "embedded": 59,
+        "embedded": 24,
         "failed": 0
       }
     },
     {
       "scope": "food",
       "view": "prompt",
-      "label": "Chef / System Prompt",
+      "label": "Chef / LLM",
       "status": "live",
-      "url": "http://localhost:5000/?scope=food&view=prompt",
+      "url": "http://localhost:5014/?scope=food&view=prompt",
       "relative_path": "pages/food/prompt.html",
       "image_counts": {
-        "embedded": 253,
-        "failed": 13
+        "embedded": 170,
+        "failed": 12
       }
     },
     {
@@ -2027,22 +1942,10 @@
       "view": "briefing",
       "label": "Chef / Briefing",
       "status": "live",
-      "url": "http://localhost:5000/?scope=food&view=briefing",
+      "url": "http://localhost:5014/?scope=food&view=briefing",
       "relative_path": "pages/food/briefing.html",
       "image_counts": {
-        "embedded": 63,
-        "failed": 0
-      }
-    },
-    {
-      "scope": "food",
-      "view": "rag",
-      "label": "Chef / RAG",
-      "status": "live",
-      "url": "http://localhost:5000/?scope=food&view=rag",
-      "relative_path": "pages/food/rag.html",
-      "image_counts": {
-        "embedded": 25,
+        "embedded": 20,
         "failed": 0
       }
     },
@@ -2051,22 +1954,10 @@
       "view": "rules",
       "label": "Chef / Rules",
       "status": "live",
-      "url": "http://localhost:5000/?scope=food&view=rules",
+      "url": "http://localhost:5014/?scope=food&view=rules",
       "relative_path": "pages/food/rules.html",
       "image_counts": {
-        "embedded": 32,
-        "failed": 0
-      }
-    },
-    {
-      "scope": "food",
-      "view": "raw_llm",
-      "label": "Chef / Raw LLM Output",
-      "status": "live",
-      "url": "http://localhost:5000/?scope=food&view=raw_llm",
-      "relative_path": "pages/food/raw_llm.html",
-      "image_counts": {
-        "embedded": 27,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -2075,10 +1966,10 @@
       "view": "infographics",
       "label": "Chef / Infographics",
       "status": "live",
-      "url": "http://localhost:5000/?scope=food&view=infographics",
+      "url": "http://localhost:5014/?scope=food&view=infographics",
       "relative_path": "pages/food/infographics.html",
       "image_counts": {
-        "embedded": 33,
+        "embedded": 11,
         "failed": 0
       }
     },
@@ -2087,10 +1978,10 @@
       "view": "advice",
       "label": "Chef / Advice",
       "status": "live",
-      "url": "http://localhost:5000/?scope=food&view=advice",
+      "url": "http://localhost:5014/?scope=food&view=advice",
       "relative_path": "pages/food/advice.html",
       "image_counts": {
-        "embedded": 138,
+        "embedded": 87,
         "failed": 0
       }
     },
@@ -2099,10 +1990,10 @@
       "view": "briefing",
       "label": "Willie / Briefing",
       "status": "live",
-      "url": "http://localhost:5000/?scope=willie&view=briefing",
+      "url": "http://localhost:5014/?scope=willie&view=briefing",
       "relative_path": "pages/willie/briefing.html",
       "image_counts": {
-        "embedded": 46,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -2111,10 +2002,10 @@
       "view": "build_queue",
       "label": "Willie / Build Queue",
       "status": "live",
-      "url": "http://localhost:5000/?scope=willie&view=build_queue",
+      "url": "http://localhost:5014/?scope=willie&view=build_queue",
       "relative_path": "pages/willie/build_queue.html",
       "image_counts": {
-        "embedded": 44,
+        "embedded": 20,
         "failed": 0
       }
     },
@@ -2123,10 +2014,10 @@
       "view": "solver",
       "label": "Willie / Solver",
       "status": "live",
-      "url": "http://localhost:5000/?scope=willie&view=solver",
+      "url": "http://localhost:5014/?scope=willie&view=solver",
       "relative_path": "pages/willie/solver.html",
       "image_counts": {
-        "embedded": 22,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -2135,10 +2026,10 @@
       "view": "requests",
       "label": "Willie / Requests",
       "status": "live",
-      "url": "http://localhost:5000/?scope=willie&view=requests",
+      "url": "http://localhost:5014/?scope=willie&view=requests",
       "relative_path": "pages/willie/requests.html",
       "image_counts": {
-        "embedded": 21,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -2147,10 +2038,10 @@
       "view": "rules",
       "label": "Willie / Rules",
       "status": "live",
-      "url": "http://localhost:5000/?scope=willie&view=rules",
+      "url": "http://localhost:5014/?scope=willie&view=rules",
       "relative_path": "pages/willie/rules.html",
       "image_counts": {
-        "embedded": 31,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -2159,22 +2050,22 @@
       "view": "advice",
       "label": "Willie / Advice",
       "status": "live",
-      "url": "http://localhost:5000/?scope=willie&view=advice",
+      "url": "http://localhost:5014/?scope=willie&view=advice",
       "relative_path": "pages/willie/advice.html",
       "image_counts": {
-        "embedded": 40,
+        "embedded": 16,
         "failed": 0
       }
     },
     {
       "scope": "defense",
       "view": "prompt",
-      "label": "Defense / System Prompt",
+      "label": "Defense / LLM",
       "status": "planned",
-      "url": "http://localhost:5000/?scope=defense&view=prompt",
+      "url": "http://localhost:5014/?scope=defense&view=prompt",
       "relative_path": "pages/defense/prompt.html",
       "image_counts": {
-        "embedded": 22,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -2183,22 +2074,10 @@
       "view": "briefing",
       "label": "Defense / Briefing",
       "status": "planned",
-      "url": "http://localhost:5000/?scope=defense&view=briefing",
+      "url": "http://localhost:5014/?scope=defense&view=briefing",
       "relative_path": "pages/defense/briefing.html",
       "image_counts": {
-        "embedded": 22,
-        "failed": 0
-      }
-    },
-    {
-      "scope": "defense",
-      "view": "rag",
-      "label": "Defense / RAG",
-      "status": "planned",
-      "url": "http://localhost:5000/?scope=defense&view=rag",
-      "relative_path": "pages/defense/rag.html",
-      "image_counts": {
-        "embedded": 25,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -2207,22 +2086,10 @@
       "view": "rules",
       "label": "Defense / Rules",
       "status": "planned",
-      "url": "http://localhost:5000/?scope=defense&view=rules",
+      "url": "http://localhost:5014/?scope=defense&view=rules",
       "relative_path": "pages/defense/rules.html",
       "image_counts": {
-        "embedded": 32,
-        "failed": 0
-      }
-    },
-    {
-      "scope": "defense",
-      "view": "raw_llm",
-      "label": "Defense / Raw LLM Output",
-      "status": "planned",
-      "url": "http://localhost:5000/?scope=defense&view=raw_llm",
-      "relative_path": "pages/defense/raw_llm.html",
-      "image_counts": {
-        "embedded": 22,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -2231,10 +2098,10 @@
       "view": "infographics",
       "label": "Defense / Infographics",
       "status": "planned",
-      "url": "http://localhost:5000/?scope=defense&view=infographics",
+      "url": "http://localhost:5014/?scope=defense&view=infographics",
       "relative_path": "pages/defense/infographics.html",
       "image_counts": {
-        "embedded": 22,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -2243,11 +2110,23 @@
       "view": "advice",
       "label": "Defense / Advice",
       "status": "planned",
-      "url": "http://localhost:5000/?scope=defense&view=advice",
+      "url": "http://localhost:5014/?scope=defense&view=advice",
       "relative_path": "pages/defense/advice.html",
       "image_counts": {
-        "embedded": 22,
+        "embedded": 3,
         "failed": 0
+      }
+    },
+    {
+      "scope": "welfare",
+      "view": "prompt",
+      "label": "Welfare / LLM",
+      "status": "live",
+      "url": "http://localhost:5014/?scope=welfare&view=prompt",
+      "relative_path": "pages/welfare/prompt.html",
+      "image_counts": {
+        "embedded": 3,
+        "failed": 2
       }
     },
     {
@@ -2255,10 +2134,10 @@
       "view": "briefing",
       "label": "Welfare / Briefing",
       "status": "live",
-      "url": "http://localhost:5000/?scope=welfare&view=briefing",
+      "url": "http://localhost:5014/?scope=welfare&view=briefing",
       "relative_path": "pages/welfare/briefing.html",
       "image_counts": {
-        "embedded": 25,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -2267,10 +2146,22 @@
       "view": "rules",
       "label": "Welfare / Rules",
       "status": "live",
-      "url": "http://localhost:5000/?scope=welfare&view=rules",
+      "url": "http://localhost:5014/?scope=welfare&view=rules",
       "relative_path": "pages/welfare/rules.html",
       "image_counts": {
-        "embedded": 28,
+        "embedded": 3,
+        "failed": 0
+      }
+    },
+    {
+      "scope": "welfare",
+      "view": "infographics",
+      "label": "Welfare / Infographics",
+      "status": "live",
+      "url": "http://localhost:5014/?scope=welfare&view=infographics",
+      "relative_path": "pages/welfare/infographics.html",
+      "image_counts": {
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -2279,22 +2170,22 @@
       "view": "advice",
       "label": "Welfare / Advice",
       "status": "live",
-      "url": "http://localhost:5000/?scope=welfare&view=advice",
+      "url": "http://localhost:5014/?scope=welfare&view=advice",
       "relative_path": "pages/welfare/advice.html",
       "image_counts": {
-        "embedded": 37,
+        "embedded": 17,
         "failed": 0
       }
     },
     {
       "scope": "medical",
       "view": "prompt",
-      "label": "Medical / System Prompt",
+      "label": "Medical / LLM",
       "status": "planned",
-      "url": "http://localhost:5000/?scope=medical&view=prompt",
+      "url": "http://localhost:5014/?scope=medical&view=prompt",
       "relative_path": "pages/medical/prompt.html",
       "image_counts": {
-        "embedded": 22,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -2303,22 +2194,10 @@
       "view": "briefing",
       "label": "Medical / Briefing",
       "status": "planned",
-      "url": "http://localhost:5000/?scope=medical&view=briefing",
+      "url": "http://localhost:5014/?scope=medical&view=briefing",
       "relative_path": "pages/medical/briefing.html",
       "image_counts": {
-        "embedded": 22,
-        "failed": 0
-      }
-    },
-    {
-      "scope": "medical",
-      "view": "rag",
-      "label": "Medical / RAG",
-      "status": "planned",
-      "url": "http://localhost:5000/?scope=medical&view=rag",
-      "relative_path": "pages/medical/rag.html",
-      "image_counts": {
-        "embedded": 25,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -2327,22 +2206,10 @@
       "view": "rules",
       "label": "Medical / Rules",
       "status": "planned",
-      "url": "http://localhost:5000/?scope=medical&view=rules",
+      "url": "http://localhost:5014/?scope=medical&view=rules",
       "relative_path": "pages/medical/rules.html",
       "image_counts": {
-        "embedded": 32,
-        "failed": 0
-      }
-    },
-    {
-      "scope": "medical",
-      "view": "raw_llm",
-      "label": "Medical / Raw LLM Output",
-      "status": "planned",
-      "url": "http://localhost:5000/?scope=medical&view=raw_llm",
-      "relative_path": "pages/medical/raw_llm.html",
-      "image_counts": {
-        "embedded": 22,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -2351,10 +2218,10 @@
       "view": "infographics",
       "label": "Medical / Infographics",
       "status": "planned",
-      "url": "http://localhost:5000/?scope=medical&view=infographics",
+      "url": "http://localhost:5014/?scope=medical&view=infographics",
       "relative_path": "pages/medical/infographics.html",
       "image_counts": {
-        "embedded": 22,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -2363,22 +2230,22 @@
       "view": "advice",
       "label": "Medical / Advice",
       "status": "planned",
-      "url": "http://localhost:5000/?scope=medical&view=advice",
+      "url": "http://localhost:5014/?scope=medical&view=advice",
       "relative_path": "pages/medical/advice.html",
       "image_counts": {
-        "embedded": 22,
+        "embedded": 3,
         "failed": 0
       }
     },
     {
       "scope": "research",
       "view": "prompt",
-      "label": "Research / System Prompt",
+      "label": "Research / LLM",
       "status": "planned",
-      "url": "http://localhost:5000/?scope=research&view=prompt",
+      "url": "http://localhost:5014/?scope=research&view=prompt",
       "relative_path": "pages/research/prompt.html",
       "image_counts": {
-        "embedded": 22,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -2387,22 +2254,10 @@
       "view": "briefing",
       "label": "Research / Briefing",
       "status": "planned",
-      "url": "http://localhost:5000/?scope=research&view=briefing",
+      "url": "http://localhost:5014/?scope=research&view=briefing",
       "relative_path": "pages/research/briefing.html",
       "image_counts": {
-        "embedded": 22,
-        "failed": 0
-      }
-    },
-    {
-      "scope": "research",
-      "view": "rag",
-      "label": "Research / RAG",
-      "status": "planned",
-      "url": "http://localhost:5000/?scope=research&view=rag",
-      "relative_path": "pages/research/rag.html",
-      "image_counts": {
-        "embedded": 25,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -2411,22 +2266,10 @@
       "view": "rules",
       "label": "Research / Rules",
       "status": "planned",
-      "url": "http://localhost:5000/?scope=research&view=rules",
+      "url": "http://localhost:5014/?scope=research&view=rules",
       "relative_path": "pages/research/rules.html",
       "image_counts": {
-        "embedded": 32,
-        "failed": 0
-      }
-    },
-    {
-      "scope": "research",
-      "view": "raw_llm",
-      "label": "Research / Raw LLM Output",
-      "status": "planned",
-      "url": "http://localhost:5000/?scope=research&view=raw_llm",
-      "relative_path": "pages/research/raw_llm.html",
-      "image_counts": {
-        "embedded": 22,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -2435,10 +2278,10 @@
       "view": "infographics",
       "label": "Research / Infographics",
       "status": "planned",
-      "url": "http://localhost:5000/?scope=research&view=infographics",
+      "url": "http://localhost:5014/?scope=research&view=infographics",
       "relative_path": "pages/research/infographics.html",
       "image_counts": {
-        "embedded": 22,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -2447,22 +2290,22 @@
       "view": "advice",
       "label": "Research / Advice",
       "status": "planned",
-      "url": "http://localhost:5000/?scope=research&view=advice",
+      "url": "http://localhost:5014/?scope=research&view=advice",
       "relative_path": "pages/research/advice.html",
       "image_counts": {
-        "embedded": 22,
+        "embedded": 3,
         "failed": 0
       }
     },
     {
       "scope": "industry",
       "view": "prompt",
-      "label": "Industry / System Prompt",
+      "label": "Industry / LLM",
       "status": "planned",
-      "url": "http://localhost:5000/?scope=industry&view=prompt",
+      "url": "http://localhost:5014/?scope=industry&view=prompt",
       "relative_path": "pages/industry/prompt.html",
       "image_counts": {
-        "embedded": 22,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -2471,22 +2314,10 @@
       "view": "briefing",
       "label": "Industry / Briefing",
       "status": "planned",
-      "url": "http://localhost:5000/?scope=industry&view=briefing",
+      "url": "http://localhost:5014/?scope=industry&view=briefing",
       "relative_path": "pages/industry/briefing.html",
       "image_counts": {
-        "embedded": 22,
-        "failed": 0
-      }
-    },
-    {
-      "scope": "industry",
-      "view": "rag",
-      "label": "Industry / RAG",
-      "status": "planned",
-      "url": "http://localhost:5000/?scope=industry&view=rag",
-      "relative_path": "pages/industry/rag.html",
-      "image_counts": {
-        "embedded": 25,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -2495,22 +2326,10 @@
       "view": "rules",
       "label": "Industry / Rules",
       "status": "planned",
-      "url": "http://localhost:5000/?scope=industry&view=rules",
+      "url": "http://localhost:5014/?scope=industry&view=rules",
       "relative_path": "pages/industry/rules.html",
       "image_counts": {
-        "embedded": 32,
-        "failed": 0
-      }
-    },
-    {
-      "scope": "industry",
-      "view": "raw_llm",
-      "label": "Industry / Raw LLM Output",
-      "status": "planned",
-      "url": "http://localhost:5000/?scope=industry&view=raw_llm",
-      "relative_path": "pages/industry/raw_llm.html",
-      "image_counts": {
-        "embedded": 22,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -2519,10 +2338,10 @@
       "view": "infographics",
       "label": "Industry / Infographics",
       "status": "planned",
-      "url": "http://localhost:5000/?scope=industry&view=infographics",
+      "url": "http://localhost:5014/?scope=industry&view=infographics",
       "relative_path": "pages/industry/infographics.html",
       "image_counts": {
-        "embedded": 22,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -2531,22 +2350,22 @@
       "view": "advice",
       "label": "Industry / Advice",
       "status": "planned",
-      "url": "http://localhost:5000/?scope=industry&view=advice",
+      "url": "http://localhost:5014/?scope=industry&view=advice",
       "relative_path": "pages/industry/advice.html",
       "image_counts": {
-        "embedded": 22,
+        "embedded": 3,
         "failed": 0
       }
     },
     {
       "scope": "economy",
       "view": "prompt",
-      "label": "Economy / System Prompt",
+      "label": "Economy / LLM",
       "status": "planned",
-      "url": "http://localhost:5000/?scope=economy&view=prompt",
+      "url": "http://localhost:5014/?scope=economy&view=prompt",
       "relative_path": "pages/economy/prompt.html",
       "image_counts": {
-        "embedded": 22,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -2555,22 +2374,10 @@
       "view": "briefing",
       "label": "Economy / Briefing",
       "status": "planned",
-      "url": "http://localhost:5000/?scope=economy&view=briefing",
+      "url": "http://localhost:5014/?scope=economy&view=briefing",
       "relative_path": "pages/economy/briefing.html",
       "image_counts": {
-        "embedded": 22,
-        "failed": 0
-      }
-    },
-    {
-      "scope": "economy",
-      "view": "rag",
-      "label": "Economy / RAG",
-      "status": "planned",
-      "url": "http://localhost:5000/?scope=economy&view=rag",
-      "relative_path": "pages/economy/rag.html",
-      "image_counts": {
-        "embedded": 25,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -2579,22 +2386,10 @@
       "view": "rules",
       "label": "Economy / Rules",
       "status": "planned",
-      "url": "http://localhost:5000/?scope=economy&view=rules",
+      "url": "http://localhost:5014/?scope=economy&view=rules",
       "relative_path": "pages/economy/rules.html",
       "image_counts": {
-        "embedded": 32,
-        "failed": 0
-      }
-    },
-    {
-      "scope": "economy",
-      "view": "raw_llm",
-      "label": "Economy / Raw LLM Output",
-      "status": "planned",
-      "url": "http://localhost:5000/?scope=economy&view=raw_llm",
-      "relative_path": "pages/economy/raw_llm.html",
-      "image_counts": {
-        "embedded": 22,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -2603,10 +2398,10 @@
       "view": "infographics",
       "label": "Economy / Infographics",
       "status": "planned",
-      "url": "http://localhost:5000/?scope=economy&view=infographics",
+      "url": "http://localhost:5014/?scope=economy&view=infographics",
       "relative_path": "pages/economy/infographics.html",
       "image_counts": {
-        "embedded": 22,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -2615,22 +2410,22 @@
       "view": "advice",
       "label": "Economy / Advice",
       "status": "planned",
-      "url": "http://localhost:5000/?scope=economy&view=advice",
+      "url": "http://localhost:5014/?scope=economy&view=advice",
       "relative_path": "pages/economy/advice.html",
       "image_counts": {
-        "embedded": 22,
+        "embedded": 3,
         "failed": 0
       }
     },
     {
       "scope": "chief_of_staff",
       "view": "prompt",
-      "label": "Chief of Staff / System Prompt",
+      "label": "Chief of Staff / LLM",
       "status": "planned",
-      "url": "http://localhost:5000/?scope=chief_of_staff&view=prompt",
+      "url": "http://localhost:5014/?scope=chief_of_staff&view=prompt",
       "relative_path": "pages/chief_of_staff/prompt.html",
       "image_counts": {
-        "embedded": 22,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -2639,22 +2434,10 @@
       "view": "briefing",
       "label": "Chief of Staff / Briefing",
       "status": "planned",
-      "url": "http://localhost:5000/?scope=chief_of_staff&view=briefing",
+      "url": "http://localhost:5014/?scope=chief_of_staff&view=briefing",
       "relative_path": "pages/chief_of_staff/briefing.html",
       "image_counts": {
-        "embedded": 22,
-        "failed": 0
-      }
-    },
-    {
-      "scope": "chief_of_staff",
-      "view": "rag",
-      "label": "Chief of Staff / RAG",
-      "status": "planned",
-      "url": "http://localhost:5000/?scope=chief_of_staff&view=rag",
-      "relative_path": "pages/chief_of_staff/rag.html",
-      "image_counts": {
-        "embedded": 25,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -2663,22 +2446,10 @@
       "view": "rules",
       "label": "Chief of Staff / Rules",
       "status": "planned",
-      "url": "http://localhost:5000/?scope=chief_of_staff&view=rules",
+      "url": "http://localhost:5014/?scope=chief_of_staff&view=rules",
       "relative_path": "pages/chief_of_staff/rules.html",
       "image_counts": {
-        "embedded": 32,
-        "failed": 0
-      }
-    },
-    {
-      "scope": "chief_of_staff",
-      "view": "raw_llm",
-      "label": "Chief of Staff / Raw LLM Output",
-      "status": "planned",
-      "url": "http://localhost:5000/?scope=chief_of_staff&view=raw_llm",
-      "relative_path": "pages/chief_of_staff/raw_llm.html",
-      "image_counts": {
-        "embedded": 22,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -2687,10 +2458,10 @@
       "view": "infographics",
       "label": "Chief of Staff / Infographics",
       "status": "planned",
-      "url": "http://localhost:5000/?scope=chief_of_staff&view=infographics",
+      "url": "http://localhost:5014/?scope=chief_of_staff&view=infographics",
       "relative_path": "pages/chief_of_staff/infographics.html",
       "image_counts": {
-        "embedded": 22,
+        "embedded": 3,
         "failed": 0
       }
     },
@@ -2699,10 +2470,10 @@
       "view": "advice",
       "label": "Chief of Staff / Advice",
       "status": "planned",
-      "url": "http://localhost:5000/?scope=chief_of_staff&view=advice",
+      "url": "http://localhost:5014/?scope=chief_of_staff&view=advice",
       "relative_path": "pages/chief_of_staff/advice.html",
       "image_counts": {
-        "embedded": 22,
+        "embedded": 3,
         "failed": 0
       }
     }
