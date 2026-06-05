@@ -121,7 +121,7 @@ public sealed class FoodChainModelBuilderTests
 
     private static IReadOnlyList<AdviceItem> DecisionAdvice(FoodBriefing briefing)
     {
-        RuleRun run = new Rules().Evaluate(briefing, ColonyContext.Default);
+        RuleRun run = new Rules().Evaluate(briefing);
         ProjectedRuleRun decision = run.ProjectFor(
             "Chef",
             "food",

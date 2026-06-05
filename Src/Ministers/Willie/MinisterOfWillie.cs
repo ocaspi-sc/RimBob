@@ -40,7 +40,7 @@ public sealed class MinisterOfWillie(
             cycle.Flag);
         solverStore.RecordInbound(Name, inboundBoard);
 
-        RuleRun result = rules.Evaluate(briefing, ColonyContext.Default, inboundRequests);
+        RuleRun result = rules.Evaluate(briefing, inboundRequests);
         DecisionProjectionContext projectionContext = new(
             Minister: Name,
             Domain: "construction",

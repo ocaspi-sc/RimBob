@@ -51,7 +51,7 @@ public sealed class Mayor(
         {
             MayorBriefing briefing                 = briefings.GetMayorBriefing();
             IReadOnlyList<AgentFlag> activeFlags    = flags.Active(Priority.Medium);
-            MayorDirectiveSet directiveSet          = rules.Evaluate(briefing, ColonyContext.Default, activeFlags);
+            MayorDirectiveSet directiveSet          = rules.Evaluate(briefing, activeFlags);
             Core.Advice.MayorAgenda? current       = outputStore.CurrentMayorAgenda;
 
             log.LogInformation(

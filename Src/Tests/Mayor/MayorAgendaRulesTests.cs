@@ -12,7 +12,7 @@ public sealed class MayorAgendaRulesTests
     {
         MayorBriefing briefing = BriefingBuilder.Default with { Season = new SeasonContext("Septober", 8, 18) };
 
-        MayorDirectiveSet directives = new MayorAgendaRules().Evaluate(briefing, ColonyContext.Default);
+        MayorDirectiveSet directives = new MayorAgendaRules().Evaluate(briefing);
 
         directives.WinterPrepRequired.Should().BeTrue();
         directives.Directives.Should().Contain(p => p.Contains("Winter prep"));
@@ -23,7 +23,7 @@ public sealed class MayorAgendaRulesTests
     {
         MayorBriefing briefing = BriefingBuilder.Default with { Season = new SeasonContext("Aprimay", 12, 45) };
 
-        MayorDirectiveSet directives = new MayorAgendaRules().Evaluate(briefing, ColonyContext.Default);
+        MayorDirectiveSet directives = new MayorAgendaRules().Evaluate(briefing);
 
         directives.WinterPrepRequired.Should().BeFalse();
     }
@@ -36,7 +36,7 @@ public sealed class MayorAgendaRulesTests
             Food = BriefingBuilder.Default.Food with { EstimatedDaysOfFood = 4.2f }
         };
 
-        MayorDirectiveSet directives = new MayorAgendaRules().Evaluate(briefing, ColonyContext.Default);
+        MayorDirectiveSet directives = new MayorAgendaRules().Evaluate(briefing);
 
         directives.FoodSecurityCritical.Should().BeTrue();
         directives.Directives.Should().Contain(p => p.Contains("Food security"));
@@ -51,7 +51,7 @@ public sealed class MayorAgendaRulesTests
             Food = BriefingBuilder.Default.Food with { EstimatedDaysOfFood = null }
         };
 
-        MayorDirectiveSet directives = new MayorAgendaRules().Evaluate(briefing, ColonyContext.Default);
+        MayorDirectiveSet directives = new MayorAgendaRules().Evaluate(briefing);
 
         directives.FoodSecurityCritical.Should().BeFalse();
     }
@@ -64,7 +64,7 @@ public sealed class MayorAgendaRulesTests
             Date = GameTime.Create("2nd of Aprimay, 5501", GameTime.TicksPerGameDay * 60, 5501, "Aprimay", 2, 6)
         };
 
-        MayorDirectiveSet directives = new MayorAgendaRules().Evaluate(briefing, ColonyContext.Default);
+        MayorDirectiveSet directives = new MayorAgendaRules().Evaluate(briefing);
 
         directives.YearTwoTransition.Should().BeTrue();
     }
@@ -72,7 +72,7 @@ public sealed class MayorAgendaRulesTests
     [Fact]
     public void QuietDayDirective_EmittedWhenNoOtherDirectiveFires()
     {
-        MayorDirectiveSet directives = new MayorAgendaRules().Evaluate(BriefingBuilder.Default, ColonyContext.Default);
+        MayorDirectiveSet directives = new MayorAgendaRules().Evaluate(BriefingBuilder.Default);
 
         directives.QuietDay.Should().BeTrue();
         directives.WinterPrepRequired.Should().BeFalse();
@@ -90,7 +90,7 @@ public sealed class MayorAgendaRulesTests
             Food   = BriefingBuilder.Default.Food with { EstimatedDaysOfFood = 5f }
         };
 
-        MayorDirectiveSet directives = new MayorAgendaRules().Evaluate(briefing, ColonyContext.Default);
+        MayorDirectiveSet directives = new MayorAgendaRules().Evaluate(briefing);
 
         directives.WinterPrepRequired.Should().BeTrue();
         directives.FoodSecurityCritical.Should().BeTrue();

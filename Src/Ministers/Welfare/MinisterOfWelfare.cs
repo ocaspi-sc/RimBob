@@ -44,7 +44,7 @@ public sealed class MinisterOfWelfare(
             return;
         }
 
-        RuleRun result = rules.Evaluate(briefing, ColonyContext.Default);
+        RuleRun result = rules.Evaluate(briefing);
         Escalate? escalation = result.Decisions.OfType<Escalate>().SingleOrDefault();
         if (escalation is not null && result.Decisions.Count == 1)
         {

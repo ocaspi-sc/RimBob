@@ -25,7 +25,7 @@ public sealed class FoodReplayCorpusTests
         cases.Should().NotBeEmpty();
         foreach (FoodRuleReplayCase replayCase in cases)
         {
-            RuleRun result = new Rules().Evaluate(replayCase.Briefing, ColonyContext.Default);
+            RuleRun result = new Rules().Evaluate(replayCase.Briefing);
 
             ProjectedRuleRun decision = result.ProjectFor(
                 "Chef",

@@ -12,7 +12,6 @@ public sealed class MayorAgendaRules
 {
     public MayorDirectiveSet Evaluate(
         MayorBriefing briefing,
-        ColonyContext _,
         IReadOnlyList<AgentFlag>? activeFlags = null)
     {
         List<string> directives = new();

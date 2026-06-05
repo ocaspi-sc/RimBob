@@ -13,7 +13,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
     private const string BillRepeatModeTargetCount = "TargetCount";
     private static readonly IReadOnlyList<string> SimpleMealRecipeDefs = ["CookMealSimple", "CookMealSimpleBulk"];
 
-    public RuleRun Evaluate(FoodBriefing briefing, ColonyContext context)
+    public RuleRun Evaluate(FoodBriefing briefing)
     {
         DateTimeOffset now = DateTimeOffset.UtcNow;
         IReadOnlyList<MinisterRule<FoodBriefing>> rules = RuleTable(now);

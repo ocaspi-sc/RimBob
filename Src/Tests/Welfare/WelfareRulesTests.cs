@@ -370,7 +370,7 @@ public sealed class WelfareRulesTests
     }
 
     private static RuleRun RawEvaluate(WelfareSourceBriefing briefing) =>
-        new Rules(new FixedTimeProvider(FixedNow)).Evaluate(briefing, ColonyContext.Default);
+        new Rules(new FixedTimeProvider(FixedNow)).Evaluate(briefing);
 
     private static void AssertAllRulesIncludeTableAndStableFallback(ProjectedRuleRun decision) =>
         decision.Diagnostics!.AllRules.Select(row => row.Rule)

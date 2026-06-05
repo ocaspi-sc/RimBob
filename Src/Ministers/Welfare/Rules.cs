@@ -21,7 +21,7 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
         this.timeProvider = timeProvider ?? TimeProvider.System;
     }
 
-    public RuleRun Evaluate(WelfareSourceBriefing briefing, ColonyContext context)
+    public RuleRun Evaluate(WelfareSourceBriefing briefing)
     {
         DateTimeOffset now = timeProvider.GetUtcNow();
         IReadOnlyList<MinisterRule<WelfareSourceBriefing>> rules = RuleTable(now);

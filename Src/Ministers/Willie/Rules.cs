@@ -20,12 +20,11 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
         this.timeProvider = timeProvider ?? TimeProvider.System;
     }
 
-    public RuleRun Evaluate(WillieBriefing briefing, ColonyContext context) =>
-        Evaluate(briefing, context, []);
+    public RuleRun Evaluate(WillieBriefing briefing) =>
+        Evaluate(briefing, []);
 
     public RuleRun Evaluate(
         WillieBriefing briefing,
-        ColonyContext context,
         IReadOnlyList<BuildingRequest> inboundBuildingRequests)
     {
         DateTimeOffset now = timeProvider.GetUtcNow();

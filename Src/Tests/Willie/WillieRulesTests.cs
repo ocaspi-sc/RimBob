@@ -15,7 +15,7 @@ public sealed class WillieRulesTests
     public void StableBuildProgram_ReturnsEmptyDecision()
     {
         WillieBriefing briefing = StableBriefing();
-        RuleRun result = new Rules().Evaluate(briefing, ColonyContext.Default);
+        RuleRun result = new Rules().Evaluate(briefing);
 
         ProjectedRuleRun decision = Project(result, briefing);
         decision.Advice.Should().BeEmpty();
@@ -126,7 +126,7 @@ public sealed class WillieRulesTests
         };
         Rules rules = new(new FixedTimeProvider(FixedNow));
 
-        RuleRun result = rules.Evaluate(briefing, ColonyContext.Default);
+        RuleRun result = rules.Evaluate(briefing);
 
         ProjectedRuleRun decision = Project(result, briefing, FixedNow);
         AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
@@ -180,7 +180,6 @@ public sealed class WillieRulesTests
         WillieBriefing briefing = StableBriefing();
         RuleRun result = new Rules().Evaluate(
             briefing,
-            ColonyContext.Default,
             [FreezerRequest()]);
 
         ProjectedRuleRun decision = Project(result, briefing);
@@ -198,7 +197,6 @@ public sealed class WillieRulesTests
         WillieBriefing briefing = StableBriefing();
         RuleRun result = new Rules().Evaluate(
             briefing,
-            ColonyContext.Default,
             [WorkshopRequest()]);
 
         ProjectedRuleRun decision = Project(result, briefing);
@@ -221,7 +219,6 @@ public sealed class WillieRulesTests
 
         RuleRun result = new Rules().Evaluate(
             briefing,
-            ColonyContext.Default,
             [FreezerRequest()]);
 
         ProjectedRuleRun decision = Project(result, briefing);
@@ -253,7 +250,6 @@ public sealed class WillieRulesTests
 
         RuleRun result = new Rules().Evaluate(
             briefing,
-            ColonyContext.Default,
             [freezerNearKitchen]);
 
         ProjectedRuleRun decision = Project(result, briefing);
@@ -284,7 +280,6 @@ public sealed class WillieRulesTests
 
         RuleRun result = new Rules().Evaluate(
             briefing,
-            ColonyContext.Default,
             [freezerNearKitchen, KitchenRequest()]);
 
         ProjectedRuleRun decision = Project(result, briefing);
@@ -314,7 +309,6 @@ public sealed class WillieRulesTests
 
         RuleRun result = new Rules().Evaluate(
             briefing,
-            ColonyContext.Default,
             [FreezerRequest()]);
 
         ProjectedRuleRun decision = Project(result, briefing);
@@ -349,7 +343,7 @@ public sealed class WillieRulesTests
 
     private static ProjectedRuleRun Evaluate(WillieBriefing briefing)
     {
-        RuleRun result = new Rules().Evaluate(briefing, ColonyContext.Default);
+        RuleRun result = new Rules().Evaluate(briefing);
         return Project(result, briefing);
     }
 

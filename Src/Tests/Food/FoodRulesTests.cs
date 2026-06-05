@@ -11,7 +11,7 @@ public sealed class FoodRulesTests
     [Fact]
     public void StableFood_ReturnsNoAdvice()
     {
-        RuleRun result = new Rules().Evaluate(Briefing(days: 35f), ColonyContext.Default);
+        RuleRun result = new Rules().Evaluate(Briefing(days: 35f));
 
         ProjectedRuleRun decision = Project(result);
         decision.Advice.Should().BeEmpty();
@@ -23,7 +23,7 @@ public sealed class FoodRulesTests
     public void UrgentShortage_EmitsHighFoodSecurityAdviceAndFlag()
     {
         FoodBriefing briefing = Briefing(days: 4f);
-        RuleRun result = new Rules().Evaluate(briefing, ColonyContext.Default);
+        RuleRun result = new Rules().Evaluate(briefing);
 
         ProjectedRuleRun decision = Project(result);
         AdviceItem advice = AdviceByRule(decision, "emergency_food_flag");
@@ -76,7 +76,7 @@ public sealed class FoodRulesTests
             ]
         };
 
-        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing, ColonyContext.Default));
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
 
         AdviceItem advice = AdviceByRule(decision, "emergency_food_flag");
         advice.Body.Should().Contain("7 forbidden packaged survival meals");
@@ -110,7 +110,7 @@ public sealed class FoodRulesTests
             StockpileCells = 0
         };
 
-        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing, ColonyContext.Default));
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
 
         AdviceItem advice = AdviceByRule(decision, "emergency_food_flag");
         advice.Priority.Should().Be(Priority.Critical);
@@ -140,7 +140,7 @@ public sealed class FoodRulesTests
             StockpileCells = 0
         };
 
-        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing, ColonyContext.Default));
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
 
         AdviceItem advice = AdviceByRule(decision, "emergency_food_flag");
         advice.Actions.Should().Contain(s =>
@@ -169,7 +169,7 @@ public sealed class FoodRulesTests
             ]
         };
 
-        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing, ColonyContext.Default));
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
 
         decision.Trace.Should().Contain("harvest_mature_crops");
         AdviceItem advice = AdviceByRule(decision, "harvest_mature_crops");
@@ -188,7 +188,7 @@ public sealed class FoodRulesTests
             Infrastructure = new FoodInfrastructureSnapshot(0, true, 500f, 1)
         };
 
-        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing, ColonyContext.Default));
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
 
         decision.Trace.Should().Be("freezer_missing");
         AdviceItem advice = AdviceByRule(decision, "freezer_missing");
@@ -228,7 +228,7 @@ public sealed class FoodRulesTests
             ]
         };
 
-        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing, ColonyContext.Default));
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
 
         decision.Trace.Should().Contain("harvest_mature_crops");
         AdviceItem advice = AdviceByRule(decision, "harvest_mature_crops");
@@ -249,7 +249,7 @@ public sealed class FoodRulesTests
     {
         FoodBriefing briefing = Briefing(days: 12f) with { MealsCount = 1, RawFoodCount = 40, ReadyToHarvest = 0 };
 
-        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing, ColonyContext.Default));
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
 
         AdviceItem advice = AdviceByRule(decision, "meals_understocked");
         advice.Actions.Should().Contain(s => s.Kind == AdviceActionKind.ProductionBill);
@@ -269,7 +269,7 @@ public sealed class FoodRulesTests
             Infrastructure = new FoodInfrastructureSnapshot(0, true, 500f, 1)
         };
 
-        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing, ColonyContext.Default));
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
 
         AdviceItem advice = AdviceByRule(decision, "meals_understocked");
         advice.Actions.Should().Contain(action => action.Kind == AdviceActionKind.ProductionBill);
@@ -300,7 +300,7 @@ public sealed class FoodRulesTests
             }
         };
 
-        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing, ColonyContext.Default));
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
 
         AdviceAction billAction = AdviceByRule(decision, "meals_understocked")
             .Actions.Should().Contain(action => action.Kind == AdviceActionKind.ProductionBill).Subject;
@@ -329,7 +329,7 @@ public sealed class FoodRulesTests
             }
         };
 
-        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing, ColonyContext.Default));
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
 
         AdviceAction billAction = AdviceByRule(decision, "meals_understocked")
             .Actions.Should().Contain(action => action.Kind == AdviceActionKind.ProductionBill).Subject;
@@ -347,7 +347,7 @@ public sealed class FoodRulesTests
             Kitchen = KitchenWithSimpleMealBill(targetCount: 12)
         };
 
-        RuleRun result = new Rules().Evaluate(briefing, ColonyContext.Default);
+        RuleRun result = new Rules().Evaluate(briefing);
 
         ProjectedRuleRun decision = Project(result);
         decision.Advice.Should().NotContain(advice => advice.Id == "chef_meals_understocked");
@@ -363,7 +363,7 @@ public sealed class FoodRulesTests
             Kitchen = KitchenWithSimpleMealBill(targetCount: 12)
         };
 
-        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing, ColonyContext.Default));
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
 
         AdviceItem advice = AdviceByRule(decision, "emergency_food_flag");
         advice.Actions.Should().NotContain(action => action.Kind == AdviceActionKind.ProductionBill);
@@ -390,7 +390,7 @@ public sealed class FoodRulesTests
             }
         };
 
-        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing, ColonyContext.Default));
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
 
         AdviceAction billAction = AdviceByRule(decision, "meals_understocked")
             .Actions.Should().Contain(action => action.Kind == AdviceActionKind.ProductionBill).Subject;
@@ -410,7 +410,7 @@ public sealed class FoodRulesTests
             Skills = new FoodSkillSnapshot(10, 1, 4, 0)
         };
 
-        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing, ColonyContext.Default));
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
 
         AdviceItem advice = AdviceByRule(decision, "meals_understocked");
         advice.Actions.Should().NotContain(action => action.Kind == AdviceActionKind.SetPriority);
@@ -430,7 +430,7 @@ public sealed class FoodRulesTests
             Kitchen = new FoodKitchenSummary(0, 0, false, false)
         };
 
-        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing, ColonyContext.Default));
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
 
         AdviceItem advice = AdviceByRule(decision, "meals_understocked");
         advice.Actions.Should().Contain(action =>
@@ -466,7 +466,7 @@ public sealed class FoodRulesTests
             ]
         };
 
-        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing, ColonyContext.Default));
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
 
         AdviceItem advice = AdviceByRule(decision, "wild_harvest_available");
         advice.Title.Should().Be("Forage can extend the buffer");
@@ -499,7 +499,7 @@ public sealed class FoodRulesTests
             Kitchen = new FoodKitchenSummary(0, 0, false, false)
         };
 
-        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing, ColonyContext.Default));
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
 
         AdviceItem advice = AdviceByRule(decision, "wild_harvest_available");
         advice.Actions.Should().Contain(action => action.Kind == AdviceActionKind.MarkHarvest);
@@ -547,7 +547,7 @@ public sealed class FoodRulesTests
             Kitchen = new FoodKitchenSummary(0, 0, false, false)
         };
 
-        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing, ColonyContext.Default));
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
 
         decision.Trace.Should().Be("rules:hunt_low_risk_animals+wild_harvest_available");
         DecisionShouldIncludeRules(decision, "hunt_low_risk_animals", "wild_harvest_available");
@@ -592,7 +592,7 @@ public sealed class FoodRulesTests
             ]
         };
 
-        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing, ColonyContext.Default));
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
 
         AdviceAction Action = AdviceByRule(decision, "wild_harvest_available")
             .Actions.Should().ContainSingle().Subject;
@@ -627,7 +627,7 @@ public sealed class FoodRulesTests
             ]
         };
 
-        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing, ColonyContext.Default));
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
 
         AdviceAction action = AdviceByRule(decision, "wild_harvest_available")
             .Actions.Should().ContainSingle().Subject;
@@ -648,7 +648,7 @@ public sealed class FoodRulesTests
             WildAnimalCount = 0
         };
 
-        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing, ColonyContext.Default));
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
 
         AdviceItem advice = AdviceByRule(decision, "expand_growing_capacity");
         AdviceAction Action = advice.Actions.Should().ContainSingle().Subject;
@@ -672,7 +672,7 @@ public sealed class FoodRulesTests
             CropZoneSummaries = [new FoodCropZoneSummary("Plant_Rice", "2", 36, 0.05f, 0, "nearby to storage")]
         };
 
-        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing, ColonyContext.Default));
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
         Escalate escalation = decision.Effects.OfType<Escalate>().Should().ContainSingle().Subject;
 
         decision.Diagnostics.Should().NotBeNull();
@@ -720,7 +720,7 @@ public sealed class FoodRulesTests
             Kitchen = KitchenWithSimpleMealBill(targetCount: 12)
         };
 
-        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing, ColonyContext.Default));
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
 
         DecisionShouldIncludeRules(decision, "emergency_food_flag", "wild_harvest_available", "hunt_low_risk_animals", "freezer_missing");
         AdviceByRule(decision, "wild_harvest_available").Actions.Should().Contain(action => action.Kind == AdviceActionKind.MarkHarvest);
@@ -751,7 +751,7 @@ public sealed class FoodRulesTests
             WildAnimalCount = 0
         };
 
-        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing, ColonyContext.Default));
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
 
         AdviceAction Action = AdviceByRule(decision, "expand_growing_capacity")
             .Actions.Should().ContainSingle().Subject;
@@ -773,7 +773,7 @@ public sealed class FoodRulesTests
             WildAnimalCount = 0
         };
 
-        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing, ColonyContext.Default));
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
         Escalate escalation = decision.Effects.OfType<Escalate>().Should().ContainSingle().Subject;
 
         escalation.Reason.Should().Contain("Winter is close");
@@ -806,7 +806,7 @@ public sealed class FoodRulesTests
             ]
         };
 
-        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing, ColonyContext.Default));
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
 
         decision.Trace.Should().Contain("hunt_low_risk_animals");
         decision.Diagnostics.Should().NotBeNull();
@@ -849,7 +849,7 @@ public sealed class FoodRulesTests
             Infrastructure = new FoodInfrastructureSnapshot(0, true, 500f, 1)
         };
 
-        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing, ColonyContext.Default));
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
 
         AdviceItem advice = AdviceByRule(decision, "hunt_low_risk_animals");
         advice.Actions.Should().Contain(action => action.Kind == AdviceActionKind.MarkHunt);
@@ -875,7 +875,7 @@ public sealed class FoodRulesTests
             WildHuntTargets = [new WildHuntTarget("Hare", 3, "location unknown", null)]
         };
 
-        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing, ColonyContext.Default));
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
 
         AdviceAction action = AdviceByRule(decision, "hunt_low_risk_animals")
             .Actions.Should().ContainSingle().Subject;
@@ -903,7 +903,7 @@ public sealed class FoodRulesTests
             ]
         };
 
-        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing, ColonyContext.Default));
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
 
         AdviceItem advice = AdviceByRule(decision, "hunt_low_risk_animals");
         advice.Body.Should().Contain("about 14 nutrition");
@@ -921,7 +921,7 @@ public sealed class FoodRulesTests
             NutritionSource = "unknown"
         };
 
-        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing, ColonyContext.Default));
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
 
         decision.Trace.Should().Be("nutrition_signal_gap");
         AdviceItem advice = AdviceByRule(decision, "nutrition_signal_gap");
@@ -947,7 +947,7 @@ public sealed class FoodRulesTests
             UnforbidTargets = DayOneForbiddenMeals()
         };
 
-        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing, ColonyContext.Default));
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
 
         decision.Trace.Should().Be("nutrition_signal_gap");
         AdviceItem advice = AdviceByRule(decision, "nutrition_signal_gap");
@@ -995,7 +995,7 @@ public sealed class FoodRulesTests
             ReadyToHarvest = 0
         };
 
-        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing, ColonyContext.Default));
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
         Escalate escalation = decision.Effects.OfType<Escalate>().Should().ContainSingle().Subject;
 
         escalation.Reason.Should().Contain("visible animals");
