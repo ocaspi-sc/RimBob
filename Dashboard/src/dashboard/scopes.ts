@@ -1,4 +1,5 @@
 export type ScopeKey =
+  | 'home'
   | 'system'
   | 'info'
   | 'analytics'
@@ -14,14 +15,16 @@ export type ScopeKey =
   | 'economy'
   | 'chief_of_staff';
 
-export type ScopeKind = 'system' | 'info' | 'analytics' | 'dev_blog' | 'minister';
+export type ScopeKind = 'home' | 'system' | 'info' | 'analytics' | 'dev_blog' | 'minister';
 export type ScopeStatus = 'live' | 'planned' | 'reference';
 export type MinisterViewKey = 'prompt' | 'raw_llm' | 'briefing' | 'build_queue' | 'solver' | 'requests' | 'rag' | 'rules' | 'infographics' | 'advice';
+export type HomeViewKey = 'overview';
 export type SystemViewKey = 'runtime' | 'connectivity' | 'storage' | 'coverage' | 'events';
 export type InfoViewKey = 'overview' | 'glossary' | 'contracts' | 'data_sources' | 'algorithms';
 export type AnalyticsViewKey = 'session' | 'colony' | 'advice' | 'sse' | 'candidates';
 export type DevBlogViewKey = 'features' | 'churn' | 'commits' | 'topics' | 'suggestions';
 export type DashboardViewKey =
+  | HomeViewKey
   | MinisterViewKey
   | SystemViewKey
   | InfoViewKey
@@ -44,6 +47,10 @@ export interface ScopeConfig {
   canRunRules?: boolean;
   canRunLlm?: boolean;
 }
+
+export const homeViews: DashboardViewDefinition[] = [
+  { key: 'overview', label: 'Overview' },
+];
 
 export const systemViews: DashboardViewDefinition[] = [
   { key: 'runtime', label: 'Runtime' },
@@ -96,6 +103,7 @@ const allMinisterViews = ministerViews
 const rulesOnlyMinisterViews: DashboardViewKey[] = ['briefing', 'build_queue', 'solver', 'requests', 'rules', 'advice'];
 
 export const scopeConfigs: ScopeConfig[] = [
+  { key: 'home', label: 'CABINET', displayLabel: 'CABINET', kind: 'home', status: 'live', enabledViews: homeViews.map(view => view.key) },
   { key: 'system', label: 'SYSTEM', displayLabel: 'SYSTEM', kind: 'system', status: 'live', enabledViews: systemViews.map(view => view.key) },
   { key: 'info', label: 'INFO', displayLabel: 'INFO', kind: 'info', status: 'reference', enabledViews: infoViews.map(view => view.key) },
   { key: 'analytics', label: 'ANALYTICS', displayLabel: 'ANALYTICS', kind: 'analytics', status: 'live', enabledViews: analyticsViews.map(view => view.key) },
@@ -122,6 +130,7 @@ export function viewsForScope(scope: ScopeConfig): DashboardViewDefinition[] {
 }
 
 function viewsForScopeKind(scope: ScopeConfig): DashboardViewDefinition[] {
+  if (scope.kind === 'home') return homeViews;
   if (scope.kind === 'system') return systemViews;
   if (scope.kind === 'info') return infoViews;
   if (scope.kind === 'analytics') return analyticsViews;
@@ -147,6 +156,7 @@ export function isMinisterViewKey(value: DashboardViewKey): value is MinisterVie
 }
 
 const allDashboardViews = [
+  ...homeViews,
   ...systemViews,
   ...infoViews,
   ...analyticsViews,

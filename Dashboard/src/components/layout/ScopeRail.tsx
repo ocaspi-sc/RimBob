@@ -77,6 +77,7 @@ function ScopeGroup({
 }
 
 function scopeStatusLabel(scope: ScopeConfig): string {
+  if (scope.kind === 'home') return 'home';
   if (scope.kind === 'system') return 'ops';
   if (scope.kind === 'info') return 'ref';
   if (scope.kind === 'analytics') return 'data';

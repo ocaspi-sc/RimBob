@@ -303,6 +303,79 @@ public sealed class CabinetCycleTests
     }
 
     [Fact]
+    public async Task TriggerCabinetRulesOnlyAsync_RunsRulesCapableMinistersAndSkipsMayor()
+    {
+        MinisterTraceStore traces = new();
+        FakeMinister mayor = new("Mayor", onRun: context =>
+            traces.RecordPath("Mayor", context, "llm", null, null, "daily agenda refresh", null, 1, 0));
+        FakeMinister chef = new("Chef", onRun: context =>
+            traces.RecordPath("Chef", context, "rules", "food_buffer_low", null, null, null, 2, 1));
+        FakeMinister welfare = new("Welfare", onRun: context =>
+            traces.RecordPath("Welfare", context, "rules", "shelter_floor", null, null, null, 1, 1));
+        FakeMinister willie = new("Willie", onRun: context =>
+            traces.RecordPath("Willie", context, "rules", "freezer_request_active", null, null, null, 1, 0));
+        CabinetCycle sut = BuildCycle(
+            new NoopRefresher(),
+            new ColonyState(),
+            new ColonyStateSnapshotStore(),
+            traces,
+            [mayor, chef, welfare, willie]);
+
+        CabinetTriggerResult result = await sut.TriggerCabinetRulesOnlyAsync(CancellationToken.None, "run-rules");
+
+        result.Scope.Should().Be("cabinet_rules");
+        result.RunLog.Scope.Should().Be("cabinet_rules");
+        result.RunLog.Status.Should().Be("completed");
+        result.RunLog.Steps.Select(step => step.Key).Should().Equal(
+            "request_accepted",
+            "live_state_refresh",
+            "minister_food",
+            "minister_welfare",
+            "minister_willie",
+            "minister_mayor",
+            "cabinet_complete");
+        result.RunLog.Steps.Single(step => step.Key == "minister_mayor").Status.Should().Be("skipped");
+        result.RunLog.Steps.Single(step => step.Key == "minister_mayor").Detail.Should().Contain("LLM-only minister");
+        mayor.WakeCount.Should().Be(0);
+        chef.RunModes.Should().Equal(MinisterRunMode.RulesOnly);
+        welfare.RunModes.Should().Equal(MinisterRunMode.RulesOnly);
+        willie.RunModes.Should().Equal(MinisterRunMode.RulesOnly);
+        chef.WakeupPayloads.Should().Equal("dashboard:cabinet_rules");
+        welfare.WakeupPayloads.Should().Equal("dashboard:cabinet_rules");
+        willie.WakeupPayloads.Should().Equal("dashboard:cabinet_rules");
+    }
+
+    [Fact]
+    public async Task TriggerCabinetRulesOnlyAsync_WhenFoodPublishesWillieBuildRequest_DoesNotRunWillieTwice()
+    {
+        FlagChannel flags = new();
+        AgentFlag freezerRequest = WillieBuildingRequestFlag();
+        FakeMinister chef = new("Chef", flags: flags, emittedFlags: [freezerRequest]);
+        FakeMinister welfare = new("Welfare");
+        FakeMinister willie = new("Willie");
+        FakeMinister mayor = new("Mayor");
+        CabinetCycle sut = BuildCycle(
+            new NoopRefresher(),
+            new ColonyState(),
+            new ColonyStateSnapshotStore(),
+            new MinisterTraceStore(),
+            [chef, welfare, willie, mayor],
+            flags: flags);
+
+        CabinetTriggerResult result = await sut.TriggerCabinetRulesOnlyAsync(CancellationToken.None);
+
+        result.Scope.Should().Be("cabinet_rules");
+        chef.WakeCount.Should().Be(1);
+        welfare.WakeCount.Should().Be(1);
+        willie.WakeCount.Should().Be(1);
+        mayor.WakeCount.Should().Be(0);
+        willie.Triggers.Should().Equal(PlayCycleTrigger.FlagFired);
+        willie.RunModes.Should().Equal(MinisterRunMode.RulesOnly);
+        willie.FlagIds.Should().Equal("food:freezer");
+        result.RunLog.Steps.Single(step => step.Key == "minister_mayor").Status.Should().Be("skipped");
+    }
+
+    [Fact]
     public async Task TriggerCabinetAsync_WhenMinisterThrows_MarksMinisterAndRunFailed()
     {
         CabinetRunLogStore runLogs = new();

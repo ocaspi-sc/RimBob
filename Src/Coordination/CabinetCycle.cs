@@ -55,10 +55,48 @@ public sealed class CabinetCycle(
         }
     }
 
+    public async Task<CabinetTriggerResult> TriggerCabinetRulesOnlyAsync(CancellationToken ct, string? runId = null)
+    {
+        CabinetRunLogSnapshot startedRun = runLogs.StartRun(
+            runId,
+            "cabinet_rules",
+            PlayCycleContext.ManualCabinetRulesOnly.Trigger.ToString());
+        bool? usedRestoredSnapshot = null;
+
+        try
+        {
+            usedRestoredSnapshot = await RunCycleAsync(
+                PlayCycleContext.ManualCabinetRulesOnly,
+                ct,
+                startedRun.RunId,
+                rulesOnlyCabinet: true);
+            CabinetRunLogSnapshot completedRun = runLogs.CompleteRun(
+                startedRun.RunId,
+                colony.LastRefreshSource.ToString(),
+                usedRestoredSnapshot.Value);
+            return new CabinetTriggerResult(
+                "cabinet_rules",
+                PlayCycleContext.ManualCabinetRulesOnly.Trigger.ToString(),
+                colony.LastRefreshSource.ToString(),
+                usedRestoredSnapshot.Value,
+                completedRun);
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            runLogs.FailRun(
+                startedRun.RunId,
+                ex,
+                colony.LastRefreshSource.ToString(),
+                usedRestoredSnapshot);
+            throw;
+        }
+    }
+
     private async Task<bool> RunCycleAsync(
         PlayCycleContext cycle,
         CancellationToken ct,
-        string? cabinetRunId = null)
+        string? cabinetRunId = null,
+        bool rulesOnlyCabinet = false)
     {
         bool usedRestoredSnapshot = await RefreshStateForReadOnlyEvaluationAsync(
             cycle,
@@ -73,6 +111,25 @@ public sealed class CabinetCycle(
             {
                 log.LogInformation(
                     "Cabinet cycle: skipping scheduled {Minister}; already ran for a newly published build request.",
+                    descriptor.Label);
+                continue;
+            }
+
+            if (rulesOnlyCabinet && !descriptor.CanRunRules)
+            {
+                if (cabinetRunId is not null)
+                {
+                    runLogs.SkipStep(
+                        cabinetRunId,
+                        $"minister_{descriptor.Key}",
+                        $"{descriptor.Label} run",
+                        "minister",
+                        "Skipped - LLM-only minister excluded from a rules-only cabinet run.",
+                        descriptor.Label);
+                }
+
+                log.LogInformation(
+                    "Cabinet rules-only cycle: skipping {Minister}; it has no rules-only path.",
                     descriptor.Label);
                 continue;
             }

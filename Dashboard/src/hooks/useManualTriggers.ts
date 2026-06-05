@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { triggerCabinet } from '../api/cabinet';
+import { triggerCabinet, triggerCabinetRules } from '../api/cabinet';
 import { triggerMinisterLlm, triggerMinisterRules as postMinisterRules } from '../api/ministers';
 import type { ScopeConfig, ScopeKey } from '../dashboard/scopes';
 import type { CabinetRunLogSnapshot, CabinetRunStepSnapshot } from '../types/system';
 
-export type TriggerTarget = 'cabinet' | `${ScopeKey}:rules` | `${ScopeKey}:llm`;
+export type TriggerTarget = 'cabinet' | 'cabinet_rules' | `${ScopeKey}:rules` | `${ScopeKey}:llm`;
 
 export interface TriggerState {
   target: TriggerTarget | null;
@@ -20,6 +20,7 @@ export interface ManualTriggers {
   triggerState: TriggerState;
   cabinetRunDialog: CabinetRunDialogState;
   triggerCabinetNow: () => Promise<void>;
+  triggerCabinetRulesOnly: () => Promise<void>;
   triggerMinisterLlm: (scope: ScopeConfig) => Promise<void>;
   triggerMinisterRules: (scope: ScopeConfig) => Promise<void>;
   closeCabinetRunDialog: () => void;
@@ -75,13 +76,45 @@ export function useManualTriggers(cabinetRunEvents: CabinetRunLogSnapshot[] = []
 
   const triggerCabinetNow = useCallback(async () => {
     const runId = createRunId();
-    const seededRun = seedCabinetRun(runId);
+    const seededRun = seedCabinetRun(runId, 'cabinet');
     await runManualTrigger(
       'cabinet',
       'Run Cabinet Now',
       async () => {
         try {
           const result = await triggerCabinet(runId);
+          if (result.run_log) {
+            activeCabinetRunIdRef.current = result.run_log.run_id;
+            setCabinetRunDialog(current => ({
+              open: current.open,
+              run: result.run_log ?? current.run,
+            }));
+          }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          setCabinetRunDialog(current => ({
+            open: current.open,
+            run: failCabinetRun(current.run ?? seededRun, message),
+          }));
+          throw error;
+        }
+      },
+      () => {
+        activeCabinetRunIdRef.current = runId;
+        setCabinetRunDialog({ open: true, run: seededRun });
+      },
+    );
+  }, [runManualTrigger]);
+
+  const triggerCabinetRulesOnly = useCallback(async () => {
+    const runId = createRunId();
+    const seededRun = seedCabinetRun(runId, 'cabinet_rules');
+    await runManualTrigger(
+      'cabinet_rules',
+      'Run Cabinet (Rules Only)',
+      async () => {
+        try {
+          const result = await triggerCabinetRules(runId);
           if (result.run_log) {
             activeCabinetRunIdRef.current = result.run_log.run_id;
             setCabinetRunDialog(current => ({
@@ -135,6 +168,7 @@ export function useManualTriggers(cabinetRunEvents: CabinetRunLogSnapshot[] = []
     triggerState,
     cabinetRunDialog,
     triggerCabinetNow,
+    triggerCabinetRulesOnly,
     triggerMinisterLlm: runMinisterLlm,
     triggerMinisterRules: runMinisterRules,
     closeCabinetRunDialog,
@@ -149,7 +183,7 @@ function createRunId(): string {
   return `cabinet-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-function seedCabinetRun(runId: string): CabinetRunLogSnapshot {
+function seedCabinetRun(runId: string, scope: 'cabinet' | 'cabinet_rules'): CabinetRunLogSnapshot {
   const now = new Date().toISOString();
   const requestStep: CabinetRunStepSnapshot = {
     key: 'request_sent',
@@ -175,7 +209,7 @@ function seedCabinetRun(runId: string): CabinetRunLogSnapshot {
 
   return {
     run_id: runId,
-    scope: 'cabinet',
+    scope,
     trigger: 'ManualTrigger',
     status: 'running',
     started_at: now,

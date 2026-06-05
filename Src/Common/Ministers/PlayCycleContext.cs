@@ -34,6 +34,10 @@ public sealed record PlayCycleContext(
         PlayCycleTrigger.ManualTrigger,
         WakeupPayload: "dashboard:rules",
         RunMode: MinisterRunMode.RulesOnly);
+    public static PlayCycleContext ManualCabinetRulesOnly { get; } = new(
+        PlayCycleTrigger.ManualTrigger,
+        WakeupPayload: "dashboard:cabinet_rules",
+        RunMode: MinisterRunMode.RulesOnly);
     public static PlayCycleContext ManualForceLlm { get; } = new(
         PlayCycleTrigger.ManualTrigger,
         WakeupPayload: "dashboard:llm",

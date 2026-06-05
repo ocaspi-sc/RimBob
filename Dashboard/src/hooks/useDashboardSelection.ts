@@ -19,6 +19,7 @@ export interface DashboardSelection {
   selectedScope: ScopeKey;
   selectedView: DashboardViewKey;
   selectScope: (scope: ScopeKey) => void;
+  selectScopeView: (scope: ScopeKey, view: DashboardViewKey) => void;
   selectView: (view: DashboardViewKey) => void;
 }
 
@@ -69,10 +70,20 @@ export function useDashboardSelection(): DashboardSelection {
     writeSelectionUrl(nextScope.key, nextView, 'push');
   };
 
+  const selectScopeView = (scope: ScopeKey, view: DashboardViewKey) => {
+    const nextScope = findScope(scope);
+    const nextView = viewForScope(nextScope, view);
+
+    setSelectedScope(nextScope.key);
+    setSelectedView(nextView);
+    writeSelectionUrl(nextScope.key, nextView, 'push');
+  };
+
   return {
     selectedScope,
     selectedView,
     selectScope,
+    selectScopeView,
     selectView,
   };
 }
@@ -89,12 +100,12 @@ function readInitialSelection(): { scope: ScopeKey; view: DashboardViewKey } {
 
 function readStoredScope(): ScopeKey {
   const stored = readStoredValue(SelectedScopeStorageKey);
-  return isScopeKey(stored) ? stored : 'system';
+  return isScopeKey(stored) ? stored : 'home';
 }
 
 function readStoredView(): DashboardViewKey {
   const stored = readStoredValue(SelectedViewStorageKey);
-  return isDashboardViewKey(stored) ? stored : 'runtime';
+  return isDashboardViewKey(stored) ? stored : 'overview';
 }
 
 function readStoredValue(key: string): string | null {

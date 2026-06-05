@@ -109,6 +109,32 @@ public sealed class CabinetRunLogStore
             errorMessage: null);
     }
 
+    public CabinetRunLogSnapshot SkipStep(
+        string runId,
+        string key,
+        string label,
+        string kind,
+        string detail,
+        string? minister = null)
+    {
+        DateTimeOffset completedAt = DateTimeOffset.UtcNow;
+        return UpdateStep(
+            runId,
+            key,
+            label,
+            kind,
+            status: "skipped",
+            completedAt: completedAt,
+            durationMs: 0,
+            detail: detail,
+            minister: minister,
+            stateSource: null,
+            usedRestoredSnapshot: null,
+            trace: null,
+            errorType: null,
+            errorMessage: null);
+    }
+
     public CabinetRunLogSnapshot FailStep(
         string runId,
         string key,

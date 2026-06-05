@@ -17,6 +17,7 @@ public static class CabinetEndpoints
     {
         EndpointCoverageCatalog coverage = app.ServiceProvider.GetRequiredService<EndpointCoverageCatalog>();
         coverage.Register("/api/cabinet/trigger", "available", "Manual dashboard trigger for all live ministers; returns a run-scoped step log and remains suggest-only, no RIMAPI writes.");
+        coverage.Register("/api/cabinet/trigger/rules", "available", "Manual rules-only cabinet trigger for wired rules-capable ministers; skips the LLM-only Mayor, returns a run-scoped step log, and remains suggest-only with no RIMAPI writes.");
         coverage.Register(
             "/api/ministers/{minister}/trigger/rules",
             _ => "partial",
@@ -48,6 +49,35 @@ public static class CabinetEndpoints
                 triggered = true,
                 scope = result.Scope,
                 trigger = result.Trigger,
+                state_source = result.StateSource,
+                used_restored_snapshot = result.UsedRestoredSnapshot,
+                run_log = result.RunLog
+            });
+        });
+
+        app.MapPost("/api/cabinet/trigger/rules", async (
+            HttpRequest request,
+            CabinetCycle cabinet,
+            CancellationToken ct) =>
+        {
+            CabinetTriggerRequest? triggerRequest = await ReadTriggerRequestAsync(request, ct);
+            CabinetTriggerResult result;
+            try
+            {
+                result = await cabinet.TriggerCabinetRulesOnlyAsync(ct, triggerRequest?.RunId);
+            }
+            catch (Exception ex)
+            {
+                if (ManualTriggerErrorResults.TryMap(ex, out IResult mapped)) return mapped;
+                throw;
+            }
+
+            return Results.Ok(new
+            {
+                triggered = true,
+                scope = result.Scope,
+                trigger = result.Trigger,
+                run_mode = "rules_only",
                 state_source = result.StateSource,
                 used_restored_snapshot = result.UsedRestoredSnapshot,
                 run_log = result.RunLog

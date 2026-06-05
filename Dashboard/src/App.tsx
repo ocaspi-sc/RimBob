@@ -8,6 +8,7 @@ import { CabinetRunDialog } from './components/layout/CabinetRunDialog';
 import { DashboardHeader } from './components/layout/DashboardHeader';
 import { ColonySidebar } from './components/layout/ColonySidebar';
 import { EndpointTimingFooter } from './components/layout/EndpointTimingFooter';
+import { HomeOverview } from './components/home/HomeOverview';
 import { InfoOverview } from './components/info/InfoOverview';
 import { ScopeRail } from './components/layout/ScopeRail';
 import { ViewTabs } from './components/layout/ViewTabs';
@@ -40,6 +41,7 @@ export default function App() {
   const activePageKey = `${activeScope.key}:${activeView}`;
   const activeViews = viewsForScope(activeScope);
   const activeMinisterView = isMinisterViewKey(activeView) ? activeView : 'advice';
+  const isHome = activeScope.kind === 'home';
   const isSystem = activeScope.kind === 'system';
   const isInfo = activeScope.kind === 'info';
   const isAnalytics = activeScope.kind === 'analytics';
@@ -62,10 +64,6 @@ export default function App() {
         statusError={status.error}
         statusLoadedAt={status.loadedAt}
         stream={feed.stream}
-        triggerError={triggers.triggerState.error}
-        triggerPending={triggers.triggerState.target === 'cabinet'}
-        triggerDisabled={triggers.triggerState.target !== null || !hostApiLive}
-        onTriggerCabinet={() => void triggers.triggerCabinetNow()}
       />
       <CabinetRunDialog
         onClose={triggers.closeCabinetRunDialog}
@@ -81,7 +79,25 @@ export default function App() {
         />
 
         <section className="main-workspace panel-shell" aria-label="Dashboard main workspace">
-          {isSystem ? (
+          {isHome ? (
+            <HomeOverview
+              advice={feed.feed.activeAdvice}
+              agenda={feed.agenda}
+              cabinetBusy={triggers.triggerState.target === 'cabinet' || triggers.triggerState.target === 'cabinet_rules'}
+              cabinetPending={triggers.triggerState.target === 'cabinet'}
+              cabinetRulesPending={triggers.triggerState.target === 'cabinet_rules'}
+              flags={feed.feed.flags}
+              health={systemHealth.data}
+              hostApiLive={hostApiLive}
+              onRunCabinet={() => void triggers.triggerCabinetNow()}
+              onRunCabinetRules={() => void triggers.triggerCabinetRulesOnly()}
+              onSelectMinisterView={selection.selectScopeView}
+              recentCabinetRuns={feed.cabinetRuns}
+              snapshot={snapshot.data}
+              stateSummaries={feed.feed.stateSummaries}
+              triggerError={triggers.triggerState.error}
+            />
+          ) : isSystem ? (
             <SystemOverview
               status={status.data}
               health={systemHealth.data}

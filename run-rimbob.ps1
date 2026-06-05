@@ -27,6 +27,10 @@ if (-not [string]::IsNullOrWhiteSpace($ListenUrl)) {
     $dashboardUrl = $ListenUrl
 }
 
+$dashboardHomeViews = @(
+    [pscustomobject]@{ Label = "Overview"; View = "overview" }
+)
+
 $dashboardSystemViews = @(
     [pscustomobject]@{ Label = "Runtime"; View = "runtime" },
     [pscustomobject]@{ Label = "Connectivity"; View = "connectivity" },
@@ -60,6 +64,7 @@ $dashboardDevBlogViews = @(
 )
 
 $dashboardConsoleScopes = @(
+    [pscustomobject]@{ Label = "HOME"; Scope = "home"; Views = $dashboardHomeViews },
     [pscustomobject]@{ Label = "SYSTEM"; Scope = "system"; Views = $dashboardSystemViews },
     [pscustomobject]@{ Label = "INFO"; Scope = "info"; Views = $dashboardInfoViews },
     [pscustomobject]@{ Label = "ANALYTICS"; Scope = "analytics"; Views = $dashboardAnalyticsViews },

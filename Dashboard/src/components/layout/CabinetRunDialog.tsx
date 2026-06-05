@@ -13,6 +13,9 @@ export function CabinetRunDialog({
 
   const statusLabel = formatLabel(run.status);
   const completed = run.status !== 'running';
+  const eyebrow = run.scope === 'cabinet_rules'
+    ? 'Manual cabinet run - rules only'
+    : 'Manual cabinet run';
 
   return (
     <div className="cabinet-run-overlay">
@@ -24,7 +27,7 @@ export function CabinetRunDialog({
       >
         <header className="cabinet-run-header">
           <div>
-            <span className="eyebrow">Manual cabinet run</span>
+            <span className="eyebrow">{eyebrow}</span>
             <h2>{statusLabel}</h2>
           </div>
           <div className="cabinet-run-header-actions">

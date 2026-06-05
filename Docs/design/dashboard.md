@@ -67,9 +67,9 @@ treat the previous UI as reference only.
 
 Dashboard v2 has four stable regions:
 
-- Header: product title, runtime status, and global manual trigger.
+- Header: product title, running version chips, and runtime status.
 - Left rail: inspected scope selector.
-- Main workspace: SYSTEM, INFO, ANALYTICS, and DEV BLOG local tabs, or
+- Main workspace: CABINET overview, SYSTEM, INFO, ANALYTICS, and DEV BLOG local tabs, or
   minister inspector tabs.
 - Right sidebar: compact colony facts plus colonist cards.
 
@@ -106,13 +106,14 @@ explanatory tooltip with the current/last value. Avoid normal header tooltips
 that are just route names, implementation URLs, or raw field names; those
 details belong in SYSTEM/debug panels.
 The browser document title mirrors compact runtime identity for tab/window scanning in the order `RimBob | port | local time | Git commit`; detailed asset fingerprints still belong in SYSTEM/runtime details.
-The header also exposes `Run Cabinet Now`. Minister workspaces expose `Run LLM` and `Run Rules` beside the selected minister's last-run time. The selected view is already visible in the tab bar and should not be repeated beside the run buttons. Planned ministers and missing mode capabilities show disabled/not-wired controls.
+CABINET exposes `Run Cabinet Now` and `Run Cabinet (Rules Only)`. Minister workspaces expose `Run LLM` and `Run Rules` beside the selected minister's last-run time. The selected view is already visible in the tab bar and should not be repeated beside the run buttons. Planned ministers and missing mode capabilities show disabled/not-wired controls.
 
 ### Scopes
 
-Live non-minister scopes are SYSTEM, INFO, ANALYTICS, and DEV BLOG. They must be
+Live non-minister scopes are CABINET, SYSTEM, INFO, ANALYTICS, and DEV BLOG. They must be
 visually and functionally distinct:
 
+- CABINET is the landing command summary. It keeps the stable `home` route key, shows bounded live pipeline vitals and one card per live minister with bottom-line advice plus the latest rules/path trace. Colony pressure facts stay in the right sidebar and ANALYTICS rather than duplicating inside CABINET.
 - SYSTEM is the operations/debug console. It answers whether RimBob, Host,
   RIMAPI, SSE, LLM, logs, traces, and endpoints are working.
 - INFO is the reference surface. It explains vocabulary and tells the operator
@@ -129,15 +130,16 @@ derived live meaning, and DEV BLOG renders repository-history meaning. INFO
 stays static/reference-oriented so it does not become either a second SYSTEM
 page or a second ANALYTICS page.
 
-Live minister scopes are Mayor, Chef (`food` key), and Willie. Future minister
+Live minister scopes are Mayor, Chef (`food` key), Welfare, and Willie. Future minister
 scopes remain visible but disabled or marked not wired until backend data
-exists: Defense, Welfare, Medical, Research, Industry, Economy, and Chief of
+exists: Defense, Medical, Research, Industry, Economy, and Chief of
 Staff.
 
 The left rail selects the inspected scope, not the view.
 
 Non-minister console scopes use a shallow local tab bar:
 
+- CABINET: Overview only, with no local sub-tabs.
 - SYSTEM: Runtime, Connectivity, Storage, Coverage, Events.
 - INFO: Overview, Glossary, Contracts, Data Sources, Algorithms.
 - ANALYTICS: Session, Colony, Advice, SSE, Candidates.
@@ -147,6 +149,10 @@ Console tabs are first-class dashboard views for URL/storage validation and
 launcher deep links, but they do not change cabinet ownership. Keep the top
 tab layer shallow; nested tool navigation should use controls such as filters,
 not a second tab system.
+
+### CABINET View
+
+CABINET is the dashboard landing scope, served by the stable `home` route key. It derives from the already-polled `/api/status`, `/api/system/health`, `/api/advice/stream`, and `/api/colony/snapshot` inputs; it does not add broad new read endpoints. CABINET shows pipeline vitals and one vertically stacked card per live minister (`mayor`, `food`, `welfare`, `willie`), while colony pressure metrics remain in the right sidebar and ANALYTICS. Each minister card shows identity and last-run label on the title row, explicit enabled-tab links in that same title row, a title-only Advice row directly underneath that wraps instead of truncating, and non-empty output sections (`Actions`, `Suggested`, `Build reqs`, `Labor reqs`, `Item reqs`, `Attention`) laid out horizontally inside the card with a 2px right-edge priority bar on each row and tooltips for detail. Cards with no non-empty output sections stay compact rather than reserving empty section space. Emitted `Actions` rows also show a compact applyability badge with a tooltip explaining whether the action is directly applyable, routed through Build Queue, already applied, expired, or missing an Assisted Apply payload. Action titles favor concrete targets and add source suffixes for generic food-chain support so duplicate kitchen prerequisites render as `Build Kitchen (Forage)`, `Build Campfire/Stove (Hunt)`, and `Build Kitchen (Grow)` while the tooltip preserves the full original instruction. Request sections should read as demand state rather than duplicate action verbs, e.g. an `Actions` row can say `Unforbid 57 packaged survival meals` while the matching `Item reqs` row says `57 forbidden packaged survival meals`. CABINET owns the two cabinet run controls: `Run Cabinet Now` keeps the full cabinet behavior, while `Run Cabinet (Rules Only)` runs only wired rules-capable ministers and excludes the LLM-only Mayor.
 
 ### Minister Views
 
@@ -506,6 +512,7 @@ Manual triggers are RimBob evaluation controls, not game controls:
 
 - Cabinet trigger: refresh live state, then run wired live ministers in the dependency order. If a feeder rule requests LLM escalation, the trace records the reason and stops before provider work until the player confirms the LLM path in the dashboard. If live refresh fails while Host is serving a restored `ColonyState` snapshot because RIMAPI is unreachable or no colony map is loaded yet, the trigger may still run read-only evaluation against that stale snapshot and must report that fallback in the response and trace.
 - Cabinet trigger responses include a run-scoped, in-memory step log, and the dashboard opens a compact run-step dialog immediately when `Run Cabinet Now` is clicked. The dashboard generates a `run_id` before posting so `/api/advice/stream` `cabinet_run` events can reconcile progress before the POST returns. Rows come from backend instrumentation around actual work: request accepted, live-state refresh, restored-snapshot fallback when used, Chef run, Willie run, Mayor run, and final complete or failed. Closing the dialog does not cancel the backend run, and the trigger remains a `Suggest`-mode evaluation control with no RIMAPI writes.
+- Cabinet rules-only trigger: `POST /api/cabinet/trigger/rules` refreshes live state, runs each wired rules-capable cabinet minister in `RulesOnly` mode, excludes the LLM-only Mayor, records a skipped Mayor step in the same run-step dialog, emits the same `cabinet_run` SSE snapshots, and remains suggest-only with no RIMAPI writes.
 - Minister `Run Rules`: refresh live state, then run only the selected wired minister's deterministic rules path through `POST /api/ministers/{minister}/trigger/rules`. This mode must not call an LLM; if rules return an escalation, the trace records the escalation reason and stops before provider work.
 - Minister `Run LLM`: refresh live state, then run only the selected wired minister's user-confirmed LLM path through `POST /api/ministers/{minister}/trigger/llm`. The button also confirms a pending rule escalation surfaced by the Rules/Advice callout. This button is disabled for scopes without an LLM path, such as Willie until a construction LLM path is implemented.
 - Willie-owned `building_request`s are request follow-ups, not separate operator chores: when a run publishes a flag containing a Willie `building_request`, the Host immediately wakes Willie in rules-only `FlagFired` mode so the Placement Solver can compute options without waiting for the Willie workspace `Run Rules` button.
