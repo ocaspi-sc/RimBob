@@ -301,10 +301,7 @@ deterministic low-risk animal batches, and one Chef-owned simple-meal cook-bill
 upsert. The bill operation is intentionally narrow:
 exactly one current cooking workbench, backend-resolved simple-meal recipe,
 bounded do-until target, idempotent add-or-update, no delete/reorder/suspend
-changes, fresh-state revalidation, and RIMAPI read-back. `mark_hunt` is eligible
-only when Chef has already excluded risky/tame/unhealthy animals, has exact
-animal ids and a bounded rectangle, and fresh validation proves no unsafe or
-off-target animals are inside that rectangle. Willie blueprint-group placement is eligible only when deterministic code produced the exact option, fresh validation passes for the whole group, the group stays under the asset cap, and the player clicks Apply in Willie's scope. Work priorities, broad bill editing, zones, pawn assignment, equipment, medical, prisoner, and combat controls stay outside the first Assisted Apply slice.
+changes, fresh-state revalidation, and RIMAPI read-back. `mark_hunt` is eligible only when Chef has already excluded risky/tame/unhealthy animals, has exact animal ids, and fresh validation proves each still-targeted animal is present and low-risk; the Host designates those exact ids, while the bounded rectangle remains only a dashboard/locality hint and batch sanity bound. Willie blueprint-group placement is eligible only when deterministic code produced the exact option, fresh validation passes for the whole group, the group stays under the asset cap, and the player clicks Apply in Willie's scope. Work priorities, broad bill editing, zones, pawn assignment, equipment, medical, prisoner, and combat controls stay outside the first Assisted Apply slice.
 
 The exclusion of policy knobs (priorities/zones/broad bills) is a deliberate
 trust call, not a plumbing gap — the RIMAPI write is usually trivial. They are

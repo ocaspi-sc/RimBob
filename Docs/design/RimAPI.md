@@ -205,8 +205,11 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 ### Order (designations)
 | Method | Path | Purpose |
 |---|---|---|
-| POST | `/order/designate/area` | designate Mine / Deconstruct / Harvest / Hunt over a rect |
+| POST | `/order/designate/area` | designate Mine / Deconstruct / Harvest over a rect |
+| POST | `/order/designate/hunt` | fork-only per-animal Hunt designation over explicit wild animal ids |
 | POST | `/order/unforbid` | safely clear the forbidden flag on explicit haulable thing ids |
+
+> **Hunt designation shape.** RimBob no longer uses area-hunt for Chef Assisted Apply because a rect designates every wild animal currently inside it. `mark_hunt` apply uses `/order/designate/hunt` with exact animal ids; the action's rect remains only a dashboard/locality hint and a batch sanity bound.
 
 > **Verified shape (RimBob fork).** `/order/unforbid` accepts `map_id` and
 > `thing_ids[]`. The sibling fork rejects empty or oversized batches, malformed

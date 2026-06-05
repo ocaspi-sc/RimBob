@@ -178,7 +178,7 @@ public sealed class AssistedApplyServiceTests
     }
 
     [Fact]
-    public async Task ApplyAsync_WhenHuntTargetsRemainLowRisk_PostsHuntDesignation()
+    public async Task ApplyAsync_WhenHuntTargetsRemainLowRisk_PostsHuntThingDesignation()
     {
         AdviceBus bus = new();
         bus.Publish(Advice("food_hunt_low_risk_animals", HuntAction()));
@@ -191,12 +191,17 @@ public sealed class AssistedApplyServiceTests
         response.Kind.Should().Be(AdviceApplyKind.MarkHuntArea);
         response.Message.Should().Contain("Hunt designation");
         AssertAppliedAction(bus, "applied", AdviceApplyKind.MarkHuntArea);
-        handler.DesignatePosted.Should().BeTrue();
-        handler.LastDesignateBody.Should().Contain("\"designation\":\"Hunt\"");
+        handler.HuntPosted.Should().BeTrue();
+        handler.DesignatePosted.Should().BeFalse();
+        JsonDocument body = JsonDocument.Parse(handler.LastHuntBody);
+        body.RootElement.GetProperty("map_id").GetInt32().Should().Be(1);
+        body.RootElement.GetProperty("thing_ids").EnumerateArray()
+            .Select(item => item.GetString())
+            .Should().Equal("hare-1", "hare-2");
     }
 
     [Fact]
-    public async Task ApplyAsync_WhenHuntAreaContainsUnsafeAnimal_ReturnsStaleWithoutPosting()
+    public async Task ApplyAsync_WhenHuntRectContainsContaminants_PostsOnlyTargetAnimalIds()
     {
         AdviceBus bus = new();
         bus.Publish(Advice("food_hunt_low_risk_animals", HuntAction()));
@@ -206,6 +211,7 @@ public sealed class AssistedApplyServiceTests
                 {"success":true,"data":[
                   {"id":"hare-1","def":"Hare","tame":false,"health":1.0,"position":{"x":40,"y":0,"z":50}},
                   {"id":"hare-2","def":"Hare","tame":false,"health":1.0,"position":{"x":41,"y":0,"z":50}},
+                  {"id":"hare-3","def":"Hare","tame":false,"health":1.0,"position":{"x":41,"y":0,"z":50}},
                   {"id":"wolf-1","def":"Wolf","tame":false,"health":1.0,"position":{"x":41,"y":0,"z":50}}
                 ],"errors":null}
                 """
@@ -214,9 +220,99 @@ public sealed class AssistedApplyServiceTests
 
         AssistedApplyResponse response = await service.ApplyAsync("food_hunt_low_risk_animals", 0);
 
-        response.Status.Should().Be("stale_advice");
-        response.Message.Should().Contain("unsafe");
+        response.Status.Should().Be("applied");
+        handler.HuntPosted.Should().BeTrue();
         handler.DesignatePosted.Should().BeFalse();
+        handler.LastHuntBody.Should().Contain("hare-1");
+        handler.LastHuntBody.Should().Contain("hare-2");
+        handler.LastHuntBody.Should().NotContain("hare-3");
+        handler.LastHuntBody.Should().NotContain("wolf-1");
+    }
+
+    [Fact]
+    public async Task ApplyAsync_WhenHuntTargetsChangedBeyondTolerance_ReturnsStaleWithoutPosting()
+    {
+        AdviceBus bus = new();
+        bus.Publish(Advice("food_hunt_low_risk_animals", HuntAction(["hare-1", "hare-2", "hare-3", "hare-4"])));
+        MinimalRefreshHandler handler = new()
+        {
+            MapAnimalsJson = """
+                {"success":true,"data":[
+                  {"id":"hare-1","def":"Hare","tame":false,"health":1.0,"position":{"x":40,"y":0,"z":50}},
+                  {"id":"hare-2","def":"Hare","tame":false,"health":1.0,"position":{"x":41,"y":0,"z":50}}
+                ],"errors":null}
+                """
+        };
+        AssistedApplyService service = Service(bus, new ColonyState(), handler);
+
+        AssistedApplyResponse response = await service.ApplyAsync("food_hunt_low_risk_animals", 0);
+
+        response.Status.Should().Be("stale_advice");
+        response.Message.Should().Contain("Too many hunt targets changed");
+        handler.HuntPosted.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ApplyAsync_WhenOneHuntTargetChangedWithinTolerance_PostsSurvivors()
+    {
+        AdviceBus bus = new();
+        bus.Publish(Advice("food_hunt_low_risk_animals", HuntAction(["hare-1", "hare-2", "hare-3", "hare-4"])));
+        MinimalRefreshHandler handler = new()
+        {
+            MapAnimalsJson = """
+                {"success":true,"data":[
+                  {"id":"hare-1","def":"Hare","tame":false,"health":1.0,"position":{"x":40,"y":0,"z":50}},
+                  {"id":"hare-2","def":"Hare","tame":false,"health":1.0,"position":{"x":41,"y":0,"z":50}},
+                  {"id":"hare-3","def":"Hare","tame":false,"health":1.0,"position":{"x":42,"y":0,"z":50}}
+                ],"errors":null}
+                """
+        };
+        AssistedApplyService service = Service(bus, new ColonyState(), handler);
+
+        AssistedApplyResponse response = await service.ApplyAsync("food_hunt_low_risk_animals", 0);
+
+        response.Status.Should().Be("applied");
+        handler.HuntPosted.Should().BeTrue();
+        handler.LastHuntBody.Should().Contain("hare-1");
+        handler.LastHuntBody.Should().Contain("hare-2");
+        handler.LastHuntBody.Should().Contain("hare-3");
+        handler.LastHuntBody.Should().NotContain("hare-4");
+    }
+
+    [Fact]
+    public async Task ApplyAsync_WhenHuntTargetTurnsRisky_CountsAsChanged()
+    {
+        AdviceBus bus = new();
+        bus.Publish(Advice("food_hunt_low_risk_animals", HuntAction()));
+        MinimalRefreshHandler handler = new()
+        {
+            MapAnimalsJson = """
+                {"success":true,"data":[
+                  {"id":"hare-1","def":"Hare","tame":false,"health":1.0,"position":{"x":40,"y":0,"z":50}},
+                  {"id":"hare-2","def":"Hare","tame":false,"health":0.4,"position":{"x":41,"y":0,"z":50}}
+                ],"errors":null}
+                """
+        };
+        AssistedApplyService service = Service(bus, new ColonyState(), handler);
+
+        AssistedApplyResponse response = await service.ApplyAsync("food_hunt_low_risk_animals", 0);
+
+        response.Status.Should().Be("stale_advice");
+        handler.HuntPosted.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ApplyAsync_WhenAllHuntTargetsGone_ReturnsAlreadySatisfiedWithoutPosting()
+    {
+        AdviceBus bus = new();
+        bus.Publish(Advice("food_hunt_low_risk_animals", HuntAction()));
+        MinimalRefreshHandler handler = new();
+        AssistedApplyService service = Service(bus, new ColonyState(), handler);
+
+        AssistedApplyResponse response = await service.ApplyAsync("food_hunt_low_risk_animals", 0);
+
+        response.Status.Should().Be("already_satisfied");
+        handler.HuntPosted.Should().BeFalse();
     }
 
     [Fact]
@@ -483,17 +579,17 @@ public sealed class AssistedApplyServiceTests
                 RepeatMode: "TargetCount",
                 TargetCount: targetCount));
 
-    private static AdviceAction HuntAction() =>
+    private static AdviceAction HuntAction(IReadOnlyList<string>? targetIds = null) =>
         new(
             AdviceActionKind.MarkHunt,
-            "Mark up to 2 hares for hunting.",
+            $"Mark up to {targetIds?.Count ?? 2} hares for hunting.",
             Apply: new MarkHuntAreaApply(
                 "Mark hunt",
-                "2 hare hunt targets",
+                $"{targetIds?.Count ?? 2} hare hunt targets",
                 MapId: 1,
-                Rect: new MapRect(40, 50, 41, 50),
-                TargetIds: ["hare-1", "hare-2"],
-                TargetCount: 2));
+                Rect: new MapRect(40, 50, 43, 50),
+                TargetIds: targetIds ?? ["hare-1", "hare-2"],
+                TargetCount: targetIds?.Count ?? 2));
 
     private static AdviceAction BlueprintGroupAction(int assetCount = 1, int mapId = 1)
     {
@@ -650,12 +746,14 @@ public sealed class AssistedApplyServiceTests
         private readonly Queue<string> _billResponses = [];
 
         public bool DesignatePosted { get; private set; }
+        public bool HuntPosted { get; private set; }
         public bool AddBillPosted { get; private set; }
         public bool UpdateBillPosted { get; private set; }
         public bool BlueprintGroupPlacePosted { get; private set; }
         public int BillListCalls { get; private set; }
         public int BlueprintGroupValidateCalls { get; private set; }
         public string LastDesignateBody { get; private set; } = "";
+        public string LastHuntBody { get; private set; } = "";
         public string LastBillWritePath { get; private set; } = "";
         public string LastBillWriteBody { get; private set; } = "";
         public string LastBlueprintGroupPlaceBody { get; private set; } = "";
@@ -701,6 +799,11 @@ public sealed class AssistedApplyServiceTests
             if (path.Contains("order/designate/area", StringComparison.OrdinalIgnoreCase))
             {
                 return CaptureDesignateAsync(request, ct);
+            }
+
+            if (path.Contains("order/designate/hunt", StringComparison.OrdinalIgnoreCase))
+            {
+                return CaptureHuntAsync(request, ct);
             }
 
             if (path.Contains("buildings/bills/add", StringComparison.OrdinalIgnoreCase))
@@ -782,6 +885,18 @@ public sealed class AssistedApplyServiceTests
         {
             DesignatePosted = true;
             LastDesignateBody = request.Content is null ? "" : await request.Content.ReadAsStringAsync(ct);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"success":true,"data":{},"errors":null}""", Encoding.UTF8, "application/json")
+            };
+        }
+
+        private async Task<HttpResponseMessage> CaptureHuntAsync(
+            HttpRequestMessage request,
+            CancellationToken ct)
+        {
+            HuntPosted = true;
+            LastHuntBody = request.Content is null ? "" : await request.Content.ReadAsStringAsync(ct);
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent("""{"success":true,"data":{},"errors":null}""", Encoding.UTF8, "application/json")

@@ -546,8 +546,8 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
     }
 
     /// <summary>
-    /// POST api/v1/order/designate/area — designate Hunt / Harvest / Mine / Deconstruct
-    /// over a rect. Used by Chef (harvest, hunt) and Willie (mine, decon).
+    /// POST api/v1/order/designate/area — designate Harvest / Mine / Deconstruct
+    /// over a rect. Used by Chef harvest and Willie mine/deconstruct flows.
     /// RIMAPI accepts designation/type and either point_a/point_b or rect.
     /// </summary>
     public async Task DesignateAreaAsync(
@@ -558,6 +558,20 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
                          rect = new { x1, z1, x2, z2 } };
         var response = await http.PostAsJsonAsync("api/v1/order/designate/area", body, ct);
         await EnsureWriteAcceptedAsync(response, "api/v1/order/designate/area", ct);
+    }
+
+    /// <summary>
+    /// POST api/v1/order/designate/hunt — designate exact wild animal ids for hunting.
+    /// Hunt uses this per-thing path because area designation marks every wild animal in the rect.
+    /// </summary>
+    public async Task DesignateHuntThingsAsync(
+        int mapId,
+        IReadOnlyList<string> animalIds,
+        CancellationToken ct = default)
+    {
+        var body = new { map_id = mapId, thing_ids = animalIds };
+        var response = await http.PostAsJsonAsync("api/v1/order/designate/hunt", body, ct);
+        await EnsureWriteAcceptedAsync(response, "api/v1/order/designate/hunt", ct);
     }
 
     /// <summary>

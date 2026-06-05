@@ -897,6 +897,22 @@ public sealed class RimApiClientTests
     }
 
     [Fact]
+    public async Task DesignateHuntThings_PostsExactThingIdsPayload()
+    {
+        CaptureHandler handler = new(Envelope(new { designated = 2 }));
+        using HttpClient http = MakeClient(handler);
+
+        await new RimApiClient(http).DesignateHuntThingsAsync(7, ["hare-1", "hare-2"]);
+
+        handler.Path.Should().Be("/api/v1/order/designate/hunt");
+        JsonDocument body = JsonDocument.Parse(handler.Body);
+        body.RootElement.GetProperty("map_id").GetInt32().Should().Be(7);
+        body.RootElement.GetProperty("thing_ids").EnumerateArray()
+            .Select(item => item.GetString())
+            .Should().Equal("hare-1", "hare-2");
+    }
+
+    [Fact]
     public async Task CreateGrowZone_PostsPointPayload()
     {
         CaptureHandler handler = new(Envelope(new { zone_id = 12 }));

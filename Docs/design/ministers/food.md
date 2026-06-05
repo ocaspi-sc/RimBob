@@ -235,17 +235,7 @@ Freezer requests should carry a compact capacity class instead of a vague
 storage capacity for a colony-days buffer or incoming harvest/hunt/cooking
 surplus; Willie turns that requirement into exact blueprints.
 
-In MVP advice actions and flag requests are rendered by default. Assisted Apply
-may later execute a narrow allowlist of Chef actions after player confirmation,
-such as `unforbid` known food stacks, `mark_harvest` on validated safe plant
-clusters, or one idempotent simple-meal cook-bill upsert when exactly one
-cooking workbench is known. `mark_hunt` is eligible only for deterministic
-low-risk animal batches with exact ids, bounded area designation, and fresh
-validation that the rect contains no unsafe or off-target animals. Broad bill
-editing, zones, pawn work priorities, and pawn assignment remain outside the
-Chef apply slice. In Auto, actions become inputs to the deferred
-planner/Labor/RIMAPI path, while flag requests remain the cross-minister
-coordination signal.
+In MVP advice actions and flag requests are rendered by default. Assisted Apply may later execute a narrow allowlist of Chef actions after player confirmation, such as `unforbid` known food stacks, `mark_harvest` on validated safe plant clusters, or one idempotent simple-meal cook-bill upsert when exactly one cooking workbench is known. `mark_hunt` is eligible only for deterministic low-risk animal batches with exact ids and fresh validation that each target is still present and low-risk; apply designates those animal ids directly, while the rect is only a dashboard/locality hint and a batch sanity bound. Broad bill editing, zones, pawn work priorities, and pawn assignment remain outside the Chef apply slice. In Auto, actions become inputs to the deferred planner/Labor/RIMAPI path, while flag requests remain the cross-minister coordination signal.
 
 Trade is not a normal Chef action in M3. Chef may flag procurement need when
 local paths are insufficient, but Economy/Trade or Mayor owns trade framing.

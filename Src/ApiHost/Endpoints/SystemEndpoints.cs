@@ -69,7 +69,8 @@ public static class SystemEndpoints
     private static readonly RimApiCoverageRow[] DeferredWriteStubs =
     [
         new("POST", "/api/v1/map/zone/growing", "deferred_write_stub", "Chef Auto", "Stub exists; body shape unverified and not called in suggest-only MVP."),
-        new("POST", "/api/v1/order/designate/area", "assisted_write", "Chef Assisted Apply", "Used for player-confirmed harvest and hunt designations over bounded rects."),
+        new("POST", "/api/v1/order/designate/area", "assisted_write", "Chef Assisted Apply", "Used for player-confirmed harvest designations over bounded rects."),
+        new("POST", "/api/v1/order/designate/hunt", "assisted_write", "Chef Assisted Apply", "Used for player-confirmed hunt designations over exact wild animal ids."),
         new("POST", "/api/v1/order/unforbid", "assisted_write", "Chef Assisted Apply", "Used for player-confirmed safe item-id unforbid over explicit haulable thing ids; destructive forbidden endpoints are not used."),
         new("POST", "/api/v1/buildings/bills/add", "assisted_write", "Chef Assisted Apply", "Creates only an allowlisted simple-meal TargetCount bill after player click and fresh validation."),
         new("PUT", "/api/v1/buildings/bill/update", "assisted_write", "Chef Assisted Apply", "Updates only an existing simple-meal bill target; never deletes, reorders, or suspends bills."),

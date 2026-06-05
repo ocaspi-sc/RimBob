@@ -347,20 +347,14 @@ public sealed class AssistedApplyService(
         if (apply.MapId != state.Map.Value.Id)
             return Response("stale_advice", "Advice targets a different map than the current colony map.", apply.Kind, adviceId, actionIndex);
 
-        IReadOnlyList<AnimalRecord> animalsInRect = state.Animals.Value.Animals
-            .Where(animal => IsInside(apply.Rect, animal.Position))
-            .ToList();
-        if (animalsInRect.Any(animal => !FoodHuntSafety.IsLowRiskTarget(animal, state.AnimalDefs.Value)))
-            return Response("stale_advice", "Hunt area now contains unsafe or non-wild animals.", apply.Kind, adviceId, actionIndex);
-
-        IReadOnlyList<AnimalRecord> eligibleInRect = animalsInRect
-            .Where(animal => FoodHuntSafety.IsLowRiskTarget(animal, state.AnimalDefs.Value))
-            .ToList();
-        if (eligibleInRect.Any(animal => !targetIds.Contains(animal.Id)))
-            return Response("stale_advice", "Hunt area now contains extra animals not covered by this advice.", apply.Kind, adviceId, actionIndex);
-
-        IReadOnlyList<AnimalRecord> currentTargets = eligibleInRect
+        IReadOnlyList<AnimalRecord> knownTargets = state.Animals.Value.Animals
             .Where(animal => targetIds.Contains(animal.Id))
+            .ToList();
+        if (knownTargets.Count == 0)
+            return Response("already_satisfied", "No targeted animals are currently available for hunting.", apply.Kind, adviceId, actionIndex);
+
+        IReadOnlyList<AnimalRecord> currentTargets = knownTargets
+            .Where(animal => FoodHuntSafety.IsLowRiskTarget(animal, state.AnimalDefs.Value))
             .ToList();
         int missing = apply.TargetIds.Count - currentTargets.Count;
         if (missing > AllowedMissing(apply.TargetIds.Count))
@@ -371,13 +365,9 @@ public sealed class AssistedApplyService(
 
         try
         {
-            await rimApi.DesignateAreaAsync(
+            await rimApi.DesignateHuntThingsAsync(
                 apply.MapId,
-                "Hunt",
-                apply.Rect.X1,
-                apply.Rect.Z1,
-                apply.Rect.X2,
-                apply.Rect.Z2,
+                currentTargets.Select(animal => animal.Id).ToList(),
                 ct);
         }
         catch (Exception ex) when (IsRimApiUnavailable(ex))
