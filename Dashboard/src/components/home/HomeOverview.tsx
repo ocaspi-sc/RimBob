@@ -698,7 +698,6 @@ function MinisterTabLinks({
 }
 
 function shortTabLabel(view: DashboardViewDefinition): string {
-  if (view.key === 'build_queue') return 'Queue';
   if (view.key === 'infographics') return 'Info';
   return view.label;
 }
@@ -1091,10 +1090,10 @@ function actionApplyStatus(
 
   if (!isExecutableApply(action.apply)) {
     return {
-      ariaLabel: 'Apply routed to Build Queue',
-      label: 'BQ',
+      ariaLabel: 'Apply routed to Requests',
+      label: 'REQ',
       tone: 'queued',
-      tooltip: `Apply from Build Queue: ${action.apply.target_summary}`,
+      tooltip: `Pick and apply the option from Willie Requests: ${action.apply.target_summary}`,
     };
   }
 

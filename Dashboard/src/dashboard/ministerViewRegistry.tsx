@@ -1,6 +1,5 @@
 import type { ReactElement } from 'react';
 import { MinisterAdviceView } from '../components/minister/MinisterAdviceView';
-import { MinisterBuildQueueView } from '../components/minister/MinisterBuildQueueView';
 import { MinisterBriefingView } from '../components/minister/MinisterBriefingView';
 import { MinisterInfographicsView } from '../components/minister/MinisterInfographicsView';
 import { MinisterPromptView } from '../components/minister/MinisterPromptView';
@@ -41,16 +40,15 @@ export interface MinisterViewDefinition {
 const ministerViewRenderers: Record<MinisterViewKey, MinisterViewRenderer> = {
   prompt: ({ agenda, scope, systemHealth }) => <MinisterPromptView scope={scope} agenda={agenda} systemHealth={systemHealth} />,
   briefing: ({ scope }) => <MinisterBriefingView scope={scope} />,
-  build_queue: ({ activeAdvice, flags, scope, systemHealth }) => (
-    <MinisterBuildQueueView
-      scope={scope}
+  solver: ({ scope, systemHealth }) => <MinisterSolverView scope={scope} systemHealth={systemHealth} />,
+  requests: ({ activeAdvice, scope, systemHealth }) => (
+    <MinisterRequestsView
       advice={activeAdvice}
       currentGameTick={systemHealth?.colony_snapshot.game_tick ?? null}
-      flags={flags}
+      scope={scope}
+      systemHealth={systemHealth}
     />
   ),
-  solver: ({ scope, systemHealth }) => <MinisterSolverView scope={scope} systemHealth={systemHealth} />,
-  requests: ({ scope, systemHealth }) => <MinisterRequestsView scope={scope} systemHealth={systemHealth} />,
   rules: ({ activeAdvice, events, manualTriggerTarget, onSelectView, scope }) => (
     <MinisterRulesView
       scope={scope}

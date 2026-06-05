@@ -119,7 +119,7 @@ the normalized 0-1 values used for ranking. Status facts such as `draftable`,
 stay booleans/enums rather than fake unit-bearing metrics.
 
 Material shortage is advisory for blueprint placement: `materials_ready` can be blocked while `apply_ready` stays ready when the footprint is validated, because pawns haul materials after the blueprint group exists.
-Any Willie dashboard surface that shows a material or building-ingredient count should render the resource icon with the quantity. Solver traces and raw payload inspectors keep exact source fields, but Build Queue, Requests, Briefing HUD chips, and Advice/flag request rows use icon-led material quantities.
+Any Willie dashboard surface that shows a material or building-ingredient count should render the resource icon with the quantity. Solver traces and raw payload inspectors keep exact source fields, but Requests, Briefing HUD chips, and Advice/flag request rows use icon-led material quantities.
 
 The executable Apply (place a chosen layout) renders in **Willie's own
 dashboard scope** for options where Willie emits an explicit action apply
@@ -127,9 +127,9 @@ payload.
 A requesting minister (e.g. Chef asking for a freezer) shows only its outbound
 request — never another minister's build Apply.
 
-Willie's dashboard scope includes a latest-only Solver view for placement diagnostics. The view reads the most recent solver outcome from the Host, shows the driving build request, selected rule, no-fit stage, and readiness ladder, and leaves option picking/apply controls in Build Queue.
+Willie's dashboard scope includes a latest-only Solver view for placement diagnostics. The view reads the most recent solver outcome from the Host, shows the driving build request, selected rule, no-fit stage, and readiness ladder. Requests owns option picking and Apply.
 
-Willie's dashboard scope also includes a Requests view backed by live per-request solver memory. Every Willie cycle records the current inbound building-request board, keyed by request target class, target def, room class, and request text, and joins each row to its latest solver outcome when one exists. The board carries full `BuildingRequest` fields; solver options are held only in the live store and `/api/ministers/willie/solver/requests` response, not in `PlacementSolverReplayOutput` or the replay corpus.
+Willie's dashboard scope includes a Requests view backed by live per-request solver memory. Every Willie cycle records the current inbound building-request board, keyed by request target class, target def, room class, and request text, and joins each row to its latest solver outcome when one exists. The board carries full `BuildingRequest` fields; solver options are held only in the live store and `/api/ministers/willie/solver/requests` response, not in `PlacementSolverReplayOutput` or the replay corpus. Requests renders validated options as the construction choice surface and enables Apply only when the active Willie advice stream carries the matching `place_blueprint_group` payload. The older Build Queue tab is retired because its Requested and Proposed lanes are covered by Requests; placed blueprint/frame backlog remains visible in Willie's Briefing HUD.
 
 When a solver run returns zero `options[]` or errors before options can be attached, the driving Willie `AdviceItem` must say in its body that no layout options were suggested and include the concrete reason. The rationale and Solver view may carry the more technical no-fit/error trace, but the Advice card itself cannot look like plain prose advice when the solver failed to produce placements.
 
@@ -148,7 +148,7 @@ Willie briefing should answer:
 - Are there structural or fire risks?
 - Which requests from other ministers require build work?
 
-The first Willie briefing record now feeds `MinisterOfWillie` in a rules-only slice. It includes backlog summaries from `/api/v1/map/construction/backlog`, room-anchor inventory for `RoomClass` lookup, and coverage flags. The dashboard renders the Willie scope with Briefing, Build Queue, Solver, Requests, Rules, and Advice views; Prompt/RAG/Raw LLM remain intentionally absent until a later LLM slice.
+The first Willie briefing record now feeds `MinisterOfWillie` in a rules-only slice. It includes backlog summaries from `/api/v1/map/construction/backlog`, room-anchor inventory for `RoomClass` lookup, and coverage flags. The dashboard renders the Willie scope with Briefing, Solver, Requests, Rules, and Advice views; Prompt/RAG/Raw LLM remain intentionally absent until a later LLM slice.
 
 Room-anchor inventory treats work tables as building evidence. RimBob ingests `/api/v1/map/work-tables` into the shared building registry, then surfaces one anchor per detected room function: a multi-purpose barracks with a stove keeps its Barracks primary anchor and also exposes a Kitchen anchor at the stove cell for placement requests such as "near kitchen."
 
@@ -187,7 +187,7 @@ In MVP these requests remain advice and flags; they never execute writes by them
 - All colonists get beds promptly.
 - Critical rooms avoid high fire-risk construction once materials allow.
 - Chef/freezer build requests are resolved or clearly blocked.
-- Build queue blockers are visible and actionable.
+- Current build/backlog blockers are visible and actionable.
 
 ---
 

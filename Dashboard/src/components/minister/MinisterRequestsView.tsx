@@ -1,11 +1,20 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { applyAdviceAction } from '../../api/advice';
 import { fetchSolverRequests, type WillieRequestBoardPayload, type WillieRequestRow, type WillieSolverOutputPayload } from '../../api/ministers';
 import { iconUrlFor } from '../../api/icons';
 import { displayMinisterName, type ScopeConfig } from '../../dashboard/scopes';
 import { isScopeMinister } from '../../dashboard/selectors';
 import { iconForField, iconForView } from '../../dashboard/semanticIcons';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
-import type { AdviceOption, AdviceOptionReadiness, BuildingRequest } from '../../types/advice';
+import type {
+  AdviceAction,
+  AdviceApplyResponse,
+  AdviceItem,
+  AdviceOption,
+  AdviceOptionReadiness,
+  BlueprintGroup,
+  BuildingRequest,
+} from '../../types/advice';
 import type { MinisterTrace, SystemHealth } from '../../types/system';
 import { EmptyState } from '../shared/EmptyState';
 import { GameIcon } from '../shared/GameIcon';
@@ -17,9 +26,13 @@ import { BlueprintFootprintThumbnail } from './BlueprintFootprintThumbnail';
 import { readinessTone } from './readiness';
 
 export function MinisterRequestsView({
+  advice,
+  currentGameTick,
   scope,
   systemHealth,
 }: {
+  advice: AdviceItem[];
+  currentGameTick: number | null;
   scope: ScopeConfig;
   systemHealth: SystemHealth | null;
 }) {
@@ -75,7 +88,7 @@ export function MinisterRequestsView({
       <header className="view-heading">
         <span className="eyebrow">{scope.displayLabel}</span>
         <h2><SemanticLabel icon={iconForView('requests')}><span>Requests</span></SemanticLabel></h2>
-        <p>Current inbound building requests with each request's latest Placement Solver outcome.</p>
+        <p>Current inbound building requests with solver outcomes and Apply controls for validated options.</p>
       </header>
 
       <div className="willie-requests-layout">
@@ -96,7 +109,7 @@ export function MinisterRequestsView({
           </div>
         </aside>
 
-        <RequestDetail row={selected} />
+        <RequestDetail advice={advice} currentGameTick={currentGameTick} row={selected} scope={scope} />
       </div>
     </div>
   );
@@ -133,7 +146,17 @@ function RequestButton({
   );
 }
 
-function RequestDetail({ row }: { row: WillieRequestRow }) {
+function RequestDetail({
+  advice,
+  currentGameTick,
+  row,
+  scope,
+}: {
+  advice: AdviceItem[];
+  currentGameTick: number | null;
+  row: WillieRequestRow;
+  scope: ScopeConfig;
+}) {
   const request = row.request;
   const outcome = outcomeMeta(row);
 
@@ -165,7 +188,7 @@ function RequestDetail({ row }: { row: WillieRequestRow }) {
         <Field label="source_minister" value={row.sourceMinister ?? '-'} />
       </div>
 
-      <SolverOutcome row={row} />
+      <SolverOutcome advice={advice} currentGameTick={currentGameTick} row={row} scope={scope} />
     </section>
   );
 }
@@ -179,7 +202,17 @@ function Field({ label, value }: { label: string; value: ReactNode }) {
   );
 }
 
-function SolverOutcome({ row }: { row: WillieRequestRow }) {
+function SolverOutcome({
+  advice,
+  currentGameTick,
+  row,
+  scope,
+}: {
+  advice: AdviceItem[];
+  currentGameTick: number | null;
+  row: WillieRequestRow;
+  scope: ScopeConfig;
+}) {
   const output = row.output;
 
   if (!output) {
@@ -207,7 +240,12 @@ function SolverOutcome({ row }: { row: WillieRequestRow }) {
       {options.length > 0 ? (
         <div className="build-option-grid request-option-grid">
           {options.map(option => (
-            <ReadOnlyOptionCard key={option.id} option={option} output={output} />
+            <RequestOptionCard
+              actionMatch={findBlueprintAction(advice, option, scope, currentGameTick)}
+              key={option.id}
+              option={option}
+              output={output}
+            />
           ))}
         </div>
       ) : output.status === 'options' ? (
@@ -217,18 +255,37 @@ function SolverOutcome({ row }: { row: WillieRequestRow }) {
   );
 }
 
-function ReadOnlyOptionCard({
+function RequestOptionCard({
+  actionMatch,
   option,
   output,
 }: {
+  actionMatch: OptionActionMatch | null;
   option: AdviceOption;
   output: WillieSolverOutputPayload;
 }) {
+  const [applyState, setApplyState] = useState<ActionApplyState>({ status: 'idle', response: null, error: null });
   const optionIcon = iconForField('place_blueprint');
   const readiness = option.readiness ?? readinessFromOutput(output);
+  const success = applyState.response?.status === 'applied' || applyState.response?.status === 'already_satisfied';
+  const disabled = actionMatch === null || actionMatch.expired.expired || applyState.status === 'pending' || success;
+  const disabledReason = actionMatch === null
+    ? 'No place_blueprint_group action payload is attached to this option yet.'
+    : actionMatch.expired.message;
+
+  const onApply = async () => {
+    if (!actionMatch || disabled) return;
+    setApplyState({ status: 'pending', response: null, error: null });
+    try {
+      const response = await applyAdviceAction(actionMatch.item.id, actionMatch.actionIndex);
+      setApplyState({ status: 'done', response, error: null });
+    } catch (error) {
+      setApplyState({ status: 'error', response: null, error: String(error) });
+    }
+  };
 
   return (
-    <article className="build-option-card request-option-card">
+    <article className={`build-option-card request-option-card ${actionMatch?.item.priority ?? ''}`}>
       <header>
         <GameIcon
           fallback={optionIcon?.fallback ?? 'BP'}
@@ -237,10 +294,10 @@ function ReadOnlyOptionCard({
           src={iconUrlFor(optionIcon?.ref)}
         />
         <div>
-          <span className="eyebrow">read-only option</span>
+          <span className="eyebrow">placement option</span>
           <h4>{option.label}</h4>
         </div>
-        <StatusPill tone="info">diagnostic</StatusPill>
+        <StatusPill tone={priorityTone(actionMatch?.item.priority)}>{actionMatch?.item.priority ?? 'no apply'}</StatusPill>
       </header>
 
       <BlueprintFootprintThumbnail group={option.blueprint_group} />
@@ -266,10 +323,41 @@ function ReadOnlyOptionCard({
       </div>
 
       {option.tradeoff_note && <blockquote><IconizedText maxIcons={1} text={option.tradeoff_note} /></blockquote>}
-      {/* TODO: Keep Apply in Build Queue until this diagnostic view is deliberately promoted into an action surface. */}
+
+      <div className="action-apply request-option-apply">
+        <button
+          disabled={disabled}
+          onClick={() => void onApply()}
+          title={actionMatch?.action.apply?.target_summary ?? disabledReason ?? 'Apply this blueprint option'}
+          type="button"
+        >
+          {buttonLabel(actionMatch, applyState, success)}
+        </button>
+        <small className={`action-apply-result ${applyState.response?.status ?? applyState.status}`}>
+          {applyState.response?.message ?? applyState.error ?? disabledReason ?? actionMatch?.action.apply?.target_summary}
+        </small>
+      </div>
     </article>
   );
 }
+
+type ActionApplyState = {
+  error: string | null;
+  response: AdviceApplyResponse | null;
+  status: 'idle' | 'pending' | 'done' | 'error';
+};
+
+type AdviceExpiryState = {
+  expired: boolean;
+  message: string | null;
+};
+
+type OptionActionMatch = {
+  action: AdviceAction;
+  actionIndex: number;
+  expired: AdviceExpiryState;
+  item: AdviceItem;
+};
 
 function findTrace(systemHealth: SystemHealth | null, scope: ScopeConfig): MinisterTrace | null {
   return systemHealth?.traces.find(trace => isScopeMinister(trace.minister, scope)) ?? null;
@@ -288,7 +376,7 @@ function statusLabel(output: WillieSolverOutputPayload): { label: string; note?:
   if (output.status === 'options') {
     return {
       label: 'options',
-      note: 'Validated options are attached below. Apply remains in the Build Queue tab.',
+      note: 'Validated options are attached below. Pick one option and apply it from this request.',
     };
   }
 
@@ -338,6 +426,67 @@ function readinessFromOutput(output: WillieSolverOutputPayload): AdviceOptionRea
 
 function readinessWire(value: string): string {
   return value.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
+}
+
+function findBlueprintAction(
+  advice: AdviceItem[],
+  option: AdviceOption,
+  scope: ScopeConfig,
+  currentGameTick: number | null,
+): OptionActionMatch | null {
+  for (const item of advice) {
+    if (!isScopeMinister(item.minister, scope)) continue;
+    const expired = adviceExpiryState(item, currentGameTick);
+
+    for (let actionIndex = 0; actionIndex < item.actions.length; actionIndex += 1) {
+      const action = item.actions[actionIndex];
+      const apply = action.apply;
+      if (apply?.kind === 'place_blueprint_group' && sameBlueprintGroup(apply.blueprint_group, option.blueprint_group)) {
+        return { action, actionIndex, expired, item };
+      }
+    }
+  }
+
+  return null;
+}
+
+function sameBlueprintGroup(left: BlueprintGroup, right: BlueprintGroup): boolean {
+  return left.map_id === right.map_id &&
+    (left.label === right.label || blueprintFingerprint(left) === blueprintFingerprint(right));
+}
+
+function blueprintFingerprint(group: BlueprintGroup): string {
+  return group.assets
+    .map(asset => `${asset.role}:${asset.def_name}:${asset.stuff_def_name ?? ''}:${asset.cell.x}:${asset.cell.z}:${asset.rotation}`)
+    .sort()
+    .join('|');
+}
+
+function buttonLabel(match: OptionActionMatch | null, state: ActionApplyState, success: boolean): string {
+  if (match?.expired.expired) return 'Expired';
+  if (state.status === 'pending') return 'Applying';
+  if (success) return 'Applied';
+  return match?.action.apply?.label ?? 'Apply not wired';
+}
+
+function adviceExpiryState(item: AdviceItem, currentGameTick: number | null): AdviceExpiryState {
+  if (typeof item.stamp.expires_game_tick === 'number') {
+    if (typeof currentGameTick === 'number' && item.stamp.expires_game_tick <= currentGameTick) {
+      return {
+        expired: true,
+        message: `Expired at game tick ${formatInteger(item.stamp.expires_game_tick)}.`,
+      };
+    }
+
+    return { expired: false, message: null };
+  }
+
+  const expiresAt = Date.parse(item.stamp.expires_at);
+  if (!Number.isNaN(expiresAt) && expiresAt <= Date.now()) {
+    return { expired: true, message: 'Expired by wall-clock TTL.' };
+  }
+
+  return { expired: false, message: null };
 }
 
 function requestKey(request: BuildingRequest): string {
