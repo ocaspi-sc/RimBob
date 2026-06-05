@@ -215,6 +215,7 @@ internal static class AdviceResponseNormalizer
 
     private static bool IsCompleteStrictAdvice(AdviceItem advice) =>
         !string.IsNullOrWhiteSpace(advice.Id) &&
+        advice.Stamp is not null &&
         advice.Actions.All(action =>
             !string.IsNullOrWhiteSpace(action.Instruction));
 
