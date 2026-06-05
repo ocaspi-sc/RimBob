@@ -44,26 +44,6 @@ public sealed class Chef(
             return;
         }
 
-        if (cycle.IsBootstrap)
-        {
-            log.LogInformation("Chef bootstrap: forcing first live cycle escalation");
-            bool bootstrapped = await RunEscalationAsync(
-                cycle,
-                briefing,
-                context,
-                new Escalate(
-                    "bootstrap_first_live_cycle",
-                    "first live Chef cycle forces an LLM bootstrap memo",
-                    new { briefing.BriefingVersion, briefing.GameTick }),
-                RuleTraceDetails.Escalated(
-                    "bootstrap_first_live_cycle",
-                    "first live Chef cycle forces an LLM bootstrap memo"),
-                ct);
-            if (bootstrapped) return;
-
-            log.LogWarning("Chef bootstrap escalation failed; falling back to normal rules evaluation.");
-        }
-
         RuleRun result = rules.Evaluate(briefing, ColonyContext.Default);
         Escalate? escalation = result.Decisions.OfType<Escalate>().SingleOrDefault();
         if (escalation is not null && result.Decisions.Count == 1)

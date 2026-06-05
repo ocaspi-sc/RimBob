@@ -16,7 +16,7 @@ namespace RimBob.Tests.Food;
 public sealed class FoodMinisterTests
 {
     [Fact]
-    public async Task FirstCycle_StableState_BootstrapsThroughLlm()
+    public async Task StartupBootstrap_StableState_UsesRulesWithoutLlm()
     {
         int calls = 0;
         Harness h = new((_, _, _, _, _) =>
@@ -28,12 +28,12 @@ public sealed class FoodMinisterTests
 
         await h.Minister.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
 
-        calls.Should().Be(1);
+        calls.Should().Be(0);
         h.PublishedAdvice.Should().BeEmpty();
     }
 
     [Fact]
-    public async Task SecondCycle_StableState_UsesRulesWithoutLlm()
+    public async Task SubsequentCycle_StableState_StillUsesRulesWithoutLlm()
     {
         int calls = 0;
         Harness h = new((_, _, _, _, _) =>
@@ -46,18 +46,24 @@ public sealed class FoodMinisterTests
         await h.Minister.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
         await h.Minister.RunPlayCycle(PlayCycleContext.CabinetRefresh, CancellationToken.None);
 
-        calls.Should().Be(1);
+        calls.Should().Be(0);
         h.PublishedAdvice.Should().BeEmpty();
     }
 
     [Fact]
-    public async Task BootstrapFailure_FallsBackToRules()
+    public async Task StartupBootstrap_WhenRulesMatch_PublishesAdviceAndFlagWithoutLlm()
     {
-        Harness h = new((_, _, _, _, _) => throw new InvalidOperationException("boom"));
+        int calls = 0;
+        Harness h = new((_, _, _, _, _) =>
+        {
+            calls++;
+            throw new InvalidOperationException("boom");
+        });
         h.SetFoodDays(4f);
 
         await h.Minister.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
 
+        calls.Should().Be(0);
         h.PublishedAdvice.Should().Contain(advice => advice.Id == "chef_emergency_food_flag");
         h.Flags.Active(Priority.Medium).Should().Contain(flag => flag.Domain == "food");
     }
@@ -103,20 +109,18 @@ public sealed class FoodMinisterTests
     }
 
     [Fact]
-    public async Task RuleDecision_ReplacesBootstrapAdviceSnapshot()
+    public async Task RuleDecision_ReplacesPriorRulesAdviceSnapshot()
     {
-        Harness h = new((_, _, _, _, _) => Task.FromResult(new FoodLlmResponse(
-            [FoodAdvice("bootstrap_1"), FoodAdvice("bootstrap_2")],
-            [])));
-        h.SetFoodDays(35f);
+        Harness h = new((_, _, _, _, _) => throw new InvalidOperationException("unexpected LLM call"));
+        h.SetFoodDays(4f);
 
         await h.Minister.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
-        h.Bus.ActiveAdvice().Select(a => a.Id).Should().BeEquivalentTo(["bootstrap_1", "bootstrap_2"]);
+        h.Bus.ActiveAdvice().Should().Contain(advice => advice.Id == "chef_emergency_food_flag");
 
-        h.SetFoodDays(4f);
+        h.SetFoodDays(35f);
         await h.Minister.RunPlayCycle(PlayCycleContext.CabinetRefresh, CancellationToken.None);
 
-        h.Bus.ActiveAdvice().Should().Contain(advice => advice.Id == "chef_emergency_food_flag");
+        h.Bus.ActiveAdvice().Should().BeEmpty();
     }
 
     [Fact]
@@ -175,15 +179,12 @@ public sealed class FoodMinisterTests
                     [FoodAdvice("llm_food", withAction: true)],
                     [new AgentFlag("food:llm", "Chef", Priority.Medium, "food", "LLM food flag")]));
         }, replay);
-        h.SetFoodDays(35f);
-
-        await h.Minister.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
         h.SetFoodDays(25f, wildAnimals: 2, dateTimeRaw: "5th of Decembary, 5500, 14h", animalDef: "Wolf");
-        await h.Minister.RunPlayCycle(PlayCycleContext.CabinetRefresh, CancellationToken.None);
+        await h.Minister.RunPlayCycle(PlayCycleContext.StartupBootstrap, CancellationToken.None);
 
-        calls.Should().Be(1);
+        calls.Should().Be(0);
         h.PublishedAdvice.Should().BeEmpty();
-        candidateCalls.Should().ContainSingle();
+        candidateCalls.Should().BeEmpty();
         IReadOnlyDictionary<string, string> stateSummaries = h.Bus.ActiveSnapshot().StateSummaries!;
         stateSummaries.Should().ContainKey("Chef")
             .WhoseValue.Should().Contain("Stores:");
