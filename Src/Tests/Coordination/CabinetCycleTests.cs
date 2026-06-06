@@ -331,6 +331,162 @@ public sealed class CabinetCycleTests
     }
 
     [Fact]
+    public async Task TriggerCabinetAsync_WhenFoodPublishesTwoWillieRequests_NestsEachSolverRunUnderOneWillieStep()
+    {
+        FlagChannel flags = new();
+        MinisterTraceStore traces = new();
+        AgentFlag freezerRequest = WillieBuildingRequestFlag();
+        AgentFlag campfireRequest = WillieCampfireRequestFlag();
+        FakeMinister chef = new("Chef", flags: flags, emittedFlags: [freezerRequest, campfireRequest]);
+        FakeMinister welfare = new("Welfare");
+        FakeMinister willie = new("Willie", onRun: context =>
+            traces.RecordPath(
+                "Willie",
+                context,
+                "rules",
+                context.Flag?.Id == "food:campfire" ? "campfire_request_active" : "freezer_request_active",
+                null,
+                null,
+                null,
+                1,
+                0));
+        FakeMinister mayor = new("Mayor");
+        CabinetCycle sut = BuildCycle(
+            new NoopRefresher(),
+            new ColonyState(),
+            new ColonyStateSnapshotStore(),
+            traces,
+            [chef, welfare, willie, mayor],
+            flags: flags);
+
+        CabinetTriggerResult result = await sut.TriggerCabinetAsync(CancellationToken.None, "run-two-willie-requests");
+
+        willie.WakeCount.Should().Be(2);
+        willie.FlagIds.Should().Equal("food:freezer", "food:campfire");
+        result.RunLog.Steps.Select(step => step.Key).Should().Equal(
+            "request_accepted",
+            "live_state_refresh",
+            "minister_food",
+            "minister_willie",
+            "minister_welfare",
+            "minister_mayor",
+            "cabinet_complete");
+        CabinetRunStepSnapshot willieStep = result.RunLog.Steps.Single(step => step.Key == "minister_willie");
+        willieStep.Status.Should().Be("completed");
+        willieStep.Detail.Should().Be("2 solver runs");
+        willieStep.Children.Should().HaveCount(2);
+        willieStep.Children.Select(step => step.Key).Should().OnlyHaveUniqueItems();
+        willieStep.Children.Select(step => step.Label).Should().Equal(
+            "Freezer (from Chef)",
+            "Campfire (from Chef)");
+        willieStep.Children.Select(step => step.RuleFired).Should().Equal(
+            "freezer_request_active",
+            "campfire_request_active");
+    }
+
+    [Fact]
+    public async Task TriggerCabinetAsync_WhenFoodAndWelfarePublishWillieRequests_AppendsBothChildrenToStableParent()
+    {
+        FlagChannel flags = new();
+        MinisterTraceStore traces = new();
+        AgentFlag freezerRequest = WillieBuildingRequestFlag();
+        AgentFlag shelterRequest = WelfareBuildingRequestFlag();
+        FakeMinister chef = new("Chef", flags: flags, emittedFlags: [freezerRequest]);
+        FakeMinister welfare = new("Welfare", flags: flags, emittedFlags: [shelterRequest]);
+        FakeMinister willie = new("Willie", onRun: context =>
+            traces.RecordPath(
+                "Willie",
+                context,
+                "rules",
+                context.Flag?.Id == "welfare:shelter_floor" ? "shelter_floor" : "freezer_request_active",
+                null,
+                null,
+                null,
+                1,
+                0));
+        FakeMinister mayor = new("Mayor");
+        CabinetCycle sut = BuildCycle(
+            new NoopRefresher(),
+            new ColonyState(),
+            new ColonyStateSnapshotStore(),
+            traces,
+            [chef, welfare, willie, mayor],
+            flags: flags);
+
+        CabinetTriggerResult result = await sut.TriggerCabinetAsync(CancellationToken.None, "run-two-source-willie");
+
+        willie.WakeCount.Should().Be(2);
+        result.RunLog.Steps.Select(step => step.Key).Should().Equal(
+            "request_accepted",
+            "live_state_refresh",
+            "minister_food",
+            "minister_willie",
+            "minister_welfare",
+            "minister_mayor",
+            "cabinet_complete");
+        CabinetRunStepSnapshot willieStep = result.RunLog.Steps.Single(step => step.Key == "minister_willie");
+        willieStep.Children.Select(step => step.Label).Should().Equal(
+            "Freezer (from Chef)",
+            "Barracks (from Welfare)");
+        willieStep.Children.Select(step => step.RuleFired).Should().Equal(
+            "freezer_request_active",
+            "shelter_floor");
+    }
+
+    [Fact]
+    public async Task TriggerCabinetAsync_WhenWillieFollowUpFails_MarksChildAndParentFailedWithoutDroppingSiblings()
+    {
+        FlagChannel flags = new();
+        MinisterTraceStore traces = new();
+        CabinetRunLogStore runLogs = new();
+        AgentFlag freezerRequest = WillieBuildingRequestFlag();
+        AgentFlag campfireRequest = WillieCampfireRequestFlag();
+        FakeMinister chef = new("Chef", flags: flags, emittedFlags: [freezerRequest, campfireRequest]);
+        FakeMinister welfare = new("Welfare");
+        int willieRuns = 0;
+        FakeMinister willie = new("Willie", onRun: context =>
+        {
+            willieRuns++;
+            traces.RecordPath(
+                "Willie",
+                context,
+                "rules",
+                context.Flag?.Id == "food:campfire" ? "campfire_request_active" : "freezer_request_active",
+                null,
+                null,
+                null,
+                1,
+                0);
+            if (willieRuns == 2)
+                throw new InvalidOperationException("solver exploded");
+        });
+        FakeMinister mayor = new("Mayor");
+        CabinetCycle sut = BuildCycle(
+            new NoopRefresher(),
+            new ColonyState(),
+            new ColonyStateSnapshotStore(),
+            traces,
+            [chef, welfare, willie, mayor],
+            runLogs,
+            flags);
+
+        Func<Task> act = () => sut.TriggerCabinetAsync(CancellationToken.None, "run-willie-child-failed");
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("solver exploded");
+        CabinetRunLogSnapshot failedRun = runLogs.Latest("run-willie-child-failed")
+            ?? throw new InvalidOperationException("Expected failed run log.");
+        failedRun.Status.Should().Be("failed");
+        CabinetRunStepSnapshot willieStep = failedRun.Steps.Single(step => step.Key == "minister_willie");
+        willieStep.Status.Should().Be("failed");
+        willieStep.ErrorMessage.Should().Be("solver exploded");
+        willieStep.Children.Should().HaveCount(2);
+        willieStep.Children[0].Status.Should().Be("completed");
+        willieStep.Children[1].Status.Should().Be("failed");
+        willieStep.Children[1].ErrorMessage.Should().Be("solver exploded");
+    }
+
+    [Fact]
     public async Task TriggerCabinetRulesOnlyAsync_RunsRulesCapableMinistersAndSkipsMayor()
     {
         MinisterTraceStore traces = new();
@@ -516,6 +672,24 @@ public sealed class CabinetCycleTests
                     Reason: "Food will spoil without cold storage.",
                     TargetClass: BuildingClass.Freezer,
                     RoomClass: RoomClass.Freezer,
+                    Priority: Priority.High,
+                    RequestedFrom: "Willie")
+            ]);
+
+    private static AgentFlag WillieCampfireRequestFlag() =>
+        new(
+            Id: "food:campfire",
+            SourceMinister: "Chef",
+            Priority: Priority.High,
+            Domain: "food",
+            Summary: "Cooking fire needed",
+            BuildingRequests:
+            [
+                new BuildingRequest(
+                    Request: "campfire or stove near food storage",
+                    Reason: "Meals cannot be cooked until a cooking spot exists.",
+                    TargetClass: BuildingClass.ProductionBench,
+                    TargetDef: "Campfire",
                     Priority: Priority.High,
                     RequestedFrom: "Willie")
             ]);

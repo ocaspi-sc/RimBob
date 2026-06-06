@@ -205,6 +205,7 @@ function seedCabinetRun(runId: string, scope: 'cabinet' | 'cabinet_rules'): Cabi
     trace_note: null,
     error_type: null,
     error_message: null,
+    children: [],
   };
 
   return {
@@ -245,6 +246,7 @@ function failCabinetRun(run: CabinetRunLogSnapshot, message: string): CabinetRun
     trace_note: null,
     error_type: 'DashboardRequestError',
     error_message: message,
+    children: [],
   };
 
   return {

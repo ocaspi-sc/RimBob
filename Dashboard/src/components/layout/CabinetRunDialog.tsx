@@ -62,12 +62,18 @@ export function CabinetRunDialog({
   );
 }
 
-function CabinetRunStepRow({ step }: { step: CabinetRunStepSnapshot }) {
+function CabinetRunStepRow({
+  isChild = false,
+  step,
+}: {
+  isChild?: boolean;
+  step: CabinetRunStepSnapshot;
+}) {
   const detail = step.error_message ?? step.detail ?? step.trace_note;
   const traceSummary = compactTraceSummary(step);
 
   return (
-    <li className={`cabinet-run-step ${step.status}`}>
+    <li className={`cabinet-run-step ${step.status}${isChild ? ' is-child' : ''}`}>
       <span className={`cabinet-run-step-dot ${step.status}`} aria-hidden="true" />
       <div className="cabinet-run-step-main">
         <div className="cabinet-run-step-title">
@@ -77,6 +83,13 @@ function CabinetRunStepRow({ step }: { step: CabinetRunStepSnapshot }) {
         </div>
         {detail && <p>{detail}</p>}
         {traceSummary && <small>{traceSummary}</small>}
+        {step.children.length > 0 && (
+          <ol className="cabinet-run-substeps" aria-label={`${step.label} substeps`}>
+            {step.children.map(child => (
+              <CabinetRunStepRow isChild key={child.key} step={child} />
+            ))}
+          </ol>
+        )}
       </div>
     </li>
   );

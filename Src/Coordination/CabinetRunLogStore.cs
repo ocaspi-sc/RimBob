@@ -37,7 +37,8 @@ public sealed class CabinetRunLogStore
             FlagCount: null,
             TraceNote: null,
             ErrorType: null,
-            ErrorMessage: null);
+            ErrorMessage: null,
+            Children: []);
         CabinetRunLogSnapshot snapshot = new(
             RunId: resolvedRunId,
             Scope: scope,
@@ -79,6 +80,50 @@ public sealed class CabinetRunLogStore
             trace: null,
             errorType: null,
             errorMessage: null);
+
+    public CabinetRunLogSnapshot StartOrResumeStep(
+        string runId,
+        string key,
+        string label,
+        string kind,
+        string? detail = null,
+        string? minister = null)
+    {
+        CabinetRunLogSnapshot snapshot = Mutate(runId, current =>
+        {
+            DateTimeOffset now = DateTimeOffset.UtcNow;
+            CabinetRunStepSnapshot? existing = current.Steps
+                .FirstOrDefault(step => step.Key.Equals(key, StringComparison.OrdinalIgnoreCase));
+            CabinetRunStepSnapshot step = new(
+                Key: key,
+                Label: label,
+                Kind: kind,
+                Status: "running",
+                StartedAt: existing?.StartedAt ?? now,
+                CompletedAt: null,
+                DurationMs: null,
+                Detail: detail ?? existing?.Detail,
+                Minister: minister ?? existing?.Minister,
+                StateSource: existing?.StateSource,
+                UsedRestoredSnapshot: existing?.UsedRestoredSnapshot,
+                TracePath: existing?.TracePath,
+                RuleFired: existing?.RuleFired,
+                EscalationReason: existing?.EscalationReason,
+                AdviceCount: existing?.AdviceCount,
+                FlagCount: existing?.FlagCount,
+                TraceNote: existing?.TraceNote,
+                ErrorType: null,
+                ErrorMessage: null,
+                Children: existing?.Children ?? []);
+
+            return current with
+            {
+                Steps = AppendOrReplace(current.Steps, step, preserveExistingIndex: true),
+            };
+        });
+        Publish(snapshot);
+        return snapshot;
+    }
 
     public CabinetRunLogSnapshot CompleteStep(
         string runId,
@@ -165,6 +210,31 @@ public sealed class CabinetRunLogStore
             errorMessage: ex.Message);
     }
 
+    public CabinetRunLogSnapshot AddChildStep(
+        string runId,
+        string parentKey,
+        CabinetRunStepSnapshot child)
+    {
+        CabinetRunLogSnapshot snapshot = Mutate(runId, current =>
+        {
+            CabinetRunStepSnapshot parent = current.Steps
+                .FirstOrDefault(step => step.Key.Equals(parentKey, StringComparison.OrdinalIgnoreCase))
+                ?? throw new InvalidOperationException(
+                    $"Cabinet run log parent step '{parentKey}' has not been started.");
+            IReadOnlyList<CabinetRunStepSnapshot> children = AppendOrReplace(parent.Children, child);
+            CabinetRunStepSnapshot updatedParent = RecomputeParentFromChildren(parent, children);
+
+            return current with
+            {
+                Steps = AppendOrReplace(current.Steps, updatedParent, preserveExistingIndex: true),
+                StateSource = child.StateSource ?? current.StateSource,
+                UsedRestoredSnapshot = child.UsedRestoredSnapshot ?? current.UsedRestoredSnapshot,
+            };
+        });
+        Publish(snapshot);
+        return snapshot;
+    }
+
     public CabinetRunLogSnapshot CompleteRun(
         string runId,
         string stateSource,
@@ -192,7 +262,8 @@ public sealed class CabinetRunLogStore
                 FlagCount: null,
                 TraceNote: null,
                 ErrorType: null,
-                ErrorMessage: null);
+                ErrorMessage: null,
+                Children: []);
             return current with
             {
                 Status = "completed",
@@ -237,7 +308,8 @@ public sealed class CabinetRunLogStore
                 FlagCount: null,
                 TraceNote: null,
                 ErrorType: ex.GetType().Name,
-                ErrorMessage: ex.Message);
+                ErrorMessage: ex.Message,
+                Children: []);
             return current with
             {
                 Status = "failed",
@@ -319,7 +391,8 @@ public sealed class CabinetRunLogStore
                 FlagCount: trace?.FlagCount ?? existing?.FlagCount,
                 TraceNote: trace?.Note ?? existing?.TraceNote,
                 ErrorType: errorType ?? trace?.ErrorType ?? existing?.ErrorType,
-                ErrorMessage: errorMessage ?? trace?.ErrorMessage ?? existing?.ErrorMessage);
+                ErrorMessage: errorMessage ?? trace?.ErrorMessage ?? existing?.ErrorMessage,
+                Children: existing?.Children ?? []);
 
             return current with
             {
@@ -368,13 +441,83 @@ public sealed class CabinetRunLogStore
     private void Publish(CabinetRunLogSnapshot snapshot) =>
         RunChanged?.Invoke(snapshot);
 
+    private static CabinetRunStepSnapshot RecomputeParentFromChildren(
+        CabinetRunStepSnapshot parent,
+        IReadOnlyList<CabinetRunStepSnapshot> children)
+    {
+        CabinetRunStepSnapshot? failedChild = children
+            .FirstOrDefault(child => StatusIs(child, "failed"));
+        string status = failedChild is not null
+            ? "failed"
+            : children.Any(child => StatusIs(child, "running"))
+                ? "running"
+                : "completed";
+        DateTimeOffset? completedAt = status.Equals("running", StringComparison.OrdinalIgnoreCase)
+            ? null
+            : children
+                .Where(child => child.CompletedAt.HasValue)
+                .Select(child => child.CompletedAt!.Value)
+                .DefaultIfEmpty(parent.CompletedAt ?? DateTimeOffset.UtcNow)
+                .Max();
+        long? durationMs = completedAt is null
+            ? null
+            : DurationMs(parent.StartedAt, completedAt.Value);
+
+        return parent with
+        {
+            Status = status,
+            CompletedAt = completedAt,
+            DurationMs = durationMs,
+            Detail = ChildAggregateDetail(children),
+            ErrorType = failedChild?.ErrorType,
+            ErrorMessage = failedChild?.ErrorMessage,
+            Children = children,
+        };
+    }
+
+    private static string ChildAggregateDetail(IReadOnlyList<CabinetRunStepSnapshot> children)
+    {
+        string unit = children.All(child => child.Kind.Equals("solver", StringComparison.OrdinalIgnoreCase))
+            ? "solver run"
+            : "substep";
+        int completed = children.Count(child => StatusIs(child, "completed"));
+        int failed = children.Count(child => StatusIs(child, "failed"));
+        int running = children.Count(child => StatusIs(child, "running"));
+        List<string> parts = [];
+        if (completed > 0 && (failed > 0 || running > 0))
+            parts.Add($"{completed} completed");
+        if (failed > 0)
+            parts.Add($"{failed} failed");
+        if (running > 0)
+            parts.Add($"{running} running");
+
+        string total = $"{children.Count} {Pluralize(unit, children.Count)}";
+        return parts.Count == 0 ? total : $"{total} - {string.Join(", ", parts)}";
+    }
+
+    private static string Pluralize(string singular, int count) =>
+        count == 1 ? singular : $"{singular}s";
+
+    private static bool StatusIs(CabinetRunStepSnapshot step, string status) =>
+        step.Status.Equals(status, StringComparison.OrdinalIgnoreCase);
+
     private static IReadOnlyList<CabinetRunStepSnapshot> AppendOrReplace(
         IReadOnlyList<CabinetRunStepSnapshot> steps,
-        CabinetRunStepSnapshot step)
+        CabinetRunStepSnapshot step,
+        bool preserveExistingIndex = false)
     {
-        List<CabinetRunStepSnapshot> next = steps
-            .Where(existing => !existing.Key.Equals(step.Key, StringComparison.OrdinalIgnoreCase))
-            .ToList();
+        List<CabinetRunStepSnapshot> next = steps.ToList();
+        int existingIndex = next.FindIndex(existing =>
+            existing.Key.Equals(step.Key, StringComparison.OrdinalIgnoreCase));
+        if (existingIndex >= 0 && preserveExistingIndex)
+        {
+            next[existingIndex] = step;
+            return next;
+        }
+
+        if (existingIndex >= 0)
+            next.RemoveAt(existingIndex);
+
         next.Add(step);
         return next;
     }
@@ -447,4 +590,8 @@ public sealed record CabinetRunStepSnapshot(
     [property: JsonPropertyName("error_type")]
     string? ErrorType,
     [property: JsonPropertyName("error_message")]
-    string? ErrorMessage);
+    string? ErrorMessage,
+    // WHY: the run dialog only uses one nested level today, but reusing the step
+    // record keeps the SSE snapshot shape uniform.
+    [property: JsonPropertyName("children")]
+    IReadOnlyList<CabinetRunStepSnapshot> Children);

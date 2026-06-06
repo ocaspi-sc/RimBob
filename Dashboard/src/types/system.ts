@@ -173,6 +173,7 @@ export interface CabinetRunStepSnapshot {
   trace_note: string | null;
   error_type: string | null;
   error_message: string | null;
+  children: CabinetRunStepSnapshot[];
 }
 
 export interface CabinetRunLogSnapshot {

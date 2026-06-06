@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using RimBob.Core.Advice;
 using RimBob.Core.Ministers;
 using RimBob.State;
+using System.Text;
 
 namespace RimBob.Coordination;
 
@@ -16,6 +17,8 @@ public sealed class CabinetCycle(
     CabinetRunLogStore runLogs,
     ILogger<CabinetCycle> log)
 {
+    private const string WillieRunStepKey = "minister_willie";
+
     public async Task RunAsync(CancellationToken ct) =>
         await RunCycleAsync(PlayCycleContext.ManualTrigger, ct);
 
@@ -399,6 +402,17 @@ public sealed class CabinetCycle(
         if (minister is null)
             throw new InvalidOperationException("Willie build-request follow-up could not resolve Willie minister.");
 
+        if (cabinetRunId is not null)
+        {
+            runLogs.StartOrResumeStep(
+                cabinetRunId,
+                WillieRunStepKey,
+                $"{willie.Label} run",
+                "minister",
+                $"Running {willie.Label} request follow-up solves.",
+                willie.Label);
+        }
+
         foreach (AgentFlag requestFlag in requestFlags)
         {
             log.LogInformation(
@@ -411,7 +425,59 @@ public sealed class CabinetCycle(
                 Flag: requestFlag,
                 WakeupPayload: wakeupPayload,
                 RunMode: MinisterRunMode.RulesOnly);
-            await RunResolvedMinisterAsync(minister, willie, requestCycle, usedRestoredSnapshot, ct, cabinetRunId);
+            DateTimeOffset childStartedAt = DateTimeOffset.UtcNow;
+            try
+            {
+                await RunResolvedMinisterAsync(
+                    minister,
+                    willie,
+                    requestCycle,
+                    usedRestoredSnapshot,
+                    ct,
+                    cabinetRunId: null);
+
+                if (cabinetRunId is not null)
+                {
+                    DateTimeOffset childCompletedAt = DateTimeOffset.UtcNow;
+                    MinisterTraceSnapshot? trace = LatestTraceFor(willie, minister);
+                    runLogs.AddChildStep(
+                        cabinetRunId,
+                        WillieRunStepKey,
+                        WillieChildStep(
+                            requestFlag,
+                            willie,
+                            childStartedAt,
+                            childCompletedAt,
+                            "completed",
+                            usedRestoredSnapshot,
+                            colony.LastRefreshSource.ToString(),
+                            trace,
+                            error: null));
+                }
+            }
+            catch (Exception ex)
+            {
+                if (cabinetRunId is not null)
+                {
+                    DateTimeOffset childCompletedAt = DateTimeOffset.UtcNow;
+                    MinisterTraceSnapshot? trace = LatestTraceFor(willie, minister);
+                    runLogs.AddChildStep(
+                        cabinetRunId,
+                        WillieRunStepKey,
+                        WillieChildStep(
+                            requestFlag,
+                            willie,
+                            childStartedAt,
+                            childCompletedAt,
+                            "failed",
+                            usedRestoredSnapshot,
+                            colony.LastRefreshSource.ToString(),
+                            trace,
+                            ex));
+                }
+
+                throw;
+            }
         }
 
         return [willie.Key];
@@ -444,6 +510,104 @@ public sealed class CabinetCycle(
         return hasZoneRequest ? $"zone_request:{flag.Id}" : $"building_request:{flag.Id}";
     }
 
+    private static CabinetRunStepSnapshot WillieChildStep(
+        AgentFlag requestFlag,
+        MinisterDescriptor willie,
+        DateTimeOffset startedAt,
+        DateTimeOffset completedAt,
+        string status,
+        bool usedRestoredSnapshot,
+        string stateSource,
+        MinisterTraceSnapshot? trace,
+        Exception? error)
+    {
+        string detail = MinisterStepDetail(willie.Label, trace);
+        return new CabinetRunStepSnapshot(
+            Key: WillieChildStepKey(requestFlag),
+            Label: WillieChildLabel(requestFlag),
+            Kind: "solver",
+            Status: status,
+            StartedAt: startedAt,
+            CompletedAt: completedAt,
+            DurationMs: DurationMs(startedAt, completedAt),
+            Detail: error is null ? detail : $"{detail}; {error.GetType().Name}: {error.Message}",
+            Minister: willie.Label,
+            StateSource: stateSource,
+            UsedRestoredSnapshot: usedRestoredSnapshot,
+            TracePath: trace?.Path,
+            RuleFired: trace?.RuleFired,
+            EscalationReason: trace?.EscalationReason,
+            AdviceCount: trace?.AdviceCount,
+            FlagCount: trace?.FlagCount,
+            TraceNote: trace?.Note,
+            ErrorType: error?.GetType().Name ?? trace?.ErrorType,
+            ErrorMessage: error?.Message ?? trace?.ErrorMessage,
+            Children: []);
+    }
+
+    private static string WillieChildStepKey(AgentFlag requestFlag) =>
+        $"minister_willie__{MinisterRegistry.NormalizeKey(requestFlag.SourceMinister)}__{MinisterRegistry.NormalizeKey(requestFlag.Id)}";
+
+    private static string WillieChildLabel(AgentFlag requestFlag)
+    {
+        List<string> requestLabels = WillieRequestLabels(requestFlag).ToList();
+        string target = requestLabels.Count switch
+        {
+            0 => "Willie request",
+            1 => requestLabels[0],
+            _ => $"{requestLabels[0]} + {requestLabels.Count - 1} more"
+        };
+        return $"{target} (from {requestFlag.SourceMinister})";
+    }
+
+    private static IEnumerable<string> WillieRequestLabels(AgentFlag requestFlag)
+    {
+        foreach (BuildingRequest request in (requestFlag.BuildingRequests ?? [])
+            .Where(request => string.Equals(request.RequestedFrom, "Willie", StringComparison.OrdinalIgnoreCase)))
+        {
+            yield return BuildingRequestLabel(request);
+        }
+
+        foreach (ZoneRequest request in (requestFlag.ZoneRequests ?? [])
+            .Where(request => string.Equals(request.RequestedFrom, "Willie", StringComparison.OrdinalIgnoreCase)))
+        {
+            yield return ZoneRequestLabel(request);
+        }
+    }
+
+    private static string BuildingRequestLabel(BuildingRequest request)
+    {
+        if (request.RoomClass is RoomClass roomClass)
+            return FriendlyName(roomClass.ToString());
+        if (!string.IsNullOrWhiteSpace(request.TargetDef))
+            return request.TargetDef;
+        return FriendlyName(request.TargetClass.ToString());
+    }
+
+    private static string ZoneRequestLabel(ZoneRequest request)
+    {
+        string zone = $"{FriendlyName(request.ZoneClass.ToString())} zone";
+        return string.IsNullOrWhiteSpace(request.PlantDef)
+            ? zone
+            : $"{zone}: {request.PlantDef}";
+    }
+
+    private static string FriendlyName(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return "request";
+
+        StringBuilder builder = new();
+        for (int i = 0; i < value.Length; i++)
+        {
+            char current = value[i];
+            if (i > 0 && char.IsUpper(current) && !char.IsWhiteSpace(value[i - 1]))
+                builder.Append(' ');
+            builder.Append(current);
+        }
+
+        return builder.ToString();
+    }
+
     private IMinister? ResolveMinister(MinisterDescriptor descriptor) =>
         ministers.FirstOrDefault(m =>
             MinisterRegistry.NormalizeKey(m.Name).Equals(descriptor.Key, StringComparison.OrdinalIgnoreCase) ||
@@ -473,6 +637,9 @@ public sealed class CabinetCycle(
 
         return parts.Count == 0 ? trace.Note : string.Join("; ", parts);
     }
+
+    private static long DurationMs(DateTimeOffset startedAt, DateTimeOffset completedAt) =>
+        Math.Max(0, (long)Math.Round((completedAt - startedAt).TotalMilliseconds));
 }
 
 public sealed record MinisterTriggerResult(
