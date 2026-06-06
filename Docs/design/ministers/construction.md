@@ -71,7 +71,7 @@ No separate Base Layout minister is planned for the first pass. Split only if Wi
 
 ## First Slice Shape
 
-Willie began as rules-first `Suggest`-mode advice. The current Willie rules path is still deterministic and has no LLM escalation; placement-solver options may now carry player-click `place_blueprint_group` Apply payloads when Willie has exact validated blueprint groups.
+Willie began as rules-first `Suggest`-mode advice. The current Willie rules path is still deterministic and has no LLM escalation; placement-solver options may now carry player-click `place_blueprint_group` Apply payloads when Willie has exact validated blueprint groups, and grow-zone options may carry player-click `create_growing_zone` Apply payloads when Willie has a complete rectangular zone option.
 
 First deterministic advice areas:
 
@@ -106,7 +106,7 @@ Inbound `building_request`s for any Willie-owned build class usually preempt gen
 
 When another minister publishes a flag with a Willie `building_request`, the Host immediately wakes Willie in rules-only `FlagFired` mode and focuses that request for the solver run. The operator should not need to click Willie `Run Rules` just to turn a fresh Chef/Welfare/Medical build request into placement options.
 
-When another minister publishes a flag with a Willie `zone_request`, the Host also wakes Willie in rules-only `FlagFired` mode, but zone placement is a separate path from building placement. The grow-zone solver reads coordinate terrain, existing growing zones, stockpiles, room/building occupancy, and Home/buildable-region evidence, then records inspect-only options or a no-fit reason in the zone board. It does not run the building Placement Solver, does not produce `place_blueprint_group`, and does not emit a zone Apply payload until `create_growing_zone` validation/writes ship.
+When another minister publishes a flag with a Willie `zone_request`, the Host also wakes Willie in rules-only `FlagFired` mode, but zone placement is a separate path from building placement. The grow-zone solver reads coordinate terrain, existing growing zones, stockpiles, room/building occupancy, and Home/buildable-region evidence, then records options or a no-fit reason in the zone board. It does not run the building Placement Solver and does not produce `place_blueprint_group`. When a selected zone option is a complete rectangle, Willie emits a `create_growing_zone` Assisted Apply action; `AssistedApplyService` refreshes live state, validates map, plant def, terrain growability, and unoccupied/unzoned cells, calls RIMAPI's growing-zone endpoint, and reads back zones before recording the result.
 
 Here, "1-3 candidate layouts" means the final emitted `options[]`, not the
 internal search space. The solver may run several bounded candidate generators
@@ -134,7 +134,7 @@ Willie's dashboard scope includes a latest-only Solver view for placement diagno
 
 Willie's dashboard scope also includes a Requests view backed by live per-request solver memory. Every Willie cycle records the current inbound building-request board, keyed by request target class, target def, room class, and request text, and joins each row to its latest solver outcome when one exists. The board carries full `BuildingRequest` fields; solver options are held only in the live store and `/api/ministers/willie/solver/requests` response, not in `PlacementSolverReplayOutput` or the replay corpus.
 
-The same Requests view also surfaces inbound `zone_requests` through `/api/ministers/willie/zone-requests`. Zone rows carry the full `ZoneRequest` fields plus the latest zone-solver outcome: awaiting solve, no-fit, error, or read-only options. Apply for a zone belongs only on a future Willie-authored concrete zone option after `create_growing_zone` is validated, never on the requesting minister's outbound row.
+The same Requests view also surfaces inbound `zone_requests` through `/api/ministers/willie/zone-requests`. Zone rows carry the full `ZoneRequest` fields plus the latest zone-solver outcome: awaiting solve, no-fit, error, or zone options. Apply for a zone belongs only on Willie-authored `create_growing_zone` advice actions after the solver emits a concrete rectangular option, never on the requesting minister's outbound row.
 
 When a solver run returns zero `options[]` or errors before options can be attached, the driving Willie `AdviceItem` must say in its body that no layout options were suggested and include the concrete reason. The rationale and Solver view may carry the more technical no-fit/error trace, but the Advice card itself cannot look like plain prose advice when the solver failed to produce placements.
 

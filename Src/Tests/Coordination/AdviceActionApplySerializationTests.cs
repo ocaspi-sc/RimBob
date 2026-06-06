@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
 using RimBob.Core.Advice;
+using RimBob.Core.Aggregates;
 
 namespace RimBob.Tests.Coordination;
 
@@ -47,5 +48,32 @@ public sealed class AdviceActionApplySerializationTests
         apply.Kind.Should().Be(AdviceApplyKind.PlaceBlueprintGroup);
         apply.AssetCount.Should().Be(1);
         apply.BlueprintGroup.Assets.Should().ContainSingle().Which.DefName.Should().Be("Cooler");
+    }
+
+    [Fact]
+    public void CreateGrowingZoneApply_SerializesAndRoundTrips()
+    {
+        AdviceAction action = new(
+            AdviceActionKind.DesignateZone,
+            "Create the rice growing zone.",
+            Apply: new CreateGrowingZoneApply(
+                Label: "Growing zone 10,20",
+                TargetSummary: "36-tile Plant_Rice growing zone at 10,20-15,25.",
+                MapId: 1,
+                PlantDef: "Plant_Rice",
+                Rect: new MapRect(10, 20, 15, 25),
+                TargetCount: 36));
+
+        string json = JsonSerializer.Serialize(action, JsonOptions);
+        AdviceAction? roundTripped = JsonSerializer.Deserialize<AdviceAction>(json, JsonOptions);
+
+        json.Should().Contain("\"kind\":\"create_growing_zone\"");
+        json.Should().Contain("\"plant_def\":\"Plant_Rice\"");
+        json.Should().Contain("\"target_count\":36");
+        roundTripped.Should().NotBeNull();
+        CreateGrowingZoneApply apply = roundTripped!.Apply.Should().BeOfType<CreateGrowingZoneApply>().Subject;
+        apply.Kind.Should().Be(AdviceApplyKind.CreateGrowingZone);
+        apply.Rect.Area.Should().Be(36);
+        apply.PlantDef.Should().Be("Plant_Rice");
     }
 }

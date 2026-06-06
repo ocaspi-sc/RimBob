@@ -113,7 +113,7 @@ optimization remain out of the current Suggest-mode scope. Chef LLM escalation
 receives the compact computed candidate table and must treat it as the source of
 truth for crop math.
 
-Chef owns the grow-zone need, not the map coordinates. For `expand_growing_capacity`, Chef chooses the crop, tile count, urgency, and food-chain reason, then emits a typed `zone_requests[]` row routed to Willie for spatial placement. Willie may now return inspect-only zone options or a no-fit reason, but Chef's outbound flag must stay read-only and must not bury grow-zone placement in `attention[]`.
+Chef owns the grow-zone need, not the map coordinates. For `expand_growing_capacity`, Chef chooses the crop, tile count, urgency, and food-chain reason, then emits a typed `zone_requests[]` row routed to Willie for spatial placement. Willie may return zone options, a no-fit reason, and a Willie-owned `create_growing_zone` Apply action for a concrete rectangular option, but Chef's outbound flag must stay read-only and must not bury grow-zone placement in `attention[]`.
 
 The implemented briefing can be narrower than the target. Use
 `FoodBriefing`, `FoodBriefingDerivation`, and Food briefing tests for current

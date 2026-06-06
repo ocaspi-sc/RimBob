@@ -214,6 +214,33 @@ public sealed class MinisterOfWillieTests
     }
 
     [Fact]
+    public async Task InboundZoneFlag_WhenGrowZoneSolverFindsOption_AttachesCreateGrowingZoneApply()
+    {
+        FakePlacementSolver solver = FakePlacementSolver.WithOptions(PlacementOption());
+        FakeGrowZonePlacementSolver growZoneSolver = FakeGrowZonePlacementSolver.WithOptions(ZonePlacementOption());
+        Harness harness = new(solver, growZoneSolver);
+        harness.SetStableState();
+        harness.Flags.Publish(ZoneFlag());
+
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
+
+        AdviceItem advice = harness.Bus.ActiveAdvice().Should().ContainSingle().Subject;
+        advice.Id.Should().Be("willie_zone_request_active");
+        advice.Actions.Should().HaveCount(2);
+        advice.Actions.Should().NotContain(action => action.Apply is PlaceBlueprintGroupApply);
+        AdviceAction applyAction = advice.Actions.Should().Contain(action => action.Apply is CreateGrowingZoneApply).Subject;
+        applyAction.Kind.Should().Be(AdviceActionKind.DesignateZone);
+        CreateGrowingZoneApply apply = applyAction.Apply.Should().BeOfType<CreateGrowingZoneApply>().Subject;
+        apply.PlantDef.Should().Be("Plant_Rice");
+        apply.Rect.Should().Be(new MapRect(10, 20, 15, 25));
+        apply.TargetCount.Should().Be(36);
+        AdviceOption option = advice.Options.Should().ContainSingle().Subject;
+        option.Readiness.Should().NotBeNull();
+        option.Readiness!.ApplyReady.Should().Be("ready");
+        advice.Rationale.Should().Contain("create_growing_zone validation");
+    }
+
+    [Fact]
     public async Task InboundFreezerFlag_WhenMaterialsAreShort_AttachesApplyPayload()
     {
         FakePlacementSolver solver = FakePlacementSolver.WithOptions(
@@ -636,6 +663,26 @@ public sealed class MinisterOfWillieTests
             EstimatedMaterials: [new MaterialEstimate("BlocksGranite", 5)],
             TradeoffNote: "Closest to kitchen.");
 
+    private static AdviceOption ZonePlacementOption()
+    {
+        IReadOnlyList<BlueprintAsset> cells = Enumerable.Range(20, 6)
+            .SelectMany(z => Enumerable.Range(10, 6).Select(x => new BlueprintAsset(
+                Role: "zone_cell",
+                DefName: "Plant_Rice",
+                StuffDefName: null,
+                Cell: new MapCell(x, z),
+                Rotation: 0)))
+            .ToList();
+
+        return new AdviceOption(
+            Id: "zone_growing_plant_rice_10_20_36",
+            Label: "Growing zone 10,20",
+            Summary: "36-tile Plant_Rice growing zone at 10,20-15,25.",
+            BlueprintGroup: new BlueprintGroup("Growing zone 10,20", 7, cells),
+            EstimatedMaterials: [],
+            TradeoffNote: "1.4 avg fertility.");
+    }
+
     private static AdviceItem PriorOptionsAdvice()
     {
         AdviceOption option = PlacementOption("placement_freezer_prior", "Prior freezer", 40);
@@ -831,7 +878,7 @@ public sealed class MinisterOfWillieTests
                 Draftable: PlacementReadiness.Ready,
                 PlacementValid: PlacementReadiness.Ready,
                 MaterialsReady: PlacementReadiness.Ready,
-                ApplyReady: PlacementReadiness.Blocked));
+                ApplyReady: PlacementReadiness.Ready));
 
         public static FakeGrowZonePlacementSolver WithNoFit(NoFitReason reason) =>
             new(new PlacementResult(

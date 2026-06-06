@@ -151,6 +151,7 @@ public sealed class AssistedApplyService(
             UnforbidThingsApply unforbid => await ApplyUnforbidAsync(advice, adviceId, actionIndex, unforbid, ct),
             UpsertProductionBillApply bill => await ApplyProductionBillAsync(advice, adviceId, actionIndex, bill, ct),
             PlaceBlueprintGroupApply blueprint => await ApplyBlueprintGroupAsync(advice, adviceId, actionIndex, blueprint, ct),
+            CreateGrowingZoneApply growZone => await ApplyCreateGrowingZoneAsync(advice, adviceId, actionIndex, growZone, ct),
             _ => Response("validation_failed", "That apply kind is not allowlisted.", apply.Kind, adviceId, actionIndex)
         };
         if (ShouldMarkAppliedAction(result))
@@ -647,6 +648,215 @@ public sealed class AssistedApplyService(
             readback);
     }
 
+    private async Task<AssistedApplyResponse> ApplyCreateGrowingZoneAsync(
+        AdviceItem advice,
+        string adviceId,
+        int actionIndex,
+        CreateGrowingZoneApply apply,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(apply.PlantDef))
+            return Response("validation_failed", "Growing-zone apply is missing the plant def.", apply.Kind, adviceId, actionIndex);
+
+        if (apply.TargetCount < 1)
+            return Response("validation_failed", "Growing-zone target count must be positive.", apply.Kind, adviceId, actionIndex);
+
+        if (apply.Rect.Area <= 0)
+            return Response("validation_failed", "Growing-zone rect is invalid.", apply.Kind, adviceId, actionIndex);
+
+        if (apply.Rect.Area > AssistedApplyLimits.MaxGrowingZoneCells ||
+            apply.TargetCount > AssistedApplyLimits.MaxGrowingZoneCells)
+        {
+            return Response("validation_failed", "Growing-zone target is too broad for assisted apply.", apply.Kind, adviceId, actionIndex);
+        }
+
+        if (apply.TargetCount != apply.Rect.Area)
+            return Response("validation_failed", "Growing-zone target count does not match its rect.", apply.Kind, adviceId, actionIndex);
+
+        AssistedApplyResponse? refreshFailure = await RefreshForValidationAsync(advice, apply.Kind, adviceId, actionIndex, ct);
+        if (refreshFailure is not null)
+            return refreshFailure;
+
+        GrowZoneApplyAssessment assessment = AssessGrowingZone(state, apply);
+        if (assessment.Outcome == GrowZoneApplyOutcome.WrongMap)
+            return Response("stale_advice", "Advice targets a different map than the current colony map.", apply.Kind, adviceId, actionIndex);
+
+        if (assessment.Outcome == GrowZoneApplyOutcome.UnsupportedPlantDef)
+            return Response("validation_failed", $"Plant def {apply.PlantDef} is not present as a plant in the live def catalogue.", apply.Kind, adviceId, actionIndex);
+
+        if (assessment.Outcome == GrowZoneApplyOutcome.NoTerrainGrid)
+            return Response("stale_advice", "Cell-level terrain is unavailable; RimBob cannot safely validate the growing-zone rectangle.", apply.Kind, adviceId, actionIndex);
+
+        if (assessment.Outcome == GrowZoneApplyOutcome.RectOutsideTerrain)
+            return Response("stale_advice", "Growing-zone rectangle is outside the current terrain bounds.", apply.Kind, adviceId, actionIndex);
+
+        if (assessment.Outcome == GrowZoneApplyOutcome.AlreadySatisfied)
+            return Response("already_satisfied", "A matching growing zone already covers the requested rectangle.", apply.Kind, adviceId, actionIndex);
+
+        if (assessment.Outcome == GrowZoneApplyOutcome.NotGrowable)
+            return Response("stale_advice", "One or more growing-zone cells no longer support growing.", apply.Kind, adviceId, actionIndex);
+
+        if (assessment.Outcome == GrowZoneApplyOutcome.BlockedOrZoned)
+            return Response("stale_advice", "One or more growing-zone cells are now occupied or already zoned.", apply.Kind, adviceId, actionIndex);
+
+        try
+        {
+            await rimApi.CreateGrowZoneAsync(
+                apply.MapId,
+                apply.PlantDef,
+                apply.Rect.X1,
+                apply.Rect.Z1,
+                apply.Rect.X2,
+                apply.Rect.Z2,
+                ct);
+        }
+        catch (Exception ex) when (IsRimApiUnavailable(ex))
+        {
+            log.LogWarning(ex, "RIMAPI growing-zone apply unavailable for advice {AdviceId} action {ActionIndex}", adviceId, actionIndex);
+            return Response("rimapi_unavailable", "RIMAPI is unavailable for growing-zone creation.", apply.Kind, adviceId, actionIndex);
+        }
+        catch (RimApiException ex)
+        {
+            log.LogWarning(ex, "RIMAPI rejected growing-zone apply for advice {AdviceId} action {ActionIndex}", adviceId, actionIndex);
+            return Response("rimapi_rejected", ex.Message, apply.Kind, adviceId, actionIndex);
+        }
+
+        AssistedApplyResponse? readbackFailure = await RefreshForReadbackAsync(apply.Kind, adviceId, actionIndex, ct);
+        if (readbackFailure is not null)
+            return readbackFailure;
+
+        if (!HasMatchingGrowingZone(state, apply))
+        {
+            return Response(
+                "readback_inconclusive",
+                "Growing-zone creation was sent, but readback did not show a matching zone yet.",
+                apply.Kind,
+                adviceId,
+                actionIndex,
+                new { plant_def = apply.PlantDef, rect = apply.Rect, target_count = apply.TargetCount });
+        }
+
+        return Response(
+            "applied",
+            $"Growing zone created for {apply.TargetCount} {apply.PlantDef} tile{(apply.TargetCount == 1 ? "" : "s")}.",
+            apply.Kind,
+            adviceId,
+            actionIndex,
+            new { plant_def = apply.PlantDef, rect = apply.Rect, target_count = apply.TargetCount });
+    }
+
+    private static GrowZoneApplyAssessment AssessGrowingZone(ColonyState state, CreateGrowingZoneApply apply)
+    {
+        if (apply.MapId != state.Map.Value.Id)
+            return new GrowZoneApplyAssessment(GrowZoneApplyOutcome.WrongMap);
+
+        if (!state.ThingDefs.Value.DefsByName.TryGetValue(apply.PlantDef, out ThingDefRecord? plantDef) ||
+            !plantDef.IsPlant)
+        {
+            return new GrowZoneApplyAssessment(GrowZoneApplyOutcome.UnsupportedPlantDef);
+        }
+
+        TerrainSnapshot terrain = state.Terrain.Value;
+        if (!terrain.HasCoordinateGrid)
+            return new GrowZoneApplyAssessment(GrowZoneApplyOutcome.NoTerrainGrid);
+
+        if (!RectInsideTerrain(apply.Rect, terrain))
+            return new GrowZoneApplyAssessment(GrowZoneApplyOutcome.RectOutsideTerrain);
+
+        if (HasMatchingGrowingZone(state, apply))
+            return new GrowZoneApplyAssessment(GrowZoneApplyOutcome.AlreadySatisfied);
+
+        Dictionary<MapCell, TerrainCellRecord> terrainByCell = terrain.Cells
+            .ToDictionary(cell => new MapCell(cell.X, cell.Z));
+        IReadOnlyList<MapCell> targetCells = CellsIn(apply.Rect);
+        if (targetCells.Any(cell => !terrainByCell.TryGetValue(cell, out TerrainCellRecord? terrainCell) || !terrainCell.SupportsGrowing))
+            return new GrowZoneApplyAssessment(GrowZoneApplyOutcome.NotGrowable);
+
+        HashSet<MapCell> blockedCells = GrowZoneBlockedCells(state);
+        if (targetCells.Any(blockedCells.Contains))
+            return new GrowZoneApplyAssessment(GrowZoneApplyOutcome.BlockedOrZoned);
+
+        return new GrowZoneApplyAssessment(GrowZoneApplyOutcome.Ready);
+    }
+
+    private static bool HasMatchingGrowingZone(ColonyState state, CreateGrowingZoneApply apply)
+    {
+        IReadOnlyList<MapCell> targetCells = CellsIn(apply.Rect);
+        foreach (MapZoneRecord zone in state.Zones.Value.Zones.Where(zone => zone.IsGrowing))
+        {
+            if (!string.IsNullOrWhiteSpace(zone.PlantDef) &&
+                !string.Equals(zone.PlantDef, apply.PlantDef, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            HashSet<MapCell> zoneCells = zone.Cells.Select(cell => cell.ToMapCell()).ToHashSet();
+            if (zoneCells.Count > 0 && targetCells.All(zoneCells.Contains))
+                return true;
+
+            if (zone.Bounds is not null && RectContains(zone.Bounds, apply.Rect))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static HashSet<MapCell> GrowZoneBlockedCells(ColonyState state)
+    {
+        HashSet<MapCell> cells = [];
+        foreach (MapZoneRecord zone in state.Zones.Value.Zones)
+            AddCells(cells, zone.Cells);
+        foreach (StockpileZone stockpile in state.Stockpiles.Value.Zones)
+        {
+            AddCells(cells, stockpile.Cells);
+            AddCell(cells, stockpile.Center);
+        }
+        foreach (BuildingRecord building in state.Buildings.Value.Buildings)
+            AddCell(cells, building.Position);
+        foreach (RoomRecord room in state.Rooms.Value.Rooms)
+            AddCells(cells, room.Cells);
+        foreach (PlantRecord plant in state.Plants.Value.Plants.Where(plant => plant.IsCrop))
+            AddCell(cells, plant.Position);
+
+        return cells;
+    }
+
+    private static IReadOnlyList<MapCell> CellsIn(MapRect rect)
+    {
+        List<MapCell> cells = [];
+        for (int z = rect.Z1; z <= rect.Z2; z++)
+        {
+            for (int x = rect.X1; x <= rect.X2; x++)
+                cells.Add(new MapCell(x, z));
+        }
+
+        return cells;
+    }
+
+    private static void AddCells(HashSet<MapCell> cells, IReadOnlyList<MapPosition> positions)
+    {
+        foreach (MapPosition position in positions)
+            cells.Add(position.ToMapCell());
+    }
+
+    private static void AddCell(HashSet<MapCell> cells, MapPosition? position)
+    {
+        if (position is not null)
+            cells.Add(position.ToMapCell());
+    }
+
+    private static bool RectInsideTerrain(MapRect rect, TerrainSnapshot terrain) =>
+        rect.X1 >= 0 &&
+        rect.Z1 >= 0 &&
+        rect.X2 < terrain.Width &&
+        rect.Z2 < terrain.Height;
+
+    private static bool RectContains(MapRect outer, MapRect inner) =>
+        outer.X1 <= inner.X1 &&
+        outer.Z1 <= inner.Z1 &&
+        outer.X2 >= inner.X2 &&
+        outer.Z2 >= inner.Z2;
+
     private static string? FirstBlueprintValidationFailure(PlacementValidationResult validation)
     {
         if (validation.OverlapConflicts.Count > 0)
@@ -887,5 +1097,19 @@ public readonly record struct HarvestApplyAssessment(
     int ReadyCount,
     int MissingCount,
     int StaleCount);
+
+public enum GrowZoneApplyOutcome
+{
+    Ready,
+    AlreadySatisfied,
+    WrongMap,
+    UnsupportedPlantDef,
+    NoTerrainGrid,
+    RectOutsideTerrain,
+    NotGrowable,
+    BlockedOrZoned
+}
+
+public readonly record struct GrowZoneApplyAssessment(GrowZoneApplyOutcome Outcome);
 
 internal sealed record CurrentThingTarget(string Def, bool IsForbidden, MapPosition Position);

@@ -9,7 +9,8 @@ export type AdviceApplyKind =
   | 'mark_hunt_area'
   | 'unforbid_things'
   | 'upsert_production_bill'
-  | 'place_blueprint_group';
+  | 'place_blueprint_group'
+  | 'create_growing_zone';
 
 export interface AdviceApplyRect {
   x1: number;
@@ -112,12 +113,20 @@ export interface PlaceBlueprintGroupApply extends AdviceActionApplyBase {
   asset_count: number;
 }
 
+export interface CreateGrowingZoneApply extends AdviceActionApplyBase {
+  kind: 'create_growing_zone';
+  plant_def: string;
+  rect: AdviceApplyRect;
+  target_count: number;
+}
+
 export type AdviceActionApply =
   | MarkHarvestAreaApply
   | MarkHuntAreaApply
   | UnforbidThingsApply
   | UpsertProductionBillApply
-  | PlaceBlueprintGroupApply;
+  | PlaceBlueprintGroupApply
+  | CreateGrowingZoneApply;
 
 export interface AdviceAction {
   kind: string;

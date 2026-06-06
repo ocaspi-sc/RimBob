@@ -418,7 +418,7 @@ function ReadOnlyOptionCard({
           <span className="eyebrow">{isZoneOption ? 'read-only zone option' : 'read-only option'}</span>
           <h4>{option.label}</h4>
         </div>
-        <StatusPill tone="info">{isZoneOption ? 'no apply yet' : 'diagnostic'}</StatusPill>
+        <StatusPill tone="info">{isZoneOption ? 'apply in advice' : 'diagnostic'}</StatusPill>
       </header>
 
       <BlueprintFootprintThumbnail group={option.blueprint_group} />
@@ -435,7 +435,7 @@ function ReadOnlyOptionCard({
 
       <div className="build-option-materials">
         {option.est_materials.length === 0 ? (
-          <span>{isZoneOption ? 'No materials; zone write not wired yet.' : 'No material estimate.'}</span>
+          <span>{isZoneOption ? 'No materials; zone write validates live cells on Apply.' : 'No material estimate.'}</span>
         ) : (
           option.est_materials.map(material => (
             <ResourceQuantity defName={material.def_name} key={`${option.id}-${material.def_name}`} quantity={material.count} />
@@ -498,7 +498,7 @@ function zoneStatusLabel(output: WillieSolverOutputPayload): { label: string; no
   if (output.status === 'options') {
     return {
       label: 'options',
-      note: 'Grow-zone coordinate options are attached below. Apply is deferred until validated zone writes ship.',
+      note: 'Grow-zone coordinate options are attached below. Apply lives on Willie advice and validates live cells before writing.',
     };
   }
 

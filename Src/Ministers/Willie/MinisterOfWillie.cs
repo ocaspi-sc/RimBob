@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using RimBob.Coordination;
 using RimBob.Core.Advice;
+using RimBob.Core.Aggregates;
 using RimBob.Core.Briefings;
 using RimBob.Core.Ministers;
 using RimBob.State;
@@ -546,7 +547,7 @@ public sealed class MinisterOfWillie(
             ? item.Actions.Where(action => action.Kind != AdviceActionKind.PlaceBlueprint || action.Apply is not null).ToList()
             : item.Actions;
         IReadOnlyList<AdviceAction> actions = attachApplyActions
-            ? baseActions.Concat(options!.Select(ApplyActionForOption)).ToList()
+            ? baseActions.Concat(options!.Select(ApplyActionForOption).Where(action => action is not null).Cast<AdviceAction>()).ToList()
             : baseActions;
 
         return item with
@@ -558,8 +559,12 @@ public sealed class MinisterOfWillie(
         };
     }
 
-    private static AdviceAction ApplyActionForOption(AdviceOption option) =>
-        new(
+    private static AdviceAction? ApplyActionForOption(AdviceOption option)
+    {
+        if (IsZoneCellOption(option))
+            return GrowingZoneApplyActionForOption(option);
+
+        return new AdviceAction(
             AdviceActionKind.PlaceBlueprint,
             $"Place the {option.Label} blueprint group.",
             Owner: "Willie",
@@ -569,6 +574,57 @@ public sealed class MinisterOfWillie(
                 MapId: option.BlueprintGroup.MapId,
                 BlueprintGroup: option.BlueprintGroup,
                 AssetCount: option.BlueprintGroup.Assets.Count));
+    }
+
+    private static AdviceAction? GrowingZoneApplyActionForOption(AdviceOption option)
+    {
+        IReadOnlyList<BlueprintAsset> zoneAssets = option.BlueprintGroup.Assets
+            .Where(asset => string.Equals(asset.Role, "zone_cell", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        if (zoneAssets.Count == 0 || zoneAssets.Count != option.BlueprintGroup.Assets.Count)
+            return null;
+
+        IReadOnlyList<string> plantDefs = zoneAssets
+            .Select(asset => asset.DefName)
+            .Where(def => !string.IsNullOrWhiteSpace(def))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (plantDefs.Count != 1)
+            return null;
+
+        IReadOnlyList<MapCell> cells = zoneAssets
+            .Select(asset => asset.Cell)
+            .Distinct()
+            .ToList();
+        if (cells.Count != zoneAssets.Count)
+            return null;
+
+        MapRect rect = new(
+            X1: cells.Min(cell => cell.X),
+            Z1: cells.Min(cell => cell.Z),
+            X2: cells.Max(cell => cell.X),
+            Z2: cells.Max(cell => cell.Z));
+        if (rect.Area != cells.Count)
+            return null;
+
+        return new AdviceAction(
+            AdviceActionKind.DesignateZone,
+            $"Create the {option.Label} growing zone.",
+            Quantity: cells.Count,
+            Owner: "Willie",
+            WorkType: WorkType.Grow,
+            Apply: new CreateGrowingZoneApply(
+                Label: option.Label,
+                TargetSummary: option.Summary,
+                MapId: option.BlueprintGroup.MapId,
+                PlantDef: plantDefs[0],
+                Rect: rect,
+                TargetCount: cells.Count));
+    }
+
+    private static bool IsZoneCellOption(AdviceOption option) =>
+        option.BlueprintGroup.Assets.Any(asset =>
+            string.Equals(asset.Role, "zone_cell", StringComparison.OrdinalIgnoreCase));
 
     private static string AppendPlacementNote(string text, string note) =>
         string.IsNullOrWhiteSpace(text) ? note : $"{text} {note}";
@@ -596,7 +652,7 @@ public sealed class MinisterOfWillie(
     {
         if (result.Options.Count > 0)
         {
-            return $"Grow-zone solver: {result.Options.Count} inspected option{Plural(result.Options.Count)}; apply_ready={ReadinessWire(result.ApplyReady)} until create_growing_zone apply validation ships.";
+            return $"Grow-zone solver: {result.Options.Count} inspected option{Plural(result.Options.Count)}; apply_ready={ReadinessWire(result.ApplyReady)} via create_growing_zone validation.";
         }
 
         string reason = result.NoFit is null
@@ -618,7 +674,7 @@ public sealed class MinisterOfWillie(
     private static string? AdviceBodyNoteFor(PlacementResult result, ZoneRequest request)
     {
         if (result.Options.Count > 0)
-            return $"Grow-zone solver found {result.Options.Count} coordinate option{Plural(result.Options.Count)} below; Apply is deferred until validated zone writes ship.";
+            return $"Grow-zone solver found {result.Options.Count} coordinate option{Plural(result.Options.Count)} below; Apply validates live terrain and occupancy before creating the zone.";
 
         string reason = result.NoFit is null
             ? "no validated growing-zone option was emitted"

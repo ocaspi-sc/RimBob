@@ -610,6 +610,75 @@ public sealed class AssistedApplyServiceTests
         response.Message.Should().Contain("too large");
     }
 
+    [Fact]
+    public async Task ApplyAsync_WhenGrowingZoneCellsRemainValid_PostsGrowZoneAndReadsBack()
+    {
+        AdviceBus bus = new();
+        bus.Publish(Advice("willie_zone_request_active", GrowingZoneAction()) with { Minister = "Willie" });
+        MinimalRefreshHandler handler = new()
+        {
+            MapTerrainJson = GrowableTerrainJson(),
+            MapPlantsJson = EmptyListJson(),
+            MapZonesAfterGrowZoneJson = ZonesJson(GrowingZoneJson())
+        };
+        AssistedApplyService service = Service(bus, new ColonyState(), handler);
+
+        AssistedApplyResponse response = await service.ApplyAsync("willie_zone_request_active", 0);
+
+        response.Status.Should().Be("applied");
+        response.Kind.Should().Be(AdviceApplyKind.CreateGrowingZone);
+        response.Message.Should().Contain("Growing zone created");
+        AssertAppliedAction(bus, "applied", AdviceApplyKind.CreateGrowingZone);
+        handler.GrowZonePosted.Should().BeTrue();
+        handler.LastGrowZoneBody.Should().Contain("\"plant_def\":\"Plant_Rice\"");
+        handler.LastGrowZoneBody.Should().Contain("\"point_a\":{\"x\":10,\"y\":0,\"z\":20}");
+        handler.LastGrowZoneBody.Should().Contain("\"point_b\":{\"x\":15,\"y\":0,\"z\":25}");
+    }
+
+    [Fact]
+    public async Task ApplyAsync_WhenGrowingZoneCellsAreOccupied_ReturnsStaleWithoutPosting()
+    {
+        AdviceBus bus = new();
+        bus.Publish(Advice("willie_zone_request_active", GrowingZoneAction()) with { Minister = "Willie" });
+        MinimalRefreshHandler handler = new()
+        {
+            MapTerrainJson = GrowableTerrainJson(),
+            MapPlantsJson = EmptyListJson(),
+            MapBuildingsJson = """
+                {"success":true,"data":[
+                  {"id":10,"def":"Wall","label":"wall","position":{"x":10,"y":0,"z":20}}
+                ],"errors":null}
+                """
+        };
+        AssistedApplyService service = Service(bus, new ColonyState(), handler);
+
+        AssistedApplyResponse response = await service.ApplyAsync("willie_zone_request_active", 0);
+
+        response.Status.Should().Be("stale_advice");
+        response.Message.Should().Contain("occupied");
+        handler.GrowZonePosted.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ApplyAsync_WhenGrowZoneRimApiRejectsWrite_ReturnsRejected()
+    {
+        AdviceBus bus = new();
+        bus.Publish(Advice("willie_zone_request_active", GrowingZoneAction()) with { Minister = "Willie" });
+        MinimalRefreshHandler handler = new()
+        {
+            MapTerrainJson = GrowableTerrainJson(),
+            MapPlantsJson = EmptyListJson(),
+            GrowZoneWriteJson = """{"success":false,"data":{},"errors":["bad crop"]}"""
+        };
+        AssistedApplyService service = Service(bus, new ColonyState(), handler);
+
+        AssistedApplyResponse response = await service.ApplyAsync("willie_zone_request_active", 0);
+
+        response.Status.Should().Be("rimapi_rejected");
+        response.Message.Should().Contain("bad crop");
+        handler.GrowZonePosted.Should().BeTrue();
+    }
+
     private static AssistedApplyService Service(AdviceBus bus, ColonyState state)
     {
         return Service(bus, state, new ThrowingHandler());
@@ -733,6 +802,21 @@ public sealed class AssistedApplyServiceTests
                 AssetCount: assetCount));
     }
 
+    private static AdviceAction GrowingZoneAction() =>
+        new(
+            AdviceActionKind.DesignateZone,
+            "Create the selected rice growing zone.",
+            Quantity: 36,
+            Owner: "Willie",
+            WorkType: WorkType.Grow,
+            Apply: new CreateGrowingZoneApply(
+                Label: "Growing zone 10,20",
+                TargetSummary: "36-tile Plant_Rice growing zone at 10,20-15,25.",
+                MapId: 1,
+                PlantDef: "Plant_Rice",
+                Rect: new MapRect(10, 20, 15, 25),
+                TargetCount: 36));
+
     private static MinimalRefreshHandler HandlerWithSingleStove() =>
         new()
         {
@@ -850,6 +934,54 @@ public sealed class AssistedApplyServiceTests
             rotation = 2
         };
 
+    private static string GrowableTerrainJson() =>
+        JsonSerializer.Serialize(new
+        {
+            success = true,
+            data = new
+            {
+                width = 30,
+                height = 30,
+                palette = new[] { "Soil" },
+                grid = new[] { 900, 0 },
+                floor_palette = Array.Empty<string>(),
+                floor_grid = new[] { 900, 0 }
+            },
+            errors = (string[]?)null
+        });
+
+    private static string EmptyListJson() => """{"success":true,"data":[],"errors":null}""";
+
+    private static string DefCatalogJson() =>
+        """
+        {"success":true,"data":{"things_defs":[
+          {"def_name":"Plant_Rice","label":"rice plant","category":"Plant","thing_class":"Plant","is_weapon":false,"is_apparel":false,"is_item":false,"is_plant":true,"is_building":false,"is_medicine":false,"is_drug":false,"nutrition":0.05,"stack_limit":null}
+        ],"terrain_defs":[
+          {"def_name":"Soil","label":"soil","fertility":1.0,"affordances":["Walkable","GrowSoil"]}
+        ],"animal_defs":[]},"errors":null}
+        """;
+
+    private static string ZonesJson(params object[] zones) =>
+        JsonSerializer.Serialize(new
+        {
+            success = true,
+            data = new { zones, areas = Array.Empty<object>() },
+            errors = (string[]?)null
+        });
+
+    private static object GrowingZoneJson() =>
+        new
+        {
+            id = "growing-zone-1",
+            type = "GrowingZone",
+            label = "Growing zone",
+            plant_def = "Plant_Rice",
+            cells_count = 36,
+            cells = Enumerable.Range(20, 6)
+                .SelectMany(z => Enumerable.Range(10, 6).Select(x => new { x, y = 0, z }))
+                .ToArray()
+        };
+
     private sealed class ThrowingHandler : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
@@ -867,6 +999,7 @@ public sealed class AssistedApplyServiceTests
         public bool AddBillPosted { get; private set; }
         public bool UpdateBillPosted { get; private set; }
         public bool BlueprintGroupPlacePosted { get; private set; }
+        public bool GrowZonePosted { get; private set; }
         public int BillListCalls { get; private set; }
         public int BlueprintGroupValidateCalls { get; private set; }
         public string LastDesignateBody { get; private set; } = "";
@@ -874,12 +1007,18 @@ public sealed class AssistedApplyServiceTests
         public string LastBillWritePath { get; private set; } = "";
         public string LastBillWriteBody { get; private set; } = "";
         public string LastBlueprintGroupPlaceBody { get; private set; } = "";
+        public string LastGrowZoneBody { get; private set; } = "";
         public HttpStatusCode BlueprintGroupValidateStatusCode { get; init; } = HttpStatusCode.OK;
         public HttpStatusCode BlueprintGroupPlaceStatusCode { get; init; } = HttpStatusCode.OK;
+        public HttpStatusCode GrowZoneWriteStatusCode { get; init; } = HttpStatusCode.OK;
         public string BlueprintGroupValidateJson { get; init; } = BlueprintGroupValidateResponseJson(canPlaceAll: true);
         public string BlueprintGroupPlaceJson { get; init; } = BlueprintGroupPlaceResponseJson("placed");
+        public string GrowZoneWriteJson { get; init; } = """{"success":true,"data":{},"errors":null}""";
         public string MapAnimalsJson { get; init; } = """{"success":true,"data":[],"errors":null}""";
         public string MapBuildingsJson { get; init; } = """{"success":true,"data":[],"errors":null}""";
+        public string MapTerrainJson { get; init; } = """{"success":true,"data":{"width":0,"height":0,"palette":[],"grid":[]},"errors":null}""";
+        public string MapZonesJson { get; init; } = """{"success":true,"data":{},"errors":null}""";
+        public string MapZonesAfterGrowZoneJson { get; init; } = """{"success":true,"data":{},"errors":null}""";
         public string MapPlantsJson { get; init; } = """
             {"success":true,"data":[
               {"id":"plant-1","def":"Plant_Rice","growth":0.9,"is_crop":true,"position":{"x":10,"y":0,"z":20}},
@@ -911,6 +1050,11 @@ public sealed class AssistedApplyServiceTests
             if (path.Contains("builder/blueprint-group/place", StringComparison.OrdinalIgnoreCase))
             {
                 return CaptureBlueprintGroupPlaceAsync(request, ct);
+            }
+
+            if (path.Contains("map/zone/growing", StringComparison.OrdinalIgnoreCase))
+            {
+                return CaptureGrowZoneAsync(request, ct);
             }
 
             if (path.Contains("order/designate/area", StringComparison.OrdinalIgnoreCase))
@@ -955,7 +1099,7 @@ public sealed class AssistedApplyServiceTests
             if (path.Contains("map/work-tables", StringComparison.OrdinalIgnoreCase))
                 return JsonResponse("""{"success":true,"data":[],"errors":null}""");
             if (path.Contains("def/all", StringComparison.OrdinalIgnoreCase))
-                return JsonResponse("""{"success":true,"data":{"things_defs":[],"terrain_defs":[]},"errors":null}""");
+                return JsonResponse(DefCatalogJson());
             if (path.Contains("resources/stored", StringComparison.OrdinalIgnoreCase))
                 return JsonResponse("""{"success":true,"data":{},"errors":null}""");
             if (path.Contains("map/animals", StringComparison.OrdinalIgnoreCase))
@@ -963,9 +1107,9 @@ public sealed class AssistedApplyServiceTests
             if (path.Contains("map/rooms", StringComparison.OrdinalIgnoreCase))
                 return JsonResponse("""{"success":true,"data":{"rooms":[]},"errors":null}""");
             if (path.Contains("map/zones", StringComparison.OrdinalIgnoreCase))
-                return JsonResponse("""{"success":true,"data":{},"errors":null}""");
+                return JsonResponse(GrowZonePosted ? MapZonesAfterGrowZoneJson : MapZonesJson);
             if (path.Contains("map/terrain", StringComparison.OrdinalIgnoreCase))
-                return JsonResponse("""{"success":true,"data":{"width":0,"height":0,"palette":[],"grid":[]},"errors":null}""");
+                return JsonResponse(MapTerrainJson);
             if (path.Contains("map/buildings", StringComparison.OrdinalIgnoreCase))
                 return JsonResponse(MapBuildingsJson);
             if (path.Contains("map/power/info", StringComparison.OrdinalIgnoreCase))
@@ -993,6 +1137,18 @@ public sealed class AssistedApplyServiceTests
             return new HttpResponseMessage(BlueprintGroupPlaceStatusCode)
             {
                 Content = new StringContent(BlueprintGroupPlaceJson, Encoding.UTF8, "application/json")
+            };
+        }
+
+        private async Task<HttpResponseMessage> CaptureGrowZoneAsync(
+            HttpRequestMessage request,
+            CancellationToken ct)
+        {
+            GrowZonePosted = true;
+            LastGrowZoneBody = request.Content is null ? "" : await request.Content.ReadAsStringAsync(ct);
+            return new HttpResponseMessage(GrowZoneWriteStatusCode)
+            {
+                Content = new StringContent(GrowZoneWriteJson, Encoding.UTF8, "application/json")
             };
         }
 

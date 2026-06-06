@@ -1,6 +1,6 @@
 # Zone Requests for Chef Growing Capacity
 
-**Status:** IN PROGRESS - Slices 1-3 implemented in the worktree; Slices 4-5 remain follow-up work gated on coordinate-addressable terrain/occupancy evidence and validated zone apply.
+**Status:** IMPLEMENTED IN WORKTREE - Slices 1-5 are complete. Zone request routing, coordinate grow-zone placement, and Willie-owned `create_growing_zone` Assisted Apply are wired; live proof still requires a running RIMAPI map with a valid Willie grow-zone option.
 **Owner:** Chef + Willie + Dashboard.
 **Scope:** Promote Chef's current growing-tile `attention[]` request into a typed `zone_requests[]` flag surface, then let Willie turn grow-zone requests into inspectable placement proposals and player-confirmed apply payloads.
 
@@ -33,7 +33,7 @@ Willie's building-request solver path remains building-request-only. `CabinetCyc
 
 Slice 4 adds the first coordinate-addressable spatial evidence: `TerrainSnapshot` preserves decoded terrain/fertility cells when the RIMAPI terrain grid supplies them, `MapZoneRegistry` preserves existing map zones and cells, and stockpile/Home area ingestion keeps cell masks when available. Food still consumes compact terrain summaries; Willie uses the code-only cell evidence for placement.
 
-Current zone placement behavior is deliberately inspect-only: Willie emits a `zone_request_active` advice card, runs the grow-zone solver when cell-level terrain exists, records options/no-fit in the zone board, and renders read-only zone option cards in Willie Requests. No `create_growing_zone` Apply payload is produced until Slice 5 validation and RIMAPI write wiring exist.
+Current zone placement behavior is player-click applyable when Willie can prove a complete rectangular option. Willie emits a `zone_request_active` advice card, runs the grow-zone solver when cell-level terrain exists, records options/no-fit in the zone board, and attaches a `create_growing_zone` Apply action to Willie advice for concrete rectangular zone options. `AssistedApplyService` refreshes live state, validates map, plant def, terrain growability, and unoccupied/unzoned cells, calls `/api/v1/map/zone/growing`, refreshes readback, and records `apply_result`. Chef's outbound `zone_requests[]` row remains inspect-only.
 
 ---
 
@@ -140,17 +140,17 @@ Tests: solver picks high-fertility growable cells over low-fertility cells; reje
 
 ---
 
-## Slice 5 - Assisted Apply for Growing Zones
+## Slice 5 - Assisted Apply for Growing Zones - Implemented
 
-Add a new apply payload, for example `create_growing_zone`, with `map_id`, `plant_def`, `rect`, `target_count`, `label`, and `target_summary`. `RimApiClient.CreateGrowZoneAsync` currently accepts a rect (`point_a`/`point_b`), not an explicit cell list, so do not promise cell-list apply unless the client and fork endpoint grow that shape. Do not reuse `place_blueprint_group`; this is a zone write, not a blueprint group.
+Added a new `create_growing_zone` apply payload with `map_id`, `plant_def`, `rect`, `target_count`, `label`, and `target_summary`. `RimApiClient.CreateGrowZoneAsync` accepts a rect (`point_a`/`point_b`), not an explicit cell list, so zone Apply is emitted only for solver options whose zone-cell assets form one complete rectangle. It does not reuse `place_blueprint_group`; this is a zone write, not a blueprint group.
 
-Use the existing `RimApiClient.CreateGrowZoneAsync` only after adding fresh validation in `AssistedApplyService`: live RIMAPI reachable, loaded map, rect bounds valid, plant def supported, target cells still growable, target cells still sufficiently unoccupied/unzoned, and request/advice not stale. After the write, read back zones or refresh state and record `apply_result`.
+The existing `RimApiClient.CreateGrowZoneAsync` is called only after fresh validation in `AssistedApplyService`: live RIMAPI reachable, loaded map, rect bounds valid, plant def supported, target cells still growable, target cells still unoccupied/unzoned, and request/advice not stale. After the write, RimBob refreshes state, checks matching growing-zone readback, and records `apply_result`.
 
-Retag `RimApiClient.CreateGrowZoneAsync` ownership when Slice 5 lands: the current comment still says Chef/HTN-owned, but the locked decision for this plan makes player-confirmed grow-zone Apply Willie-owned through `AssistedApplyService`.
+Retagged `RimApiClient.CreateGrowZoneAsync` ownership to Willie-owned player-confirmed Assisted Apply.
 
-Update dashboard Apply rendering for the new apply kind, with the Apply button only in Willie's emitted zone option/advice surface. Chef's outbound request should remain inspect-only.
+Updated dashboard Apply typing/rendering for the new apply kind. The Apply button appears only on Willie's emitted advice action; Chef's outbound request remains inspect-only. The Willie Requests view remains diagnostic and points operators back to the Advice action for Apply.
 
-Tests: successful create-zone apply calls `POST /api/v1/map/zone/growing` with the selected plant def and rect; stale terrain/occupied cells reject before writing; failed RIMAPI write returns a clear apply result.
+Tests cover successful create-zone apply calling `POST /api/v1/map/zone/growing` with the selected plant def and rect, stale occupied cells rejecting before writing, failed RIMAPI writes returning a clear apply result, serialization, and Willie option action attachment.
 
 ---
 

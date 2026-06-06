@@ -1135,9 +1135,10 @@ function actionDisplay(action: AdviceAction, item: AdviceItem): HomeActionDispla
   }
 
   if (normalizedKind === 'designate_zone') {
+    const target = zoneActionTarget(action);
     return {
-      iconKey: 'plant_rice',
-      title: `Grow ${quantityPrefix(action)}rice`,
+      iconKey: target.iconKey,
+      title: `Grow ${target.title}`,
     };
   }
 
@@ -1265,6 +1266,20 @@ function buildAdviceSource(item: AdviceItem): string | null {
   return null;
 }
 
+function zoneActionTarget(action: AdviceAction): HomeActionDisplay {
+  if (action.apply?.kind === 'create_growing_zone') {
+    return {
+      iconKey: action.apply.plant_def.toLowerCase(),
+      title: `${quantityPrefix(action)}${plantDefLabel(action.apply.plant_def)}`,
+    };
+  }
+
+  return {
+    iconKey: 'plant_rice',
+    title: `${quantityPrefix(action)}Rice`,
+  };
+}
+
 function harvestActionTarget(action: AdviceAction): HomeActionDisplay {
   const haystack = actionSearchText(action);
 
@@ -1323,6 +1338,7 @@ function actionQuantity(action: AdviceAction): number | null {
   if (action.apply?.kind === 'mark_harvest_area') return action.apply.target_count;
   if (action.apply?.kind === 'mark_hunt_area') return action.apply.target_count;
   if (action.apply?.kind === 'upsert_production_bill') return action.apply.target_count;
+  if (action.apply?.kind === 'create_growing_zone') return action.apply.target_count;
   if (action.quantity !== null && action.quantity !== undefined) return action.quantity;
 
   return firstNumber(action.apply?.target_summary) ?? firstNumber(action.instruction);

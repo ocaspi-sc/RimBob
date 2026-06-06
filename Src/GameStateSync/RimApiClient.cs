@@ -525,10 +525,10 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
     //       and implement: SetWorkPriority, SetSchedule, ForceJob, SetZoneRestriction.
     //       Only MinisterOfLabor calls these writes.
 
-    // ── Grow zone write (Chef-owned, deferred Auto path) ─────────────────────
+    // ── Grow zone write (Willie-owned Assisted Apply path) ───────────────────
     /// <summary>
     /// POST api/v1/map/zone/growing — create a grow zone over a rect with a crop def.
-    /// Owned by Chef. Only call via the HTN planner primitive.
+    /// Owned by Willie placement advice through player-click Assisted Apply.
     /// </summary>
     public async Task CreateGrowZoneAsync(
         int mapId, string plantDef, int x1, int z1, int x2, int z2,

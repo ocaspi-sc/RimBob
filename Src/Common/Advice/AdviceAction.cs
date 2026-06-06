@@ -41,6 +41,7 @@ public sealed record AdviceActionApplyResult(
 [JsonDerivedType(typeof(UnforbidThingsApply), "unforbid_things")]
 [JsonDerivedType(typeof(UpsertProductionBillApply), "upsert_production_bill")]
 [JsonDerivedType(typeof(PlaceBlueprintGroupApply), "place_blueprint_group")]
+[JsonDerivedType(typeof(CreateGrowingZoneApply), "create_growing_zone")]
 public abstract record AdviceActionApply(
     [property: JsonPropertyName("label")]
     string Label,
@@ -133,6 +134,22 @@ public sealed record PlaceBlueprintGroupApply(
     public override AdviceApplyKind Kind => AdviceApplyKind.PlaceBlueprintGroup;
 }
 
+public sealed record CreateGrowingZoneApply(
+    string Label,
+    string TargetSummary,
+    int MapId,
+    [property: JsonPropertyName("plant_def")]
+    string PlantDef,
+    [property: JsonPropertyName("rect")]
+    MapRect Rect,
+    [property: JsonPropertyName("target_count")]
+    int TargetCount)
+    : AdviceActionApply(Label, TargetSummary, MapId)
+{
+    [JsonIgnore]
+    public override AdviceApplyKind Kind => AdviceApplyKind.CreateGrowingZone;
+}
+
 public sealed record AdviceThingApplyTarget(
     [property: JsonPropertyName("id")]
     string Id,
@@ -152,7 +169,8 @@ public enum AdviceApplyKind
     MarkHuntArea,
     UnforbidThings,
     UpsertProductionBill,
-    PlaceBlueprintGroup
+    PlaceBlueprintGroup,
+    CreateGrowingZone
 }
 
 public static class AssistedApplyLimits
@@ -164,6 +182,7 @@ public static class AssistedApplyLimits
     public const int MaxUnforbidTargets = 50;
     public const int MaxProductionBillTarget = 50;
     public const int MaxBlueprintGroupAssets = 64;
+    public const int MaxGrowingZoneCells = 160;
     public const double MaxMissingTargetFraction = 0.25d;
 }
 

@@ -22,7 +22,7 @@ public sealed class GrowZonePlacementSolverTests
         option.BlueprintGroup.Assets.Select(asset => (asset.Cell.X, asset.Cell.Z))
             .Should().BeEquivalentTo([(4, 1), (5, 1), (4, 2), (5, 2)]);
         option.TradeoffNote.Should().Contain("1.4 avg fertility");
-        result.ApplyReady.Should().Be(PlacementReadiness.Blocked);
+        result.ApplyReady.Should().Be(PlacementReadiness.Ready);
     }
 
     [Fact]

@@ -105,7 +105,7 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
             Draftable: PlacementReadiness.Ready,
             PlacementValid: PlacementReadiness.Ready,
             MaterialsReady: PlacementReadiness.Ready,
-            ApplyReady: PlacementReadiness.Blocked));
+            ApplyReady: PlacementReadiness.Ready));
     }
 
     private static MapRect SearchBounds(
