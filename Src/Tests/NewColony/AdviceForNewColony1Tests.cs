@@ -47,6 +47,7 @@ public sealed class AdviceForNewColony1Tests
     }
 
     [Fact]
+    // REACH: target food-buffer accounting (~10.7d, 57 meals, 0 raw); RED until nutrition derivation matches - see .plans/advice-for-new-colony-1.md
     [Trait("kind", "reach")]
     public async Task Snapshot_DerivesTargetFoodBuffer()
     {
@@ -60,6 +61,7 @@ public sealed class AdviceForNewColony1Tests
     }
 
     [Fact]
+    // REACH: day-1 food stockpile zone; RED until SetStockpileZone fires outside the emergency/nutrition-gap branches - see .plans/advice-for-new-colony-1.md
     [Trait("kind", "reach")]
     public async Task Chef_NewColony1_DesignatesFoodStockpile()
     {
@@ -86,6 +88,7 @@ public sealed class AdviceForNewColony1Tests
     }
 
     [Fact]
+    // REACH: unforbid the 49 RawFungus; RED until unforbid stops filtering targets to kind=="meal" - see .plans/advice-for-new-colony-1.md
     [Trait("kind", "reach")]
     public async Task Chef_NewColony1_UnforbidsForbiddenFungus()
     {
@@ -147,6 +150,7 @@ public sealed class AdviceForNewColony1Tests
     }
 
     [Fact]
+    // REACH: demote expand_growing_capacity to <= Medium; RED until the "emergency rice" framing is dropped at a healthy buffer - see .plans/advice-for-new-colony-1.md
     [Trait("kind", "reach")]
     public async Task Chef_NewColony1_GrowingCapacityIsNotHigh()
     {
@@ -158,6 +162,7 @@ public sealed class AdviceForNewColony1Tests
     }
 
     [Fact]
+    // REACH: no far-hunt + premature butcher on day 1; RED until hunt is demoted/suppressed at a healthy buffer - see .plans/advice-for-new-colony-1.md
     [Trait("kind", "reach")]
     public async Task Chef_NewColony1_DoesNotPushFarHunt()
     {
@@ -189,6 +194,7 @@ public sealed class AdviceForNewColony1Tests
     }
 
     [Fact]
+    // REACH: temperature_comfort advice + heater request; RED until the temperature rule fires - see .plans/advice-for-new-colony-1.md
     [Trait("kind", "reach")]
     public async Task Welfare_NewColony1_EmitsTemperature()
     {
@@ -211,6 +217,7 @@ public sealed class AdviceForNewColony1Tests
     }
 
     [Fact]
+    // REACH: standalone (snapshot-mode) Willie flags kitchen_missing; RED until that rule path covers it - see .plans/advice-for-new-colony-1.md
     [Trait("kind", "reach")]
     public async Task Willie_NewColony1_Standalone_FlagsMissingKitchen()
     {
@@ -223,6 +230,7 @@ public sealed class AdviceForNewColony1Tests
     }
 
     [Fact]
+    // REACH: solver places the High-priority beds request; RED until the bed-anchor no-fit is fixed - see .plans/advice-for-new-colony-1.md
     [Trait("kind", "reach")]
     public async Task Willie_NewColony1_PlacesHighPriorityBeds()
     {

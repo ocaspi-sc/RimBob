@@ -151,5 +151,6 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 - Every new minister gets its own directory under `Src/Ministers/<Name>/`.
 - `Rules.cs` is the first file in every minister directory. It must compile and have tests before the LLM is wired.
 - Fixture JSON files live in `Src/Tests/<MinisterName>/Fixtures/`.
+- Aspirational "reach-target" tests are tagged `[Trait("kind", "reach")]`: they assert where advice *should* land and are expected RED until the rules catch up. The default/CI gate runs `dotnet test --filter "kind!=reach"`; run the targets on demand with `--filter "kind=reach"`. Keep real regression tests plain `[Fact]` so an already-red reach set can never mask them. (Current reach set + per-target rationale: `.plans/advice-for-new-colony-1.md`.)
 - Use `// TODO:` comments only for known gaps, unverified field names, deferred writes, or concrete revisit points before the next slice ships.
 - React collapsible UI uses the standard disclosure pattern: a real `<button>` header with `aria-expanded` / `aria-controls`, plus a conditionally rendered panel in normal flow.
