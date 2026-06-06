@@ -1,6 +1,6 @@
 # Grow-Zone Solver Reuse Refactor
 
-**Status:** PLANNED - design only; do not implement until the user says to execute it.
+**Status:** IMPLEMENTED in `codex/grow-zone-solver-reuse`; pending landing.
 **Owner:** Willie placement.
 **Scope:** Refactor the landed `GrowZonePlacementSolver` so it reuses Willie's shared placement machinery (`AnchorResolver`, `PlacementEvidence` free-rect search) instead of reimplementing anchors, occupancy, and a brute-force rectangle scan. Fixes a reuse/altitude gap and an efficiency hot-spot found in `/simplify` review of `14ffbcd`.
 

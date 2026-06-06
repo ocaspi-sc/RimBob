@@ -33,6 +33,25 @@ public sealed class PlacementEvidenceFreeSpaceTests
     }
 
     [Fact]
+    public void BuildFreeRects_WithBlockedPredicate_ExcludesMaskedCellsInsideOffsetBounds()
+    {
+        MapCell blocked = new(12, 21);
+
+        PlacementEvidence.FreeRectScanResult result = PlacementEvidence.BuildFreeRects(
+            new MapRect(10, 20, 14, 23),
+            cell => cell == blocked);
+
+        result.ScanTruncated.Should().BeFalse();
+        result.Rects.Should().NotBeEmpty();
+        result.Rects.Should().OnlyContain(rect =>
+            rect.MinX >= 10 &&
+            rect.MinZ >= 20 &&
+            rect.MaxXExclusive <= 15 &&
+            rect.MaxZExclusive <= 24);
+        result.Rects.Should().NotContain(rect => rect.Contains(blocked));
+    }
+
+    [Fact]
     public void Build_WhenMapExceedsScanBound_SkipsFreeSpaceScan()
     {
         PlacementEvidence evidence = Evidence("300x300", []);

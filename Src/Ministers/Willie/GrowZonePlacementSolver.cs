@@ -51,25 +51,29 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
         }
 
         MapRect searchBounds = SearchBounds(terrain, colonyState.Areas.Value, notes);
-        HashSet<(int X, int Z)> blockedCells = BlockedCells(colonyState);
-        List<ZoneAnchor> anchors = ZoneAnchors(request, briefing, colonyState, searchBounds);
-        IReadOnlyList<ZoneCandidate> candidates = EnumerateCandidates(
+        TerrainIndex terrainIndex = TerrainIndex.Build(terrain, request);
+        HashSet<MapCell> blockedCells = BuildZoneBlockedMask(request, terrain, colonyState, searchBounds);
+        IReadOnlyList<ResolvedAnchor> anchors = ResolveZoneAnchors(request, briefing, colonyState, searchBounds);
+        PlacementEvidence.FreeRectScanResult freeSpace = PlacementEvidence.BuildFreeRects(searchBounds, blockedCells.Contains);
+        if (freeSpace.ScanTruncated)
+            notes.Add("grow-zone free-space scan exceeded the bounded scan budget");
+
+        IReadOnlyList<ZoneCandidate> candidates = BuildCandidatesFromFreeRects(
             request,
             briefing.MapId,
-            terrain,
-            searchBounds,
-            blockedCells,
+            terrainIndex,
+            freeSpace.Rects,
             anchors);
 
         if (candidates.Count == 0)
         {
             bool anyGrowable = terrain.Cells.Any(cell =>
-                cell.SupportsGrowing &&
+                CellSupportsTerrainNeed(request, cell) &&
                 Inside(cell.X, cell.Z, searchBounds));
             bool anyUnblockedGrowable = terrain.Cells.Any(cell =>
-                cell.SupportsGrowing &&
+                CellSupportsTerrainNeed(request, cell) &&
                 Inside(cell.X, cell.Z, searchBounds) &&
-                !blockedCells.Contains((cell.X, cell.Z)));
+                !blockedCells.Contains(new MapCell(cell.X, cell.Z)));
             NoFitReason reason = !anyGrowable
                 ? NoFitReason.NoGrowableCells
                 : !anyUnblockedGrowable
@@ -127,69 +131,65 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
         return new MapRect(0, 0, terrain.Width - 1, terrain.Height - 1);
     }
 
-    private static HashSet<(int X, int Z)> BlockedCells(ColonyState colonyState)
+    private static HashSet<MapCell> BuildZoneBlockedMask(
+        ZoneRequest request,
+        TerrainSnapshot terrain,
+        ColonyState colonyState,
+        MapRect searchBounds)
     {
-        HashSet<(int X, int Z)> cells = [];
+        HashSet<MapCell> cells = [];
+        foreach (TerrainCellRecord cell in terrain.Cells.Where(cell => Inside(cell.X, cell.Z, searchBounds)))
+        {
+            if (!CellSupportsTerrainNeed(request, cell))
+                cells.Add(new MapCell(cell.X, cell.Z));
+        }
+
         foreach (MapZoneRecord zone in colonyState.Zones.Value.Zones.Where(zone => zone.IsGrowing))
-            AddCells(cells, zone.Cells);
+            AddCells(cells, zone.Cells, searchBounds);
         foreach (StockpileZone stockpile in colonyState.Stockpiles.Value.Zones)
         {
-            AddCells(cells, stockpile.Cells);
-            AddCell(cells, stockpile.Center);
+            AddCells(cells, stockpile.Cells, searchBounds);
+            AddCell(cells, stockpile.Center, searchBounds);
         }
         foreach (BuildingRecord building in colonyState.Buildings.Value.Buildings)
-            AddCell(cells, building.Position);
+            AddCell(cells, building.Position, searchBounds);
         foreach (RoomRecord room in colonyState.Rooms.Value.Rooms)
-            AddCells(cells, room.Cells);
+            AddCells(cells, room.Cells, searchBounds);
         foreach (PlantRecord plant in colonyState.Plants.Value.Plants.Where(plant => plant.IsCrop))
-            AddCell(cells, plant.Position);
+            AddCell(cells, plant.Position, searchBounds);
 
         return cells;
     }
 
-    private static void AddCells(HashSet<(int X, int Z)> cells, IReadOnlyList<MapPosition> positions)
+    private static void AddCells(HashSet<MapCell> cells, IReadOnlyList<MapPosition> positions, MapRect searchBounds)
     {
         foreach (MapPosition position in positions)
-            cells.Add((position.X, position.Z));
+            AddCell(cells, position, searchBounds);
     }
 
-    private static void AddCell(HashSet<(int X, int Z)> cells, MapPosition? position)
+    private static void AddCell(HashSet<MapCell> cells, MapPosition? position, MapRect searchBounds)
     {
-        if (position is not null)
-            cells.Add((position.X, position.Z));
+        if (position is not null && Inside(position.X, position.Z, searchBounds))
+            cells.Add(position.ToMapCell());
     }
 
-    private static List<ZoneAnchor> ZoneAnchors(
+    private static bool CellSupportsTerrainNeed(ZoneRequest request, TerrainCellRecord cell) =>
+        request.Terrain?.MustSupportGrowing == false || cell.SupportsGrowing;
+
+    private static IReadOnlyList<ResolvedAnchor> ResolveZoneAnchors(
         ZoneRequest request,
         WillieBriefing briefing,
         ColonyState colonyState,
         MapRect searchBounds)
     {
-        List<ZoneAnchor> anchors = [];
-        IReadOnlyList<string> requestedTargets = (request.Adjacency ?? [])
-            .Where(adjacency => adjacency.Relation == AdjacencyRelation.Near)
-            .Select(adjacency => adjacency.Target)
-            .Where(target => !string.IsNullOrWhiteSpace(target))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+        IReadOnlyList<AdjacencyHint> adjacency = request.Adjacency ?? [];
+        if (!adjacency.Any(hint => hint.Relation == AdjacencyRelation.Near))
+            adjacency = [new AdjacencyHint(AdjacencyRelation.Near, "storage")];
+
+        List<ResolvedAnchor> anchors = AnchorResolver
+            .ResolveNear(adjacency, briefing, colonyState.Stockpiles.Value.Zones)
+            .OrderBy(anchor => anchor.Anchor.RoomId, StringComparer.OrdinalIgnoreCase)
             .ToList();
-
-        bool wantsStorage = requestedTargets.Count == 0 ||
-            requestedTargets.Any(target => target.Contains("storage", StringComparison.OrdinalIgnoreCase) ||
-                target.Contains("stockpile", StringComparison.OrdinalIgnoreCase));
-        bool wantsKitchen = requestedTargets.Any(target => target.Contains("kitchen", StringComparison.OrdinalIgnoreCase));
-
-        if (wantsStorage)
-        {
-            foreach (StockpileZone stockpile in colonyState.Stockpiles.Value.Zones.Where(zone => zone.Center is not null))
-                anchors.Add(new ZoneAnchor($"stockpile:{stockpile.Id}", "storage", stockpile.Center!));
-        }
-
-        if (wantsKitchen)
-        {
-            foreach (WillieRoomAnchor anchor in briefing.AnchorInventory.Anchors
-                         .Where(anchor => anchor.Class == RoomClass.Kitchen && anchor.Centroid is not null))
-                anchors.Add(new ZoneAnchor($"room:{anchor.RoomId}", "kitchen", anchor.Centroid!));
-        }
 
         if (anchors.Count == 0)
         {
@@ -197,47 +197,52 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
                 X: (searchBounds.X1 + searchBounds.X2) / 2,
                 Y: 0,
                 Z: (searchBounds.Z1 + searchBounds.Z2) / 2);
-            anchors.Add(new ZoneAnchor("home:bounds", "Home area", fallback));
+            WillieRoomAnchor fallbackAnchor = new(
+                "home:bounds",
+                RoomClass.BuildableRegion,
+                "Home area",
+                searchBounds.Area,
+                fallback,
+                [])
+            {
+                Bounds = searchBounds
+            };
+            anchors.Add(new ResolvedAnchor(fallbackAnchor, fallback, AnchorMatchReason.BuildableRegionFallback));
         }
 
-        return anchors
-            .OrderBy(anchor => anchor.Id, StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        return anchors;
     }
 
-    private static IReadOnlyList<ZoneCandidate> EnumerateCandidates(
+    private static IReadOnlyList<ZoneCandidate> BuildCandidatesFromFreeRects(
         ZoneRequest request,
         int mapId,
-        TerrainSnapshot terrain,
-        MapRect searchBounds,
-        HashSet<(int X, int Z)> blockedCells,
-        IReadOnlyList<ZoneAnchor> anchors)
+        TerrainIndex terrain,
+        IReadOnlyList<FreeRect> freeRects,
+        IReadOnlyList<ResolvedAnchor> anchors)
     {
         int targetCount = Math.Clamp(request.TileCount ?? DefaultTileCount, 1, MaxTileCount);
-        IReadOnlyList<(int Width, int Height)> dimensions = CandidateDimensions(targetCount);
-        Dictionary<(int X, int Z), TerrainCellRecord> cellByCoordinate = terrain.Cells
-            .ToDictionary(cell => (cell.X, cell.Z), cell => cell);
+        IReadOnlyList<(int Width, int Height)> dimensions = CandidateSizesForTarget(targetCount);
         List<ZoneCandidate> candidates = [];
 
-        foreach ((int width, int height) in dimensions)
+        foreach (FreeRect freeRect in freeRects)
         {
-            int maxX = searchBounds.X2 - width + 1;
-            int maxZ = searchBounds.Z2 - height + 1;
-            for (int z = searchBounds.Z1; z <= maxZ; z++)
+            foreach ((int width, int height) in dimensions)
             {
-                for (int x = searchBounds.X1; x <= maxX; x++)
+                RectSize size = new(width, height);
+                if (!freeRect.CanFit(size))
+                    continue;
+
+                foreach (MapCell origin in CandidateOrigins(request, terrain, freeRect, size, anchors))
                 {
-                    MapRect rect = new(x, z, x + width - 1, z + height - 1);
-                    ZoneCandidate? candidate = TryBuildCandidate(
+                    MapRect rect = new(origin.X, origin.Z, origin.X + width - 1, origin.Z + height - 1);
+                    ZoneCandidate candidate = BuildCandidate(
                         request,
                         mapId,
                         rect,
                         targetCount,
-                        cellByCoordinate,
-                        blockedCells,
+                        terrain,
                         anchors);
-                    if (candidate is not null)
-                        candidates.Add(candidate);
+                    candidates.Add(candidate);
                 }
             }
         }
@@ -251,46 +256,109 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
             .ToList();
     }
 
-    private static ZoneCandidate? TryBuildCandidate(
+    private static IReadOnlyList<MapCell> CandidateOrigins(
+        ZoneRequest request,
+        TerrainIndex terrain,
+        FreeRect freeRect,
+        RectSize size,
+        IReadOnlyList<ResolvedAnchor> anchors)
+    {
+        List<MapCell> origins = [];
+        MapCell? bestOrigin = BestOrigin(request, terrain, freeRect, size, anchors);
+        if (bestOrigin is not null)
+            origins.Add(bestOrigin);
+
+        foreach (ResolvedAnchor anchor in anchors)
+            origins.Add(PreferredOrigin(freeRect, size, anchor.TargetCell.ToMapCell()));
+
+        origins.Add(new MapCell(freeRect.MinX, freeRect.MinZ));
+        origins.Add(new MapCell(freeRect.MaxXExclusive - size.Width, freeRect.MinZ));
+        origins.Add(new MapCell(freeRect.MinX, freeRect.MaxZExclusive - size.Height));
+        origins.Add(new MapCell(freeRect.MaxXExclusive - size.Width, freeRect.MaxZExclusive - size.Height));
+
+        return origins
+            .Distinct()
+            .Where(origin => OriginFits(freeRect, size, origin))
+            .ToList();
+    }
+
+    private static MapCell? BestOrigin(
+        ZoneRequest request,
+        TerrainIndex terrain,
+        FreeRect freeRect,
+        RectSize size,
+        IReadOnlyList<ResolvedAnchor> anchors)
+    {
+        int maxX = freeRect.MaxXExclusive - size.Width;
+        int maxZ = freeRect.MaxZExclusive - size.Height;
+        MapCell? bestOrigin = null;
+        double bestScore = double.NegativeInfinity;
+        int bestDistance = int.MaxValue;
+
+        for (int z = freeRect.MinZ; z <= maxZ; z++)
+        {
+            for (int x = freeRect.MinX; x <= maxX; x++)
+            {
+                MapRect rect = new(x, z, x + size.Width - 1, z + size.Height - 1);
+                int nearestDistance = NearestAnchorDistance(anchors, rect);
+                double score = ScoreFor(
+                    request,
+                    rect,
+                    terrain.AverageFertility(rect),
+                    nearestDistance,
+                    terrain.PreferredTerrainFraction(rect));
+                if (score > bestScore ||
+                    (score == bestScore && nearestDistance < bestDistance) ||
+                    (score == bestScore && nearestDistance == bestDistance && bestOrigin is not null && z < bestOrigin.Z) ||
+                    (score == bestScore && nearestDistance == bestDistance && bestOrigin is not null && z == bestOrigin.Z && x < bestOrigin.X))
+                {
+                    bestScore = score;
+                    bestDistance = nearestDistance;
+                    bestOrigin = new MapCell(x, z);
+                }
+            }
+        }
+
+        return bestOrigin;
+    }
+
+    private static MapCell PreferredOrigin(FreeRect freeRect, RectSize size, MapCell target)
+    {
+        int maxX = freeRect.MaxXExclusive - size.Width;
+        int maxZ = freeRect.MaxZExclusive - size.Height;
+        int preferredX = Math.Clamp(target.X - size.Width / 2, freeRect.MinX, maxX);
+        int preferredZ = Math.Clamp(target.Z - size.Height / 2, freeRect.MinZ, maxZ);
+        return new MapCell(preferredX, preferredZ);
+    }
+
+    private static bool OriginFits(FreeRect freeRect, RectSize size, MapCell origin) =>
+        origin.X >= freeRect.MinX &&
+        origin.Z >= freeRect.MinZ &&
+        origin.X + size.Width <= freeRect.MaxXExclusive &&
+        origin.Z + size.Height <= freeRect.MaxZExclusive;
+
+    private static ZoneCandidate BuildCandidate(
         ZoneRequest request,
         int mapId,
         MapRect rect,
         int targetCount,
-        IReadOnlyDictionary<(int X, int Z), TerrainCellRecord> cellByCoordinate,
-        HashSet<(int X, int Z)> blockedCells,
-        IReadOnlyList<ZoneAnchor> anchors)
+        TerrainIndex terrain,
+        IReadOnlyList<ResolvedAnchor> anchors)
     {
-        List<TerrainCellRecord> cells = [];
-        for (int z = rect.Z1; z <= rect.Z2; z++)
-        {
-            for (int x = rect.X1; x <= rect.X2; x++)
-            {
-                if (blockedCells.Contains((x, z)))
-                    return null;
-                if (!cellByCoordinate.TryGetValue((x, z), out TerrainCellRecord? cell))
-                    return null;
-                if (request.Terrain?.MustSupportGrowing != false && !cell.SupportsGrowing)
-                    return null;
-
-                cells.Add(cell);
-            }
-        }
-
-        if (cells.Count < targetCount)
-            return null;
-
+        IReadOnlyList<TerrainCellRecord> cells = terrain.Cells(rect);
         double averageFertility = cells.Average(cell => cell.Fertility);
-        ZoneAnchor nearestAnchor = anchors
-            .OrderBy(anchor => DistanceToRect(anchor.Position, rect))
-            .ThenBy(anchor => anchor.Id, StringComparer.OrdinalIgnoreCase)
+        ResolvedAnchor nearestAnchor = anchors
+            .OrderBy(anchor => DistanceToRect(anchor.TargetCell, rect))
+            .ThenBy(anchor => anchor.Anchor.RoomId, StringComparer.OrdinalIgnoreCase)
             .First();
-        int nearestDistance = DistanceToRect(nearestAnchor.Position, rect);
+        int nearestDistance = DistanceToRect(nearestAnchor.TargetCell, rect);
+        double preferredTerrainFraction = terrain.PreferredTerrainFraction(rect);
         IReadOnlyList<MetricValue> metrics = MetricsFor(
             request,
             rect,
-            cells,
             averageFertility,
-            nearestDistance);
+            nearestDistance,
+            preferredTerrainFraction);
         double score = metrics.Sum(metric => metric.Contribution);
         return new ZoneCandidate(
             MapId: mapId,
@@ -305,12 +373,35 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
             Score: score);
     }
 
+    private static int NearestAnchorDistance(IReadOnlyList<ResolvedAnchor> anchors, MapRect rect) =>
+        anchors.Min(anchor => DistanceToRect(anchor.TargetCell, rect));
+
+    private static double ScoreFor(
+        ZoneRequest request,
+        MapRect rect,
+        double averageFertility,
+        int nearestDistance,
+        double preferredTerrainFraction)
+    {
+        double score = Math.Clamp(averageFertility / 1.4d, 0d, 1d) * 6d;
+        double preferredFertility = request.Terrain?.PreferredFertility ?? 1.0d;
+        score += Math.Clamp(averageFertility / Math.Max(0.01d, preferredFertility), 0d, 1d) * 2d;
+        int width = rect.X2 - rect.X1 + 1;
+        int height = rect.Z2 - rect.Z1 + 1;
+        score += (1d / (1d + Math.Abs(width - height))) * 2d;
+        score += (1d / (1d + nearestDistance)) * 3d;
+        if (request.Terrain?.PreferredTerrainDefs is { Count: > 0 })
+            score += preferredTerrainFraction;
+
+        return score;
+    }
+
     private static IReadOnlyList<MetricValue> MetricsFor(
         ZoneRequest request,
         MapRect rect,
-        IReadOnlyList<TerrainCellRecord> cells,
         double averageFertility,
-        int nearestDistance)
+        int nearestDistance,
+        double preferredTerrainFraction)
     {
         List<MetricValue> metrics = [];
         AddMetric(metrics, "average_fertility", averageFertility, "fertility", Math.Clamp(averageFertility / 1.4d, 0d, 1d), 6d, "higher");
@@ -321,11 +412,9 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
         AddMetric(metrics, "compactness", Math.Abs(width - height), "shape_delta", 1d / (1d + Math.Abs(width - height)), 2d, "lower");
         AddMetric(metrics, "anchor_distance", nearestDistance, "cells", 1d / (1d + nearestDistance), 3d, "lower");
 
-        if (request.Terrain?.PreferredTerrainDefs is { Count: > 0 } preferredDefs)
+        if (request.Terrain?.PreferredTerrainDefs is { Count: > 0 })
         {
-            HashSet<string> preferred = preferredDefs.ToHashSet(StringComparer.OrdinalIgnoreCase);
-            double fraction = cells.Count(cell => preferred.Contains(cell.TerrainDef)) / (double)cells.Count;
-            AddMetric(metrics, "preferred_terrain_defs", fraction, "fraction", fraction, 1d, "higher");
+            AddMetric(metrics, "preferred_terrain_defs", preferredTerrainFraction, "fraction", preferredTerrainFraction, 1d, "higher");
         }
 
         return metrics;
@@ -363,7 +452,7 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
                 break;
         }
 
-        return selected.Count > 0 ? selected : candidates.Take(MaxOptionCount).ToList();
+        return selected;
     }
 
     private static AdviceOption AssembleOption(ZoneRequest request, ZoneCandidate candidate)
@@ -386,13 +475,13 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
             Summary: $"{candidate.Rect.Area}-tile {plantDef} growing zone at {FormatRect(candidate.Rect)}.",
             BlueprintGroup: new BlueprintGroup(label, candidate.MapId, assets),
             EstimatedMaterials: [],
-            TradeoffNote: $"{FormatNumber(candidate.AverageFertility)} avg fertility; nearest {candidate.NearestAnchor.Label} {candidate.NearestAnchorDistance} cells; {candidate.Rect.X2 - candidate.Rect.X1 + 1}x{candidate.Rect.Z2 - candidate.Rect.Z1 + 1} rectangle.");
+            TradeoffNote: $"{FormatNumber(candidate.AverageFertility)} avg fertility; nearest {AnchorLabel(candidate.NearestAnchor)} {candidate.NearestAnchorDistance} cells; {candidate.Rect.X2 - candidate.Rect.X1 + 1}x{candidate.Rect.Z2 - candidate.Rect.Z1 + 1} rectangle.");
     }
 
     private static PlacementDraftTrace TraceFor(ZoneCandidate candidate, string status, string? reason) =>
         new(
             GeneratorId: "grow_zone_rect",
-            AnchorRoomId: candidate.NearestAnchor.Id,
+            AnchorRoomId: candidate.NearestAnchor.Anchor.RoomId,
             Status: status,
             Reason: reason,
             Metrics: candidate.Metrics);
@@ -416,14 +505,14 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
             ApplyReady: PlacementReadiness.Blocked);
     }
 
-    private static IReadOnlyList<(int Width, int Height)> CandidateDimensions(int targetCount)
+    private static IReadOnlyList<(int Width, int Height)> CandidateSizesForTarget(int targetCount)
     {
         List<(int Width, int Height)> dimensions = [];
         int maxArea = targetCount + Math.Max(4, targetCount / 6);
         for (int width = 1; width <= Math.Min(16, maxArea); width++)
         {
             int height = (int)Math.Ceiling(targetCount / (double)width);
-            if (width > 16 || height > 16)
+            if (height > 16)
                 continue;
             if (width * height > maxArea)
                 continue;
@@ -478,7 +567,144 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
     private static string FormatNumber(double value) =>
         value.ToString("0.##", CultureInfo.InvariantCulture);
 
-    private sealed record ZoneAnchor(string Id, string Label, MapPosition Position);
+    private static string AnchorLabel(ResolvedAnchor anchor)
+    {
+        if (anchor.Anchor.Class == RoomClass.BuildableRegion)
+            return anchor.Anchor.RoleLabel;
+
+        if (anchor.Anchor.RoomId.StartsWith("stockpile:", StringComparison.OrdinalIgnoreCase))
+            return "storage";
+
+        return anchor.Anchor.Class.ToString().ToLowerInvariant();
+    }
+
+    private sealed class TerrainIndex
+    {
+        private readonly int width;
+        private readonly int height;
+        private readonly TerrainCellRecord?[,] cells;
+        private readonly double[,] fertilityPrefix;
+        private readonly int[,] preferredTerrainPrefix;
+        private readonly bool hasPreferredTerrainDefs;
+
+        private TerrainIndex(
+            int width,
+            int height,
+            TerrainCellRecord?[,] cells,
+            double[,] fertilityPrefix,
+            int[,] preferredTerrainPrefix,
+            bool hasPreferredTerrainDefs)
+        {
+            this.width = width;
+            this.height = height;
+            this.cells = cells;
+            this.fertilityPrefix = fertilityPrefix;
+            this.preferredTerrainPrefix = preferredTerrainPrefix;
+            this.hasPreferredTerrainDefs = hasPreferredTerrainDefs;
+        }
+
+        public static TerrainIndex Build(TerrainSnapshot terrain, ZoneRequest request)
+        {
+            TerrainCellRecord?[,] cells = new TerrainCellRecord?[terrain.Width, terrain.Height];
+            double[,] fertility = new double[terrain.Width, terrain.Height];
+            int[,] preferredTerrain = new int[terrain.Width, terrain.Height];
+            HashSet<string> preferredDefs = request.Terrain?.PreferredTerrainDefs is { Count: > 0 } defs
+                ? defs.ToHashSet(StringComparer.OrdinalIgnoreCase)
+                : [];
+
+            foreach (TerrainCellRecord cell in terrain.Cells)
+            {
+                if (cell.X < 0 || cell.Z < 0 || cell.X >= terrain.Width || cell.Z >= terrain.Height)
+                    continue;
+
+                cells[cell.X, cell.Z] = cell;
+                fertility[cell.X, cell.Z] = cell.Fertility;
+                preferredTerrain[cell.X, cell.Z] = preferredDefs.Contains(cell.TerrainDef) ? 1 : 0;
+            }
+
+            return new TerrainIndex(
+                terrain.Width,
+                terrain.Height,
+                cells,
+                BuildDoublePrefix(fertility, terrain.Width, terrain.Height),
+                BuildIntPrefix(preferredTerrain, terrain.Width, terrain.Height),
+                preferredDefs.Count > 0);
+        }
+
+        public double AverageFertility(MapRect rect) =>
+            Sum(fertilityPrefix, rect) / Math.Max(1, rect.Area);
+
+        public double PreferredTerrainFraction(MapRect rect) =>
+            hasPreferredTerrainDefs
+                ? Sum(preferredTerrainPrefix, rect) / (double)Math.Max(1, rect.Area)
+                : 0d;
+
+        public IReadOnlyList<TerrainCellRecord> Cells(MapRect rect)
+        {
+            List<TerrainCellRecord> result = [];
+            for (int z = rect.Z1; z <= rect.Z2; z++)
+            {
+                for (int x = rect.X1; x <= rect.X2; x++)
+                {
+                    if (x < 0 || z < 0 || x >= width || z >= height)
+                        continue;
+
+                    if (cells[x, z] is TerrainCellRecord cell)
+                        result.Add(cell);
+                }
+            }
+
+            return result;
+        }
+
+        private static double[,] BuildDoublePrefix(double[,] values, int width, int height)
+        {
+            double[,] prefix = new double[width + 1, height + 1];
+            for (int z = 0; z < height; z++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    prefix[x + 1, z + 1] =
+                        values[x, z] +
+                        prefix[x, z + 1] +
+                        prefix[x + 1, z] -
+                        prefix[x, z];
+                }
+            }
+
+            return prefix;
+        }
+
+        private static int[,] BuildIntPrefix(int[,] values, int width, int height)
+        {
+            int[,] prefix = new int[width + 1, height + 1];
+            for (int z = 0; z < height; z++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    prefix[x + 1, z + 1] =
+                        values[x, z] +
+                        prefix[x, z + 1] +
+                        prefix[x + 1, z] -
+                        prefix[x, z];
+                }
+            }
+
+            return prefix;
+        }
+
+        private static double Sum(double[,] prefix, MapRect rect) =>
+            prefix[rect.X2 + 1, rect.Z2 + 1] -
+            prefix[rect.X1, rect.Z2 + 1] -
+            prefix[rect.X2 + 1, rect.Z1] +
+            prefix[rect.X1, rect.Z1];
+
+        private static int Sum(int[,] prefix, MapRect rect) =>
+            prefix[rect.X2 + 1, rect.Z2 + 1] -
+            prefix[rect.X1, rect.Z2 + 1] -
+            prefix[rect.X2 + 1, rect.Z1] +
+            prefix[rect.X1, rect.Z1];
+    }
 
     private sealed record ZoneCandidate(
         int MapId,
@@ -487,7 +713,7 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
         string PlantDef,
         int TargetCount,
         double AverageFertility,
-        ZoneAnchor NearestAnchor,
+        ResolvedAnchor NearestAnchor,
         int NearestAnchorDistance,
         IReadOnlyList<MetricValue> Metrics,
         double Score);

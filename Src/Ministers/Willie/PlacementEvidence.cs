@@ -40,7 +40,6 @@ public sealed class PlacementEvidence
 
     public IReadOnlyList<ExistingRoomFootprint> RoomFootprints { get; }
 
-    // TODO: terrain affordance still absent (rimapi-buildability-layers); free-space is occupancy-only.
     public IReadOnlyList<FreeRect> FreeRects { get; }
 
     public FreeRect? BuildableRegionBounds { get; }
@@ -64,7 +63,7 @@ public sealed class PlacementEvidence
             .ToHashSet();
 
         MapBounds? bounds = MapBounds.Parse(map.Size);
-        FreeSpaceScanResult freeSpace = BuildFreeRects(bounds, occupied);
+        FreeRectScanResult freeSpace = BuildFreeRects(bounds, occupied);
         IReadOnlyList<ExistingRoomFootprint> roomFootprints = BuildRoomFootprints(roomAnchors ?? []);
         FreeRect? buildableRegionBounds = ResolveBuildableRegionBounds(anchors);
 
@@ -121,42 +120,60 @@ public sealed class PlacementEvidence
         return expansionCells.Count;
     }
 
-    private static FreeSpaceScanResult BuildFreeRects(
+    public static FreeRectScanResult BuildFreeRects(
         MapBounds? bounds,
-        HashSet<MapCell> occupied)
+        IReadOnlySet<MapCell> blocked)
     {
-        if (bounds is null) return new FreeSpaceScanResult([], false);
+        if (bounds is null) return new FreeRectScanResult([], false);
 
-        int scanCells = bounds.Width * bounds.Height;
+        MapRect scanBounds = new(0, 0, bounds.Width - 1, bounds.Height - 1);
+        return BuildFreeRects(scanBounds, blocked.Contains);
+    }
+
+    public static FreeRectScanResult BuildFreeRects(
+        MapRect? bounds,
+        Func<MapCell, bool> isBlocked)
+    {
+        if (bounds is null) return new FreeRectScanResult([], false);
+
+        int width = bounds.X2 - bounds.X1 + 1;
+        int height = bounds.Z2 - bounds.Z1 + 1;
+        if (width <= 0 || height <= 0)
+            return new FreeRectScanResult([], false);
+
+        int scanCells = width * height;
         if (scanCells > MaxFreeSpaceScanCells)
-            return new FreeSpaceScanResult([], true);
+            return new FreeRectScanResult([], true);
 
-        int[,] clearRunRight = BuildClearRunRight(bounds, occupied);
+        int[,] clearRunRight = BuildClearRunRight(bounds, width, height, isBlocked);
         List<FreeRect> candidates = [];
-        for (int z = 0; z < bounds.Height; z++)
+        for (int z = 0; z < height; z++)
         {
-            for (int x = 0; x < bounds.Width; x++)
+            for (int x = 0; x < width; x++)
             {
-                FreeRect? bestFromOrigin = LargestRectFromOrigin(clearRunRight, x, z, bounds.Height);
+                FreeRect? bestFromOrigin = LargestRectFromOrigin(clearRunRight, bounds, x, z, height);
                 if (bestFromOrigin is not null)
                     candidates.Add(bestFromOrigin);
             }
         }
 
-        return new FreeSpaceScanResult(ReduceFreeRects(candidates), false);
+        return new FreeRectScanResult(ReduceFreeRects(candidates), false);
     }
 
     private static int[,] BuildClearRunRight(
-        MapBounds bounds,
-        HashSet<MapCell> occupied)
+        MapRect bounds,
+        int width,
+        int height,
+        Func<MapCell, bool> isBlocked)
     {
-        int[,] clearRunRight = new int[bounds.Width, bounds.Height];
-        for (int z = 0; z < bounds.Height; z++)
+        int[,] clearRunRight = new int[width, height];
+        for (int z = 0; z < height; z++)
         {
             int run = 0;
-            for (int x = bounds.Width - 1; x >= 0; x--)
+            for (int x = width - 1; x >= 0; x--)
             {
-                if (occupied.Contains(new MapCell(x, z)))
+                MapCell cell = new(bounds.X1 + x, bounds.Z1 + z);
+                if (isBlocked(cell))
                 {
                     run = 0;
                     clearRunRight[x, z] = 0;
@@ -173,6 +190,7 @@ public sealed class PlacementEvidence
 
     private static FreeRect? LargestRectFromOrigin(
         int[,] clearRunRight,
+        MapRect bounds,
         int originX,
         int originZ,
         int mapHeight)
@@ -188,7 +206,7 @@ public sealed class PlacementEvidence
 
             minWidth = Math.Min(minWidth, rowRun);
             int height = z - originZ + 1;
-            FreeRect candidate = new(new MapCell(originX, originZ), minWidth, height);
+            FreeRect candidate = new(new MapCell(bounds.X1 + originX, bounds.Z1 + originZ), minWidth, height);
             if (best is null ||
                 candidate.Area > best.Area ||
                 (candidate.Area == best.Area && candidate.Width > best.Width))
@@ -223,7 +241,7 @@ public sealed class PlacementEvidence
         return reduced;
     }
 
-    private sealed record FreeSpaceScanResult(
+    public sealed record FreeRectScanResult(
         IReadOnlyList<FreeRect> Rects,
         bool ScanTruncated);
 

@@ -25,24 +25,35 @@ public static class AnchorResolver
 
     public static IReadOnlyList<ResolvedAnchor> ResolveNear(
         PlacementSpec spec,
-        WillieBriefing briefing)
+        WillieBriefing briefing) =>
+        ResolveNear(spec.Adjacency, briefing);
+
+    public static IReadOnlyList<ResolvedAnchor> ResolveNear(
+        IReadOnlyList<AdjacencyHint>? adjacency,
+        WillieBriefing briefing,
+        IReadOnlyList<StockpileZone>? stockpiles = null)
     {
+        IReadOnlyList<AdjacencyHint> hints = adjacency ?? [];
         List<ResolvedAnchor> anchors = [];
-        foreach (AdjacencyHint hint in spec.Adjacency.Where(hint => hint.Relation == AdjacencyRelation.Near))
+        foreach (AdjacencyHint hint in hints.Where(hint => hint.Relation == AdjacencyRelation.Near))
         {
             RoomClass? targetClass = ParseRoomClass(hint.Target);
-            if (targetClass is null) continue;
-
-            IEnumerable<WillieRoomAnchor> matching = briefing.AnchorInventory.Anchors
-                .Where(anchor => anchor.Class == targetClass)
-                .OrderBy(anchor => anchor.RoomId, StringComparer.OrdinalIgnoreCase)
-                .ThenByDescending(anchor => anchor.CellsCount);
-
-            foreach (WillieRoomAnchor anchor in matching)
+            if (targetClass is not null)
             {
-                ResolvedAnchor? resolved = ResolveAnchor(anchor);
-                if (resolved is not null) anchors.Add(resolved);
+                IEnumerable<WillieRoomAnchor> matching = briefing.AnchorInventory.Anchors
+                    .Where(anchor => anchor.Class == targetClass)
+                    .OrderBy(anchor => anchor.RoomId, StringComparer.OrdinalIgnoreCase)
+                    .ThenByDescending(anchor => anchor.CellsCount);
+
+                foreach (WillieRoomAnchor anchor in matching)
+                {
+                    ResolvedAnchor? resolved = ResolveAnchor(anchor);
+                    if (resolved is not null) anchors.Add(resolved);
+                }
             }
+
+            if (stockpiles is not null && IsStorageTarget(hint.Target))
+                anchors.AddRange(ResolveStockpileAnchors(stockpiles));
         }
 
         return anchors;
@@ -90,6 +101,31 @@ public static class AnchorResolver
             : new ResolvedAnchor(anchor, boundsCenter, AnchorMatchReason.BuildableRegionFallback);
     }
 
+    private static IReadOnlyList<ResolvedAnchor> ResolveStockpileAnchors(IReadOnlyList<StockpileZone> stockpiles)
+    {
+        List<ResolvedAnchor> anchors = [];
+        foreach (StockpileZone stockpile in stockpiles
+                     .Where(stockpile => stockpile.Center is not null)
+                     .OrderBy(stockpile => stockpile.Id, StringComparer.OrdinalIgnoreCase))
+        {
+            MapPosition center = stockpile.Center!;
+            WillieRoomAnchor anchor = new(
+                $"stockpile:{stockpile.Id}",
+                RoomClass.Storage,
+                stockpile.Label ?? "stockpile",
+                stockpile.CellCount,
+                center,
+                [])
+            {
+                Bounds = BoundsFor(stockpile.Cells),
+                Cells = stockpile.Cells
+            };
+            anchors.Add(new ResolvedAnchor(anchor, center, AnchorMatchReason.StockpileCenter));
+        }
+
+        return anchors;
+    }
+
     private static MapPosition? CenterOf(MapRect? bounds)
     {
         if (bounds is null) return null;
@@ -110,6 +146,24 @@ public static class AnchorResolver
         return Aliases.TryGetValue(normalizedTarget, out RoomClass alias)
             ? alias
             : null;
+    }
+
+    private static bool IsStorageTarget(string target)
+    {
+        string normalizedTarget = Normalize(target);
+        return normalizedTarget.Contains("storage", StringComparison.OrdinalIgnoreCase) ||
+            normalizedTarget.Contains("stockpile", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static MapRect? BoundsFor(IReadOnlyList<MapPosition> cells)
+    {
+        if (cells.Count == 0) return null;
+
+        int minX = cells.Min(cell => cell.X);
+        int maxX = cells.Max(cell => cell.X);
+        int minZ = cells.Min(cell => cell.Z);
+        int maxZ = cells.Max(cell => cell.Z);
+        return new MapRect(minX, minZ, maxX, maxZ);
     }
 
     private static string Normalize(string value)

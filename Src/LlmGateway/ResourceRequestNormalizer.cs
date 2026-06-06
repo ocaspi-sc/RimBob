@@ -674,14 +674,7 @@ internal static class ResourceRequestNormalizer
         return null;
     }
 
-    private static ZoneClass InferZoneClass(string text)
-    {
-        string normalized = LlmResponseParser.NormalizeIdentifier(text);
-        if (normalized.Contains("grow") || normalized.Contains("crop") || normalized.Contains("plant"))
-            return ZoneClass.Growing;
-
-        return ZoneClass.Growing;
-    }
+    private static ZoneClass InferZoneClass(string _) => ZoneClass.Growing;
 
     private static Urgency? ParseUrgency(string? raw)
     {

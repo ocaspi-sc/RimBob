@@ -97,6 +97,36 @@ public sealed class AnchorResolverTests
         resolved.TargetCell.Should().Be(new MapPosition(11, 0, 12));
     }
 
+    [Fact]
+    public void ResolveNear_WithStockpileTarget_UsesStockpileCenters()
+    {
+        StockpileZone stockpile = new(
+            Id: "food",
+            Type: "StockpileZone",
+            Label: "food storage",
+            CellCount: 4,
+            Center: new MapPosition(8, 0, 9),
+            Cells:
+            [
+                new MapPosition(7, 0, 9),
+                new MapPosition(8, 0, 9),
+                new MapPosition(7, 0, 10),
+                new MapPosition(8, 0, 10)
+            ]);
+
+        ResolvedAnchor resolved = AnchorResolver.ResolveNear(
+                [new AdjacencyHint(AdjacencyRelation.Near, "stockpile")],
+                StableBriefing(),
+                [stockpile])
+            .Should().ContainSingle().Subject;
+
+        resolved.Anchor.RoomId.Should().Be("stockpile:food");
+        resolved.Anchor.Class.Should().Be(RoomClass.Storage);
+        resolved.TargetCell.Should().Be(new MapPosition(8, 0, 9));
+        resolved.MatchReason.Should().Be(AnchorMatchReason.StockpileCenter);
+        resolved.Anchor.Bounds.Should().Be(new MapRect(7, 9, 8, 10));
+    }
+
     [Theory]
     [InlineData("Kitchen", RoomClass.Kitchen)]
     [InlineData("hospital", RoomClass.Hospital)]

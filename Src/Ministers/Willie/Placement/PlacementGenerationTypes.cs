@@ -84,5 +84,6 @@ public enum AnchorMatchReason
     EntryCells,
     CentroidFallback,
     BuildableRegionFallback,
+    StockpileCenter,
     NoTargetCell
 }
