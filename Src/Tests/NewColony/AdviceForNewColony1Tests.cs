@@ -121,12 +121,29 @@ public sealed class AdviceForNewColony1Tests
 
         AdviceAction action = HarvestActionByAdviceId(scenario.FoodDecision, "chef_wild_harvest_available");
         MarkHarvestAreaApply apply = action.Apply.Should().BeOfType<MarkHarvestAreaApply>().Subject;
+
+        // Precondition: at least one emitted target must be harvestable while below the growth
+        // threshold the old apply predicate gated on - the ebfaef5 divergence zone. Above the
+        // threshold the generator and apply readiness predicates agree even when drifted apart, so
+        // without a target in this zone the assertions below would still pass with the bug
+        // reintroduced, and this regression guard would be silently toothless (e.g. after a
+        // snapshot recapture that no longer contains harvestable-below-0.85 forage).
+        HashSet<string> targetIds = apply.TargetIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        scenario.State.Plants.Value.Plants
+            .Where(plant => targetIds.Contains(plant.Id))
+            .Should().Contain(
+                plant => plant.IsHarvestable == true && plant.Growth < PlantHarvest.DefaultHarvestMinGrowth,
+                "the new-colony fixture must exercise the harvestable-below-growth-threshold rule, "
+                + "otherwise this verdict test cannot catch generator/apply predicate drift");
+
         HarvestApplyAssessment assessment = AssistedApplyService.AssessHarvest(scenario.State, apply);
 
+        // Generator and apply now share PlantHarvest.IsReady, so every selected target must read
+        // back as apply-ready: ReadyCount == target count is the precise "no drift" invariant (it
+        // also subsumes MissingCount == 0 and StaleCount == 0). Reverting the shared predicate drops
+        // the below-threshold targets guaranteed by the precondition above, lowering ReadyCount.
         assessment.Outcome.Should().Be(HarvestApplyOutcome.Ready);
         assessment.ReadyCount.Should().Be(apply.TargetIds.Count);
-        assessment.MissingCount.Should().Be(0);
-        assessment.StaleCount.Should().Be(0);
     }
 
     [Fact]
