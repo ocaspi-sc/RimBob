@@ -169,6 +169,8 @@ Rules-only ministers expose only the subset that is actually wired. Willie start
 
 Minister names always render with their fixed emoji in human-facing dashboard labels (`🍲 Chef`). This is display-only: route keys, raw payloads, and debug contract fields stay unchanged. Prefer generic emoji for dashboard semantic cues such as views, sections, fields, metrics, status, advice, power, weather, runtime, rules, logs, and analytics. Use Host game icons for specific RimWorld things: concrete item/building/terrain/pawn defs, explicit backend `icon` refs, entity rows, resource quantities, construction assets, and other cases where real in-game art helps the player inspect game state. Icons annotate contract names, but raw LLM output, JSON inspectors, backend payloads, and stored advice contracts are not rewritten.
 
+Willie's construction scope keeps distinct view cues for diagnostic surfaces: Solver uses `🧮` for deterministic placement math and Requests uses `📥` for inbound demand/board state instead of reusing the generic construction brick.
+
 Large objects use the standard disclosure pattern: a real button header with
 `aria-expanded` / `aria-controls`, plus a conditionally rendered panel in normal
 document flow.
