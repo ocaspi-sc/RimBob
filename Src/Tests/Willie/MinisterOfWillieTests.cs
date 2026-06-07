@@ -241,6 +241,25 @@ public sealed class MinisterOfWillieTests
     }
 
     [Fact]
+    public async Task InboundZoneFlag_WhenGrowZoneOptionIsNonRectangular_KeepsManualPlacementNote()
+    {
+        FakePlacementSolver solver = FakePlacementSolver.WithOptions(PlacementOption());
+        FakeGrowZonePlacementSolver growZoneSolver = FakeGrowZonePlacementSolver.WithOptions(ZonePlacementOption(nonRectangular: true));
+        Harness harness = new(solver, growZoneSolver);
+        harness.SetStableState();
+        harness.Flags.Publish(ZoneFlag());
+
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
+
+        AdviceItem advice = harness.Bus.ActiveAdvice().Should().ContainSingle().Subject;
+        advice.Actions.Should().ContainSingle().Which.Apply.Should().BeNull();
+        advice.Actions.Should().NotContain(action => action.Apply is CreateGrowingZoneApply);
+        AdviceOption option = advice.Options.Should().ContainSingle().Subject;
+        option.TradeoffNote.Should().Contain("Non-rectangular growing area");
+        option.TradeoffNote.Should().Contain("place it manually");
+    }
+
+    [Fact]
     public async Task InboundFreezerFlag_WhenMaterialsAreShort_AttachesApplyPayload()
     {
         FakePlacementSolver solver = FakePlacementSolver.WithOptions(
@@ -663,7 +682,7 @@ public sealed class MinisterOfWillieTests
             EstimatedMaterials: [new MaterialEstimate("BlocksGranite", 5)],
             TradeoffNote: "Closest to kitchen.");
 
-    private static AdviceOption ZonePlacementOption()
+    private static AdviceOption ZonePlacementOption(bool nonRectangular = false)
     {
         IReadOnlyList<BlueprintAsset> cells = Enumerable.Range(20, 6)
             .SelectMany(z => Enumerable.Range(10, 6).Select(x => new BlueprintAsset(
@@ -672,6 +691,7 @@ public sealed class MinisterOfWillieTests
                 StuffDefName: null,
                 Cell: new MapCell(x, z),
                 Rotation: 0)))
+            .Where(asset => !nonRectangular || asset.Cell != new MapCell(15, 25))
             .ToList();
 
         return new AdviceOption(

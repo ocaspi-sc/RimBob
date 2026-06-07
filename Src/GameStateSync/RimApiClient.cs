@@ -77,7 +77,9 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
         }
         catch (HttpRequestException ex)
         {
-            throw new RimApiHttpException($"RIMAPI HTTP error at {path}: {(int?)response.StatusCode} {response.ReasonPhrase}", response.StatusCode, ex);
+            string detail = await ReadWriteFailureDetailsAsync(response, ct);
+            string detailSuffix = string.IsNullOrWhiteSpace(detail) ? string.Empty : $": {detail}";
+            throw new RimApiHttpException($"RIMAPI HTTP error at {path}: {(int?)response.StatusCode} {response.ReasonPhrase}{detailSuffix}", response.StatusCode, ex);
         }
 
         if (response.Content.Headers.ContentLength == 0)
@@ -96,12 +98,34 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
                 success.ValueKind != JsonValueKind.False)
                 return;
 
-            string errors = ReadStringArray(root, "errors");
+            string errors = ReadErrorDetails(root);
             throw new RimApiException($"RIMAPI rejected write at {path}: {errors}");
         }
         catch (JsonException)
         {
             return;
+        }
+    }
+
+    private static async Task<string> ReadWriteFailureDetailsAsync(HttpResponseMessage response, CancellationToken ct)
+    {
+        if (response.Content.Headers.ContentLength == 0)
+            return string.Empty;
+
+        string text = await response.Content.ReadAsStringAsync(ct);
+        if (string.IsNullOrWhiteSpace(text))
+            return string.Empty;
+
+        string trimmed = text.Trim();
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(trimmed);
+            string details = ReadErrorDetails(document.RootElement);
+            return string.IsNullOrWhiteSpace(details) ? trimmed : details;
+        }
+        catch (JsonException)
+        {
+            return trimmed;
         }
     }
 
@@ -203,6 +227,28 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
             return value.ToString();
 
         return string.Join(", ", value.EnumerateArray().Select(item => item.ToString()));
+    }
+
+    private static string ReadErrorDetails(JsonElement root)
+    {
+        if (root.ValueKind != JsonValueKind.Object)
+            return root.ToString();
+
+        List<string> details = [];
+        string errors = ReadStringArray(root, "errors");
+        if (!string.IsNullOrWhiteSpace(errors))
+            details.Add(errors);
+
+        if (root.TryGetProperty("message", out JsonElement message))
+        {
+            string messageText = message.ValueKind == JsonValueKind.String
+                ? message.GetString() ?? string.Empty
+                : message.ToString();
+            if (!string.IsNullOrWhiteSpace(messageText))
+                details.Add(messageText);
+        }
+
+        return string.Join(", ", details.Distinct(StringComparer.OrdinalIgnoreCase));
     }
 
     // ── Handshake ─────────────────────────────────────────────────────────────

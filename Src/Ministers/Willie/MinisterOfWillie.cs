@@ -531,14 +531,15 @@ public sealed class MinisterOfWillie(
         PlacementResult result = attempt.Result;
         IReadOnlyList<AdviceOption>? options = result.Options.Count == 0
             ? item.Options
-            : result.Options.Select(option => option with
+            : result.Options.Select(option =>
+                AnnotateManualZonePlacement(option with
                 {
                     Readiness = new AdviceOptionReadiness(
                         Draftable: ReadinessWire(result.Draftable),
                         PlacementValid: ReadinessWire(result.PlacementValid),
                         MaterialsReady: ReadinessWire(result.MaterialsReady),
                         ApplyReady: ReadinessWire(result.ApplyReady))
-                })
+                }))
                 .ToList();
 
         bool attachApplyActions = options is { Count: > 0 } &&
@@ -578,6 +579,44 @@ public sealed class MinisterOfWillie(
 
     private static AdviceAction? GrowingZoneApplyActionForOption(AdviceOption option)
     {
+        ZoneOptionShape? shape = ZoneOptionShapeFor(option);
+        if (shape is null)
+            return null;
+
+        if (shape.Rect.Area != shape.Cells.Count)
+            return null;
+
+        return new AdviceAction(
+            AdviceActionKind.DesignateZone,
+            $"Create the {option.Label} growing zone.",
+            Quantity: shape.Cells.Count,
+            Owner: "Willie",
+            WorkType: WorkType.Grow,
+            Apply: new CreateGrowingZoneApply(
+                Label: option.Label,
+                TargetSummary: option.Summary,
+                MapId: option.BlueprintGroup.MapId,
+                PlantDef: shape.PlantDef,
+                Rect: shape.Rect,
+                TargetCount: shape.Cells.Count));
+    }
+
+    private static AdviceOption AnnotateManualZonePlacement(AdviceOption option)
+    {
+        ZoneOptionShape? shape = ZoneOptionShapeFor(option);
+        if (shape is null || shape.Rect.Area == shape.Cells.Count)
+            return option;
+
+        return option with
+        {
+            TradeoffNote = AppendPlacementNote(
+                option.TradeoffNote ?? string.Empty,
+                "Non-rectangular growing area - place it manually in-game.")
+        };
+    }
+
+    private static ZoneOptionShape? ZoneOptionShapeFor(AdviceOption option)
+    {
         IReadOnlyList<BlueprintAsset> zoneAssets = option.BlueprintGroup.Assets
             .Where(asset => string.Equals(asset.Role, "zone_cell", StringComparison.OrdinalIgnoreCase))
             .ToList();
@@ -604,22 +643,8 @@ public sealed class MinisterOfWillie(
             Z1: cells.Min(cell => cell.Z),
             X2: cells.Max(cell => cell.X),
             Z2: cells.Max(cell => cell.Z));
-        if (rect.Area != cells.Count)
-            return null;
 
-        return new AdviceAction(
-            AdviceActionKind.DesignateZone,
-            $"Create the {option.Label} growing zone.",
-            Quantity: cells.Count,
-            Owner: "Willie",
-            WorkType: WorkType.Grow,
-            Apply: new CreateGrowingZoneApply(
-                Label: option.Label,
-                TargetSummary: option.Summary,
-                MapId: option.BlueprintGroup.MapId,
-                PlantDef: plantDefs[0],
-                Rect: rect,
-                TargetCount: cells.Count));
+        return new ZoneOptionShape(plantDefs[0], cells, rect);
     }
 
     private static bool IsZoneCellOption(AdviceOption option) =>
@@ -777,6 +802,11 @@ public sealed class MinisterOfWillie(
         foreach (AgentFlag flag in emittedFlags)
             flags.Publish(flag);
     }
+
+    private sealed record ZoneOptionShape(
+        string PlantDef,
+        IReadOnlyList<MapCell> Cells,
+        MapRect Rect);
 
     private sealed record PlacementSolveAttempt(
         PlacementResult? Result,

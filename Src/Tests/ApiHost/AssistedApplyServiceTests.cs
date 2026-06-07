@@ -636,6 +636,132 @@ public sealed class AssistedApplyServiceTests
     }
 
     [Fact]
+    public async Task ApplyAsync_WhenGrowingZoneTerrainNoLongerGrowable_ReturnsStaleWithoutPosting()
+    {
+        AdviceBus bus = new();
+        bus.Publish(Advice("willie_zone_request_active", GrowingZoneAction()) with { Minister = "Willie" });
+        MinimalRefreshHandler handler = new()
+        {
+            MapTerrainJson = TerrainWithOneNonGrowableCellJson(),
+            MapPlantsJson = EmptyListJson()
+        };
+        AssistedApplyService service = Service(bus, new ColonyState(), handler);
+
+        AssistedApplyResponse response = await service.ApplyAsync("willie_zone_request_active", 0);
+
+        response.Status.Should().Be("stale_advice");
+        response.Message.Should().Contain("support growing");
+        handler.GrowZonePosted.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ApplyAsync_WhenGrowingZoneRectOutsideTerrain_ReturnsStaleWithoutPosting()
+    {
+        AdviceBus bus = new();
+        bus.Publish(Advice("willie_zone_request_active", GrowingZoneAction()) with { Minister = "Willie" });
+        MinimalRefreshHandler handler = new()
+        {
+            MapTerrainJson = SmallGrowableTerrainJson(),
+            MapPlantsJson = EmptyListJson()
+        };
+        AssistedApplyService service = Service(bus, new ColonyState(), handler);
+
+        AssistedApplyResponse response = await service.ApplyAsync("willie_zone_request_active", 0);
+
+        response.Status.Should().Be("stale_advice");
+        response.Message.Should().Contain("outside");
+        handler.GrowZonePosted.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ApplyAsync_WhenGrowingZoneAlreadySatisfied_ReturnsAlreadySatisfiedWithoutPosting()
+    {
+        AdviceBus bus = new();
+        bus.Publish(Advice("willie_zone_request_active", GrowingZoneAction()) with { Minister = "Willie" });
+        MinimalRefreshHandler handler = new()
+        {
+            MapTerrainJson = GrowableTerrainJson(),
+            MapPlantsJson = EmptyListJson(),
+            MapZonesJson = ZonesJson(GrowingZoneJson(id: "existing-zone"))
+        };
+        AssistedApplyService service = Service(bus, new ColonyState(), handler);
+
+        AssistedApplyResponse response = await service.ApplyAsync("willie_zone_request_active", 0);
+
+        response.Status.Should().Be("already_satisfied");
+        AssertAppliedAction(bus, "already_satisfied", AdviceApplyKind.CreateGrowingZone);
+        handler.GrowZonePosted.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ApplyAsync_WhenExistingGrowingZoneHasNoPlantDef_DoesNotTreatItAsSatisfied()
+    {
+        AdviceBus bus = new();
+        bus.Publish(Advice("willie_zone_request_active", GrowingZoneAction()) with { Minister = "Willie" });
+        MinimalRefreshHandler handler = new()
+        {
+            MapTerrainJson = GrowableTerrainJson(),
+            MapPlantsJson = EmptyListJson(),
+            MapZonesJson = ZonesJson(GrowingZoneJson(id: "existing-zone", plantDef: null)),
+            MapZonesAfterGrowZoneJson = ZonesJson(
+                GrowingZoneJson(id: "existing-zone", plantDef: null),
+                GrowingZoneJson(id: "new-zone", plantDef: null))
+        };
+        AssistedApplyService service = Service(bus, new ColonyState(), handler);
+
+        AssistedApplyResponse response = await service.ApplyAsync("willie_zone_request_active", 0);
+
+        response.Status.Should().Be("applied");
+        handler.GrowZonePosted.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ApplyAsync_WhenGrowingZoneTargetCountDoesNotMatchRect_ReturnsValidationFailedWithoutRimApi()
+    {
+        AdviceBus bus = new();
+        bus.Publish(Advice("willie_zone_request_active", GrowingZoneAction(targetCount: 35)) with { Minister = "Willie" });
+        AssistedApplyService service = Service(bus, new ColonyState());
+
+        AssistedApplyResponse response = await service.ApplyAsync("willie_zone_request_active", 0);
+
+        response.Status.Should().Be("validation_failed");
+        response.Message.Should().Contain("target count");
+    }
+
+    [Fact]
+    public async Task ApplyAsync_WhenGrowingZoneTargetExceedsCap_ReturnsValidationFailedWithoutRimApi()
+    {
+        AdviceBus bus = new();
+        MapRect rect = new(0, 0, 16, 9);
+        bus.Publish(Advice("willie_zone_request_active", GrowingZoneAction(rect: rect, targetCount: rect.Area)) with { Minister = "Willie" });
+        AssistedApplyService service = Service(bus, new ColonyState());
+
+        AssistedApplyResponse response = await service.ApplyAsync("willie_zone_request_active", 0);
+
+        response.Status.Should().Be("validation_failed");
+        response.Message.Should().Contain("too broad");
+    }
+
+    [Fact]
+    public async Task ApplyAsync_WhenGrowingZoneAdviceExpired_ReturnsStaleWithoutRimApi()
+    {
+        AdviceBus bus = new();
+        bus.Publish(Advice("willie_zone_request_active", GrowingZoneAction()) with
+        {
+            Minister = "Willie",
+            Stamp = new AdviceStamp(DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddHours(1), null, 1_000, 2_000)
+        });
+        ColonyState state = new();
+        state.Economy.Update(new EconomyLedger(2_000, 0, "Cassandra", "Playing", false, "5th of Aprimay, 5500, 14h"));
+        AssistedApplyService service = Service(bus, state);
+
+        AssistedApplyResponse response = await service.ApplyAsync("willie_zone_request_active", 0);
+
+        response.Status.Should().Be("stale_advice");
+        response.Message.Should().Contain("game tick 2000");
+    }
+
+    [Fact]
     public async Task ApplyAsync_WhenGrowingZoneCellsAreOccupied_ReturnsStaleWithoutPosting()
     {
         AdviceBus bus = new();
@@ -802,20 +928,28 @@ public sealed class AssistedApplyServiceTests
                 AssetCount: assetCount));
     }
 
-    private static AdviceAction GrowingZoneAction() =>
-        new(
+    private static AdviceAction GrowingZoneAction(
+        MapRect? rect = null,
+        int? targetCount = null,
+        string plantDef = "Plant_Rice",
+        int mapId = 1)
+    {
+        MapRect actualRect = rect ?? new MapRect(10, 20, 15, 25);
+        int actualTargetCount = targetCount ?? actualRect.Area;
+        return new(
             AdviceActionKind.DesignateZone,
-            "Create the selected rice growing zone.",
-            Quantity: 36,
+            $"Create the selected {plantDef} growing zone.",
+            Quantity: actualTargetCount,
             Owner: "Willie",
             WorkType: WorkType.Grow,
             Apply: new CreateGrowingZoneApply(
                 Label: "Growing zone 10,20",
-                TargetSummary: "36-tile Plant_Rice growing zone at 10,20-15,25.",
-                MapId: 1,
-                PlantDef: "Plant_Rice",
-                Rect: new MapRect(10, 20, 15, 25),
-                TargetCount: 36));
+                TargetSummary: $"{actualTargetCount}-tile {plantDef} growing zone at {actualRect.X1},{actualRect.Z1}-{actualRect.X2},{actualRect.Z2}.",
+                MapId: mapId,
+                PlantDef: plantDef,
+                Rect: actualRect,
+                TargetCount: actualTargetCount));
+    }
 
     private static MinimalRefreshHandler HandlerWithSingleStove() =>
         new()
@@ -934,18 +1068,32 @@ public sealed class AssistedApplyServiceTests
             rotation = 2
         };
 
-    private static string GrowableTerrainJson() =>
+    private static string GrowableTerrainJson() => TerrainJson(30, 30, ["Soil"], [900, 0]);
+
+    private static string SmallGrowableTerrainJson() => TerrainJson(12, 12, ["Soil"], [144, 0]);
+
+    private static string TerrainWithOneNonGrowableCellJson() => TerrainJson(
+        30,
+        30,
+        ["Soil", "Sand"],
+        [610, 0, 1, 1, 289, 0]);
+
+    private static string TerrainJson(
+        int width,
+        int height,
+        IReadOnlyList<string> palette,
+        IReadOnlyList<int> grid) =>
         JsonSerializer.Serialize(new
         {
             success = true,
             data = new
             {
-                width = 30,
-                height = 30,
-                palette = new[] { "Soil" },
-                grid = new[] { 900, 0 },
+                width,
+                height,
+                palette,
+                grid,
                 floor_palette = Array.Empty<string>(),
-                floor_grid = new[] { 900, 0 }
+                floor_grid = grid
             },
             errors = (string[]?)null
         });
@@ -957,7 +1105,8 @@ public sealed class AssistedApplyServiceTests
         {"success":true,"data":{"things_defs":[
           {"def_name":"Plant_Rice","label":"rice plant","category":"Plant","thing_class":"Plant","is_weapon":false,"is_apparel":false,"is_item":false,"is_plant":true,"is_building":false,"is_medicine":false,"is_drug":false,"nutrition":0.05,"stack_limit":null}
         ],"terrain_defs":[
-          {"def_name":"Soil","label":"soil","fertility":1.0,"affordances":["Walkable","GrowSoil"]}
+          {"def_name":"Soil","label":"soil","fertility":1.0,"affordances":["Walkable","GrowSoil"]},
+          {"def_name":"Sand","label":"sand","fertility":0.1,"affordances":["Walkable"]}
         ],"animal_defs":[]},"errors":null}
         """;
 
@@ -969,17 +1118,17 @@ public sealed class AssistedApplyServiceTests
             errors = (string[]?)null
         });
 
-    private static object GrowingZoneJson() =>
+    private static object GrowingZoneJson(
+        string id = "growing-zone-1",
+        string? plantDef = "Plant_Rice",
+        int cellsCount = 36) =>
         new
         {
-            id = "growing-zone-1",
+            id,
             type = "GrowingZone",
             label = "Growing zone",
-            plant_def = "Plant_Rice",
-            cells_count = 36,
-            cells = Enumerable.Range(20, 6)
-                .SelectMany(z => Enumerable.Range(10, 6).Select(x => new { x, y = 0, z }))
-                .ToArray()
+            plant_def = plantDef,
+            cells_count = cellsCount
         };
 
     private sealed class ThrowingHandler : HttpMessageHandler

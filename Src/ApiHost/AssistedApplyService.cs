@@ -677,6 +677,7 @@ public sealed class AssistedApplyService(
         if (refreshFailure is not null)
             return refreshFailure;
 
+        HashSet<string> growingZoneIdsBeforeWrite = GrowingZoneIds(state);
         GrowZoneApplyAssessment assessment = AssessGrowingZone(state, apply);
         if (assessment.Outcome == GrowZoneApplyOutcome.WrongMap)
             return Response("stale_advice", "Advice targets a different map than the current colony map.", apply.Kind, adviceId, actionIndex);
@@ -725,7 +726,8 @@ public sealed class AssistedApplyService(
         if (readbackFailure is not null)
             return readbackFailure;
 
-        if (!HasMatchingGrowingZone(state, apply))
+        MapZoneRecord? createdZone = NewMatchingGrowingZone(state, growingZoneIdsBeforeWrite, apply);
+        if (createdZone is null)
         {
             return Response(
                 "readback_inconclusive",
@@ -742,7 +744,7 @@ public sealed class AssistedApplyService(
             apply.Kind,
             adviceId,
             actionIndex,
-            new { plant_def = apply.PlantDef, rect = apply.Rect, target_count = apply.TargetCount });
+            new { plant_def = apply.PlantDef, rect = apply.Rect, target_count = apply.TargetCount, zone_id = createdZone.Id });
     }
 
     private static GrowZoneApplyAssessment AssessGrowingZone(ColonyState state, CreateGrowingZoneApply apply)
@@ -781,24 +783,50 @@ public sealed class AssistedApplyService(
 
     private static bool HasMatchingGrowingZone(ColonyState state, CreateGrowingZoneApply apply)
     {
-        IReadOnlyList<MapCell> targetCells = CellsIn(apply.Rect);
         foreach (MapZoneRecord zone in state.Zones.Value.Zones.Where(zone => zone.IsGrowing))
         {
+            if (!string.Equals(zone.PlantDef, apply.PlantDef, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            if (zone.CellCount == apply.TargetCount)
+                return true;
+        }
+
+        return false;
+    }
+
+    private static HashSet<string> GrowingZoneIds(ColonyState state) =>
+        state.Zones.Value.Zones
+            .Where(zone => zone.IsGrowing && !string.IsNullOrWhiteSpace(zone.Id))
+            .Select(zone => zone.Id)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    private static MapZoneRecord? NewMatchingGrowingZone(
+        ColonyState state,
+        HashSet<string> beforeWriteIds,
+        CreateGrowingZoneApply apply)
+    {
+        foreach (MapZoneRecord zone in state.Zones.Value.Zones.Where(zone => zone.IsGrowing))
+        {
+            if (string.IsNullOrWhiteSpace(zone.Id))
+                continue;
+
+            if (beforeWriteIds.Contains(zone.Id))
+                continue;
+
+            if (zone.CellCount != apply.TargetCount)
+                continue;
+
             if (!string.IsNullOrWhiteSpace(zone.PlantDef) &&
                 !string.Equals(zone.PlantDef, apply.PlantDef, StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
 
-            HashSet<MapCell> zoneCells = zone.Cells.Select(cell => cell.ToMapCell()).ToHashSet();
-            if (zoneCells.Count > 0 && targetCells.All(zoneCells.Contains))
-                return true;
-
-            if (zone.Bounds is not null && RectContains(zone.Bounds, apply.Rect))
-                return true;
+            return zone;
         }
 
-        return false;
+        return null;
     }
 
     private static HashSet<MapCell> GrowZoneBlockedCells(ColonyState state)
@@ -850,12 +878,6 @@ public sealed class AssistedApplyService(
         rect.Z1 >= 0 &&
         rect.X2 < terrain.Width &&
         rect.Z2 < terrain.Height;
-
-    private static bool RectContains(MapRect outer, MapRect inner) =>
-        outer.X1 <= inner.X1 &&
-        outer.Z1 <= inner.Z1 &&
-        outer.X2 >= inner.X2 &&
-        outer.Z2 >= inner.Z2;
 
     private static string? FirstBlueprintValidationFailure(PlacementValidationResult validation)
     {

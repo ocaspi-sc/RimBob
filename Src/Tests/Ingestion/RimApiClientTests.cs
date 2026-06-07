@@ -934,6 +934,20 @@ public sealed class RimApiClientTests
     }
 
     [Fact]
+    public async Task CreateGrowZone_WhenHttpFailsWithErrorEnvelope_IncludesServerMessage()
+    {
+        CaptureHandler handler = new(
+            Json("""{"success":false,"data":{},"errors":["Internal server error: zoneManager race"],"message":"write failed"}"""),
+            HttpStatusCode.InternalServerError);
+        using HttpClient http = MakeClient(handler);
+
+        Func<Task> act = () => new RimApiClient(http).CreateGrowZoneAsync(7, "Plant_Rice", 10, 20, 12, 22);
+
+        await act.Should().ThrowAsync<RimApiException>()
+            .WithMessage("*500*Internal server error: zoneManager race*write failed*");
+    }
+
+    [Fact]
     public async Task GetLords_WhenApiReturnsForkPayload_MapsCurrentFields()
     {
         using HttpClient http = MakeClient(new PathRouter()
@@ -1164,7 +1178,7 @@ public sealed class RimApiClientTests
         }
     }
 
-    private sealed class CaptureHandler(HttpContent responseContent) : HttpMessageHandler
+    private sealed class CaptureHandler(HttpContent responseContent, HttpStatusCode statusCode = HttpStatusCode.OK) : HttpMessageHandler
     {
         public HttpMethod? Method { get; private set; }
         public string Path { get; private set; } = "";
@@ -1179,7 +1193,7 @@ public sealed class RimApiClientTests
             Path = request.RequestUri?.AbsolutePath ?? "";
             Query = request.RequestUri?.Query ?? "";
             Body = request.Content is null ? "" : await request.Content.ReadAsStringAsync(ct);
-            return new HttpResponseMessage(HttpStatusCode.OK) { Content = responseContent };
+            return new HttpResponseMessage(statusCode) { Content = responseContent };
         }
     }
 }
