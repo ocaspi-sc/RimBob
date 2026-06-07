@@ -54,7 +54,7 @@ public sealed class AdviceActionApplySerializationTests
     public void CreateGrowingZoneApply_SerializesAndRoundTrips()
     {
         AdviceAction action = new(
-            AdviceActionKind.DesignateZone,
+            AdviceActionKind.DesignateZoneReq,
             "Create the rice growing zone.",
             Apply: new CreateGrowingZoneApply(
                 Label: "Growing zone 10,20",
@@ -67,6 +67,7 @@ public sealed class AdviceActionApplySerializationTests
         string json = JsonSerializer.Serialize(action, JsonOptions);
         AdviceAction? roundTripped = JsonSerializer.Deserialize<AdviceAction>(json, JsonOptions);
 
+        json.Should().Contain("\"kind\":\"designate_zone_req\"");
         json.Should().Contain("\"kind\":\"create_growing_zone\"");
         json.Should().Contain("\"plant_def\":\"Plant_Rice\"");
         json.Should().Contain("\"target_count\":36");

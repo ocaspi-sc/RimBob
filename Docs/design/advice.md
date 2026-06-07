@@ -74,7 +74,7 @@ surface.
 Action kinds are shared across ministers and should describe the operation well
 enough to stand alone in the dashboard and future Auto mapping. Prefer explicit
 names such as `mark_harvest`, `mark_hunt`, `place_blueprint`,
-`production_bill`, `set_priority`, `designate_zone`, `set_stockpile_zone`, and
+`production_bill`, `set_priority`, `designate_zone_req`, `set_stockpile_zone`, and
 `unforbid` over generic `note` output when the operation is known.
 
 #### Policy Knobs vs. Targeted Designations
@@ -84,7 +84,7 @@ Two classes of action exist and they have different risk profiles:
 - **Targeted designation** — `mark_harvest`, `mark_hunt`, `place_blueprint`,
   `unforbid`. One-off, spatially explicit, additive, and ephemeral; the game
   clears it once done. Low blast radius.
-- **Policy knob** — `set_priority`, `designate_zone`, `set_stockpile_zone`,
+- **Policy knob** — `set_priority`, `designate_zone_req`, `set_stockpile_zone`,
   broad `production_bill`. Colony-wide, persistent, and *overwrites hand-tuned
   player intent* the briefing cannot see. High blast radius.
 

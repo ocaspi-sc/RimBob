@@ -587,7 +587,7 @@ public sealed class MinisterOfWillie(
             return null;
 
         return new AdviceAction(
-            AdviceActionKind.DesignateZone,
+            AdviceActionKind.DesignateZoneReq,
             $"Create the {option.Label} growing zone.",
             Quantity: shape.Cells.Count,
             Owner: "Willie",

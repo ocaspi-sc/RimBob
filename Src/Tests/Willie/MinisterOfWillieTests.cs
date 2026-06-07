@@ -200,7 +200,7 @@ public sealed class MinisterOfWillieTests
         advice.Title.Should().Contain("Growing request");
         advice.Body.Should().Contain("Grow-zone solver could not suggest zone options");
         AdviceAction action = advice.Actions.Should().ContainSingle().Subject;
-        action.Kind.Should().Be(AdviceActionKind.DesignateZone);
+        action.Kind.Should().Be(AdviceActionKind.DesignateZoneReq);
         action.Apply.Should().BeNull();
         solver.CallCount.Should().Be(0);
         growZoneSolver.CallCount.Should().Be(1);
@@ -229,7 +229,7 @@ public sealed class MinisterOfWillieTests
         advice.Actions.Should().HaveCount(2);
         advice.Actions.Should().NotContain(action => action.Apply is PlaceBlueprintGroupApply);
         AdviceAction applyAction = advice.Actions.Should().Contain(action => action.Apply is CreateGrowingZoneApply).Subject;
-        applyAction.Kind.Should().Be(AdviceActionKind.DesignateZone);
+        applyAction.Kind.Should().Be(AdviceActionKind.DesignateZoneReq);
         CreateGrowingZoneApply apply = applyAction.Apply.Should().BeOfType<CreateGrowingZoneApply>().Subject;
         apply.PlantDef.Should().Be("Plant_Rice");
         apply.Rect.Should().Be(new MapRect(10, 20, 15, 25));

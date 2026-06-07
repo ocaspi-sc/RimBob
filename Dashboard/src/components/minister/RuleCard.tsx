@@ -355,7 +355,7 @@ function actionMatchesEmission(action: AdviceAction, emission: RuleEmission): bo
   }
 
   if (emissionKind === 'request_zone') {
-    return actionKind === 'designate_zone';
+    return actionKind === 'designate_zone_req';
   }
 
   if (emissionKind === 'request_attention') {

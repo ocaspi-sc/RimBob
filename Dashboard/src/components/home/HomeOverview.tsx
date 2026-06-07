@@ -1134,7 +1134,7 @@ function actionDisplay(action: AdviceAction, item: AdviceItem): HomeActionDispla
     };
   }
 
-  if (normalizedKind === 'designate_zone') {
+  if (normalizedKind === 'designate_zone_req') {
     const target = zoneActionTarget(action);
     return {
       iconKey: target.iconKey,

@@ -937,7 +937,7 @@ public sealed class AssistedApplyServiceTests
         MapRect actualRect = rect ?? new MapRect(10, 20, 15, 25);
         int actualTargetCount = targetCount ?? actualRect.Area;
         return new(
-            AdviceActionKind.DesignateZone,
+            AdviceActionKind.DesignateZoneReq,
             $"Create the selected {plantDef} growing zone.",
             Quantity: actualTargetCount,
             Owner: "Willie",

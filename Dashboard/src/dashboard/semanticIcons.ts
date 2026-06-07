@@ -271,7 +271,7 @@ const fieldIcons: Record<string, SemanticIconSpec> = {
   table_butcher: item('TableButcher', 'Butcher table icon', 'BT'),
   plant_berry: item('Plant_Berry', 'Berry plant icon', 'BE'),
   plant_rice: item('Plant_Rice', 'Rice plant icon', 'RI'),
-  designate_zone: item('Plant_Rice', 'Growing zone action icon', 'ZN'),
+  designate_zone_req: item('Plant_Rice', 'Growing zone action icon', 'ZN'),
   mark_harvest: common.harvest,
   mark_harvest_area: common.harvest,
   mark_hunt: item('Gun_Revolver', 'Hunt icon', 'HU'),

@@ -302,7 +302,7 @@ public static class FoodChainModelBuilder
                 case AdviceActionKind.MarkHunt:
                     _steps.Add("hunt.hunt");
                     break;
-                case AdviceActionKind.DesignateZone:
+                case AdviceActionKind.DesignateZoneReq:
                     _steps.Add("grow.zone");
                     break;
                 case AdviceActionKind.ProductionBill:

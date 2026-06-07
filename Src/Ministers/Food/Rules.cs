@@ -976,7 +976,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             Apply: HuntApply(briefing));
 
     private static AdviceAction GrowingZoneAction(FoodCropCandidate candidate) =>
-        new(AdviceActionKind.DesignateZone,
+        new(AdviceActionKind.DesignateZoneReq,
             $"Create about {candidate.Tiles} emergency {candidate.Label} growing tiles; use fertile soil near storage when possible.",
             Quantity: candidate.Tiles,
             Owner: MinisterName,

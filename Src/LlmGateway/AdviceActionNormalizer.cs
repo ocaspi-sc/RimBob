@@ -60,7 +60,7 @@ internal static class AdviceActionNormalizer
     }
 
     private static bool ShouldInferWorkType(AdviceActionKind kind) => kind is
-        AdviceActionKind.DesignateZone or
+        AdviceActionKind.DesignateZoneReq or
         AdviceActionKind.MarkHarvest or
         AdviceActionKind.MarkHunt or
         AdviceActionKind.ProductionBill or

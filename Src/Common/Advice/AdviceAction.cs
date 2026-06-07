@@ -189,7 +189,7 @@ public static class AssistedApplyLimits
 [JsonConverter(typeof(SnakeCaseLowerEnumConverter<AdviceActionKind>))]
 public enum AdviceActionKind
 {
-    DesignateZone,
+    DesignateZoneReq,
     MarkHarvest,
     MarkHunt,
     PlaceBlueprint,

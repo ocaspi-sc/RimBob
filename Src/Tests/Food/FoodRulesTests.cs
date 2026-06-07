@@ -137,7 +137,7 @@ public sealed class FoodRulesTests
 
         AdviceItem advice = AdviceByRule(decision, "emergency_food_flag");
         advice.Priority.Should().Be(Priority.Critical);
-        AdviceByRule(decision, "expand_growing_capacity").Actions.Should().Contain(s => s.Kind == AdviceActionKind.DesignateZone);
+        AdviceByRule(decision, "expand_growing_capacity").Actions.Should().Contain(s => s.Kind == AdviceActionKind.DesignateZoneReq);
         AdviceByRule(decision, "freezer_missing").Actions.Should().Contain(s => s.Kind == AdviceActionKind.PlaceBlueprint);
         advice.Actions.Should().NotContain(s => s.Kind == AdviceActionKind.Note);
         AgentFlag flag = FlagById(decision, "food:emergency_food_flag");
@@ -177,7 +177,7 @@ public sealed class FoodRulesTests
         advice.Actions.Should().Contain(s =>
             s.Kind == AdviceActionKind.SetStockpileZone &&
             s.Quantity == 46);
-        AdviceByRule(decision, "expand_growing_capacity").Actions.Should().Contain(s => s.Kind == AdviceActionKind.DesignateZone);
+        AdviceByRule(decision, "expand_growing_capacity").Actions.Should().Contain(s => s.Kind == AdviceActionKind.DesignateZoneReq);
         AdviceByRule(decision, "freezer_missing").Actions.Should().Contain(s => s.Kind == AdviceActionKind.PlaceBlueprint);
         AgentFlag flag = FlagById(decision, "food:emergency_food_flag");
         flag.BuildingRequests.Should().Contain(r =>
@@ -767,7 +767,7 @@ public sealed class FoodRulesTests
 
         AdviceItem advice = AdviceByRule(decision, "expand_growing_capacity");
         AdviceAction Action = advice.Actions.Should().ContainSingle().Subject;
-        Action.Kind.Should().Be(AdviceActionKind.DesignateZone);
+        Action.Kind.Should().Be(AdviceActionKind.DesignateZoneReq);
         Action.Quantity.Should().Be(36);
         Action.Instruction.Should().Contain("rice");
         advice.Body.Should().Contain("winter margin");
@@ -870,7 +870,7 @@ public sealed class FoodRulesTests
 
         AdviceAction Action = AdviceByRule(decision, "expand_growing_capacity")
             .Actions.Should().ContainSingle().Subject;
-        Action.Kind.Should().Be(AdviceActionKind.DesignateZone);
+        Action.Kind.Should().Be(AdviceActionKind.DesignateZoneReq);
         Action.Instruction.Should().Contain("rice");
         AdviceByRule(decision, "expand_growing_capacity").Body.Should().Contain("1 day of winter margin");
     }

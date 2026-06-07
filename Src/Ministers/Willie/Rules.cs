@@ -248,7 +248,7 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
             "The requesting minister owns crop, size, and food-chain reason; Willie owns spatial placement. Zone writes remain player-click-gated and are not attached until the create-zone apply path ships.",
             [
                 new AdviceAction(
-                    AdviceActionKind.DesignateZone,
+                    AdviceActionKind.DesignateZoneReq,
                     $"Review Willie placement options for a {tilePrefix}{plant}growing zone; no zone Apply action is attached yet.",
                     Owner: MinisterName)
             ],
