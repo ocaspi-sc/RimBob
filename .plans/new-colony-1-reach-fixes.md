@@ -21,7 +21,9 @@ Run `dotnet test Src/RimBob.sln --filter "kind=reach"` to see them RED (8 today)
 | 5 | Food-buffer: honest edible buffer + latent figure (Option C) | `Snapshot_DerivesTargetFoodBuffer` | `Src/StateStore/Derivations/FoodBriefingDerivation.cs` | M |
 | 6 | Willie snapshot-mode anchor/coverage | `Willie_NewColony1_Standalone_FlagsMissingKitchen`, `Willie_NewColony1_PlacesHighPriorityBeds` | `Src/Ministers/Willie/Rules.cs`, Willie briefing derivation | L |
 
-Recommended landing order: **1 → 2 → 3 → 4 → 5 → 6** (rising cost; slice 5 should follow slice 2 because both concern forbidden food; slice 6 is the heaviest and most independent). Slices are otherwise independent and each can land alone; the only shared file is `Food/Rules.cs` (slices 1, 2, 4) — land those in sequence to avoid rebases, or in any order with a clean rebase since they touch different rules.
+Landing order (revised 2026-06-08): **1 → 2 → 3 → 5 → 4 → 6**. Slices 1–3 landed in the original order. **Slice 5 now precedes slice 4** — see the decision note below. Slice 6 is the heaviest and most independent, last. The only shared file is `Food/Rules.cs` (slices 1, 2, 4); land those in sequence to avoid rebases.
+
+> **Decision (2026-06-08): reorder 5 before 4.** A live probe of the fixture showed `EstimatedDaysOfFood = 0.51` days (forbidden food excluded), with 106 forbidden/unclassified food units physically present (the ~10 days that are one unforbid-click away). Both slice-4 reach tests (`GrowingCapacityIsNotHigh`, `DoesNotPushFarHunt`) fire **High** today because priority keys off `EstimatedDaysOfFood`; a pure days-threshold tweak can never demote them (at 0.5 days any sane threshold yields High — starvation *should* be High). The demotion needs a non-days "real food exists" signal. Under Option C that signal is exactly slice 5's **latent-food field** (`EstimatedDaysOfFood` stays ~0.5 even after slice 5). So slice 4's demotion logically depends on slice 5. User chose to reorder rather than re-derive slice 5's accounting ad-hoc inside the Chef rule.
 
 ---
 
