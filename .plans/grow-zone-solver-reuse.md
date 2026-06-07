@@ -1,6 +1,6 @@
 # Grow-Zone Solver Reuse Refactor
 
-**Status:** IMPLEMENTED in `codex/grow-zone-solver-reuse`; pending landing.
+**Status:** LANDED `e041c04`.
 **Owner:** Willie placement.
 **Scope:** Refactor the landed `GrowZonePlacementSolver` so it reuses Willie's shared placement machinery (`AnchorResolver`, `PlacementEvidence` free-rect search) instead of reimplementing anchors, occupancy, and a brute-force rectangle scan. Fixes a reuse/altitude gap and an efficiency hot-spot found in `/simplify` review of `14ffbcd`.
 
@@ -124,3 +124,15 @@ Live proof: run a cabinet rules cycle on a colony with growable terrain, call `G
 - No path-cost scoring for zones.
 - No change to the building `PlacementSolver` behavior or its option output.
 - Do not merge the zone board / endpoints into the building board; that separation is the parent plan's locked decision.
+
+---
+
+## Summary — landed `e041c04`
+
+Grow-zone placement now shares Willie's existing machinery instead of duplicating it. +505/−151 across 10 files; building solver behavior unchanged.
+
+- **Free-rect engine generalized.** `PlacementEvidence.BuildFreeRects`/`BuildClearRunRight` now take an `isBlocked` predicate (`IReadOnlySet<MapCell> blocked` → `blocked.Contains`). The building `Build(...)` path delegates with `occupied.Contains`, so `PlacementSolver` is byte-for-byte unchanged. Closes the standing "terrain affordance absent" TODO. (Chose the predicate-overload option, not the separate-scanner extraction — smaller building diff, as the plan preferred.)
+- **Growable zone evidence.** Zone path feeds a growable+unblocked mask (non-growable terrain + growing zones + stockpiles + rooms + crops) into that scanner and gets maximal free rects directly. Brute-force `EnumerateCandidates` / `TryBuildCandidate` / `CandidateDimensions` / `BlockedCells` deleted — the `O(dims·W·H·tiles)` scan is gone.
+- **Anchor reuse.** `AnchorResolver.ResolveNear` split into an `(IReadOnlyList<AdjacencyHint>, briefing, stockpiles?)` overload; the building call delegates with `spec.Adjacency`. New `ResolveStockpileAnchors` + `AnchorMatchReason.StockpileCenter` give zones their storage anchors; `ZoneAnchors` deleted.
+- **Cleanups.** All 3 incidental dead-code items removed (incl. `ResourceRequestNormalizer.InferZoneClass`).
+- **Tests.** Added `AnchorResolverTests` (+30), `PlacementEvidenceFreeSpaceTests` (+19), `GrowZonePlacementSolverTests` (+13). Zone stays inspect-only (`ApplyReady: Blocked`); Apply shipped separately under the parent plan (`8448e9e`).
