@@ -263,6 +263,36 @@ public sealed class WelfareRulesTests
         AssertAllRulesIncludeTableAndStableFallback(decision);
     }
 
+    [Theory]
+    [InlineData("Chilly")]
+    [InlineData("EnvironmentCold")]
+    public void RimWorldColdThoughtLabels_EmitTemperatureComfortHeaterRequest(string exampleLabel)
+    {
+        WelfareSourceBriefing briefing = LoadFixture("too-cold") with
+        {
+            ThoughtDigest = new WelfareThoughtDigest(
+            [
+                new WelfareThoughtGroup(ThoughtCategory.Temperature, PawnCount: 2, WorstOffset: -4f, exampleLabel)
+            ])
+        };
+
+        ProjectedRuleRun decision = Evaluate(briefing);
+
+        decision.Trace.Should().Be("temperature_comfort");
+        AdviceItem advice = decision.Advice.Should().ContainSingle().Subject;
+        advice.Id.Should().Be("welfare_temperature_comfort");
+        advice.Body.Should().Contain(exampleLabel);
+
+        AgentFlag flag = decision.Flags.Should().ContainSingle().Subject;
+        BuildingRequest request = flag.BuildingRequests.Should().ContainSingle().Subject;
+        request.TargetClass.Should().Be(BuildingClass.Heater);
+        request.TargetDef.Should().Be("Heater");
+        request.RoomClass.Should().Be(RoomClass.Barracks);
+        request.RequestedFrom.Should().Be("Willie");
+
+        decision.Effects.OfType<Escalate>().Should().BeEmpty();
+    }
+
     [Fact]
     public void TooHot_EmitsTemperatureComfortAdviceAndCoolerRequest()
     {

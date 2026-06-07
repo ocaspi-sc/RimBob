@@ -190,8 +190,6 @@ public sealed class AdviceForNewColony1Tests
     }
 
     [Fact]
-    // REACH: temperature_comfort advice + heater request; RED until the temperature rule fires - see .plans/advice-for-new-colony-1.md
-    [Trait("kind", "reach")]
     public async Task Welfare_NewColony1_EmitsTemperature()
     {
         NewColonyScenario scenario = await Scenario.Value;

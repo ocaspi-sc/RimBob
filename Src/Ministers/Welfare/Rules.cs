@@ -331,7 +331,7 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
     private static TemperatureDirection SniffTemperatureDirection(string label)
     {
         string normalized = label.ToLowerInvariant().Replace(" ", "", StringComparison.Ordinal);
-        bool isCold = ContainsAnyToken(normalized, "cold", "snap", "freez", "hypothermia");
+        bool isCold = ContainsAnyToken(normalized, "cold", "chill", "frost", "froz", "snap", "freez", "hypothermia");
         bool isHot = ContainsAnyToken(normalized, "hot", "heat", "wave", "heatstroke");
         if (isCold && !isHot) return TemperatureDirection.Cold;
         if (isHot && !isCold) return TemperatureDirection.Hot;
