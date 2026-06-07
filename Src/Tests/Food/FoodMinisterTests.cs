@@ -268,6 +268,9 @@ public sealed class FoodMinisterTests
                 new ColonistRecord("p3", "P3", 30, "Female", 1f, 0.7f, 1f, false, false, null, null, [], [])
             ]));
             Colony.Resources.Update(new ResourceSummary(100, 0f, 80, days * FoodNutrition.NutritionPerColonistPerDay * 3, 20, 20, 0, 0, 0f));
+            Colony.Stockpiles.Update(new StockpileLedger(
+                [new StockpileZone("food-stockpile", "StockpileZone", "food", 20, new MapPosition(10, 0, 10))],
+                new Dictionary<string, int>()));
             Colony.Buildings.Update(new BuildingRegistry([new BuildingRecord("cooler1", "Cooler", 1f, null, null)]));
             Colony.Animals.Update(new AnimalRegistry(Enumerable.Range(0, wildAnimals)
                 .Select(i => new AnimalRecord($"a{i}", animalDef, false, 1f))

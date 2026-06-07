@@ -42,7 +42,7 @@ public sealed class FoodRulesTests
         decision.Diagnostics.MatchedSignals.Should().Contain(signal =>
             signal.Rule == "expand_growing_capacity" &&
             signal.Outcome == RuleOutcome.Selected);
-        decision.Diagnostics.AllRules.Should().HaveCount(13);
+        decision.Diagnostics.AllRules.Should().HaveCount(14);
         decision.Diagnostics.AllRules.Should().Contain(row =>
             row.Rule == "emergency_food_flag" &&
             row.Outcome == RuleOutcome.Selected &&
@@ -168,6 +168,84 @@ public sealed class FoodRulesTests
             r.RequestedFrom == "Willie");
         growFlag.Attention.Should().BeNull();
         growFlag.BuildingRequests.Should().Contain(r => r.TargetClass == BuildingClass.ProductionBench);
+    }
+
+    [Fact]
+    public void KnownFoodWithoutStockpile_RequestsWillieStockpile()
+    {
+        FoodBriefing briefing = Briefing(days: 10.7f) with
+        {
+            FoodUnits = 57,
+            MealsCount = 57,
+            RawFoodCount = 0,
+            Storage = new FoodStorageSummary(0, 0, null, null)
+            {
+                UnpositionedFoodUnits = 57
+            },
+            StockpileCells = 0
+        };
+
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
+
+        AdviceItem advice = AdviceByRule(decision, "food_stockpile_missing");
+        advice.Priority.Should().Be(Priority.Medium);
+        advice.Body.Should().Contain("57 food unit(s) are unpositioned");
+        advice.Body.Should().Contain("0 reachable food stockpile cells");
+        AdviceAction action = advice.Actions.Should().ContainSingle().Subject;
+        action.Kind.Should().Be(AdviceActionKind.SetStockpileZone);
+        action.Owner.Should().Be("Willie");
+        action.Quantity.Should().Be(57);
+
+        AgentFlag flag = FlagById(decision, "food:food_stockpile_missing");
+        BuildingRequest request = flag.BuildingRequests.Should().ContainSingle().Subject;
+        request.TargetClass.Should().Be(BuildingClass.Stockpile);
+        request.RoomClass.Should().Be(RoomClass.Storage);
+        request.RequestedFrom.Should().Be("Willie");
+        request.Priority.Should().Be(Priority.Medium);
+        request.Quantity.Should().Be(57);
+    }
+
+    [Fact]
+    public void KnownFoodWithStockpile_DoesNotRequestFoodStockpileMissing()
+    {
+        FoodBriefing briefing = Briefing(days: 10.7f) with
+        {
+            FoodUnits = 57,
+            MealsCount = 57,
+            RawFoodCount = 0,
+            StockpileCells = 8,
+            Storage = new FoodStorageSummary(1, 8, null, null)
+            {
+                PositionedFoodUnits = 57
+            }
+        };
+
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
+
+        decision.Advice.Should().NotContain(advice => advice.Id == "chef_food_stockpile_missing");
+        decision.Flags.Should().NotContain(flag => flag.Id == "food:food_stockpile_missing");
+    }
+
+    [Fact]
+    public void NullBufferWithFoodAndNoStockpile_DoesNotUseFoodStockpileMissing()
+    {
+        FoodBriefing briefing = Briefing(days: null) with
+        {
+            FoodUnits = 57,
+            MealsCount = 57,
+            RawFoodCount = 0,
+            Storage = new FoodStorageSummary(0, 0, null, null)
+            {
+                UnpositionedFoodUnits = 57
+            },
+            StockpileCells = 0
+        };
+
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
+
+        decision.Trace.Should().Be("unknown_food_state");
+        decision.Advice.Should().NotContain(advice => advice.Id == "chef_food_stockpile_missing");
+        decision.Flags.Should().NotContain(flag => flag.Id == "food:food_stockpile_missing");
     }
 
     [Fact]

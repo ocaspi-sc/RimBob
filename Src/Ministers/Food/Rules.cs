@@ -73,6 +73,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
     [
         new("nutrition_signal_gap", MatchesNutritionSignalGap, NutritionSignalGapReason, briefing => BuildNutritionSignalGap(briefing, now)),
         new("unknown_food_state", MatchesUnknownFoodState, UnknownFoodStateReason, briefing => BuildUnknownFoodState(briefing, now)),
+        new("food_stockpile_missing", MatchesFoodStockpileMissing, FoodStockpileMissingReason, briefing => BuildFoodStockpileMissing(briefing, now)),
         new("emergency_food_flag", MatchesEmergencyFoodFlag, EmergencyFoodFlagReason, briefing => BuildEmergencyFoodFlag(briefing, now)),
         new("harvest_mature_crops", MatchesHarvestMatureCrops, HarvestMatureCropsReason, briefing => BuildHarvestMatureCrops(briefing, now)),
         new("meals_understocked", MatchesMealsUnderstocked, MealsUnderstockedReason, briefing => BuildMealsUnderstocked(briefing, now)),
@@ -132,6 +133,76 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 quantity: null,
                 priority: Priority.High)),
             true);
+
+    private static bool MatchesFoodStockpileMissing(FoodBriefing briefing) =>
+        briefing.EstimatedDaysOfFood is not null &&
+        FoodStockpileVisibleFoodUnits(briefing) > 0 &&
+        briefing.StockpileCells == 0;
+
+    private static string FoodStockpileMissingReason(FoodBriefing briefing)
+    {
+        int visibleFoodUnits = FoodStockpileVisibleFoodUnits(briefing);
+        if (MatchesFoodStockpileMissing(briefing))
+            return briefing.Storage.UnpositionedFoodUnits > 0
+                ? $"{briefing.Storage.UnpositionedFoodUnits} food units are unpositioned with 0 reachable stockpile cells"
+                : $"{visibleFoodUnits} visible food units exist with 0 reachable stockpile cells";
+
+        if (briefing.EstimatedDaysOfFood is null)
+            return "days-of-food is unavailable, so nutrition visibility rules own stockpile setup";
+
+        if (visibleFoodUnits <= 0)
+            return "no visible food units need stockpile placement";
+
+        return $"{briefing.StockpileCells} reachable stockpile cell(s) are visible";
+    }
+
+    private static IReadOnlyList<Decision> BuildFoodStockpileMissing(FoodBriefing briefing, DateTimeOffset now)
+    {
+        float days = RequiredFoodDays(briefing, "food_stockpile_missing");
+        int visibleFoodUnits = FoodStockpileVisibleFoodUnits(briefing);
+        Priority priority = days < 7f ? Priority.High : Priority.Medium;
+        return EmitAdvice(briefing, now, "food_stockpile_missing",
+            priority,
+            "Food needs a reachable stockpile",
+            FoodStockpileMissingBody(briefing, days, visibleFoodUnits),
+            "Known food still needs reachable storage; Chef owns the stockpile requirement and Willie owns spatial setup.",
+            [
+                new AdviceAction(
+                    AdviceActionKind.SetStockpileZone,
+                    "Designate a reachable food stockpile near the visible meals/raw food, then let haulers move the food into storage.",
+                    Quantity: visibleFoodUnits,
+                    Owner: "Willie")
+            ],
+            FoodFlagRequests.Building(StockpileVisibilityRequest(
+                $"reachable food stockpile for {visibleFoodUnits} visible food units",
+                "known or visible food exists but no reachable food stockpile cells are visible",
+                quantity: visibleFoodUnits,
+                priority: priority)),
+            true);
+    }
+
+    private static int FoodStockpileVisibleFoodUnits(FoodBriefing briefing)
+    {
+        int classifiedFoodUnits = briefing.MealsCount + briefing.RawFoodCount;
+        if (classifiedFoodUnits > 0)
+            return classifiedFoodUnits;
+
+        if (briefing.Storage.UnpositionedFoodUnits > 0)
+            return briefing.Storage.UnpositionedFoodUnits;
+
+        int forbiddenMealCount = ForbiddenMealCount(briefing);
+        return forbiddenMealCount > 0 ? forbiddenMealCount : briefing.FoodUnits;
+    }
+
+    private static string FoodStockpileMissingBody(FoodBriefing briefing, float days, int visibleFoodUnits)
+    {
+        string placementSignal = briefing.Storage.UnpositionedFoodUnits > 0
+            ? $"{briefing.Storage.UnpositionedFoodUnits} food unit(s) are unpositioned"
+            : ForbiddenMealCount(briefing) > 0
+                ? $"{ForbiddenMealCount(briefing)} forbidden {ForbiddenMealLabel(briefing, ForbiddenMealCount(briefing))} are visible"
+                : $"{visibleFoodUnits} food unit(s) are visible";
+        return $"Food covers about {days:F1} days and {placementSignal}, but there are 0 reachable food stockpile cells. Designate a small food stockpile near the meals so haulers have a valid storage target.";
+    }
 
     private static bool MatchesEmergencyFoodFlag(FoodBriefing briefing) =>
         briefing.EstimatedDaysOfFood is float days && days < 7f;

@@ -61,8 +61,6 @@ public sealed class AdviceForNewColony1Tests
     }
 
     [Fact]
-    // REACH: day-1 food stockpile zone; RED until SetStockpileZone fires outside the emergency/nutrition-gap branches - see .plans/advice-for-new-colony-1.md
-    [Trait("kind", "reach")]
     public async Task Chef_NewColony1_DesignatesFoodStockpile()
     {
         NewColonyScenario scenario = await Scenario.Value;
