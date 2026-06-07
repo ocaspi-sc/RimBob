@@ -189,3 +189,13 @@ Per MEMORY "verify with JSON first": confirm via the zone-requests / zones JSON,
   - Files: `Src/GameStateSync/RimApiClient.cs`, `Src/ApiHost/AssistedApplyService.cs`, `Src/Ministers/Willie/MinisterOfWillie.cs`.
 
 **Codex run:** `20260607-215455-grow-zone-apply-500` · branch `codex/prompt-20260607-215455-grow-zone-apply-500` (squashed + removed) · landed commit `12ca7b8`
+
+---
+
+## Slice 1 landed (RIMAPI repo, 2026-06-08)
+
+Root-cause 500 fix landed in `C:\dev\RIMAPI-for-RimBob` master, commit `700ad68` `fix(map): marshal grow-zone create onto main thread`. `MapService.CreateGrowingZone` now validates synchronously (map / point_a-point_b / plant def), queues the zone mutation through `LongEventHandler.ExecuteWhenFinished` (try/catch + `LogApi.Error`), and returns `ApiResult.Ok()` immediately (return type `ApiResult<GrowingZoneDto>` → `ApiResult`; the RimBob client checks only the success envelope and does its own readback). Compile-verified `dotnet build -c Debug` → 0 errors.
+
+**Deploy (still pending):** `dotnet build -c Release-1.6` writes `1.6\Assemblies\RIMAPI.dll` and requires RimWorld closed (the running game locks the dll), then reload the save. **Live verify after deploy:** run a cabinet cycle, click a Willie grow-zone Apply with the game **unpaused**, repeat several times — pre-fix this intermittently 500s; post-fix it should not.
+
+**Remaining:** Slice 5 (RIMAPI version/SHA), Slice 3B (RimBob readback eventual-consistency poll — only now relevant since the create is async).
