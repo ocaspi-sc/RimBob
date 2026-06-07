@@ -175,3 +175,16 @@ Add one umbrella entry linking this plan, with the six slices as checkable sub-i
   - Files: `Src/Ministers/Food/Rules.cs` (`IsEdibleUnforbidTarget`, `ForbiddenMealItemRequests`).
 
 **Codex run:** `20260608-001756-reach-2-unforbid-rawfood` · landed commit `33cadd5`.
+
+### Slice 3 — Welfare temperature emits heater (landed 2026-06-08)
+
+**What shipped.** Root cause confirmed: the fixture's cold thought is `EnvironmentCold` with display label `Chilly`; `SniffTemperatureDirection` (`Src/Ministers/Welfare/Rules.cs:331`) didn't classify that as cold, so `temperature_comfort` resolved direction Ambiguous and emitted attention instead of a Heater. Fix is a one-line, general cold-keyword widening — added tokens `chill`, `frost`, `froz` to the existing `cold/snap/freez/hypothermia` set (matched against the lowercased, space-stripped label, so it covers Chilly/Frosty/Frozen/EnvironmentCold across any briefing, not just this fixture).
+
+**Tests.** `Welfare_NewColony1_EmitsTemperature` untagged. New `[Theory]` in `Src/Tests/Welfare/WelfareRulesTests.cs` (`Chilly`, `EnvironmentCold` → Cold → Heater request). Gate `kind!=reach` green (634/634); reach 6 → 5.
+
+**How to verify (human).**
+  - Dashboard: HOME → Welfare on new-colony-1 should now carry a temperature_comfort card with a Heater build request routed to Willie (Barracks).
+  - Commands: `dotnet test Src/RimBob.sln --filter "FullyQualifiedName~Welfare_NewColony1_EmitsTemperature"` (green); `--filter "kind=reach"` (5 failed / 5).
+  - Files: `Src/Ministers/Welfare/Rules.cs` (`SniffTemperatureDirection`).
+
+**Codex run:** `20260608-002818-reach-3-welfare-heater` · landed commit `eff8512`.
