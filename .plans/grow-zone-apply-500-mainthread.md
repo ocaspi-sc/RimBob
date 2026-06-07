@@ -176,7 +176,7 @@ Per MEMORY "verify with JSON first": confirm via the zone-requests / zones JSON,
 
 **Motivation.** Clicking Willie's grow-zone Apply returned a bare `500 Internal Server Error` with no cause, and even a *successful* create could never be confirmed. The root-cause 500 fix is a RIMAPI-repo change (Slice 1, separate); this slice ships the three independent **RimBob-side** hardening pieces so the failure is legible and the readback is correct.
 
-**Context.** Builds on S5 (`8448e9e`). Root cause + full plan above. Slice 1 (RIMAPI main-thread marshal), Slice 3 Part B (eventual-consistency poll, depends on Slice 1) and Slice 5 (RIMAPI version+SHA) remain follow-ups — see the independence table.
+**Context.** Builds on S5 (`8448e9e`). Root cause + full plan above. Slice 1 (RIMAPI main-thread marshal), Slice 3 Part B (eventual-consistency poll, depends on Slice 1) and Slice 5 (RIMAPI version+SHA) were follow-ups — see the independence table and landed sections below.
 
 **Scope (shipped).**
 - **Slice 2** — `RimApiClient.EnsureWriteAcceptedAsync` now reads the failed response body and folds the RIMAPI `errors[]`/message into the `RimApiException`, so `apply_result` shows the real cause (all write endpoints; robust to empty/non-JSON body).
@@ -198,4 +198,14 @@ Root-cause 500 fix landed in `C:\dev\RIMAPI-for-RimBob` master, commit `700ad68`
 
 **Deploy (still pending):** `dotnet build -c Release-1.6` writes `1.6\Assemblies\RIMAPI.dll` and requires RimWorld closed (the running game locks the dll), then reload the save. **Live verify after deploy:** run a cabinet cycle, click a Willie grow-zone Apply with the game **unpaused**, repeat several times — pre-fix this intermittently 500s; post-fix it should not.
 
-**Remaining:** Slice 5 (RIMAPI version/SHA), Slice 3B (RimBob readback eventual-consistency poll — only now relevant since the create is async).
+---
+
+## Slice 5 landed (RIMAPI repo, 2026-06-08)
+
+RIMAPI version/build identity landed in `C:\dev\RIMAPI-for-RimBob` master, commit `3996023` `feat(game): expose RIMAPI build metadata`. The existing `GET /api/v1/version` route now populates the previously-empty `version` field and adds `build_commit_sha`, `build_number`, `build_timestamp`, and `build_dirty`; JSON remains snake_case through the existing resolver. `RimApi.csproj` generates `BuildInfo.g.cs` before compile from `git rev-parse --short HEAD`, `git rev-list --count HEAD`, `git status --porcelain --untracked-files=no`, and UTC build time, with `"unknown"`/`0` fallbacks when git metadata is unavailable. The generated assembly informational version uses the same `{Version}+{build_number}.{build_commit_sha}{-dirty?}` string as the endpoint.
+
+**Verification.** `dotnet build Source\RIMAPI\RimApi.csproj -c Debug` and `dotnet build Source\RIMAPI\RimApi.csproj -c Release-1.6` both passed. The post-commit `Release-1.6` generated `BuildInfo` reported `InformationalVersion = "1.9.0+247.3996023"`, `BuildCommitSha = "3996023"`, `BuildNumber = 247`, and `BuildDirty = false`; built DLL SHA256 `0EFB6AF5E70F7A83E87AF3B04710B82D3EF36892E75FCA4632058E7C65C178FA`.
+
+**Live deploy still pending.** RimWorld was running as `RimWorldWin64` PID `36100` during this slice, and the installed mod DLL at `D:\Games\SteamLibrary\steamapps\common\RimWorld\Mods\RIMAPI-for-RimBob\1.6\Assemblies\RIMAPI.dll` still had SHA256 prefix `4160445E...`, different from the rebuilt fork DLL. Copy/reload was intentionally not forced while the game was live; after RimWorld exits, copy the rebuilt `1.6\Assemblies\RIMAPI.dll`, restart RimWorld, then verify `GET http://localhost:8765/api/v1/version` reports `build_commit_sha: "3996023"`.
+
+**Remaining:** Slice 3B (RimBob readback eventual-consistency poll — only now relevant since create is async) plus live installed-DLL verification after RimWorld reloads the rebuilt fork.

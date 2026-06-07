@@ -69,6 +69,8 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 | GET | `/game/settings` + `/game/settings/run-in-background` (+ toggle) | settings |
 | POST | `/game/main-menu` / `/game/quit` | exit |
 
+> **Fork shape.** `/version` now returns `version`, `rim_world_version`, `mod_version`, `api_version`, `build_commit_sha`, `build_number`, `build_timestamp`, and `build_dirty`. `version` is generated at compile time as `{Version}+{build_number}.{build_commit_sha}{-dirty?}`; `build_number` is `git rev-list --count HEAD`; `build_timestamp` is UTC build time. Use this route, after a RimWorld reload, to confirm the loaded `RIMAPI.dll` is the rebuilt fork DLL.
+
 > **Verified shape.** `/def/all` returns a non-empty object under `data`, with thing defs nested at `data.things_defs`. Food uses this catalog to read item nutrition; live `MealSurvivalPack` has `nutrition: 0.9`, `stack_limit: 10`, and item/category metadata. The RimBob fork also exposes `animal_defs` so Food can score hunt risk/value from compact animal metadata instead of relying only on def-name deny lists.
 
 ### Game Events (incidents, quests, lords)
