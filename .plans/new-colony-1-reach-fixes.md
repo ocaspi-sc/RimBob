@@ -162,3 +162,16 @@ Add one umbrella entry linking this plan, with the six slices as checkable sub-i
   - Files: `Src/Ministers/Food/Rules.cs` (`MatchesFoodStockpileMissing`/`BuildFoodStockpileMissing`/`FoodStockpileVisibleFoodUnits`).
 
 **Codex run:** `20260607-215156-reach-1-chef-stockpile` · landed commit `e32ba03`.
+
+### Slice 2 — Chef unforbid raw food (landed 2026-06-08)
+
+**What shipped.** `ForbiddenMealUnforbidTargets` (`Src/Ministers/Food/Rules.cs`) now keeps edible forbidden food of kind `meal` **or** `raw_food` (new `IsEdibleUnforbidTarget` helper; `MaxUnforbidTargets` cap retained), so the fixture's 49 forbidden `RawFungus` are no longer dropped. The flag item-request path was refactored from a single `ForbiddenMealItemRequest` to `ForbiddenMealItemRequests` that groups targets per item def, so each def (e.g. `RawFungus`) carries its own quantity. The mixed-kind `UnforbidThingsApply` now labels as "Unforbid food" (meal-only keeps "Unforbid meal(s)"). The optional `ForbiddenMeal*`→`ForbiddenEdible*` rename was deliberately skipped to keep the slice bounded.
+
+**Tests.** `Chef_NewColony1_UnforbidsForbiddenFungus` untagged. New unit test in `Src/Tests/Food/FoodRulesTests.cs` covering both meal and raw_food unforbid paths. Gate `kind!=reach` green (631/631); reach 7 → 6.
+
+**How to verify (human).**
+  - Dashboard: HOME → Chef/Food on new-colony-1 should carry an Unforbid action targeting `RawFungus` and a flag item-request for 49 forbidden RawFungus.
+  - Commands: `dotnet test Src/RimBob.sln --filter "FullyQualifiedName~Chef_NewColony1_UnforbidsForbiddenFungus"` (green); `--filter "kind=reach"` (6 failed / 6).
+  - Files: `Src/Ministers/Food/Rules.cs` (`IsEdibleUnforbidTarget`, `ForbiddenMealItemRequests`).
+
+**Codex run:** `20260608-001756-reach-2-unforbid-rawfood` · landed commit `33cadd5`.
