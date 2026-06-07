@@ -1,6 +1,6 @@
 # Zone Requests for Chef Growing Capacity
 
-**Status:** IMPLEMENTED IN WORKTREE - Slices 1-5 are complete. Zone request routing, coordinate grow-zone placement, and Willie-owned `create_growing_zone` Assisted Apply are wired; live proof still requires a running RIMAPI map with a valid Willie grow-zone option.
+**Status:** LANDED - Slices 1-4 `14ffbcd`, Slice 5 Apply `8448e9e`, solver reuse refactor `e041c04`. Live proof still requires a running RIMAPI map with a valid Willie grow-zone option.
 **Owner:** Chef + Willie + Dashboard.
 **Scope:** Promote Chef's current growing-tile `attention[]` request into a typed `zone_requests[]` flag surface, then let Willie turn grow-zone requests into inspectable placement proposals and player-confirmed apply payloads.
 
@@ -194,3 +194,17 @@ Live proof for Slice 5: click the Willie-authored grow-zone Apply, confirm `/api
 - Should `ZoneRequest` use `tile_count` only, or also carry a typed `capacity_need` for future non-growing zones?
 - Should grow-zone placement require the RIMAPI fork buildability-layer read before any Apply path ships, or is terrain grid plus occupancy enough for the first player-confirmed write?
 - Should Chef's existing `designate_zone` action remain visible once Willie returns a concrete zone option, should it be renamed to `designate_zone_req`, or should the Willie option supersede it to avoid duplicate player instructions?
+
+---
+
+## Summary — landed
+
+All five slices are on master:
+
+- **Slices 1-4** (`14ffbcd`) — typed `zone_requests[]` wire (`ZoneRequest`/`ZoneClass`, `RequestZone`, projection + dedupe + `request_zone` traces, incl. the `IsRequest`/`RequestPriority` switch updates), Chef producer (`BuildExpandGrowingCapacity` emits `zone_requests[]` instead of `attention[]`), Willie routing (`CabinetCycle` wakes Willie on Willie-routed zone requests; separate zone board at `/api/ministers/willie/zone-requests`), coordinate terrain/zone/occupancy evidence, and the inspect-only grow-zone solver.
+- **Slice 5 Apply** (`8448e9e`) — Willie-owned `create_growing_zone` Assisted Apply: live validation (map, plant def, growability, unoccupied/unzoned cells, staleness), `POST /api/v1/map/zone/growing` via `CreateGrowZoneAsync`, zone readback, `apply_result`. Rect-only client honored — Apply is emitted only when the option's zone cells form one complete rectangle; `CreateGrowZoneAsync` ownership retagged Chef→Willie.
+- **Solver reuse refactor** (`e041c04`) — follow-up; the solver now shares `PlacementEvidence`'s free-rect engine + `AnchorResolver`. See [grow-zone-solver-reuse.md](grow-zone-solver-reuse.md).
+
+All plan-review fixes landed: rect-only Apply, ownership retag, projection helper-switch updates, and the terrain-coordinate dependency met before the solver shipped.
+
+**Deferred / still open:** the `designate_zone` → `designate_zone_req` action-token rename was not executed (token unchanged; would be its own no-compat slice). Live proof against a running RIMAPI map is still pending.
