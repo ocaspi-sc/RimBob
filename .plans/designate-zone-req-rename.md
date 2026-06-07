@@ -58,3 +58,22 @@ The grow-zone work left one deferred item: Chef's player-facing `designate_zone`
 - No rename of the `create_growing_zone` Apply kind.
 - No behavior change to the rules that emit the action.
 - No legacy alias for the old token.
+
+---
+
+## Summary — landed `dfc1336`
+
+Mechanical, behavior-neutral rename of the one advice-action token `designate_zone` -> `designate_zone_req`, shipped via gimp (Codex run `20260608-002216-designate-zone-req-rename`).
+
+**What shipped.** Enum member `AdviceActionKind.DesignateZone` -> `DesignateZoneReq` (`Src/Common/Advice/AdviceAction.cs`); wire string auto-derived to `designate_zone_req` via `SnakeCaseLowerEnumConverter`. All compile-time refs updated (3 emitters: Chef `Rules.cs`, Willie `MinisterOfWillie.cs` + `Rules.cs`; 2 consumers: `AdviceActionNormalizer.cs`, `FoodChainModelBuilder.cs`). Manual string updates in 3 dashboard files, the food prompt, and 2 docs. Replay-corpus fixture regenerated. 17 files total. `ZoneRequest`/`zone_requests[]`/`ZoneClass` and `create_growing_zone` untouched, per scope.
+
+**Verification.** `dotnet test --filter "kind!=reach"` = 634 passed / 0 failed. Full run's only reds are the 5 documented `AdviceForNewColony1Tests` `kind=reach` targets (pre-existing, unrelated). Grep proof: zero `designate_zone` without `_req` / `DesignateZone` without `Req` outside `.plans/`. Verifier (Sonnet) returned Adherent: yes, no scope drift.
+
+**How to verify (human).**
+  - Code: `git -C C:\dev\RimBob grep -n "DesignateZoneReq" Src/Common/Advice/AdviceAction.cs`.
+  - Dashboard: a Chef grow-zone advice card still renders its crop/zone icon (semanticIcons key `designate_zone_req`).
+  - Live: run a cabinet cycle; Chef `expand_growing_capacity` advice carries an action with `"kind":"designate_zone_req"`.
+
+**Codex run:** `20260608-002216-designate-zone-req-rename` · landed commit `dfc1336`.
+
+**Deferred (post-land ops):** AppData persisted minister snapshots / replay logs still hold the old token — Codex skipped the wipe because live Hosts were running from other checkouts. Regenerated on the next fresh Host boot (folds into live proof); the committed test fixture is already regenerated.
