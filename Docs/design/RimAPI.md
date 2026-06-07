@@ -12,6 +12,8 @@ The RimBob fork targets RimWorld 1.6 only. Build and install fork changes with
 `Release-1.6`; do not add `Release-1.5`, `RIMWORLD_1_5`, or other old-game
 compatibility paths.
 
+Fork build/deploy proof is a three-step workflow: build `C:\dev\RIMAPI-for-RimBob\Source\RIMAPI\RimApi.csproj` with `-c Release-1.6`, copy the rebuilt `C:\dev\RIMAPI-for-RimBob\1.6\Assemblies\RIMAPI.dll` over the installed mod DLL at `D:\Games\SteamLibrary\steamapps\common\RimWorld\Mods\RIMAPI-for-RimBob\1.6\Assemblies\RIMAPI.dll` while RimWorld is closed, then restart RimWorld. RimWorld does not hot-reload mod assemblies. After restart, prove the loaded DLL with `GET /api/v1/version` and route registration with `GET /api/v1/dev/endpoints`; matching source/installed DLL hashes alone prove deploy-to-disk, not that the running process loaded it.
+
 If you need an endpoint not listed here, fetch the live docs and append to this file.
 
 > **Verified vs. cached.** The catalogue below was distilled from upstream docs and is **not** all field-checked against the running mod. Verified shapes are called out inline as slices wire them into ingestion. Several DTO field names that previously diverged from the live API have been corrected against the running RIMAPI (e.g. `tick` → `game_tick`, `wealth` → `colony_wealth`, `paused` → `is_paused`, `mapId` → `map_id`); other endpoint DTOs remain speculative until a minister actually wires them.

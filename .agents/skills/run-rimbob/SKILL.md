@@ -78,6 +78,7 @@ After building, restart the .NET host to pick up the new bundle. If the user ask
 
 - `GEMINI_API_KEY` provides one Gemini key. `GEMINI_API_KEYS` provides an ordered fallback list. Missing key → warn, but don't abort.
 - RIMAPI runs at `http://localhost:8765/` by default. If RimWorld isn't running the handshake fails but the server continues normally.
+- RIMAPI fork rebuild/deploy/restart proof is handled by `run-rimapi-fork`. This skill checks Host reachability and RIMAPI reachability only; it does not copy `RIMAPI.dll` or prove the loaded mod build.
 - The server binds to `127.0.0.1` only (never `0.0.0.0`) — this is by design.
 
 ## Quick health check (no build)
