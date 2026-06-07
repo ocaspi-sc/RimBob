@@ -143,3 +143,22 @@ No new panel. Each landed slice should visibly change the new-colony advice on H
 ## Tasks.md
 
 Add one umbrella entry linking this plan, with the six slices as checkable sub-items so they can be landed and ticked independently.
+
+---
+
+## Landed log
+
+### Slice 1 — Chef `food_stockpile_missing` rule (landed 2026-06-08)
+
+**What shipped.** A new Chef rule `food_stockpile_missing` (`Src/Ministers/Food/Rules.cs`) that fires when the colony has a known food buffer (`EstimatedDaysOfFood is not null`), there is food to store, and there are zero reachable stockpile cells (`StockpileCells == 0`). It emits one `SetStockpileZone` action owned by Willie plus a `BuildingClass.Stockpile` request routed to Willie (via the existing `StockpileVisibilityRequest`). Priority is High when the buffer is thin (<7 days) and Medium otherwise. It is mutually exclusive with `nutrition_signal_gap`/`unknown_food_state` by construction (those own the null-buffer case).
+
+**Implementation note.** The literal plan predicate was `(MealsCount + RawFoodCount) > 0`, but the fixture has `meals_count == 0 && raw_food_count == 0` (its food shows up as unpositioned/forbidden/reported units). Codex generalised the food-present test to a helper `FoodStockpileVisibleFoodUnits` that falls back to `Storage.UnpositionedFoodUnits`, then forbidden-meal count, then `FoodUnits` — preserving the slice's intent ("food exists but nowhere reachable to store it") on this fixture. No derivation/schema/replay change. A defensive `StockpileLedger` was added to the shared `FoodMinisterTests` helper so existing minister tests don't spuriously match the new rule.
+
+**Tests.** `Chef_NewColony1_DesignatesFoodStockpile` untagged (rejoined the default gate). New focused unit tests in `Src/Tests/Food/`. Post-merge gate `kind!=reach` green (629/629); reach count 8 → 7.
+
+**How to verify (human).**
+  - Dashboard: HOME → Chef/Food advice on the new-colony-1 snapshot should now carry a "Food needs a reachable stockpile" card with a SetStockpileZone step and a Willie stockpile request.
+  - Commands: `dotnet test Src/RimBob.sln --filter "FullyQualifiedName~Chef_NewColony1_DesignatesFoodStockpile"` (green); `--filter "kind!=reach"` (green); `--filter "kind=reach"` (7 failed / 7).
+  - Files: `Src/Ministers/Food/Rules.cs` (`MatchesFoodStockpileMissing`/`BuildFoodStockpileMissing`/`FoodStockpileVisibleFoodUnits`).
+
+**Codex run:** `20260607-215156-reach-1-chef-stockpile` · landed commit `e32ba03`.
