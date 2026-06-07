@@ -86,8 +86,6 @@ public sealed class AdviceForNewColony1Tests
     }
 
     [Fact]
-    // REACH: unforbid the 49 RawFungus; RED until unforbid stops filtering targets to kind=="meal" - see .plans/advice-for-new-colony-1.md
-    [Trait("kind", "reach")]
     public async Task Chef_NewColony1_UnforbidsForbiddenFungus()
     {
         NewColonyScenario scenario = await Scenario.Value;

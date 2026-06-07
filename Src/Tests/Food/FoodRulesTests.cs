@@ -95,6 +95,29 @@ public sealed class FoodRulesTests
     }
 
     [Fact]
+    public void UrgentShortageWithForbiddenEdibleFood_EmitsUnforbidApplyAndItemRequest()
+    {
+        AssertForbiddenFoodUnforbidTarget(
+            id: "meal-forbidden",
+            def: "MealSurvivalPack",
+            label: "packaged survival meal",
+            count: 7,
+            kind: "meal",
+            expectedLabel: "packaged survival meals",
+            expectedRequestReason: "visible meals are forbidden and not counted in the current food buffer",
+            expectedApplyLabel: "Unforbid meals");
+        AssertForbiddenFoodUnforbidTarget(
+            id: "raw-fungus-forbidden",
+            def: "RawFungus",
+            label: "raw fungus x49",
+            count: 49,
+            kind: "raw_food",
+            expectedLabel: "raw fungus",
+            expectedRequestReason: "visible edible food is forbidden and not counted in the current food buffer",
+            expectedApplyLabel: "Unforbid food");
+    }
+
+    [Fact]
     public void NearStarvationWithoutLocalFood_SetsUpFoodChain()
     {
         FoodBriefing briefing = Briefing(days: 0.4f) with
@@ -1125,6 +1148,49 @@ public sealed class FoodRulesTests
     {
         foreach (string rule in rules)
             decision.Advice.Should().Contain(advice => advice.Id == $"chef_{rule}");
+    }
+
+    private static void AssertForbiddenFoodUnforbidTarget(
+        string id,
+        string def,
+        string label,
+        int count,
+        string kind,
+        string expectedLabel,
+        string expectedRequestReason,
+        string expectedApplyLabel)
+    {
+        FoodBriefing briefing = Briefing(days: 6.1f) with
+        {
+            FoodUnits = 52,
+            MealsCount = 32,
+            RawFoodCount = 12,
+            UnforbidTargets =
+            [
+                new FoodUnforbidTarget(id, def, label, count, kind, "map_things", new(62, 0, 219))
+            ]
+        };
+
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
+
+        AdviceItem advice = AdviceByRule(decision, "emergency_food_flag");
+        AdviceAction unforbidStep = advice.Actions.Should().Contain(action =>
+            action.Kind == AdviceActionKind.Unforbid &&
+            action.Quantity == count &&
+            action.Instruction.Contains($"Unforbid {count} {expectedLabel}")).Subject;
+        UnforbidThingsApply apply = unforbidStep.Apply.Should().BeOfType<UnforbidThingsApply>().Subject;
+        apply.Label.Should().Be(expectedApplyLabel);
+        apply.TargetSummary.Should().Be($"{count} {expectedLabel} across 1 stack");
+        AdviceThingApplyTarget applyTarget = apply.ThingTargets.Should().ContainSingle().Subject;
+        applyTarget.Def.Should().Be(def);
+        applyTarget.Kind.Should().Be(kind);
+
+        ItemRequest itemRequest = FlagById(decision, "food:emergency_food_flag")
+            .ItemRequests.Should().ContainSingle().Subject;
+        itemRequest.Request.Should().Be($"{count} forbidden {expectedLabel}");
+        itemRequest.Reason.Should().Be(expectedRequestReason);
+        itemRequest.ItemDef.Should().Be(def);
+        itemRequest.Quantity.Should().Be(count);
     }
 
     internal static FoodBriefing Briefing(float? days) => new(
