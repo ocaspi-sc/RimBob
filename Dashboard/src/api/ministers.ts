@@ -140,6 +140,14 @@ export interface WillieSolverPayload extends WillieSolverOutputPayload {
   output: WillieSolverOutputPayload;
 }
 
+export interface WillieSolveQueueStatus {
+  queued: number;
+  running: number;
+  enqueuedThisSession: number;
+  completedThisSession: number;
+  rejectedThisSession: number;
+}
+
 export interface WillieRequestRow {
   request: BuildingRequest;
   sourceMinister: string | null;
@@ -151,6 +159,7 @@ export interface WillieRequestRow {
 
 export interface WillieRequestBoardPayload {
   minister: string;
+  queueStatus: WillieSolveQueueStatus;
   requests: WillieRequestRow[];
 }
 
@@ -167,6 +176,7 @@ export interface WillieZoneRequestRow {
 
 export interface WillieZoneRequestBoardPayload {
   minister: string;
+  queueStatus: WillieSolveQueueStatus;
   requests: WillieZoneRequestRow[];
 }
 

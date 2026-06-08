@@ -6158,6 +6158,12 @@ code {
   opacity: 0.62;
 }
 
+.action-apply-unavailable button {
+  border-color: rgba(151, 163, 182, 0.36);
+  background: rgba(151, 163, 182, 0.1);
+  color: var(--muted);
+}
+
 .action-apply-result {
   grid-column: auto;
   flex: 1 1 auto;
@@ -6179,7 +6185,8 @@ code {
 
 .action-apply-result.rimapi_unavailable,
 .action-apply-result.readback_inconclusive,
-.action-apply-result.pending {
+.action-apply-result.pending,
+.action-apply-result.unavailable {
   color: var(--warn);
 }
 

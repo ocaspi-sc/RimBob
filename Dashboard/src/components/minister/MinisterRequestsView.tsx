@@ -4,6 +4,7 @@ import {
   fetchZoneRequests,
   type WillieRequestBoardPayload,
   type WillieRequestRow,
+  type WillieSolveQueueStatus,
   type WillieSolverOutputPayload,
   type WillieZoneRequestBoardPayload,
   type WillieZoneRequestRow,
@@ -49,6 +50,7 @@ export function MinisterRequestsView({
   );
   const rows = board.data?.requests ?? [];
   const zoneRows = zoneBoard.data?.requests ?? [];
+  const queueStatus = board.data?.queueStatus ?? zoneBoard.data?.queueStatus ?? null;
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [selectedZoneKey, setSelectedZoneKey] = useState<string | null>(null);
 
@@ -108,6 +110,8 @@ export function MinisterRequestsView({
         <p>Current inbound building and zone requests. Building rows join to Placement Solver outcomes; zone rows join to grow-zone placement outcomes.</p>
       </header>
 
+      {queueStatus && <QueueStatusStrip status={queueStatus} />}
+
       {zoneRows.length > 0 && (
         <ZoneRequestsPanel
           onSelect={setSelectedZoneKey}
@@ -140,6 +144,17 @@ export function MinisterRequestsView({
       ) : (
         <EmptyState code="NO BUILDING REQUESTS">No inbound building requests are active; zone requests are listed above.</EmptyState>
       )}
+    </div>
+  );
+}
+
+function QueueStatusStrip({ status }: { status: WillieSolveQueueStatus }) {
+  return (
+    <div className="prompt-meta solver-request-meta" aria-label="Willie solve queue status">
+      <span>queue {formatInteger(status.queued)}</span>
+      <span>running {formatInteger(status.running)}</span>
+      <span>done {formatInteger(status.completedThisSession)}</span>
+      {status.rejectedThisSession > 0 && <span>rejected {formatInteger(status.rejectedThisSession)}</span>}
     </div>
   );
 }
@@ -458,7 +473,9 @@ function outcomeMeta(row: WillieRequestRow): { label: string; tone: PillTone } {
   if (row.output.status === 'options') return { label: 'options', tone: 'ok' };
   if (row.output.status === 'no_fit') return { label: 'no-fit', tone: 'warn' };
   if (row.output.status === 'error') return { label: 'error', tone: 'error' };
-  if (row.output.status === 'offline') return { label: 'offline', tone: 'warn' };
+  if (row.output.status === 'queued') return { label: 'queued', tone: 'info' };
+  if (row.output.status === 'running') return { label: 'running', tone: 'info' };
+  if (row.output.status === 'stale') return { label: 'stale', tone: 'warn' };
   return { label: row.output.status.replace(/_/g, ' '), tone: 'idle' };
 }
 
@@ -484,10 +501,24 @@ function statusLabel(output: WillieSolverOutputPayload): { label: string; note?:
     };
   }
 
-  if (output.status === 'offline') {
+  if (output.status === 'queued') {
     return {
-      label: `offline: ${output.errorType ?? 'unknown'}`,
-      note: output.errorMessage ?? 'Live map validation was unavailable.',
+      label: 'queued',
+      note: output.errorMessage ?? 'Placement solve is queued in the background.',
+    };
+  }
+
+  if (output.status === 'running') {
+    return {
+      label: 'running',
+      note: output.errorMessage ?? 'Placement solve is running in the background.',
+    };
+  }
+
+  if (output.status === 'stale') {
+    return {
+      label: 'stale',
+      note: output.errorMessage ?? 'A completed solve no longer matched the current advice/request.',
     };
   }
 
@@ -516,12 +547,34 @@ function zoneStatusLabel(output: WillieSolverOutputPayload): { label: string; no
     };
   }
 
+  if (output.status === 'queued') {
+    return {
+      label: 'queued',
+      note: output.errorMessage ?? 'Grow-zone solve is queued in the background.',
+    };
+  }
+
+  if (output.status === 'running') {
+    return {
+      label: 'running',
+      note: output.errorMessage ?? 'Grow-zone solve is running in the background.',
+    };
+  }
+
+  if (output.status === 'stale') {
+    return {
+      label: 'stale',
+      note: output.errorMessage ?? 'A completed zone solve no longer matched the current advice/request.',
+    };
+  }
+
   return { label: output.status.replace(/_/g, ' ') };
 }
 
 function statusTone(status: string): PillTone {
   if (status === 'options') return 'ok';
-  if (status === 'no_fit' || status === 'offline') return 'warn';
+  if (status === 'queued' || status === 'running') return 'info';
+  if (status === 'no_fit' || status === 'stale') return 'warn';
   if (status === 'error') return 'error';
   return 'idle';
 }

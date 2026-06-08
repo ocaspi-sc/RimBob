@@ -1,3 +1,5 @@
+using RimBob.Ministers.Willie;
+
 namespace RimBob.Host;
 
 /// <summary>
@@ -27,6 +29,8 @@ public sealed class RimBobOptions
     public RagOptions Rag { get; init; } = new();
 
     public IconWarmOptions IconWarm { get; init; } = new();
+
+    public WillieSolveOptions WillieSolve { get; init; } = new();
 }
 
 /// <summary>

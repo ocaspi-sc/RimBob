@@ -62,7 +62,9 @@ public sealed class MinisterOfWillieTests
         solver.CallCount.Should().Be(1);
         solver.LastSpec.Should().NotBeNull();
         solver.LastSpec!.TargetClass.Should().Be(BuildingClass.Freezer);
-        solver.LastState.Should().BeSameAs(harness.Colony);
+        solver.LastState.Should().NotBeSameAs(harness.Colony);
+        solver.LastState!.LastRefreshSource.Should().Be(ColonyStateOrigin.Live);
+        solver.LastState.Buildings.Value.Should().Be(harness.Colony.Buildings.Value);
         WillieSolverSnapshot snapshot = harness.SolverStore.Latest("Willie")!;
         snapshot.Should().NotBeNull();
         snapshot.Status.Should().Be("options");
@@ -72,6 +74,60 @@ public sealed class MinisterOfWillieTests
         snapshot.GameTick.Should().Be(harness.Cache.GetWillieBriefing().GameTick);
         snapshot.Trace.Should().NotBeNull();
         snapshot.Options.Should().ContainSingle().Which.Id.Should().Be("placement_freezer_10_12");
+    }
+
+    [Fact]
+    public async Task InboundFreezerFlag_WithAsyncQueue_PublishesPendingAdviceAndQueuesJob()
+    {
+        FakePlacementSolver solver = FakePlacementSolver.WithOptions(PlacementOption());
+        RecordingWillieSolveQueue queue = null!;
+        Harness harness = new(
+            solver,
+            queueFactory: (_, store) =>
+            {
+                queue = new RecordingWillieSolveQueue(store);
+                return queue;
+            });
+        harness.SetStableState();
+        harness.Flags.Publish(FreezerFlag());
+
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
+
+        solver.CallCount.Should().Be(0);
+        queue.Jobs.Should().ContainSingle()
+            .Which.Should().BeOfType<WillieBuildingSolveJob>()
+            .Which.DrivingAdviceId.Should().Be("willie_building_request_active");
+        AdviceItem advice = harness.Bus.ActiveAdvice().Should().ContainSingle().Subject;
+        advice.Id.Should().Be("willie_building_request_active");
+        advice.Options.Should().BeNull();
+        advice.Body.Should().Contain("computing in the background");
+        WillieRequestBoardRow row = harness.SolverStore.RequestBoard("Willie").Should().ContainSingle().Subject;
+        row.Outcome.Should().NotBeNull();
+        row.Outcome!.Status.Should().Be("queued");
+    }
+
+    [Fact]
+    public async Task InboundFreezerFlag_WithAsyncQueue_CapturesFrozenStateForJob()
+    {
+        RecordingWillieSolveQueue queue = null!;
+        Harness harness = new(
+            queueFactory: (_, store) =>
+            {
+                queue = new RecordingWillieSolveQueue(store);
+                return queue;
+            });
+        harness.SetStableState();
+        harness.Flags.Publish(FreezerFlag());
+
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
+        WillieBuildingSolveJob job = queue.Jobs.Should().ContainSingle()
+            .Which.Should().BeOfType<WillieBuildingSolveJob>()
+            .Subject;
+        harness.Colony.Buildings.Update(new BuildingRegistry([]));
+
+        job.FrozenState.Should().NotBeSameAs(harness.Colony);
+        job.FrozenState.Buildings.Value.Buildings.Should().HaveCount(3);
+        harness.Colony.Buildings.Value.Buildings.Should().BeEmpty();
     }
 
     [Fact]
@@ -703,29 +759,26 @@ public sealed class MinisterOfWillieTests
         await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
 
         AdviceItem activeAdvice = harness.Bus.ActiveAdvice().Should().ContainSingle().Subject;
-        activeAdvice.Id.Should().Be(priorAdvice.Id);
-        activeAdvice.Options.Should().ContainSingle()
-            .Which.Id.Should().Be(priorAdvice.Options!.Single().Id);
-        activeAdvice.Actions.Should().Contain(action => action.Apply is PlaceBlueprintGroupApply);
+        activeAdvice.Id.Should().Be("willie_building_request_active");
+        activeAdvice.Options.Should().BeNull();
+        activeAdvice.Body.Should().Contain("Placement solver could not refresh layout options because live map validation was unavailable");
+        activeAdvice.Rationale.Should().Contain("Placement solver offline");
 
         AdviceSnapshot persisted = harness.OutputStore.GetAdviceSnapshot("Willie")
             ?? throw new InvalidOperationException("Expected Willie snapshot to remain persisted.");
         persisted.Advice.Should().ContainSingle()
-            .Which.Id.Should().Be(priorAdvice.Id);
-        persisted.Advice.Single().Options.Should().ContainSingle()
-            .Which.Id.Should().Be(priorAdvice.Options!.Single().Id);
+            .Which.Id.Should().Be("willie_building_request_active");
 
         MinisterReplayRecord record = replay.Records.Should().ContainSingle().Subject;
         record.OutputKind.Should().Be("placement_solver");
         PlacementSolverReplayOutput output = record.Output.Should().BeOfType<PlacementSolverReplayOutput>().Subject;
-        output.Status.Should().Be("offline");
+        output.Status.Should().Be("error");
         record.Advice.Should().ContainSingle()
             .Which.Rationale.Should().Contain("Placement solver offline");
 
         WillieSolverSnapshot solverSnapshot = harness.SolverStore.Latest("Willie")
             ?? throw new InvalidOperationException("Expected Willie solver snapshot.");
-        solverSnapshot.Status.Should().Be("offline");
-        harness.Traces.Latest("Willie")!.Note.Should().Contain("solver offline; preserved prior advice");
+        solverSnapshot.Status.Should().Be("error");
     }
 
     private static RoomRecord RoomWithCells(
@@ -919,21 +972,30 @@ public sealed class MinisterOfWillieTests
         public Harness(
             IPlacementSolver? solver = null,
             IGrowZonePlacementSolver? growZoneSolver = null,
-            IReplayCorpusWriter? replay = null)
+            IReplayCorpusWriter? replay = null,
+            Func<WillieSolveExecutor, WillieSolverStore, IWillieSolveQueue>? queueFactory = null)
         {
             Bus = new AdviceBus(OutputStore);
             Cache = new BriefingCache(Colony, new TestLogger<BriefingCache>());
+            IPlacementSolver placementSolver = solver ?? FakePlacementSolver.WithNoFit(NoFitReason.NoDrafts);
+            IGrowZonePlacementSolver zoneSolver = growZoneSolver ?? FakeGrowZonePlacementSolver.WithNoFit(NoFitReason.NoTerrainGrid);
+            WillieSolveExecutor executor = new(
+                placementSolver,
+                zoneSolver,
+                SolverStore,
+                NullLogger<WillieSolveExecutor>.Instance);
+            IWillieSolveQueue solveQueue = queueFactory?.Invoke(executor, SolverStore)
+                ?? new InlineWillieSolveQueue(executor, SolverStore);
             Minister = new(
                 Cache,
                 new Rules(new FixedTimeProvider(FixedNow)),
-                solver ?? FakePlacementSolver.WithNoFit(NoFitReason.NoDrafts),
-                growZoneSolver ?? FakeGrowZonePlacementSolver.WithNoFit(NoFitReason.NoTerrainGrid),
+                executor,
+                solveQueue,
                 Colony,
                 SolverStore,
                 OutputStore,
                 Bus,
                 Flags,
-                Traces,
                 NullLogger<MinisterOfWillie>.Instance,
                 replay is null ? null : new MinisterReplayRecorder(replay, traces: Traces));
         }
@@ -1056,6 +1118,25 @@ public sealed class MinisterOfWillieTests
                         Metrics: [])
                 ],
                 ["test_note"]);
+    }
+
+    private sealed class RecordingWillieSolveQueue(WillieSolverStore solverStore) : IWillieSolveQueue
+    {
+        public List<IWillieSolveJob> Jobs { get; } = [];
+
+        public WillieSolveQueueStatus Status => new(
+            Queued: Jobs.Count,
+            Running: 0,
+            EnqueuedThisSession: Jobs.Count,
+            CompletedThisSession: 0,
+            RejectedThisSession: 0);
+
+        public WillieSolveEnqueueResult TryEnqueue(IWillieSolveJob job)
+        {
+            Jobs.Add(job);
+            solverStore.RecordQueued(job);
+            return new WillieSolveEnqueueResult(WillieSolveQueueItemState.Queued);
+        }
     }
 
     private sealed class FakeGrowZonePlacementSolver(PlacementResult? result, Exception? exception = null) : IGrowZonePlacementSolver

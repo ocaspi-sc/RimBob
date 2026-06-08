@@ -212,7 +212,7 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
             AddCell(cells, building.Position, searchBounds);
         foreach (RoomRecord room in colonyState.Rooms.Value.Rooms)
             AddCells(cells, room.Cells, searchBounds);
-        foreach (PlantRecord plant in colonyState.Plants.Value.Plants.Where(plant => plant.IsCrop))
+        foreach (PlantRecord plant in colonyState.Plants.Value.Plants)
             AddCell(cells, plant.Position, searchBounds);
 
         return cells;

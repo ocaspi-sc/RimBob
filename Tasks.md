@@ -11,6 +11,7 @@
 ## Captured by /todo
 
 <!-- entries go here -->
+- [x] willie-async-solve-pool [2026-06-08] #willie #solver #cabinet #perf **WORKTREE.** Willie placement and grow-zone cold solves now queue onto a bounded background solve service with frozen `ColonyState` jobs, live `queued/running/options/no_fit/error/stale` board states, terminal cache reuse, and atomic advice patching for still-current results. Source plan: `C:\dev\RimBob\.plans\willie-async-solve-pool.md`.
 - [x] cabinet-toast-solver-log [2026-06-06] #dashboard #willie #ux **LANDED `4211944`.** Nests each routed Willie follow-up as a child of one "Willie run" cabinet-toast step so earlier solver traces stay visible. [plan](.plans/cabinet-toast-solver-log.md)
 - [x] cabinet-toast-overflow [2026-06-06] #dashboard #ux **LANDED `ce2a9b4`.** Contain Run Cabinet toast text so it no longer overflows adjacent cards.
 - [x] willie-emojis [2026-06-06] #dashboard #willie #ux **LANDED `671f144`.** Distinct dashboard view emojis for Willie Solver and Requests surfaces.

@@ -59,7 +59,7 @@ public static class MinisterEndpoints
         coverage.Register(
             "/api/ministers/willie/zone-requests",
             "available",
-            "Current Willie zone-request board. Initial growing-zone rows are read-only and placement-pending until cell-level zone solving lands.");
+            "Current Willie zone-request board joined with each request's latest live grow-zone solver outcome, options, and queue lifecycle state.");
 
         app.MapGet("/api/ministers", (MinisterRegistry registry) =>
             Results.Ok(registry.Scopes.Select(MinisterScopeInfo.FromDescriptor)));
@@ -257,7 +257,8 @@ public static class MinisterEndpoints
 
         app.MapGet("/api/ministers/willie/solver/requests", (
             MinisterRegistry registry,
-            WillieSolverStore solverStore) =>
+            WillieSolverStore solverStore,
+            IWillieSolveQueue solveQueue) =>
         {
             MinisterDescriptor? scope = registry.FindMinister("willie");
             if (scope is null)
@@ -266,12 +267,14 @@ public static class MinisterEndpoints
             IReadOnlyList<WillieRequestBoardRow> board = solverStore.RequestBoard(scope.Label);
             return Results.Ok(new WillieRequestBoardPayload(
                 Minister: scope.Label,
+                QueueStatus: solveQueue.Status,
                 Requests: board.Select(WillieRequestRowPayload.FromRow).ToList()));
         });
 
         app.MapGet("/api/ministers/willie/zone-requests", (
             MinisterRegistry registry,
-            WillieSolverStore solverStore) =>
+            WillieSolverStore solverStore,
+            IWillieSolveQueue solveQueue) =>
         {
             MinisterDescriptor? scope = registry.FindMinister("willie");
             if (scope is null)
@@ -280,6 +283,7 @@ public static class MinisterEndpoints
             IReadOnlyList<WillieZoneRequestBoardRow> board = solverStore.ZoneRequestBoard(scope.Label);
             return Results.Ok(new WillieZoneRequestBoardPayload(
                 Minister: scope.Label,
+                QueueStatus: solveQueue.Status,
                 Requests: board.Select(WillieZoneRequestRowPayload.FromRow).ToList()));
         });
 
@@ -829,6 +833,7 @@ public static class MinisterEndpoints
 
     private sealed record WillieRequestBoardPayload(
         string Minister,
+        WillieSolveQueueStatus QueueStatus,
         IReadOnlyList<WillieRequestRowPayload> Requests);
 
     private sealed record WillieRequestRowPayload(
@@ -858,6 +863,7 @@ public static class MinisterEndpoints
 
     private sealed record WillieZoneRequestBoardPayload(
         string Minister,
+        WillieSolveQueueStatus QueueStatus,
         IReadOnlyList<WillieZoneRequestRowPayload> Requests);
 
     private sealed record WillieZoneRequestRowPayload(
@@ -876,7 +882,7 @@ public static class MinisterEndpoints
                 string.Equals(row.Outcome.Status, "options", StringComparison.OrdinalIgnoreCase)
                     ? row.Outcome.Options
                     : [];
-            string status = row.Outcome?.Status ?? "awaiting_solve";
+            string status = row.Outcome?.Status ?? "not_seen_yet";
             return new WillieZoneRequestRowPayload(
                 Request: row.Inbound.Request,
                 SourceMinister: row.Inbound.SourceMinister,
@@ -891,9 +897,9 @@ public static class MinisterEndpoints
         private static string MessageFor(WillieZoneSolverSnapshot? outcome)
         {
             if (outcome is null)
-                return "Zone request recorded; awaiting grow-zone placement solve.";
+                return "Zone request recorded; no grow-zone placement solve has started yet.";
             if (string.Equals(outcome.Status, "options", StringComparison.OrdinalIgnoreCase))
-                return $"Grow-zone solver produced {outcome.Options.Count} coordinate option(s). Apply remains deferred until the create_growing_zone write path ships.";
+                return $"Grow-zone solver produced {outcome.Options.Count} coordinate option(s). Apply appears on Willie advice when a rectangular option is current.";
             if (string.Equals(outcome.Status, "no_fit", StringComparison.OrdinalIgnoreCase))
                 return $"Grow-zone solver found no fit: {outcome.NoFit ?? "unknown"}.";
             if (string.Equals(outcome.Status, "error", StringComparison.OrdinalIgnoreCase))

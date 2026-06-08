@@ -92,6 +92,8 @@ The AdviceBus is the inspectable player-facing stream. Active advice is
 published as minister snapshots so stale prior-cycle cards can be replaced
 without losing audit history.
 
+`AdviceBus` also owns atomic single-card patches for background work that completes after a minister snapshot has already been published. Patch callers must prove the target minister and advice id are still current, preserve existing state summaries/chains/flags, and refuse rather than clobber a card that has an in-flight or recorded Apply result.
+
 The bulletin-board/Labor execution side remains deferred until the Auto epic.
 Assisted Apply is intentionally smaller: one player-confirmed, allowlisted
 operation, not planning or pawn allocation.
@@ -104,6 +106,8 @@ rules layer first and an LLM escalation path only when rules cannot decide.
 Minister-specific docs define domain ownership, advice quality constraints,
 escalation boundaries, and open questions. They should not copy every rule,
 enum, fixture, or helper from the implementation.
+
+Willie's placement and grow-zone solves are produced by the rules run but executed through a bounded async solve service. Cold solves are queued onto a named channel, drained by dedicated below-normal-priority background threads, and building solves pass through a one-permit RimAPI gate by default. The rules run may reuse fresh terminal cache hits immediately; otherwise it publishes prose/pending advice and returns while workers fill the live solver boards and patch still-current advice cards.
 
 ### LLM Gateway
 
@@ -158,6 +162,8 @@ Tracked config contains only non-secret defaults. Gemini API keys and other
 secrets must stay in environment variables or gitignored local config.
 `GEMINI_API_KEY` provides one Gemini key. `GEMINI_API_KEYS` provides an ordered
 fallback list for quota/key failures.
+
+`RimBob:WillieSolve` configures the live Willie background solve pool: worker degree, RimAPI gate width, queue cap, and worker thread priority. The default priority is `BelowNormal`; `Lowest` is allowed for experiments but risks starving long-running solves under host CPU load.
 
 The Host should tolerate missing LLM credentials well enough to boot health and
 dashboard surfaces; actual LLM calls can report degraded provider health.

@@ -11,19 +11,16 @@ namespace RimBob.Ministers.Willie;
 public sealed class MinisterOfWillie(
     BriefingCache briefings,
     Rules rules,
-    IPlacementSolver placementSolver,
-    IGrowZonePlacementSolver growZonePlacementSolver,
+    WillieSolveExecutor solveExecutor,
+    IWillieSolveQueue solveQueue,
     ColonyState colonyState,
     WillieSolverStore solverStore,
     MinisterOutputStore outputStore,
     AdviceBus bus,
     FlagChannel flags,
-    MinisterTraceStore traces,
     ILogger<MinisterOfWillie> log,
     MinisterReplayRecorder? replay = null) : IMinister
 {
-    private const string SolverOfflineTraceNote = "solver offline; preserved prior advice";
-
     public string Name => "Willie";
 
     public async Task RunPlayCycle(PlayCycleContext cycle, CancellationToken ct)
@@ -63,8 +60,8 @@ public sealed class MinisterOfWillie(
         PlacementSolverReplayOutput? placementReplayOutput = null;
         IReadOnlyList<AdviceItem> advice = DecisionProjection.ProjectAdvice(result.Decisions, projectionContext);
         IReadOnlyList<AgentFlag> emittedFlags = DecisionProjection.ProjectFlags(result.Decisions, projectionContext);
-        Dictionary<string, PlacementSolveAttempt> attemptsByRequestKey = new(StringComparer.OrdinalIgnoreCase);
-        Dictionary<string, PlacementSolveAttempt> zoneAttemptsByRequestKey = new(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, PlacementSolveAttempt?> attemptsByRequestKey = new(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, PlacementSolveAttempt?> zoneAttemptsByRequestKey = new(StringComparer.OrdinalIgnoreCase);
         IReadOnlyList<RuleId> emittedRuleIds = EmittedAdviceRuleIds(result.Decisions);
         BuildingRequest? drivingBoardRequest = ContainsRule(emittedRuleIds, Rules.BuildingRequestActiveTrace)
             ? Rules.SelectPlacementRequest(briefing, inboundRequests)
@@ -75,23 +72,24 @@ public sealed class MinisterOfWillie(
 
         if (drivingBoardRequest is not null)
         {
-            PlacementSolveAttempt attempt = await SolveAndRecordPlacementAsync(
+            string drivingAdviceId = AdviceIdForRule(Rules.BuildingRequestActiveTrace);
+            PlacementSolveAttempt? attempt = ResolveOrQueuePlacement(
                 drivingBoardRequest,
                 SourceMinisterForRequest(drivingBoardRequest, activeFlags, cycle.Flag),
                 briefing,
                 attemptsByRequestKey,
-                ct);
-            advice = EnrichSolverAdvice(
-                advice,
-                attempt,
-                AdviceIdForRule(Rules.BuildingRequestActiveTrace),
+                drivingAdviceId,
                 removeFallbackWhenApplyReady: false);
-            placementReplayOutput = attempt.ReplayOutput;
-
-            if (attempt.SolverOffline)
+            if (attempt is null)
+                advice = WillieAdviceComposer.MarkSolverPending(advice, drivingAdviceId);
+            else
             {
-                await PreserveSolverOfflineReplayAsync(result, cycle, briefing, context, advice, emittedFlags, attempt.ReplayOutput, ct);
-                return;
+                advice = WillieAdviceComposer.EnrichSolverAdvice(
+                    advice,
+                    attempt,
+                    drivingAdviceId,
+                    removeFallbackWhenApplyReady: false);
+                placementReplayOutput = attempt.ReplayOutput;
             }
         }
 
@@ -100,23 +98,24 @@ public sealed class MinisterOfWillie(
             if (!Rules.TryGetPlacementRequest(rule, briefing, inboundRequests, out BuildingRequest missingRoomRequest))
                 continue;
 
-            PlacementSolveAttempt attempt = await SolveAndRecordPlacementAsync(
+            string drivingAdviceId = AdviceIdForRule(rule);
+            PlacementSolveAttempt? attempt = ResolveOrQueuePlacement(
                 missingRoomRequest,
                 Name,
                 briefing,
                 attemptsByRequestKey,
-                ct);
-            advice = EnrichSolverAdvice(
-                advice,
-                attempt,
-                AdviceIdForRule(rule),
+                drivingAdviceId,
                 removeFallbackWhenApplyReady: true);
-            placementReplayOutput ??= attempt.ReplayOutput;
-
-            if (attempt.SolverOffline)
+            if (attempt is null)
+                advice = WillieAdviceComposer.MarkSolverPending(advice, drivingAdviceId);
+            else
             {
-                await PreserveSolverOfflineReplayAsync(result, cycle, briefing, context, advice, emittedFlags, attempt.ReplayOutput, ct);
-                return;
+                advice = WillieAdviceComposer.EnrichSolverAdvice(
+                    advice,
+                    attempt,
+                    drivingAdviceId,
+                    removeFallbackWhenApplyReady: true);
+                placementReplayOutput ??= attempt.ReplayOutput;
             }
         }
 
@@ -128,33 +127,37 @@ public sealed class MinisterOfWillie(
                 continue;
             }
 
-            PlacementSolveAttempt attempt = await SolveAndRecordPlacementAsync(
+            PlacementSolveAttempt? attempt = ResolveOrQueuePlacement(
                 inbound.Request,
                 inbound.SourceMinister,
                 briefing,
                 attemptsByRequestKey,
-                ct);
-            if (attempt.SolverOffline)
-            {
-                await PreserveSolverOfflineReplayAsync(result, cycle, briefing, context, advice, emittedFlags, attempt.ReplayOutput, ct);
-                return;
-            }
+                drivingAdviceId: null,
+                removeFallbackWhenApplyReady: false);
+            placementReplayOutput ??= attempt?.ReplayOutput;
         }
 
         if (drivingZoneRequest is not null)
         {
-            PlacementSolveAttempt attempt = await SolveAndRecordZonePlacementAsync(
+            string drivingAdviceId = AdviceIdForRule(Rules.ZoneRequestActiveTrace);
+            PlacementSolveAttempt? attempt = ResolveOrQueueZonePlacement(
                 drivingZoneRequest,
                 SourceMinisterForRequest(drivingZoneRequest, activeFlags, cycle.Flag),
                 briefing,
                 zoneAttemptsByRequestKey,
-                ct);
-            advice = EnrichSolverAdvice(
-                advice,
-                attempt,
-                AdviceIdForRule(Rules.ZoneRequestActiveTrace),
+                drivingAdviceId,
                 removeFallbackWhenApplyReady: false);
-            placementReplayOutput ??= attempt.ReplayOutput;
+            if (attempt is null)
+                advice = WillieAdviceComposer.MarkSolverPending(advice, drivingAdviceId);
+            else
+            {
+                advice = WillieAdviceComposer.EnrichSolverAdvice(
+                    advice,
+                    attempt,
+                    drivingAdviceId,
+                    removeFallbackWhenApplyReady: false);
+                placementReplayOutput ??= attempt.ReplayOutput;
+            }
         }
 
         foreach (WillieInboundZoneRequest inbound in zoneSolveBoard)
@@ -165,13 +168,14 @@ public sealed class MinisterOfWillie(
                 continue;
             }
 
-            PlacementSolveAttempt attempt = await SolveAndRecordZonePlacementAsync(
+            PlacementSolveAttempt? attempt = ResolveOrQueueZonePlacement(
                 inbound.Request,
                 inbound.SourceMinister,
                 briefing,
                 zoneAttemptsByRequestKey,
-                ct);
-            placementReplayOutput ??= attempt.ReplayOutput;
+                drivingAdviceId: null,
+                removeFallbackWhenApplyReady: false);
+            placementReplayOutput ??= attempt?.ReplayOutput;
         }
 
         string stateSummary = WillieStateSummary.Build(briefing);
@@ -342,209 +346,106 @@ public sealed class MinisterOfWillie(
         return flagsToRead;
     }
 
-    private async Task<PlacementSolveAttempt> SolveAndRecordPlacementAsync(
+    private PlacementSolveAttempt? ResolveOrQueuePlacement(
         BuildingRequest request,
         string? sourceMinister,
         WillieBriefing briefing,
-        Dictionary<string, PlacementSolveAttempt> attemptsByRequestKey,
-        CancellationToken ct)
-    {
-        string requestKey = WillieSolverStore.RequestKey(request);
-        if (attemptsByRequestKey.TryGetValue(requestKey, out PlacementSolveAttempt? cached))
-            return cached;
-
-        string inputFingerprint = WillieSolveCacheKey.ForBuilding(
-            request,
-            briefing,
-            colonyState,
-            MaterialsOnHandFromStoredResources() ?? []);
-        WillieSolverSnapshot? cachedSnapshot = solverStore.TryGetFreshBuildingOutcome(Name, request, inputFingerprint);
-        CachedSolveOutcome? cachedOutcome = cachedSnapshot is null
-            ? null
-            : CachedSolveOutcome.From(cachedSnapshot);
-        if (cachedSnapshot is not null && cachedOutcome is not null)
-        {
-            PlacementSolveAttempt cachedAttempt = PlacementSolveAttempt.FromCached(cachedOutcome, request);
-            attemptsByRequestKey[requestKey] = cachedAttempt;
-            solverStore.RecordBuildingOutcome(cachedSnapshot with
-            {
-                Request = WillieSolverRequestSnapshot.FromRequest(request, sourceMinister),
-                GameTick = briefing.GameTick,
-                CapturedAt = DateTimeOffset.UtcNow
-            }, inputFingerprint);
-            return cachedAttempt;
-        }
-
-        PlacementSolveAttempt attempt = await TrySolvePlacementAsync(request, briefing, ct);
-        attemptsByRequestKey[requestKey] = attempt;
-        solverStore.RecordBuildingOutcome(new WillieSolverSnapshot(
-            Minister: Name,
-            Request: WillieSolverRequestSnapshot.FromRequest(request, sourceMinister),
-            GameTick: briefing.GameTick,
-            CapturedAt: DateTimeOffset.UtcNow,
-            Output: attempt.ReplayOutput,
-            Options: attempt.Result?.Options ?? []), inputFingerprint);
-        return attempt;
-    }
-
-    private async Task<PlacementSolveAttempt> SolveAndRecordZonePlacementAsync(
-        ZoneRequest request,
-        string? sourceMinister,
-        WillieBriefing briefing,
-        Dictionary<string, PlacementSolveAttempt> attemptsByRequestKey,
-        CancellationToken ct)
-    {
-        string requestKey = WillieSolverStore.RequestKey(request);
-        if (attemptsByRequestKey.TryGetValue(requestKey, out PlacementSolveAttempt? cached))
-            return cached;
-
-        string inputFingerprint = WillieSolveCacheKey.ForZone(request, briefing, colonyState);
-        WillieZoneSolverSnapshot? cachedSnapshot = solverStore.TryGetFreshZoneOutcome(Name, request, inputFingerprint);
-        CachedSolveOutcome? cachedOutcome = cachedSnapshot is null
-            ? null
-            : CachedSolveOutcome.From(cachedSnapshot);
-        if (cachedSnapshot is not null && cachedOutcome is not null)
-        {
-            PlacementSolveAttempt cachedAttempt = PlacementSolveAttempt.FromCached(cachedOutcome, request);
-            attemptsByRequestKey[requestKey] = cachedAttempt;
-            solverStore.RecordZoneOutcome(cachedSnapshot with
-            {
-                Request = WillieZoneRequestSnapshot.FromRequest(request, sourceMinister),
-                GameTick = briefing.GameTick,
-                CapturedAt = DateTimeOffset.UtcNow
-            }, inputFingerprint);
-            return cachedAttempt;
-        }
-
-        PlacementSolveAttempt attempt = await TrySolveZonePlacementAsync(request, briefing, ct);
-        attemptsByRequestKey[requestKey] = attempt;
-        solverStore.RecordZoneOutcome(new WillieZoneSolverSnapshot(
-            Minister: Name,
-            Request: WillieZoneRequestSnapshot.FromRequest(request, sourceMinister),
-            GameTick: briefing.GameTick,
-            CapturedAt: DateTimeOffset.UtcNow,
-            Output: attempt.ReplayOutput,
-            Options: attempt.Result?.Options ?? []), inputFingerprint);
-        return attempt;
-    }
-
-    private async Task PreserveSolverOfflineReplayAsync(
-        RuleRun ruleRun,
-        PlayCycleContext cycle,
-        WillieBriefing briefing,
-        MinisterBriefingContext context,
-        IReadOnlyList<AdviceItem> advice,
-        IReadOnlyList<AgentFlag> emittedFlags,
-        PlacementSolverReplayOutput replayOutput,
-        CancellationToken ct)
-    {
-        string preservedStateSummary = WillieStateSummary.Build(briefing);
-        string? trace = ruleRun.Decisions.Count > 0
-            ? MinisterRuleTableEvaluator.CompositeTrace(ruleRun.Decisions)
-            : ruleRun.Diagnostics.SelectedRule?.Value;
-        await PersistReplayAsync(new MinisterReplayEntry(
-            Minister: Name,
-            Cycle: cycle,
-            Path: "rules",
-            Briefing: briefing,
-            Context: context,
-            RuleTrace: trace,
-            RuleDiagnostics: ruleRun.Diagnostics,
-            Advice: advice,
-            Flags: emittedFlags,
-            StateSummary: preservedStateSummary,
-            OutputKind: "placement_solver",
-            Output: replayOutput), ct);
-        traces.Complete(Name, SolverOfflineTraceNote);
-        log.LogInformation(
-            "Willie placement solver offline for trace={Trace}; preserved prior advice snapshot",
-            trace);
-    }
-
-    private async Task<PlacementSolveAttempt> TrySolvePlacementAsync(
-        BuildingRequest request,
-        WillieBriefing briefing,
-        CancellationToken ct)
-    {
-        PlacementSpec spec = PlacementSpec.FromBuildingRequest(
-            request,
-            MaterialsOnHandFromStoredResources());
-        try
-        {
-            PlacementResult result = await placementSolver.SolveAsync(spec, briefing, colonyState, ct);
-            return PlacementSolveAttempt.FromResult(result, request);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex) when (
-            RimApiConnectionFailure.IsConnectionFailure(ex) ||
-            ex is RimApiLiveStateUnavailableException)
-        {
-            log.LogWarning(
-                ex,
-                "Willie placement solver is offline for request={Request}; preserving prior advice.",
-                request.Request);
-            return PlacementSolveAttempt.FromSolverOffline(ex);
-        }
-        catch (Exception ex)
-        {
-            log.LogWarning(ex, "Willie placement solver failed for request={Request}", request.Request);
-            return PlacementSolveAttempt.FromFailure(ex);
-        }
-    }
-
-    private async Task<PlacementSolveAttempt> TrySolveZonePlacementAsync(
-        ZoneRequest request,
-        WillieBriefing briefing,
-        CancellationToken ct)
-    {
-        try
-        {
-            PlacementResult result = await growZonePlacementSolver.SolveAsync(request, briefing, colonyState, ct);
-            return PlacementSolveAttempt.FromZoneResult(result, request);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            log.LogWarning(ex, "Willie grow-zone placement solver failed for request={Request}", request.Request);
-            return PlacementSolveAttempt.FromZoneFailure(ex);
-        }
-    }
-
-    private IReadOnlyList<MaterialHint>? MaterialsOnHandFromStoredResources()
-    {
-        IReadOnlyDictionary<string, int> countByDef = colonyState.StoredResources.Value.CountByDef;
-        if (countByDef.Count == 0) return null;
-
-        return countByDef
-            .OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(pair => pair.Key, StringComparer.Ordinal)
-            .Select(pair => new MaterialHint(pair.Key, pair.Value))
-            .ToList();
-    }
-
-    private static IReadOnlyList<AdviceItem> EnrichSolverAdvice(
-        IReadOnlyList<AdviceItem> advice,
-        PlacementSolveAttempt attempt,
-        string drivingAdviceId,
+        Dictionary<string, PlacementSolveAttempt?> attemptsByRequestKey,
+        string? drivingAdviceId,
         bool removeFallbackWhenApplyReady)
     {
-        if (advice.Count == 0) return advice;
+        string requestKey = WillieSolverStore.RequestKey(request);
+        if (attemptsByRequestKey.TryGetValue(requestKey, out PlacementSolveAttempt? remembered))
+            return remembered;
 
-        return advice
-            .Select(item => IsDrivingAdvice(item, drivingAdviceId)
-                ? EnrichAdviceItem(item, attempt, removeFallbackWhenApplyReady)
-                : item)
-            .ToList();
+        IReadOnlyList<MaterialHint> materialsOnHand = WillieSolveExecutor.MaterialsOnHandFromStoredResources(colonyState);
+        string inputFingerprint = solveExecutor.BuildingFingerprint(request, briefing, colonyState, materialsOnHand);
+        PlacementSolveAttempt? cachedAttempt = solveExecutor.TryUseFreshBuildingOutcome(
+            Name,
+            request,
+            sourceMinister,
+            briefing,
+            inputFingerprint);
+        if (cachedAttempt is not null)
+        {
+            attemptsByRequestKey[requestKey] = cachedAttempt;
+            return cachedAttempt;
+        }
+
+        WillieBuildingSolveJob job = new(
+            JobId: Guid.NewGuid().ToString("N"),
+            Minister: Name,
+            RequestKey: requestKey,
+            InputFingerprint: inputFingerprint,
+            SourceMinister: sourceMinister,
+            Briefing: briefing,
+            FrozenState: ColonyStateFreeze.Capture(colonyState),
+            DrivingAdviceId: drivingAdviceId,
+            RemoveFallbackWhenApplyReady: removeFallbackWhenApplyReady,
+            GameTick: briefing.GameTick,
+            EnqueuedAt: DateTimeOffset.UtcNow,
+            Request: request,
+            MaterialsOnHand: materialsOnHand);
+        WillieSolveEnqueueResult enqueue = solveQueue.TryEnqueue(job);
+        PlacementSolveAttempt? attempt = enqueue.InlineAttempt ?? RejectedAttempt(enqueue, zone: false);
+        attemptsByRequestKey[requestKey] = attempt;
+        return attempt;
     }
 
-    private static bool IsDrivingAdvice(AdviceItem item, string drivingAdviceId) =>
-        string.Equals(item.Id, drivingAdviceId, StringComparison.OrdinalIgnoreCase);
+    private PlacementSolveAttempt? ResolveOrQueueZonePlacement(
+        ZoneRequest request,
+        string? sourceMinister,
+        WillieBriefing briefing,
+        Dictionary<string, PlacementSolveAttempt?> attemptsByRequestKey,
+        string? drivingAdviceId,
+        bool removeFallbackWhenApplyReady)
+    {
+        string requestKey = WillieSolverStore.RequestKey(request);
+        if (attemptsByRequestKey.TryGetValue(requestKey, out PlacementSolveAttempt? remembered))
+            return remembered;
+
+        string inputFingerprint = solveExecutor.ZoneFingerprint(request, briefing, colonyState);
+        PlacementSolveAttempt? cachedAttempt = solveExecutor.TryUseFreshZoneOutcome(
+            Name,
+            request,
+            sourceMinister,
+            briefing,
+            inputFingerprint);
+        if (cachedAttempt is not null)
+        {
+            attemptsByRequestKey[requestKey] = cachedAttempt;
+            return cachedAttempt;
+        }
+
+        WillieZoneSolveJob job = new(
+            JobId: Guid.NewGuid().ToString("N"),
+            Minister: Name,
+            RequestKey: requestKey,
+            InputFingerprint: inputFingerprint,
+            SourceMinister: sourceMinister,
+            Briefing: briefing,
+            FrozenState: ColonyStateFreeze.Capture(colonyState),
+            DrivingAdviceId: drivingAdviceId,
+            RemoveFallbackWhenApplyReady: removeFallbackWhenApplyReady,
+            GameTick: briefing.GameTick,
+            EnqueuedAt: DateTimeOffset.UtcNow,
+            Request: request);
+        WillieSolveEnqueueResult enqueue = solveQueue.TryEnqueue(job);
+        PlacementSolveAttempt? attempt = enqueue.InlineAttempt ?? RejectedAttempt(enqueue, zone: true);
+        attemptsByRequestKey[requestKey] = attempt;
+        return attempt;
+    }
+
+    private static PlacementSolveAttempt? RejectedAttempt(WillieSolveEnqueueResult enqueue, bool zone)
+    {
+        if (enqueue.State != WillieSolveQueueItemState.Rejected)
+            return null;
+
+        InvalidOperationException ex = new("Willie solve queue is full.");
+        return zone
+            ? PlacementSolveAttempt.FromZoneFailure(ex)
+            : PlacementSolveAttempt.FromFailure(ex);
+    }
 
     private static IReadOnlyList<RuleId> EmittedAdviceRuleIds(IReadOnlyList<Decision> decisions) =>
         decisions
@@ -555,147 +456,6 @@ public sealed class MinisterOfWillie(
 
     private static bool ContainsRule(IReadOnlyList<RuleId> rules, RuleId rule) =>
         rules.Contains(rule);
-
-    private static AdviceItem EnrichAdviceItem(
-        AdviceItem item,
-        PlacementSolveAttempt attempt,
-        bool removeFallbackWhenApplyReady)
-    {
-        if (attempt.Result is null)
-            return item with
-            {
-                Body = AppendPlacementBodyNote(item.Body, attempt.AdviceBodyNote),
-                Rationale = AppendPlacementNote(item.Rationale, attempt.Note)
-            };
-
-        PlacementResult result = attempt.Result;
-        IReadOnlyList<AdviceOption>? options = result.Options.Count == 0
-            ? item.Options
-            : result.Options.Select(option =>
-                AnnotateManualZonePlacement(option with
-                {
-                    Readiness = new AdviceOptionReadiness(
-                        Draftable: WilliePlacementSolveText.ReadinessWire(result.Draftable),
-                        PlacementValid: WilliePlacementSolveText.ReadinessWire(result.PlacementValid),
-                        MaterialsReady: WilliePlacementSolveText.ReadinessWire(result.MaterialsReady),
-                        ApplyReady: WilliePlacementSolveText.ReadinessWire(result.ApplyReady))
-                }))
-                .ToList();
-
-        bool attachApplyActions = options is { Count: > 0 } &&
-            result.ApplyReady != PlacementReadiness.Blocked;
-        IReadOnlyList<AdviceAction> baseActions = removeFallbackWhenApplyReady && attachApplyActions
-            ? item.Actions.Where(action => action.Kind != AdviceActionKind.PlaceBlueprint || action.Apply is not null).ToList()
-            : item.Actions;
-        IReadOnlyList<AdviceAction> actions = attachApplyActions
-            ? baseActions.Concat(options!.Select(ApplyActionForOption).Where(action => action is not null).Cast<AdviceAction>()).ToList()
-            : baseActions;
-
-        return item with
-        {
-            Body = AppendPlacementBodyNote(item.Body, attempt.AdviceBodyNote),
-            Options = options,
-            Actions = actions,
-            Rationale = AppendPlacementNote(item.Rationale, attempt.Note)
-        };
-    }
-
-    private static AdviceAction? ApplyActionForOption(AdviceOption option)
-    {
-        if (IsZoneCellOption(option))
-            return GrowingZoneApplyActionForOption(option);
-
-        return new AdviceAction(
-            AdviceActionKind.PlaceBlueprint,
-            $"Place the {option.Label} blueprint group.",
-            Owner: "Willie",
-            Apply: new PlaceBlueprintGroupApply(
-                Label: option.Label,
-                TargetSummary: option.Summary,
-                MapId: option.BlueprintGroup.MapId,
-                BlueprintGroup: option.BlueprintGroup,
-                AssetCount: option.BlueprintGroup.Assets.Count));
-    }
-
-    private static AdviceAction? GrowingZoneApplyActionForOption(AdviceOption option)
-    {
-        ZoneOptionShape? shape = ZoneOptionShapeFor(option);
-        if (shape is null)
-            return null;
-
-        if (shape.Rect.Area != shape.Cells.Count)
-            return null;
-
-        return new AdviceAction(
-            AdviceActionKind.DesignateZoneReq,
-            $"Create the {option.Label} growing zone.",
-            Quantity: shape.Cells.Count,
-            Owner: "Willie",
-            WorkType: WorkType.Grow,
-            Apply: new CreateGrowingZoneApply(
-                Label: option.Label,
-                TargetSummary: option.Summary,
-                MapId: option.BlueprintGroup.MapId,
-                PlantDef: shape.PlantDef,
-                Rect: shape.Rect,
-                TargetCount: shape.Cells.Count));
-    }
-
-    private static AdviceOption AnnotateManualZonePlacement(AdviceOption option)
-    {
-        ZoneOptionShape? shape = ZoneOptionShapeFor(option);
-        if (shape is null || shape.Rect.Area == shape.Cells.Count)
-            return option;
-
-        return option with
-        {
-            TradeoffNote = AppendPlacementNote(
-                option.TradeoffNote ?? string.Empty,
-                "Non-rectangular growing area - place it manually in-game.")
-        };
-    }
-
-    private static ZoneOptionShape? ZoneOptionShapeFor(AdviceOption option)
-    {
-        IReadOnlyList<BlueprintAsset> zoneAssets = option.BlueprintGroup.Assets
-            .Where(asset => string.Equals(asset.Role, "zone_cell", StringComparison.OrdinalIgnoreCase))
-            .ToList();
-        if (zoneAssets.Count == 0 || zoneAssets.Count != option.BlueprintGroup.Assets.Count)
-            return null;
-
-        IReadOnlyList<string> plantDefs = zoneAssets
-            .Select(asset => asset.DefName)
-            .Where(def => !string.IsNullOrWhiteSpace(def))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-        if (plantDefs.Count != 1)
-            return null;
-
-        IReadOnlyList<MapCell> cells = zoneAssets
-            .Select(asset => asset.Cell)
-            .Distinct()
-            .ToList();
-        if (cells.Count != zoneAssets.Count)
-            return null;
-
-        MapRect rect = new(
-            X1: cells.Min(cell => cell.X),
-            Z1: cells.Min(cell => cell.Z),
-            X2: cells.Max(cell => cell.X),
-            Z2: cells.Max(cell => cell.Z));
-
-        return new ZoneOptionShape(plantDefs[0], cells, rect);
-    }
-
-    private static bool IsZoneCellOption(AdviceOption option) =>
-        option.BlueprintGroup.Assets.Any(asset =>
-            string.Equals(asset.Role, "zone_cell", StringComparison.OrdinalIgnoreCase));
-
-    private static string AppendPlacementNote(string text, string note) =>
-        string.IsNullOrWhiteSpace(text) ? note : $"{text} {note}";
-
-    private static string AppendPlacementBodyNote(string body, string? note) =>
-        string.IsNullOrWhiteSpace(note) ? body : AppendPlacementNote(body, note);
 
     private static string AdviceIdForRule(RuleId rule) =>
         $"willie_{rule.Value}";
@@ -740,135 +500,4 @@ public sealed class MinisterOfWillie(
             flags.Publish(flag);
     }
 
-    private sealed record ZoneOptionShape(
-        string PlantDef,
-        IReadOnlyList<MapCell> Cells,
-        MapRect Rect);
-
-    private sealed record PlacementSolveAttempt(
-        PlacementResult? Result,
-        string Note,
-        string? AdviceBodyNote,
-        PlacementSolverReplayOutput ReplayOutput,
-        bool SolverOffline)
-    {
-        public static PlacementSolveAttempt FromResult(PlacementResult result, BuildingRequest request) =>
-            new(
-                result,
-                WilliePlacementSolveText.NoteFor(result, request),
-                WilliePlacementSolveText.AdviceBodyNoteFor(result, request),
-                PlacementSolverReplayOutput.FromResult(result),
-                SolverOffline: false);
-
-        public static PlacementSolveAttempt FromCached(CachedSolveOutcome outcome, BuildingRequest request) =>
-            new(
-                outcome.Result,
-                WilliePlacementSolveText.CachedNoteFor(outcome.Result, request),
-                WilliePlacementSolveText.AdviceBodyNoteFor(outcome.Result, request),
-                outcome.ReplayOutput,
-                SolverOffline: false);
-
-        public static PlacementSolveAttempt FromZoneResult(PlacementResult result, ZoneRequest request) =>
-            new(
-                result,
-                WilliePlacementSolveText.NoteFor(result, request),
-                WilliePlacementSolveText.AdviceBodyNoteFor(result, request),
-                PlacementSolverReplayOutput.FromResult(result),
-                SolverOffline: false);
-
-        public static PlacementSolveAttempt FromCached(CachedSolveOutcome outcome, ZoneRequest request) =>
-            new(
-                outcome.Result,
-                WilliePlacementSolveText.CachedNoteFor(outcome.Result, request),
-                WilliePlacementSolveText.AdviceBodyNoteFor(outcome.Result, request),
-                outcome.ReplayOutput,
-                SolverOffline: false);
-
-        public static PlacementSolveAttempt FromFailure(Exception ex)
-        {
-            string errorType = ex.GetType().Name;
-            string note = $"Placement solver unavailable: {errorType}. Keeping prose advice.";
-            string bodyNote = $"Placement solver could not suggest layout options because it hit {errorType} before validation completed.";
-            return new PlacementSolveAttempt(
-                null,
-                note,
-                bodyNote,
-                PlacementSolverReplayOutput.FromFailure(errorType, ex.Message),
-                SolverOffline: false);
-        }
-
-        public static PlacementSolveAttempt FromSolverOffline(Exception ex)
-        {
-            string errorType = ex.GetType().Name;
-            string note = $"Placement solver offline: {errorType}. Preserved prior advice.";
-            string bodyNote = $"Placement solver could not refresh layout options because live map validation was unavailable ({errorType}); preserved prior advice.";
-            return new PlacementSolveAttempt(
-                null,
-                note,
-                bodyNote,
-                PlacementSolverReplayOutput.FromOffline(errorType, ex.Message),
-                SolverOffline: true);
-        }
-
-        public static PlacementSolveAttempt FromZoneFailure(Exception ex)
-        {
-            string errorType = ex.GetType().Name;
-            string note = $"Grow-zone solver unavailable: {errorType}. Keeping prose advice.";
-            string bodyNote = $"Grow-zone solver could not suggest zone options because it hit {errorType} before scoring completed.";
-            return new PlacementSolveAttempt(
-                null,
-                note,
-                bodyNote,
-                PlacementSolverReplayOutput.FromFailure(errorType, ex.Message),
-                SolverOffline: false);
-        }
-    }
-}
-
-public sealed record PlacementSolverReplayOutput(
-    string Status,
-    string? NoFit,
-    string? Draftable,
-    string? PlacementValid,
-    string? MaterialsReady,
-    string? ApplyReady,
-    PlacementTrace? Trace,
-    string? ErrorType,
-    string? ErrorMessage)
-{
-    public static PlacementSolverReplayOutput FromResult(PlacementResult result) =>
-        new(
-            Status: result.Options.Count > 0 ? "options" : "no_fit",
-            NoFit: result.NoFit?.ToString(),
-            Draftable: result.Draftable.ToString(),
-            PlacementValid: result.PlacementValid.ToString(),
-            MaterialsReady: result.MaterialsReady.ToString(),
-            ApplyReady: result.ApplyReady.ToString(),
-            Trace: result.Trace,
-            ErrorType: null,
-            ErrorMessage: null);
-
-    public static PlacementSolverReplayOutput FromFailure(string errorType, string errorMessage) =>
-        new(
-            Status: "error",
-            NoFit: null,
-            Draftable: null,
-            PlacementValid: null,
-            MaterialsReady: null,
-            ApplyReady: null,
-            Trace: null,
-            ErrorType: errorType,
-            ErrorMessage: errorMessage);
-
-    public static PlacementSolverReplayOutput FromOffline(string errorType, string errorMessage) =>
-        new(
-            Status: "offline",
-            NoFit: null,
-            Draftable: null,
-            PlacementValid: null,
-            MaterialsReady: null,
-            ApplyReady: null,
-            Trace: null,
-            ErrorType: errorType,
-            ErrorMessage: errorMessage);
 }

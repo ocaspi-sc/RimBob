@@ -60,6 +60,21 @@ public sealed class WillieSolverStoreTests
         sut.TryGetFreshBuildingOutcome("Willie", request, "request-state-b").Should().BeNull();
     }
 
+    [Theory]
+    [InlineData("queued")]
+    [InlineData("running")]
+    [InlineData("error")]
+    [InlineData("stale")]
+    public void TryGetFreshBuildingOutcome_ReturnsOnlyReusableTerminalOutcomes(string status)
+    {
+        WillieSolverStore sut = new();
+        BuildingRequest request = Request("starter freezer near kitchen");
+
+        sut.RecordBuildingOutcome(Snapshot(request.Request, status: status), inputFingerprint: "request-state-a");
+
+        sut.TryGetFreshBuildingOutcome("Willie", request, "request-state-a").Should().BeNull();
+    }
+
     [Fact]
     public void RecordInbound_HidesRowsButKeepsFreshCacheWhenRequestsLeaveBoard()
     {
@@ -93,6 +108,21 @@ public sealed class WillieSolverStoreTests
         rows[1].Inbound.Request.Request.Should().Be(workshopRequest.Request);
         rows[1].Outcome.Should().NotBeNull();
         sut.TryGetFreshBuildingOutcome("Willie", freezerRequest, "freezer-state").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void RecordInbound_PrunesDroppedQueuedRows()
+    {
+        WillieSolverStore sut = new();
+        BuildingRequest freezerRequest = Request("starter freezer near kitchen");
+        WillieInboundRequest freezerInbound = Inbound(freezerRequest, "Chef");
+
+        sut.RecordInbound("Willie", [freezerInbound]);
+        sut.RecordBuildingOutcome(Snapshot(freezerRequest.Request, status: "queued"), inputFingerprint: "freezer-state");
+        sut.RecordInbound("Willie", []);
+
+        sut.RequestBoard("Willie").Should().BeEmpty();
+        sut.TryGetFreshBuildingOutcome("Willie", freezerRequest, "freezer-state").Should().BeNull();
     }
 
     [Fact]
@@ -292,6 +322,7 @@ public sealed class WillieSolverStoreTests
     private static WillieSolverSnapshot Snapshot(
         string request,
         IReadOnlyList<AdviceOption>? options = null,
+        string status = "options",
         string targetClass = "Freezer",
         string? targetDef = "Cooler",
         string? roomClass = "Freezer") =>
@@ -309,7 +340,7 @@ public sealed class WillieSolverStoreTests
             GameTick: 123,
             CapturedAt: DateTimeOffset.UtcNow,
             Output: new PlacementSolverReplayOutput(
-                Status: "options",
+                Status: status,
                 NoFit: null,
                 Draftable: "Ready",
                 PlacementValid: "Ready",

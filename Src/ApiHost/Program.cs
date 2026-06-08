@@ -57,6 +57,10 @@ try
         .Bind(builder.Configuration.GetSection(RimBobOptions.SectionName))
         .ValidateDataAnnotations()
         .ValidateOnStart();
+    builder.Services
+        .AddOptions<WillieSolveOptions>()
+        .Bind(builder.Configuration.GetSection($"{RimBobOptions.SectionName}:WillieSolve"))
+        .ValidateOnStart();
 
     // Localhost-only bind (design/dashboard.md). Never 0.0.0.0.
     builder.WebHost.UseUrls(options.ListenUrl);
@@ -145,6 +149,9 @@ try
     builder.Services.AddSingleton<MinisterTraceStore>();
     builder.Services.AddSingleton<CabinetRunLogStore>();
     builder.Services.AddSingleton<WillieSolverStore>();
+    builder.Services.AddSingleton<WillieSolveExecutor>();
+    builder.Services.AddSingleton<ChannelWillieSolveQueue>();
+    builder.Services.AddSingleton<IWillieSolveQueue>(sp => sp.GetRequiredService<ChannelWillieSolveQueue>());
     builder.Services.AddSingleton<AssistedApplyService>();
     builder.Services.AddTransient<RimApiRuntimeProbe>();
     builder.Services.AddSingleton<RimApiRuntimeProbeCache>();
@@ -288,6 +295,7 @@ try
     builder.Services.AddHostedService<ColonySnapshotRestoreHostedService>();
     builder.Services.AddHostedService<MinisterCorpusRestoreHostedService>();
     builder.Services.AddHostedService<AgendaBootstrapHostedService>();
+    builder.Services.AddHostedService<WillieSolveWorker>();
     builder.Services.AddHostedService<DayTickOrchestrator>();
 
     var app = builder.Build();

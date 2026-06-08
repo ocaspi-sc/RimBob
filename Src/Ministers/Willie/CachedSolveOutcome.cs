@@ -2,7 +2,7 @@ using RimBob.Core.Advice;
 
 namespace RimBob.Ministers.Willie;
 
-internal sealed record CachedSolveOutcome(
+public sealed record CachedSolveOutcome(
     PlacementResult Result,
     PlacementSolverReplayOutput ReplayOutput)
 {

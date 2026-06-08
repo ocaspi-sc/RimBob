@@ -800,11 +800,10 @@ public sealed class AssistedApplyService(
     {
         foreach (MapZoneRecord zone in state.Zones.Value.Zones.Where(zone => zone.IsGrowing))
         {
-            if (!string.Equals(zone.PlantDef, apply.PlantDef, StringComparison.OrdinalIgnoreCase))
+            if (!GrowingZoneMatchesApply(zone, apply))
                 continue;
 
-            if (zone.CellCount == apply.TargetCount)
-                return true;
+            return true;
         }
 
         return false;
@@ -829,19 +828,32 @@ public sealed class AssistedApplyService(
             if (beforeWriteIds.Contains(zone.Id))
                 continue;
 
-            if (zone.CellCount != apply.TargetCount)
+            if (!GrowingZoneMatchesApply(zone, apply))
                 continue;
-
-            if (!string.IsNullOrWhiteSpace(zone.PlantDef) &&
-                !string.Equals(zone.PlantDef, apply.PlantDef, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
 
             return zone;
         }
 
         return null;
+    }
+
+    private static bool GrowingZoneMatchesApply(MapZoneRecord zone, CreateGrowingZoneApply apply)
+    {
+        if (!string.Equals(zone.PlantDef, apply.PlantDef, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        IReadOnlyList<MapCell> expectedCells = CellsIn(apply.Rect);
+        if (zone.CellCount != expectedCells.Count)
+            return false;
+
+        if (zone.Cells.Count == 0)
+            return false;
+
+        HashSet<MapCell> zoneCells = zone.Cells
+            .Select(cell => new MapCell(cell.X, cell.Z))
+            .ToHashSet();
+
+        return expectedCells.All(zoneCells.Contains);
     }
 
     private static HashSet<MapCell> GrowZoneBlockedCells(ColonyState state)
@@ -858,7 +870,7 @@ public sealed class AssistedApplyService(
             AddCell(cells, building.Position);
         foreach (RoomRecord room in state.Rooms.Value.Rooms)
             AddCells(cells, room.Cells);
-        foreach (PlantRecord plant in state.Plants.Value.Plants.Where(plant => plant.IsCrop))
+        foreach (PlantRecord plant in state.Plants.Value.Plants)
             AddCell(cells, plant.Position);
 
         return cells;

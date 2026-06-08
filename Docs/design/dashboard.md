@@ -171,6 +171,8 @@ Minister names always render with their fixed emoji in human-facing dashboard la
 
 Willie's construction scope keeps distinct view cues for diagnostic surfaces: Solver uses `🧮` for deterministic placement math and Requests uses `📥` for inbound demand/board state instead of reusing the generic construction brick.
 
+Willie Solver, Requests, and Zone Requests surfaces share the live solve lifecycle vocabulary: `not_seen_yet`, `queued`, `running`, `options`, `no_fit`, `error`, and `stale`. Requests views should show a compact queue-status strip and keep polling while any job is queued or running; Apply controls still render only from real Willie-authored `options[]` and `actions[]`.
+
 Large objects use the standard disclosure pattern: a real button header with
 `aria-expanded` / `aria-controls`, plus a conditionally rendered panel in normal
 document flow.
@@ -638,6 +640,8 @@ Willie's Solver view is a latest-only diagnostic surface for the Placement Solve
 Willie's Requests view is a read-only master-detail diagnostic surface for inbound building requests aimed at Willie. It reads `/api/ministers/willie/solver/requests`, lists the current building-request board in a sidebar, and shows the selected request's full `BuildingRequest` fields plus the latest per-request Placement Solver outcome. Requests with validated options render read-only footprint cards; no-fit, error, and offline outcomes show the concrete solver message; unsolved requests show an awaiting-solve state. Apply stays in Build Queue only.
 
 The Requests view also reads `/api/ministers/willie/zone-requests` and shows Willie-routed `ZoneRequest` rows above the building-request board. Zone rows render crop, tile count, adjacency, terrain need, source minister, and the latest zone-solver status. When the solver finds candidate cells, the detail pane renders diagnostic option cards with plant def, footprint cells, score/readiness, and an explicit note that Apply lives on the Willie Advice action. Zone Apply appears only when Willie emits a concrete validated `create_growing_zone` option.
+
+Queued and running rows are meaningful states, not empty states. `output: null` means a request has been seen but no solve job has been queued yet; once a job exists, the row should carry an output object whose status names the lifecycle state.
 
 ### Rules
 

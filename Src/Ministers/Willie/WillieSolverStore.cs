@@ -42,6 +42,7 @@ public sealed class WillieSolverStore
                 .Select(group => group.First())
                 .ToList();
             _board[minister] = snapshot;
+            PruneDroppedBuildingLifecycleRows(minister, snapshot.Select(row => row.RequestKey).ToHashSet(StringComparer.OrdinalIgnoreCase));
         }
     }
 
@@ -54,6 +55,7 @@ public sealed class WillieSolverStore
                 .Select(group => group.First())
                 .ToList();
             _zoneBoard[minister] = snapshot;
+            PruneDroppedZoneLifecycleRows(minister, snapshot.Select(row => row.RequestKey).ToHashSet(StringComparer.OrdinalIgnoreCase));
         }
     }
 
@@ -77,7 +79,8 @@ public sealed class WillieSolverStore
             string requestKey = RequestKey(request);
             return HasFreshFingerprint(_fingerprintsByRequest, minister, requestKey, inputFingerprint) &&
                 _byRequest.TryGetValue(minister, out Dictionary<string, WillieSolverSnapshot>? snapshots) &&
-                snapshots.TryGetValue(requestKey, out WillieSolverSnapshot? snapshot)
+                snapshots.TryGetValue(requestKey, out WillieSolverSnapshot? snapshot) &&
+                IsReusableTerminal(snapshot.Status)
                     ? snapshot
                     : null;
         }
@@ -93,9 +96,55 @@ public sealed class WillieSolverStore
             string requestKey = RequestKey(request);
             return HasFreshFingerprint(_zoneFingerprintsByRequest, minister, requestKey, inputFingerprint) &&
                 _zoneByRequest.TryGetValue(minister, out Dictionary<string, WillieZoneSolverSnapshot>? snapshots) &&
-                snapshots.TryGetValue(requestKey, out WillieZoneSolverSnapshot? snapshot)
+                snapshots.TryGetValue(requestKey, out WillieZoneSolverSnapshot? snapshot) &&
+                IsReusableTerminal(snapshot.Status)
                     ? snapshot
                     : null;
+        }
+    }
+
+    public void RecordQueued(IWillieSolveJob job) =>
+        RecordLifecycle(job, "queued", "Solve job is queued.");
+
+    public void RecordRunning(IWillieSolveJob job) =>
+        RecordLifecycle(job, "running", "Solve job is running.");
+
+    public void RecordStale(IWillieSolveJob job, string message)
+    {
+        lock (_lock)
+        {
+            bool current = job.Kind switch
+            {
+                WillieSolveKind.Building => HasFreshFingerprint(_fingerprintsByRequest, job.Minister, job.RequestKey, job.InputFingerprint),
+                WillieSolveKind.Zone => HasFreshFingerprint(_zoneFingerprintsByRequest, job.Minister, job.RequestKey, job.InputFingerprint),
+                _ => false
+            };
+            if (!current) return;
+        }
+
+        RecordLifecycle(job, "stale", message);
+    }
+
+    public bool CanPatchAdvice(IWillieSolveJob job)
+    {
+        lock (_lock)
+        {
+            return job.Kind switch
+            {
+                WillieSolveKind.Building =>
+                    BoardContains(_board, job.Minister, job.RequestKey) &&
+                    HasFreshFingerprint(_fingerprintsByRequest, job.Minister, job.RequestKey, job.InputFingerprint) &&
+                    _byRequest.TryGetValue(job.Minister, out Dictionary<string, WillieSolverSnapshot>? snapshots) &&
+                    snapshots.TryGetValue(job.RequestKey, out WillieSolverSnapshot? snapshot) &&
+                    IsPatchTerminal(snapshot.Status),
+                WillieSolveKind.Zone =>
+                    BoardContains(_zoneBoard, job.Minister, job.RequestKey) &&
+                    HasFreshFingerprint(_zoneFingerprintsByRequest, job.Minister, job.RequestKey, job.InputFingerprint) &&
+                    _zoneByRequest.TryGetValue(job.Minister, out Dictionary<string, WillieZoneSolverSnapshot>? snapshots) &&
+                    snapshots.TryGetValue(job.RequestKey, out WillieZoneSolverSnapshot? snapshot) &&
+                    IsPatchTerminal(snapshot.Status),
+                _ => false
+            };
         }
     }
 
@@ -237,6 +286,105 @@ public sealed class WillieSolverStore
         fingerprintsByMinister.TryGetValue(minister, out Dictionary<string, string>? fingerprints) &&
         fingerprints.TryGetValue(requestKey, out string? stored) &&
         string.Equals(stored, inputFingerprint, StringComparison.Ordinal);
+
+    private void RecordLifecycle(IWillieSolveJob job, string status, string message)
+    {
+        lock (_lock)
+        {
+            PlacementSolverReplayOutput output = PlacementSolverReplayOutput.FromLifecycle(status, message);
+            switch (job)
+            {
+                case WillieBuildingSolveJob buildingJob:
+                    RecordBuildingOutcomeLocked(new WillieSolverSnapshot(
+                        Minister: buildingJob.Minister,
+                        Request: WillieSolverRequestSnapshot.FromRequest(buildingJob.Request, buildingJob.SourceMinister),
+                        GameTick: buildingJob.GameTick,
+                        CapturedAt: DateTimeOffset.UtcNow,
+                        Output: output,
+                        Options: []), buildingJob.InputFingerprint);
+                    break;
+                case WillieZoneSolveJob zoneJob:
+                    RecordZoneOutcomeLocked(new WillieZoneSolverSnapshot(
+                        Minister: zoneJob.Minister,
+                        Request: WillieZoneRequestSnapshot.FromRequest(zoneJob.Request, zoneJob.SourceMinister),
+                        GameTick: zoneJob.GameTick,
+                        CapturedAt: DateTimeOffset.UtcNow,
+                        Output: output,
+                        Options: []), zoneJob.InputFingerprint);
+                    break;
+            }
+        }
+    }
+
+    private void RecordBuildingOutcomeLocked(WillieSolverSnapshot snapshot, string? inputFingerprint)
+    {
+        _latest[snapshot.Minister] = snapshot;
+        if (snapshot.Request is null) return;
+
+        string requestKey = RequestKey(snapshot.Request);
+        OutcomesFor(_byRequest, snapshot.Minister)[requestKey] = snapshot;
+        RecordFingerprint(_fingerprintsByRequest, snapshot.Minister, requestKey, inputFingerprint);
+    }
+
+    private void RecordZoneOutcomeLocked(WillieZoneSolverSnapshot snapshot, string? inputFingerprint)
+    {
+        string requestKey = RequestKey(snapshot.Request);
+        OutcomesFor(_zoneByRequest, snapshot.Minister)[requestKey] = snapshot;
+        RecordFingerprint(_zoneFingerprintsByRequest, snapshot.Minister, requestKey, inputFingerprint);
+    }
+
+    private void PruneDroppedBuildingLifecycleRows(string minister, HashSet<string> liveRequestKeys)
+    {
+        if (!_byRequest.TryGetValue(minister, out Dictionary<string, WillieSolverSnapshot>? snapshots))
+            return;
+
+        foreach (string requestKey in snapshots
+            .Where(pair => !liveRequestKeys.Contains(pair.Key) && IsLifecycleStatus(pair.Value.Status))
+            .Select(pair => pair.Key)
+            .ToList())
+        {
+            snapshots.Remove(requestKey);
+            RemoveFingerprint(_fingerprintsByRequest, minister, requestKey);
+        }
+    }
+
+    private void PruneDroppedZoneLifecycleRows(string minister, HashSet<string> liveRequestKeys)
+    {
+        if (!_zoneByRequest.TryGetValue(minister, out Dictionary<string, WillieZoneSolverSnapshot>? snapshots))
+            return;
+
+        foreach (string requestKey in snapshots
+            .Where(pair => !liveRequestKeys.Contains(pair.Key) && IsLifecycleStatus(pair.Value.Status))
+            .Select(pair => pair.Key)
+            .ToList())
+        {
+            snapshots.Remove(requestKey);
+            RemoveFingerprint(_zoneFingerprintsByRequest, minister, requestKey);
+        }
+    }
+
+    private static bool BoardContains(
+        Dictionary<string, IReadOnlyList<WillieInboundRequest>> boards,
+        string minister,
+        string requestKey) =>
+        boards.TryGetValue(minister, out IReadOnlyList<WillieInboundRequest>? board) &&
+        board.Any(row => string.Equals(row.RequestKey, requestKey, StringComparison.OrdinalIgnoreCase));
+
+    private static bool BoardContains(
+        Dictionary<string, IReadOnlyList<WillieInboundZoneRequest>> boards,
+        string minister,
+        string requestKey) =>
+        boards.TryGetValue(minister, out IReadOnlyList<WillieInboundZoneRequest>? board) &&
+        board.Any(row => string.Equals(row.RequestKey, requestKey, StringComparison.OrdinalIgnoreCase));
+
+    private static bool IsReusableTerminal(string status) =>
+        status is "options" or "no_fit";
+
+    private static bool IsPatchTerminal(string status) =>
+        status is "options" or "no_fit" or "error";
+
+    private static bool IsLifecycleStatus(string status) =>
+        status is "queued" or "running" or "stale";
 }
 
 public sealed record WillieSolverSnapshot(

@@ -179,6 +179,44 @@ public sealed class AdviceBus
         return true;
     }
 
+    public bool TryPatchMinisterAdvice(
+        string minister,
+        string adviceId,
+        Func<AdviceItem, AdviceItem?> patch)
+    {
+        if (string.IsNullOrWhiteSpace(minister))
+            throw new ArgumentException("Minister name is required.", nameof(minister));
+        if (string.IsNullOrWhiteSpace(adviceId))
+            throw new ArgumentException("Advice id is required.", nameof(adviceId));
+
+        AdviceItem updatedAdvice;
+        AdviceSnapshot ministerSnapshot;
+        lock (_lock)
+        {
+            if (!_activeAdvice.TryGetValue(adviceId, out AdviceItem? advice))
+                return false;
+            if (!string.Equals(advice.Minister, minister, StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            AdviceItem? patched = patch(advice);
+            if (patched is null)
+                return false;
+            if (!string.Equals(patched.Id, adviceId, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Advice patch cannot change the advice id.");
+            if (!string.Equals(patched.Minister, minister, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Advice patch cannot change the advice minister.");
+
+            updatedAdvice = patched;
+            _activeAdvice[adviceId] = updatedAdvice;
+            ministerSnapshot = BuildMinisterSnapshotLocked(minister);
+        }
+
+        _outputStore?.QueueAdviceSnapshot(ministerSnapshot);
+        AdviceSnapshotPublished?.Invoke(ministerSnapshot);
+        AdvicePublished?.Invoke(updatedAdvice);
+        return true;
+    }
+
     public void Hydrate(IReadOnlyList<AdviceSnapshot> snapshots)
     {
         lock (_lock)

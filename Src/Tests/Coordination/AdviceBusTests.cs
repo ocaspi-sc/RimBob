@@ -1,6 +1,7 @@
 using FluentAssertions;
 using RimBob.Coordination;
 using RimBob.Core.Advice;
+using RimBob.Core.Aggregates;
 using RimBob.Core.Briefings;
 using RimBob.Core.Ministers;
 
@@ -244,6 +245,59 @@ public sealed class AdviceBusTests
         action.ApplyResult!.Status.Should().Be("already_satisfied");
     }
 
+    [Fact]
+    public void TryPatchMinisterAdvice_PatchesCurrentAdviceAndPublishesMinisterSnapshot()
+    {
+        AdviceBus bus = new();
+        bus.ReplaceMinisterAdvice("Chef", [Advice("food", "Chef")], "Food summary", Chain());
+        List<AdviceSnapshot> snapshots = [];
+        List<AdviceItem> published = [];
+        bus.AdviceSnapshotPublished += snapshots.Add;
+        bus.AdvicePublished += published.Add;
+
+        bool patched = bus.TryPatchMinisterAdvice("Chef", "food", item => item with
+        {
+            Body = $"{item.Body} Patched.",
+            Options = [Option("opt_1")]
+        });
+
+        patched.Should().BeTrue();
+        AdviceItem active = bus.ActiveAdvice().Should().ContainSingle().Subject;
+        active.Body.Should().EndWith("Patched.");
+        active.Options.Should().ContainSingle().Which.Id.Should().Be("opt_1");
+        snapshots.Should().ContainSingle();
+        snapshots[0].Minister.Should().Be("Chef");
+        snapshots[0].StateSummary.Should().Be("Food summary");
+        snapshots[0].Chain.Should().NotBeNull();
+        published.Should().ContainSingle().Which.Options.Should().ContainSingle();
+    }
+
+    [Fact]
+    public void TryPatchMinisterAdvice_ReturnsFalseWhenPatchRefusesAppliedAction()
+    {
+        AdviceBus bus = new();
+        AdviceItem applied = Advice("food", "Chef", [Action("bill", executable: true)]) with
+        {
+            Actions =
+            [
+                Action("bill", executable: true) with
+                {
+                    Apply = null,
+                    ApplyResult = ApplyResult("applied")
+                }
+            ]
+        };
+        bus.ReplaceMinisterAdvice("Chef", [applied], "Food summary");
+
+        bool patched = bus.TryPatchMinisterAdvice("Chef", "food", item =>
+            item.Actions.Any(action => action.ApplyResult is not null)
+                ? null
+                : item with { Body = "patched" });
+
+        patched.Should().BeFalse();
+        bus.ActiveAdvice().Should().ContainSingle().Which.Body.Should().Be("Body");
+    }
+
     private static AdviceItem Advice(string id, string minister) => new(
         Id: id,
         Minister: minister,
@@ -283,6 +337,20 @@ public sealed class AdviceBusTests
 
     private static AdviceActionApplyResult ApplyResult(string status) =>
         new(status, status == "applied" ? "Applied." : "Already satisfied.", AdviceApplyKind.UpsertProductionBill, DateTimeOffset.UnixEpoch);
+
+    private static AdviceOption Option(string id) =>
+        new(
+            Id: id,
+            Label: "Option",
+            Summary: "Patched option.",
+            BlueprintGroup: new BlueprintGroup(
+                Label: "Option",
+                MapId: 1,
+                Assets:
+                [
+                    new BlueprintAsset("wall", "Wall", "BlocksGranite", new MapCell(1, 1), 0)
+                ]),
+            EstimatedMaterials: []);
 
     private static AgentFlag Flag(string id, string minister) => new(
         Id: id,

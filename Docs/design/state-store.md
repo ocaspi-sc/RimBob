@@ -104,6 +104,8 @@ SYSTEM must expose the resolved snapshot path and current snapshot metadata so
 operators can distinguish real live state from restored stale state and verify
 the snapshot is not tied to the active checkout or worktree.
 
+Background readers that outlive the cabinet request must freeze the current aggregate root before doing work. `ColonyStateFreeze.Capture` builds a new root and updates each `Versioned<T>` with the live aggregate value, copying references to immutable records rather than deep-serializing the map. Workers must read that frozen root, not the live singleton, so a queued solve cannot observe half of one refresh and half of a later refresh.
+
 ## Minister Output Persistence
 
 Host also persists each minister's latest player-facing output under the stable

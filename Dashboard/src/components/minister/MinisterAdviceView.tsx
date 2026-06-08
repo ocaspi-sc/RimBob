@@ -2,6 +2,7 @@ import { useId, useState, type ReactNode } from 'react';
 import type { MayorAgenda, AgendaPriority } from '../../types/agenda';
 import { fetchTrace } from '../../api/ministers';
 import type {
+  AdviceAction,
   AdviceActionApply,
   AdviceApplyResponse,
   AdviceItem,
@@ -735,6 +736,7 @@ function AdviceCard({
                 persistedResult?.status === 'already_satisfied';
               const disabled = state.status === 'pending' || success || expiry.expired;
               const actionIcon = iconForActionKind(action.kind);
+              const unavailableApply = applyUnavailableState(action);
               return (
                 <div className="compact-action-row" key={`${item.id}-action-${index}`}>
                   <GameIcon
@@ -766,7 +768,17 @@ function AdviceCard({
                       </small>
                     </div>
                   )}
-                  {!action.apply && persistedResult && (
+                  {unavailableApply && !persistedResult && (
+                    <div className="action-apply action-apply-unavailable">
+                      <button type="button" disabled title={unavailableApply.message}>
+                        {unavailableApply.label}
+                      </button>
+                      <small className="action-apply-result unavailable">
+                        {unavailableApply.message}
+                      </small>
+                    </div>
+                  )}
+                  {(!action.apply || !isExecutableApply(action.apply)) && persistedResult && (
                     <small
                       className={`action-apply-result persisted ${persistedResult.status}`}
                       title={resultRecordedAt ?? undefined}
@@ -921,6 +933,38 @@ function actionKey(item: AdviceItem, actionIndex: number): string {
 
 function isExecutableApply(apply: AdviceActionApply): boolean {
   return apply.kind !== 'place_blueprint_group';
+}
+
+function applyUnavailableState(action: AdviceAction): { label: string; message: string } | null {
+  if (action.apply && isExecutableApply(action.apply)) {
+    return null;
+  }
+
+  if (action.apply?.kind === 'place_blueprint_group') {
+    return {
+      label: 'Routed',
+      message: `Blueprint placement is not executable from the Advice tab: ${action.apply.target_summary}`,
+    };
+  }
+
+  if (action.kind === 'place_blueprint') {
+    return {
+      label: 'No Apply',
+      message: 'No validated blueprint option is attached yet.',
+    };
+  }
+
+  if (action.kind === 'designate_zone_req') {
+    return {
+      label: 'No Apply',
+      message: 'No concrete grow-zone rectangle is attached yet.',
+    };
+  }
+
+  return {
+    label: 'No Apply',
+    message: 'No Assisted Apply payload is attached; follow the instruction manually.',
+  };
 }
 
 function formatApplyResultText(status: string, message: string): string {

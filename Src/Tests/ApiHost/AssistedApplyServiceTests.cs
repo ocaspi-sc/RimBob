@@ -698,6 +698,29 @@ public sealed class AssistedApplyServiceTests
     }
 
     [Fact]
+    public async Task ApplyAsync_WhenGrowingZoneCellsContainWildPlants_ReturnsStaleWithoutPosting()
+    {
+        AdviceBus bus = new();
+        bus.Publish(Advice("willie_zone_request_active", GrowingZoneAction()) with { Minister = "Willie" });
+        MinimalRefreshHandler handler = new()
+        {
+            MapTerrainJson = GrowableTerrainJson(),
+            MapPlantsJson = """
+                {"success":true,"data":[
+                  {"id":"berry-1","def":"Plant_Berry","growth":0.45,"is_crop":false,"is_harvestable":false,"position":{"x":10,"y":0,"z":20}}
+                ],"errors":null}
+                """
+        };
+        AssistedApplyService service = Service(bus, new ColonyState(), handler);
+
+        AssistedApplyResponse response = await service.ApplyAsync("willie_zone_request_active", 0);
+
+        response.Status.Should().Be("stale_advice");
+        response.Message.Should().Contain("occupied");
+        handler.GrowZonePosted.Should().BeFalse();
+    }
+
+    [Fact]
     public async Task ApplyAsync_WhenGrowingZoneRectOutsideTerrain_ReturnsStaleWithoutPosting()
     {
         AdviceBus bus = new();
@@ -737,7 +760,7 @@ public sealed class AssistedApplyServiceTests
     }
 
     [Fact]
-    public async Task ApplyAsync_WhenExistingGrowingZoneHasNoPlantDef_DoesNotTreatItAsSatisfied()
+    public async Task ApplyAsync_WhenGrowingZoneReadbackHasNoPlantDef_ReturnsInconclusive()
     {
         AdviceBus bus = new();
         bus.Publish(Advice("willie_zone_request_active", GrowingZoneAction()) with { Minister = "Willie" });
@@ -745,16 +768,33 @@ public sealed class AssistedApplyServiceTests
         {
             MapTerrainJson = GrowableTerrainJson(),
             MapPlantsJson = EmptyListJson(),
-            MapZonesJson = ZonesJson(GrowingZoneJson(id: "existing-zone", plantDef: null)),
-            MapZonesAfterGrowZoneJson = ZonesJson(
-                GrowingZoneJson(id: "existing-zone", plantDef: null),
-                GrowingZoneJson(id: "new-zone", plantDef: null))
+            MapZonesJson = ZonesJson(),
+            MapZonesAfterGrowZoneJson = ZonesJson(GrowingZoneJson(id: "new-zone", plantDef: null))
         };
         AssistedApplyService service = Service(bus, new ColonyState(), handler);
 
         AssistedApplyResponse response = await service.ApplyAsync("willie_zone_request_active", 0);
 
-        response.Status.Should().Be("applied");
+        response.Status.Should().Be("readback_inconclusive");
+        handler.GrowZonePosted.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ApplyAsync_WhenGrowingZoneReadbackCoversDifferentCells_ReturnsInconclusive()
+    {
+        AdviceBus bus = new();
+        bus.Publish(Advice("willie_zone_request_active", GrowingZoneAction()) with { Minister = "Willie" });
+        MinimalRefreshHandler handler = new()
+        {
+            MapTerrainJson = GrowableTerrainJson(),
+            MapPlantsJson = EmptyListJson(),
+            MapZonesAfterGrowZoneJson = ZonesJson(GrowingZoneJson(id: "new-zone", cells: RectCells(1, 1, 6, 6)))
+        };
+        AssistedApplyService service = Service(bus, new ColonyState(), handler);
+
+        AssistedApplyResponse response = await service.ApplyAsync("willie_zone_request_active", 0);
+
+        response.Status.Should().Be("readback_inconclusive");
         handler.GrowZonePosted.Should().BeTrue();
     }
 
@@ -1164,15 +1204,31 @@ public sealed class AssistedApplyServiceTests
     private static object GrowingZoneJson(
         string id = "growing-zone-1",
         string? plantDef = "Plant_Rice",
-        int cellsCount = 36) =>
+        int cellsCount = 36,
+        IReadOnlyList<object>? cells = null) =>
         new
         {
             id,
             type = "GrowingZone",
             label = "Growing zone",
             plant_def = plantDef,
-            cells_count = cellsCount
+            cells_count = cells?.Count ?? cellsCount,
+            cells = cells ?? RectCells(10, 20, 15, 25)
         };
+
+    private static IReadOnlyList<object> RectCells(int x1, int z1, int x2, int z2)
+    {
+        List<object> cells = [];
+        for (int x = x1; x <= x2; x++)
+        {
+            for (int z = z1; z <= z2; z++)
+            {
+                cells.Add(new { x, y = 0, z });
+            }
+        }
+
+        return cells;
+    }
 
     private sealed class ThrowingHandler : HttpMessageHandler
     {

@@ -244,19 +244,41 @@ function statusLabel(output: WillieSolverOutputPayload): { label: string; note?:
     };
   }
 
+  if (output.status === 'queued') {
+    return {
+      label: 'queued',
+      note: output.errorMessage ?? 'Placement solve is queued in the background.',
+    };
+  }
+
+  if (output.status === 'running') {
+    return {
+      label: 'running',
+      note: output.errorMessage ?? 'Placement solve is running in the background.',
+    };
+  }
+
+  if (output.status === 'stale') {
+    return {
+      label: 'stale',
+      note: output.errorMessage ?? 'Completed solve no longer matched the current request/advice.',
+    };
+  }
+
   return { label: output.status.replace(/_/g, ' ') };
 }
 
 function statusTone(status: string): PillTone {
   if (status === 'options') return 'ok';
-  if (status === 'no_fit') return 'warn';
+  if (status === 'queued' || status === 'running') return 'info';
+  if (status === 'no_fit' || status === 'stale') return 'warn';
   if (status === 'error') return 'error';
   return 'idle';
 }
 
 function metricTone(status: string): 'neutral' | 'ok' | 'warn' | 'error' {
   if (status === 'options') return 'ok';
-  if (status === 'no_fit') return 'warn';
+  if (status === 'no_fit' || status === 'stale') return 'warn';
   if (status === 'error') return 'error';
   return 'neutral';
 }

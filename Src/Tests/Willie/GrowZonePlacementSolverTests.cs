@@ -51,6 +51,22 @@ public sealed class GrowZonePlacementSolverTests
     }
 
     [Fact]
+    public async Task SolveAsync_RejectsWildPlantCells()
+    {
+        ColonyState state = StateWithTerrain(8, 8, (x, z) => x is >= 4 and <= 5 && z is >= 1 and <= 2 ? "SoilRich" : "Soil");
+        state.Plants.Update(new PlantRegistry([
+            new PlantRecord("berry-1", "Plant_Berry", 0.5f, false, null, new MapPosition(4, 0, 1))
+        ]));
+
+        PlacementResult result = await new GrowZonePlacementSolver().SolveAsync(Request(4), Briefing(), state);
+
+        result.Options.Should().NotBeEmpty();
+        result.Options[0].BlueprintGroup.Assets
+            .Select(asset => (asset.Cell.X, asset.Cell.Z))
+            .Should().NotContain((4, 1));
+    }
+
+    [Fact]
     public async Task SolveAsync_RejectsNonGrowableTerrainCells()
     {
         ColonyState state = StateWithTerrain(6, 6, (x, z) => x is >= 4 and <= 5 && z is >= 4 and <= 5 ? "Soil" : "Sand");
