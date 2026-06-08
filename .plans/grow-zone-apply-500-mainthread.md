@@ -1,6 +1,6 @@
 # Grow-Zone Apply 500 — Off-Main-Thread Zone Mutation
 
-**Status:** DIAGNOSED, not started. Root cause proven live on 2026-06-07.
+**Status:** RimBob slices 2/3A/3B/4 complete; RIMAPI Slices 1/5 landed and live-loaded; unpaused live verification remains. Root cause proven live on 2026-06-07.
 **Owner:** RIMAPI mod (primary) + Willie/AssistedApply (secondary).
 **Scope:** Fix the intermittent `500 Internal Server Error` on `POST api/v1/map/zone/growing` that the player hits when clicking Willie's grow-zone Apply, then harden RimBob so the next such failure is self-diagnosing and the now-async create reads back correctly.
 
@@ -176,7 +176,7 @@ Per MEMORY "verify with JSON first": confirm via the zone-requests / zones JSON,
 
 **Motivation.** Clicking Willie's grow-zone Apply returned a bare `500 Internal Server Error` with no cause, and even a *successful* create could never be confirmed. The root-cause 500 fix is a RIMAPI-repo change (Slice 1, separate); this slice ships the three independent **RimBob-side** hardening pieces so the failure is legible and the readback is correct.
 
-**Context.** Builds on S5 (`8448e9e`). Root cause + full plan above. Slice 1 (RIMAPI main-thread marshal), Slice 3 Part B (eventual-consistency poll, depends on Slice 1) and Slice 5 (RIMAPI version+SHA) were follow-ups — see the independence table and landed sections below.
+**Context.** Builds on S5 (`8448e9e`). Root cause + full plan above. Slice 1 (RIMAPI main-thread marshal), Slice 3 Part B (eventual-consistency poll, depends on Slice 1), and Slice 5 (RIMAPI version+SHA) were follow-ups; all three landed sections are recorded below.
 
 **Scope (shipped).**
 - **Slice 2** — `RimApiClient.EnsureWriteAcceptedAsync` now reads the failed response body and folds the RIMAPI `errors[]`/message into the `RimApiException`, so `apply_result` shows the real cause (all write endpoints; robust to empty/non-JSON body).
@@ -196,7 +196,16 @@ Per MEMORY "verify with JSON first": confirm via the zone-requests / zones JSON,
 
 Root-cause 500 fix landed in `C:\dev\RIMAPI-for-RimBob` master, commit `700ad68` `fix(map): marshal grow-zone create onto main thread`. `MapService.CreateGrowingZone` now validates synchronously (map / point_a-point_b / plant def), queues the zone mutation through `LongEventHandler.ExecuteWhenFinished` (try/catch + `LogApi.Error`), and returns `ApiResult.Ok()` immediately (return type `ApiResult<GrowingZoneDto>` → `ApiResult`; the RimBob client checks only the success envelope and does its own readback). Compile-verified `dotnet build -c Debug` → 0 errors.
 
-**Deploy (still pending):** `dotnet build -c Release-1.6` writes `1.6\Assemblies\RIMAPI.dll` and requires RimWorld closed (the running game locks the dll), then reload the save. **Live verify after deploy:** run a cabinet cycle, click a Willie grow-zone Apply with the game **unpaused**, repeat several times — pre-fix this intermittently 500s; post-fix it should not.
+**Deploy:** `dotnet build -c Release-1.6` writes `1.6\Assemblies\RIMAPI.dll` and requires RimWorld closed (the running game locks the dll), then reload the save. Slice 5's version endpoint later proved the rebuilt DLL was live-loaded. **Remaining live verify:** run a cabinet cycle, click a Willie grow-zone Apply with the game **unpaused**, repeat several times — pre-fix this intermittently 500s; post-fix it should not.
+
+
+---
+
+## Slice 3B complete (RimBob worktree, 2026-06-08)
+
+Slice 3B adds a grow-zone-only bounded readback poll in `AssistedApplyService`: after RIMAPI accepts `create_growing_zone`, RimBob refreshes up to 3 times with short delays and checks for a new matching `GrowingZone` id before returning `readback_inconclusive`. If still absent, the response now says creation was accepted but may still be queued on RimWorld's main thread. Focused verification: `dotnet test Src\Tests\RimBob.Tests.csproj --filter FullyQualifiedName~AssistedApplyServiceTests` passed 41/41 after the feature branch merged current `master`.
+
+Live paused proof on 2026-06-08: worktree Host `C:\Users\orca\.codex\worktrees\0a02\RimBob` served on `http://localhost:5003` with `runtime_root` and `host_process_path` matching the worktree; RIMAPI reported version `1.9.0+247.3996023` / commit `3996023`; cabinet rules refreshed live state and emitted Willie `willie_zone_request_active` with `create_growing_zone` action index 1 for rect `119,121-124,126`; `POST /api/advice/willie_zone_request_active/actions/1/apply` returned `status=applied`, `zone_id=0`; direct RIMAPI readback showed one `Zone_Growing` with `cells_count=36` and farm summary showed `Plant_Rice` on `zone_id=0`. RimWorld remained paused (`is_paused=true`, `game_tick=539`) during this proof, so the remaining live verification is an unpaused repeat on another option while the game is ticking.
 
 ---
 
@@ -206,6 +215,6 @@ RIMAPI version/build identity landed in `C:\dev\RIMAPI-for-RimBob` master, commi
 
 **Verification.** `dotnet build Source\RIMAPI\RimApi.csproj -c Debug` and `dotnet build Source\RIMAPI\RimApi.csproj -c Release-1.6` both passed. The post-commit `Release-1.6` generated `BuildInfo` reported `InformationalVersion = "1.9.0+247.3996023"`, `BuildCommitSha = "3996023"`, `BuildNumber = 247`, and `BuildDirty = false`; built DLL SHA256 `0EFB6AF5E70F7A83E87AF3B04710B82D3EF36892E75FCA4632058E7C65C178FA`.
 
-**Live deploy verified.** RimWorld was later closed, the rebuilt `1.6\Assemblies\RIMAPI.dll` was copied over the installed mod DLL at `D:\Games\SteamLibrary\steamapps\common\RimWorld\Mods\RIMAPI-for-RimBob\1.6\Assemblies\RIMAPI.dll`, and RimWorld was restarted. Live `GET http://localhost:8765/api/v1/version` reported `version: "1.9.0+247.3996023"`, `build_commit_sha: "3996023"`, `build_number: 247`, `build_dirty: false`, `mod_version: "1.9.0"`, and `rim_world_version: "1.6.4633"`. Live `GET http://localhost:8765/api/v1/dev/endpoints` reported 182 endpoints and included `/api/v1/version`, `/api/v1/map/zone/growing`, and `/api/v1/order/designate/hunt`; `GET http://localhost:8765/api/v1/game/state` confirmed `program_state: "Playing"`, `map_count: 1`, `colonist_count: 3`, and `is_paused: true`.
+**Live deploy verified later.** During the Slice 5 landing, RimWorld was running as `RimWorldWin64` PID `36100` and the installed mod DLL still differed from the rebuilt fork DLL, so copy/reload was not forced. In the later Slice 3B live proof, `GET http://localhost:8765/api/v1/version` reported `version: "1.9.0+247.3996023"` and `build_commit_sha: "3996023"`, proving RimWorld had reloaded the rebuilt fork.
 
-**Remaining:** Slice 3B (RimBob readback eventual-consistency poll — only now relevant since create is async).
+**Remaining:** live unpaused verification only. Repeat a Willie grow-zone Apply while `is_paused=false` to prove the original tick-thread race is gone under load.

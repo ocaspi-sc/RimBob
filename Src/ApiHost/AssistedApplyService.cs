@@ -27,6 +27,8 @@ public sealed class AssistedApplyService(
     private const string BillRepeatModeTargetCount = "TargetCount";
     private const string BlueprintGroupPlacementOrder = "default";
     private const bool BlueprintGroupRequireAll = true;
+    private const int GrowingZoneReadbackRefreshLimit = 3;
+    private static readonly TimeSpan GrowingZoneReadbackRefreshDelay = TimeSpan.FromMilliseconds(100);
     private static readonly IReadOnlyList<string> SimpleMealRecipeDefs = ["CookMealSimple", "CookMealSimpleBulk"];
     private readonly object _lock = new();
     private readonly List<AssistedApplyAttempt> _recentAttempts = [];
@@ -722,20 +724,33 @@ public sealed class AssistedApplyService(
             return Response("rimapi_rejected", ex.Message, apply.Kind, adviceId, actionIndex);
         }
 
-        AssistedApplyResponse? readbackFailure = await RefreshForReadbackAsync(apply.Kind, adviceId, actionIndex, ct);
-        if (readbackFailure is not null)
-            return readbackFailure;
+        MapZoneRecord? createdZone = null;
+        for (int attempt = 1; attempt <= GrowingZoneReadbackRefreshLimit; attempt++)
+        {
+            AssistedApplyResponse? readbackFailure = await RefreshForReadbackAsync(apply.Kind, adviceId, actionIndex, ct);
+            if (readbackFailure is not null)
+                return readbackFailure;
 
-        MapZoneRecord? createdZone = NewMatchingGrowingZone(state, growingZoneIdsBeforeWrite, apply);
+            createdZone = NewMatchingGrowingZone(state, growingZoneIdsBeforeWrite, apply);
+            if (createdZone is not null)
+                break;
+
+            if (attempt < GrowingZoneReadbackRefreshLimit)
+            {
+                // RIMAPI queues zone creation onto RimWorld's main thread; the first refresh can beat registration.
+                await Task.Delay(GrowingZoneReadbackRefreshDelay, ct);
+            }
+        }
+
         if (createdZone is null)
         {
             return Response(
                 "readback_inconclusive",
-                "Growing-zone creation was sent, but readback did not show a matching zone yet.",
+                "Growing-zone creation was accepted by RIMAPI, but readback did not show the new zone yet; it may still be queued on RimWorld's main thread.",
                 apply.Kind,
                 adviceId,
                 actionIndex,
-                new { plant_def = apply.PlantDef, rect = apply.Rect, target_count = apply.TargetCount });
+                new { plant_def = apply.PlantDef, rect = apply.Rect, target_count = apply.TargetCount, readback_attempts = GrowingZoneReadbackRefreshLimit });
         }
 
         return Response(

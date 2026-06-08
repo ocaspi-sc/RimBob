@@ -636,6 +636,49 @@ public sealed class AssistedApplyServiceTests
     }
 
     [Fact]
+    public async Task ApplyAsync_WhenGrowingZoneReadbackMissesOnce_PollsAndApplies()
+    {
+        AdviceBus bus = new();
+        bus.Publish(Advice("willie_zone_request_active", GrowingZoneAction()) with { Minister = "Willie" });
+        MinimalRefreshHandler handler = new()
+        {
+            MapTerrainJson = GrowableTerrainJson(),
+            MapPlantsJson = EmptyListJson()
+        };
+        handler.EnqueueMapZonesAfterGrowZoneResponse(ZonesJson());
+        handler.EnqueueMapZonesAfterGrowZoneResponse(ZonesJson(GrowingZoneJson()));
+        AssistedApplyService service = Service(bus, new ColonyState(), handler);
+
+        AssistedApplyResponse response = await service.ApplyAsync("willie_zone_request_active", 0);
+
+        response.Status.Should().Be("applied");
+        handler.GrowZonePosted.Should().BeTrue();
+        handler.MapZonesCalls.Should().BeGreaterThanOrEqualTo(3);
+    }
+
+    [Fact]
+    public async Task ApplyAsync_WhenGrowingZoneReadbackNeverConfirms_ReturnsQueuedInconclusive()
+    {
+        AdviceBus bus = new();
+        bus.Publish(Advice("willie_zone_request_active", GrowingZoneAction()) with { Minister = "Willie" });
+        MinimalRefreshHandler handler = new()
+        {
+            MapTerrainJson = GrowableTerrainJson(),
+            MapPlantsJson = EmptyListJson(),
+            MapZonesAfterGrowZoneJson = ZonesJson()
+        };
+        AssistedApplyService service = Service(bus, new ColonyState(), handler);
+
+        AssistedApplyResponse response = await service.ApplyAsync("willie_zone_request_active", 0);
+
+        response.Status.Should().Be("readback_inconclusive");
+        response.Message.Should().Contain("accepted by RIMAPI");
+        response.Message.Should().Contain("queued");
+        handler.GrowZonePosted.Should().BeTrue();
+        handler.MapZonesCalls.Should().BeGreaterThanOrEqualTo(4);
+    }
+
+    [Fact]
     public async Task ApplyAsync_WhenGrowingZoneTerrainNoLongerGrowable_ReturnsStaleWithoutPosting()
     {
         AdviceBus bus = new();
@@ -1142,6 +1185,7 @@ public sealed class AssistedApplyServiceTests
     private sealed class MinimalRefreshHandler : HttpMessageHandler
     {
         private readonly Queue<string> _billResponses = [];
+        private readonly Queue<string> _mapZonesAfterGrowZoneResponses = [];
 
         public bool DesignatePosted { get; private set; }
         public bool HuntPosted { get; private set; }
@@ -1151,6 +1195,7 @@ public sealed class AssistedApplyServiceTests
         public bool GrowZonePosted { get; private set; }
         public int BillListCalls { get; private set; }
         public int BlueprintGroupValidateCalls { get; private set; }
+        public int MapZonesCalls { get; private set; }
         public string LastDesignateBody { get; private set; } = "";
         public string LastHuntBody { get; private set; } = "";
         public string LastBillWritePath { get; private set; } = "";
@@ -1185,6 +1230,11 @@ public sealed class AssistedApplyServiceTests
         public void EnqueueBillResponse(string json)
         {
             _billResponses.Enqueue(json);
+        }
+
+        public void EnqueueMapZonesAfterGrowZoneResponse(string json)
+        {
+            _mapZonesAfterGrowZoneResponses.Enqueue(json);
         }
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
@@ -1256,7 +1306,13 @@ public sealed class AssistedApplyServiceTests
             if (path.Contains("map/rooms", StringComparison.OrdinalIgnoreCase))
                 return JsonResponse("""{"success":true,"data":{"rooms":[]},"errors":null}""");
             if (path.Contains("map/zones", StringComparison.OrdinalIgnoreCase))
+            {
+                MapZonesCalls++;
+                if (GrowZonePosted && _mapZonesAfterGrowZoneResponses.Count > 0)
+                    return JsonResponse(_mapZonesAfterGrowZoneResponses.Dequeue());
+
                 return JsonResponse(GrowZonePosted ? MapZonesAfterGrowZoneJson : MapZonesJson);
+            }
             if (path.Contains("map/terrain", StringComparison.OrdinalIgnoreCase))
                 return JsonResponse(MapTerrainJson);
             if (path.Contains("map/buildings", StringComparison.OrdinalIgnoreCase))
