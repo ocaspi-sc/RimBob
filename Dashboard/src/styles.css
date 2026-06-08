@@ -6279,6 +6279,46 @@ code {
   overflow: auto;
 }
 
+.sidebar-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  margin-bottom: 10px;
+  padding: 3px;
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.sidebar-tab {
+  min-width: 0;
+  min-height: 30px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.sidebar-tab.active {
+  border-color: rgba(98, 216, 230, 0.55);
+  background: rgba(98, 216, 230, 0.13);
+  color: var(--text);
+}
+
+.sidebar-tab-panel {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.sidebar-tab-panel[hidden] {
+  display: none;
+}
+
 .sidebar-header {
   display: flex;
   justify-content: space-between;
@@ -6461,6 +6501,335 @@ code {
   background: rgba(245, 158, 11, 0.10);
   padding: 4px 7px;
   letter-spacing: 0;
+}
+
+.sidebar-log,
+.sidebar-log-list {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sidebar-log-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.sidebar-log-header h2 {
+  margin: 1px 0 0;
+  color: var(--text);
+  font-size: 0.86rem;
+  letter-spacing: 0;
+}
+
+.log-clear-button {
+  min-height: 26px;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.68rem;
+  font-weight: 850;
+  line-height: 1;
+  padding: 5px 8px;
+}
+
+.log-clear-button:hover:not(:disabled),
+.log-clear-button:focus-visible:not(:disabled) {
+  border-color: rgba(98, 216, 230, 0.55);
+  color: var(--cyan);
+  background: rgba(98, 216, 230, 0.10);
+  outline: none;
+}
+
+.log-clear-button:disabled {
+  cursor: default;
+  opacity: 0.48;
+}
+
+.log-card {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--line-soft);
+  border-left-width: 2px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.log-card.ok {
+  border-left-color: rgba(80, 211, 141, 0.78);
+}
+
+.log-card.info {
+  border-left-color: rgba(98, 216, 230, 0.72);
+}
+
+.log-card.warn {
+  border-left-color: rgba(240, 189, 95, 0.82);
+}
+
+.log-card.error {
+  border-left-color: rgba(255, 107, 107, 0.82);
+}
+
+.log-card-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 26px;
+  gap: 6px;
+  align-items: start;
+  min-width: 0;
+}
+
+.log-card-main {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  min-width: 0;
+}
+
+.log-card-toggle {
+  width: 100%;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+}
+
+.log-card-toggle:hover h3 {
+  color: var(--cyan);
+}
+
+.log-card-disclosure {
+  align-self: center;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1;
+  transition: transform 120ms ease;
+}
+
+.log-card-disclosure.open {
+  transform: rotate(90deg);
+}
+
+.log-card-link,
+.log-step-link {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--line-soft);
+  border-radius: 5px;
+  color: var(--muted);
+  background: rgba(0, 0, 0, 0.16);
+  font-size: 0.72rem;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.log-card-link {
+  justify-self: end;
+}
+
+.log-card-link:hover,
+.log-step-link:hover {
+  border-color: rgba(98, 216, 230, 0.48);
+  color: var(--cyan);
+  background: rgba(98, 216, 230, 0.08);
+}
+
+.log-card-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.18);
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.log-card-copy {
+  min-width: 0;
+}
+
+.log-card h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.82rem;
+  line-height: 1.32;
+  overflow-wrap: anywhere;
+}
+
+.log-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.log-card-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-width: 0;
+}
+
+.log-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-width: 0;
+  gap: 4px;
+  padding: 3px 5px;
+  border: 1px solid var(--line-soft);
+  border-radius: 5px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.1;
+}
+
+.log-chip span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.log-step-list {
+  display: grid;
+  gap: 6px;
+  margin: 2px 0 0;
+  padding: 7px 0 0;
+  border-top: 1px solid var(--line-soft);
+  list-style: none;
+}
+
+.log-step-list.nested {
+  margin: 6px 0 0 12px;
+  padding: 0 0 0 8px;
+  border-top: 0;
+  border-left: 1px solid var(--line-soft);
+}
+
+.log-step {
+  min-width: 0;
+}
+
+.log-step-row {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr);
+  gap: 7px;
+  min-width: 0;
+}
+
+.log-step-dot {
+  width: 8px;
+  height: 8px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.log-step-dot.completed,
+.log-step-dot.ok {
+  background: var(--ok);
+}
+
+.log-step-dot.running,
+.log-step-dot.info {
+  background: var(--cyan);
+}
+
+.log-step-dot.warn {
+  background: var(--warn);
+}
+
+.log-step-dot.failed,
+.log-step-dot.error {
+  background: var(--error);
+}
+
+.log-step-copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.log-step-title {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+  min-width: 0;
+}
+
+.log-step-title strong {
+  min-width: 0;
+  color: var(--text);
+  font-size: 0.74rem;
+  overflow-wrap: anywhere;
+}
+
+.log-step-title-actions {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  justify-self: end;
+  min-width: max-content;
+}
+
+.log-step-link {
+  width: 18px;
+  height: 18px;
+  font-size: 0.62rem;
+}
+
+.log-step-time,
+.log-step-status {
+  color: var(--muted);
+  font-size: 0.64rem;
+  text-transform: uppercase;
+}
+
+.log-step-time {
+  justify-self: end;
+  padding-top: 1px;
+  white-space: nowrap;
+}
+
+.log-step-status {
+  width: fit-content;
+}
+
+.log-step-facts {
+  display: grid;
+  gap: 2px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.log-step-facts li {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .icon-cache-panel,

@@ -1,14 +1,170 @@
+import { useMemo, useState } from 'react';
 import type { ColonySnapshot, PawnLine } from '../../types/colony';
-import type { ColonySnapshotMetadata } from '../../types/system';
+import type { AdviceItem, AgentFlag } from '../../types/advice';
+import type { AssistedApplyAttempt, CabinetRunLogSnapshot, ColonySnapshotMetadata, MinisterTrace } from '../../types/system';
 import { pawnPortraitUrl } from '../../api/icons';
+import { deriveLogEntries } from '../../dashboard/selectors';
 import { iconForField, iconForSection } from '../../dashboard/semanticIcons';
 import { EmptyState } from '../shared/EmptyState';
 import { GameIcon } from '../shared/GameIcon';
 import { MetricCard } from '../shared/MetricCard';
 import { ResourceQuantity, formatResourceLabel } from '../shared/ResourceQuantity';
 import { SemanticLabel } from '../shared/SemanticIcon';
+import { SidebarLog } from './SidebarLog';
+
+type SidebarTab = 'colony' | 'log';
+const SidebarLogClearedAtKey = 'rimbob.dashboard.sidebarLogClearedAt';
+const SidebarLogExpandedIdsKey = 'rimbob.dashboard.sidebarLogExpandedIds';
 
 export function ColonySidebar({
+  activeAdvice,
+  applyAttempts,
+  cabinetRuns,
+  criticalAdvice,
+  error,
+  loadedAt,
+  snapshot,
+  staleSnapshot,
+  traces,
+  flags,
+}: {
+  activeAdvice: AdviceItem[];
+  applyAttempts: AssistedApplyAttempt[];
+  cabinetRuns: CabinetRunLogSnapshot[];
+  criticalAdvice: AdviceItem[];
+  error: string | null;
+  loadedAt: string | null;
+  snapshot: ColonySnapshot | null;
+  staleSnapshot: ColonySnapshotMetadata | null;
+  traces: MinisterTrace[];
+  flags: Record<string, AgentFlag[]>;
+}) {
+  const [selectedTab, setSelectedTab] = useState<SidebarTab>('log');
+  const [logClearedAt, setLogClearedAt] = useState<string | null>(() => readSessionValue(SidebarLogClearedAtKey));
+  const [expandedLogIds, setExpandedLogIds] = useState<Set<string>>(() => readSessionSet(SidebarLogExpandedIdsKey));
+  const allLogEntries = useMemo(
+    () => deriveLogEntries({ activeAdvice, applyAttempts, cabinetRuns, criticalAdvice, flags, traces }),
+    [activeAdvice, applyAttempts, cabinetRuns, criticalAdvice, flags, traces],
+  );
+  const logEntries = useMemo(
+    () => allLogEntries.filter(entry => isAfterClearTime(entry.at, logClearedAt)),
+    [allLogEntries, logClearedAt],
+  );
+  const clearLog = () => {
+    const nextClearedAt = new Date().toISOString();
+    setLogClearedAt(nextClearedAt);
+    writeSessionValue(SidebarLogClearedAtKey, nextClearedAt);
+  };
+  const updateExpandedLogIds = (nextExpandedIds: Set<string>) => {
+    setExpandedLogIds(nextExpandedIds);
+    writeSessionValue(SidebarLogExpandedIdsKey, JSON.stringify([...nextExpandedIds]));
+  };
+
+  return (
+    <aside className="colony-sidebar panel-shell">
+      <div className="sidebar-tabs" role="tablist" aria-label="Right sidebar">
+        <button
+          aria-controls="sidebar-colony-panel"
+          aria-selected={selectedTab === 'colony'}
+          className={`sidebar-tab ${selectedTab === 'colony' ? 'active' : ''}`}
+          id="sidebar-colony-tab"
+          role="tab"
+          type="button"
+          onClick={() => setSelectedTab('colony')}
+        >
+          COLONY
+        </button>
+        <button
+          aria-controls="sidebar-log-panel"
+          aria-selected={selectedTab === 'log'}
+          className={`sidebar-tab ${selectedTab === 'log' ? 'active' : ''}`}
+          id="sidebar-log-tab"
+          role="tab"
+          type="button"
+          onClick={() => setSelectedTab('log')}
+        >
+          LOG
+        </button>
+      </div>
+
+      <section
+        aria-labelledby="sidebar-colony-tab"
+        className="sidebar-tab-panel"
+        hidden={selectedTab !== 'colony'}
+        id="sidebar-colony-panel"
+        role="tabpanel"
+      >
+        <ColonySidebarBody
+          error={error}
+          loadedAt={loadedAt}
+          snapshot={snapshot}
+          staleSnapshot={staleSnapshot}
+        />
+      </section>
+      <section
+        aria-labelledby="sidebar-log-tab"
+        className="sidebar-tab-panel sidebar-log-panel"
+        hidden={selectedTab !== 'log'}
+        id="sidebar-log-panel"
+        role="tabpanel"
+      >
+        <SidebarLog
+          clearedAt={logClearedAt}
+          entries={logEntries}
+          expandedIds={expandedLogIds}
+          onClear={clearLog}
+          onExpandedIdsChange={updateExpandedLogIds}
+        />
+      </section>
+    </aside>
+  );
+}
+
+function isAfterClearTime(entryAt: string, clearedAt: string | null): boolean {
+  if (!clearedAt) return true;
+
+  const entryTime = new Date(entryAt).getTime();
+  const clearTime = new Date(clearedAt).getTime();
+  if (Number.isNaN(entryTime) || Number.isNaN(clearTime)) return true;
+
+  return entryTime > clearTime;
+}
+
+function readSessionValue(key: string): string | null {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    return window.sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function readSessionSet(key: string): Set<string> {
+  const rawValue = readSessionValue(key);
+  if (!rawValue) return new Set();
+
+  try {
+    const parsed = JSON.parse(rawValue);
+    if (!Array.isArray(parsed)) return new Set();
+
+    return new Set(parsed.filter((item): item is string => typeof item === 'string'));
+  } catch {
+    return new Set();
+  }
+}
+
+function writeSessionValue(key: string, value: string) {
+  if (typeof window === 'undefined') return;
+
+  try {
+    window.sessionStorage.setItem(key, value);
+  } catch {
+    // Session storage can be unavailable in restricted browser contexts; in-memory state still clears the visible log.
+  }
+}
+
+function ColonySidebarBody({
   error,
   loadedAt,
   snapshot,
@@ -20,25 +176,17 @@ export function ColonySidebar({
   staleSnapshot: ColonySnapshotMetadata | null;
 }) {
   if (error && !snapshot) {
-    return (
-      <aside className="colony-sidebar panel-shell">
-        <EmptyState code="COLONY SNAPSHOT FAILED">{error}</EmptyState>
-      </aside>
-    );
+    return <EmptyState code="COLONY SNAPSHOT FAILED">{error}</EmptyState>;
   }
 
   if (!snapshot) {
-    return (
-      <aside className="colony-sidebar panel-shell">
-        <EmptyState code="COLONY SNAPSHOT">Waiting for briefing data.</EmptyState>
-      </aside>
-    );
+    return <EmptyState code="COLONY SNAPSHOT">Waiting for briefing data.</EmptyState>;
   }
 
   const pawns = snapshot.colonists.pawns ?? [];
 
   return (
-    <aside className="colony-sidebar panel-shell">
+    <>
       <header className="sidebar-header">
         <div>
           <span className="eyebrow">Colony</span>
@@ -103,7 +251,7 @@ export function ColonySidebar({
           <strong role="status">Snapshot poll failed; showing last successful data.</strong>
         )}
       </footer>
-    </aside>
+    </>
   );
 }
 

@@ -70,7 +70,7 @@ Dashboard v2 has four stable regions:
 - Left rail: inspected scope selector.
 - Main workspace: CABINET overview, SYSTEM, INFO, ANALYTICS, and DEV BLOG local tabs, or
   minister inspector tabs.
-- Right sidebar: compact colony facts plus colonist cards.
+- Right sidebar: shallow `COLONY | LOG` tab surface; `LOG` is the default curated cross-scope event feed, while `COLONY` remains available for compact colony facts plus colonist cards.
 
 The header keeps the running-version chips directly after the
 `RimBob Dashboard v2` title and the transient status pills right-aligned in the
@@ -355,11 +355,13 @@ rollups so tag changes do not rebuild the whole feature inventory.
 
 ### Right Sidebar
 
-The right sidebar is always-on colony context independent of selected scope.
+The right sidebar is always-on support context independent of selected scope. It uses a shallow `COLONY | LOG` tab bar. `LOG` is the default so recent important events are immediately visible on load. `COLONY` remains one click away for current colony context.
 
-Render compact facts first, then one small panel per colonist: date/tick/season,
-colonist count, mood, medical/downed/dead signals, food days, wealth, power,
-threat, weather, research, and colonist cards where available.
+`COLONY` renders compact facts first, then one small panel per colonist: date/tick/season, colonist count, mood, medical/downed/dead signals, food days, wealth, power, threat, weather, research, and colonist cards where available.
+
+`LOG` renders small icon-led cards with a wrapped title, emoji chips, tooltips, and a compact link button when the event has a clear dashboard destination. Cabinet-run LOG cards are disclosure controls: clicking the card expands the run's step list inline, including nested child steps from the cabinet-run snapshot. Expanded steps show the request/rule name, duration, generated option count when advice options can be correlated, compact advice/flag summaries with bullet-list tooltips, and their own compact link button when a step can be routed to related advice, rules, or solver inspection; they do not print the raw composite `rules:a+b+c` trace as body text. Expanded LOG card state persists across sidebar tab switches, main workspace tab switches, scope changes, and same-session dashboard route reloads; it resets only when the operator collapses the card, clears LOG, or the browser session ends. Step dots reflect operator attention, not just backend completion: completed solver rows with zero generated options or no-fit/error detail are yellow, running rows are blue, successful rows are green, and failed rows are red. LOG suppresses standalone manual minister-run cards when the same trace is already covered by a cabinet-run step, so a rules-only cabinet run stays one expandable event instead of duplicating Chef, Welfare, or Willie rows outside it. LOG includes a `Clear` button that hides currently visible entries for the current browser session by recording a client-side clear timestamp; it does not delete backend run history, SYSTEM Events, persisted advice, replay records, or SSE buffers. This LOG disclosure replaces the old floating cabinet-run toast/dialog in normal dashboard use so run progress stays in the right sidebar instead of covering the workspace. It derives from bounded dashboard inputs the client already has: Assisted Apply recent attempts, cabinet-run SSE snapshots, manual minister run traces, minister traces carrying escalation/LLM outcomes, and active critical advice. It is read-only frontend derivation: no backend endpoint, SSE event, wire shape, persistence, or replay contract changes.
+
+`LOG` is distinct from SYSTEM Events and ANALYTICS. SYSTEM Events remains the raw operations firehose and source diagnostics, including SSE/connectivity noise and the full Assisted Apply table. ANALYTICS remains derived aggregate readouts. Sidebar LOG is the always-visible curated subset for the most important event cards: actions applied, cabinet runs, manual minister rules runs, escalation/LLM outcomes, and new critical advice.
 
 Date rendering should use the backend's normalized game-time model: show the
 colony-relative label (`Y1 D6, Aprimay 5, 14h` style), total elapsed days when
@@ -372,11 +374,7 @@ read `issued_game_date` plus tick fields for expiry math. The dashboard should
 show normalized day deltas and total days, not raw tick arithmetic, wherever a
 player-facing freshness label is needed.
 
-If a sidebar poll fails after a successful snapshot, keep rendering the last
-snapshot and show a compact stale/error note. Do not replace the whole sidebar
-with a failure panel unless no snapshot has ever loaded in this page session.
-If Host is serving restored ColonyState while RIMAPI is unreachable, show a
-compact stale snapshot chip near the sidebar footer.
+If a sidebar poll fails after a successful snapshot, keep rendering the last snapshot and show a compact stale/error note inside `COLONY`. Do not replace the whole sidebar with a failure panel unless no snapshot has ever loaded in this page session, and do not blank the `LOG` tab because colony snapshot data is unavailable. If Host is serving restored ColonyState while RIMAPI is unreachable, show a compact stale snapshot chip near the sidebar footer.
 
 ---
 

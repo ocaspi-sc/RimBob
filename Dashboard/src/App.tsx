@@ -4,7 +4,6 @@ import { findScope, isMinisterViewKey, scopeConfigs, viewForScope, viewsForScope
 import { formatLastRun } from './dashboard/selectors';
 import { AnalyticsOverview } from './components/analytics/AnalyticsOverview';
 import { DevBlogOverview } from './components/devBlog/DevBlogOverview';
-import { CabinetRunDialog } from './components/layout/CabinetRunDialog';
 import { DashboardHeader } from './components/layout/DashboardHeader';
 import { ColonySidebar } from './components/layout/ColonySidebar';
 import { EndpointTimingFooter } from './components/layout/EndpointTimingFooter';
@@ -32,7 +31,7 @@ export default function App() {
   const snapshot = usePollingResource(fetchColonySnapshot, SnapshotPollMs);
   const systemHealth = usePollingResource(fetchSystemHealth, SystemHealthPollMs);
   const feed = useAdviceFeed();
-  const triggers = useManualTriggers(feed.cabinetRuns);
+  const triggers = useManualTriggers();
   useDashboardDocumentTitle(systemHealth.data, feed.runningVersion);
   useDashboardReloadOnVersionChange(systemHealth.data, feed.runningVersion);
 
@@ -48,6 +47,7 @@ export default function App() {
   const isDevBlog = activeScope.kind === 'dev_blog';
   const hostApiLive = status.data !== null && status.error === null;
   const systemHealthFresh = systemHealth.data !== null && systemHealth.error === null;
+  const criticalAdvice = feed.feed.activeAdvice.filter(item => item.priority === 'critical');
   const staleSnapshot = systemHealth.data &&
     systemHealth.data.runtime.colony_state_origin !== 'live' &&
     systemHealth.data.colony_snapshot.has_snapshot
@@ -64,11 +64,6 @@ export default function App() {
         statusError={status.error}
         statusLoadedAt={status.loadedAt}
         stream={feed.stream}
-      />
-      <CabinetRunDialog
-        onClose={triggers.closeCabinetRunDialog}
-        open={triggers.cabinetRunDialog.open}
-        run={triggers.cabinetRunDialog.run}
       />
 
       <div className="dashboard-v2-grid">
@@ -172,10 +167,16 @@ export default function App() {
         </section>
 
         <ColonySidebar
+          activeAdvice={feed.feed.activeAdvice}
+          applyAttempts={systemHealth.data?.assisted_apply?.recent_attempts ?? []}
+          cabinetRuns={feed.cabinetRuns}
+          criticalAdvice={criticalAdvice}
+          flags={feed.feed.flags}
           snapshot={snapshot.data}
           error={snapshot.error}
           loadedAt={snapshot.loadedAt}
           staleSnapshot={staleSnapshot}
+          traces={systemHealth.data?.traces ?? []}
         />
       </div>
     </main>
