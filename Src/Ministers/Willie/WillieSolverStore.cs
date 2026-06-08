@@ -15,21 +15,21 @@ public sealed class WillieSolverStore
         new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Dictionary<string, WillieZoneSolverSnapshot>> _zoneByRequest =
         new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Dictionary<string, string>> _fingerprintsByRequest =
+        new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Dictionary<string, string>> _zoneFingerprintsByRequest =
+        new(StringComparer.OrdinalIgnoreCase);
 
-    public void Record(WillieSolverSnapshot snapshot)
+    public void RecordBuildingOutcome(WillieSolverSnapshot snapshot, string? inputFingerprint = null)
     {
         lock (_lock)
         {
             _latest[snapshot.Minister] = snapshot;
             if (snapshot.Request is null) return;
 
-            if (!_byRequest.TryGetValue(snapshot.Minister, out Dictionary<string, WillieSolverSnapshot>? snapshots))
-            {
-                snapshots = new Dictionary<string, WillieSolverSnapshot>(StringComparer.OrdinalIgnoreCase);
-                _byRequest[snapshot.Minister] = snapshots;
-            }
-
-            snapshots[RequestKey(snapshot.Request)] = snapshot;
+            string requestKey = RequestKey(snapshot.Request);
+            OutcomesFor(_byRequest, snapshot.Minister)[requestKey] = snapshot;
+            RecordFingerprint(_fingerprintsByRequest, snapshot.Minister, requestKey, inputFingerprint);
         }
     }
 
@@ -53,7 +53,10 @@ public sealed class WillieSolverStore
                 .Where(key => !currentKeys.Contains(key))
                 .ToList();
             foreach (string staleKey in staleKeys)
+            {
                 snapshots.Remove(staleKey);
+                RemoveFingerprint(_fingerprintsByRequest, minister, staleKey);
+            }
         }
     }
 
@@ -77,21 +80,52 @@ public sealed class WillieSolverStore
                 .Where(key => !currentKeys.Contains(key))
                 .ToList();
             foreach (string staleKey in staleKeys)
+            {
                 snapshots.Remove(staleKey);
+                RemoveFingerprint(_zoneFingerprintsByRequest, minister, staleKey);
+            }
         }
     }
 
-    public void RecordZoneOutcome(WillieZoneSolverSnapshot snapshot)
+    public void RecordZoneOutcome(WillieZoneSolverSnapshot snapshot, string? inputFingerprint = null)
     {
         lock (_lock)
         {
-            if (!_zoneByRequest.TryGetValue(snapshot.Minister, out Dictionary<string, WillieZoneSolverSnapshot>? snapshots))
-            {
-                snapshots = new Dictionary<string, WillieZoneSolverSnapshot>(StringComparer.OrdinalIgnoreCase);
-                _zoneByRequest[snapshot.Minister] = snapshots;
-            }
+            string requestKey = RequestKey(snapshot.Request);
+            OutcomesFor(_zoneByRequest, snapshot.Minister)[requestKey] = snapshot;
+            RecordFingerprint(_zoneFingerprintsByRequest, snapshot.Minister, requestKey, inputFingerprint);
+        }
+    }
 
-            snapshots[RequestKey(snapshot.Request)] = snapshot;
+    public WillieSolverSnapshot? TryGetFreshBuildingOutcome(
+        string minister,
+        BuildingRequest request,
+        string inputFingerprint)
+    {
+        lock (_lock)
+        {
+            string requestKey = RequestKey(request);
+            return HasFreshFingerprint(_fingerprintsByRequest, minister, requestKey, inputFingerprint) &&
+                _byRequest.TryGetValue(minister, out Dictionary<string, WillieSolverSnapshot>? snapshots) &&
+                snapshots.TryGetValue(requestKey, out WillieSolverSnapshot? snapshot)
+                    ? snapshot
+                    : null;
+        }
+    }
+
+    public WillieZoneSolverSnapshot? TryGetFreshZoneOutcome(
+        string minister,
+        ZoneRequest request,
+        string inputFingerprint)
+    {
+        lock (_lock)
+        {
+            string requestKey = RequestKey(request);
+            return HasFreshFingerprint(_zoneFingerprintsByRequest, minister, requestKey, inputFingerprint) &&
+                _zoneByRequest.TryGetValue(minister, out Dictionary<string, WillieZoneSolverSnapshot>? snapshots) &&
+                snapshots.TryGetValue(requestKey, out WillieZoneSolverSnapshot? snapshot)
+                    ? snapshot
+                    : null;
         }
     }
 
@@ -186,6 +220,53 @@ public sealed class WillieSolverStore
         string.IsNullOrWhiteSpace(value)
             ? "-"
             : value.Trim().ToLowerInvariant();
+
+    private static Dictionary<string, TSnapshot> OutcomesFor<TSnapshot>(
+        Dictionary<string, Dictionary<string, TSnapshot>> outcomes,
+        string minister)
+    {
+        if (!outcomes.TryGetValue(minister, out Dictionary<string, TSnapshot>? snapshots))
+        {
+            snapshots = new Dictionary<string, TSnapshot>(StringComparer.OrdinalIgnoreCase);
+            outcomes[minister] = snapshots;
+        }
+
+        return snapshots;
+    }
+
+    private static void RecordFingerprint(
+        Dictionary<string, Dictionary<string, string>> fingerprintsByMinister,
+        string minister,
+        string requestKey,
+        string? inputFingerprint)
+    {
+        if (string.IsNullOrWhiteSpace(inputFingerprint))
+        {
+            RemoveFingerprint(fingerprintsByMinister, minister, requestKey);
+            return;
+        }
+
+        Dictionary<string, string> fingerprints = OutcomesFor(fingerprintsByMinister, minister);
+        fingerprints[requestKey] = inputFingerprint;
+    }
+
+    private static void RemoveFingerprint(
+        Dictionary<string, Dictionary<string, string>> fingerprintsByMinister,
+        string minister,
+        string requestKey)
+    {
+        if (fingerprintsByMinister.TryGetValue(minister, out Dictionary<string, string>? fingerprints))
+            fingerprints.Remove(requestKey);
+    }
+
+    private static bool HasFreshFingerprint(
+        Dictionary<string, Dictionary<string, string>> fingerprintsByMinister,
+        string minister,
+        string requestKey,
+        string inputFingerprint) =>
+        fingerprintsByMinister.TryGetValue(minister, out Dictionary<string, string>? fingerprints) &&
+        fingerprints.TryGetValue(requestKey, out string? stored) &&
+        string.Equals(stored, inputFingerprint, StringComparison.Ordinal);
 }
 
 public sealed record WillieSolverSnapshot(

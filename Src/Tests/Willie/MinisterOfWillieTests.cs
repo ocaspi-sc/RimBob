@@ -185,6 +185,77 @@ public sealed class MinisterOfWillieTests
     }
 
     [Fact]
+    public async Task RepeatedInboundFreezerFlagWithStableInputs_ReusesCachedPlacementOutcome()
+    {
+        FakePlacementSolver solver = FakePlacementSolver.WithOptions(PlacementOption());
+        Harness harness = new(solver);
+        harness.SetStableState();
+        harness.Flags.Publish(FreezerFlag());
+
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
+
+        solver.CallCount.Should().Be(1);
+        AdviceItem advice = harness.Bus.ActiveAdvice().Should().ContainSingle().Subject;
+        advice.Rationale.Should().Contain("Placement solver cache hit");
+        advice.Actions.Should().Contain(action => action.Apply is PlaceBlueprintGroupApply);
+        harness.SolverStore.RequestBoard("Willie").Should().ContainSingle()
+            .Which.Outcome.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task RepeatedInboundFreezerFlagAfterPlacementInputChange_RunsSolverAgain()
+    {
+        FakePlacementSolver solver = FakePlacementSolver.WithOptions(PlacementOption());
+        Harness harness = new(solver);
+        harness.SetStableState();
+        harness.Flags.Publish(FreezerFlag());
+
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
+        harness.Colony.Buildings.Update(new BuildingRegistry(
+            harness.Colony.Buildings.Value.Buildings
+                .Concat([new BuildingRecord("new-wall", "Wall", 1f, null, null, new MapPosition(11, 0, 12))])
+                .ToList()));
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
+
+        solver.CallCount.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task RepeatedInboundFreezerFlagAfterBacklogInputChange_RunsSolverAgain()
+    {
+        FakePlacementSolver solver = FakePlacementSolver.WithOptions(PlacementOption());
+        Harness harness = new(solver);
+        harness.SetStableState();
+        harness.Flags.Publish(FreezerFlag());
+
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
+        harness.Colony.WillieBacklog.Update(new WillieConstructionBacklog(
+        [
+            new WillieBacklogGroup(
+                Kind: "Blueprint",
+                DefName: "Wall",
+                StuffDefName: "BlocksGranite",
+                Allowed: true,
+                Count: 1,
+                ThingIds: ["frame-1"],
+                SampleCells: [new MapPosition(10, 0, 12)],
+                TotalWorkLeft: 100f,
+                Cost: [new MaterialCount("BlocksGranite", 5)],
+                MaterialsAvailable: [new MaterialCount("BlocksGranite", 5)],
+                MaterialsMissing: [],
+                BlockedCount: 0,
+                DisallowedCount: 0)
+        ])
+        {
+            SourceAvailable = true
+        });
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
+
+        solver.CallCount.Should().Be(2);
+    }
+
+    [Fact]
     public async Task InboundZoneFlag_RunsGrowZoneSolverAndRecordsZoneBoardOutcome()
     {
         FakePlacementSolver solver = FakePlacementSolver.WithOptions(PlacementOption());
@@ -211,6 +282,70 @@ public sealed class MinisterOfWillieTests
         row.Outcome!.Status.Should().Be("no_fit");
         row.Outcome.NoFit.Should().Be(nameof(NoFitReason.NoTerrainGrid));
         harness.SolverStore.RequestBoard("Willie").Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task RepeatedInboundZoneFlagWithStableInputs_ReusesCachedZoneOutcome()
+    {
+        FakePlacementSolver solver = FakePlacementSolver.WithOptions(PlacementOption());
+        FakeGrowZonePlacementSolver growZoneSolver = FakeGrowZonePlacementSolver.WithNoFit(NoFitReason.NoTerrainGrid);
+        Harness harness = new(solver, growZoneSolver);
+        harness.SetStableState();
+        harness.Flags.Publish(ZoneFlag());
+
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
+
+        growZoneSolver.CallCount.Should().Be(1);
+        AdviceItem advice = harness.Bus.ActiveAdvice().Should().ContainSingle().Subject;
+        advice.Rationale.Should().Contain("Grow-zone solver cache hit");
+        WillieZoneRequestBoardRow row = harness.SolverStore.ZoneRequestBoard("Willie").Should().ContainSingle().Subject;
+        row.Outcome.Should().NotBeNull();
+        row.Outcome!.Status.Should().Be("no_fit");
+    }
+
+    [Fact]
+    public async Task RepeatedInboundZoneFlagAfterRoomInputChange_RunsGrowZoneSolverAgain()
+    {
+        FakePlacementSolver solver = FakePlacementSolver.WithOptions(PlacementOption());
+        FakeGrowZonePlacementSolver growZoneSolver = FakeGrowZonePlacementSolver.WithNoFit(NoFitReason.NoTerrainGrid);
+        Harness harness = new(solver, growZoneSolver);
+        harness.SetStableState();
+        harness.Flags.Publish(ZoneFlag());
+
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
+        harness.Colony.Rooms.Update(new RoomRegistry(
+            harness.Colony.Rooms.Value.Rooms
+                .Concat([RoomWithCells("new-room", "Bedroom", [new MapPosition(12, 0, 12)])])
+                .ToList()));
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
+
+        growZoneSolver.CallCount.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task RepeatedInboundZoneFlagAfterCropInputChange_RunsGrowZoneSolverAgain()
+    {
+        FakePlacementSolver solver = FakePlacementSolver.WithOptions(PlacementOption());
+        FakeGrowZonePlacementSolver growZoneSolver = FakeGrowZonePlacementSolver.WithNoFit(NoFitReason.NoTerrainGrid);
+        Harness harness = new(solver, growZoneSolver);
+        harness.SetStableState();
+        harness.Flags.Publish(ZoneFlag());
+
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
+        harness.Colony.Plants.Update(new PlantRegistry(
+        [
+            new PlantRecord(
+                Id: "crop-1",
+                Def: "Plant_Rice",
+                Growth: 0.5f,
+                IsCrop: true,
+                ZoneId: "grow-1",
+                Position: new MapPosition(12, 0, 12))
+        ]));
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
+
+        growZoneSolver.CallCount.Should().Be(2);
     }
 
     [Fact]
@@ -574,6 +709,27 @@ public sealed class MinisterOfWillieTests
         solverSnapshot.Status.Should().Be("offline");
         harness.Traces.Latest("Willie")!.Note.Should().Contain("solver offline; preserved prior advice");
     }
+
+    private static RoomRecord RoomWithCells(
+        string id,
+        string role,
+        IReadOnlyList<MapPosition> cells) =>
+        new(
+            Id: id,
+            RoleLabel: role,
+            Temperature: 21,
+            CellsCount: cells.Count,
+            TouchesMapEdge: false,
+            IsPrisonCell: false,
+            IsDoorway: false,
+            OpenRoofCount: 0,
+            ContainedBedIds: [],
+            Impressiveness: null,
+            Beauty: null,
+            Cleanliness: null,
+            Space: null,
+            Wealth: null,
+            Cells: cells);
 
     private static AgentFlag FreezerFlag(string requestedFrom = "Willie") =>
         new(

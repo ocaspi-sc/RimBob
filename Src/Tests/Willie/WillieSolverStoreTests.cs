@@ -21,8 +21,8 @@ public sealed class WillieSolverStoreTests
         WillieSolverSnapshot first = Snapshot("first");
         WillieSolverSnapshot second = Snapshot("second");
 
-        sut.Record(first);
-        sut.Record(second);
+        sut.RecordBuildingOutcome(first);
+        sut.RecordBuildingOutcome(second);
 
         sut.Latest("Willie").Should().BeSameAs(second);
     }
@@ -39,12 +39,25 @@ public sealed class WillieSolverStoreTests
         WillieSolverSnapshot outcome = Snapshot(request.Request, [Option("placement_freezer")]);
 
         sut.RecordInbound("Willie", [inbound]);
-        sut.Record(outcome);
+        sut.RecordBuildingOutcome(outcome);
 
         WillieRequestBoardRow row = sut.RequestBoard("Willie").Should().ContainSingle().Subject;
         row.Inbound.Should().Be(inbound);
         row.Outcome.Should().BeSameAs(outcome);
         row.Outcome!.Options.Should().ContainSingle().Which.Id.Should().Be("placement_freezer");
+    }
+
+    [Fact]
+    public void TryGetFreshBuildingOutcome_ReturnsOnlyMatchingFingerprint()
+    {
+        WillieSolverStore sut = new();
+        BuildingRequest request = Request("starter freezer near kitchen");
+        WillieSolverSnapshot outcome = Snapshot(request.Request, [Option("placement_freezer")]);
+
+        sut.RecordBuildingOutcome(outcome, inputFingerprint: "request-state-a");
+
+        sut.TryGetFreshBuildingOutcome("Willie", request, "request-state-a").Should().BeSameAs(outcome);
+        sut.TryGetFreshBuildingOutcome("Willie", request, "request-state-b").Should().BeNull();
     }
 
     [Fact]
@@ -61,8 +74,8 @@ public sealed class WillieSolverStoreTests
         WillieInboundRequest workshopInbound = Inbound(workshopRequest, "Industry");
 
         sut.RecordInbound("Willie", [freezerInbound, workshopInbound]);
-        sut.Record(Snapshot(freezerRequest.Request));
-        sut.Record(Snapshot(
+        sut.RecordBuildingOutcome(Snapshot(freezerRequest.Request));
+        sut.RecordBuildingOutcome(Snapshot(
             workshopRequest.Request,
             targetClass: "ProductionBench",
             targetDef: "ElectricTailoringBench",
@@ -146,6 +159,35 @@ public sealed class WillieSolverStoreTests
         row.Outcome.Should().NotBeNull();
         row.Outcome!.Status.Should().Be("no_fit");
         row.Outcome.NoFit.Should().Be(nameof(NoFitReason.NoTerrainGrid));
+    }
+
+    [Fact]
+    public void TryGetFreshZoneOutcome_ReturnsOnlyMatchingFingerprint()
+    {
+        WillieSolverStore sut = new();
+        ZoneRequest request = ZoneRequest("36 rice growing tiles near storage");
+        WillieZoneRequestSnapshot snapshot = WillieZoneRequestSnapshot.FromRequest(request, "Chef");
+        WillieZoneSolverSnapshot outcome = new(
+            Minister: "Willie",
+            Request: snapshot,
+            GameTick: 300_000,
+            CapturedAt: DateTimeOffset.UnixEpoch,
+            Output: new PlacementSolverReplayOutput(
+                Status: "no_fit",
+                NoFit: nameof(NoFitReason.NoTerrainGrid),
+                Draftable: "Blocked",
+                PlacementValid: "Blocked",
+                MaterialsReady: "Ready",
+                ApplyReady: "Blocked",
+                Trace: null,
+                ErrorType: null,
+                ErrorMessage: null),
+            Options: []);
+
+        sut.RecordZoneOutcome(outcome, inputFingerprint: "zone-state-a");
+
+        sut.TryGetFreshZoneOutcome("Willie", request, "zone-state-a").Should().BeSameAs(outcome);
+        sut.TryGetFreshZoneOutcome("Willie", request, "zone-state-b").Should().BeNull();
     }
 
     [Fact]
