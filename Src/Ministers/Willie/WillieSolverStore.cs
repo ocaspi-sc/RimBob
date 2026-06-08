@@ -42,21 +42,6 @@ public sealed class WillieSolverStore
                 .Select(group => group.First())
                 .ToList();
             _board[minister] = snapshot;
-
-            if (!_byRequest.TryGetValue(minister, out Dictionary<string, WillieSolverSnapshot>? snapshots))
-                return;
-
-            HashSet<string> currentKeys = snapshot
-                .Select(row => row.RequestKey)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-            IReadOnlyList<string> staleKeys = snapshots.Keys
-                .Where(key => !currentKeys.Contains(key))
-                .ToList();
-            foreach (string staleKey in staleKeys)
-            {
-                snapshots.Remove(staleKey);
-                RemoveFingerprint(_fingerprintsByRequest, minister, staleKey);
-            }
         }
     }
 
@@ -69,21 +54,6 @@ public sealed class WillieSolverStore
                 .Select(group => group.First())
                 .ToList();
             _zoneBoard[minister] = snapshot;
-
-            if (!_zoneByRequest.TryGetValue(minister, out Dictionary<string, WillieZoneSolverSnapshot>? snapshots))
-                return;
-
-            HashSet<string> currentKeys = snapshot
-                .Select(row => row.RequestKey)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-            IReadOnlyList<string> staleKeys = snapshots.Keys
-                .Where(key => !currentKeys.Contains(key))
-                .ToList();
-            foreach (string staleKey in staleKeys)
-            {
-                snapshots.Remove(staleKey);
-                RemoveFingerprint(_zoneFingerprintsByRequest, minister, staleKey);
-            }
         }
     }
 

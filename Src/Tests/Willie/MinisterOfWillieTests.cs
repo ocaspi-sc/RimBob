@@ -672,6 +672,24 @@ public sealed class MinisterOfWillieTests
             .Which.Target.Should().Be("storage");
     }
 
+    [Fact]
+    public async Task RepeatedMissingKitchenWithStableInputs_ReusesCachedPlacementOutcome()
+    {
+        AdviceOption option = PlacementOption("placement_kitchen_30_12", "Starter kitchen", 30);
+        FakePlacementSolver solver = FakePlacementSolver.WithOptions(option);
+        Harness harness = new(solver);
+        harness.SetStableStateWithoutKitchen();
+
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
+
+        solver.CallCount.Should().Be(1);
+        AdviceItem advice = harness.Bus.ActiveAdvice().Should().ContainSingle().Subject;
+        advice.Id.Should().Be("willie_kitchen_missing");
+        advice.Rationale.Should().Contain("Placement solver cache hit");
+        advice.Options.Should().ContainSingle().Which.Id.Should().Be("placement_kitchen_30_12");
+    }
+
     private static async Task SolverOfflinePreservesPriorOptionsAsync(Exception solverException)
     {
         FakePlacementSolver solver = FakePlacementSolver.Throwing(solverException);

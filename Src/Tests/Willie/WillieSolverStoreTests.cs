@@ -61,7 +61,7 @@ public sealed class WillieSolverStoreTests
     }
 
     [Fact]
-    public void RecordInbound_PrunesOutcomesWhenRequestsLeaveBoard()
+    public void RecordInbound_HidesRowsButKeepsFreshCacheWhenRequestsLeaveBoard()
     {
         WillieSolverStore sut = new();
         BuildingRequest freezerRequest = Request("starter freezer near kitchen");
@@ -74,21 +74,24 @@ public sealed class WillieSolverStoreTests
         WillieInboundRequest workshopInbound = Inbound(workshopRequest, "Industry");
 
         sut.RecordInbound("Willie", [freezerInbound, workshopInbound]);
-        sut.RecordBuildingOutcome(Snapshot(freezerRequest.Request));
+        sut.RecordBuildingOutcome(Snapshot(freezerRequest.Request), inputFingerprint: "freezer-state");
         sut.RecordBuildingOutcome(Snapshot(
             workshopRequest.Request,
             targetClass: "ProductionBench",
             targetDef: "ElectricTailoringBench",
-            roomClass: "Workshop"));
+            roomClass: "Workshop"), inputFingerprint: "workshop-state");
         sut.RecordInbound("Willie", [workshopInbound]);
+        sut.RequestBoard("Willie").Should().ContainSingle()
+            .Which.Inbound.Request.Request.Should().Be(workshopRequest.Request);
         sut.RecordInbound("Willie", [freezerInbound, workshopInbound]);
 
         IReadOnlyList<WillieRequestBoardRow> rows = sut.RequestBoard("Willie");
         rows.Should().HaveCount(2);
         rows[0].Inbound.Request.Request.Should().Be(freezerRequest.Request);
-        rows[0].Outcome.Should().BeNull();
+        rows[0].Outcome.Should().NotBeNull();
         rows[1].Inbound.Request.Request.Should().Be(workshopRequest.Request);
         rows[1].Outcome.Should().NotBeNull();
+        sut.TryGetFreshBuildingOutcome("Willie", freezerRequest, "freezer-state").Should().NotBeNull();
     }
 
     [Fact]
