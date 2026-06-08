@@ -83,6 +83,7 @@ public sealed class WillieSolverStoreTests
         sut.RecordInbound("Willie", [workshopInbound]);
         sut.RequestBoard("Willie").Should().ContainSingle()
             .Which.Inbound.Request.Request.Should().Be(workshopRequest.Request);
+        sut.TryGetFreshBuildingOutcome("Willie", freezerRequest, "freezer-state").Should().NotBeNull();
         sut.RecordInbound("Willie", [freezerInbound, workshopInbound]);
 
         IReadOnlyList<WillieRequestBoardRow> rows = sut.RequestBoard("Willie");
@@ -92,6 +93,30 @@ public sealed class WillieSolverStoreTests
         rows[1].Inbound.Request.Request.Should().Be(workshopRequest.Request);
         rows[1].Outcome.Should().NotBeNull();
         sut.TryGetFreshBuildingOutcome("Willie", freezerRequest, "freezer-state").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void RecordInbound_KeepsFreshCacheForRequestsThatNeverAppearOnBoard()
+    {
+        WillieSolverStore sut = new();
+        BuildingRequest missingKitchenRequest = Request(
+            request: "starter kitchen footprint",
+            targetClass: BuildingClass.ProductionBench,
+            targetDef: "FueledStove",
+            roomClass: RoomClass.Kitchen);
+
+        sut.RecordBuildingOutcome(Snapshot(
+            missingKitchenRequest.Request,
+            targetClass: "ProductionBench",
+            targetDef: "FueledStove",
+            roomClass: "Kitchen"), inputFingerprint: "missing-kitchen-state");
+        sut.RecordInbound("Willie", []);
+
+        sut.RequestBoard("Willie").Should().BeEmpty();
+        sut.TryGetFreshBuildingOutcome("Willie", missingKitchenRequest, "missing-kitchen-state")
+            .Should().NotBeNull();
+        sut.TryGetFreshBuildingOutcome("Willie", missingKitchenRequest, "changed-state")
+            .Should().BeNull();
     }
 
     [Fact]
@@ -134,29 +159,57 @@ public sealed class WillieSolverStoreTests
     }
 
     [Fact]
+    public void RecordZoneInbound_HidesRowsButKeepsFreshCacheWhenRequestsLeaveBoard()
+    {
+        WillieSolverStore sut = new();
+        ZoneRequest riceRequest = ZoneRequest("36 rice growing tiles near storage");
+        ZoneRequest cornRequest = ZoneRequest("49 corn growing tiles near storage") with
+        {
+            PlantDef = "Plant_Corn",
+            TileCount = 49
+        };
+        WillieInboundZoneRequest riceInbound = ZoneInbound(riceRequest, "Chef");
+        WillieInboundZoneRequest cornInbound = ZoneInbound(cornRequest, "Chef");
+
+        sut.RecordZoneInbound("Willie", [riceInbound, cornInbound]);
+        sut.RecordZoneOutcome(ZoneSnapshot(riceRequest), inputFingerprint: "rice-zone-state");
+        sut.RecordZoneOutcome(ZoneSnapshot(cornRequest), inputFingerprint: "corn-zone-state");
+        sut.RecordZoneInbound("Willie", [cornInbound]);
+        sut.ZoneRequestBoard("Willie").Should().ContainSingle()
+            .Which.Inbound.Request.PlantDef.Should().Be("Plant_Corn");
+        sut.TryGetFreshZoneOutcome("Willie", riceRequest, "rice-zone-state").Should().NotBeNull();
+        sut.RecordZoneInbound("Willie", [riceInbound, cornInbound]);
+
+        IReadOnlyList<WillieZoneRequestBoardRow> rows = sut.ZoneRequestBoard("Willie");
+        rows.Should().HaveCount(2);
+        rows.Should().OnlyContain(row => row.Outcome != null);
+        sut.TryGetFreshZoneOutcome("Willie", riceRequest, "rice-zone-state").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void RecordZoneInbound_KeepsFreshCacheForRequestsThatNeverAppearOnBoard()
+    {
+        WillieSolverStore sut = new();
+        ZoneRequest syntheticRequest = ZoneRequest("36 rice growing tiles near storage");
+
+        sut.RecordZoneOutcome(ZoneSnapshot(syntheticRequest), inputFingerprint: "synthetic-zone-state");
+        sut.RecordZoneInbound("Willie", []);
+
+        sut.ZoneRequestBoard("Willie").Should().BeEmpty();
+        sut.TryGetFreshZoneOutcome("Willie", syntheticRequest, "synthetic-zone-state")
+            .Should().NotBeNull();
+        sut.TryGetFreshZoneOutcome("Willie", syntheticRequest, "changed-state")
+            .Should().BeNull();
+    }
+
+    [Fact]
     public void RecordZoneOutcome_JoinsLatestOutcomeToZoneBoard()
     {
         WillieSolverStore sut = new();
         ZoneRequest request = ZoneRequest("36 rice growing tiles near storage");
         sut.RecordZoneInbound("Willie", [ZoneInbound(request, "Chef")]);
-        WillieZoneRequestSnapshot snapshot = WillieZoneRequestSnapshot.FromRequest(request, "Chef");
 
-        sut.RecordZoneOutcome(new WillieZoneSolverSnapshot(
-            Minister: "Willie",
-            Request: snapshot,
-            GameTick: 300_000,
-            CapturedAt: DateTimeOffset.UnixEpoch,
-            Output: new PlacementSolverReplayOutput(
-                Status: "no_fit",
-                NoFit: nameof(NoFitReason.NoTerrainGrid),
-                Draftable: "Blocked",
-                PlacementValid: "Blocked",
-                MaterialsReady: "Ready",
-                ApplyReady: "Blocked",
-                Trace: null,
-                ErrorType: null,
-                ErrorMessage: null),
-            Options: []));
+        sut.RecordZoneOutcome(ZoneSnapshot(request));
 
         WillieZoneRequestBoardRow row = sut.ZoneRequestBoard("Willie").Should().ContainSingle().Subject;
         row.Outcome.Should().NotBeNull();
@@ -169,23 +222,7 @@ public sealed class WillieSolverStoreTests
     {
         WillieSolverStore sut = new();
         ZoneRequest request = ZoneRequest("36 rice growing tiles near storage");
-        WillieZoneRequestSnapshot snapshot = WillieZoneRequestSnapshot.FromRequest(request, "Chef");
-        WillieZoneSolverSnapshot outcome = new(
-            Minister: "Willie",
-            Request: snapshot,
-            GameTick: 300_000,
-            CapturedAt: DateTimeOffset.UnixEpoch,
-            Output: new PlacementSolverReplayOutput(
-                Status: "no_fit",
-                NoFit: nameof(NoFitReason.NoTerrainGrid),
-                Draftable: "Blocked",
-                PlacementValid: "Blocked",
-                MaterialsReady: "Ready",
-                ApplyReady: "Blocked",
-                Trace: null,
-                ErrorType: null,
-                ErrorMessage: null),
-            Options: []);
+        WillieZoneSolverSnapshot outcome = ZoneSnapshot(request);
 
         sut.RecordZoneOutcome(outcome, inputFingerprint: "zone-state-a");
 
@@ -282,6 +319,24 @@ public sealed class WillieSolverStoreTests
                 ErrorType: null,
                 ErrorMessage: null),
             Options: options ?? []);
+
+    private static WillieZoneSolverSnapshot ZoneSnapshot(ZoneRequest request) =>
+        new(
+            Minister: "Willie",
+            Request: WillieZoneRequestSnapshot.FromRequest(request, "Chef"),
+            GameTick: 300_000,
+            CapturedAt: DateTimeOffset.UnixEpoch,
+            Output: new PlacementSolverReplayOutput(
+                Status: "no_fit",
+                NoFit: nameof(NoFitReason.NoTerrainGrid),
+                Draftable: "Blocked",
+                PlacementValid: "Blocked",
+                MaterialsReady: "Ready",
+                ApplyReady: "Blocked",
+                Trace: null,
+                ErrorType: null,
+                ErrorMessage: null),
+            Options: []);
 
     private static AdviceOption Option(string id) =>
         new(
