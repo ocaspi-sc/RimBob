@@ -107,13 +107,37 @@ Call this out so review does not flag overlap:
 - **ANALYTICS** is derived live *aggregates* (advice mix, SSE health rollups), not a per-event log.
 - **Sidebar › LOG** is a **curated, capped, always-visible** subset of the *most important* discrete events, readable without leaving the current scope. Same underlying data, different job. (A later cleanup could have SYSTEM Events consume the same `deriveLogEntries` selector, but that is out of scope here.)
 
+## Full subsume of the Cabinet Run dialog ("toast")
+
+Decision: **LOG fully replaces the toast.** Delete `CabinetRunDialog` ([CabinetRunDialog.tsx](Dashboard/src/components/layout/CabinetRunDialog.tsx)) — the wide `aria-modal="false"` overlay that auto-pops on `Run Cabinet Now` and shows one run's step tree (incl. the landed Willie solver subitems from `.plans/cabinet-toast-solver-log.md`, `CabinetRunStepSnapshot.children` rendered by a recursive `CabinetRunStepRow`) — and render cabinet runs entirely inside the LOG tab. `cabinet-toast-overflow` has since landed (`ce2a9b4`) containing the toast's text overflow; that containment moves into the sidebar rendering rather than staying on a separate overlay.
+
+The cabinet-run LOG card is an **expandable disclosure**, per the repo disclosure convention (real `<button>` header with `aria-expanded`/`aria-controls` + a conditionally rendered panel in normal flow):
+
+- **Collapsed** = the one-line summary (status tone, step count, source ministers, duration), like every other LOG card.
+- **Expanded** = full run detail: a small header line (short `run_id`, started time, duration, `state_source`/restored-snapshot chips) plus the `<ol>` of steps rendered by the **recursive `CabinetRunStepRow`**, so the landed Willie solver `children` subitems render unchanged.
+
+Reuse, not rewrite: extract `CabinetRunStepRow` + `compactTraceSummary` (and the shared `formatDuration`/`formatTime`) out of `CabinetRunDialog.tsx` into a shared `Dashboard/src/components/layout/CabinetRunSteps.tsx` consumed by the LOG card, then delete `CabinetRunDialog.tsx`. No backend change — the same `cabinet_run` SSE snapshot already carries everything.
+
+**Live feedback without the modal.** On a fresh `Run Cabinet Now` / `Run Cabinet (Rules Only)` click the sidebar auto-switches to the LOG tab and the active run's card auto-expands while `status === 'running'`, so the operator watches progress live exactly as the popup did — docked in the always-on sidebar instead of a floating overlay. Auto-expand releases (the card collapses to its summary) once the run completes, or when the operator manually toggles it.
+
+Plumbing:
+
+- [useManualTriggers.ts](Dashboard/src/hooks/useManualTriggers.ts) — drop the dialog open-state (`cabinetRunDialog`, `closeCabinetRunDialog`). Keep the optimistic seed (`seedCabinetRun`/`failCabinetRun`) and `activeCabinetRunIdRef` reconcile, but expose them as data: `activeCabinetRun: CabinetRunLogSnapshot | null` and `activeCabinetRunId: string | null`. This preserves instant-on feedback before the first `cabinet_run` SSE/POST result and still surfaces POST failures as a failed run.
+- [App.tsx](Dashboard/src/App.tsx) — remove the `<CabinetRunDialog>` render. Merge the optimistic `activeCabinetRun` into `feed.cabinetRuns` by `run_id` (the seeded row is replaced once the real SSE snapshot lands) and pass the merged list + `activeCabinetRunId` into `ColonySidebar`.
+- [ColonySidebar.tsx](Dashboard/src/components/layout/ColonySidebar.tsx) / `SidebarLog` — a `useEffect` switches the sidebar tab to `log` and marks the active run expanded whenever `activeCabinetRunId` changes to a new non-null id; otherwise each cabinet card owns its own expand toggle.
+
+Narrow-column containment is now **mandatory** — the step tree lives in the sidebar, the narrowest region. Port the `cabinet-toast-overflow` text-containment rules (`ce2a9b4`) into the `.log-card`/step CSS so long detail/trace text wraps or clamps and the nested tree never overflows the sidebar. This is the one real cost of full subsume and is handled in the CSS slice, not deferred.
+
 ## Files
 
 - [Dashboard/src/dashboard/selectors.ts](Dashboard/src/dashboard/selectors.ts) — add `LogEntry`/`LogChip`/`LogEntryKind`/`LogTone` types + `deriveLogEntries(...)` pure selector.
-- [Dashboard/src/components/layout/ColonySidebar.tsx](Dashboard/src/components/layout/ColonySidebar.tsx) — add the COLONY|LOG tab bar; restructure so empty/error states scope to the COLONY tab only; render the LOG tab.
-- New `Dashboard/src/components/layout/SidebarLog.tsx` (or an in-file section) — the LOG card list + empty state.
-- Dashboard CSS (the existing global stylesheet the sidebar uses) — `.sidebar-tabs*` and `.log-card*` rules, reusing existing tone tokens.
-- [Dashboard/src/App.tsx](Dashboard/src/App.tsx) — pass `systemHealth.data`, `feed.cabinetRuns`, and critical advice into `ColonySidebar`.
+- [Dashboard/src/components/layout/ColonySidebar.tsx](Dashboard/src/components/layout/ColonySidebar.tsx) — add the COLONY|LOG tab bar; restructure so empty/error states scope to the COLONY tab only; render the LOG tab; auto-switch to LOG + auto-expand the active run when `activeCabinetRunId` changes (see toast section).
+- New `Dashboard/src/components/layout/SidebarLog.tsx` (or an in-file section) — the LOG card list + empty state; the cabinet-run card is an expandable disclosure that renders the step tree inline.
+- New `Dashboard/src/components/layout/CabinetRunSteps.tsx` — `CabinetRunStepRow` (recursive) + `compactTraceSummary` + shared formatters, extracted from the deleted dialog and consumed by the LOG cabinet card.
+- **Delete** [Dashboard/src/components/layout/CabinetRunDialog.tsx](Dashboard/src/components/layout/CabinetRunDialog.tsx) — fully replaced by the LOG expandable card (no dead code per repo convention).
+- Dashboard CSS (the existing global stylesheet the sidebar uses) — `.sidebar-tabs*` and `.log-card*` rules + the narrow-column step-tree containment ported from `cabinet-toast-overflow` (`ce2a9b4`), reusing existing tone tokens. Remove the `.cabinet-run-overlay`/`.cabinet-run-dialog` overlay rules; keep `.cabinet-run-step*`/`.cabinet-run-substeps` (now used inside the LOG card).
+- [Dashboard/src/hooks/useManualTriggers.ts](Dashboard/src/hooks/useManualTriggers.ts) — drop `cabinetRunDialog`/`closeCabinetRunDialog`; expose `activeCabinetRun` + `activeCabinetRunId` (keep the optimistic seed + reconcile).
+- [Dashboard/src/App.tsx](Dashboard/src/App.tsx) — remove the `<CabinetRunDialog>` render; merge `activeCabinetRun` into `feed.cabinetRuns` by `run_id`; pass the merged runs + `activeCabinetRunId` + `systemHealth.data` + critical advice into `ColonySidebar`.
 
 ## Out of scope / non-goals
 
@@ -121,6 +145,8 @@ Call this out so review does not flag overlap:
 - **No new polling or hooks.** Reuse the existing `systemHealth` poll and the `cabinet_run` SSE feed. The 15s system-health cadence means applied/escalation cards can lag up to ~15s; acceptable for a log, and explicitly **not** worth adding a faster poll or threading an apply-callback event bus in this slice.
 - **No connectivity / build-served cards** this slice (deferred candidates above).
 - **No SYSTEM Events refactor** to share the selector (possible later cleanup, noted not done).
+- **No backend/SSE change to cabinet runs.** Deleting the dialog and rendering in LOG is frontend-only; the `cabinet_run` snapshot (incl. Willie solver `children`) is unchanged.
+- **No change to cabinet run *triggering*.** The `Run Cabinet` controls stay in CABINET/HomeOverview; full subsume only moves where the run *log* is displayed (modal → sidebar LOG card).
 - **No test runner introduction.** The Dashboard package has no vitest/jest today; do **not** add one here. Keep `deriveLogEntries` pure so it is trivially unit-testable if a runner lands later; verify this slice live.
 - **No persisted/wire/replay change**, so no compat code and no wipe-and-regen.
 
@@ -131,7 +157,7 @@ No dashboard unit-test runner exists, so verify in the running dashboard from th
 1. Sidebar shows `COLONY | LOG`; COLONY is default and visually unchanged; switching to LOG and back works; LOG stays visible across scope changes (open a minister inspector — LOG persists).
 2. With no events yet, LOG shows its empty state; COLONY empty/error states still render correctly under the COLONY tab (and do not blank the LOG tab).
 3. Click **Apply** on an advice action → within one system-health poll an "Applied · …" card appears (ok tone); a failing apply shows a warn/error card with the backend `message` in its tooltip. Confirm against the live apply response + the SYSTEM Assisted Apply table (verify state via JSON/API, not the snapshot export).
-4. Click **Run Cabinet Now** → a "Cabinet run …" card appears live (cabinet_run SSE), with step count + duration chips; a failed run shows error tone.
+4. Click **Run Cabinet Now** → the sidebar auto-switches to LOG and the active run's card auto-expands, showing live progress (cabinet_run SSE): the full step tree incl. nested Willie solver subitems (from the landed `cabinet-toast-solver-log`), with step status/duration updating live; a failed run shows error tone and the POST-failure step. After completion the card collapses to its summary; re-expanding any of the last ~12 run cards shows that run's full tree. Confirm **no floating modal appears** (dialog deleted) and the nested tree does not overflow the sidebar column.
 5. Trigger a minister escalation (rules path requesting LLM) → a warn escalation card appears; confirming the LLM path flips it to an "LLM used" (ok) or "LLM failed" (error) card on the next health poll, matching the MinisterEscalationCallout.
 6. Force a critical advice item → a warn "Critical · …" card appears once.
 7. Cards are compact, titles wrap (no truncation), every emoji chip has a hover tooltip, and the card tooltip carries full detail.
@@ -143,6 +169,8 @@ This *is* a dashboard surface; it reflects existing backend state (apply attempt
 ## Docs
 
 Same-turn doc update (Documentation Discipline): [Docs/design/dashboard.md](Docs/design/dashboard.md) — update the **Right Sidebar** section and the **Information Architecture** "four stable regions" / right-sidebar line: the sidebar now carries a shallow `COLONY | LOG` tab bar; COLONY is the default and keeps the always-on colony context; LOG is a curated, capped, cross-scope feed of the most important discrete events (actions applied, cabinet runs, escalation/LLM outcomes, new critical advice) rendered as small icon-led cards with tooltips. Note the explicit role split vs SYSTEM Events (raw firehose) and ANALYTICS (aggregates). Record that COLONY remains the default tab so sidebar colony context is never hidden by default.
+
+Also update the cabinet run-step **dialog** references (the Manual Triggers "run-step dialog" notes near [dashboard.md:508](Docs/design/dashboard.md) and the CABINET run-dialog / `cabinet_run` SSE description near [:573](Docs/design/dashboard.md)): the run-step log is no longer a modal opened on click — it renders as the LOG tab's expandable cabinet-run card, which auto-focuses (sidebar switches to LOG) and live-updates on a manual run, and keeps the last ~12 runs re-expandable. The `cabinet_run` SSE contract and the `run_id`-before-POST reconciliation are unchanged; only the surface that renders them moves from a floating dialog to the sidebar LOG card.
 
 ## No compat
 
@@ -157,3 +185,4 @@ No compat code; no wipe-and-regen. There is no persisted, wire, or replay shape 
 
 - **Sidebar tab persistence** — this slice keeps the selected sidebar tab in ephemeral `useState` (resets to COLONY on reload). The dashboard already persists scope/view in browser storage; persisting the sidebar tab the same way is a trivial optional add. Recommend shipping ephemeral first.
 - **Card count cap** — proposed ~40; tune during live verification for sidebar height.
+- **Auto-switch aggressiveness** — this slice auto-switches the sidebar to LOG and auto-expands on every manual cabinet run. If that steals focus from COLONY too aggressively, the fallback is to switch only when the sidebar is already on LOG, else just badge the LOG tab. Ship the auto-switch first; tune live.
