@@ -2,6 +2,8 @@
 
 Status: PLAN (design-only). Claude writes the plan + slice map; Codex lands each slice via `bring-out-the-gimp`. Claude never edits source on master.
 
+Progress 2026-06-08: Slice 6 is implemented in this worktree. `Area_Home` rows now seed a fallback `BuildableRegion` anchor even when RIMAPI reports no cells/bounds and `cell_count:0`; Willie request ordering now demotes kitchen-dependent requests instead of globally boosting kitchen requests over independent higher-priority beds. `Willie_NewColony1_Standalone_FlagsMissingKitchen` and `Willie_NewColony1_PlacesHighPriorityBeds` are untagged and join the default gate.
+
 ## Motivation
 
 `.plans/advice-for-new-colony-1.md` froze one real day-1 world (`Src/Tests/NewColony/Fixtures/new-colony-1.colony-state.json`, LFS) and wrote the **target** day-1 advice as assertions. Eight of those assertions are tagged `[Trait("kind", "reach")]` and are RED on purpose — they encode where Chef/Welfare/Willie advice *should* land, not where it is. That suite deliberately changed **no rules**; this plan does the rule-side follow-up: turn the reach reds green, one bounded slice at a time.

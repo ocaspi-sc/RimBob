@@ -499,9 +499,6 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
         if (!HasFunctionalRoomEvidence(briefing) || !MissingRoom(briefing, RoomClass.Kitchen))
             return 1;
 
-        if (IsKitchenBuildRequest(request))
-            return 2;
-
         return DependsOnKitchen(request) ? 0 : 1;
     }
 

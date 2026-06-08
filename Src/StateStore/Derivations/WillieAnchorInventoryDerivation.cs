@@ -67,8 +67,9 @@ public static class WillieAnchorInventoryDerivation
         MapRect? mapBounds = BoundsFromMapSize(state.Map.Value.Size);
         foreach (MapArea area in state.Areas.Value.Areas.OrderBy(area => area.Id, StringComparer.OrdinalIgnoreCase))
         {
-            // RIMAPI area rows can report cells_count without cells[]; keep a painted Home area usable as a fallback locus.
-            MapRect? bounds = area.Bounds ?? (area.CellCount > 0 ? mapBounds : null);
+            // RIMAPI Home rows may omit geometry or report zero cells; the row itself is still
+            // the player's early build locus, so fall back to map bounds when exact bounds are absent.
+            MapRect? bounds = area.Bounds ?? mapBounds;
             if (area.Centroid is null && bounds is null)
                 continue;
 

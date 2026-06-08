@@ -211,8 +211,6 @@ public sealed class AdviceForNewColony1Tests
     }
 
     [Fact]
-    // REACH: standalone (snapshot-mode) Willie flags kitchen_missing; RED until that rule path covers it - see .plans/advice-for-new-colony-1.md
-    [Trait("kind", "reach")]
     public async Task Willie_NewColony1_Standalone_FlagsMissingKitchen()
     {
         NewColonyScenario scenario = await Scenario.Value;
@@ -224,8 +222,6 @@ public sealed class AdviceForNewColony1Tests
     }
 
     [Fact]
-    // REACH: solver places the High-priority beds request; RED until the bed-anchor no-fit is fixed - see .plans/advice-for-new-colony-1.md
-    [Trait("kind", "reach")]
     public async Task Willie_NewColony1_PlacesHighPriorityBeds()
     {
         NewColonyScenario scenario = await Scenario.Value;

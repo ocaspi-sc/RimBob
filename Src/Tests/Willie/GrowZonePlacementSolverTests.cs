@@ -64,6 +64,35 @@ public sealed class GrowZonePlacementSolverTests
     }
 
     [Fact]
+    public async Task SolveAsync_UsesHomeAsAnchorButSearchesOutsideHome()
+    {
+        ColonyState state = StateWithTerrain(8, 6, (x, z) => x is >= 4 and <= 5 && z is >= 1 and <= 2 ? "Soil" : "Sand");
+        MapRect homeBounds = new(0, 0, 2, 2);
+        state.Areas.Update(new MapAreaRegistry([
+            new MapArea(
+                Id: "home",
+                Type: "Area_Home",
+                Label: "Home",
+                CellCount: homeBounds.Area,
+                Bounds: homeBounds,
+                Centroid: new MapPosition(1, 0, 1),
+                Cells: CellsIn(homeBounds))
+        ]));
+        state.Stockpiles.Update(new StockpileLedger(
+            [],
+            new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)));
+
+        PlacementResult result = await new GrowZonePlacementSolver().SolveAsync(Request(4), Briefing(), state);
+
+        result.Options.Should().NotBeEmpty();
+        result.Options[0].BlueprintGroup.Assets
+            .Select(asset => (asset.Cell.X, asset.Cell.Z))
+            .Should().BeEquivalentTo([(4, 1), (5, 1), (4, 2), (5, 2)]);
+        result.Trace.Drafts.Should().Contain(draft => draft.AnchorRoomId == "area:home");
+        result.NoFit.Should().BeNull();
+    }
+
+    [Fact]
     public async Task SolveAsync_WhenTerrainHasNoCoordinateGrid_ReturnsNoFit()
     {
         ColonyState state = new();
@@ -117,6 +146,18 @@ public sealed class GrowZonePlacementSolverTests
             [new StockpileZone("stockpile-1", "StockpileZone", "food", 1, new MapPosition(0, 0, 0))],
             new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)));
         return state;
+    }
+
+    private static IReadOnlyList<MapPosition> CellsIn(MapRect rect)
+    {
+        List<MapPosition> cells = [];
+        for (int z = rect.Z1; z <= rect.Z2; z++)
+        {
+            for (int x = rect.X1; x <= rect.X2; x++)
+                cells.Add(new MapPosition(x, 0, z));
+        }
+
+        return cells;
     }
 
     private static TerrainSnapshot Terrain(

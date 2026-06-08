@@ -710,7 +710,11 @@ public sealed class RimApiClientTests
                         "id": "z1",
                         "cells_count": 2,
                         "label": "Stockpile zone 1",
-                        "type": "Zone_Stockpile"
+                        "type": "Zone_Stockpile",
+                        "cells": [
+                          { "x": 1, "y": 0, "z": 2 },
+                          { "x": 1, "y": 0, "z": 3 }
+                        ]
                       }
                     ],
                     "areas": [
@@ -719,7 +723,13 @@ public sealed class RimApiClientTests
                         "cells_count": 4,
                         "label": "Home",
                         "base_label": "Home",
-                        "type": "Area_Home"
+                        "type": "Area_Home",
+                        "cells": [
+                          { "x": 10, "y": 0, "z": 20 },
+                          { "x": 11, "y": 0, "z": 20 },
+                          { "x": 10, "y": 0, "z": 21 },
+                          { "x": 11, "y": 0, "z": 21 }
+                        ]
                       }
                     ]
                   },
@@ -735,6 +745,11 @@ public sealed class RimApiClientTests
         result[1].Id.Should().Be("0");
         result[1].Label.Should().Be("Home");
         result[1].CellsCount.Should().Be(4);
+        result[1].Cells.Should().Equal(
+            new PositionDto(10, 0, 20),
+            new PositionDto(11, 0, 20),
+            new PositionDto(10, 0, 21),
+            new PositionDto(11, 0, 21));
     }
 
     [Fact]

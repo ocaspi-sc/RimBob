@@ -50,10 +50,11 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
                 "terrain snapshot has no coordinate-addressable cell grid"));
         }
 
-        MapRect searchBounds = SearchBounds(terrain, colonyState.Areas.Value, notes);
+        SearchContext searchContext = BuildSearchContext(terrain, colonyState.Areas.Value, notes);
+        MapRect searchBounds = searchContext.Bounds;
         TerrainIndex terrainIndex = TerrainIndex.Build(terrain, request);
         HashSet<MapCell> blockedCells = BuildZoneBlockedMask(request, terrain, colonyState, searchBounds);
-        IReadOnlyList<ResolvedAnchor> anchors = ResolveZoneAnchors(request, briefing, colonyState, searchBounds);
+        IReadOnlyList<ResolvedAnchor> anchors = ResolveZoneAnchors(request, briefing, colonyState, searchContext);
         PlacementEvidence.FreeRectScanResult freeSpace = PlacementEvidence.BuildFreeRects(searchBounds, blockedCells.Contains);
         if (freeSpace.ScanTruncated)
             notes.Add("grow-zone free-space scan exceeded the bounded scan budget");
@@ -108,27 +109,83 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
             ApplyReady: PlacementReadiness.Ready));
     }
 
-    private static MapRect SearchBounds(
+    private static SearchContext BuildSearchContext(
         TerrainSnapshot terrain,
         MapAreaRegistry areas,
         List<string> notes)
     {
+        MapRect terrainBounds = new(0, 0, terrain.Width - 1, terrain.Height - 1);
         MapArea? home = areas.Areas
             .Where(area => string.Equals(area.Type, "Area_Home", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(area.Type, "Home", StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(area => area.CellCount)
             .ThenBy(area => area.Id, StringComparer.OrdinalIgnoreCase)
             .FirstOrDefault();
-        if (home?.Bounds is not null)
-        {
-            if (home.Cells.Count == 0)
-                notes.Add("Home area row did not include cells; using Home bounds as the grow-zone search region");
 
-            return Clamp(home.Bounds, terrain);
+        WillieRoomAnchor? fallbackAnchor = BuildHomeAnchor(home, terrainBounds, notes);
+        MapPosition searchCenter = fallbackAnchor?.Centroid ?? CenterOf(terrainBounds);
+        MapRect searchBounds = BudgetedSearchBounds(terrainBounds, searchCenter, notes);
+        return new SearchContext(searchBounds, fallbackAnchor);
+    }
+
+    private static WillieRoomAnchor? BuildHomeAnchor(
+        MapArea? home,
+        MapRect terrainBounds,
+        List<string> notes)
+    {
+        if (home is null)
+        {
+            notes.Add("no Home area available; grow-zone search uses terrain bounds with map-center fallback");
+            return null;
         }
 
-        notes.Add("no Home area bounds available; searching the full terrain grid");
-        return new MapRect(0, 0, terrain.Width - 1, terrain.Height - 1);
+        MapRect? bounds = home.Bounds is null ? null : Clamp(home.Bounds, terrainBounds);
+        if (bounds is null)
+            notes.Add("Home area row did not include bounds; using Home centroid as the grow-zone anchor");
+        else if (home.Cells.Count == 0)
+            notes.Add("Home area row did not include cells; using Home bounds center as the grow-zone anchor");
+
+        MapPosition centroid = home.Centroid ?? (bounds is null ? CenterOf(terrainBounds) : CenterOf(bounds));
+        return new WillieRoomAnchor(
+            $"area:{home.Id}",
+            RoomClass.BuildableRegion,
+            home.Label ?? "Home area",
+            home.CellCount,
+            centroid,
+            [])
+        {
+            Bounds = bounds,
+            Cells = home.Cells
+        };
+    }
+
+    private static MapRect BudgetedSearchBounds(
+        MapRect terrainBounds,
+        MapPosition center,
+        List<string> notes)
+    {
+        if (terrainBounds.Area <= PlacementEvidence.MaxFreeSpaceScanCells)
+            return terrainBounds;
+
+        int terrainWidth = terrainBounds.X2 - terrainBounds.X1 + 1;
+        int terrainHeight = terrainBounds.Z2 - terrainBounds.Z1 + 1;
+        double terrainRatio = terrainWidth / (double)Math.Max(1, terrainHeight);
+        int searchWidth = Math.Clamp(
+            (int)Math.Floor(Math.Sqrt(PlacementEvidence.MaxFreeSpaceScanCells * terrainRatio)),
+            1,
+            terrainWidth);
+        int searchHeight = Math.Clamp(
+            PlacementEvidence.MaxFreeSpaceScanCells / searchWidth,
+            1,
+            terrainHeight);
+
+        if (searchWidth * searchHeight > PlacementEvidence.MaxFreeSpaceScanCells)
+            searchHeight = Math.Max(1, PlacementEvidence.MaxFreeSpaceScanCells / searchWidth);
+
+        int x1 = Math.Clamp(center.X - searchWidth / 2, terrainBounds.X1, terrainBounds.X2 - searchWidth + 1);
+        int z1 = Math.Clamp(center.Z - searchHeight / 2, terrainBounds.Z1, terrainBounds.Z2 - searchHeight + 1);
+        notes.Add($"grow-zone search centered on Home anchor and capped at {searchWidth}x{searchHeight} cells by scan budget");
+        return new MapRect(x1, z1, x1 + searchWidth - 1, z1 + searchHeight - 1);
     }
 
     private static HashSet<MapCell> BuildZoneBlockedMask(
@@ -180,7 +237,7 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
         ZoneRequest request,
         WillieBriefing briefing,
         ColonyState colonyState,
-        MapRect searchBounds)
+        SearchContext searchContext)
     {
         IReadOnlyList<AdjacencyHint> adjacency = request.Adjacency ?? [];
         if (!adjacency.Any(hint => hint.Relation == AdjacencyRelation.Near))
@@ -193,24 +250,30 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
 
         if (anchors.Count == 0)
         {
-            MapPosition fallback = new(
-                X: (searchBounds.X1 + searchBounds.X2) / 2,
-                Y: 0,
-                Z: (searchBounds.Z1 + searchBounds.Z2) / 2);
-            WillieRoomAnchor fallbackAnchor = new(
-                "home:bounds",
-                RoomClass.BuildableRegion,
-                "Home area",
-                searchBounds.Area,
+            WillieRoomAnchor fallbackAnchor = searchContext.FallbackAnchor ?? BuildSearchBoundsAnchor(searchContext.Bounds);
+            MapPosition fallback = fallbackAnchor.Centroid ?? CenterOf(fallbackAnchor.Bounds ?? searchContext.Bounds);
+            anchors.Add(new ResolvedAnchor(
+                fallbackAnchor,
                 fallback,
-                [])
-            {
-                Bounds = searchBounds
-            };
-            anchors.Add(new ResolvedAnchor(fallbackAnchor, fallback, AnchorMatchReason.BuildableRegionFallback));
+                AnchorMatchReason.BuildableRegionFallback));
         }
 
         return anchors;
+    }
+
+    private static WillieRoomAnchor BuildSearchBoundsAnchor(MapRect searchBounds)
+    {
+        MapPosition fallback = CenterOf(searchBounds);
+        return new WillieRoomAnchor(
+            "search:bounds",
+            RoomClass.BuildableRegion,
+            "search bounds",
+            searchBounds.Area,
+            fallback,
+            [])
+        {
+            Bounds = searchBounds
+        };
     }
 
     private static IReadOnlyList<ZoneCandidate> BuildCandidatesFromFreeRects(
@@ -551,12 +614,18 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
     private static bool Overlaps(MapRect a, MapRect b) =>
         a.X1 <= b.X2 && a.X2 >= b.X1 && a.Z1 <= b.Z2 && a.Z2 >= b.Z1;
 
-    private static MapRect Clamp(MapRect rect, TerrainSnapshot terrain) =>
+    private static MapRect Clamp(MapRect rect, MapRect bounds) =>
         new(
-            X1: Math.Clamp(rect.X1, 0, Math.Max(0, terrain.Width - 1)),
-            Z1: Math.Clamp(rect.Z1, 0, Math.Max(0, terrain.Height - 1)),
-            X2: Math.Clamp(rect.X2, 0, Math.Max(0, terrain.Width - 1)),
-            Z2: Math.Clamp(rect.Z2, 0, Math.Max(0, terrain.Height - 1)));
+            X1: Math.Clamp(rect.X1, bounds.X1, bounds.X2),
+            Z1: Math.Clamp(rect.Z1, bounds.Z1, bounds.Z2),
+            X2: Math.Clamp(rect.X2, bounds.X1, bounds.X2),
+            Z2: Math.Clamp(rect.Z2, bounds.Z1, bounds.Z2));
+
+    private static MapPosition CenterOf(MapRect bounds) =>
+        new(
+            X: (int)Math.Round((bounds.X1 + bounds.X2) / 2d),
+            Y: 0,
+            Z: (int)Math.Round((bounds.Z1 + bounds.Z2) / 2d));
 
     private static string SanitizeId(string value) =>
         new(value.Select(character => char.IsLetterOrDigit(character) ? char.ToLowerInvariant(character) : '_').ToArray());
@@ -717,4 +786,8 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
         int NearestAnchorDistance,
         IReadOnlyList<MetricValue> Metrics,
         double Score);
+
+    private sealed record SearchContext(
+        MapRect Bounds,
+        WillieRoomAnchor? FallbackAnchor);
 }

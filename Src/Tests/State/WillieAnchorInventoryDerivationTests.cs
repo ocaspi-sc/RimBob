@@ -199,7 +199,7 @@ public sealed class WillieAnchorInventoryDerivationTests
     }
 
     [Fact]
-    public void Derive_HomeAreaWithZeroCountAndNoCellsDoesNotEmitAnchor()
+    public void Derive_HomeAreaWithZeroCountAndNoCellsUsesMapBounds()
     {
         ColonyState state = new();
         state.Map.Update(new MapInfoSnapshot(0, "(250, 1, 250)"));
@@ -213,6 +213,11 @@ public sealed class WillieAnchorInventoryDerivationTests
 
         WillieAnchorInventory inventory = WillieAnchorInventoryDerivation.Derive(state);
 
-        inventory.Anchors.Should().BeEmpty();
+        WillieRoomAnchor anchor = inventory.Anchors.Should().ContainSingle().Subject;
+        anchor.RoomId.Should().Be("area:0");
+        anchor.Class.Should().Be(RoomClass.BuildableRegion);
+        anchor.CellsCount.Should().Be(0);
+        anchor.Centroid.Should().BeNull();
+        anchor.Bounds.Should().Be(new MapRect(0, 0, 249, 249));
     }
 }

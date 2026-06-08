@@ -296,6 +296,27 @@ public sealed class WillieRulesTests
     }
 
     [Fact]
+    public void InboundKitchenRequest_DoesNotPreemptHigherPriorityIndependentBedRequest()
+    {
+        WillieBriefing briefing = StableBriefing() with
+        {
+            FunctionalRooms = FunctionalRooms(RoomClass.Hospital, RoomClass.Storage)
+        };
+
+        RuleRun result = new Rules().Evaluate(
+            briefing,
+            [KitchenRequest(), BedRequest()]);
+
+        ProjectedRuleRun decision = Project(result, briefing);
+        decision.Trace.Should().Be("rules:building_request_active+kitchen_missing");
+        Rules.TryGetPlacementRequest(Rules.BuildingRequestActiveTrace, briefing, [KitchenRequest(), BedRequest()], out BuildingRequest request)
+            .Should().BeTrue();
+        request.TargetClass.Should().Be(BuildingClass.Bed);
+        request.RoomClass.Should().Be(RoomClass.Barracks);
+        request.Priority.Should().Be(Priority.High);
+    }
+
+    [Fact]
     public void HardBuildBlocker_AndInboundRequestBothEmit()
     {
         WillieBriefing briefing = StableBriefing() with
@@ -389,6 +410,17 @@ public sealed class WillieRulesTests
             CapacityNeed: new CapacityNeed(CapacityMeasure.WorkSlots, 1),
             Adjacency: [new AdjacencyHint(AdjacencyRelation.Near, "storage")],
             Priority: Priority.Medium,
+            RequestedFrom: "Willie");
+
+    private static BuildingRequest BedRequest() =>
+        new(
+            Request: "add 3 beds in a roofed barracks",
+            Reason: "3 colonists lack bed capacity",
+            TargetClass: BuildingClass.Bed,
+            TargetDef: "Bed",
+            RoomClass: RoomClass.Barracks,
+            CapacityNeed: new CapacityNeed(CapacityMeasure.Beds, 3),
+            Priority: Priority.High,
             RequestedFrom: "Willie");
 
     private static BuildingRequest WorkshopRequest() =>

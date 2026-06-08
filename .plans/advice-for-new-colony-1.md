@@ -6,6 +6,8 @@ Owner-on-land: Codex (via `bring-out-the-gimp`). Claude writes plan + target map
 
 Execution note 2026-06-05: Codex implemented the suite in `codex/advice-for-new-colony-1` and kept the default gate green by moving newly proven current-code gaps into `[Trait("kind","reach")]`. The full snapshot restored through current code derives `resources.total_nutrition=2.45` / `reported` / ~0.51 food-days because all 57 `MealSurvivalPack` stacks in `things` are forbidden, while the reference briefing under `.plans/advice-for-new-colony-1/briefing.food.json` targeted `item_def_catalog` / ~10.7 food-days; the suite pins the target in `Snapshot_DerivesTargetFoodBuffer` as reach. Welfare currently emits shelter only from this fixture, so temperature comfort is reach. Willie standalone `kitchen_missing` is also reach because snapshot mode has no functional-room/anchor evidence. The CI-safe gate is `dotnet test Src\Tests\RimBob.Tests.csproj --filter "kind!=reach&Category!=Live"`.
 
+Execution note 2026-06-08: Willie snapshot anchoring has caught up to the target in this worktree. `Area_Home` rows now produce fallback `BuildableRegion` anchors even when the fork reports no Home geometry and `cell_count:0`; the two Willie reach tests are untagged and pass in the default gate.
+
 ## Goal
 
 Freeze one real new-colony world, commit the **entire** captured state, and assert what Chef, Welfare, and Willie *should* advise from it — driven through the real pipeline (snapshot → restore → derive briefings → rules → advice). Tests are a golden/reach target: they pin the desired day-1 advice so we can drive rules toward it and catch regressions once they pass.
