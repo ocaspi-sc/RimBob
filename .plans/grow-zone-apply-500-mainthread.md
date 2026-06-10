@@ -1,6 +1,6 @@
 # Grow-Zone Apply 500 — Off-Main-Thread Zone Mutation
 
-**Status:** Slices 1–5 landed & live. Unpaused live test (2026-06-08) exposed a **false-positive create** — fire-and-forget (Slice 1) + a location-blind readback heuristic let a failed create report success against a *different* zone. Fix in flight: **Slice 6** (RIMAPI marshal-and-WAIT, truthful result — reverses the Slice 1 return contract) + **Slice 7** (RimBob trusts the returned zone id). Root cause proven live on 2026-06-07.
+**Status:** Slices 1-5 landed & live. Unpaused live test (2026-06-08) exposed a **false-positive create**: fire-and-forget (Slice 1) + a location-blind readback heuristic let a failed create report success against a *different* zone. Follow-up proof showed valid `Plant_Rice` could be rejected when listener-thread `DefDatabase` lookup returned null. Fix in flight: **Slice 6** (RIMAPI marshal-and-WAIT, resolve `plant_def` on main thread, truthful result) + **Slice 7** (RimBob trusts the returned zone id). Root causes proven live on 2026-06-07 and 2026-06-08.
 **Owner:** RIMAPI mod (primary) + Willie/AssistedApply (secondary).
 **Scope:** Fix the intermittent `500 Internal Server Error` on `POST api/v1/map/zone/growing` that the player hits when clicking Willie's grow-zone Apply, then harden RimBob so the next such failure is self-diagnosing and the now-async create reads back correctly.
 
@@ -81,7 +81,7 @@ Verify: with the game **unpaused**, repeated `POST api/v1/map/zone/growing` over
 
 ## Slice 2 — RimBob: stop swallowing the RIMAPI error body (diagnosability)
 
-The player saw `500 Internal Server Error` with no cause because `RimApiClient.EnsureWriteAcceptedAsync` raises `RimApiException` from status alone and drops the response body. RIMAPI returns a JSON envelope on 500 (`{"success":false,"errors":["Internal server error: <message>"],...}` — confirmed live on the zones GET). 
+The player saw `500 Internal Server Error` with no cause because `RimApiClient.EnsureWriteAcceptedAsync` raises `RimApiException` from status alone and drops the response body. RIMAPI returns a JSON envelope on 500 (`{"success":false,"errors":["Internal server error: <message>"],...}` — confirmed live on the zones GET).
 
 Fix: in `EnsureWriteAcceptedAsync` (`Src/GameStateSync/RimApiClient.cs`), read the response content on failure and include any `errors[]`/message in the thrown `RimApiException`. Then `AssistedApplyService.ApplyCreateGrowingZoneAsync`'s `catch (RimApiException ex) → Response("rimapi_rejected", ex.Message, …)` surfaces the real reason in `apply_result`, dashboard-visible. Applies to all write endpoints, not just grow-zone.
 
@@ -249,13 +249,14 @@ Return-option **B** (block the listener on a completion handle) is now **require
 
 ## Slice 6 — RIMAPI: make grow-zone create truthful (marshal-and-wait)  *[supersedes Slice 1 return contract]*
 
-**Repo:** RIMAPI. `MapService.CreateGrowingZone` — keep the sync validation (map / `point_a`-`point_b` / plant def). Replace the fire-and-forget block with marshal-and-wait:
+**Repo:** RIMAPI. `MapService.CreateGrowingZone` - keep sync validation for map lookup and point guards only. Move `plant_def` lookup and zone mutation into the marshaled main-thread path, then marshal-and-wait:
 
 - `var tcs = new TaskCompletionSource<GrowingZoneDto>();`
 - inside `LongEventHandler.ExecuteWhenFinished`, run `FarmHelper.CreateGrowingZone(...)`; `tcs.SetResult(dto)` (dto may be null), `tcs.SetException(ex)` on throw.
 - block the listener with a bounded wait: `tcs.Task.Wait(timeoutMs)` (~5000 ms).
 - map outcomes:
   - non-null dto → `ApiResult<GrowingZoneDto>.Ok(dto)`
+  - invalid/unknown plant def → `ApiResult<GrowingZoneDto>.Fail(...)` from the main-thread lookup
   - **null dto** → `ApiResult.Fail("No growable cells — all requested cells are occupied or already zoned.")`
   - timeout (`Wait` false) → `ApiResult.Fail("Grow-zone create did not complete on the main thread in time.")`
   - exception (unwrap `AggregateException`) → `ApiResult.Fail(ex.Message)`
@@ -265,7 +266,7 @@ The mutation still runs on the main thread (the race stays fixed); the listener 
 
 **Consideration:** confirm the RIMAPI HTTP server handles requests on a threadpool/per-request thread (SSE + texture export already do long async work, implying it does) so a ~5 s block on one request can't stall the whole API. The timeout guards against a stalled main thread (load screen / long event); a late-firing deferred action after a timeout would create an orphan zone — acceptable, optionally `LogApi.Warning`.
 
-**Verify (unpaused):** create over free cells → 200 with real `zone_id`/`cells_count`; create whose cells are fully occupied → `Fail` with the "occupied" message (not 200, not 500); repeat N times unpaused, no race, no false success.
+**Verify (unpaused):** create over free cells -> 200 with real `zone_id`/`cells_count`; create with an invalid `plant_def` -> truthful `Fail`; create whose cells are fully occupied -> `Fail` with the "occupied" message (not 200, not 500); repeat N times unpaused, no race, no false success.
 
 ---
 
@@ -289,3 +290,55 @@ The mutation still runs on the main thread (the race stays fixed); the listener 
 - **Slice 7** (RimBob) — depends on Slice 6's returned DTO. Gimp pipeline.
 
 Do **Slice 6 first**, deploy, live-verify unpaused (click ≥3 options including overlapping ones — the failed one must say `rimapi_rejected … occupied`, not "created"), then Slice 7 to clean up RimBob.
+
+---
+
+## Intermezzo commits (2026-06-08, after false-positive detection)
+
+Three code changes landed between the false-positive live test and Slice 6 shipping. They improve the situation but do not fully resolve it.
+
+### RIMAPI `1e6fb5e feat(map): emit zone cell lists`
+
+`MapHelper.GetZones` now populates `cells` (sorted by `x` then `z`) on every `ZoneDto` for both zones and areas. `CellsCount` for areas now counts `ActiveCells` from the same sorted list (was `area.ActiveCells.Count()` inline, same value). This unblocked both the solver Home-anchor feature and the exact-cell readback upgrade below.
+
+Requires mod rebuild for the new field to appear.
+
+### RIMAPI `fb1dd6e` (Codex run `20260608-100639-rimapi-growzone-mainthread-fix`) — **not Slice 6**
+
+`MapService.CreateGrowingZone` plant-def validation simplified: removed the `DefDatabase<ThingDef>.GetNamedSilentFail(plantDefName)` lookup and the `plantDef.plant == null` check. Now only validates `IsNullOrWhiteSpace`. The endpoint still fires the zone mutation fire-and-forget (`LongEventHandler.ExecuteWhenFinished`) and returns `ApiResult.Ok()` immediately — **Slice 6 marshal-and-wait is not yet done**.
+
+**Regression note:** unknown plant def names now pass synchronous validation; `FarmHelper.CreateGrowingZone` passes the raw string to `DefDatabase` internally and returns `null` on a miss, so an invalid `plant_def` will silently produce no zone and RimBob readback will exhaust to `readback_inconclusive`. The old behavior was a sync `Fail("Invalid plant definition: …")`.
+
+### RimBob `dd9b77e feat(willie): add async solve pool`
+
+Willie solves moved to a bounded background queue (separate feature). The part relevant to this plan: `GrowingZoneMatchesApply` was introduced as a shared helper, upgrading both `IsAlreadySatisfied` and `NewMatchingGrowingZone`:
+
+**Before (Slice 3A):** new id + `CellCount == TargetCount` + optional plant def
+**After:** strict plant-def match **+** `CellCount == expectedCells.Count` **+** `zone.Cells.Count > 0` guard **+** full cell-position intersection (`expectedCells.All(zoneCells.Contains)` via a `HashSet`)
+
+The `zone.Cells` data comes from `1e6fb5e`'s new RIMAPI field. The guard on `zone.Cells.Count == 0` makes the match safe when cells are absent (older mod build → `readback_inconclusive`, not false positive).
+
+**Effect on the false-positive scenario:** option 1's zone at `(119,121)-(124,126)` has different cell coordinates than option 3's rect, so `expectedCells.All(zoneCells.Contains)` is false → option 3's readback finds no match → returns `readback_inconclusive`. The user-visible "growing zone created" lie is gone even without Slice 6.
+
+Also in this commit: `GrowZoneBlockedCells` now adds **all** plants (not just `IsCrop`) to the blocked-cell mask — a previously over-permissive occupancy check.
+
+**Remaining gap:** RIMAPI still returns `Ok()` for a failed create (all cells occupied → `FarmHelper` returns null). The fix for the underlying truthfulness issue is still Slice 6.
+
+---
+
+## Status as of 2026-06-09
+
+| Slice | State | Notes |
+|---|---|---|
+| 1 — RIMAPI fire-and-forget marshal | ✅ landed `700ad68` | Race fixed; truthfulness gap exposed later |
+| 2 — RimBob surface 500 body | ✅ landed `12ca7b8` | |
+| 3A — RimBob id-based readback | ✅ landed `12ca7b8` | Upgraded to exact-cell match in `dd9b77e` |
+| 3B — RimBob readback poll | ✅ landed `cb019d1` | Still active; needed until Slice 6 lands |
+| 4 — RimBob S5 minor fixes | ✅ landed `12ca7b8` | |
+| 5 — RIMAPI version + SHA | ✅ landed `3996023` | |
+| `1e6fb5e` — RIMAPI zone cell lists | ✅ landed | Unlocked exact-cell readback; separate feature |
+| `fb1dd6e` — RIMAPI validation simplification | ✅ landed | Not Slice 6; see regression note above |
+| 6 — RIMAPI marshal-and-wait (truthful result) | ❌ **open** | False-positive user-visible lie gone (exact-cell fix), but RIMAPI still lies on wire |
+| 7 — RimBob trust returned zone id | ❌ **open** | Depends on Slice 6 |
+
+**Remaining live verification:** with game **unpaused** and the `1e6fb5e` + `dd9b77e` builds loaded, click ≥3 options including overlapping rects — confirm no false "applied" result. Then proceed to Slice 6 to make RIMAPI itself truthful and enable Slice 7 cleanup.
