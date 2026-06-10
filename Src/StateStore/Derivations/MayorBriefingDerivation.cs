@@ -161,6 +161,9 @@ public static class MayorBriefingDerivation
         float? daysOfFood = food.Nutrition is not null && colonistCount > 0
             ? food.Nutrition / (FoodNutrition.NutritionPerColonistPerDay * colonistCount)
             : null;
+        float? latentFoodDays = colonistCount > 0
+            ? food.ForbiddenEdibleNutrition / (FoodNutrition.NutritionPerColonistPerDay * colonistCount)
+            : null;
 
         return new FoodSnapshot(
             TotalCrops:     farm.TotalCrops,
@@ -170,7 +173,8 @@ public static class MayorBriefingDerivation
                                 .Select(c => new CropBreakdown(c.Def, c.Count, c.AverageGrowth))
                                 .ToList(),
             EstimatedFoodUnitsInStockpile: food.FoodUnits,
-            EstimatedDaysOfFood:           daysOfFood
+            EstimatedDaysOfFood:           daysOfFood,
+            LatentFoodDays:                latentFoodDays
         );
     }
 

@@ -67,6 +67,7 @@ export interface FoodCropMathPayload {
   };
   colonistCount: number;
   estimatedDaysOfFood: number | null;
+  latentFoodDays: number | null;
   nutritionSource: string;
   growingTerrain: {
     hasTerrain: boolean;

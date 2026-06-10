@@ -480,6 +480,7 @@ public sealed class LlmClientTests
         FallbackNutrition: null,
         NutritionSource: "reported",
         EstimatedDaysOfFood: days,
+        LatentFoodDays: 0f,
         FoodUnits: 60,
         MealsCount: 0,
         RawFoodCount: 0,

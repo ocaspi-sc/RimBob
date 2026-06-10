@@ -95,7 +95,7 @@ function groupBriefing(scope: string, briefing: unknown): BriefingGroup[] {
 
   if (scope === 'food') {
     return [
-      pickGroup('food_status', 'Food status', briefing, ['estimatedDaysOfFood', 'nutritionSource', 'reportedNutrition', 'fallbackNutrition', 'foodUnits', 'mealsCount', 'rawFoodCount', 'colonistCount'], true),
+      pickGroup('food_status', 'Food status', briefing, ['estimatedDaysOfFood', 'latentFoodDays', 'nutritionSource', 'reportedNutrition', 'fallbackNutrition', 'foodUnits', 'mealsCount', 'rawFoodCount', 'colonistCount'], true),
       pickGroup('crops', 'Crops', briefing, ['readyToHarvest', 'cropBreakdown', 'cropZoneSummaries']),
       pickGroup('wild_harvest', 'Forage and hunting', briefing, ['wildHarvestCandidates', 'wildHarvestClusters', 'wildAnimalCount']),
       pickGroup('skills_and_labor', 'Skills and labor signals', briefing, ['skills']),
@@ -104,7 +104,7 @@ function groupBriefing(scope: string, briefing: unknown): BriefingGroup[] {
       pickGroup('data_coverage', 'Data coverage', briefing, ['dataCoverage']),
       pickGroup('recent_incidents', 'Recent incidents', briefing, ['recentFoodIncidents', 'activeThreat']),
       { key: 'raw_remaining_fields', title: 'Raw remaining fields', value: omitKeys(briefing, [
-        'estimatedDaysOfFood', 'nutritionSource', 'reportedNutrition', 'fallbackNutrition', 'foodUnits', 'mealsCount',
+        'estimatedDaysOfFood', 'latentFoodDays', 'nutritionSource', 'reportedNutrition', 'fallbackNutrition', 'foodUnits', 'mealsCount',
         'rawFoodCount', 'colonistCount', 'readyToHarvest', 'cropBreakdown', 'cropZoneSummaries',
         'wildHarvestCandidates', 'wildHarvestClusters', 'wildAnimalCount', 'skills', 'infrastructure',
         'storage', 'stockpileCells', 'kitchen', 'dataCoverage', 'recentFoodIncidents', 'activeThreat',

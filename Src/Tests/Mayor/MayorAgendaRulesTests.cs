@@ -110,7 +110,7 @@ internal static class BriefingBuilder
         Traits:          new TraitCallouts([], []),
         Medical:         new MedicalState(0, 0, 0),
         Prisoners:       0,
-        Food:            new FoodSnapshot(0, 0f, 0, [], 0, 30f),
+        Food:            new FoodSnapshot(0, 0f, 0, [], 0, 30f, 0f),
         Resources:       new ResourceSnapshot(
                              new Dictionary<string, int>(),
                              new Dictionary<string, int>(),

@@ -136,7 +136,8 @@ public sealed record FoodSnapshot(
     int    ReadyToHarvest,
     IReadOnlyList<CropBreakdown> CropBreakdown,
     int    EstimatedFoodUnitsInStockpile,
-    float? EstimatedDaysOfFood
+    float? EstimatedDaysOfFood,
+    float? LatentFoodDays
 );
 
 public sealed record CropBreakdown(string Def, int Count, float AverageGrowth);

@@ -13,6 +13,7 @@ public sealed record FoodBriefing(
     float? FallbackNutrition,
     string NutritionSource,
     float? EstimatedDaysOfFood,
+    float? LatentFoodDays,
     int FoodUnits,
     int MealsCount,
     int RawFoodCount,

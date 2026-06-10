@@ -1203,6 +1203,7 @@ public sealed class FoodRulesTests
         FallbackNutrition: null,
         NutritionSource: days is null ? "unknown" : "reported",
         EstimatedDaysOfFood: days,
+        LatentFoodDays: 0f,
         FoodUnits: 60,
         MealsCount: 20,
         RawFoodCount: 20,

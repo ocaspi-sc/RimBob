@@ -92,6 +92,7 @@ When the unclassified remainder can be explained by compact map evidence, such
 as forbidden meals or other visible food-like items excluded from the reachable
 stored-food count, the briefing should carry that explanation so advice can name
 the concrete player action instead of saying only "visibility."
+The briefing separates the honest currently-edible buffer from forbidden-but-edible reserves: `EstimatedDaysOfFood` counts only food colonists can eat now, while `LatentFoodDays` reports comparable food-days that are sitting behind forbidden edible stacks.
 
 Chef should carry compact current bill state for known cooking workbenches.
 Rules use it to avoid repeating a simple-meal bill suggestion once a matching

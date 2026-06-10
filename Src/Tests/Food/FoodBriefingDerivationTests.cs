@@ -248,6 +248,26 @@ public sealed class FoodBriefingDerivationTests
     }
 
     [Fact]
+    public void Compute_SplitsForbiddenEdibleNutritionFromCurrentFoodBuffer()
+    {
+        ColonyState forbiddenState = StateWithMealStack(forbidden: true);
+
+        FoodBriefing forbidden = FoodBriefingDerivation.Compute(forbiddenState);
+
+        forbidden.EstimatedDaysOfFood.Should().BeNull();
+        forbidden.LatentFoodDays.Should().BeApproximately(5.625f, 0.001f);
+        forbidden.MealsCount.Should().Be(0);
+
+        ColonyState unforbiddenState = StateWithMealStack(forbidden: false);
+
+        FoodBriefing unforbidden = FoodBriefingDerivation.Compute(unforbiddenState);
+
+        unforbidden.EstimatedDaysOfFood.Should().BeApproximately(5.625f, 0.001f);
+        unforbidden.LatentFoodDays.Should().Be(0f);
+        unforbidden.MealsCount.Should().Be(10);
+    }
+
+    [Fact]
     public void Compute_DefaultState_MarksLiveStateMissing()
     {
         FoodBriefing b = FoodBriefingDerivation.Compute(new ColonyState());
@@ -612,6 +632,27 @@ public sealed class FoodBriefingDerivationTests
                 Skills: [new ColonistSkill("Plants", 10, "Major"), new ColonistSkill("Cooking", 8, "Minor")],
                 Traits: []))
             .ToList()));
+        return s;
+    }
+
+    private static ColonyState StateWithMealStack(bool forbidden)
+    {
+        ColonyState s = StateWithColonists(1);
+        s.Resources.Update(new ResourceSummary(100, 0f, 10, 0f, 0, 0, 0, 0, 0f));
+        s.Things.Update(new ThingRegistry([
+            new ThingRecord(
+                "meal-stack",
+                "MealSurvivalPack",
+                "packaged survival meal",
+                10,
+                ["FoodMeals"],
+                forbidden,
+                new MapPosition(62, 0, 219))
+        ]));
+        s.ThingDefs.Update(new ThingDefRegistry(new Dictionary<string, ThingDefRecord>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["MealSurvivalPack"] = new("MealSurvivalPack", "packaged survival meal", "Item", "ThingWithComps", true, false, false, false, 0.9f, 10)
+        }));
         return s;
     }
 

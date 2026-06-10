@@ -35,13 +35,17 @@ internal static class FoodItemClassifier
                 Source: "map_things",
                 Position: item.Position))
             .ToList();
+        float forbiddenEdibleNutrition = ForbiddenEdibleNutrition(
+            PreferredForbiddenEdibleSource(storedItems, broadMapItems, thingDefs),
+            thingDefs);
 
         FoodItemClassification? stored = ClassifyItems(
             storedItems,
             thingDefs,
             resources.FoodTotal,
             reportedNutrition,
-            broadMapItems);
+            broadMapItems,
+            forbiddenEdibleNutrition);
 
         if (stored is not null)
             return stored;
@@ -51,7 +55,8 @@ internal static class FoodItemClassifier
             thingDefs,
             resources.FoodTotal,
             reportedNutrition,
-            broadMapItems);
+            broadMapItems,
+            forbiddenEdibleNutrition);
 
         if (broadMap is not null)
             return broadMap;
@@ -73,6 +78,7 @@ internal static class FoodItemClassifier
             FoodUnits: resources.FoodTotal,
             MealsCount: resources.MealsCount,
             RawFoodCount: resources.RawFoodCount,
+            ForbiddenEdibleNutrition: forbiddenEdibleNutrition,
             HasItemFoodClassification: false,
             UnclassifiedFoodItems: []);
     }
@@ -104,7 +110,8 @@ internal static class FoodItemClassifier
         ThingDefRegistry thingDefs,
         int reportedFoodUnits,
         float? reportedNutrition,
-        IReadOnlyList<FoodSourceItem> unclassifiedCandidateItems)
+        IReadOnlyList<FoodSourceItem> unclassifiedCandidateItems,
+        float forbiddenEdibleNutrition)
     {
         int meals = 0;
         int rawFood = 0;
@@ -136,11 +143,40 @@ internal static class FoodItemClassifier
             FoodUnits: Math.Max(reportedFoodUnits, meals + rawFood),
             MealsCount: meals,
             RawFoodCount: rawFood,
+            ForbiddenEdibleNutrition: forbiddenEdibleNutrition,
             HasItemFoodClassification: true,
             UnclassifiedFoodItems: BuildUnclassifiedFoodItems(
                 unclassifiedCandidateItems,
                 thingDefs,
                 reportedFoodUnits - meals - rawFood));
+    }
+
+    private static IReadOnlyList<FoodSourceItem> PreferredForbiddenEdibleSource(
+        IReadOnlyList<FoodSourceItem> storedItems,
+        IReadOnlyList<FoodSourceItem> broadMapItems,
+        ThingDefRegistry thingDefs) =>
+        broadMapItems.Any(item =>
+            item.IsForbidden &&
+            item.StackCount > 0 &&
+            ClassifyKind(item, thingDefs) != FoodItemKind.NotFood)
+            ? broadMapItems
+            : storedItems;
+
+    private static float ForbiddenEdibleNutrition(
+        IReadOnlyList<FoodSourceItem> sourceItems,
+        ThingDefRegistry thingDefs)
+    {
+        float nutrition = 0f;
+        foreach (FoodSourceItem item in sourceItems.Where(item => item.IsForbidden && item.StackCount > 0))
+        {
+            FoodItemKind kind = ClassifyKind(item, thingDefs);
+            if (kind == FoodItemKind.NotFood)
+                continue;
+
+            nutrition += item.StackCount * NutritionFor(item, kind, thingDefs);
+        }
+
+        return nutrition;
     }
 
     private static IReadOnlyList<FoodUnclassifiedItem> BuildUnclassifiedFoodItems(
@@ -289,5 +325,6 @@ internal sealed record FoodItemClassification(
     int FoodUnits,
     int MealsCount,
     int RawFoodCount,
+    float ForbiddenEdibleNutrition,
     bool HasItemFoodClassification,
     IReadOnlyList<FoodUnclassifiedItem> UnclassifiedFoodItems);

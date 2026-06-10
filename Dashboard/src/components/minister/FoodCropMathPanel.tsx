@@ -44,8 +44,8 @@ export function FoodCropMathPanel() {
           />
           <MetricCard
             label={<SemanticLabel icon={iconForField('estimated_days_of_food')}><span>Food buffer</span></SemanticLabel>}
-            value={formatDays(data.estimatedDaysOfFood)}
-            note={`${data.colonistCount} colonists`}
+            value={formatEdibleDays(data.estimatedDaysOfFood)}
+            note={formatCropMathFoodNote(data.colonistCount, data.latentFoodDays)}
             tone={data.estimatedDaysOfFood === null ? 'warn' : data.estimatedDaysOfFood < 7 ? 'error' : 'ok'}
           />
           <MetricCard
@@ -130,8 +130,17 @@ function candidateTone(candidate: FoodCropCandidate): PillTone {
   return candidate.fitsSeason ? 'ok' : 'warn';
 }
 
-function formatDays(value: number | null): string {
-  return value === null ? 'unknown' : `${formatNumber(value)} days`;
+function formatEdibleDays(value: number | null): string {
+  return value === null ? 'unknown' : `${formatNumber(value)} days edible`;
+}
+
+function formatCropMathFoodNote(colonistCount: number, latentFoodDays: number | null): string {
+  const colonistLabel = colonistCount === 1 ? 'colonist' : 'colonists';
+  if (latentFoodDays === null || latentFoodDays < 0.05) {
+    return `${colonistCount} ${colonistLabel}`;
+  }
+
+  return `+${formatNumber(latentFoodDays)} behind forbidden | ${colonistCount} ${colonistLabel}`;
 }
 
 function formatMaybeNumber(value: number | null): string {

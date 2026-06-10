@@ -34,6 +34,9 @@ public static class FoodBriefingDerivation
         float? days = food.Nutrition is not null && pawns.Count > 0
             ? food.Nutrition / (FoodNutrition.NutritionPerColonistPerDay * pawns.Count)
             : null;
+        float? latentFoodDays = pawns.Count > 0
+            ? food.ForbiddenEdibleNutrition / (FoodNutrition.NutritionPerColonistPerDay * pawns.Count)
+            : null;
 
         IReadOnlyList<string> incidents = s.Threats.Value.RecentIncidents
             .Where(i => IsFoodIncident(i.Def) || (i.Label is not null && IsFoodIncident(i.Label)))
@@ -54,6 +57,7 @@ public static class FoodBriefingDerivation
             FallbackNutrition: food.FallbackNutrition,
             NutritionSource: food.NutritionSource,
             EstimatedDaysOfFood: days,
+            LatentFoodDays: latentFoodDays,
             FoodUnits: food.FoodUnits,
             MealsCount: food.MealsCount,
             RawFoodCount: food.RawFoodCount,

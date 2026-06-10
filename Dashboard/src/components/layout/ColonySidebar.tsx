@@ -198,7 +198,8 @@ function ColonySidebarBody({
       <div className="sidebar-metrics">
         <MetricCard
           label={<SemanticLabel icon={iconForField('food')}><span>Food</span></SemanticLabel>}
-          value={snapshot.food.estimatedDaysOfFood != null ? `${snapshot.food.estimatedDaysOfFood.toFixed(1)}d` : 'unknown'}
+          value={formatFoodDays(snapshot.food.estimatedDaysOfFood)}
+          note={formatLatentFoodDays(snapshot.food.latentFoodDays)}
           tone={snapshot.food.estimatedDaysOfFood != null && snapshot.food.estimatedDaysOfFood < 7 ? 'warn' : 'neutral'}
         />
         <MetricCard
@@ -334,6 +335,15 @@ function formatDate(snapshot: ColonySnapshot): string {
 function formatTotalDays(value: number): string {
   if (!Number.isFinite(value)) return '?';
   return value.toFixed(value >= 10 ? 0 : 1);
+}
+
+function formatFoodDays(value: number | null): string {
+  return value != null ? `${value.toFixed(1)}d edible` : 'unknown';
+}
+
+function formatLatentFoodDays(value: number | null): string | undefined {
+  if (value == null || value < 0.05) return undefined;
+  return `+${value.toFixed(1)}d behind forbidden`;
 }
 
 function formatLoadedAt(iso: string): string {

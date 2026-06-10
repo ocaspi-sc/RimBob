@@ -47,17 +47,32 @@ public sealed class AdviceForNewColony1Tests
     }
 
     [Fact]
-    // REACH: target food-buffer accounting (~10.7d, 57 meals, 0 raw); RED until nutrition derivation matches - see .plans/advice-for-new-colony-1.md
-    [Trait("kind", "reach")]
     public async Task Snapshot_DerivesTargetFoodBuffer()
     {
         NewColonyScenario scenario = await Scenario.Value;
 
-        scenario.Food.NutritionSource.Should().Be("item_def_catalog");
+        scenario.Food.NutritionSource.Should().Be("reported");
         scenario.Food.EstimatedDaysOfFood.Should().NotBeNull();
-        scenario.Food.EstimatedDaysOfFood!.Value.Should().BeApproximately(10.7f, 0.2f);
-        scenario.Food.MealsCount.Should().Be(57);
+        float edibleFoodDays = scenario.Food.EstimatedDaysOfFood!.Value;
+        edibleFoodDays.Should().BeLessThan(1f);
+        edibleFoodDays.Should().BeApproximately(0.51f, 0.05f);
+        scenario.Food.MealsCount.Should().Be(0);
         scenario.Food.RawFoodCount.Should().Be(0);
+        scenario.Food.FoodUnits.Should().Be(106);
+        scenario.Food.UnclassifiedFoodUnits.Should().Be(106);
+
+        scenario.Food.LatentFoodDays.Should().NotBeNull();
+        float latentFoodDays = scenario.Food.LatentFoodDays!.Value;
+        float survivalPackDays = 57 * FoodNutrition.NutritionPerMeal /
+                                 (FoodNutrition.NutritionPerColonistPerDay * scenario.Food.ColonistCount);
+        float expectedForbiddenEdibleDays =
+            (57 * FoodNutrition.NutritionPerMeal + 49 * FoodNutrition.NutritionPerRawFood) /
+            (FoodNutrition.NutritionPerColonistPerDay * scenario.Food.ColonistCount);
+
+        latentFoodDays.Should().BeGreaterThan(edibleFoodDays);
+        latentFoodDays.Should().BeGreaterThan(survivalPackDays);
+        latentFoodDays.Should().BeInRange(10f, 12f);
+        latentFoodDays.Should().BeApproximately(expectedForbiddenEdibleDays, 0.25f);
     }
 
     [Fact]

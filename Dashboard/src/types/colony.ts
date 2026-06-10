@@ -60,6 +60,7 @@ export interface FoodSnapshot {
   cropBreakdown?: CropBreakdown[];
   estimatedFoodUnitsInStockpile: number;
   estimatedDaysOfFood: number | null;
+  latentFoodDays: number | null;
 }
 
 export interface ResourceSnapshot {
