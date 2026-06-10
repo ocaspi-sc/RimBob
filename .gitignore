@@ -43,3 +43,6 @@ Microsoft/
 # Local scratch files
 Untitled
 Docs/Untitled
+
+# graphify knowledge-graph output (local tool artifact, not committed)
+graphify-out/
