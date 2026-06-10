@@ -194,12 +194,28 @@ public sealed class AdviceForNewColony1Tests
     {
         NewColonyScenario scenario = await Scenario.Value;
 
-        scenario.WelfareDecision.Trace.Should().Be("rules:shelter_floor+temperature_comfort");
+        scenario.WelfareDecision.Trace.Should().Be("rules:shelter_floor+temperature_comfort+recreation_gap");
         scenario.WelfareDecision.Advice.Should().Contain(advice => advice.Id == "welfare_temperature_comfort");
         WillieBuildingRequests(scenario.WelfareDecision).Should().Contain(request =>
             request.TargetClass == BuildingClass.Heater &&
             request.TargetDef == "Heater" &&
             request.RoomClass == RoomClass.Barracks);
+    }
+
+    [Fact]
+    public async Task Welfare_NewColony1_EmitsRecreation()
+    {
+        NewColonyScenario scenario = await Scenario.Value;
+
+        // Anticipatory: NC1 has no recreation source and full joy (0.51-0.53), so recreation_gap
+        // fires structurally (not on a joy symptom) at Low priority and routes a build to Willie.
+        AdviceItem recreation = scenario.WelfareDecision.Advice
+            .Should().ContainSingle(advice => advice.Id == "welfare_recreation_gap").Subject;
+        recreation.Priority.Should().Be(Priority.Low);
+        WillieBuildingRequests(scenario.WelfareDecision).Should().Contain(request =>
+            request.TargetClass == BuildingClass.Recreation &&
+            request.RoomClass == RoomClass.Recreation &&
+            request.RequestedFrom == "Willie");
     }
 
     [Fact]

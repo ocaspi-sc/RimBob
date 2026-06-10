@@ -76,13 +76,30 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
     }
 
     private static bool MatchesRecreationGap(WelfareSourceBriefing briefing) =>
+        HasJoyShortfall(briefing) || HasNoRecreationSource(briefing);
+
+    // Symptom path: a colonist's joy has already dropped below the low threshold.
+    private static bool HasJoyShortfall(WelfareSourceBriefing briefing) =>
         briefing.DataCoverage.HasNeedLevels &&
         briefing.Recreation.JoyLowCount > 0;
 
-    private static string RecreationGapReason(WelfareSourceBriefing briefing) =>
-        briefing.DataCoverage.HasNeedLevels
-            ? $"joy_low_count={briefing.Recreation.JoyLowCount}"
+    // Anticipatory path: colonists exist but the map has no recreation source yet, so joy will
+    // fall. Mirrors shelter_floor firing on a bed deficit before anyone is actually harmed.
+    private static bool HasNoRecreationSource(WelfareSourceBriefing briefing) =>
+        briefing.DataCoverage.HasBuildings &&
+        briefing.ColonistCount > 0 &&
+        !briefing.Recreation.HasRecreationSource;
+
+    private static string RecreationGapReason(WelfareSourceBriefing briefing)
+    {
+        if (HasJoyShortfall(briefing))
+            return $"joy_low_count={briefing.Recreation.JoyLowCount}";
+        if (HasNoRecreationSource(briefing))
+            return $"no_recreation_source; colonists={briefing.ColonistCount}";
+        return briefing.DataCoverage.HasNeedLevels
+            ? "recreation within thresholds"
             : "need-level coverage unavailable for recreation check";
+    }
 
     private static bool MatchesComfortBeauty(WelfareSourceBriefing briefing) =>
         ThoughtGroup(briefing, ThoughtCategory.ComfortBeauty) is not null ||
@@ -169,8 +186,11 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
 
     private IReadOnlyList<Decision> RecreationGapEmission(WelfareSourceBriefing briefing, DateTimeOffset now)
     {
+        bool joyAlreadyLow = briefing.Recreation.JoyLowCount > 0;
         bool canProveNoSource = briefing.DataCoverage.HasBuildings && !briefing.Recreation.HasRecreationSource;
-        Priority priority = canProveNoSource ? Priority.Medium : Priority.Low;
+        // A real joy shortfall earns Medium; a purely anticipatory "no source yet" stays Low so it
+        // never crowds shelter/temperature on day one.
+        Priority priority = (canProveNoSource && joyAlreadyLow) ? Priority.Medium : Priority.Low;
         IReadOnlyList<Decision> requests = canProveNoSource
             ? BuildRequestDecisions(
                 "recreation_gap",
@@ -179,7 +199,9 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
                 [
                     new BuildingRequest(
                         Request: $"starter recreation source for {briefing.ColonistCount} colonists",
-                        Reason: $"{briefing.Recreation.JoyLowCount} colonist{Plural(briefing.Recreation.JoyLowCount)} have low joy and no recreation source is visible",
+                        Reason: joyAlreadyLow
+                            ? $"{briefing.Recreation.JoyLowCount} colonist{Plural(briefing.Recreation.JoyLowCount)} have low joy and no recreation source is visible"
+                            : $"{briefing.ColonistCount} colonist{Plural(briefing.ColonistCount)} have no recreation source yet, so joy will fall",
                         TargetClass: BuildingClass.Recreation,
                         TargetDef: "HorseshoesPin",
                         RoomClass: RoomClass.Recreation,
@@ -189,9 +211,12 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
                 ])
             : [];
 
-        string body = canProveNoSource
-            ? $"{briefing.Recreation.JoyLowCount} colonist{Plural(briefing.Recreation.JoyLowCount)} have low joy and no recreation source is visible."
-            : $"{briefing.Recreation.JoyLowCount} colonist{Plural(briefing.Recreation.JoyLowCount)} have low joy; recreation time or access needs player review.";
+        string title = joyAlreadyLow ? "Recreation need is falling" : "No recreation source yet";
+        string body = joyAlreadyLow
+            ? (canProveNoSource
+                ? $"{briefing.Recreation.JoyLowCount} colonist{Plural(briefing.Recreation.JoyLowCount)} have low joy and no recreation source is visible."
+                : $"{briefing.Recreation.JoyLowCount} colonist{Plural(briefing.Recreation.JoyLowCount)} have low joy; recreation time or access needs player review.")
+            : $"No recreation source for {briefing.ColonistCount} colonist{Plural(briefing.ColonistCount)} yet — build one before joy falls.";
         string rationale = briefing.DataCoverage.HasBuildings
             ? $"Recreation sources visible: {briefing.Recreation.JoySourceBuildingCount} buildings and {briefing.Recreation.RecreationRoomCount} recreation rooms."
             : "Building coverage is missing, so Welfare does not claim the map has no recreation source.";
@@ -201,7 +226,7 @@ public sealed class Rules : IMinisterRules<WelfareSourceBriefing>
             now,
             "recreation_gap",
             priority,
-            "Recreation need is falling",
+            title,
             body,
             rationale,
             [new AdviceAction(canProveNoSource ? AdviceActionKind.PlaceBlueprint : AdviceActionKind.Note, RecreationAction(canProveNoSource), Owner: canProveNoSource ? "Willie" : MinisterName)],
