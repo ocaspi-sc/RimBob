@@ -328,14 +328,15 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
     private static IReadOnlyList<Decision> BuildHuntLowRiskAnimals(FoodBriefing briefing, DateTimeOffset now)
     {
         float days = RequiredFoodDays(briefing, "hunt_low_risk_animals");
-        Priority priority = days < 10f ? Priority.High : Priority.Medium;
+        // Cap at Low when the latent reserve covers near-term starvation; far-hunt infra is premature.
+        Priority priority = HasHealthyLatentFoodReserve(briefing) ? Priority.Low : (days < 10f ? Priority.High : Priority.Medium);
         return EmitAdvice(briefing, now, "hunt_low_risk_animals",
             priority,
             "Mark low-risk animals for hunting",
             HuntingBody(briefing, days),
             "The briefing has healthy wild animals that pass the current safety filter.",
-            ActionsWithCookingBuildingSupport(briefing, HuntingActions(briefing)),
-            HuntingRequests(briefing, priority),
+            ActionsWithCookingBuildingSupport(briefing, HuntingActions(briefing, HasHealthyLatentFoodReserve(briefing))),
+            HuntingRequests(briefing, priority, HasHealthyLatentFoodReserve(briefing)),
             true);
     }
 
@@ -371,7 +372,8 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         float days = RequiredFoodDays(briefing, "expand_growing_capacity");
         FoodCropCandidate cropCandidate = FoodCropMath.Recommend(briefing).BestCandidate
             ?? throw new InvalidOperationException("expand_growing_capacity matched without a crop candidate");
-        Priority priority = days < 12f ? Priority.High : Priority.Medium;
+        // Cap at Medium when the latent reserve covers near-term starvation; growing is a long-game action.
+        Priority priority = (days < 12f && !HasHealthyLatentFoodReserve(briefing)) ? Priority.High : Priority.Medium;
         return EmitAdvice(briefing, now, "expand_growing_capacity",
             priority,
             "Expand food growing capacity",
@@ -430,6 +432,13 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             FreezerSupportRequests(briefing, days, incomingPerishableFood),
             true);
     }
+
+    // A ≥1-week forbidden-but-edible reserve means near-term food is secured via one unforbid-click,
+    // so long-game growing and optional hunting are not emergencies.
+    private const float LatentReserveComfortDays = 7f;
+
+    private static bool HasHealthyLatentFoodReserve(FoodBriefing briefing) =>
+        briefing.LatentFoodDays is float latent && latent >= LatentReserveComfortDays;
 
     private static float RequiredFoodDays(FoodBriefing briefing, string rule) =>
         briefing.EstimatedDaysOfFood
@@ -896,7 +905,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 RequestedFrom: "Labor"));
     }
 
-    private static FoodFlagRequests HuntingRequests(FoodBriefing briefing, Priority priority)
+    private static FoodFlagRequests HuntingRequests(FoodBriefing briefing, Priority priority, bool suppressBuildRequests = false)
     {
         FoodFlagRequests requests = FoodFlagRequests.Labor(
             new LaborRequest(
@@ -906,43 +915,53 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                 Skill: "Shooting",
                 Priority: priority,
                 RequestedFrom: "Labor"));
-        if (!briefing.Kitchen.HasButcherTable)
-            requests = requests.Add(new BuildingRequest(
-                "butcher table for hunted animals",
-                "hunting only helps the food chain after animals can be butchered",
-                BuildingClass.ProductionBench,
-                TargetDef: "TableButcher",
-                RoomClass: RoomClass.Butcher,
-                Priority: priority,
-                RequestedFrom: "Willie"));
-        if (!briefing.Kitchen.HasCookingBuilding)
-            requests = requests.Add(new BuildingRequest(
-                "campfire or stove for meat meals",
-                "meat must be cooked into safe meals once butchered",
-                BuildingClass.ProductionBench,
-                TargetDef: "Campfire",
-                RoomClass: RoomClass.Kitchen,
-                Priority: priority,
-                RequestedFrom: "Willie"));
+        // Suppress Butcher/ProductionBench and campfire build requests when a healthy latent reserve
+        // means building hunting infrastructure on day 1 would be premature waste.
+        if (!suppressBuildRequests)
+        {
+            if (!briefing.Kitchen.HasButcherTable)
+                requests = requests.Add(new BuildingRequest(
+                    "butcher table for hunted animals",
+                    "hunting only helps the food chain after animals can be butchered",
+                    BuildingClass.ProductionBench,
+                    TargetDef: "TableButcher",
+                    RoomClass: RoomClass.Butcher,
+                    Priority: priority,
+                    RequestedFrom: "Willie"));
+            if (!briefing.Kitchen.HasCookingBuilding)
+                requests = requests.Add(new BuildingRequest(
+                    "campfire or stove for meat meals",
+                    "meat must be cooked into safe meals once butchered",
+                    BuildingClass.ProductionBench,
+                    TargetDef: "Campfire",
+                    RoomClass: RoomClass.Kitchen,
+                    Priority: priority,
+                    RequestedFrom: "Willie"));
+        }
         return requests;
     }
 
-    private static IReadOnlyList<AdviceAction> HuntingActions(FoodBriefing briefing)
+    private static IReadOnlyList<AdviceAction> HuntingActions(FoodBriefing briefing, bool suppressBuildActions = false)
     {
         List<AdviceAction> actions =
         [
             HuntingAction(briefing)
         ];
-        if (!briefing.Kitchen.HasButcherTable)
-            actions.Add(new AdviceAction(
-                AdviceActionKind.PlaceBlueprint,
-                "Place a butcher table so hunted animals can become meat.",
-                Owner: "Willie"));
-        if (!briefing.Kitchen.HasCookingBuilding)
-            actions.Add(new AdviceAction(
-                AdviceActionKind.PlaceBlueprint,
-                "Place a campfire or stove so butchered meat can become meals.",
-                Owner: "Willie"));
+        // Suppress butcher/campfire build actions when a healthy latent reserve makes far-hunt
+        // infrastructure premature; keep the hunt designation itself.
+        if (!suppressBuildActions)
+        {
+            if (!briefing.Kitchen.HasButcherTable)
+                actions.Add(new AdviceAction(
+                    AdviceActionKind.PlaceBlueprint,
+                    "Place a butcher table so hunted animals can become meat.",
+                    Owner: "Willie"));
+            if (!briefing.Kitchen.HasCookingBuilding)
+                actions.Add(new AdviceAction(
+                    AdviceActionKind.PlaceBlueprint,
+                    "Place a campfire or stove so butchered meat can become meals.",
+                    Owner: "Willie"));
+        }
         return actions.Take(3).ToList();
     }
 

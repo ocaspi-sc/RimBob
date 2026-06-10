@@ -1101,6 +1101,70 @@ public sealed class FoodRulesTests
     }
 
     [Fact]
+    public void LowEdibleWithHealthyLatentReserve_GrowingCapacityIsNotHighAndHuntIsLow()
+    {
+        // NC1-style: ~0.5d edible + ~10d latent (forbidden survival packs). Growing is long-game;
+        // hunting infra is premature. Both should be demoted, no Butcher/ProductionBench request.
+        FoodBriefing briefing = Briefing(days: 0.5f) with
+        {
+            LatentFoodDays = 10.2f,
+            WildAnimalCount = 2,
+            WildHuntTargets = [new WildHuntTarget("Hare", 2, "nearby to kitchen", "kitchen")],
+            HuntTargets =
+            [
+                new FoodHuntTarget("Hare", 2, new(40, 50, 41, 50), ["hare-1", "hare-2"], "nearby to kitchen", "kitchen")
+            ],
+            Kitchen = new FoodKitchenSummary(0, 0, false, false)
+        };
+
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
+
+        // Growing capacity must be <= Medium
+        AdviceItem grow = AdviceByRule(decision, "expand_growing_capacity");
+        ((int)grow.Priority).Should().BeLessThanOrEqualTo((int)Priority.Medium,
+            "a ≥7d latent reserve means growing is long-game, not an emergency");
+
+        // Hunt must be Low if present
+        AdviceItem? hunt = decision.Advice.SingleOrDefault(advice => advice.Id == "chef_hunt_low_risk_animals");
+        if (hunt is not null)
+            hunt.Priority.Should().Be(Priority.Low, "a ≥7d latent reserve demotes hunting to Low");
+
+        // No far-hunt build infrastructure
+        WillieBuildingRequestsFromDecision(decision).Should().NotContain(request =>
+            request.RoomClass == RoomClass.Butcher &&
+            request.TargetClass == BuildingClass.ProductionBench,
+            "far-hunt butcher build is suppressed by healthy latent reserve");
+    }
+
+    [Fact]
+    public void LowEdibleWithNoLatentReserve_GrowingCapacityIsHighAndHuntIsHigh()
+    {
+        // No-regression: without a latent reserve, growing stays High and hunting stays High at <10d.
+        FoodBriefing briefing = Briefing(days: 0.5f) with
+        {
+            LatentFoodDays = 0f,
+            WildAnimalCount = 2,
+            WildHuntTargets = [new WildHuntTarget("Hare", 2, "nearby to kitchen", "kitchen")],
+            HuntTargets =
+            [
+                new FoodHuntTarget("Hare", 2, new(40, 50, 41, 50), ["hare-1", "hare-2"], "nearby to kitchen", "kitchen")
+            ],
+            Kitchen = new FoodKitchenSummary(0, 0, false, false)
+        };
+
+        ProjectedRuleRun decision = Project(new Rules().Evaluate(briefing));
+
+        // Growing capacity must be High (days < 12, no latent gate)
+        AdviceByRule(decision, "expand_growing_capacity").Priority.Should().Be(Priority.High,
+            "without a latent reserve, low edible days drive High priority for growing");
+
+        // Hunt must be High (days < 10, no latent gate)
+        AdviceItem? hunt = decision.Advice.SingleOrDefault(advice => advice.Id == "chef_hunt_low_risk_animals");
+        if (hunt is not null)
+            hunt.Priority.Should().Be(Priority.High, "without a latent reserve, <10d edible drives High hunt priority");
+    }
+
+    [Fact]
     public void HuntTargetsBlockedByRisk_Escalates()
     {
         FoodBriefing briefing = Briefing(days: 12f) with
@@ -1242,6 +1306,12 @@ public sealed class FoodRulesTests
         new("meal-forbidden-11", "MealSurvivalPack", "packaged survival meal", 4, "meal", "map_things", new(117, 0, 120)),
         new("meal-forbidden-12", "MealSurvivalPack", "packaged survival meal", 4, "meal", "map_things", new(117, 0, 118))
     ];
+
+    private static IReadOnlyList<BuildingRequest> WillieBuildingRequestsFromDecision(ProjectedRuleRun decision) =>
+        decision.Flags
+            .SelectMany(flag => flag.BuildingRequests ?? [])
+            .Where(request => string.Equals(request.RequestedFrom, "Willie", StringComparison.OrdinalIgnoreCase))
+            .ToList();
 
     private static FoodKitchenSummary KitchenWithSimpleMealBill(int targetCount) =>
         new(1, 1, true, true)

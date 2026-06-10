@@ -161,8 +161,6 @@ public sealed class AdviceForNewColony1Tests
     }
 
     [Fact]
-    // REACH: demote expand_growing_capacity to <= Medium; RED until the "emergency rice" framing is dropped at a healthy buffer - see .plans/advice-for-new-colony-1.md
-    [Trait("kind", "reach")]
     public async Task Chef_NewColony1_GrowingCapacityIsNotHigh()
     {
         NewColonyScenario scenario = await Scenario.Value;
@@ -173,8 +171,6 @@ public sealed class AdviceForNewColony1Tests
     }
 
     [Fact]
-    // REACH: no far-hunt + premature butcher on day 1; RED until hunt is demoted/suppressed at a healthy buffer - see .plans/advice-for-new-colony-1.md
-    [Trait("kind", "reach")]
     public async Task Chef_NewColony1_DoesNotPushFarHunt()
     {
         NewColonyScenario scenario = await Scenario.Value;
