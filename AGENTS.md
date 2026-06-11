@@ -14,7 +14,7 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 - Show me your plan before doing any significant work
 - When writing markdown (.md) files, don't add your own linebreaks in the middle of the paragraph. the viewer has line wrapping.
 - If unsure whether the user wants planning-only or land-it, ask. Do not infer "ship" from a plan request.
-- While reading the code, if you see something confusing, il-designed, convoluted, over-engineered, tech-debt: Suggest refactoring ideas!
+- While reading the code, if you see something confusing, ill-designed, convoluted, over-engineered, tech-debt: Suggest refactoring ideas!
 
 ## Coding
 
@@ -117,7 +117,7 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 - Briefings are the quality lever: keep them tight; derived facts belong in the state store, not prompts.
 - Dashboard and Host are localhost-only. Host binds `127.0.0.1`, never `0.0.0.0`.
 - Deferred Auto epic: HTN planner, bulletin board, Labor solver, broad RIMAPI write coverage, and "only Labor touches pawn allocation." Do not implement before M7. (The narrow allowlisted Assisted Apply writes are the only MVP exception.)
-- Dashboard is for debugging. it should reflect exact state.
+- Dashboard is for debugging. It should reflect exact state.
 - When adding new features, note how it should be reflected in the dashboard. maybe suggest a new panel.
 
 ---

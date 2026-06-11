@@ -11,6 +11,7 @@
 ## Captured by /todo
 
 <!-- entries go here -->
+- [ ] agents-context-audit [2026-06-11] #doc #debt #skill Audit `AGENTS.md` and everything it transitively loads into agent context for staleness, bloat, and conflicting instructions.
 - [ ] dashboard-devblog [2026-06-09] #idea #ux Add a dashboard devblog surface listing major milestones (dashboard v2, first freezer landed, etc).
 - [ ] live-farm-gate-fix [2026-06-09] #test #debt Reinstate the reverted crop-types→plant-count fix (ex-`225ff4a`) in `LiveTestHelpers.CountFarmPlants` + `LiveHostSmokeTests`/`LiveRimApiContractTests` as its own micro-slice so `kind!=reach` stays green when live RIMAPI returns `total_plants:0`. Sharpens the live-decouple bullet of `newcolony-test-polish`. [plan](.plans/new-colony-1-reach-fixes.md)
 - [ ] milestone-nc1 [2026-06-09] #milestone #index #chef #welfare #willie #mayor #apply #dashboard #test **NC1 vertical-slice milestone index.** Evidence-backed status of the 8 criteria, ordered remaining slices (S1 Chef calibration → S2 Willie heater/cooler → S3 apply chain → S4 Mayor-minimal → S5 dashboard declutter → S6 test polish), stale-checkbox corrections, and the two unscoped design questions (Mayor minimal, dashboard important-views). Verified 2026-06-09: NC1 non-reach 12/0 green, 3 reach red (food-buffer split, growing-capacity demote, far-hunt demote). [plan](.plans/milestone-nc1.md)
@@ -192,7 +193,6 @@ Migrate from Codex Chrome plugin to Playwright for frontend.
 - The first alert "Resource requests attention food" - what does attention mean? Why not Trade?
 - It is bad day-one advice; do not suggest sending caravans to traders.
 - Too many things are generated. Focus on important and currently possible short-term actions; let the Mayor handle grand strategy.
-- Alerts priorities use numbers 1-10.
 - "Manage Food Stockpile" requested labor; why not tiles to be marked as storage?
 - The most basic actions like hauling and cleaning should be automated by the game, and only request labor for urgent cases.
 - LABOR requests should specify what kind of work type or skill is required.
