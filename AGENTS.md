@@ -103,6 +103,7 @@ This file is loaded by Codex at the start of every session. Keep it as an operat
 | Specific minister | `Docs/design/ministers/<name>.md` |
 | HTN, planning (deferred - Auto epic) | `Docs/design/planning.md` |
 | Labor / assignment solver (deferred - Auto epic) | `Docs/design/ministers/labor.md` |
+| Superseded/retired decisions (history only) | `Docs/DESIGN-archive.md` |
 
 ---
 
