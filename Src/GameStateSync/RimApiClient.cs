@@ -51,7 +51,9 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
         }
         catch (HttpRequestException ex)
         {
-            throw new RimApiHttpException($"RIMAPI HTTP error at {path}: {(int?)response.StatusCode} {response.ReasonPhrase}", response.StatusCode, ex);
+            string detail = await ReadWriteFailureDetailsAsync(response, ct);
+            string detailSuffix = string.IsNullOrWhiteSpace(detail) ? string.Empty : $": {detail}";
+            throw new RimApiHttpException($"RIMAPI HTTP error at {path}: {(int?)response.StatusCode} {response.ReasonPhrase}{detailSuffix}", response.StatusCode, ex);
         }
 
         RimApiEnvelope<TResponse>? envelope = await response.Content.ReadFromJsonAsync<RimApiEnvelope<TResponse>>(cancellationToken: ct)
@@ -576,7 +578,7 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
     /// POST api/v1/map/zone/growing — create a grow zone over a rect with a crop def.
     /// Owned by Willie placement advice through player-click Assisted Apply.
     /// </summary>
-    public async Task CreateGrowZoneAsync(
+    public async Task<GrowingZoneCreateDto> CreateGrowZoneAsync(
         int mapId, string plantDef, int x1, int z1, int x2, int z2,
         CancellationToken ct = default)
     {
@@ -587,8 +589,7 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
             point_a = new { x = x1, y = 0, z = z1 },
             point_b = new { x = x2, y = 0, z = z2 }
         };
-        HttpResponseMessage response = await http.PostAsJsonAsync("api/v1/map/zone/growing", body, ct);
-        await EnsureWriteAcceptedAsync(response, "api/v1/map/zone/growing", ct);
+        return await PostEnvelopedAsync<object, GrowingZoneCreateDto>("api/v1/map/zone/growing", body, ct);
     }
 
     /// <summary>

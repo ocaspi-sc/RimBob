@@ -27,8 +27,6 @@ public sealed class AssistedApplyService(
     private const string BillRepeatModeTargetCount = "TargetCount";
     private const string BlueprintGroupPlacementOrder = "default";
     private const bool BlueprintGroupRequireAll = true;
-    private const int GrowingZoneReadbackRefreshLimit = 3;
-    private static readonly TimeSpan GrowingZoneReadbackRefreshDelay = TimeSpan.FromMilliseconds(100);
     private static readonly IReadOnlyList<string> SimpleMealRecipeDefs = ["CookMealSimple", "CookMealSimpleBulk"];
     private readonly object _lock = new();
     private readonly List<AssistedApplyAttempt> _recentAttempts = [];
@@ -679,7 +677,6 @@ public sealed class AssistedApplyService(
         if (refreshFailure is not null)
             return refreshFailure;
 
-        HashSet<string> growingZoneIdsBeforeWrite = GrowingZoneIds(state);
         GrowZoneApplyAssessment assessment = AssessGrowingZone(state, apply);
         if (assessment.Outcome == GrowZoneApplyOutcome.WrongMap)
             return Response("stale_advice", "Advice targets a different map than the current colony map.", apply.Kind, adviceId, actionIndex);
@@ -702,9 +699,10 @@ public sealed class AssistedApplyService(
         if (assessment.Outcome == GrowZoneApplyOutcome.BlockedOrZoned)
             return Response("stale_advice", "One or more growing-zone cells are now occupied or already zoned.", apply.Kind, adviceId, actionIndex);
 
+        GrowingZoneCreateDto createdZone;
         try
         {
-            await rimApi.CreateGrowZoneAsync(
+            createdZone = await rimApi.CreateGrowZoneAsync(
                 apply.MapId,
                 apply.PlantDef,
                 apply.Rect.X1,
@@ -724,33 +722,45 @@ public sealed class AssistedApplyService(
             return Response("rimapi_rejected", ex.Message, apply.Kind, adviceId, actionIndex);
         }
 
-        MapZoneRecord? createdZone = null;
-        for (int attempt = 1; attempt <= GrowingZoneReadbackRefreshLimit; attempt++)
-        {
-            AssistedApplyResponse? readbackFailure = await RefreshForReadbackAsync(apply.Kind, adviceId, actionIndex, ct);
-            if (readbackFailure is not null)
-                return readbackFailure;
-
-            createdZone = NewMatchingGrowingZone(state, growingZoneIdsBeforeWrite, apply);
-            if (createdZone is not null)
-                break;
-
-            if (attempt < GrowingZoneReadbackRefreshLimit)
-            {
-                // RIMAPI queues zone creation onto RimWorld's main thread; the first refresh can beat registration.
-                await Task.Delay(GrowingZoneReadbackRefreshDelay, ct);
-            }
-        }
-
-        if (createdZone is null)
+        string? createdZoneId = createdZone.Zone?.Id;
+        if (string.IsNullOrWhiteSpace(createdZoneId))
         {
             return Response(
                 "readback_inconclusive",
-                "Growing-zone creation was accepted by RIMAPI, but readback did not show the new zone yet; it may still be queued on RimWorld's main thread.",
+                "RIMAPI accepted growing-zone creation but did not return a zone id.",
                 apply.Kind,
                 adviceId,
                 actionIndex,
-                new { plant_def = apply.PlantDef, rect = apply.Rect, target_count = apply.TargetCount, readback_attempts = GrowingZoneReadbackRefreshLimit });
+                new { plant_def = apply.PlantDef, rect = apply.Rect, target_count = apply.TargetCount });
+        }
+
+        AssistedApplyResponse? readbackFailure = await RefreshForReadbackAsync(apply.Kind, adviceId, actionIndex, ct);
+        if (readbackFailure is not null)
+            return readbackFailure;
+
+        MapZoneRecord? confirmedZone = state.Zones.Value.Zones.FirstOrDefault(zone =>
+            zone.IsGrowing &&
+            string.Equals(zone.Id, createdZoneId, StringComparison.OrdinalIgnoreCase));
+        if (confirmedZone is null)
+        {
+            return Response(
+                "readback_inconclusive",
+                $"RIMAPI returned growing-zone id {createdZoneId}, but readback did not include that zone.",
+                apply.Kind,
+                adviceId,
+                actionIndex,
+                new { plant_def = apply.PlantDef, rect = apply.Rect, target_count = apply.TargetCount, zone_id = createdZoneId });
+        }
+
+        if (!GrowingZoneMatchesApply(confirmedZone, apply))
+        {
+            return Response(
+                "readback_inconclusive",
+                $"RIMAPI returned growing-zone id {createdZoneId}, but readback did not match the requested crop and rectangle.",
+                apply.Kind,
+                adviceId,
+                actionIndex,
+                new { plant_def = apply.PlantDef, rect = apply.Rect, target_count = apply.TargetCount, zone_id = createdZoneId });
         }
 
         return Response(
@@ -759,7 +769,7 @@ public sealed class AssistedApplyService(
             apply.Kind,
             adviceId,
             actionIndex,
-            new { plant_def = apply.PlantDef, rect = apply.Rect, target_count = apply.TargetCount, zone_id = createdZone.Id });
+            new { plant_def = apply.PlantDef, rect = apply.Rect, target_count = apply.TargetCount, zone_id = confirmedZone.Id });
     }
 
     private static GrowZoneApplyAssessment AssessGrowingZone(ColonyState state, CreateGrowingZoneApply apply)
@@ -807,34 +817,6 @@ public sealed class AssistedApplyService(
         }
 
         return false;
-    }
-
-    private static HashSet<string> GrowingZoneIds(ColonyState state) =>
-        state.Zones.Value.Zones
-            .Where(zone => zone.IsGrowing && !string.IsNullOrWhiteSpace(zone.Id))
-            .Select(zone => zone.Id)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-    private static MapZoneRecord? NewMatchingGrowingZone(
-        ColonyState state,
-        HashSet<string> beforeWriteIds,
-        CreateGrowingZoneApply apply)
-    {
-        foreach (MapZoneRecord zone in state.Zones.Value.Zones.Where(zone => zone.IsGrowing))
-        {
-            if (string.IsNullOrWhiteSpace(zone.Id))
-                continue;
-
-            if (beforeWriteIds.Contains(zone.Id))
-                continue;
-
-            if (!GrowingZoneMatchesApply(zone, apply))
-                continue;
-
-            return zone;
-        }
-
-        return null;
     }
 
     private static bool GrowingZoneMatchesApply(MapZoneRecord zone, CreateGrowingZoneApply apply)

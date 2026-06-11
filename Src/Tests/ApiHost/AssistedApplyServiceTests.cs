@@ -636,7 +636,7 @@ public sealed class AssistedApplyServiceTests
     }
 
     [Fact]
-    public async Task ApplyAsync_WhenGrowingZoneReadbackMissesOnce_PollsAndApplies()
+    public async Task ApplyAsync_WhenGrowingZoneReturnedIdIsMissingFromReadback_ReturnsInconclusive()
     {
         AdviceBus bus = new();
         bus.Publish(Advice("willie_zone_request_active", GrowingZoneAction()) with { Minister = "Willie" });
@@ -651,13 +651,14 @@ public sealed class AssistedApplyServiceTests
 
         AssistedApplyResponse response = await service.ApplyAsync("willie_zone_request_active", 0);
 
-        response.Status.Should().Be("applied");
+        response.Status.Should().Be("readback_inconclusive");
+        response.Message.Should().Contain("returned growing-zone id growing-zone-1");
         handler.GrowZonePosted.Should().BeTrue();
-        handler.MapZonesCalls.Should().BeGreaterThanOrEqualTo(3);
+        handler.MapZonesCalls.Should().Be(2);
     }
 
     [Fact]
-    public async Task ApplyAsync_WhenGrowingZoneReadbackNeverConfirms_ReturnsQueuedInconclusive()
+    public async Task ApplyAsync_WhenGrowingZoneResponseHasNoZoneId_ReturnsInconclusive()
     {
         AdviceBus bus = new();
         bus.Publish(Advice("willie_zone_request_active", GrowingZoneAction()) with { Minister = "Willie" });
@@ -665,6 +666,7 @@ public sealed class AssistedApplyServiceTests
         {
             MapTerrainJson = GrowableTerrainJson(),
             MapPlantsJson = EmptyListJson(),
+            GrowZoneWriteJson = """{"success":true,"data":{},"errors":null}""",
             MapZonesAfterGrowZoneJson = ZonesJson()
         };
         AssistedApplyService service = Service(bus, new ColonyState(), handler);
@@ -672,10 +674,9 @@ public sealed class AssistedApplyServiceTests
         AssistedApplyResponse response = await service.ApplyAsync("willie_zone_request_active", 0);
 
         response.Status.Should().Be("readback_inconclusive");
-        response.Message.Should().Contain("accepted by RIMAPI");
-        response.Message.Should().Contain("queued");
+        response.Message.Should().Contain("did not return a zone id");
         handler.GrowZonePosted.Should().BeTrue();
-        handler.MapZonesCalls.Should().BeGreaterThanOrEqualTo(4);
+        handler.MapZonesCalls.Should().Be(1);
     }
 
     [Fact]
@@ -769,6 +770,7 @@ public sealed class AssistedApplyServiceTests
             MapTerrainJson = GrowableTerrainJson(),
             MapPlantsJson = EmptyListJson(),
             MapZonesJson = ZonesJson(),
+            GrowZoneWriteJson = GrowZoneWriteResponseJson("new-zone"),
             MapZonesAfterGrowZoneJson = ZonesJson(GrowingZoneJson(id: "new-zone", plantDef: null))
         };
         AssistedApplyService service = Service(bus, new ColonyState(), handler);
@@ -788,6 +790,7 @@ public sealed class AssistedApplyServiceTests
         {
             MapTerrainJson = GrowableTerrainJson(),
             MapPlantsJson = EmptyListJson(),
+            GrowZoneWriteJson = GrowZoneWriteResponseJson("new-zone"),
             MapZonesAfterGrowZoneJson = ZonesJson(GrowingZoneJson(id: "new-zone", cells: RectCells(1, 1, 6, 6)))
         };
         AssistedApplyService service = Service(bus, new ColonyState(), handler);
@@ -1216,6 +1219,18 @@ public sealed class AssistedApplyServiceTests
             cells = cells ?? RectCells(10, 20, 15, 25)
         };
 
+    private static string GrowZoneWriteResponseJson(string id = "growing-zone-1") =>
+        JsonSerializer.Serialize(new
+        {
+            success = true,
+            data = new
+            {
+                zone = GrowingZoneJson(id),
+                plant_def_name = "Plant_Rice"
+            },
+            errors = (string[]?)null
+        });
+
     private static IReadOnlyList<object> RectCells(int x1, int z1, int x2, int z2)
     {
         List<object> cells = [];
@@ -1263,7 +1278,7 @@ public sealed class AssistedApplyServiceTests
         public HttpStatusCode GrowZoneWriteStatusCode { get; init; } = HttpStatusCode.OK;
         public string BlueprintGroupValidateJson { get; init; } = BlueprintGroupValidateResponseJson(canPlaceAll: true);
         public string BlueprintGroupPlaceJson { get; init; } = BlueprintGroupPlaceResponseJson("placed");
-        public string GrowZoneWriteJson { get; init; } = """{"success":true,"data":{},"errors":null}""";
+        public string GrowZoneWriteJson { get; init; } = GrowZoneWriteResponseJson();
         public string MapAnimalsJson { get; init; } = """{"success":true,"data":[],"errors":null}""";
         public string MapBuildingsJson { get; init; } = """{"success":true,"data":[],"errors":null}""";
         public string MapTerrainJson { get; init; } = """{"success":true,"data":{"width":0,"height":0,"palette":[],"grid":[]},"errors":null}""";

@@ -930,12 +930,27 @@ public sealed class RimApiClientTests
     [Fact]
     public async Task CreateGrowZone_PostsPointPayload()
     {
-        CaptureHandler handler = new(Envelope(new { zone_id = 12 }));
+        CaptureHandler handler = new(Envelope(new
+        {
+            zone = new
+            {
+                id = 12,
+                type = "GrowingZone",
+                label = "Growing zone",
+                cells = Array.Empty<object>(),
+                plant_def = "Plant_Rice",
+                cells_count = 9
+            },
+            plant_def_name = "Plant_Rice"
+        }));
         using HttpClient http = MakeClient(handler);
 
-        await new RimApiClient(http).CreateGrowZoneAsync(7, "Plant_Rice", 10, 20, 12, 22);
+        GrowingZoneCreateDto result = await new RimApiClient(http).CreateGrowZoneAsync(7, "Plant_Rice", 10, 20, 12, 22);
 
         handler.Path.Should().Be("/api/v1/map/zone/growing");
+        result.Zone.Should().NotBeNull();
+        result.Zone!.Id.Should().Be("12");
+        result.Zone.CellsCount.Should().Be(9);
         JsonDocument body = JsonDocument.Parse(handler.Body);
         body.RootElement.GetProperty("map_id").GetInt32().Should().Be(7);
         body.RootElement.GetProperty("plant_def").GetString().Should().Be("Plant_Rice");

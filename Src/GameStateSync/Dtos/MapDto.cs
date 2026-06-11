@@ -190,6 +190,11 @@ public record AnimalDto(
     [property: JsonPropertyName("position")] PositionDto? Position
 );
 
+public sealed record GrowingZoneCreateDto(
+    [property: JsonPropertyName("zone")] ZoneDto? Zone,
+    [property: JsonPropertyName("plant_def_name")] string? PlantDefName
+);
+
 // ── GET /map/zones?map_id ─────────────────────────────────────────────────────
 // Zone rows expose labels, types, and cell counts; stockpile contents come from stored resources.
 public record ZoneDto(
