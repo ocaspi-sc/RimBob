@@ -89,11 +89,84 @@ new("food_stockpile_missing", MatchesFoodStockpileMissing, FoodStockpileMissingR
 **Gap.** With a healthy 10.7-day buffer and 44 days to winter, day-1 doctrine wants long-game items demoted and far/no-payoff items suppressed:
 - `expand_growing_capacity` is emitted **High** with an "emergency rice" framing (`BuildExpandGrowingCapacity`, `Food/Rules.cs:300`); target ≤ **Medium** and drop the emergency framing at a healthy buffer.
 - `hunt_low_risk_animals` (`:259`) fires Medium and emits butcher+campfire builds for a 119–139-cell hunt; target **Low or suppressed**, and **no** premature `Butcher` production-bench request when targets are far and the buffer is healthy.
-- `freezer_missing` (`:351`) at Medium is premature when the only food is 57 non-spoiling packaged meals; target **Low/deferred**. (No reach test exists for freezer yet — either add `Chef_NewColony1_FreezerNotHigh` or fold the demotion in untested and note it.)
+- `freezer_missing` premature day-1. Code-accurate trigger (`Rules.cs:83` table / `:399` `MatchesFreezerMissing` / `:674` `NeedsFreezerSupport`; old `:351` ref stale): fires via `incomingPerishableFood` (forageable berries), **not** the meal buffer — `EstimatedDaysOfFood`≈0.5 so the `days>=7` branch never trips. NC1 is **cold** (Welfare `temperature_comfort` fires) → food won't spoil → freezer redundant, not merely low-priority. Target = **suppress when cold**, now tested (`Chef_NewColony1_DoesNotPushFreezer`). See execution prompt below.
 
 **Change.** Tie these priorities to buffer health + target distance (inputs already in the briefing: days-of-food, hunt-target distances). Likely a shared "day-1 / healthy-buffer" gate that demotes the long-game rules and the far-hunt build. Keep each rule's *match* intact where the advice is still wanted (growing, hunt-as-info); change *priority* and the **build requests** they emit.
 
 **Acceptance.** `Chef_NewColony1_GrowingCapacityIsNotHigh` (`:151`, priority ≤ Medium) and `Chef_NewColony1_DoesNotPushFarHunt` (`:162`, hunt Low if present + no Butcher bench request). Untag both on green. Guard against regressing the existing higher-pressure food tests (a thin buffer must still escalate growing/hunt).
+
+### Freezer suppression — execution prompt (2026-06-09)
+Concrete spec for the freezer half of this slice; hand to a builder (gimp lane). Adds the missing freezer test. Suppress-on-cold, not demote-to-Low.
+```
+Fix Chef's `freezer_missing` rule over-firing on a fresh/cold Day-1 colony (NC1).
+
+Repo: C:\dev\RimBob. Work in a worktree + feature branch off master (AGENTS.md). Read AGENTS.md first.
+
+## Problem
+Chef recommends building a freezer on Day-1 of the NC1 scenario, which is wrong. NC1 is a
+cold-start colony (Welfare's `temperature_comfort` rule fires — colonists are cold), with no
+power and no buildings. Food doesn't spoil in the cold, and a freezer needs power + walls, so
+it is never a real Day-1 build — doubly pointless on a cold map.
+
+Current trigger — Src/Ministers/Food/Rules.cs:
+- `freezer_missing` registered in the all-hits rule table at ~Rules.cs:83.
+- `MatchesFreezerMissing` (~:399) delegates to `NeedsFreezerSupport` (~:674):
+      Coolers == 0 && (incomingPerishableFood || (days >= 7 && FoodUnits > 0))
+- `HasIncomingPerishableFoodPath` (~:678) is true when there are forageable wild plants,
+  ready crops, huntable animals, or a crop recommendation.
+On NC1: Coolers==0 and forageable berries make incomingPerishableFood==true, so the rule fires
+and emits "Food storage needs freezer support" + a `Freezer` BuildingRequest to Willie.
+(`days` = EstimatedDaysOfFood ≈ 0.5 here, so the days>=7 branch is NOT what trips it.)
+
+## Goal
+Chef must not recommend a freezer on NC1. Generally: suppress `freezer_missing` when stored food
+won't spoil because it's cold.
+
+## Investigate first (don't assume)
+1. Reproduce: dump the NC1 `FoodDecision` advice ids (extend/borrow the AdviceForNewColony1Tests
+   harness) and confirm `freezer_missing` is present today.
+2. Find the cold signal available to the Food briefing. `WeatherSnapshot.TemperatureC` exists in
+   state (Src/Common/Aggregates/Snapshots.cs:~223); `FoodBriefing` carries `SeasonContext Season`
+   (FoodBriefing.cs:10) but no ambient temperature. Confirm whether the NC1 fixture snapshot
+   (Src/Tests/NewColony/Fixtures/new-colony-1.colony-state.json) actually carries weather/ambient
+   temperature, and check how Welfare derives its cold signal (ThoughtCategory.Temperature) — pick
+   a source that is reliably present on the fixture.
+
+## Implement
+- Gate `NeedsFreezerSupport` so it returns false when it's cold enough that food won't deteriorate
+  (RimWorld: at/below ~0°C food is effectively frozen → no freezer needed). The guard must wrap the
+  whole condition, since NC1 fires via the incomingPerishableFood branch.
+- Make `FreezerMissingReason` reflect the new guard so the diagnostics string stays truthful.
+- Keep the rules-as-data all-hits table shape (one matcher/reason/build triple; no first-match).
+- If you add a derived ambient-temperature / "stored food spoils" signal to `FoodBriefing`: derive
+  it in BriefingCache from existing ColonyState weather (no new RIMAPI read). This is a briefing
+  schema change → NO compat code; wipe-and-regen persisted minister snapshots + the replay corpus
+  per AGENTS.md.
+- Leave a `// TODO` noting the complementary guard (don't recommend a freezer with no power) is the
+  warm-biome Day-1 case and is gated on the deferred `rimapi-power-net-read` task — out of scope here.
+
+## Test (add; must be GREEN after the fix — plain [Fact], not reach-tagged)
+- Src/Tests/NewColony/AdviceForNewColony1Tests.cs → `Chef_NewColony1_DoesNotPushFreezer`:
+  the NC1 `FoodDecision` has no advice with id `freezer_missing` and no `Freezer` BuildingRequest
+  routed to Willie.
+- Focused Food-rules tests: a cold briefing suppresses `freezer_missing`; a warm briefing with the
+  same buffer + incoming-perishable still emits it (cold is the only behavior change).
+
+## Validate
+- dotnet test Src/Tests/RimBob.Tests.csproj --filter "FullyQualifiedName~NewColony&kind!=reach"  → green, includes the new test.
+- Full Food-rules tests green.
+- dotnet test --filter "kind!=reach"  → gate stays green. The 3 existing reach reds (food-buffer
+  split, growing-capacity demote, far-hunt demote) are NOT in scope; leave them red.
+
+## Scope boundaries
+- Only the freezer calibration, its guard, the briefing signal it needs, and the tests. Don't touch
+  the other reach reds or unrelated rules. No RIMAPI changes.
+
+## Report
+The guard chosen and why; whether a FoodBriefing field was added (and the regen you ran); the new
+test name; and the gate results. This closes the "defer freezer" half of reach-4 in
+.plans/new-colony-1-reach-fixes.md.
+```
 
 ---
 
@@ -192,3 +265,27 @@ Add one umbrella entry linking this plan, with the six slices as checkable sub-i
   - Files: `Src/Ministers/Welfare/Rules.cs` (`SniffTemperatureDirection`).
 
 **Codex run:** `20260608-002818-reach-3-welfare-heater` · landed commit `eff8512`.
+
+### Slice 5 — food-buffer honest edible + latent figure, Option C (landed 2026-06-10)
+
+**What shipped.** `LatentFoodDays` added to `FoodBriefing` (+ Mayor `FoodSnapshot`); `FoodItemClassifier` derives `ForbiddenEdibleNutrition`; `EstimatedDaysOfFood` stays honest = currently-edible only (~0.5d on NC1), latent ≈10.2d behind the 57 forbidden `MealSurvivalPack`. Dashboard surfaces the latent figure beside days-of-food (`FoodCropMathPanel`/`ColonySidebar`/`MinisterBriefingView`). `Snapshot_DerivesTargetFoodBuffer` **rewritten** to assert the honest split, untagged. 17 files (derivation + Mayor + dashboard + tests).
+
+**Land mechanics.** Built earlier on Codex branch `codex/prompt-20260608-013729-reach-5-latent-food` (run `20260608-013729-reach-5-latent-food`). This session: re-merged current master in (clean, swept in S1b + willie-async-solve-pool), build 0 err, `Snapshot_DerivesTargetFoodBuffer` green, `kind!=reach` **668/668** (the 2 live-farm + IconCache flake from the old run did not recur — live RIMAPI was up on NC1). User chose "land now" (skip the `live-farm-gate-fix` prerequisite). Landed via `CloseOut -LandAndClose -Verified`.
+
+**Tests.** Gate `kind!=reach` green (668); reach 3 → 2.
+
+**Landed commit:** `fde7d64`.
+
+### Slice 4 — Chef day-1 priority demote, growing + far-hunt (landed 2026-06-10)
+
+**What shipped.** Detailed subplan [reach4-chef-priority-demote.md](reach4-chef-priority-demote.md). `HasHealthyLatentFoodReserve` = `LatentFoodDays >= 7f`; when set, `expand_growing_capacity` caps at Medium and `hunt_low_risk_animals` caps at Low with the far-hunt build (Butcher/ProductionBench + campfire) suppressed via a `suppressBuild*` flag on `HuntingRequests`/`HuntingActions` (defaults false; shared cooking-support helper untouched). `EstimatedDaysOfFood`/body text stay honest. Keyed off slice-5 `LatentFoodDays`, per the reorder decision. Both reach tests untagged.
+
+**Land mechanics.** Lane **bring-out-the-gimp Sonnet lane** (Sonnet 4.6 implementer sub-agent `ae36a5f`; gimp-verifier `Adherent: yes`; Claude squash-land). In-worktree: build 0 err, `kind!=reach` **672/672**, `kind=reach` **0 matched**. New Food unit tests guard the gate + no-regression.
+
+**Tests.** Gate green (672); **reach set now EMPTY** (2 → 0). All 8 `new-colony-1` reach targets are green plain Facts.
+
+**Landed commit:** `3f009dd`.
+
+---
+
+**All slices landed (2026-06-10).** The `new-colony-1` reach set is empty; every target is a green plain `[Fact]` on the default gate. Remaining reach-set housekeeping: the reach-set note in `AGENTS.md` Repo Conventions + `.plans/advice-for-new-colony-1.md` can drop their "expected RED" framing (the suite no longer has reach-tagged tests).

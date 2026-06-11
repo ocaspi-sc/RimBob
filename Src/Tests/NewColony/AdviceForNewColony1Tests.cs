@@ -26,7 +26,7 @@ public sealed class AdviceForNewColony1Tests
 
         scenario.Snapshot.SchemaVersion.Should().Be(ColonyStateSnapshot.CurrentSchemaVersion);
         scenario.Snapshot.Source.Should().Be("live");
-        scenario.Snapshot.GameTick.Should().Be(538);
+        scenario.Snapshot.GameTick.Should().Be(539);
         scenario.Snapshot.GameDate.ColonyDay.Should().Be(1);
         scenario.State.LastRefreshSource.Should().Be(ColonyStateOrigin.Snapshot);
         scenario.State.Colonists.Value.Colonists.Should().HaveCount(3);
