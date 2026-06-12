@@ -19,7 +19,7 @@ public interface IPlacementSolver
 
 public sealed class PlacementSolver : IPlacementSolver
 {
-    private const int MaxValidateCount = 3;
+    private const int MaxValidateCount = 8;
     private const int MaxOptionCount = 3;
     private readonly IPathCostProbe pathCostProbe;
     private readonly IPlacementValidator placementValidator;
@@ -67,8 +67,8 @@ public sealed class PlacementSolver : IPlacementSolver
             if (anchors.Count > 0)
             {
                 notes.Add("no room anchor matched; using Home-area buildable region as fallback locus");
-                if (anchors.Any(anchor => anchor.Anchor.Centroid is null && anchor.Anchor.Bounds is not null))
-                    notes.Add("Home area row did not include cells; using buildable-region bounds center as approximate fallback target");
+                if (anchors.Any(anchor => anchor.Anchor.Cells.Count == 0 && anchor.Anchor.Bounds is not null))
+                    notes.Add("Home area row did not include cells; using buildable-region bounds interior target");
             }
         }
 
@@ -85,7 +85,11 @@ public sealed class PlacementSolver : IPlacementSolver
             colonyState.Map.Value,
             colonyState.Buildings.Value,
             anchors,
-            briefing.AnchorInventory.Anchors);
+            briefing.AnchorInventory.Anchors,
+            colonyState.Terrain.Value,
+            colonyState.Things.Value,
+            colonyState.Zones.Value,
+            colonyState.Stockpiles.Value);
         IReadOnlyList<PlacementDraft> drafts = generators
             .SelectMany(generator => generator.Generate(spec, evidence, BudgetFor(generator)))
             .ToList();

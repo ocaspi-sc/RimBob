@@ -964,6 +964,52 @@ public sealed class RimApiClientTests
     }
 
     [Fact]
+    public async Task CreateStockpileZone_PostsFilteredPointPayload()
+    {
+        CaptureHandler handler = new(Envelope(new
+        {
+            zone_id = 12,
+            name = "Food stockpile",
+            cells_count = 12,
+            priority = 0,
+            success = true,
+            message = "created"
+        }));
+        using HttpClient http = MakeClient(handler);
+
+        StockpileZoneCreateDto result = await new RimApiClient(http).CreateStockpileZoneAsync(
+            7,
+            "Food stockpile",
+            0,
+            [],
+            ["Foods"],
+            10,
+            20,
+            13,
+            22);
+
+        handler.Path.Should().Be("/api/v1/map/zone/stockpile");
+        result.ZoneId.Should().Be("12");
+        result.CellsCount.Should().Be(12);
+        result.Success.Should().BeTrue();
+        JsonDocument body = JsonDocument.Parse(handler.Body);
+        body.RootElement.GetProperty("map_id").GetInt32().Should().Be(7);
+        body.RootElement.GetProperty("name").GetString().Should().Be("Food stockpile");
+        body.RootElement.GetProperty("priority").GetInt32().Should().Be(0);
+        body.RootElement.GetProperty("allowed_item_defs").EnumerateArray().Should().BeEmpty();
+        body.RootElement.GetProperty("allowed_item_categories").EnumerateArray()
+            .Select(item => item.GetString())
+            .Should().Equal("Foods");
+        body.RootElement.GetProperty("point_a").GetProperty("x").GetInt32().Should().Be(10);
+        body.RootElement.GetProperty("point_a").GetProperty("y").GetInt32().Should().Be(0);
+        body.RootElement.GetProperty("point_a").GetProperty("z").GetInt32().Should().Be(20);
+        body.RootElement.GetProperty("point_b").GetProperty("x").GetInt32().Should().Be(13);
+        body.RootElement.GetProperty("point_b").GetProperty("y").GetInt32().Should().Be(0);
+        body.RootElement.GetProperty("point_b").GetProperty("z").GetInt32().Should().Be(22);
+        body.RootElement.TryGetProperty("rect", out JsonElement _).Should().BeFalse();
+    }
+
+    [Fact]
     public async Task CreateGrowZone_WhenHttpFailsWithErrorEnvelope_IncludesServerMessage()
     {
         CaptureHandler handler = new(

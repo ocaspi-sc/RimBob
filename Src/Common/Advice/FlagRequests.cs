@@ -92,6 +92,10 @@ public sealed record ZoneRequest(
     IReadOnlyList<AdjacencyHint>? Adjacency = null,
     [property: JsonPropertyName("terrain")]
     TerrainNeed? Terrain = null,
+    [property: JsonPropertyName("allowed_item_defs")]
+    IReadOnlyList<string>? AllowedItemDefs = null,
+    [property: JsonPropertyName("allowed_item_categories")]
+    IReadOnlyList<string>? AllowedItemCategories = null,
     [property: JsonPropertyName("urgency")]
     Urgency? Urgency = null,
     [property: JsonPropertyName("deadline")]
@@ -192,7 +196,8 @@ public enum BuildingClass
 [JsonConverter(typeof(SnakeCaseLowerEnumConverter<ZoneClass>))]
 public enum ZoneClass
 {
-    Growing
+    Growing,
+    Stockpile
 }
 
 [JsonConverter(typeof(SnakeCaseLowerEnumConverter<RoomClass>))]

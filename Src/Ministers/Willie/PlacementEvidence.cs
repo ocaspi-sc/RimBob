@@ -53,19 +53,22 @@ public sealed class PlacementEvidence
         MapInfoSnapshot map,
         BuildingRegistry buildings,
         IReadOnlyList<ResolvedAnchor> anchors,
-        IReadOnlyList<WillieRoomAnchor>? roomAnchors = null)
+        IReadOnlyList<WillieRoomAnchor>? roomAnchors = null,
+        TerrainSnapshot? terrain = null,
+        ThingRegistry? things = null,
+        MapZoneRegistry? zones = null,
+        StockpileLedger? stockpiles = null)
     {
-        HashSet<MapCell> occupied = buildings.Buildings
-            .Select(building => building.Position)
-            .Where(position => position is not null)
-            .Cast<MapPosition>()
-            .Select(position => position.ToMapCell())
-            .ToHashSet();
-
         MapBounds? bounds = MapBounds.Parse(map.Size);
-        FreeRectScanResult freeSpace = BuildFreeRects(bounds, occupied);
         IReadOnlyList<ExistingRoomFootprint> roomFootprints = BuildRoomFootprints(roomAnchors ?? []);
         FreeRect? buildableRegionBounds = ResolveBuildableRegionBounds(anchors);
+        HashSet<MapCell> occupied = BuildBlockedCells(
+            buildings,
+            terrain,
+            things,
+            zones,
+            stockpiles);
+        FreeRectScanResult freeSpace = BuildFreeRects(ScanBounds(bounds, buildableRegionBounds), occupied.Contains);
 
         return new PlacementEvidence(
             map.Id,
@@ -128,6 +131,72 @@ public sealed class PlacementEvidence
 
         MapRect scanBounds = new(0, 0, bounds.Width - 1, bounds.Height - 1);
         return BuildFreeRects(scanBounds, blocked.Contains);
+    }
+
+    private static MapRect? ScanBounds(MapBounds? bounds, FreeRect? buildableRegionBounds)
+    {
+        if (buildableRegionBounds is not null)
+        {
+            return new MapRect(
+                buildableRegionBounds.MinX,
+                buildableRegionBounds.MinZ,
+                buildableRegionBounds.MaxXExclusive - 1,
+                buildableRegionBounds.MaxZExclusive - 1);
+        }
+
+        return bounds is null
+            ? null
+            : new MapRect(0, 0, bounds.Width - 1, bounds.Height - 1);
+    }
+
+    private static HashSet<MapCell> BuildBlockedCells(
+        BuildingRegistry buildings,
+        TerrainSnapshot? terrain,
+        ThingRegistry? things,
+        MapZoneRegistry? zones,
+        StockpileLedger? stockpiles)
+    {
+        HashSet<MapCell> blocked = buildings.Buildings
+            .Select(building => building.Position)
+            .Where(position => position is not null)
+            .Cast<MapPosition>()
+            .Select(position => position.ToMapCell())
+            .ToHashSet();
+
+        AddPositions(blocked, things?.Things.Select(thing => thing.Position));
+        AddPositions(blocked, zones?.Zones
+            .Where(zone => zone.IsGrowing || zone.IsStockpile)
+            .SelectMany(zone => zone.Cells));
+        AddPositions(blocked, stockpiles?.Zones.SelectMany(zone => zone.Cells));
+
+        if (terrain?.HasCoordinateGrid == true)
+        {
+            foreach (TerrainCellRecord cell in terrain.Cells.Where(cell => !CellSupportsBuilding(terrain, cell)))
+                blocked.Add(new MapCell(cell.X, cell.Z));
+        }
+
+        return blocked;
+    }
+
+    private static bool CellSupportsBuilding(TerrainSnapshot terrain, TerrainCellRecord cell)
+    {
+        if (terrain.DefsByName.TryGetValue(cell.TerrainDef, out TerrainDefRecord? def))
+            return def.SupportsStockpile;
+
+        return cell.SupportsStockpile;
+    }
+
+    private static void AddPositions(
+        HashSet<MapCell> blocked,
+        IEnumerable<MapPosition?>? positions)
+    {
+        if (positions is null) return;
+
+        foreach (MapPosition? position in positions)
+        {
+            if (position is null) continue;
+            blocked.Add(position.ToMapCell());
+        }
     }
 
     public static FreeRectScanResult BuildFreeRects(

@@ -180,9 +180,11 @@ public sealed class FoodRulesTests
         AdviceByRule(decision, "expand_growing_capacity").Actions.Should().Contain(s => s.Kind == AdviceActionKind.DesignateZoneReq);
         AdviceByRule(decision, "freezer_missing").Actions.Should().Contain(s => s.Kind == AdviceActionKind.PlaceBlueprint);
         AgentFlag flag = FlagById(decision, "food:emergency_food_flag");
-        flag.BuildingRequests.Should().Contain(r =>
-            r.TargetClass == BuildingClass.Stockpile &&
-            r.Quantity == 46);
+        flag.ZoneRequests.Should().Contain(r =>
+            r.ZoneClass == ZoneClass.Stockpile &&
+            r.TileCount == 5 &&
+            r.AllowedItemCategories!.Contains("Foods") &&
+            r.RequestedFrom == "Willie");
         AgentFlag growFlag = FlagById(decision, "food:expand_growing_capacity");
         growFlag.ZoneRequests.Should().ContainSingle(r =>
             r.ZoneClass == ZoneClass.Growing &&
@@ -220,12 +222,12 @@ public sealed class FoodRulesTests
         action.Quantity.Should().Be(57);
 
         AgentFlag flag = FlagById(decision, "food:food_stockpile_missing");
-        BuildingRequest request = flag.BuildingRequests.Should().ContainSingle().Subject;
-        request.TargetClass.Should().Be(BuildingClass.Stockpile);
-        request.RoomClass.Should().Be(RoomClass.Storage);
+        ZoneRequest request = flag.ZoneRequests.Should().ContainSingle().Subject;
+        request.ZoneClass.Should().Be(ZoneClass.Stockpile);
+        request.TileCount.Should().Be(6);
+        request.AllowedItemCategories.Should().ContainSingle().Which.Should().Be("Foods");
         request.RequestedFrom.Should().Be("Willie");
         request.Priority.Should().Be(Priority.Medium);
-        request.Quantity.Should().Be(57);
     }
 
     [Fact]
@@ -1090,8 +1092,9 @@ public sealed class FoodRulesTests
 
         AgentFlag flag = FlagById(decision, "food:nutrition_signal_gap");
         flag.Priority.Should().Be(Priority.Medium);
-        flag.BuildingRequests.Should().ContainSingle(request =>
-            request.TargetClass == BuildingClass.Stockpile &&
+        flag.ZoneRequests.Should().ContainSingle(request =>
+            request.ZoneClass == ZoneClass.Stockpile &&
+            request.AllowedItemCategories!.Contains("Foods") &&
             request.RequestedFrom == "Willie");
         ItemRequest itemRequest = flag.ItemRequests.Should().ContainSingle().Subject;
         itemRequest.Request.Should().Be("57 forbidden packaged survival meals");

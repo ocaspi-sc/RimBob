@@ -236,7 +236,7 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
             ?? throw new InvalidOperationException("zone_request_active matched without a selected zone request");
         string zone = FormatZone(request);
         string tilePrefix = request.TileCount is null ? "" : $"{request.TileCount.Value} tile ";
-        string plant = FormatPlant(request.PlantDef);
+        string zoneTarget = ZoneInstructionLabel(request, tilePrefix);
 
         return EmitAdvice(
             briefing,
@@ -244,12 +244,12 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
             ZoneRequestActiveTrace,
             request.Priority ?? Priority.Medium,
             $"{TitleCase(zone)} request needs Willie placement",
-            $"{request.Request}. Willie records the zone request and computes grow-zone placement options when coordinate-addressable terrain and occupancy evidence are available.",
-            "The requesting minister owns crop, size, and food-chain reason; Willie owns spatial placement. Zone writes remain player-click-gated and are not attached until the create-zone apply path ships.",
+            $"{request.Request}. Willie records the zone request and computes placement options when coordinate-addressable terrain and occupancy evidence are available.",
+            "The requesting minister owns crop or item filters, size, and reason; Willie owns spatial placement. Supported zone writes remain player-click-gated through the create-zone apply path.",
             [
                 new AdviceAction(
                     AdviceActionKind.DesignateZoneReq,
-                    $"Review Willie placement options for a {tilePrefix}{plant}growing zone; no zone Apply action is attached yet.",
+                    $"Review Willie placement options for a {zoneTarget}; Apply appears when a rectangular option validates.",
                     Owner: MinisterName)
             ],
             WillieFlagRequests.Empty);
@@ -630,6 +630,11 @@ public sealed class Rules : IMinisterRules<WillieBriefing>
 
     private static string FormatZone(ZoneRequest request) =>
         ToSnakeCase(request.ZoneClass.ToString()).Replace('_', ' ');
+
+    private static string ZoneInstructionLabel(ZoneRequest request, string tilePrefix) =>
+        request.ZoneClass == ZoneClass.Stockpile
+            ? $"{tilePrefix}food stockpile zone"
+            : $"{tilePrefix}{FormatPlant(request.PlantDef)}growing zone";
 
     private static string FormatPlant(string? plantDef)
     {

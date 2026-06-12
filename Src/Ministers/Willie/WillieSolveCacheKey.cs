@@ -205,7 +205,13 @@ internal static class WillieSolveCacheKey
                     PreferredTerrainDefs = request.Terrain.PreferredTerrainDefs?
                         .OrderBy(def => def, StringComparer.OrdinalIgnoreCase)
                         .ToList()
-                }
+                },
+            AllowedItemDefs = request.AllowedItemDefs?
+                .OrderBy(def => def, StringComparer.OrdinalIgnoreCase)
+                .ToList(),
+            AllowedItemCategories = request.AllowedItemCategories?
+                .OrderBy(category => category, StringComparer.OrdinalIgnoreCase)
+                .ToList()
         };
 
     private sealed record BuildingPlacementCacheInput(

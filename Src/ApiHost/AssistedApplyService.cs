@@ -152,6 +152,7 @@ public sealed class AssistedApplyService(
             UpsertProductionBillApply bill => await ApplyProductionBillAsync(advice, adviceId, actionIndex, bill, ct),
             PlaceBlueprintGroupApply blueprint => await ApplyBlueprintGroupAsync(advice, adviceId, actionIndex, blueprint, ct),
             CreateGrowingZoneApply growZone => await ApplyCreateGrowingZoneAsync(advice, adviceId, actionIndex, growZone, ct),
+            CreateStockpileZoneApply stockpileZone => await ApplyCreateStockpileZoneAsync(advice, adviceId, actionIndex, stockpileZone, ct),
             _ => Response("validation_failed", "That apply kind is not allowlisted.", apply.Kind, adviceId, actionIndex)
         };
         if (ShouldMarkAppliedAction(result))
@@ -772,6 +773,148 @@ public sealed class AssistedApplyService(
             new { plant_def = apply.PlantDef, rect = apply.Rect, target_count = apply.TargetCount, zone_id = confirmedZone.Id });
     }
 
+    private async Task<AssistedApplyResponse> ApplyCreateStockpileZoneAsync(
+        AdviceItem advice,
+        string adviceId,
+        int actionIndex,
+        CreateStockpileZoneApply apply,
+        CancellationToken ct)
+    {
+        if (apply.TargetCount < 1)
+            return Response("validation_failed", "Stockpile-zone target count must be positive.", apply.Kind, adviceId, actionIndex);
+
+        if (apply.Rect.Area <= 0)
+            return Response("validation_failed", "Stockpile-zone rect is invalid.", apply.Kind, adviceId, actionIndex);
+
+        if (apply.Rect.Area > AssistedApplyLimits.MaxStockpileZoneCells ||
+            apply.TargetCount > AssistedApplyLimits.MaxStockpileZoneCells)
+        {
+            return Response("validation_failed", "Stockpile-zone target is too broad for assisted apply.", apply.Kind, adviceId, actionIndex);
+        }
+
+        if (apply.TargetCount != apply.Rect.Area)
+            return Response("validation_failed", "Stockpile-zone target count does not match its rect.", apply.Kind, adviceId, actionIndex);
+
+        IReadOnlyList<string> allowedItemDefs = CleanFilter(apply.AllowedItemDefs);
+        IReadOnlyList<string> allowedItemCategories = CleanFilter(apply.AllowedItemCategories);
+        if (allowedItemDefs.Count == 0 && allowedItemCategories.Count == 0)
+            return Response("validation_failed", "Stockpile-zone apply is missing an item filter.", apply.Kind, adviceId, actionIndex);
+
+        AssistedApplyResponse? refreshFailure = await RefreshForValidationAsync(advice, apply.Kind, adviceId, actionIndex, ct);
+        if (refreshFailure is not null)
+            return refreshFailure;
+
+        StockpileZoneApplyAssessment assessment = AssessStockpileZone(state, apply);
+        if (assessment.Outcome == StockpileZoneApplyOutcome.WrongMap)
+            return Response("stale_advice", "Advice targets a different map than the current colony map.", apply.Kind, adviceId, actionIndex);
+
+        if (assessment.Outcome == StockpileZoneApplyOutcome.NoTerrainGrid)
+            return Response("stale_advice", "Cell-level terrain is unavailable; RimBob cannot safely validate the stockpile-zone rectangle.", apply.Kind, adviceId, actionIndex);
+
+        if (assessment.Outcome == StockpileZoneApplyOutcome.RectOutsideTerrain)
+            return Response("stale_advice", "Stockpile-zone rectangle is outside the current terrain bounds.", apply.Kind, adviceId, actionIndex);
+
+        if (assessment.Outcome == StockpileZoneApplyOutcome.AlreadySatisfied)
+            return Response("already_satisfied", "A stockpile zone already covers the requested rectangle.", apply.Kind, adviceId, actionIndex);
+
+        if (assessment.Outcome == StockpileZoneApplyOutcome.NotStockpileCapable)
+            return Response("stale_advice", "One or more stockpile-zone cells no longer support stockpile placement.", apply.Kind, adviceId, actionIndex);
+
+        if (assessment.Outcome == StockpileZoneApplyOutcome.BlockedOrZoned)
+            return Response("stale_advice", "One or more stockpile-zone cells are now occupied or already zoned.", apply.Kind, adviceId, actionIndex);
+
+        StockpileZoneCreateDto createdZone;
+        try
+        {
+            createdZone = await rimApi.CreateStockpileZoneAsync(
+                apply.MapId,
+                string.IsNullOrWhiteSpace(apply.Name) ? apply.Label : apply.Name,
+                apply.Priority,
+                allowedItemDefs,
+                allowedItemCategories,
+                apply.Rect.X1,
+                apply.Rect.Z1,
+                apply.Rect.X2,
+                apply.Rect.Z2,
+                ct);
+        }
+        catch (Exception ex) when (IsRimApiUnavailable(ex))
+        {
+            log.LogWarning(ex, "RIMAPI stockpile-zone apply unavailable for advice {AdviceId} action {ActionIndex}", adviceId, actionIndex);
+            return Response("rimapi_unavailable", "RIMAPI is unavailable for stockpile-zone creation.", apply.Kind, adviceId, actionIndex);
+        }
+        catch (RimApiException ex)
+        {
+            log.LogWarning(ex, "RIMAPI rejected stockpile-zone apply for advice {AdviceId} action {ActionIndex}", adviceId, actionIndex);
+            return Response("rimapi_rejected", ex.Message, apply.Kind, adviceId, actionIndex);
+        }
+
+        if (!createdZone.Success)
+        {
+            return Response(
+                "rimapi_rejected",
+                string.IsNullOrWhiteSpace(createdZone.Message) ? "RIMAPI rejected stockpile-zone creation." : createdZone.Message,
+                apply.Kind,
+                adviceId,
+                actionIndex,
+                new { rect = apply.Rect, target_count = apply.TargetCount, allowed_item_defs = allowedItemDefs, allowed_item_categories = allowedItemCategories });
+        }
+
+        string? createdZoneId = createdZone.ZoneId;
+        if (string.IsNullOrWhiteSpace(createdZoneId))
+        {
+            return Response(
+                "readback_inconclusive",
+                "RIMAPI accepted stockpile-zone creation but did not return a zone id.",
+                apply.Kind,
+                adviceId,
+                actionIndex,
+                new { rect = apply.Rect, target_count = apply.TargetCount, allowed_item_defs = allowedItemDefs, allowed_item_categories = allowedItemCategories });
+        }
+
+        AssistedApplyResponse? readbackFailure = await RefreshForReadbackAsync(apply.Kind, adviceId, actionIndex, ct);
+        if (readbackFailure is not null)
+            return readbackFailure;
+
+        MapZoneRecord? confirmedZone = state.Zones.Value.Zones.FirstOrDefault(zone =>
+            zone.IsStockpile &&
+            string.Equals(zone.Id, createdZoneId, StringComparison.OrdinalIgnoreCase));
+        StockpileZone? confirmedStockpile = state.Stockpiles.Value.Zones.FirstOrDefault(zone =>
+            string.Equals(zone.Id, createdZoneId, StringComparison.OrdinalIgnoreCase));
+        bool readbackMatches = confirmedZone is not null
+            ? StockpileZoneMatchesApply(confirmedZone.CellCount, confirmedZone.Cells, apply)
+            : confirmedStockpile is not null && StockpileZoneMatchesApply(confirmedStockpile.CellCount, confirmedStockpile.Cells, apply);
+        if (confirmedZone is null && confirmedStockpile is null)
+        {
+            return Response(
+                "readback_inconclusive",
+                $"RIMAPI returned stockpile-zone id {createdZoneId}, but readback did not include that zone.",
+                apply.Kind,
+                adviceId,
+                actionIndex,
+                new { rect = apply.Rect, target_count = apply.TargetCount, zone_id = createdZoneId, allowed_item_defs = allowedItemDefs, allowed_item_categories = allowedItemCategories });
+        }
+
+        if (!readbackMatches)
+        {
+            return Response(
+                "readback_inconclusive",
+                $"RIMAPI returned stockpile-zone id {createdZoneId}, but readback did not match the requested rectangle.",
+                apply.Kind,
+                adviceId,
+                actionIndex,
+                new { rect = apply.Rect, target_count = apply.TargetCount, zone_id = createdZoneId, allowed_item_defs = allowedItemDefs, allowed_item_categories = allowedItemCategories });
+        }
+
+        return Response(
+            "applied",
+            $"Stockpile zone created for {apply.TargetCount} food tile{(apply.TargetCount == 1 ? "" : "s")}.",
+            apply.Kind,
+            adviceId,
+            actionIndex,
+            new { rect = apply.Rect, target_count = apply.TargetCount, zone_id = createdZoneId, allowed_item_defs = allowedItemDefs, allowed_item_categories = allowedItemCategories });
+    }
+
     private static GrowZoneApplyAssessment AssessGrowingZone(ColonyState state, CreateGrowingZoneApply apply)
     {
         if (apply.MapId != state.Map.Value.Id)
@@ -799,7 +942,7 @@ public sealed class AssistedApplyService(
         if (targetCells.Any(cell => !terrainByCell.TryGetValue(cell, out TerrainCellRecord? terrainCell) || !terrainCell.SupportsGrowing))
             return new GrowZoneApplyAssessment(GrowZoneApplyOutcome.NotGrowable);
 
-        HashSet<MapCell> blockedCells = GrowZoneBlockedCells(state);
+        HashSet<MapCell> blockedCells = ZoneBlockedCells(state);
         if (targetCells.Any(blockedCells.Contains))
             return new GrowZoneApplyAssessment(GrowZoneApplyOutcome.BlockedOrZoned);
 
@@ -838,10 +981,71 @@ public sealed class AssistedApplyService(
         return expectedCells.All(zoneCells.Contains);
     }
 
-    private static HashSet<MapCell> GrowZoneBlockedCells(ColonyState state)
+    private static StockpileZoneApplyAssessment AssessStockpileZone(ColonyState state, CreateStockpileZoneApply apply)
+    {
+        if (apply.MapId != state.Map.Value.Id)
+            return new StockpileZoneApplyAssessment(StockpileZoneApplyOutcome.WrongMap);
+
+        TerrainSnapshot terrain = state.Terrain.Value;
+        if (!terrain.HasCoordinateGrid)
+            return new StockpileZoneApplyAssessment(StockpileZoneApplyOutcome.NoTerrainGrid);
+
+        if (!RectInsideTerrain(apply.Rect, terrain))
+            return new StockpileZoneApplyAssessment(StockpileZoneApplyOutcome.RectOutsideTerrain);
+
+        if (HasMatchingStockpileZone(state, apply))
+            return new StockpileZoneApplyAssessment(StockpileZoneApplyOutcome.AlreadySatisfied);
+
+        Dictionary<MapCell, TerrainCellRecord> terrainByCell = terrain.Cells
+            .ToDictionary(cell => new MapCell(cell.X, cell.Z));
+        IReadOnlyList<MapCell> targetCells = CellsIn(apply.Rect);
+        if (targetCells.Any(cell => !terrainByCell.TryGetValue(cell, out TerrainCellRecord? terrainCell) || !terrainCell.SupportsStockpile))
+            return new StockpileZoneApplyAssessment(StockpileZoneApplyOutcome.NotStockpileCapable);
+
+        HashSet<MapCell> blockedCells = ZoneBlockedCells(state);
+        if (targetCells.Any(blockedCells.Contains))
+            return new StockpileZoneApplyAssessment(StockpileZoneApplyOutcome.BlockedOrZoned);
+
+        return new StockpileZoneApplyAssessment(StockpileZoneApplyOutcome.Ready);
+    }
+
+    private static bool HasMatchingStockpileZone(ColonyState state, CreateStockpileZoneApply apply)
+    {
+        foreach (MapZoneRecord zone in state.Zones.Value.Zones.Where(zone => zone.IsStockpile))
+        {
+            if (StockpileZoneMatchesApply(zone.CellCount, zone.Cells, apply))
+                return true;
+        }
+
+        foreach (StockpileZone stockpile in state.Stockpiles.Value.Zones)
+        {
+            if (StockpileZoneMatchesApply(stockpile.CellCount, stockpile.Cells, apply))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static bool StockpileZoneMatchesApply(int cellCount, IReadOnlyList<MapPosition> cells, CreateStockpileZoneApply apply)
+    {
+        IReadOnlyList<MapCell> expectedCells = CellsIn(apply.Rect);
+        if (cellCount != expectedCells.Count)
+            return false;
+
+        if (cells.Count == 0)
+            return false;
+
+        HashSet<MapCell> zoneCells = cells
+            .Select(cell => new MapCell(cell.X, cell.Z))
+            .ToHashSet();
+
+        return expectedCells.All(zoneCells.Contains);
+    }
+
+    private static HashSet<MapCell> ZoneBlockedCells(ColonyState state)
     {
         HashSet<MapCell> cells = [];
-        foreach (MapZoneRecord zone in state.Zones.Value.Zones)
+        foreach (MapZoneRecord zone in state.Zones.Value.Zones.Where(zone => zone.IsGrowing || zone.IsStockpile))
             AddCells(cells, zone.Cells);
         foreach (StockpileZone stockpile in state.Stockpiles.Value.Zones)
         {
@@ -852,11 +1056,16 @@ public sealed class AssistedApplyService(
             AddCell(cells, building.Position);
         foreach (RoomRecord room in state.Rooms.Value.Rooms)
             AddCells(cells, room.Cells);
-        foreach (PlantRecord plant in state.Plants.Value.Plants)
-            AddCell(cells, plant.Position);
-
+        // Wild plants are not stale-preflight blockers; RIMAPI returns the final all-or-nothing verdict.
         return cells;
     }
+
+    private static IReadOnlyList<string> CleanFilter(IReadOnlyList<string>? values) =>
+        values?
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList() ?? [];
 
     private static IReadOnlyList<MapCell> CellsIn(MapRect rect)
     {
@@ -1142,5 +1351,18 @@ public enum GrowZoneApplyOutcome
 }
 
 public readonly record struct GrowZoneApplyAssessment(GrowZoneApplyOutcome Outcome);
+
+public enum StockpileZoneApplyOutcome
+{
+    Ready,
+    AlreadySatisfied,
+    WrongMap,
+    NoTerrainGrid,
+    RectOutsideTerrain,
+    NotStockpileCapable,
+    BlockedOrZoned
+}
+
+public readonly record struct StockpileZoneApplyAssessment(StockpileZoneApplyOutcome Outcome);
 
 internal sealed record CurrentThingTarget(string Def, bool IsForbidden, MapPosition Position);

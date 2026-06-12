@@ -1274,6 +1274,13 @@ function zoneActionTarget(action: AdviceAction): HomeActionDisplay {
     };
   }
 
+  if (action.apply?.kind === 'create_stockpile_zone') {
+    return {
+      iconKey: 'stockpile',
+      title: `${quantityPrefix(action)}Food stockpile`,
+    };
+  }
+
   return {
     iconKey: 'plant_rice',
     title: `${quantityPrefix(action)}Rice`,
@@ -1339,6 +1346,7 @@ function actionQuantity(action: AdviceAction): number | null {
   if (action.apply?.kind === 'mark_hunt_area') return action.apply.target_count;
   if (action.apply?.kind === 'upsert_production_bill') return action.apply.target_count;
   if (action.apply?.kind === 'create_growing_zone') return action.apply.target_count;
+  if (action.apply?.kind === 'create_stockpile_zone') return action.apply.target_count;
   if (action.quantity !== null && action.quantity !== undefined) return action.quantity;
 
   return firstNumber(action.apply?.target_summary) ?? firstNumber(action.instruction);
@@ -1572,6 +1580,7 @@ function zoneRequestItem(flag: AgentFlag, request: ZoneRequest, index: number): 
     request.reason,
     request.zone_class ? `Zone: ${formatLabel(request.zone_class)}` : null,
     request.plant_def ? `Plant: ${request.plant_def}` : null,
+    formatZoneFilterDetail(request),
     request.tile_count !== null && request.tile_count !== undefined ? `Tiles: ${formatInteger(request.tile_count)}` : null,
     request.terrain?.preferred_fertility !== null && request.terrain?.preferred_fertility !== undefined
       ? `Fertility: ${request.terrain.preferred_fertility.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
@@ -1580,7 +1589,7 @@ function zoneRequestItem(flag: AgentFlag, request: ZoneRequest, index: number): 
   ].filter((value): value is string => Boolean(value)).join(' | ');
 
   return {
-    iconKey: request.plant_def ?? 'zone_requests',
+    iconKey: zoneRequestIconKey(request),
     key: `${flag.id}:zone:${index}`,
     priority,
     title,
@@ -1589,16 +1598,61 @@ function zoneRequestItem(flag: AgentFlag, request: ZoneRequest, index: number): 
 }
 
 function zoneRequestTitle(request: ZoneRequest): string {
-  const plant = request.plant_def ? plantDefLabel(request.plant_def) : formatLabel(request.zone_class);
   const tiles = request.tile_count !== null && request.tile_count !== undefined
     ? `${formatInteger(request.tile_count)} `
     : '';
+  if (request.zone_class === 'stockpile') {
+    const filter = stockpileFilterLabel(request);
+    return filter ? `${tiles}${filter} stockpile zone` : `${tiles}stockpile zone`;
+  }
+
+  const plant = request.plant_def ? plantDefLabel(request.plant_def) : formatLabel(request.zone_class);
   return `${tiles}${plant} zone`;
+}
+
+function zoneRequestIconKey(request: ZoneRequest): string {
+  if (request.plant_def) return request.plant_def;
+  return request.zone_class === 'stockpile' ? 'stockpile' : 'zone_requests';
+}
+
+function stockpileFilterLabel(request: ZoneRequest): string | null {
+  const categories = formatZoneFilterList(request.allowed_item_categories, formatLabel);
+  if (categories) return categories;
+  return formatZoneFilterList(request.allowed_item_defs, itemDefLabel);
+}
+
+function formatZoneFilterDetail(request: ZoneRequest): string | null {
+  const categories = formatZoneFilterList(request.allowed_item_categories, formatLabel);
+  const defs = formatZoneFilterList(request.allowed_item_defs, itemDefLabel);
+  const parts = [
+    categories ? `Categories: ${categories}` : null,
+    defs ? `Defs: ${defs}` : null,
+  ].filter((value): value is string => Boolean(value));
+  return parts.length === 0 ? null : `Filter: ${parts.join('; ')}`;
+}
+
+function formatZoneFilterList(
+  values: string[] | null | undefined,
+  formatter: (value: string) => string = value => value,
+): string | null {
+  if (!values || values.length === 0) return null;
+  const formatted = values
+    .map(value => value.trim())
+    .filter(value => value.length > 0)
+    .map(formatter);
+  return formatted.length === 0 ? null : formatted.join(', ');
 }
 
 function plantDefLabel(def: string): string {
   const trimmed = def.trim().replace(/^Plant_/i, '');
   return trimmed
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, char => char.toUpperCase());
+}
+
+function itemDefLabel(def: string): string {
+  return def.trim()
+    .replace(/^ThingDef_/i, '')
     .replace(/_/g, ' ')
     .replace(/\b\w/g, char => char.toUpperCase());
 }

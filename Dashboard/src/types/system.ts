@@ -91,14 +91,14 @@ export interface RimApiCoverageMetadata {
   cached_upstream_endpoint_total: number;
   active_read_count: number;
   client_method_count: number;
-  deferred_write_stub_count: number;
+  assisted_write_count: number;
   represented_endpoint_count: number;
   active_read_percent: number;
   represented_endpoint_percent: number;
   coverage_note: string;
   active_reads: RimApiCoverageRow[];
   represented_not_refreshed: RimApiCoverageRow[];
-  deferred_writes: RimApiCoverageRow[];
+  assisted_writes: RimApiCoverageRow[];
   missing_priorities: RimApiCoverageRow[];
 }
 

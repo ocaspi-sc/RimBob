@@ -37,9 +37,9 @@ public sealed class PlacementSolverTests
         metric.Unit.Should().Be("path_tiles");
         metric.RawValue.Should().Be(12);
         metric.Normalized.Should().BeGreaterThan(0);
-        result.Trace.Drafts.Where(trace => trace.Status == "selected").Should().HaveCount(3);
-        result.Trace.Drafts.Where(trace => trace.Status == "validated").Should().HaveCount(3);
-        validator.ValidateCount.Should().Be(3);
+        result.Trace.Drafts.Where(trace => trace.Status == "selected").Should().HaveCount(8);
+        result.Trace.Drafts.Where(trace => trace.Status == "validated").Should().HaveCount(8);
+        validator.ValidateCount.Should().Be(8);
         validator.ValidatedGroup.Should().NotBeNull();
     }
 
@@ -159,7 +159,7 @@ public sealed class PlacementSolverTests
         result.NoFit.Should().BeNull();
         result.Options.Should().NotBeEmpty();
         result.Trace.Notes.Should().Contain("no room anchor matched; using Home-area buildable region as fallback locus");
-        result.Trace.Notes.Should().Contain("Home area row did not include cells; using buildable-region bounds center as approximate fallback target");
+        result.Trace.Notes.Should().Contain("Home area row did not include cells; using buildable-region bounds interior target");
         result.Trace.Drafts.Should().Contain(trace => trace.AnchorRoomId == "area:0");
     }
 
@@ -344,7 +344,7 @@ public sealed class PlacementSolverTests
     }
 
     [Fact]
-    public async Task SolveAsync_WithSeveralDrafts_ValidatesAtMostThree()
+    public async Task SolveAsync_WithSeveralDrafts_ValidatesAvailableDraftsUpToCap()
     {
         ResolvedAnchor anchor = ResolvedKitchenAnchor(new MapPosition(8, 0, 8));
         IReadOnlyList<PlacementDraft> drafts =
@@ -364,8 +364,8 @@ public sealed class PlacementSolverTests
 
         result.NoFit.Should().BeNull();
         result.Options.Should().HaveCount(3);
-        validator.ValidateCount.Should().Be(3);
-        result.Trace.Drafts.Where(trace => trace.Status == "selected").Should().HaveCount(3);
+        validator.ValidateCount.Should().Be(4);
+        result.Trace.Drafts.Where(trace => trace.Status == "selected").Should().HaveCount(4);
     }
 
     [Fact]

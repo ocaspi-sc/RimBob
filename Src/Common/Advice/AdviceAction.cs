@@ -42,6 +42,7 @@ public sealed record AdviceActionApplyResult(
 [JsonDerivedType(typeof(UpsertProductionBillApply), "upsert_production_bill")]
 [JsonDerivedType(typeof(PlaceBlueprintGroupApply), "place_blueprint_group")]
 [JsonDerivedType(typeof(CreateGrowingZoneApply), "create_growing_zone")]
+[JsonDerivedType(typeof(CreateStockpileZoneApply), "create_stockpile_zone")]
 public abstract record AdviceActionApply(
     [property: JsonPropertyName("label")]
     string Label,
@@ -150,6 +151,28 @@ public sealed record CreateGrowingZoneApply(
     public override AdviceApplyKind Kind => AdviceApplyKind.CreateGrowingZone;
 }
 
+public sealed record CreateStockpileZoneApply(
+    string Label,
+    string TargetSummary,
+    int MapId,
+    [property: JsonPropertyName("rect")]
+    MapRect Rect,
+    [property: JsonPropertyName("target_count")]
+    int TargetCount,
+    [property: JsonPropertyName("name")]
+    string? Name = null,
+    [property: JsonPropertyName("priority")]
+    int? Priority = null,
+    [property: JsonPropertyName("allowed_item_defs")]
+    IReadOnlyList<string>? AllowedItemDefs = null,
+    [property: JsonPropertyName("allowed_item_categories")]
+    IReadOnlyList<string>? AllowedItemCategories = null)
+    : AdviceActionApply(Label, TargetSummary, MapId)
+{
+    [JsonIgnore]
+    public override AdviceApplyKind Kind => AdviceApplyKind.CreateStockpileZone;
+}
+
 public sealed record AdviceThingApplyTarget(
     [property: JsonPropertyName("id")]
     string Id,
@@ -170,7 +193,8 @@ public enum AdviceApplyKind
     UnforbidThings,
     UpsertProductionBill,
     PlaceBlueprintGroup,
-    CreateGrowingZone
+    CreateGrowingZone,
+    CreateStockpileZone
 }
 
 public static class AssistedApplyLimits
@@ -183,6 +207,7 @@ public static class AssistedApplyLimits
     public const int MaxProductionBillTarget = 50;
     public const int MaxBlueprintGroupAssets = 64;
     public const int MaxGrowingZoneCells = 160;
+    public const int MaxStockpileZoneCells = 160;
     public const double MaxMissingTargetFraction = 0.25d;
 }
 

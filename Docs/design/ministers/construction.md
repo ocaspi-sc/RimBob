@@ -59,6 +59,7 @@ Willie owns built infrastructure:
 - Temperature systems as buildable assets.
 - Build queue feasibility, material readiness, and construction bottlenecks.
 - Material/component stockpile zones.
+- Food-stockpile placement when Chef owns the food-storage need/filter and routes a `zone_request` to Willie.
 - Growing-zone placement when another minister owns the crop/size/urgency and routes a `zone_request` to Willie.
 - Pens, barns, animal beds, and animal shelter assets when requested by Welfare or another owning minister.
 - Layout efficiency as an extension of room/base planning.
@@ -71,7 +72,7 @@ No separate Base Layout minister is planned for the first pass. Split only if Wi
 
 ## First Slice Shape
 
-Willie began as rules-first `Suggest`-mode advice. The current Willie rules path is still deterministic and has no LLM escalation; placement-solver options may now carry player-click `place_blueprint_group` Apply payloads when Willie has exact validated blueprint groups, and grow-zone options may carry player-click `create_growing_zone` Apply payloads when Willie has a complete rectangular zone option.
+Willie began as rules-first `Suggest`-mode advice. The current Willie rules path is still deterministic and has no LLM escalation; placement-solver options may now carry player-click `place_blueprint_group` Apply payloads when Willie has exact validated blueprint groups, and zone options may carry player-click `create_growing_zone` or `create_stockpile_zone` Apply payloads when Willie has a complete rectangular zone option.
 
 First deterministic advice areas:
 
@@ -93,6 +94,8 @@ Decisions: `base_topology` is folded into `base_layout` (a dashboard / briefing 
 
 ### Placement & Authorship
 
+2026-06-12 update: Building Placement Solver internals may validate more drafts than the final 1-3 emitted options. The shared hard gate now uses Home/buildable-region bounds, terrain support, item occupancy, and real growing/stockpile zone cells; RIMAPI validation remains the final truth for plants, hidden blockers, multi-cell fixture footprints, and exact blueprint legality. Home-area fallback preserves cells when available and targets an interior bounds cell instead of a raw geometric centroid.
+
 Build placement is computed by the **Placement Solver** — a deterministic
 component, not the LLM. The minister LLM (or rules) emits judgment plus, for
 build advice, a compact semantic intent (target class, room class, capacity,
@@ -108,7 +111,7 @@ When another minister publishes a flag with a Willie `building_request`, the Hos
 
 Willie now treats placement as an eventual-consistency workflow. A rules run records the current request board, evaluates rules, reuses any fresh terminal solver cache hit, and queues cold placement work instead of blocking the cabinet trigger. The first card for a cold request can be prose-only with a background-computing note; the Solver/Requests boards show `queued`/`running` immediately and later become `options`, `no_fit`, `error`, or `stale`.
 
-When another minister publishes a flag with a Willie `zone_request`, the Host also wakes Willie in rules-only `FlagFired` mode, but zone placement is a separate path from building placement. The grow-zone solver reads coordinate terrain, existing growing zones, stockpiles, room/building occupancy, and Home/buildable-region evidence, then records options or a no-fit reason in the zone board. For grow zones, Home/buildable-region evidence is an anchor and scoring locus, not a placement boundary: the solver may search and place outside Home, with oversized maps using a budgeted search window centered on the anchor. It does not run the building Placement Solver and does not produce `place_blueprint_group`. When a selected zone option is a complete rectangle, Willie emits a `create_growing_zone` Assisted Apply action; `AssistedApplyService` refreshes live state, validates map, plant def, terrain growability, and unoccupied/unzoned cells, calls RIMAPI's growing-zone endpoint, and records success only after readback proves a new growing zone with the requested crop def and exact target cells. For this write, plant-occupied cells count as occupied even when the plant is wild/non-crop; otherwise RimBob can create a zone order that is technically accepted but does not visibly become the requested crop.
+When another minister publishes a flag with a Willie `zone_request`, the Host also wakes Willie in rules-only `FlagFired` mode, but zone placement is a separate path from building placement. The zone solver reads coordinate terrain, existing growing zones, stockpiles, room/building occupancy, and Home/buildable-region evidence, then records options or a no-fit reason in the zone board. Grow-zone requests require growable terrain and score fertility, compactness, and anchor distance. Stockpile-zone requests require stockpile-capable terrain, carry the item filter from the request, and score compactness plus anchor distance rather than fertility. Home/buildable-region evidence is an anchor and scoring locus, not a placement boundary: the solver may search and place outside Home, with oversized maps using a budgeted search window centered on the anchor. It does not run the building Placement Solver and does not produce `place_blueprint_group`. When a selected grow option is a complete rectangle, Willie emits a `create_growing_zone` Assisted Apply action; `AssistedApplyService` refreshes live state, validates map, plant def, terrain growability, and unoccupied/unzoned cells, calls RIMAPI's growing-zone endpoint, and records success only after readback proves a new growing zone with the requested crop def and exact target cells. When a selected food-stockpile option is a complete rectangle, Willie emits `create_stockpile_zone`; the Host validates map, stockpile-capable terrain, occupancy, food filter presence, and exact returned-id readback before recording success. For these writes, plant-occupied cells count as occupied even when the plant is wild/non-crop; otherwise RimBob can create a zone order that is technically accepted but does not visibly become the requested crop or stockpile.
 
 Background workers solve against a frozen `ColonyState` capture and patch the live advice card only when the current advice id, request key, and input fingerprint still match. If the board moved on, the request fingerprint changed, the card disappeared, or the card already carries an Apply result, the worker records `stale` and does not mutate advice. This compare-and-swap rule is the correctness boundary for moving solves off the cabinet critical path.
 
@@ -134,11 +137,11 @@ payload.
 A requesting minister (e.g. Chef asking for a freezer) shows only its outbound
 request — never another minister's build Apply.
 
-Willie's dashboard scope includes a latest-only Solver view for placement diagnostics. The view reads the most recent solver outcome from the Host, shows the driving build request, selected rule, no-fit stage, and readiness ladder, and leaves option picking/apply controls in Build Queue.
+Willie's dashboard scope includes a latest-only Solver view for placement diagnostics. The view reads the most recent solver outcome from the Host, shows the driving build or zone request, selected rule, no-fit stage, and readiness ladder, and leaves option picking/apply controls in Build Queue or Advice actions.
 
 Willie's dashboard scope also includes a Requests view backed by live per-request solver memory. Every Willie cycle records the current inbound building-request board, keyed by request target class, target def, room class, and request text, and joins each row to its latest solver outcome when one exists. The same live store reuses a prior building or zone solver outcome only when the request identity and placement-input fingerprint still match; the fingerprint covers the solver-owned map, anchor, occupancy, terrain, crop, material, and construction-backlog inputs, and transient offline/error outcomes are never reused. The board carries full `BuildingRequest` fields; solver options are held only in the live store and `/api/ministers/willie/solver/requests` response, not in `PlacementSolverReplayOutput` or the replay corpus.
 
-The same Requests view also surfaces inbound `zone_requests` through `/api/ministers/willie/zone-requests`. Zone rows carry the full `ZoneRequest` fields plus the latest zone-solver outcome: awaiting solve, no-fit, error, or zone options. Apply for a zone belongs only on Willie-authored `create_growing_zone` advice actions after the solver emits a concrete rectangular option, never on the requesting minister's outbound row.
+The same Requests view also surfaces inbound `zone_requests` through `/api/ministers/willie/zone-requests`. Zone rows carry the full `ZoneRequest` fields plus the latest zone-solver outcome: awaiting solve, no-fit, error, or zone options. Apply for a zone belongs only on Willie-authored `create_growing_zone` or `create_stockpile_zone` advice actions after the solver emits a concrete rectangular option, never on the requesting minister's outbound row. This wire/persistence shape change has no compat code; wipe-and-regen on upgrade.
 
 Solver lifecycle state is live-only. Queue state and in-flight jobs are not replay-corpus or durable minister-output schema; after restart they naturally disappear and re-enqueue on the next request-board run if no fresh terminal cache exists. No compat code is introduced for this decoupling slice.
 
@@ -163,7 +166,7 @@ The first Willie briefing record now feeds `MinisterOfWillie` in a rules-only sl
 
 Room-anchor inventory treats work tables as building evidence. RimBob ingests `/api/v1/map/work-tables` into the shared building registry, then surfaces one anchor per detected room function: a multi-purpose barracks with a stove keeps its Barracks primary anchor and also exposes a Kitchen anchor at the stove cell for placement requests such as "near kitchen."
 
-When no room anchor resolves, Willie may fall back to a Home-area `BuildableRegion` anchor derived from `/map/zones` `data.areas[]`. This is a low-priority fallback only: it never competes with real room anchors, and the solver uses it only after normal `near:<room>` resolution returns zero anchors. Building-placement fallback remains clamped to the Home/buildable-region bounds when geometry is available; grow-zone placement treats Home as a locus and may search outside it. When the fork supplies no Home geometry, including `cells_count:0`, Willie still treats the Home area row as a valid fallback anchor and uses map bounds plus a bounds-center target as an explicitly approximate locus. Exact non-rectangular cell-mask placement remains deferred to buildability-layer evidence.
+When no room anchor resolves, Willie may fall back to a Home-area `BuildableRegion` anchor derived from `/map/zones` `data.areas[]`. This is a low-priority fallback only: it never competes with real room anchors, and the solver uses it only after normal `near:<room>` resolution returns zero anchors. Building-placement fallback remains clamped to the Home/buildable-region bounds when geometry is available; zone placement treats Home as a locus and may search outside it. When the fork supplies no Home geometry, including `cells_count:0`, Willie still treats the Home area row as a valid fallback anchor and uses map bounds plus a bounds-center target as an explicitly approximate locus. Exact non-rectangular cell-mask placement remains deferred to buildability-layer evidence.
 
 ---
 

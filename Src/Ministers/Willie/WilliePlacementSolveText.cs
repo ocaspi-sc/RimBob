@@ -24,13 +24,13 @@ internal static class WilliePlacementSolveText
     {
         if (result.Options.Count > 0)
         {
-            return $"Grow-zone solver: {result.Options.Count} inspected option{Plural(result.Options.Count)}; apply_ready={ReadinessWire(result.ApplyReady)} via create_growing_zone validation.";
+            return $"Zone solver: {result.Options.Count} inspected option{Plural(result.Options.Count)}; apply_ready={ReadinessWire(result.ApplyReady)} via {ApplyKindFor(request)} validation.";
         }
 
         string reason = result.NoFit is null
-            ? "no validated growing-zone option was emitted"
+            ? $"no validated {ZoneLabel(request)} option was emitted"
             : NoFitNote(result.NoFit.Value, request);
-        return $"Grow-zone solver no-fit: {reason}.";
+        return $"Zone solver no-fit: {reason}.";
     }
 
     public static string? AdviceBodyNoteFor(PlacementResult result, BuildingRequest request)
@@ -46,12 +46,12 @@ internal static class WilliePlacementSolveText
     public static string? AdviceBodyNoteFor(PlacementResult result, ZoneRequest request)
     {
         if (result.Options.Count > 0)
-            return $"Grow-zone solver found {result.Options.Count} coordinate option{Plural(result.Options.Count)} below; Apply validates live terrain and occupancy before creating the zone.";
+            return $"Zone solver found {result.Options.Count} coordinate option{Plural(result.Options.Count)} below; Apply validates live terrain and occupancy before creating the zone.";
 
         string reason = result.NoFit is null
-            ? "no validated growing-zone option was emitted"
+            ? $"no validated {ZoneLabel(request)} option was emitted"
             : NoFitNote(result.NoFit.Value, request);
-        return $"Grow-zone solver could not suggest zone options because {reason}.";
+        return $"Zone solver could not suggest zone options because {reason}.";
     }
 
     public static string CachedNoteFor(PlacementResult result, BuildingRequest request)
@@ -71,13 +71,13 @@ internal static class WilliePlacementSolveText
     {
         if (result.Options.Count > 0)
         {
-            return $"Grow-zone solver cache hit: reused {result.Options.Count} inspected option{Plural(result.Options.Count)}; apply_ready={ReadinessWire(result.ApplyReady)} via create_growing_zone validation.";
+            return $"Zone solver cache hit: reused {result.Options.Count} inspected option{Plural(result.Options.Count)}; apply_ready={ReadinessWire(result.ApplyReady)} via {ApplyKindFor(request)} validation.";
         }
 
         string reason = result.NoFit is null
-            ? "no validated growing-zone option was emitted"
+            ? $"no validated {ZoneLabel(request)} option was emitted"
             : NoFitNote(result.NoFit.Value, request);
-        return $"Grow-zone solver cache hit: reused no-fit result: {reason}.";
+        return $"Zone solver cache hit: reused no-fit result: {reason}.";
     }
 
     private static string NoFitNote(NoFitReason reason, BuildingRequest request) => reason switch
@@ -92,13 +92,22 @@ internal static class WilliePlacementSolveText
 
     private static string NoFitNote(NoFitReason reason, ZoneRequest request) => reason switch
     {
-        NoFitReason.UnsupportedZoneClass => $"{request.ZoneClass} is not supported by the grow-zone solver",
+        NoFitReason.UnsupportedZoneClass => $"{request.ZoneClass} is not supported by the zone solver",
         NoFitReason.NoTerrainGrid => "cell-level terrain is unavailable in the current state snapshot",
-        NoFitReason.NoGrowableCells => "no growable terrain cells were found inside the Home/buildable bounds",
-        NoFitReason.AllZoneCellsBlocked => "all growable cells were blocked by existing zones or occupancy",
-        NoFitReason.NoZoneRectangle => "no compact unoccupied growable rectangle matched the requested tile count",
-        _ => "no validated growing-zone option was emitted"
+        NoFitReason.NoGrowableCells => $"no {ZoneTerrainLabel(request)} terrain cells were found inside the Home/buildable bounds",
+        NoFitReason.AllZoneCellsBlocked => $"all {ZoneTerrainLabel(request)} cells were blocked by existing zones or occupancy",
+        NoFitReason.NoZoneRectangle => $"no compact unoccupied {ZoneTerrainLabel(request)} rectangle matched the requested tile count",
+        _ => $"no validated {ZoneLabel(request)} option was emitted"
     };
+
+    private static string ApplyKindFor(ZoneRequest request) =>
+        request.ZoneClass == ZoneClass.Stockpile ? "create_stockpile_zone" : "create_growing_zone";
+
+    private static string ZoneLabel(ZoneRequest request) =>
+        request.ZoneClass == ZoneClass.Stockpile ? "stockpile-zone" : "growing-zone";
+
+    private static string ZoneTerrainLabel(ZoneRequest request) =>
+        request.ZoneClass == ZoneClass.Stockpile ? "stockpile-capable" : "growable";
 
     private static string RequestRoomLabel(BuildingRequest request) =>
         request.RoomClass is not null

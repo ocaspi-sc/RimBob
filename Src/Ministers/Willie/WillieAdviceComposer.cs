@@ -5,6 +5,9 @@ namespace RimBob.Ministers.Willie;
 
 public static class WillieAdviceComposer
 {
+    private const string StockpileZoneOptionPrefix = "zone_stockpile_";
+    private static readonly IReadOnlyList<string> FoodStockpileCategories = ["Foods"];
+
     public static IReadOnlyList<AdviceItem> EnrichSolverAdvice(
         IReadOnlyList<AdviceItem> advice,
         PlacementSolveAttempt attempt,
@@ -93,8 +96,13 @@ public static class WillieAdviceComposer
 
     private static AdviceAction? ApplyActionForOption(AdviceOption option)
     {
-        if (IsZoneCellOption(option))
-            return GrowingZoneApplyActionForOption(option);
+        ZoneOptionShape? zoneShape = ZoneOptionShapeFor(option);
+        if (zoneShape is not null)
+            return zoneShape.ZoneClass == ZoneClass.Stockpile
+                ? StockpileZoneApplyActionForOption(option, zoneShape)
+                : GrowingZoneApplyActionForOption(option, zoneShape);
+        if (HasZoneCellAsset(option))
+            return null;
 
         return new AdviceAction(
             AdviceActionKind.PlaceBlueprint,
@@ -108,13 +116,12 @@ public static class WillieAdviceComposer
                 AssetCount: option.BlueprintGroup.Assets.Count));
     }
 
-    private static AdviceAction? GrowingZoneApplyActionForOption(AdviceOption option)
+    private static AdviceAction? GrowingZoneApplyActionForOption(AdviceOption option, ZoneOptionShape shape)
     {
-        ZoneOptionShape? shape = ZoneOptionShapeFor(option);
-        if (shape is null)
+        if (shape.Rect.Area != shape.Cells.Count)
             return null;
 
-        if (shape.Rect.Area != shape.Cells.Count)
+        if (string.IsNullOrWhiteSpace(shape.ZoneDef))
             return null;
 
         return new AdviceAction(
@@ -127,9 +134,31 @@ public static class WillieAdviceComposer
                 Label: option.Label,
                 TargetSummary: option.Summary,
                 MapId: option.BlueprintGroup.MapId,
-                PlantDef: shape.PlantDef,
+                PlantDef: shape.ZoneDef,
                 Rect: shape.Rect,
                 TargetCount: shape.Cells.Count));
+    }
+
+    private static AdviceAction? StockpileZoneApplyActionForOption(AdviceOption option, ZoneOptionShape shape)
+    {
+        if (shape.Rect.Area != shape.Cells.Count)
+            return null;
+
+        return new AdviceAction(
+            AdviceActionKind.SetStockpileZone,
+            $"Create the {option.Label} food stockpile zone.",
+            Quantity: shape.Cells.Count,
+            Owner: "Willie",
+            WorkType: WorkType.Haul,
+            Apply: new CreateStockpileZoneApply(
+                Label: option.Label,
+                TargetSummary: option.Summary,
+                MapId: option.BlueprintGroup.MapId,
+                Rect: shape.Rect,
+                TargetCount: shape.Cells.Count,
+                Name: option.Label,
+                Priority: 0,
+                AllowedItemCategories: FoodStockpileCategories));
     }
 
     private static AdviceOption AnnotateManualZonePlacement(AdviceOption option)
@@ -142,7 +171,7 @@ public static class WillieAdviceComposer
         {
             TradeoffNote = AppendPlacementNote(
                 option.TradeoffNote ?? string.Empty,
-                "Non-rectangular growing area - place it manually in-game.")
+                $"Non-rectangular {ZoneClassLabel(shape.ZoneClass)} area - place it manually in-game.")
         };
     }
 
@@ -154,12 +183,12 @@ public static class WillieAdviceComposer
         if (zoneAssets.Count == 0 || zoneAssets.Count != option.BlueprintGroup.Assets.Count)
             return null;
 
-        IReadOnlyList<string> plantDefs = zoneAssets
+        IReadOnlyList<string> zoneDefs = zoneAssets
             .Select(asset => asset.DefName)
             .Where(def => !string.IsNullOrWhiteSpace(def))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
-        if (plantDefs.Count != 1)
+        if (zoneDefs.Count != 1)
             return null;
 
         IReadOnlyList<MapCell> cells = zoneAssets
@@ -175,12 +204,24 @@ public static class WillieAdviceComposer
             X2: cells.Max(cell => cell.X),
             Z2: cells.Max(cell => cell.Z));
 
-        return new ZoneOptionShape(plantDefs[0], cells, rect);
+        return new ZoneOptionShape(
+            OptionZoneClass(option),
+            zoneDefs[0],
+            cells,
+            rect);
     }
 
-    private static bool IsZoneCellOption(AdviceOption option) =>
+    private static ZoneClass OptionZoneClass(AdviceOption option) =>
+        option.Id.StartsWith(StockpileZoneOptionPrefix, StringComparison.OrdinalIgnoreCase)
+            ? ZoneClass.Stockpile
+            : ZoneClass.Growing;
+
+    private static bool HasZoneCellAsset(AdviceOption option) =>
         option.BlueprintGroup.Assets.Any(asset =>
             string.Equals(asset.Role, "zone_cell", StringComparison.OrdinalIgnoreCase));
+
+    private static string ZoneClassLabel(ZoneClass zoneClass) =>
+        zoneClass == ZoneClass.Stockpile ? "stockpile" : "growing";
 
     private static string AppendPlacementNote(string text, string note) =>
         string.IsNullOrWhiteSpace(text) ? note : $"{text} {note}";
@@ -189,7 +230,8 @@ public static class WillieAdviceComposer
         string.IsNullOrWhiteSpace(note) ? body : AppendPlacementNote(body, note);
 
     private sealed record ZoneOptionShape(
-        string PlantDef,
+        ZoneClass ZoneClass,
+        string ZoneDef,
         IReadOnlyList<MapCell> Cells,
         MapRect Rect);
 }

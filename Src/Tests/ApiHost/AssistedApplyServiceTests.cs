@@ -636,6 +636,51 @@ public sealed class AssistedApplyServiceTests
     }
 
     [Fact]
+    public async Task ApplyAsync_WhenStockpileZoneCellsRemainValid_PostsStockpileZoneAndReadsBack()
+    {
+        AdviceBus bus = new();
+        bus.Publish(Advice("willie_zone_request_active", StockpileZoneAction()) with { Minister = "Willie" });
+        MinimalRefreshHandler handler = new()
+        {
+            MapTerrainJson = GrowableTerrainJson(),
+            MapPlantsJson = EmptyListJson(),
+            MapZonesAfterStockpileZoneJson = ZonesJson(StockpileZoneJson())
+        };
+        AssistedApplyService service = Service(bus, new ColonyState(), handler);
+
+        AssistedApplyResponse response = await service.ApplyAsync("willie_zone_request_active", 0);
+
+        response.Status.Should().Be("applied");
+        response.Kind.Should().Be(AdviceApplyKind.CreateStockpileZone);
+        response.Message.Should().Contain("Stockpile zone created");
+        AssertAppliedAction(bus, "applied", AdviceApplyKind.CreateStockpileZone);
+        handler.StockpileZonePosted.Should().BeTrue();
+        handler.LastStockpileZoneBody.Should().Contain("\"name\":\"Food stockpile\"");
+        handler.LastStockpileZoneBody.Should().Contain("\"allowed_item_categories\":[\"Foods\"]");
+        handler.LastStockpileZoneBody.Should().Contain("\"point_a\":{\"x\":10,\"y\":0,\"z\":20}");
+        handler.LastStockpileZoneBody.Should().Contain("\"point_b\":{\"x\":13,\"y\":0,\"z\":22}");
+    }
+
+    [Fact]
+    public async Task ApplyAsync_WhenStockpileZoneHasNoFilter_ReturnsValidationFailedWithoutPosting()
+    {
+        AdviceBus bus = new();
+        bus.Publish(Advice("willie_zone_request_active", StockpileZoneAction(allowedItemCategories: [])) with { Minister = "Willie" });
+        MinimalRefreshHandler handler = new()
+        {
+            MapTerrainJson = GrowableTerrainJson(),
+            MapPlantsJson = EmptyListJson()
+        };
+        AssistedApplyService service = Service(bus, new ColonyState(), handler);
+
+        AssistedApplyResponse response = await service.ApplyAsync("willie_zone_request_active", 0);
+
+        response.Status.Should().Be("validation_failed");
+        response.Message.Should().Contain("missing an item filter");
+        handler.StockpileZonePosted.Should().BeFalse();
+    }
+
+    [Fact]
     public async Task ApplyAsync_WhenGrowingZoneReturnedIdIsMissingFromReadback_ReturnsInconclusive()
     {
         AdviceBus bus = new();
@@ -699,7 +744,7 @@ public sealed class AssistedApplyServiceTests
     }
 
     [Fact]
-    public async Task ApplyAsync_WhenGrowingZoneCellsContainWildPlants_ReturnsStaleWithoutPosting()
+    public async Task ApplyAsync_WhenGrowingZoneCellsContainWildPlants_DoesNotFailPreflight()
     {
         AdviceBus bus = new();
         bus.Publish(Advice("willie_zone_request_active", GrowingZoneAction()) with { Minister = "Willie" });
@@ -710,15 +755,17 @@ public sealed class AssistedApplyServiceTests
                 {"success":true,"data":[
                   {"id":"berry-1","def":"Plant_Berry","growth":0.45,"is_crop":false,"is_harvestable":false,"position":{"x":10,"y":0,"z":20}}
                 ],"errors":null}
-                """
+                """,
+            MapZonesAfterGrowZoneJson = ZonesJson(GrowingZoneJson())
         };
         AssistedApplyService service = Service(bus, new ColonyState(), handler);
 
         AssistedApplyResponse response = await service.ApplyAsync("willie_zone_request_active", 0);
 
-        response.Status.Should().Be("stale_advice");
-        response.Message.Should().Contain("occupied");
-        handler.GrowZonePosted.Should().BeFalse();
+        response.Status.Should().Be("applied");
+        response.Kind.Should().Be(AdviceApplyKind.CreateGrowingZone);
+        response.Message.Should().Contain("Growing zone created");
+        handler.GrowZonePosted.Should().BeTrue();
     }
 
     [Fact]
@@ -1037,6 +1084,32 @@ public sealed class AssistedApplyServiceTests
                 TargetCount: actualTargetCount));
     }
 
+    private static AdviceAction StockpileZoneAction(
+        MapRect? rect = null,
+        int? targetCount = null,
+        int mapId = 1,
+        IReadOnlyList<string>? allowedItemCategories = null)
+    {
+        MapRect actualRect = rect ?? new MapRect(10, 20, 13, 22);
+        int actualTargetCount = targetCount ?? actualRect.Area;
+        IReadOnlyList<string> categories = allowedItemCategories ?? ["Foods"];
+        return new(
+            AdviceActionKind.SetStockpileZone,
+            "Create the selected food stockpile zone.",
+            Quantity: actualTargetCount,
+            Owner: "Willie",
+            WorkType: WorkType.Haul,
+            Apply: new CreateStockpileZoneApply(
+                Label: "Stockpile zone 10,20",
+                TargetSummary: $"{actualTargetCount}-tile stockpile zone for Foods at {actualRect.X1},{actualRect.Z1}-{actualRect.X2},{actualRect.Z2}.",
+                MapId: mapId,
+                Rect: actualRect,
+                TargetCount: actualTargetCount,
+                Name: "Food stockpile",
+                Priority: 0,
+                AllowedItemCategories: categories));
+    }
+
     private static MinimalRefreshHandler HandlerWithSingleStove() =>
         new()
         {
@@ -1219,6 +1292,19 @@ public sealed class AssistedApplyServiceTests
             cells = cells ?? RectCells(10, 20, 15, 25)
         };
 
+    private static object StockpileZoneJson(
+        string id = "stockpile-zone-1",
+        int cellsCount = 12,
+        IReadOnlyList<object>? cells = null) =>
+        new
+        {
+            id,
+            type = "StockpileZone",
+            label = "Food stockpile",
+            cells_count = cells?.Count ?? cellsCount,
+            cells = cells ?? RectCells(10, 20, 13, 22)
+        };
+
     private static string GrowZoneWriteResponseJson(string id = "growing-zone-1") =>
         JsonSerializer.Serialize(new
         {
@@ -1227,6 +1313,22 @@ public sealed class AssistedApplyServiceTests
             {
                 zone = GrowingZoneJson(id),
                 plant_def_name = "Plant_Rice"
+            },
+            errors = (string[]?)null
+        });
+
+    private static string StockpileZoneWriteResponseJson(string id = "stockpile-zone-1") =>
+        JsonSerializer.Serialize(new
+        {
+            success = true,
+            data = new
+            {
+                zone_id = id,
+                name = "Food stockpile",
+                cells_count = 12,
+                priority = 0,
+                success = true,
+                message = "created"
             },
             errors = (string[]?)null
         });
@@ -1257,6 +1359,7 @@ public sealed class AssistedApplyServiceTests
     {
         private readonly Queue<string> _billResponses = [];
         private readonly Queue<string> _mapZonesAfterGrowZoneResponses = [];
+        private readonly Queue<string> _mapZonesAfterStockpileZoneResponses = [];
 
         public bool DesignatePosted { get; private set; }
         public bool HuntPosted { get; private set; }
@@ -1264,6 +1367,7 @@ public sealed class AssistedApplyServiceTests
         public bool UpdateBillPosted { get; private set; }
         public bool BlueprintGroupPlacePosted { get; private set; }
         public bool GrowZonePosted { get; private set; }
+        public bool StockpileZonePosted { get; private set; }
         public int BillListCalls { get; private set; }
         public int BlueprintGroupValidateCalls { get; private set; }
         public int MapZonesCalls { get; private set; }
@@ -1273,17 +1377,21 @@ public sealed class AssistedApplyServiceTests
         public string LastBillWriteBody { get; private set; } = "";
         public string LastBlueprintGroupPlaceBody { get; private set; } = "";
         public string LastGrowZoneBody { get; private set; } = "";
+        public string LastStockpileZoneBody { get; private set; } = "";
         public HttpStatusCode BlueprintGroupValidateStatusCode { get; init; } = HttpStatusCode.OK;
         public HttpStatusCode BlueprintGroupPlaceStatusCode { get; init; } = HttpStatusCode.OK;
         public HttpStatusCode GrowZoneWriteStatusCode { get; init; } = HttpStatusCode.OK;
+        public HttpStatusCode StockpileZoneWriteStatusCode { get; init; } = HttpStatusCode.OK;
         public string BlueprintGroupValidateJson { get; init; } = BlueprintGroupValidateResponseJson(canPlaceAll: true);
         public string BlueprintGroupPlaceJson { get; init; } = BlueprintGroupPlaceResponseJson("placed");
         public string GrowZoneWriteJson { get; init; } = GrowZoneWriteResponseJson();
+        public string StockpileZoneWriteJson { get; init; } = StockpileZoneWriteResponseJson();
         public string MapAnimalsJson { get; init; } = """{"success":true,"data":[],"errors":null}""";
         public string MapBuildingsJson { get; init; } = """{"success":true,"data":[],"errors":null}""";
         public string MapTerrainJson { get; init; } = """{"success":true,"data":{"width":0,"height":0,"palette":[],"grid":[]},"errors":null}""";
         public string MapZonesJson { get; init; } = """{"success":true,"data":{},"errors":null}""";
         public string MapZonesAfterGrowZoneJson { get; init; } = """{"success":true,"data":{},"errors":null}""";
+        public string MapZonesAfterStockpileZoneJson { get; init; } = """{"success":true,"data":{},"errors":null}""";
         public string MapPlantsJson { get; init; } = """
             {"success":true,"data":[
               {"id":"plant-1","def":"Plant_Rice","growth":0.9,"is_crop":true,"position":{"x":10,"y":0,"z":20}},
@@ -1308,6 +1416,11 @@ public sealed class AssistedApplyServiceTests
             _mapZonesAfterGrowZoneResponses.Enqueue(json);
         }
 
+        public void EnqueueMapZonesAfterStockpileZoneResponse(string json)
+        {
+            _mapZonesAfterStockpileZoneResponses.Enqueue(json);
+        }
+
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
             string path = request.RequestUri?.PathAndQuery ?? "";
@@ -1325,6 +1438,11 @@ public sealed class AssistedApplyServiceTests
             if (path.Contains("map/zone/growing", StringComparison.OrdinalIgnoreCase))
             {
                 return CaptureGrowZoneAsync(request, ct);
+            }
+
+            if (path.Contains("map/zone/stockpile", StringComparison.OrdinalIgnoreCase))
+            {
+                return CaptureStockpileZoneAsync(request, ct);
             }
 
             if (path.Contains("order/designate/area", StringComparison.OrdinalIgnoreCase))
@@ -1379,8 +1497,14 @@ public sealed class AssistedApplyServiceTests
             if (path.Contains("map/zones", StringComparison.OrdinalIgnoreCase))
             {
                 MapZonesCalls++;
+                if (StockpileZonePosted && _mapZonesAfterStockpileZoneResponses.Count > 0)
+                    return JsonResponse(_mapZonesAfterStockpileZoneResponses.Dequeue());
+
                 if (GrowZonePosted && _mapZonesAfterGrowZoneResponses.Count > 0)
                     return JsonResponse(_mapZonesAfterGrowZoneResponses.Dequeue());
+
+                if (StockpileZonePosted)
+                    return JsonResponse(MapZonesAfterStockpileZoneJson);
 
                 return JsonResponse(GrowZonePosted ? MapZonesAfterGrowZoneJson : MapZonesJson);
             }
@@ -1425,6 +1549,18 @@ public sealed class AssistedApplyServiceTests
             return new HttpResponseMessage(GrowZoneWriteStatusCode)
             {
                 Content = new StringContent(GrowZoneWriteJson, Encoding.UTF8, "application/json")
+            };
+        }
+
+        private async Task<HttpResponseMessage> CaptureStockpileZoneAsync(
+            HttpRequestMessage request,
+            CancellationToken ct)
+        {
+            StockpileZonePosted = true;
+            LastStockpileZoneBody = request.Content is null ? "" : await request.Content.ReadAsStringAsync(ct);
+            return new HttpResponseMessage(StockpileZoneWriteStatusCode)
+            {
+                Content = new StringContent(StockpileZoneWriteJson, Encoding.UTF8, "application/json")
             };
         }
 

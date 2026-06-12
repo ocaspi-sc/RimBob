@@ -176,6 +176,33 @@ public sealed class WillieAnchorInventoryDerivationTests
     }
 
     [Fact]
+    public void Derive_HomeAreaPreservesCellsForBuildableRegionAnchor()
+    {
+        ColonyState state = new();
+        state.Areas.Update(new MapAreaRegistry([
+            new MapArea(
+                Id: "0",
+                Type: "Area_Home",
+                Label: "Home",
+                CellCount: 2,
+                Bounds: new MapRect(10, 20, 14, 24),
+                Centroid: new MapPosition(12, 0, 22),
+                Cells:
+                [
+                    new MapPosition(10, 0, 20),
+                    new MapPosition(14, 0, 24)
+                ])
+        ]));
+
+        WillieAnchorInventory inventory = WillieAnchorInventoryDerivation.Derive(state);
+
+        WillieRoomAnchor anchor = inventory.Anchors.Should().ContainSingle().Subject;
+        anchor.RoomId.Should().Be("area:0");
+        anchor.Class.Should().Be(RoomClass.BuildableRegion);
+        anchor.Cells.Should().Equal(new MapPosition(10, 0, 20), new MapPosition(14, 0, 24));
+    }
+
+    [Fact]
     public void Derive_HomeAreaWithPositiveCountButNoCellsUsesMapBounds()
     {
         ColonyState state = new();

@@ -213,6 +213,8 @@ public sealed class WillieSolverStore
             NormalizeKeyPart(request.ZoneClass.ToString()),
             NormalizeKeyPart(request.PlantDef),
             request.TileCount?.ToString() ?? "-",
+            NormalizeKeyList(request.AllowedItemDefs),
+            NormalizeKeyList(request.AllowedItemCategories),
             NormalizeKeyPart(request.Request));
 
     public static string RequestKey(WillieZoneRequestSnapshot request) =>
@@ -221,6 +223,8 @@ public sealed class WillieSolverStore
             NormalizeKeyPart(request.ZoneClass),
             NormalizeKeyPart(request.PlantDef),
             request.TileCount?.ToString() ?? "-",
+            NormalizeKeyList(request.AllowedItemDefs),
+            NormalizeKeyList(request.AllowedItemCategories),
             NormalizeKeyPart(request.Request));
 
     public static string RequestKey(
@@ -239,6 +243,16 @@ public sealed class WillieSolverStore
         string.IsNullOrWhiteSpace(value)
             ? "-"
             : value.Trim().ToLowerInvariant();
+
+    private static string NormalizeKeyList(IReadOnlyList<string>? values) =>
+        values is null || values.Count == 0
+            ? "-"
+            : string.Join(
+                ",",
+                values
+                    .Where(value => !string.IsNullOrWhiteSpace(value))
+                    .Select(value => value.Trim().ToLowerInvariant())
+                    .Order(StringComparer.Ordinal));
 
     private static Dictionary<string, TSnapshot> OutcomesFor<TSnapshot>(
         Dictionary<string, Dictionary<string, TSnapshot>> outcomes,
@@ -471,6 +485,8 @@ public sealed record WillieZoneRequestSnapshot(
     string ZoneClass,
     string? PlantDef,
     int? TileCount,
+    IReadOnlyList<string>? AllowedItemDefs,
+    IReadOnlyList<string>? AllowedItemCategories,
     string? RequestedFrom,
     string? SourceMinister,
     string? Priority)
@@ -484,6 +500,8 @@ public sealed record WillieZoneRequestSnapshot(
             ZoneClass: request.ZoneClass.ToString(),
             PlantDef: request.PlantDef,
             TileCount: request.TileCount,
+            AllowedItemDefs: request.AllowedItemDefs,
+            AllowedItemCategories: request.AllowedItemCategories,
             RequestedFrom: request.RequestedFrom,
             SourceMinister: sourceMinister,
             Priority: request.Priority?.ToString());

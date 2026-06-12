@@ -92,14 +92,51 @@ public static class AnchorResolver
         if (entryCell is not null)
             return new ResolvedAnchor(anchor, entryCell, AnchorMatchReason.EntryCells);
 
-        if (anchor.Centroid is not null)
-            return new ResolvedAnchor(anchor, anchor.Centroid, AnchorMatchReason.BuildableRegionFallback);
+        MapPosition? targetCell = BuildableRegionTargetCell(anchor);
+        if (targetCell is not null)
+            return new ResolvedAnchor(anchor, targetCell, AnchorMatchReason.BuildableRegionFallback);
 
-        MapPosition? boundsCenter = CenterOf(anchor.Bounds);
-        return boundsCenter is null
-            ? null
-            : new ResolvedAnchor(anchor, boundsCenter, AnchorMatchReason.BuildableRegionFallback);
+        return null;
     }
+
+    private static MapPosition? BuildableRegionTargetCell(WillieRoomAnchor anchor)
+    {
+        MapPosition? preferred = anchor.Bounds is not null
+            ? InteriorPoint(anchor.Bounds)
+            : anchor.Centroid;
+        if (anchor.Cells.Count > 0)
+            return ClosestCell(anchor.Cells, preferred);
+
+        if (anchor.Bounds is not null)
+            return InteriorPoint(anchor.Bounds);
+
+        return anchor.Centroid;
+    }
+
+    private static MapPosition ClosestCell(
+        IReadOnlyList<MapPosition> cells,
+        MapPosition? preferred)
+    {
+        return cells
+            .OrderBy(cell => preferred is null ? 0 : Manhattan(cell, preferred))
+            .ThenBy(cell => cell.X)
+            .ThenBy(cell => cell.Z)
+            .First();
+    }
+
+    private static MapPosition InteriorPoint(MapRect bounds)
+    {
+        int width = bounds.X2 - bounds.X1 + 1;
+        int height = bounds.Z2 - bounds.Z1 + 1;
+        int xOffset = width <= 1 ? 0 : Math.Max(1, width / 3);
+        int zOffset = height <= 1 ? 0 : Math.Max(1, height / 3);
+        int x = Math.Min(bounds.X2, bounds.X1 + xOffset);
+        int z = Math.Min(bounds.Z2, bounds.Z1 + zOffset);
+        return new MapPosition(x, 0, z);
+    }
+
+    private static int Manhattan(MapPosition a, MapPosition b) =>
+        Math.Abs(a.X - b.X) + Math.Abs(a.Z - b.Z);
 
     private static IReadOnlyList<ResolvedAnchor> ResolveStockpileAnchors(IReadOnlyList<StockpileZone> stockpiles)
     {

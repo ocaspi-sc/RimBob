@@ -288,8 +288,7 @@ An action is eligible only when all of these are true:
 
 - The action kind maps to an allowlisted, single-operation RIMAPI write.
 - The target is explicit and can be revalidated against fresh state.
-- The operation does not allocate pawns, force jobs, change schedules, edit
-  arbitrary bills, create broad zones, or make combat/medical/prisoner decisions.
+- The operation does not allocate pawns, force jobs, change schedules, edit arbitrary bills, edit/delete zones, create broad zones, or make combat/medical/prisoner decisions.
 - The Host can read back or otherwise observe the expected result.
 - The dashboard requires an explicit player click for that one action.
 
@@ -301,12 +300,12 @@ deterministic low-risk animal batches, and one Chef-owned simple-meal cook-bill
 upsert. The bill operation is intentionally narrow:
 exactly one current cooking workbench, backend-resolved simple-meal recipe,
 bounded do-until target, idempotent add-or-update, no delete/reorder/suspend
-changes, fresh-state revalidation, and RIMAPI read-back. `mark_hunt` is eligible only when Chef has already excluded risky/tame/unhealthy animals, has exact animal ids, and fresh validation proves each still-targeted animal is present and low-risk; the Host designates those exact ids, while the bounded rectangle remains only a dashboard/locality hint and batch sanity bound. Willie blueprint-group placement is eligible only when deterministic code produced the exact option, fresh validation passes for the whole group, the group stays under the asset cap, and the player clicks Apply in Willie's scope. Work priorities, broad bill editing, zones, pawn assignment, equipment, medical, prisoner, and combat controls stay outside the first Assisted Apply slice.
+changes, fresh-state revalidation, and RIMAPI read-back. `mark_hunt` is eligible only when Chef has already excluded risky/tame/unhealthy animals, has exact animal ids, and fresh validation proves each still-targeted animal is present and low-risk; the Host designates those exact ids, while the bounded rectangle remains only a dashboard/locality hint and batch sanity bound. Willie blueprint-group placement is eligible only when deterministic code produced the exact option, fresh validation passes for the whole group, the group stays under the asset cap, and the player clicks Apply in Willie's scope. Willie zone creation is eligible only for solver-produced complete rectangles: `create_growing_zone` validates map, crop def, growable terrain, occupancy, and exact readback; `create_stockpile_zone` is currently scoped to Chef food-storage requests, uses the `Foods` filter, validates stockpile-capable terrain and occupancy, and confirms the returned stockpile id and exact rectangle. This is a wire/persistence shape change: no compat code; wipe-and-regen on upgrade. Work priorities, broad bill editing, zone edits/deletes/broad zone creation, pawn assignment, equipment, medical, prisoner, and combat controls stay outside the first Assisted Apply slice.
 
 The exclusion of policy knobs (priorities/zones/broad bills) is a deliberate
 trust call, not a plumbing gap — the RIMAPI write is usually trivial. They are
 persistent and overwrite player intent (high blast radius), whereas the
-allowlisted designations are additive and ephemeral. Every allowlist candidate is a targeted designation by that test; policy knobs return only with the Auto dial, where Labor recommends them and the player has explicitly consented per minister and action kind.
+allowlisted designations are additive and ephemeral. The create-only growing and food-stockpile zone paths are explicit MVP exceptions because they are solver-bounded, player-click-gated, and readback-confirmed; general policy knobs return only with the Auto dial, where Labor recommends them and the player has explicitly consented per minister and action kind.
 
 Apply attempts must be logged with enough context to inspect the advice, target,
 validation decision, RIMAPI result, and read-back state in dashboard/system

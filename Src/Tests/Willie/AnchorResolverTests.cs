@@ -151,7 +151,51 @@ public sealed class AnchorResolverTests
     }
 
     [Fact]
-    public void ResolveBuildableRegion_UsesCentroid()
+    public void ResolveBuildableRegion_UsesCellsBeforeCentroid()
+    {
+        WillieRoomAnchor region = Anchor("area:0", RoomClass.BuildableRegion, 25, new MapPosition(99, 0, 99)) with
+        {
+            Cells = [new MapPosition(10, 0, 20), new MapPosition(11, 0, 20)]
+        };
+        WillieBriefing briefing = StableBriefing() with
+        {
+            AnchorInventory = new WillieAnchorInventory([region])
+        };
+
+        ResolvedAnchor resolved = AnchorResolver.ResolveBuildableRegion(briefing)
+            .Should().ContainSingle().Subject;
+
+        resolved.Anchor.Class.Should().Be(RoomClass.BuildableRegion);
+        resolved.TargetCell.Should().Be(new MapPosition(11, 0, 20));
+        resolved.MatchReason.Should().Be(AnchorMatchReason.BuildableRegionFallback);
+    }
+
+    [Fact]
+    public void ResolveBuildableRegion_WithBoundsAndCellsUsesInteriorCellInsteadOfCentroid()
+    {
+        WillieRoomAnchor region = Anchor("area:0", RoomClass.BuildableRegion, 25, new MapPosition(99, 0, 99)) with
+        {
+            Bounds = new MapRect(10, 20, 14, 24),
+            Cells =
+            [
+                new MapPosition(11, 0, 21),
+                new MapPosition(14, 0, 24)
+            ]
+        };
+        WillieBriefing briefing = StableBriefing() with
+        {
+            AnchorInventory = new WillieAnchorInventory([region])
+        };
+
+        ResolvedAnchor resolved = AnchorResolver.ResolveBuildableRegion(briefing)
+            .Should().ContainSingle().Subject;
+
+        resolved.TargetCell.Should().Be(new MapPosition(11, 0, 21));
+        resolved.MatchReason.Should().Be(AnchorMatchReason.BuildableRegionFallback);
+    }
+
+    [Fact]
+    public void ResolveBuildableRegion_UsesCentroidWhenNoCellsOrBounds()
     {
         WillieBriefing briefing = StableBriefing() with
         {
@@ -164,13 +208,12 @@ public sealed class AnchorResolverTests
         ResolvedAnchor resolved = AnchorResolver.ResolveBuildableRegion(briefing)
             .Should().ContainSingle().Subject;
 
-        resolved.Anchor.Class.Should().Be(RoomClass.BuildableRegion);
         resolved.TargetCell.Should().Be(new MapPosition(12, 0, 22));
         resolved.MatchReason.Should().Be(AnchorMatchReason.BuildableRegionFallback);
     }
 
     [Fact]
-    public void ResolveBuildableRegion_UsesBoundsCenterWhenCentroidMissing()
+    public void ResolveBuildableRegion_UsesInteriorBoundsPointWhenCentroidMissing()
     {
         WillieRoomAnchor region = Anchor("area:0", RoomClass.BuildableRegion, 25, null) with
         {
@@ -184,7 +227,7 @@ public sealed class AnchorResolverTests
         ResolvedAnchor resolved = AnchorResolver.ResolveBuildableRegion(briefing)
             .Should().ContainSingle().Subject;
 
-        resolved.TargetCell.Should().Be(new MapPosition(12, 0, 22));
+        resolved.TargetCell.Should().Be(new MapPosition(11, 0, 21));
         resolved.MatchReason.Should().Be(AnchorMatchReason.BuildableRegionFallback);
     }
 

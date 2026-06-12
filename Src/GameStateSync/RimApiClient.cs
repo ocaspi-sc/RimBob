@@ -593,6 +593,35 @@ public sealed class RimApiClient(HttpClient http, ILogger<RimApiClient>? log = n
     }
 
     /// <summary>
+    /// POST api/v1/map/zone/stockpile - create a stockpile zone over a rect with item filters.
+    /// Owned by Willie placement advice through player-click Assisted Apply.
+    /// </summary>
+    public async Task<StockpileZoneCreateDto> CreateStockpileZoneAsync(
+        int mapId,
+        string? name,
+        int? priority,
+        IReadOnlyList<string>? allowedItemDefs,
+        IReadOnlyList<string>? allowedItemCategories,
+        int x1,
+        int z1,
+        int x2,
+        int z2,
+        CancellationToken ct = default)
+    {
+        object body = new
+        {
+            map_id = mapId,
+            point_a = new { x = x1, y = 0, z = z1 },
+            point_b = new { x = x2, y = 0, z = z2 },
+            name,
+            priority,
+            allowed_item_defs = allowedItemDefs ?? [],
+            allowed_item_categories = allowedItemCategories ?? []
+        };
+        return await PostEnvelopedAsync<object, StockpileZoneCreateDto>("api/v1/map/zone/stockpile", body, ct);
+    }
+
+    /// <summary>
     /// POST api/v1/order/designate/area — designate Harvest / Mine / Deconstruct
     /// over a rect. Used by Chef harvest and Willie mine/deconstruct flows.
     /// RIMAPI accepts designation/type and either point_a/point_b or rect.

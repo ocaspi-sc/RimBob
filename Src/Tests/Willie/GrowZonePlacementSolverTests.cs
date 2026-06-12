@@ -51,7 +51,7 @@ public sealed class GrowZonePlacementSolverTests
     }
 
     [Fact]
-    public async Task SolveAsync_RejectsWildPlantCells()
+    public async Task SolveAsync_AllowsWildPlantCells()
     {
         ColonyState state = StateWithTerrain(8, 8, (x, z) => x is >= 4 and <= 5 && z is >= 1 and <= 2 ? "SoilRich" : "Soil");
         state.Plants.Update(new PlantRegistry([
@@ -63,7 +63,7 @@ public sealed class GrowZonePlacementSolverTests
         result.Options.Should().NotBeEmpty();
         result.Options[0].BlueprintGroup.Assets
             .Select(asset => (asset.Cell.X, asset.Cell.Z))
-            .Should().NotContain((4, 1));
+            .Should().BeEquivalentTo([(4, 1), (5, 1), (4, 2), (5, 2)]);
     }
 
     [Fact]
@@ -77,6 +77,26 @@ public sealed class GrowZonePlacementSolverTests
         result.Options[0].BlueprintGroup.Assets
             .Select(asset => (asset.Cell.X, asset.Cell.Z))
             .Should().BeEquivalentTo([(4, 4), (5, 4), (4, 5), (5, 5)]);
+    }
+
+    [Fact]
+    public async Task SolveAsync_WhenStockpileRequest_UsesStockpileCapableTerrain()
+    {
+        ColonyState state = StateWithTerrain(6, 6, (_, _) => "Sand");
+
+        PlacementResult result = await new GrowZonePlacementSolver().SolveAsync(StockpileRequest(4), Briefing(), state);
+
+        result.Options.Should().NotBeEmpty();
+        AdviceOption option = result.Options[0];
+        option.Id.Should().StartWith("zone_stockpile_");
+        option.Summary.Should().Contain("stockpile zone");
+        option.TradeoffNote.Should().Contain("filter Foods");
+        option.TradeoffNote.Should().NotContain("avg fertility");
+        option.BlueprintGroup.Assets.Should().OnlyContain(asset =>
+            asset.Role == "zone_cell" &&
+            asset.DefName == "Foods");
+        option.BlueprintGroup.Assets.Should().HaveCount(4);
+        result.ApplyReady.Should().Be(PlacementReadiness.Ready);
     }
 
     [Fact]
@@ -141,6 +161,17 @@ public sealed class GrowZonePlacementSolverTests
             Priority: Priority.High,
             RequestedFrom: "Willie");
 
+    private static ZoneRequest StockpileRequest(int tiles) =>
+        new(
+            Request: $"{tiles} food stockpile tiles near storage",
+            Reason: "food needs reachable storage",
+            ZoneClass: ZoneClass.Stockpile,
+            TileCount: tiles,
+            Adjacency: [new AdjacencyHint(AdjacencyRelation.Near, "storage")],
+            AllowedItemCategories: ["Foods"],
+            Priority: Priority.High,
+            RequestedFrom: "Willie");
+
     private static ColonyState StateWithTerrain(
         int width,
         int height,
@@ -191,7 +222,7 @@ public sealed class GrowZonePlacementSolverTests
                 string def = terrainAt(x, z);
                 TerrainDefRecord record = defs[def];
                 counts[def] = counts.TryGetValue(def, out int current) ? current + 1 : 1;
-                cells.Add(new TerrainCellRecord(x, z, def, record.Fertility, record.SupportsGrowing));
+                cells.Add(new TerrainCellRecord(x, z, def, record.Fertility, record.SupportsGrowing, record.SupportsStockpile));
             }
         }
 

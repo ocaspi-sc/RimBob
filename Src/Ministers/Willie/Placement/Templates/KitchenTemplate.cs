@@ -23,7 +23,7 @@ public sealed class KitchenTemplate : IRoomTemplate
         for (int stove = 0; stove < stoves; stove++)
         {
             int x = 1 + stove * 3;
-            fixtures.Add(new TemplateAsset("stove", "FueledStove", "Steel", new MapCell(x, 2), 1));
+            fixtures.Add(new TemplateAsset("stove", "FueledStove", null, new MapCell(x, 2), 1));
         }
 
         return RoomShellBuilder.Build(interior, door, "Concrete", null, fixtures);

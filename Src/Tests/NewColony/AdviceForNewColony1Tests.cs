@@ -84,8 +84,9 @@ public sealed class AdviceForNewColony1Tests
             .Should().Contain(action =>
                 action.Kind == AdviceActionKind.SetStockpileZone &&
                 action.Owner == "Willie");
-        WillieBuildingRequests(scenario.FoodDecision).Should().Contain(request =>
-            request.TargetClass == BuildingClass.Stockpile &&
+        WillieZoneRequests(scenario.FoodDecision).Should().Contain(request =>
+            request.ZoneClass == ZoneClass.Stockpile &&
+            request.AllowedItemCategories!.Contains("Foods") &&
             request.RequestedFrom == "Willie");
     }
 
@@ -341,6 +342,13 @@ public sealed class AdviceForNewColony1Tests
         decisions
             .SelectMany(decision => decision.Flags)
             .SelectMany(flag => flag.BuildingRequests ?? [])
+            .Where(request => string.Equals(request.RequestedFrom, "Willie", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+    private static IReadOnlyList<ZoneRequest> WillieZoneRequests(params ProjectedRuleRun[] decisions) =>
+        decisions
+            .SelectMany(decision => decision.Flags)
+            .SelectMany(flag => flag.ZoneRequests ?? [])
             .Where(request => string.Equals(request.RequestedFrom, "Willie", StringComparison.OrdinalIgnoreCase))
             .ToList();
 

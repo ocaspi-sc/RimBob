@@ -291,10 +291,22 @@ public static class MinisterRuleTableEvaluator
             new(NormalizeKeyText(request.ItemDef));
     }
 
-    private readonly record struct ZoneRequestKey(ZoneClass ZoneClass, string? PlantDef, int? TileCount, string? RequestedFrom)
+    private readonly record struct ZoneRequestKey(
+        ZoneClass ZoneClass,
+        string? PlantDef,
+        int? TileCount,
+        string? AllowedItemDefs,
+        string? AllowedItemCategories,
+        string? RequestedFrom)
     {
         public static ZoneRequestKey For(ZoneRequest request) =>
-            new(request.ZoneClass, NormalizeKeyText(request.PlantDef), request.TileCount, NormalizeKeyText(request.RequestedFrom));
+            new(
+                request.ZoneClass,
+                NormalizeKeyText(request.PlantDef),
+                request.TileCount,
+                NormalizeKeyList(request.AllowedItemDefs),
+                NormalizeKeyList(request.AllowedItemCategories),
+                NormalizeKeyText(request.RequestedFrom));
     }
 
     private readonly record struct AttentionRequestKey(string Request, string? RequestedFrom)
@@ -305,4 +317,14 @@ public static class MinisterRuleTableEvaluator
 
     private static string? NormalizeKeyText(string? value) =>
         value is null ? null : value.ToUpperInvariant();
+
+    private static string? NormalizeKeyList(IReadOnlyList<string>? values) =>
+        values is null
+            ? null
+            : string.Join(
+                ",",
+                values
+                    .Where(value => !string.IsNullOrWhiteSpace(value))
+                    .Select(value => value.Trim().ToUpperInvariant())
+                    .Order(StringComparer.Ordinal));
 }

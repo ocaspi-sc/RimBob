@@ -31,7 +31,7 @@ treat the previous UI as reference only.
   advice actions, each requiring an explicit player click. Current allowlisted
   controls are safe food-stack unforbid, validated harvest designation,
   validated low-risk hunt designation, the single-workbench simple-meal bill
-  upsert, Willie blueprint-group placement, and Willie growing-zone creation.
+  upsert, Willie blueprint-group placement, Willie growing-zone creation, and Willie food-stockpile zone creation.
 - Manual Run buttons may trigger RimBob re-evaluation, never RimWorld writes.
   Assisted Apply controls are separate from Run controls.
 - Localhost-only: Host binds loopback and serves the dashboard plus `/api/*`.
@@ -233,9 +233,7 @@ SYSTEM owns:
 - LLM usage placeholders.
 - RAG health and corpus/cache placeholders.
 - Endpoint and data coverage markers.
-- RIMAPI integration snapshot: cached upstream endpoint denominator, active
-  reads, represented client methods, deferred write stubs, and missing
-  high-priority endpoints.
+- RIMAPI integration snapshot: cached upstream endpoint denominator, active reads, represented client methods, player-click Assisted Apply writes, and missing high-priority endpoints.
 - Colony state snapshot metadata: latest curated snapshot path, capture time,
   age, load/save errors, and whether current state is live or restored/stale.
 - Test inventory metadata: declared xUnit `[Fact]` / `[Theory]` counts grouped
@@ -497,10 +495,7 @@ declared xUnit test methods by source category so the dashboard can answer
 The same health payload may expose a RIMAPI integration snapshot for SYSTEM.
 This is coverage of upstream RimWorld mod endpoints, separate from Host
 `/api/*` coverage. It is a declared inventory of current RimBob wiring, not a
-live-discovered upstream truth source. It should distinguish active reads,
-represented-but-not-refreshed client methods, deferred write stubs, and missing
-high-priority endpoint groups, and should be updated when `RimApiClient` or
-`RefreshAllAsync` wiring changes.
+live-discovered upstream truth source. It should distinguish active reads, represented-but-not-refreshed client methods, player-click Assisted Apply writes, and missing high-priority endpoint groups, and should be updated when `RimApiClient` or `RefreshAllAsync` wiring changes.
 
 ### Manual Triggers
 
@@ -512,7 +507,7 @@ Manual triggers are RimBob evaluation controls, not game controls:
 - Minister `Run Rules`: refresh live state, then run only the selected wired minister's deterministic rules path through `POST /api/ministers/{minister}/trigger/rules`. This mode must not call an LLM; if rules return an escalation, the trace records the escalation reason and stops before provider work.
 - Minister `Run LLM`: refresh live state, then run only the selected wired minister's user-confirmed LLM path through `POST /api/ministers/{minister}/trigger/llm`. The button also confirms a pending rule escalation surfaced by the Rules/Advice callout. This button is disabled for scopes without an LLM path, such as Willie until a construction LLM path is implemented.
 - Willie-owned `building_request`s are request follow-ups, not separate operator chores: when a run publishes a flag containing a Willie `building_request`, the Host immediately wakes Willie in rules-only `FlagFired` mode so the Placement Solver can compute options without waiting for the Willie workspace `Run Rules` button.
-- Willie-owned `zone_request`s use the same follow-up wakeup, but they resolve through a zone-specific grow-zone solver rather than the building Placement Solver. The current result is a zone board row with awaiting/no-fit/error/options status and Willie advice that names the outcome; when a rectangular option exists, Apply uses `create_growing_zone` and revalidates live terrain/occupancy before writing.
+- Willie-owned `zone_request`s use the same follow-up wakeup, but they resolve through a zone-specific solver rather than the building Placement Solver. The current result is a zone board row with awaiting/no-fit/error/options status and Willie advice that names the outcome; when a rectangular option exists, Apply uses `create_growing_zone` or `create_stockpile_zone` and revalidates live terrain/occupancy before writing.
 - Do not keep legacy trigger aliases unless a current dashboard or script consumer requires them.
 
 Expected operational failures should be translated before they reach the
@@ -639,7 +634,7 @@ Willie's Solver view is a latest-only diagnostic surface for the Placement Solve
 
 Willie's Requests view is a read-only master-detail diagnostic surface for inbound building requests aimed at Willie. It reads `/api/ministers/willie/solver/requests`, lists the current building-request board in a sidebar, and shows the selected request's full `BuildingRequest` fields plus the latest per-request Placement Solver outcome. Requests with validated options render read-only footprint cards; no-fit, error, and offline outcomes show the concrete solver message; unsolved requests show an awaiting-solve state. Apply stays in Build Queue only.
 
-The Requests view also reads `/api/ministers/willie/zone-requests` and shows Willie-routed `ZoneRequest` rows above the building-request board. Zone rows render crop, tile count, adjacency, terrain need, source minister, and the latest zone-solver status. When the solver finds candidate cells, the detail pane renders diagnostic option cards with plant def, footprint cells, score/readiness, and an explicit note that Apply lives on the Willie Advice action. Zone Apply appears only when Willie emits a concrete validated `create_growing_zone` option.
+The Requests view also reads `/api/ministers/willie/zone-requests` and shows Willie-routed `ZoneRequest` rows above the building-request board. Zone rows render zone class, crop or item filter, tile count, adjacency, terrain need, source minister, and the latest zone-solver status. When the solver finds candidate cells, the detail pane renders diagnostic option cards with footprint cells, score/readiness, and an explicit note that Apply lives on the Willie Advice action. Zone Apply appears only when Willie emits a concrete validated `create_growing_zone` or `create_stockpile_zone` option.
 
 Queued and running rows are meaningful states, not empty states. `output: null` means a request has been seen but no solve job has been queued yet; once a job exists, the row should carry an output object whose status names the lifecycle state.
 
@@ -761,12 +756,11 @@ metrics, and endpoint coverage.
 - Feedback/Pushback UI returns only when the feedback lifecycle is actively
   wired.
 - Autonomy controls return only with M7+ autonomy work.
-- Broad RIMAPI write/control surfaces remain deferred; Assisted Apply is the
-  only MVP exception and is limited to backend-allowlisted advice actions.
+- Broad RIMAPI write/control surfaces remain deferred; Assisted Apply is the only MVP exception and is limited to backend-allowlisted advice actions.
 - Hard-case icon variants such as stuff colors, crop growth stages, styles,
   rotations, motes/projectiles, and per-instance art remain deferred.
 - Hard-case action controls such as broad bill editing, schedules, pawn
-  assignment, zones, medical/prisoner operations, and combat commands remain out
+  assignment, arbitrary zone edits/deletes, medical/prisoner operations, and combat commands remain out
   of scope for MVP.
 
 ---

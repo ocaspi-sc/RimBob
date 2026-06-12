@@ -471,7 +471,8 @@ public static class MapAggregateMapper
                     Z: z,
                     TerrainDef: def,
                     Fertility: record?.Fertility ?? 0f,
-                    SupportsGrowing: record?.SupportsGrowing ?? false));
+                    SupportsGrowing: record?.SupportsGrowing ?? false,
+                    SupportsStockpile: record?.SupportsStockpile ?? false));
             }
 
             totalCells += runLength;

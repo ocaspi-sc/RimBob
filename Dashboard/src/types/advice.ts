@@ -10,7 +10,8 @@ export type AdviceApplyKind =
   | 'unforbid_things'
   | 'upsert_production_bill'
   | 'place_blueprint_group'
-  | 'create_growing_zone';
+  | 'create_growing_zone'
+  | 'create_stockpile_zone';
 
 export interface AdviceApplyRect {
   x1: number;
@@ -120,13 +121,24 @@ export interface CreateGrowingZoneApply extends AdviceActionApplyBase {
   target_count: number;
 }
 
+export interface CreateStockpileZoneApply extends AdviceActionApplyBase {
+  kind: 'create_stockpile_zone';
+  rect: AdviceApplyRect;
+  target_count: number;
+  name?: string | null;
+  priority?: number | null;
+  allowed_item_defs?: string[] | null;
+  allowed_item_categories?: string[] | null;
+}
+
 export type AdviceActionApply =
   | MarkHarvestAreaApply
   | MarkHuntAreaApply
   | UnforbidThingsApply
   | UpsertProductionBillApply
   | PlaceBlueprintGroupApply
-  | CreateGrowingZoneApply;
+  | CreateGrowingZoneApply
+  | CreateStockpileZoneApply;
 
 export interface AdviceAction {
   kind: string;
@@ -201,7 +213,7 @@ export type AdjacencyRelation = 'near' | 'inside' | 'connected_to' | 'away_from'
 export type TemperatureBand = 'freezing' | 'cold' | 'room' | 'sterile_warm' | string;
 export type Urgency = 'when_convenient' | 'soon' | 'before_deadline' | 'blocking_now' | string;
 export type DeadlineKind = 'by_day' | 'by_season' | 'before_event' | string;
-export type ZoneClass = 'growing' | string;
+export type ZoneClass = 'growing' | 'stockpile' | string;
 
 export interface CapacityNeed {
   measure: CapacityMeasure;
@@ -285,6 +297,8 @@ export interface ZoneRequest {
   tile_count?: number | null;
   adjacency?: AdjacencyHint[] | null;
   terrain?: TerrainNeed | null;
+  allowed_item_defs?: string[] | null;
+  allowed_item_categories?: string[] | null;
   urgency?: Urgency | null;
   deadline?: Deadline | null;
   priority?: Priority | null;

@@ -81,7 +81,8 @@ public static class WillieAnchorInventoryDerivation
                 Centroid: area.Centroid,
                 ContainedBuildingIds: [])
             {
-                Bounds = bounds
+                Bounds = bounds,
+                Cells = area.Cells
             });
         }
 

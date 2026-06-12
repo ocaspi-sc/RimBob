@@ -77,4 +77,34 @@ public sealed class AdviceActionApplySerializationTests
         apply.Rect.Area.Should().Be(36);
         apply.PlantDef.Should().Be("Plant_Rice");
     }
+
+    [Fact]
+    public void CreateStockpileZoneApply_SerializesAndRoundTrips()
+    {
+        AdviceAction action = new(
+            AdviceActionKind.SetStockpileZone,
+            "Create the food stockpile zone.",
+            Apply: new CreateStockpileZoneApply(
+                Label: "Stockpile zone 10,20",
+                TargetSummary: "12-tile stockpile zone for Foods at 10,20-13,22.",
+                MapId: 1,
+                Rect: new MapRect(10, 20, 13, 22),
+                TargetCount: 12,
+                Name: "Food stockpile",
+                Priority: 0,
+                AllowedItemCategories: ["Foods"]));
+
+        string json = JsonSerializer.Serialize(action, JsonOptions);
+        AdviceAction? roundTripped = JsonSerializer.Deserialize<AdviceAction>(json, JsonOptions);
+
+        json.Should().Contain("\"kind\":\"set_stockpile_zone\"");
+        json.Should().Contain("\"kind\":\"create_stockpile_zone\"");
+        json.Should().Contain("\"allowed_item_categories\":[\"Foods\"]");
+        json.Should().Contain("\"target_count\":12");
+        roundTripped.Should().NotBeNull();
+        CreateStockpileZoneApply apply = roundTripped!.Apply.Should().BeOfType<CreateStockpileZoneApply>().Subject;
+        apply.Kind.Should().Be(AdviceApplyKind.CreateStockpileZone);
+        apply.Rect.Area.Should().Be(12);
+        apply.AllowedItemCategories.Should().ContainSingle().Which.Should().Be("Foods");
+    }
 }

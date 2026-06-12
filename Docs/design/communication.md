@@ -69,8 +69,8 @@ Request discipline:
 - Keep player-facing actions on advice `actions[]`; do not duplicate them as
   CoS requests unless they also need cross-minister routing.
 - Fill `requested_from` when the owner is known from the ownership map.
-- Use `zone_requests[]` for real map-zone/designation dependencies, including grow-zone placement requests. A grow-zone request is not a building request.
-- A Willie-routed grow-zone request asks Willie for spatial options or a no-fit reason; Chef's outbound request is not itself a player Apply action. Apply appears only later if Willie emits a concrete `create_growing_zone` advice action after solver placement.
+- Use `zone_requests[]` for real map-zone/designation dependencies, including grow-zone and stockpile-zone placement requests. These are not building requests.
+- A Willie-routed zone request asks Willie for spatial options or a no-fit reason; Chef's outbound request is not itself a player Apply action. Apply appears only later if Willie emits a concrete `create_growing_zone` or `create_stockpile_zone` advice action after solver placement.
 - Use `Attention` only when the dependency is real but no more specific request kind fits yet.
 - Keep `request` and `reason` compact enough to render in a trace table.
 

@@ -241,6 +241,8 @@ function ZoneRequestDetail({ row }: { row: WillieZoneRequestRow }) {
         <Field label="reason" value={<IconizedText maxIcons={2} text={request.reason} />} />
         <Field label="zone_class" value={formatLabel(request.zone_class)} />
         <Field label="plant_def" value={request.plant_def ?? '-'} />
+        <Field label="allowed_item_categories" value={formatAllowedItemList(request.allowed_item_categories, formatLabel)} />
+        <Field label="allowed_item_defs" value={formatAllowedItemList(request.allowed_item_defs)} />
         <Field label="tile_count" value={request.tile_count ?? '-'} />
         <Field label="adjacency" value={formatAdjacency(request.adjacency)} />
         <Field label="terrain" value={formatTerrain(request.terrain)} />
@@ -609,6 +611,8 @@ function zoneRequestKey(request: ZoneRequest): string {
   return [
     request.zone_class,
     request.plant_def,
+    keyListPart(request.allowed_item_categories),
+    keyListPart(request.allowed_item_defs),
     request.tile_count === null || request.tile_count === undefined ? null : String(request.tile_count),
     request.request,
   ].map(keyPart).join('|');
@@ -616,6 +620,15 @@ function zoneRequestKey(request: ZoneRequest): string {
 
 function keyPart(value: string | null | undefined): string {
   return value && value.trim() ? value.trim().toLowerCase() : '-';
+}
+
+function keyListPart(values: string[] | null | undefined): string {
+  if (!values || values.length === 0) return '-';
+  const parts = values
+    .map(value => keyPart(value))
+    .filter(value => value !== '-')
+    .sort();
+  return parts.length === 0 ? '-' : parts.join(',');
 }
 
 function priorityTone(priority: string | null | undefined): PillTone {
@@ -654,6 +667,18 @@ function formatTerrain(terrain: ZoneRequest['terrain']): string {
       : null,
   ].filter((value): value is string => Boolean(value));
   return parts.join(', ');
+}
+
+function formatAllowedItemList(
+  values: string[] | null | undefined,
+  formatter: (value: string) => string = value => value,
+): string {
+  if (!values || values.length === 0) return '-';
+  const formatted = values
+    .map(value => value.trim())
+    .filter(value => value.length > 0)
+    .map(formatter);
+  return formatted.length === 0 ? '-' : formatted.join(', ');
 }
 
 function formatPower(power: BuildingRequest['power']): string {

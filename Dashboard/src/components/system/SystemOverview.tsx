@@ -464,10 +464,10 @@ export function SystemOverview({
               <MetricCard
                 label={<FieldLabel iconKey="client">Represented in client</FieldLabel>}
                 value={`${rimapi.represented_endpoint_count} / ${rimapi.cached_upstream_endpoint_total}`}
-                note={`${rimapi.represented_endpoint_percent}% including stubs`}
+                note={`${rimapi.represented_endpoint_percent}% including assisted writes`}
               />
               <MetricCard label={<FieldLabel iconKey="client_methods">Client methods</FieldLabel>} value={rimapi.client_method_count} />
-              <MetricCard label={<FieldLabel iconKey="deferred_writes">Deferred writes</FieldLabel>} value={rimapi.deferred_write_stub_count} tone="warn" />
+              <MetricCard label={<FieldLabel iconKey="deferred_writes">Assisted writes</FieldLabel>} value={rimapi.assisted_write_count} tone="ok" />
             </div>
             <div className="stacked-lines rimapi-source-lines">
               <InfoLine label="Basis" value={rimapi.coverage_basis} />
@@ -476,7 +476,7 @@ export function SystemOverview({
             </div>
             <RimApiCoverageTable title="Active reads" rows={rimapi.active_reads} />
             <RimApiCoverageTable title="Represented, not refreshed" rows={rimapi.represented_not_refreshed} />
-            <RimApiCoverageTable title="Deferred write stubs" rows={rimapi.deferred_writes} />
+            <RimApiCoverageTable title="Assisted writes" rows={rimapi.assisted_writes} />
             <RimApiCoverageTable title="Missing priorities" rows={rimapi.missing_priorities} />
           </div>
         )}

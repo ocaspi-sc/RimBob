@@ -224,9 +224,9 @@ public sealed class AggregateMapperTests
         snapshot.CellCountsByDef.Should().ContainKey("Soil").WhoseValue.Should().Be(2);
         snapshot.CellCountsByDef.Should().ContainKey("SoilRich").WhoseValue.Should().Be(2);
         snapshot.Cells.Should().HaveCount(6);
-        snapshot.Cells[0].Should().Be(new TerrainCellRecord(0, 0, "Soil", 1f, true));
-        snapshot.Cells[2].Should().Be(new TerrainCellRecord(2, 0, "SoilRich", 1.4f, true));
-        snapshot.Cells[5].Should().Be(new TerrainCellRecord(2, 1, "Sand", 0.1f, false));
+        snapshot.Cells[0].Should().Be(new TerrainCellRecord(0, 0, "Soil", 1f, true, true));
+        snapshot.Cells[2].Should().Be(new TerrainCellRecord(2, 0, "SoilRich", 1.4f, true, true));
+        snapshot.Cells[5].Should().Be(new TerrainCellRecord(2, 1, "Sand", 0.1f, false, true));
         snapshot.HasCoordinateGrid.Should().BeTrue();
     }
 }

@@ -889,25 +889,38 @@ public static class MinisterEndpoints
                 Request: row.Inbound.Request,
                 SourceMinister: row.Inbound.SourceMinister,
                 Status: status,
-                Message: MessageFor(row.Outcome),
+                Message: MessageFor(row.Inbound.Request, row.Outcome),
                 GameTick: row.Outcome?.GameTick,
                 CapturedAt: row.Outcome?.CapturedAt,
                 Output: row.Outcome?.Output,
                 Options: options);
         }
 
-        private static string MessageFor(WillieZoneSolverSnapshot? outcome)
+        private static string MessageFor(ZoneRequest request, WillieZoneSolverSnapshot? outcome)
         {
+            string solverLabel = request.ZoneClass == ZoneClass.Stockpile
+                ? "Stockpile-zone solver"
+                : request.ZoneClass == ZoneClass.Growing
+                    ? "Grow-zone solver"
+                    : "Zone solver";
             if (outcome is null)
-                return "Zone request recorded; no grow-zone placement solve has started yet.";
+                return $"Zone request recorded; no {FormatZoneClass(request.ZoneClass)} placement solve has started yet.";
             if (string.Equals(outcome.Status, "options", StringComparison.OrdinalIgnoreCase))
-                return $"Grow-zone solver produced {outcome.Options.Count} coordinate option(s). Apply appears on Willie advice when a rectangular option is current.";
+                return $"{solverLabel} produced {outcome.Options.Count} coordinate option(s). Apply appears on Willie advice when a rectangular option is current.";
             if (string.Equals(outcome.Status, "no_fit", StringComparison.OrdinalIgnoreCase))
-                return $"Grow-zone solver found no fit: {outcome.NoFit ?? "unknown"}.";
+                return $"{solverLabel} found no fit: {outcome.NoFit ?? "unknown"}.";
             if (string.Equals(outcome.Status, "error", StringComparison.OrdinalIgnoreCase))
-                return $"Grow-zone solver failed: {outcome.Output.ErrorType ?? "unknown"}.";
-            return $"Grow-zone solver status: {outcome.Status}.";
+                return $"{solverLabel} failed: {outcome.Output.ErrorType ?? "unknown"}.";
+            return $"{solverLabel} status: {outcome.Status}.";
         }
+
+        private static string FormatZoneClass(ZoneClass zoneClass) =>
+            zoneClass switch
+            {
+                ZoneClass.Stockpile => "stockpile-zone",
+                ZoneClass.Growing => "grow-zone",
+                _ => "zone"
+            };
     }
 
     private sealed record FoodHuntRiskThresholds(

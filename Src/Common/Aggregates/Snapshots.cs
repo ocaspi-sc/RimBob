@@ -135,6 +135,11 @@ public sealed record MapZoneRecord(
         string.Equals(Type, "GrowingZone", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(Type, "Zone_Growing", StringComparison.OrdinalIgnoreCase) ||
         Type.Contains("Growing", StringComparison.OrdinalIgnoreCase);
+
+    public bool IsStockpile =>
+        string.Equals(Type, "StockpileZone", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(Type, "Zone_Stockpile", StringComparison.OrdinalIgnoreCase) ||
+        Type.Contains("Stockpile", StringComparison.OrdinalIgnoreCase);
 }
 
 public sealed record MapAreaRegistry(IReadOnlyList<MapArea> Areas)
@@ -330,7 +335,8 @@ public sealed record TerrainCellRecord(
     int Z,
     string TerrainDef,
     float Fertility,
-    bool SupportsGrowing);
+    bool SupportsGrowing,
+    bool SupportsStockpile = false);
 
 public sealed record TerrainDefRecord(
     string Def,
@@ -342,6 +348,13 @@ public sealed record TerrainDefRecord(
     public bool SupportsGrowing =>
         Fertility > 0f &&
         Affordances.Any(affordance => affordance.Equals("GrowSoil", StringComparison.OrdinalIgnoreCase));
+
+    public bool SupportsStockpile =>
+        Affordances.Any(affordance =>
+            affordance.Equals("Walkable", StringComparison.OrdinalIgnoreCase) ||
+            affordance.Equals("Light", StringComparison.OrdinalIgnoreCase) ||
+            affordance.Equals("Medium", StringComparison.OrdinalIgnoreCase) ||
+            affordance.Equals("Heavy", StringComparison.OrdinalIgnoreCase));
 }
 
 public sealed record StoredResourceRegistry(

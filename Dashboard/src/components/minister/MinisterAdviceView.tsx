@@ -505,7 +505,7 @@ function buildingRequestRow(request: BuildingRequest): FlagRequestRow {
 function zoneRequestRow(request: ZoneRequest): FlagRequestRow {
   return {
     detail: formatZoneDetail(request),
-    iconKey: request.plant_def ?? 'zone_requests',
+    iconKey: zoneRequestIconKey(request),
     owner: request.requested_from,
     priority: request.priority,
     reason: request.reason,
@@ -590,10 +590,39 @@ function formatZoneDetail(request: ZoneRequest): ReactNode[] {
   return detailList(
     request.zone_class ? `Zone: ${formatLabel(request.zone_class)}` : null,
     request.plant_def ? <ResourceQuantity defName={request.plant_def} key="plant" quantity={request.tile_count} /> : formatTileCount(request.tile_count),
+    formatAllowedItems(request),
     formatAdjacency(request.adjacency),
     formatTerrainNeed(request.terrain),
     request.urgency ? `Urgency: ${formatLabel(request.urgency)}` : null,
     formatDeadline(request.deadline));
+}
+
+function zoneRequestIconKey(request: ZoneRequest): string {
+  if (request.plant_def) return request.plant_def;
+  return request.zone_class === 'stockpile' ? 'stockpile' : 'zone_requests';
+}
+
+function formatAllowedItems(request: ZoneRequest): string | null {
+  const categories = formatAllowedItemList(request.allowed_item_categories, formatLabel);
+  const defs = formatAllowedItemList(request.allowed_item_defs);
+  const parts = [
+    categories ? `Categories: ${categories}` : null,
+    defs ? `Defs: ${defs}` : null,
+  ].filter((value): value is string => Boolean(value));
+
+  return parts.length === 0 ? null : `Filter: ${parts.join('; ')}`;
+}
+
+function formatAllowedItemList(
+  values: string[] | null | undefined,
+  formatter: (value: string) => string = value => value,
+): string | null {
+  if (!values || values.length === 0) return null;
+  const formatted = values
+    .map(value => value.trim())
+    .filter(value => value.length > 0)
+    .map(formatter);
+  return formatted.length === 0 ? null : formatted.join(', ');
 }
 
 function formatTileCount(value: number | null | undefined): string | null {

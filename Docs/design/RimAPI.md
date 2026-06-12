@@ -131,6 +131,8 @@ Categories below are exhaustive at the controller level (167 endpoints total). W
 >
 > **Verified shape.** `/map/terrain?map_id=...` returns map dimensions, a terrain palette, and an RLE grid. `/def/all` terrain definitions include fertility and affordances; Food uses those as compact crop-fertility context, not as an exact placement solver.
 
+> **RimBob Assisted Apply shape.** Willie uses `/map/zone/growing` only for solver-produced rectangular grow-zone options, then confirms the returned zone id through `/map/zones`. Willie uses `/map/zone/stockpile` only for Chef food-stockpile requests in this slice, posting `map_id`, `point_a`, `point_b`, a display name, optional priority, and the `Foods` item-category filter; success is recorded only after `/map/zones` readback includes the returned stockpile id and exact requested rectangle. The broader stockpile update/delete endpoints remain outside Assisted Apply.
+
 > **Fork shape.** `/map/reach`, `/map/region-at`, `/map/path-cost`, and
 > `/map/path-cost/batch` expose default in-map reachability, region ids, and walk-cost
 > scoring for Willie placement ranking. `reach` wraps

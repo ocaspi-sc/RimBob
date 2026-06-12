@@ -195,6 +195,17 @@ public sealed record GrowingZoneCreateDto(
     [property: JsonPropertyName("plant_def_name")] string? PlantDefName
 );
 
+public sealed record StockpileZoneCreateDto(
+    [property: JsonPropertyName("zone_id")]
+    [property: JsonConverter(typeof(FlexibleStringIdJsonConverter))]
+    string? ZoneId,
+    [property: JsonPropertyName("name")] string? Name,
+    [property: JsonPropertyName("cells_count")] int CellsCount,
+    [property: JsonPropertyName("priority")] int? Priority,
+    [property: JsonPropertyName("success")] bool Success,
+    [property: JsonPropertyName("message")] string? Message
+);
+
 // ── GET /map/zones?map_id ─────────────────────────────────────────────────────
 // Zone rows expose labels, types, and cell counts; stockpile contents come from stored resources.
 public record ZoneDto(

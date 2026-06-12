@@ -66,9 +66,10 @@ public static class SystemEndpoints
         new("POST", "/api/v1/builder/blueprint-group/validate", "solver_client", "Willie Placement Solver", "Dry-run group blueprint validation wrapped for Solver1 options and Assisted Apply preflight.")
     ];
 
-    private static readonly RimApiCoverageRow[] DeferredWriteStubs =
+    private static readonly RimApiCoverageRow[] AssistedWrites =
     [
-        new("POST", "/api/v1/map/zone/growing", "deferred_write_stub", "Chef Auto", "Stub exists; body shape unverified and not called in suggest-only MVP."),
+        new("POST", "/api/v1/map/zone/growing", "assisted_write", "Willie Assisted Apply", "Creates player-confirmed growing zones from Willie solver-authored rectangles after live validation and returned-id readback."),
+        new("POST", "/api/v1/map/zone/stockpile", "assisted_write", "Willie Assisted Apply", "Creates player-confirmed filtered stockpile zones from Willie solver-authored rectangles after live validation and returned-id readback."),
         new("POST", "/api/v1/order/designate/area", "assisted_write", "Chef Assisted Apply", "Used for player-confirmed harvest designations over bounded rects."),
         new("POST", "/api/v1/order/designate/hunt", "assisted_write", "Chef Assisted Apply", "Used for player-confirmed hunt designations over exact wild animal ids."),
         new("POST", "/api/v1/order/unforbid", "assisted_write", "Chef Assisted Apply", "Used for player-confirmed safe item-id unforbid over explicit haulable thing ids; destructive forbidden endpoints are not used."),
@@ -419,7 +420,7 @@ public static class SystemEndpoints
     private static object RimApiCoverageMetadata()
     {
         int clientMethodCount = ActiveRimApiReads.Length + RepresentedButNotRefreshed.Length;
-        int representedEndpointCount = clientMethodCount + DeferredWriteStubs.Length;
+        int representedEndpointCount = clientMethodCount + AssistedWrites.Length;
 
         return new
         {
@@ -428,14 +429,14 @@ public static class SystemEndpoints
             cached_upstream_endpoint_total = UpstreamRimApiEndpointTotal,
             active_read_count = ActiveRimApiReads.Length,
             client_method_count = clientMethodCount,
-            deferred_write_stub_count = DeferredWriteStubs.Length,
+            assisted_write_count = AssistedWrites.Length,
             represented_endpoint_count = representedEndpointCount,
             active_read_percent = Percentage(ActiveRimApiReads.Length, UpstreamRimApiEndpointTotal),
             represented_endpoint_percent = Percentage(representedEndpointCount, UpstreamRimApiEndpointTotal),
             coverage_note = "This is not live-discovered from RIMAPI. Update it when RimApiClient or RefreshAllAsync wiring changes. MVP is suggest plus player-confirmed Assisted Apply; broad Auto/Labor writes remain deferred.",
             active_reads = RimApiRows(ActiveRimApiReads),
             represented_not_refreshed = RimApiRows(RepresentedButNotRefreshed),
-            deferred_writes = RimApiRows(DeferredWriteStubs),
+            assisted_writes = RimApiRows(AssistedWrites),
             missing_priorities = RimApiRows(MissingRimApiPriorities),
         };
     }

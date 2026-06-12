@@ -17,9 +17,11 @@ public interface IGrowZonePlacementSolver
 
 public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
 {
-    private const int DefaultTileCount = 36;
+    private const int DefaultGrowingTileCount = 36;
+    private const int DefaultStockpileTileCount = 12;
     private const int MaxTileCount = 120;
     private const int MaxOptionCount = 3;
+    private const string StockpileZoneDef = "Foods";
 
     public Task<PlacementResult> SolveAsync(
         ZoneRequest request,
@@ -31,7 +33,7 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
 
         List<string> notes = [];
         List<PlacementDraftTrace> traces = [];
-        if (request.ZoneClass != ZoneClass.Growing)
+        if (!IsSupportedZoneClass(request.ZoneClass))
         {
             return Task.FromResult(NoFit(
                 NoFitReason.UnsupportedZoneClass,
@@ -57,7 +59,7 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
         IReadOnlyList<ResolvedAnchor> anchors = ResolveZoneAnchors(request, briefing, colonyState, searchContext);
         PlacementEvidence.FreeRectScanResult freeSpace = PlacementEvidence.BuildFreeRects(searchBounds, blockedCells.Contains);
         if (freeSpace.ScanTruncated)
-            notes.Add("grow-zone free-space scan exceeded the bounded scan budget");
+            notes.Add($"{ZoneLabel(request)} free-space scan exceeded the bounded scan budget");
 
         IReadOnlyList<ZoneCandidate> candidates = BuildCandidatesFromFreeRects(
             request,
@@ -68,16 +70,16 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
 
         if (candidates.Count == 0)
         {
-            bool anyGrowable = terrain.Cells.Any(cell =>
+            bool anyEligible = terrain.Cells.Any(cell =>
                 CellSupportsTerrainNeed(request, cell) &&
                 Inside(cell.X, cell.Z, searchBounds));
-            bool anyUnblockedGrowable = terrain.Cells.Any(cell =>
+            bool anyUnblockedEligible = terrain.Cells.Any(cell =>
                 CellSupportsTerrainNeed(request, cell) &&
                 Inside(cell.X, cell.Z, searchBounds) &&
                 !blockedCells.Contains(new MapCell(cell.X, cell.Z)));
-            NoFitReason reason = !anyGrowable
+            NoFitReason reason = !anyEligible
                 ? NoFitReason.NoGrowableCells
-                : !anyUnblockedGrowable
+                : !anyUnblockedEligible
                     ? NoFitReason.AllZoneCellsBlocked
                     : NoFitReason.NoZoneRectangle;
             return Task.FromResult(NoFit(
@@ -86,9 +88,9 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
                 notes,
                 reason switch
                 {
-                    NoFitReason.NoGrowableCells => "no growable terrain cells were available inside the search bounds",
-                    NoFitReason.AllZoneCellsBlocked => "all growable cells inside the search bounds were blocked by existing zones or occupancy",
-                    _ => "no compact rectangle satisfied growable, unoccupied, unzoned cells"
+                    NoFitReason.NoGrowableCells => $"no {ZoneTerrainLabel(request)} cells were available inside the search bounds",
+                    NoFitReason.AllZoneCellsBlocked => $"all {ZoneTerrainLabel(request)} cells inside the search bounds were blocked by existing zones or occupancy",
+                    _ => $"no compact rectangle satisfied {ZoneTerrainLabel(request)}, unoccupied, unzoned cells"
                 }));
         }
 
@@ -101,13 +103,16 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
             .ToList();
         return Task.FromResult(new PlacementResult(
             Options: options,
-            Trace: new PlacementTrace("grow_zone_placement_solver", traces, notes),
+            Trace: new PlacementTrace("zone_placement_solver", traces, notes),
             NoFit: null,
             Draftable: PlacementReadiness.Ready,
             PlacementValid: PlacementReadiness.Ready,
             MaterialsReady: PlacementReadiness.Ready,
             ApplyReady: PlacementReadiness.Ready));
     }
+
+    private static bool IsSupportedZoneClass(ZoneClass zoneClass) =>
+        zoneClass is ZoneClass.Growing or ZoneClass.Stockpile;
 
     private static SearchContext BuildSearchContext(
         TerrainSnapshot terrain,
@@ -135,15 +140,15 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
     {
         if (home is null)
         {
-            notes.Add("no Home area available; grow-zone search uses terrain bounds with map-center fallback");
+            notes.Add("no Home area available; zone search uses terrain bounds with map-center fallback");
             return null;
         }
 
         MapRect? bounds = home.Bounds is null ? null : Clamp(home.Bounds, terrainBounds);
         if (bounds is null)
-            notes.Add("Home area row did not include bounds; using Home centroid as the grow-zone anchor");
+            notes.Add("Home area row did not include bounds; using Home centroid as the zone anchor");
         else if (home.Cells.Count == 0)
-            notes.Add("Home area row did not include cells; using Home bounds center as the grow-zone anchor");
+            notes.Add("Home area row did not include cells; using Home bounds center as the zone anchor");
 
         MapPosition centroid = home.Centroid ?? (bounds is null ? CenterOf(terrainBounds) : CenterOf(bounds));
         return new WillieRoomAnchor(
@@ -184,7 +189,7 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
 
         int x1 = Math.Clamp(center.X - searchWidth / 2, terrainBounds.X1, terrainBounds.X2 - searchWidth + 1);
         int z1 = Math.Clamp(center.Z - searchHeight / 2, terrainBounds.Z1, terrainBounds.Z2 - searchHeight + 1);
-        notes.Add($"grow-zone search centered on Home anchor and capped at {searchWidth}x{searchHeight} cells by scan budget");
+        notes.Add($"zone search centered on Home anchor and capped at {searchWidth}x{searchHeight} cells by scan budget");
         return new MapRect(x1, z1, x1 + searchWidth - 1, z1 + searchHeight - 1);
     }
 
@@ -201,7 +206,7 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
                 cells.Add(new MapCell(cell.X, cell.Z));
         }
 
-        foreach (MapZoneRecord zone in colonyState.Zones.Value.Zones.Where(zone => zone.IsGrowing))
+        foreach (MapZoneRecord zone in colonyState.Zones.Value.Zones.Where(zone => zone.IsGrowing || zone.IsStockpile))
             AddCells(cells, zone.Cells, searchBounds);
         foreach (StockpileZone stockpile in colonyState.Stockpiles.Value.Zones)
         {
@@ -212,9 +217,7 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
             AddCell(cells, building.Position, searchBounds);
         foreach (RoomRecord room in colonyState.Rooms.Value.Rooms)
             AddCells(cells, room.Cells, searchBounds);
-        foreach (PlantRecord plant in colonyState.Plants.Value.Plants)
-            AddCell(cells, plant.Position, searchBounds);
-
+        // Wild plants are not solve-time blockers; RIMAPI remains the all-or-nothing authority at Apply.
         return cells;
     }
 
@@ -231,7 +234,9 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
     }
 
     private static bool CellSupportsTerrainNeed(ZoneRequest request, TerrainCellRecord cell) =>
-        request.Terrain?.MustSupportGrowing == false || cell.SupportsGrowing;
+        request.ZoneClass == ZoneClass.Stockpile
+            ? cell.SupportsStockpile
+            : request.Terrain?.MustSupportGrowing == false || cell.SupportsGrowing;
 
     private static IReadOnlyList<ResolvedAnchor> ResolveZoneAnchors(
         ZoneRequest request,
@@ -283,7 +288,7 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
         IReadOnlyList<FreeRect> freeRects,
         IReadOnlyList<ResolvedAnchor> anchors)
     {
-        int targetCount = Math.Clamp(request.TileCount ?? DefaultTileCount, 1, MaxTileCount);
+        int targetCount = Math.Clamp(request.TileCount ?? DefaultTileCountFor(request), 1, MaxTileCount);
         IReadOnlyList<(int Width, int Height)> dimensions = CandidateSizesForTarget(targetCount);
         List<ZoneCandidate> candidates = [];
 
@@ -427,7 +432,7 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
             MapId: mapId,
             Rect: rect,
             Cells: cells,
-            PlantDef: request.PlantDef ?? "Plant_Rice",
+            ZoneDef: ZoneAssetDef(request),
             TargetCount: targetCount,
             AverageFertility: averageFertility,
             NearestAnchor: nearestAnchor,
@@ -446,11 +451,20 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
         int nearestDistance,
         double preferredTerrainFraction)
     {
+        int width = rect.X2 - rect.X1 + 1;
+        int height = rect.Z2 - rect.Z1 + 1;
+        if (request.ZoneClass == ZoneClass.Stockpile)
+        {
+            double stockpileScore = (1d / (1d + Math.Abs(width - height))) * 3d;
+            stockpileScore += (1d / (1d + nearestDistance)) * 5d;
+            if (request.Terrain?.PreferredTerrainDefs is { Count: > 0 })
+                stockpileScore += preferredTerrainFraction;
+            return stockpileScore;
+        }
+
         double score = Math.Clamp(averageFertility / 1.4d, 0d, 1d) * 6d;
         double preferredFertility = request.Terrain?.PreferredFertility ?? 1.0d;
         score += Math.Clamp(averageFertility / Math.Max(0.01d, preferredFertility), 0d, 1d) * 2d;
-        int width = rect.X2 - rect.X1 + 1;
-        int height = rect.Z2 - rect.Z1 + 1;
         score += (1d / (1d + Math.Abs(width - height))) * 2d;
         score += (1d / (1d + nearestDistance)) * 3d;
         if (request.Terrain?.PreferredTerrainDefs is { Count: > 0 })
@@ -467,11 +481,21 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
         double preferredTerrainFraction)
     {
         List<MetricValue> metrics = [];
+        int width = rect.X2 - rect.X1 + 1;
+        int height = rect.Z2 - rect.Z1 + 1;
+        if (request.ZoneClass == ZoneClass.Stockpile)
+        {
+            AddMetric(metrics, "compactness", Math.Abs(width - height), "shape_delta", 1d / (1d + Math.Abs(width - height)), 3d, "lower");
+            AddMetric(metrics, "anchor_distance", nearestDistance, "cells", 1d / (1d + nearestDistance), 5d, "lower");
+            if (request.Terrain?.PreferredTerrainDefs is { Count: > 0 })
+                AddMetric(metrics, "preferred_terrain_defs", preferredTerrainFraction, "fraction", preferredTerrainFraction, 1d, "higher");
+
+            return metrics;
+        }
+
         AddMetric(metrics, "average_fertility", averageFertility, "fertility", Math.Clamp(averageFertility / 1.4d, 0d, 1d), 6d, "higher");
         double preferredFertility = request.Terrain?.PreferredFertility ?? 1.0d;
         AddMetric(metrics, "preferred_fertility", averageFertility, "fertility", Math.Clamp(averageFertility / Math.Max(0.01d, preferredFertility), 0d, 1d), 2d, "higher");
-        int width = rect.X2 - rect.X1 + 1;
-        int height = rect.Z2 - rect.Z1 + 1;
         AddMetric(metrics, "compactness", Math.Abs(width - height), "shape_delta", 1d / (1d + Math.Abs(width - height)), 2d, "lower");
         AddMetric(metrics, "anchor_distance", nearestDistance, "cells", 1d / (1d + nearestDistance), 3d, "lower");
 
@@ -520,30 +544,31 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
 
     private static AdviceOption AssembleOption(ZoneRequest request, ZoneCandidate candidate)
     {
-        string plantDef = request.PlantDef ?? candidate.PlantDef;
+        string zoneDef = candidate.ZoneDef;
         IReadOnlyList<BlueprintAsset> assets = candidate.Cells
             .OrderBy(cell => cell.X)
             .ThenBy(cell => cell.Z)
             .Select(cell => new BlueprintAsset(
                 Role: "zone_cell",
-                DefName: plantDef,
+                DefName: zoneDef,
                 StuffDefName: null,
                 Cell: new MapCell(cell.X, cell.Z),
                 Rotation: 0))
             .ToList();
-        string label = $"Growing zone {candidate.Rect.X1},{candidate.Rect.Z1}";
+        string zoneKind = request.ZoneClass == ZoneClass.Stockpile ? "stockpile" : "growing";
+        string label = $"{TitleCase(zoneKind)} zone {candidate.Rect.X1},{candidate.Rect.Z1}";
         return new AdviceOption(
-            Id: $"zone_growing_{SanitizeId(plantDef)}_{candidate.Rect.X1}_{candidate.Rect.Z1}_{candidate.Rect.Area}",
+            Id: $"zone_{zoneKind}_{SanitizeId(zoneDef)}_{candidate.Rect.X1}_{candidate.Rect.Z1}_{candidate.Rect.Area}",
             Label: label,
-            Summary: $"{candidate.Rect.Area}-tile {plantDef} growing zone at {FormatRect(candidate.Rect)}.",
+            Summary: SummaryFor(request, candidate, zoneDef),
             BlueprintGroup: new BlueprintGroup(label, candidate.MapId, assets),
             EstimatedMaterials: [],
-            TradeoffNote: $"{FormatNumber(candidate.AverageFertility)} avg fertility; nearest {AnchorLabel(candidate.NearestAnchor)} {candidate.NearestAnchorDistance} cells; {candidate.Rect.X2 - candidate.Rect.X1 + 1}x{candidate.Rect.Z2 - candidate.Rect.Z1 + 1} rectangle.");
+            TradeoffNote: TradeoffFor(request, candidate));
     }
 
     private static PlacementDraftTrace TraceFor(ZoneCandidate candidate, string status, string? reason) =>
         new(
-            GeneratorId: "grow_zone_rect",
+            GeneratorId: "zone_rect",
             AnchorRoomId: candidate.NearestAnchor.Anchor.RoomId,
             Status: status,
             Reason: reason,
@@ -558,7 +583,7 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
         List<string> mergedNotes = [.. notes, note];
         return new PlacementResult(
             Options: [],
-            Trace: new PlacementTrace("grow_zone_placement_solver", traces, mergedNotes),
+            Trace: new PlacementTrace("zone_placement_solver", traces, mergedNotes),
             NoFit: reason,
             Draftable: reason is NoFitReason.NoTerrainGrid or NoFitReason.NoGrowableCells or NoFitReason.UnsupportedZoneClass
                 ? PlacementReadiness.Blocked
@@ -629,6 +654,62 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
 
     private static string SanitizeId(string value) =>
         new(value.Select(character => char.IsLetterOrDigit(character) ? char.ToLowerInvariant(character) : '_').ToArray());
+
+    private static int DefaultTileCountFor(ZoneRequest request) =>
+        request.ZoneClass == ZoneClass.Stockpile ? DefaultStockpileTileCount : DefaultGrowingTileCount;
+
+    private static string ZoneAssetDef(ZoneRequest request)
+    {
+        if (request.ZoneClass == ZoneClass.Stockpile)
+        {
+            string? def = request.AllowedItemCategories?.FirstOrDefault(category => !string.IsNullOrWhiteSpace(category)) ??
+                request.AllowedItemDefs?.FirstOrDefault(itemDef => !string.IsNullOrWhiteSpace(itemDef));
+            return string.IsNullOrWhiteSpace(def) ? StockpileZoneDef : def;
+        }
+
+        return request.PlantDef ?? "Plant_Rice";
+    }
+
+    private static string ZoneLabel(ZoneRequest request) =>
+        request.ZoneClass == ZoneClass.Stockpile ? "stockpile-zone" : "grow-zone";
+
+    private static string ZoneTerrainLabel(ZoneRequest request) =>
+        request.ZoneClass == ZoneClass.Stockpile ? "stockpile-capable" : "growable";
+
+    private static string SummaryFor(ZoneRequest request, ZoneCandidate candidate, string zoneDef) =>
+        request.ZoneClass == ZoneClass.Stockpile
+            ? $"{candidate.Rect.Area}-tile stockpile zone for {StockpileFilterLabel(request)} at {FormatRect(candidate.Rect)}."
+            : $"{candidate.Rect.Area}-tile {zoneDef} growing zone at {FormatRect(candidate.Rect)}.";
+
+    private static string TradeoffFor(ZoneRequest request, ZoneCandidate candidate)
+    {
+        string dimensions = $"{candidate.Rect.X2 - candidate.Rect.X1 + 1}x{candidate.Rect.Z2 - candidate.Rect.Z1 + 1}";
+        if (request.ZoneClass == ZoneClass.Stockpile)
+        {
+            return $"Nearest {AnchorLabel(candidate.NearestAnchor)} {candidate.NearestAnchorDistance} cells; {dimensions} rectangle; filter {StockpileFilterLabel(request)}.";
+        }
+
+        return $"{FormatNumber(candidate.AverageFertility)} avg fertility; nearest {AnchorLabel(candidate.NearestAnchor)} {candidate.NearestAnchorDistance} cells; {dimensions} rectangle.";
+    }
+
+    private static string StockpileFilterLabel(ZoneRequest request)
+    {
+        IReadOnlyList<string> defs = request.AllowedItemDefs?
+            .Where(def => !string.IsNullOrWhiteSpace(def))
+            .ToList() ?? [];
+        if (defs.Count > 0)
+            return string.Join(", ", defs);
+
+        IReadOnlyList<string> categories = request.AllowedItemCategories?
+            .Where(category => !string.IsNullOrWhiteSpace(category))
+            .ToList() ?? [];
+        return categories.Count > 0 ? string.Join(", ", categories) : StockpileZoneDef;
+    }
+
+    private static string TitleCase(string value) =>
+        string.IsNullOrWhiteSpace(value)
+            ? value
+            : char.ToUpperInvariant(value[0]) + value[1..];
 
     private static string FormatRect(MapRect rect) =>
         $"{rect.X1},{rect.Z1}-{rect.X2},{rect.Z2}";
@@ -779,7 +860,7 @@ public sealed class GrowZonePlacementSolver : IGrowZonePlacementSolver
         int MapId,
         MapRect Rect,
         IReadOnlyList<TerrainCellRecord> Cells,
-        string PlantDef,
+        string ZoneDef,
         int TargetCount,
         double AverageFertility,
         ResolvedAnchor NearestAnchor,

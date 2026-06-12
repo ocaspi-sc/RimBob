@@ -325,7 +325,7 @@ public sealed class MinisterOfWillieTests
         AdviceItem advice = harness.Bus.ActiveAdvice().Should().ContainSingle().Subject;
         advice.Id.Should().Be("willie_zone_request_active");
         advice.Title.Should().Contain("Growing request");
-        advice.Body.Should().Contain("Grow-zone solver could not suggest zone options");
+        advice.Body.Should().Contain("Zone solver could not suggest zone options");
         AdviceAction action = advice.Actions.Should().ContainSingle().Subject;
         action.Kind.Should().Be(AdviceActionKind.DesignateZoneReq);
         action.Apply.Should().BeNull();
@@ -354,7 +354,7 @@ public sealed class MinisterOfWillieTests
 
         growZoneSolver.CallCount.Should().Be(1);
         AdviceItem advice = harness.Bus.ActiveAdvice().Should().ContainSingle().Subject;
-        advice.Rationale.Should().Contain("Grow-zone solver cache hit");
+        advice.Rationale.Should().Contain("Zone solver cache hit");
         WillieZoneRequestBoardRow row = harness.SolverStore.ZoneRequestBoard("Willie").Should().ContainSingle().Subject;
         row.Outcome.Should().NotBeNull();
         row.Outcome!.Status.Should().Be("no_fit");
@@ -429,6 +429,34 @@ public sealed class MinisterOfWillieTests
         option.Readiness.Should().NotBeNull();
         option.Readiness!.ApplyReady.Should().Be("ready");
         advice.Rationale.Should().Contain("create_growing_zone validation");
+    }
+
+    [Fact]
+    public async Task InboundZoneFlag_WhenStockpileSolverFindsOption_AttachesCreateStockpileZoneApply()
+    {
+        FakePlacementSolver solver = FakePlacementSolver.WithOptions(PlacementOption());
+        FakeGrowZonePlacementSolver growZoneSolver = FakeGrowZonePlacementSolver.WithOptions(StockpileZonePlacementOption());
+        Harness harness = new(solver, growZoneSolver);
+        harness.SetStableState();
+        harness.Flags.Publish(StockpileZoneFlag());
+
+        await harness.Minister.RunPlayCycle(PlayCycleContext.ManualTrigger, CancellationToken.None);
+
+        AdviceItem advice = harness.Bus.ActiveAdvice().Should().ContainSingle().Subject;
+        advice.Id.Should().Be("willie_zone_request_active");
+        advice.Actions.Should().HaveCount(2);
+        advice.Actions.Should().NotContain(action => action.Apply is PlaceBlueprintGroupApply);
+        AdviceAction applyAction = advice.Actions.Should().Contain(action => action.Apply is CreateStockpileZoneApply).Subject;
+        applyAction.Kind.Should().Be(AdviceActionKind.SetStockpileZone);
+        applyAction.WorkType.Should().Be(WorkType.Haul);
+        CreateStockpileZoneApply apply = applyAction.Apply.Should().BeOfType<CreateStockpileZoneApply>().Subject;
+        apply.Rect.Should().Be(new MapRect(10, 20, 13, 22));
+        apply.TargetCount.Should().Be(12);
+        apply.AllowedItemCategories.Should().ContainSingle().Which.Should().Be("Foods");
+        AdviceOption option = advice.Options.Should().ContainSingle().Subject;
+        option.Readiness.Should().NotBeNull();
+        option.Readiness!.ApplyReady.Should().Be("ready");
+        advice.Rationale.Should().Contain("create_stockpile_zone validation");
     }
 
     [Fact]
@@ -891,6 +919,26 @@ public sealed class MinisterOfWillieTests
                     RequestedFrom: requestedFrom)
             ]);
 
+    private static AgentFlag StockpileZoneFlag(string requestedFrom = "Willie") =>
+        new(
+            Id: "food:food_stockpile_missing",
+            SourceMinister: "Chef",
+            Priority: Priority.High,
+            Domain: "food",
+            Summary: "Food needs a stockpile",
+            ZoneRequests:
+            [
+                new ZoneRequest(
+                    Request: "12 food stockpile tiles near storage",
+                    Reason: "food needs reachable storage",
+                    ZoneClass: ZoneClass.Stockpile,
+                    TileCount: 12,
+                    Adjacency: [new AdjacencyHint(AdjacencyRelation.Near, "storage")],
+                    AllowedItemCategories: ["Foods"],
+                    Priority: Priority.High,
+                    RequestedFrom: requestedFrom)
+            ]);
+
     private static AdviceOption PlacementOption(
         string id = "placement_freezer_10_12",
         string label = "Compact freezer",
@@ -928,6 +976,26 @@ public sealed class MinisterOfWillieTests
             BlueprintGroup: new BlueprintGroup("Growing zone 10,20", 7, cells),
             EstimatedMaterials: [],
             TradeoffNote: "1.4 avg fertility.");
+    }
+
+    private static AdviceOption StockpileZonePlacementOption()
+    {
+        IReadOnlyList<BlueprintAsset> cells = Enumerable.Range(20, 3)
+            .SelectMany(z => Enumerable.Range(10, 4).Select(x => new BlueprintAsset(
+                Role: "zone_cell",
+                DefName: "Foods",
+                StuffDefName: null,
+                Cell: new MapCell(x, z),
+                Rotation: 0)))
+            .ToList();
+
+        return new AdviceOption(
+            Id: "zone_stockpile_foods_10_20_12",
+            Label: "Stockpile zone 10,20",
+            Summary: "12-tile stockpile zone for Foods at 10,20-13,22.",
+            BlueprintGroup: new BlueprintGroup("Stockpile zone 10,20", 7, cells),
+            EstimatedMaterials: [],
+            TradeoffNote: "Nearest storage 4 cells; 4x3 rectangle; filter Foods.");
     }
 
     private static AdviceItem PriorOptionsAdvice()

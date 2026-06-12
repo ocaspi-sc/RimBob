@@ -28,7 +28,7 @@ public sealed class BedroomTemplate : IRoomTemplate
         for (int bed = 0; bed < beds; bed++)
         {
             int x = 1 + bed * 2;
-            fixtures.Add(new TemplateAsset("bed", "Bed", "WoodLog", new MapCell(x, 1), 2));
+            fixtures.Add(new TemplateAsset("bed", "Bed", "WoodLog", new MapCell(x, 2), 2));
         }
 
         return RoomShellBuilder.Build(interior, door, "WoodPlankFloor", null, fixtures);

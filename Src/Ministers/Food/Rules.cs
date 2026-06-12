@@ -12,6 +12,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
     private const string SimpleMealRecipeSelector = "simple_meal";
     private const string BillRepeatModeTargetCount = "TargetCount";
     private static readonly IReadOnlyList<string> SimpleMealRecipeDefs = ["CookMealSimple", "CookMealSimpleBulk"];
+    private static readonly IReadOnlyList<string> FoodStockpileCategories = ["Foods"];
 
     public RuleRun Evaluate(FoodBriefing briefing)
     {
@@ -93,7 +94,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
 
     private static IReadOnlyList<Decision> BuildNutritionSignalGap(FoodBriefing briefing, DateTimeOffset now)
     {
-        FoodFlagRequests nutritionGapRequests = FoodFlagRequests.Building(StockpileVisibilityRequest(
+        FoodFlagRequests nutritionGapRequests = FoodFlagRequests.Zone(FoodStockpileZoneRequest(
             "reachable food stockpile visibility",
             "food units outside meals/raw-food counts cannot be converted into days-of-food",
             quantity: null,
@@ -127,7 +128,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             "No reliable food stockpile signal is available. Treat this as a food-security check, not confirmed starvation.",
             "The food chain cannot safely decide without stockpile visibility.",
             [new(AdviceActionKind.SetStockpileZone, "Create or expose a reachable food stockpile, then refresh RimBob once food is visible.")],
-            FoodFlagRequests.Building(StockpileVisibilityRequest(
+            FoodFlagRequests.Zone(FoodStockpileZoneRequest(
                 "visible reachable food stockpile",
                 "food_units and nutrition are both unavailable",
                 quantity: null,
@@ -173,7 +174,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
                     Quantity: visibleFoodUnits,
                     Owner: "Willie")
             ],
-            FoodFlagRequests.Building(StockpileVisibilityRequest(
+            FoodFlagRequests.Zone(FoodStockpileZoneRequest(
                 $"reachable food stockpile for {visibleFoodUnits} visible food units",
                 "known or visible food exists but no reachable food stockpile cells are visible",
                 quantity: visibleFoodUnits,
@@ -787,7 +788,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         return days < 1f && noImmediateLocalFood ? Priority.Critical : Priority.High;
     }
 
-    private static BuildingRequest StockpileVisibilityRequest(
+    private static ZoneRequest FoodStockpileZoneRequest(
         string request,
         string reason,
         int? quantity,
@@ -795,14 +796,17 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
         new(
             request,
             reason,
-            BuildingClass.Stockpile,
-            RoomClass: RoomClass.Storage,
-            CapacityNeed: quantity is null
-                ? null
-                : new CapacityNeed(CapacityMeasure.StorageStacks, quantity, "food_units"),
-            Quantity: quantity,
+            ZoneClass.Stockpile,
+            TileCount: FoodStockpileTileCount(quantity),
+            Adjacency: [new AdjacencyHint(AdjacencyRelation.Near, "storage")],
+            AllowedItemCategories: FoodStockpileCategories,
             Priority: priority,
             RequestedFrom: "Willie");
+
+    private static int FoodStockpileTileCount(int? quantity) =>
+        quantity is null
+            ? 12
+            : Math.Clamp((int)Math.Ceiling(quantity.Value / 10d), 4, AssistedApplyLimits.MaxStockpileZoneCells);
 
     private static FoodFlagRequests EmergencyRequests(FoodBriefing briefing, float days, Priority priority)
     {
@@ -812,7 +816,7 @@ public sealed class Rules : IMinisterRules<FoodBriefing>
             requests = requests.Add(forbiddenMealRequest);
 
         if (briefing.UnknownFoodUnits > 0 && briefing.MealsCount == 0 && briefing.RawFoodCount == 0)
-            requests = requests.Add(StockpileVisibilityRequest(
+            requests = requests.Add(FoodStockpileZoneRequest(
                 $"stockpile visibility for {briefing.UnknownFoodUnits} food units not classified as meals or raw food",
                 "reported food units exist, but no meal or raw-food category is visible to Food",
                 quantity: briefing.UnknownFoodUnits,
